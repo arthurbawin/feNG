@@ -109,9 +109,14 @@ int test2(){
   std::cout << "Coucou Simon" << std::endl;
 }
 
+int test3(){
+  return 5;
+}
+
 int main( int argc, char** argv )
 {
 	test1(argc,argv);
   test2();
+  test3();
    	return 0;
 }
