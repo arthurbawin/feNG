@@ -1,0 +1,1 @@
+efeNG_add_executable(efGraphic EF5.C EF)

@@ -1,0 +1,130 @@
+#include "feMesh.h"
+
+int feMesh::getCncGeoTag(std::string cncGeoID){
+  if(_cncGeoMap.find(cncGeoID) != _cncGeoMap.end())
+    return _cncGeoMap[cncGeoID];
+  return -1;
+}
+
+feCncGeo* feMesh::getCncGeoByName(std::string cncGeoID){
+  if(_cncGeoMap.find(cncGeoID) != _cncGeoMap.end())
+    return _cncGeo[_cncGeoMap[cncGeoID]];
+  return nullptr;
+}
+
+feCncGeo* feMesh::getCncGeoByTag(int cncGeoTag){
+  if(cncGeoTag < _cncGeo.size())
+    return _cncGeo[cncGeoTag];
+  return nullptr;
+}
+
+std::vector<double> feMesh::getCoord(std::string cncGeoID, int numElem){
+  feCncGeo* cnc = getCncGeoByName(cncGeoID);
+  int nNodePerElem = cnc->getNbNodePerElem();
+  std::vector<double> coord(nNodePerElem * _dim);
+  for(int i = 0; i < nNodePerElem; ++i){
+    for(int j = 0; j < _dim; ++j){
+      coord[_dim * i + j] = _coord[_dim * cnc->getLocalConnectivity(numElem, i) + j];
+    }
+  }
+  return coord;
+}
+
+std::vector<double> feMesh::getCoord(int cncGeoTag, int numElem){
+  feCncGeo* cnc = getCncGeoByTag(cncGeoTag);
+  int nNodePerElem = cnc->getNbNodePerElem();
+  std::vector<double> coord(nNodePerElem * _dim);
+  for(int i = 0; i < nNodePerElem; ++i){
+    for(int j = 0; j < _dim; ++j){
+      coord[_dim * i + j] = _coord[_dim * cnc->getLocalConnectivity(numElem, i) + j];
+    }
+  }
+  return coord;
+}
+
+int feMesh::getNbNodePerElem(std::string cncGeoID){
+  return getCncGeoByName(cncGeoID)->getNbNodePerElem();
+}
+
+int feMesh::getNbNodePerElem(int cncGeoTag){
+  return getCncGeoByTag(cncGeoTag)->getNbNodePerElem();
+}
+
+
+int feMesh::getVertex(std::string cncGeoID, int numElem, int numVertex){
+  return getCncGeoByName(cncGeoID)->getLocalConnectivity(numElem, numVertex);
+}
+
+int feMesh::getVertex(int cncGeoTag, int numElem, int numVertex){
+  return getCncGeoByTag(cncGeoTag)->getLocalConnectivity(numElem, numVertex);
+}
+
+int feMesh::getElement(std::string cncGeoID, int numElem){
+  return getCncGeoByName(cncGeoID)->getGlobalConnectivity(numElem);
+}
+
+int feMesh::getElement(int cncGeoTag, int numElem){
+  return getCncGeoByTag(cncGeoTag)->getGlobalConnectivity(numElem);
+}
+
+int feMesh::getNbElm(std::string cncGeoID){
+  return getCncGeoByName(cncGeoID)->getNbElm();
+}
+
+int feMesh::getNbElm(int cncGeoTag){
+  return getCncGeoByTag(cncGeoTag)->getNbElm();
+}
+
+feSpace* feMesh::getGeometricSpace(std::string cncGeoID){
+  return getCncGeoByName(cncGeoID)->getFeSpace();
+}
+
+feSpace* feMesh::getGeometricSpace(int cncGeoTag){
+  return getCncGeoByTag(cncGeoTag)->getFeSpace();
+}
+
+feMesh1DP1::feMesh1DP1(double xA, double xB, int nElm, std::string bndA_ID, std::string bndB_ID, std::string domID)
+  : _xA(xA), _xB(xB), _nElm(nElm), _bndA_ID(bndA_ID), _bndB_ID(bndB_ID), _domID(domID),
+  _nElmDomain(nElm), _nElmBoundary(1), _nNodDomain(2), _nNodBoundary(1), feMesh(nElm+1, 1, 3, "1D")
+{
+  // Sommets
+  _coord.resize(_nNod);
+  for(int i = 0; i < _nNod; ++i)
+    _coord[i] = xA + i * (xB-xA)/(_nNod-1);
+
+  // Elements 1D
+  std::vector<int> connecDomain(_nElmDomain*_nNodDomain, 0);
+  for(int i = 0; i < _nElmDomain; ++i){
+    connecDomain[_nNodDomain*i+0] = i;
+    connecDomain[_nNodDomain*i+1] = i+1;
+  }
+  int nCncGeo = 0;
+  feCncGeo *geoDom = new feCncGeo(_nNodDomain, _nElmDomain, connecDomain, _domID, "Lg", new feSpace1DP1("xyz"));
+  _cncGeo.push_back(geoDom);
+  _cncGeoMap[_domID] = nCncGeo;
+  geoDom->getFeSpace()->setCncGeoTag(nCncGeo++);
+
+
+  // Elements 0D
+  std::vector<int> connecBoundaryA(_nElmBoundary*_nNodBoundary, 0);
+  std::vector<int> connecBoundaryB(_nElmBoundary*_nNodBoundary, 0);
+  connecBoundaryA[0] = 0;
+  connecBoundaryB[0] = _nNod-1;
+  feCncGeo *geoBndA = new feCncGeo(_nNodBoundary, _nElmBoundary, connecBoundaryA, _bndA_ID, "Pt", new feSpace1DP0("xyz"));
+  feCncGeo *geoBndB = new feCncGeo(_nNodBoundary, _nElmBoundary, connecBoundaryB, _bndB_ID, "Pt", new feSpace1DP0("xyz"));
+  _cncGeo.push_back(geoBndA);
+  _cncGeoMap[_bndA_ID] = nCncGeo;
+  geoBndA->getFeSpace()->setCncGeoTag(nCncGeo++);
+  _cncGeo.push_back(geoBndB);
+  _cncGeoMap[_bndB_ID] = nCncGeo;
+  geoBndB->getFeSpace()->setCncGeoTag(nCncGeo++);
+
+  // Fonction COMPLETER : connectivite globale des elements
+  int numElmGlo = 0;
+  for(feCncGeo *cnc : _cncGeo){
+    for(int i = 0; i < cnc->getNbElm(); ++i)
+      cnc->setGlobalConnectivity(i,numElmGlo++);
+  } 
+  _nTotalElm = numElmGlo;
+
+};
