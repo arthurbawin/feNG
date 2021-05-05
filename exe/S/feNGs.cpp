@@ -110,7 +110,8 @@ int test2(){
 }
 
 int test3(){
-  return 5;
+  return 4;
+
 }
 
 int main( int argc, char** argv )
@@ -118,5 +119,9 @@ int main( int argc, char** argv )
 	test1(argc,argv);
   test2();
   test3();
+<<<<<<< HEAD
    	return 0;
+=======
+  return 0;
+>>>>>>> origin/master
 }
