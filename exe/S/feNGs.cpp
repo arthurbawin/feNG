@@ -87,6 +87,8 @@ void test1(int argc, char** argv){
   linearSystem->check(); // Prints the solution
   linearSystem->finalize();
 
+
+
   delete linearSystem;
   delete bDiff_U_M1D;
   delete bDiff_V_M1D;
@@ -103,8 +105,13 @@ void test1(int argc, char** argv){
 	delete mesh;
 }
 
+int test2(){
+  std::cout << "Coucou Simon" << std::endl;
+}
+
 int main( int argc, char** argv )
 {
 	test1(argc,argv);
+  test2();
    	return 0;
 }
