@@ -1,5 +1,6 @@
 set(feNG_SRC
   feBilinearForm.cpp
+  feLinearSystem.cpp
   feMesh.cpp
   feNumber.cpp
   feSolution.cpp
