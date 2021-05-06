@@ -26,7 +26,7 @@ protected:
   std::vector<double> _x; 
 
   std::vector<int> _iVar;
-  std::vector<int> _jTest;
+  std::vector<int> _jVar;
   int _niElm;
   int _njElm;
   std::vector<int> _adrI;
@@ -38,6 +38,7 @@ protected:
 public:
 	feBilinearForm(std::vector<feSpace*> &space, feMesh *mesh, int nQuadraturePoints, feSysElm *sysElm);
 	~feBilinearForm() {
+    // if(_sysElm) delete _sysElm;
   }
 
   int getCncGeoTag(){ return _cncGeoTag; }
@@ -63,7 +64,7 @@ public:
     printf("_nGeoElm = %d\n", _nGeoElm);
     printf("_geoCoord :"); for(auto val : _geoCoord) std::cout<<val<<" "; std::cout<<std::endl;
     printf("_iVar :"); for(auto val : _iVar) std::cout<<val<<" "; std::cout<<std::endl;
-    printf("_jTest :"); for(auto val : _jTest) std::cout<<val<<" "; std::cout<<std::endl;
+    printf("_jVar :"); for(auto val : _jVar) std::cout<<val<<" "; std::cout<<std::endl;
     printf("_adrI :"); for(auto val : _adrI) std::cout<<val<<" "; std::cout<<std::endl;
     printf("_adrJ :"); for(auto val : _adrJ)  std::cout<<val<<" "; std::cout<<std::endl;
     printf("_Ae :"); for(auto val : _Ae) std::cout<<val<<" "; std::cout<<std::endl;

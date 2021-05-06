@@ -9,19 +9,19 @@ protected:
   std::function<double(const double, const std::vector<double> &)> _fct;
 
   std::vector<int> _iVar;
-  std::vector<int> _jTest;
+  std::vector<int> _jVar;
 
 public:
 	feSysElm(std::function<double(const double, const std::vector<double> &)> fct)
     : _fct(fct)
 	{
     _iVar.resize(1);
-    _jTest.resize(1);
+    _jVar.resize(1);
 	};
 	virtual ~feSysElm() {}
 
   std::vector<int> &getIVar(){ return _iVar; }
-  std::vector<int> &getJTest(){ return _jTest; }
+  std::vector<int> &getJVar(){ return _jVar; }
 
   virtual void createElementarySystem(std::vector<feSpace*> &space);
   virtual void computeAe(std::vector<feSpace*> &intSpace, feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn, std::vector<double> &Ae) {};

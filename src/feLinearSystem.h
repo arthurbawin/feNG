@@ -11,7 +11,8 @@
 class feLinearSystem{
 
 protected:
-  std::vector<feBilinearForm*> &_forms;
+  std::vector<feBilinearForm*> &_formMatrices;
+  std::vector<feBilinearForm*> &_formResiduals;
   feMetaNumber *_metaNumber;
   feMesh *_mesh;
 
@@ -24,14 +25,29 @@ protected:
   KSP ksp;
   PC preconditioner;
 
+  bool recomputeMatrix;
+
 public:
-	feLinearSystem(std::vector<feBilinearForm*> &forms, feMetaNumber *metaNumber, feMesh *mesh)
-    : _forms(forms), _metaNumber(metaNumber), _mesh(mesh), _nInc(metaNumber->getNbUnknowns()), 
-    _nDofs(metaNumber->getNbDOFs())
+	feLinearSystem(std::vector<feBilinearForm*> &formMatrices, std::vector<feBilinearForm*> &formResiduals,
+    feMetaNumber *metaNumber, feMesh *mesh)  : _formMatrices(formMatrices), _formResiduals(formResiduals), 
+  _metaNumber(metaNumber), _mesh(mesh), _nInc(metaNumber->getNbUnknowns()), _nDofs(metaNumber->getNbDOFs()),
+  recomputeMatrix(false)
   {
     
   };
 	~feLinearSystem() {}
+
+  bool getRecomputeStatus(){ return recomputeMatrix; }
+  void setRecomputeStatus(bool status){ recomputeMatrix = status; }
+
+  void viewMatrix(){
+    MatView(_A,PETSC_VIEWER_STDOUT_WORLD);
+    PetscViewer viewer;
+    PetscViewerDrawOpen(PETSC_COMM_WORLD,NULL,NULL,0,0,600,600,&viewer);
+    PetscObjectSetName((PetscObject)viewer,"Line graph Plot");
+    PetscViewerPushFormat(viewer,PETSC_VIEWER_DRAW_LG);
+    MatView(_A,viewer);
+  }
 
   PetscErrorCode initialize(int argc, char** args){
     PetscErrorCode ierr;
@@ -62,46 +78,74 @@ public:
     ierr = PCSetType(preconditioner,PCJACOBI);                                    CHKERRQ(ierr);
     ierr = KSPSetTolerances(ksp,1.e-5,PETSC_DEFAULT,PETSC_DEFAULT,PETSC_DEFAULT); CHKERRQ(ierr);
     ierr = KSPSetFromOptions(ksp);                                                CHKERRQ(ierr);
+    return ierr;
   }
 
-  PetscErrorCode assemble(feSolution *sol){
-    PetscErrorCode ierr;
-    PetscInt I,J;
-    int niElm, njElm;
-    std::vector<int> adrI, adrJ;
+  PetscErrorCode setToZero(){
+    PetscErrorCode ierr = 0;
+    if(recomputeMatrix){
+      ierr = MatZeroEntries(_A);                      CHKERRQ(ierr);
+      ierr = MatAssemblyBegin(_A,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
+      ierr = MatAssemblyEnd(_A,MAT_FINAL_ASSEMBLY);   CHKERRQ(ierr);
+    }
+    ierr = VecZeroEntries(_res);
+    // viewMatrix();
+    return ierr;
+  }
 
-    for(feBilinearForm *f : _forms){
-      int nElm = _mesh->getNbElm(f->getCncGeoTag());
-      for(int iElm = 0; iElm < nElm; ++iElm){
-        // Matrice et residu elementaires
-        f->computeMatrix(_metaNumber, _mesh, sol, iElm);
-        f->computeRHS(_metaNumber, _mesh, sol, iElm);
-        // Assemblage
-        std::vector<double> Ae = f->getAe(), Be = f->getBe();
-        niElm = f->getNiElm();
-        njElm = f->getNjElm();
-        adrI = f->getAdrI();
-        adrJ = f->getAdrJ();
-        for(int i = 0; i < niElm; ++i){
-          I = adrI[i];
-          if(I < _nInc){
-            ierr = VecSetValue(_res, I, Be[i], ADD_VALUES); // TODO : assigner par blocs
-            CHKERRQ(ierr);
-            for(int j = 0; j < njElm; ++j){
-              J = adrJ[j];
-              if(J < _nInc){
-                ierr = MatSetValue(_A, I, J, Ae[njElm*i+j], ADD_VALUES); // TODO : assigner par blocs
-                CHKERRQ(ierr);
+  PetscErrorCode assembleMatrices(feSolution *sol){
+    PetscErrorCode ierr = 0;
+    if(recomputeMatrix){
+      PetscInt I,J;
+      int niElm, njElm;
+      std::vector<int> adrI, adrJ;
+
+      for(feBilinearForm *f : _formMatrices){
+        int nElm = _mesh->getNbElm(f->getCncGeoTag());
+        for(int iElm = 0; iElm < nElm; ++iElm){
+          f->computeMatrix(_metaNumber, _mesh, sol, iElm); // Matrice elementaire
+          std::vector<double> Ae = f->getAe();
+          niElm = f->getNiElm();
+          njElm = f->getNjElm();
+          adrI = f->getAdrI();
+          adrJ = f->getAdrJ();
+          for(int i = 0; i < niElm; ++i){
+            I = adrI[i];
+            if(I < _nInc){
+              for(int j = 0; j < njElm; ++j){
+                J = adrJ[j];
+                if(J < _nInc){
+                  ierr = MatSetValue(_A, I, J, Ae[njElm*i+j], ADD_VALUES); // TODO : assigner par blocs
+                  CHKERRQ(ierr);
+                }
               }
             }
           }
         }
       }
-    }
-    ierr = MatAssemblyBegin(_A,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
-    ierr = MatAssemblyEnd(_A,MAT_FINAL_ASSEMBLY);   CHKERRQ(ierr);
-    MatView(_A,PETSC_VIEWER_STDOUT_WORLD);
-    VecView(_res,PETSC_VIEWER_STDOUT_WORLD);
+      ierr = MatAssemblyBegin(_A,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
+      ierr = MatAssemblyEnd(_A,MAT_FINAL_ASSEMBLY);   CHKERRQ(ierr);
+    } // if(recomputeMatrix)
+    // viewMatrix();
+    
+    // MatView(_A,PETSC_VIEWER_STDOUT_WORLD);
+    // VecView(_res,PETSC_VIEWER_STDOUT_WORLD);
+    // PetscViewer    viewer;
+    // PetscViewerDrawOpen(PETSC_COMM_WORLD,NULL,NULL,0,0,600,600,&viewer);
+    // PetscObjectSetName((PetscObject)viewer,"Line graph Plot");
+    // PetscViewerPushFormat(viewer,PETSC_VIEWER_DRAW_LG);
+
+    // MatOrderingType rtype = MATORDERINGRCM;
+    // IS isrow,iscol;  //row and column permutations 
+    // MatGetOrdering(_A,rtype,&isrow,&iscol);
+    // ISView(isrow,PETSC_VIEWER_STDOUT_WORLD);
+    // Mat Aperm;
+    // MatPermute(_A,isrow,iscol,&Aperm);
+    // // VecPermute(_b,colperm,PETSC_FALSE);
+    // MatDestroy(&_A);
+    // _A    = Aperm;
+    // MatView(_A,viewer);
+    // PetscDrawPause();
     /*
        Assemble matrix
     */
@@ -120,8 +164,49 @@ public:
     // ierr = MatAssemblyEnd(_A,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
   }
 
-  PetscErrorCode solve(){
+  PetscErrorCode assembleResiduals(feSolution *sol){
+    PetscErrorCode ierr;
+    PetscInt I;
+    int niElm;
+    std::vector<int> adrI;
+    for(feBilinearForm *f : _formResiduals){
+      int nElm = _mesh->getNbElm(f->getCncGeoTag());
+      for(int iElm = 0; iElm < nElm; ++iElm){
+        f->computeRHS(_metaNumber, _mesh, sol, iElm); // Residu elementaire
+        std::vector<double> Be = f->getBe();
+        niElm = f->getNiElm();
+        adrI = f->getAdrI();
+        for(int i = 0; i < niElm; ++i){
+          I = adrI[i];
+          if(I < _nInc){
+            ierr = VecSetValue(_res, I, Be[i], ADD_VALUES); // TODO : assigner par blocs
+            CHKERRQ(ierr);
+          }
+        }
+      }
+    }
+    // VecView(_res,PETSC_VIEWER_STDOUT_WORLD);
+  }
+
+  PetscErrorCode assemble(feSolution *sol){
+    PetscErrorCode ierr;
+    ierr = this->assembleMatrices(sol);
+    ierr = this->assembleResiduals(sol);
+    return ierr;
+  }
+
+  PetscErrorCode solve(double *normDx, double *normResidual){
     PetscErrorCode ierr = KSPSolve(ksp,_res,_dx); CHKERRQ(ierr);
+    ierr = VecNorm(_res, NORM_2, normResidual); CHKERRQ(ierr);
+    ierr = VecNorm( _dx, NORM_2, normDx);       CHKERRQ(ierr);
+  }
+
+  void correctSolution(feSolution *sol){
+    PetscScalar *array;
+    VecGetArray(_dx, &array);
+    for(int i = 0; i < _nInc; ++i)
+      sol->incrementSolAtDOF(i, array[i]);
+    VecRestoreArray(_dx, &array);
   }
 
   PetscErrorCode check(){
