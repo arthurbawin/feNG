@@ -33,13 +33,11 @@ public:
       _dsoldt[i] = 0.0;
     }
 	};
-	~feSolution() {
-  }
+	~feSolution() {}
 
   void initializeTemporalSolution(double t0, double t1, int nTimeSteps);
   void initializeUnknowns(feMesh *mesh, feMetaNumber *metaNumber);
   void initializeEssentialBC(feMesh *mesh, feMetaNumber *metaNumber);
-
 
   int getC0(){ return _c0; }
   double getCurrentTime(){ return _tn; }
@@ -52,9 +50,7 @@ public:
   double getSolDotAtDOF(int iDOF){ return _dsoldt[iDOF]; }
   void setSolDotAtDOF(int iDOF, double val){ _dsoldt[iDOF] = val; }
 
-
   void printSol();
-
 };
 
 #endif

@@ -1,19 +1,34 @@
 #ifndef _FENORM_
 #define _FENORM_
 
+#include "feSpace.h"
+#include "feMesh.h"
+#include "feNumber.h"
+#include "feSolution.h"
+
 class feNorm{
 
 protected:
+  int cncGeoTag;
+  feSpace *_intSpace;
+  feSpace *geoSpace;
+  int nElmGeo;
+  int dim;
+  int nNodePerElem;
+  std::vector<double> geoCoord;
 
+  int _nQuad;
+  int deg;
+  std::vector<double> w;
+  std::vector<double> x;
+
+  double norm;
 public:
-	feNorm()
-	{
+	feNorm(feSpace *intSpace, feMesh *mesh, int nQuad);
+	~feNorm() {}
 
-	};
-	~feNorm() {
-  }
-
-
+  double getNorm(){ return norm; }
+  void computeL2Norm(feMetaNumber *metaNumber, feSolution *sol, feMesh *mesh);
 };
 
 #endif

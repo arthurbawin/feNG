@@ -25,7 +25,6 @@ protected:
   int _fieldTag;         // Number (tag) of the associated field
   std::string _cncGeoID; // Name of the geometric connectivity on which the space is defined
   int _cncGeoTag;        // Number (tag) of the geometric connectivity
-
 	// Quadrature
 	int _nQuad;
 	std::vector<double> _wQuad;
@@ -37,8 +36,8 @@ protected:
   std::vector<double> _dLdr;
 
   std::vector<int>    _adr;
-  std::vector<double> _te;
-  std::vector<double> _tedot;
+  std::vector<double> _sol;
+  std::vector<double> _soldot;
 
   std::function<double(const double, const std::vector<double> &)> _fct;
 
@@ -48,6 +47,7 @@ public:
 	virtual ~feSpace() {}
 
   int getDim();
+  int getNbElm();
   int getNbNodePerElem();
 
   std::string getFieldID(){ return _fieldID; }
@@ -91,7 +91,6 @@ public:
 
   void printL();
   void printdLdr();
-
 };
 
 // FESpace pour interpolant de Lagrange 1D de degre 0

@@ -16,6 +16,10 @@ int feSpace::getDim(){
   return _mesh->getDim();
 }
 
+int feSpace::getNbElm(){
+  return _mesh->getNbElm(_cncGeoTag);
+}
+
 int feSpace::getNbNodePerElem(){
   return _mesh->getNbNodePerElem(_cncGeoTag);
 }
@@ -39,28 +43,28 @@ void feSpace::setQuadratureRule(feQuadrature *quad){
 }
 
 void feSpace::initializeSolution(feSolution *sol){
-  _te.resize(_adr.size());
+  _sol.resize(_adr.size());
   for(int i = 0; i < _adr.size(); ++i)
-    _te[i] = sol->getSolAtDOF(_adr[i]);
+    _sol[i] = sol->getSolAtDOF(_adr[i]);
 }
 
 void feSpace::initializeSolutionDot(feSolution *sol){
-  _tedot.resize(_adr.size());
+  _soldot.resize(_adr.size());
   for(int i = 0; i < _adr.size(); ++i)
-    _te[i] = sol->getSolAtDOF(_adr[i]);
+    _soldot[i] = sol->getSolDotAtDOF(_adr[i]);
 }
 
 double feSpace::interpolateSolutionAtQuadNode(int iNode){
   double res = 0.0;
   for(int i = 0; i < _nFunctions; ++i)
-    res += _te[i]*_L[_nFunctions*iNode+i];
+    res += _sol[i]*_L[_nFunctions*iNode+i];
   return res;
 }
 
 double feSpace::interpolateSolutionAtQuadNode_rDerivative(int iNode){
   double res = 0.0;
   for(int i = 0; i < _nFunctions; ++i)
-    res += _te[i]*_dLdr[_nFunctions*iNode+i];
+    res += _sol[i]*_dLdr[_nFunctions*iNode+i];
   return res;
 }
 

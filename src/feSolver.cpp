@@ -32,7 +32,6 @@ double solveStationary(feTolerances tol, feMetaNumber *metaNumber, feLinearSyste
   std::vector<feBilinearForm*> &formMatrices, std::vector<feBilinearForm*> &formResiduals,
   feSolution *sol, feNorm *norm, feMesh *mesh)
 {
-  double normL2Sta = 0.0;
 	linearSystem->setRecomputeStatus(true);
 
   sol->initializeUnknowns(mesh, metaNumber);
@@ -47,7 +46,7 @@ double solveStationary(feTolerances tol, feMetaNumber *metaNumber, feLinearSyste
   printf("Étape 1 - recomputeMatrix = %s : Solution stationnaire\n", linearSystem->getRecomputeStatus() ? "true" : "false");
   solveQNBDF(solSta, tol, metaNumber, linearSystem, formMatrices, formResiduals, sol, mesh);
 
-  // TODO : implementer feNorm et calculer normL2sta
+  norm->computeL2Norm(metaNumber, sol, mesh);
 
-  return normL2Sta;
+  return norm->getNorm();
 }

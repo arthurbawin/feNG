@@ -112,48 +112,60 @@ double fSource(const double t, const std::vector<double> x){
 void testStationnaire(int argc, char** argv){
   double xa = 0.;
   double xb = 5.;
-  int nElm = 20;
 
-  // Maillage
-  feMesh1DP1 *mesh = new feMesh1DP1(xa,xb,nElm,"BXA","BXB","M1D");
-  // Espaces d'interpolation
-  feSpace1DP0 U_BXA = feSpace1DP0(mesh, "U", "BXA", fSol);
-  feSpace1DP0 U_BXB = feSpace1DP0(mesh, "U", "BXB", fSol);
-  feSpace1DP3 U_M1D = feSpace1DP3(mesh, "U", "M1D", fSol);
-  std::vector<feSpace*> fespace = {&U_BXA, &U_BXB, &U_M1D};
-  std::vector<feSpace*> feEssBC = {&U_BXA, &U_BXB};
-  // Numerotations
-  feMetaNumber *metaNumber = new feMetaNumber(mesh, fespace, feEssBC);
-  // Solution
-  feSolution *sol = new feSolution(mesh, fespace, feEssBC, metaNumber);
-  sol->initializeUnknowns(mesh, metaNumber);
-  sol->initializeEssentialBC(mesh, metaNumber);
-  // Formes (bi)lineaires
-  int nQuad = 3; // TODO : change to deg
-  std::vector<feSpace*> spaceDiffusion1D_U = {&U_M1D};
-  feBilinearForm *diff_U_M1D = new feBilinearForm(spaceDiffusion1D_U, mesh, nQuad, new feSysElm_1D_Diffusion(kd, nullptr));
-  std::vector<feSpace*> spaceSource1D_U = {&U_M1D};
-  feBilinearForm *source_U_M1D = new feBilinearForm(spaceSource1D_U, mesh, nQuad, new feSysElm_1D_Source(1.0, fSource));
+  int nIter = 6;
+  std::vector<double> normL2(2*nIter, 0.0);
+  std::vector<int> nElm(nIter, 0);
 
-  std::vector<feBilinearForm*> formMatrices  = {diff_U_M1D};
-  std::vector<feBilinearForm*> formResiduals  = {diff_U_M1D, source_U_M1D};
+  for(int iter = 0; iter < nIter; ++iter){
+    nElm[iter] = 20 * pow(2, iter);
+    // Maillage
+    feMesh1DP1 *mesh = new feMesh1DP1(xa,xb,nElm[iter],"BXA","BXB","M1D");
+    // Espaces d'interpolation
+    feSpace1DP0 U_BXA = feSpace1DP0(mesh, "U", "BXA", fSol);
+    feSpace1DP0 U_BXB = feSpace1DP0(mesh, "U", "BXB", fSol);
+    feSpace1DP3 U_M1D = feSpace1DP3(mesh, "U", "M1D", fSol);
+    std::vector<feSpace*> fespace = {&U_BXA, &U_BXB, &U_M1D};
+    std::vector<feSpace*> feEssBC = {&U_BXA, &U_BXB};
+    // Numerotations
+    feMetaNumber *metaNumber = new feMetaNumber(mesh, fespace, feEssBC);
+    // Solution
+    feSolution *sol = new feSolution(mesh, fespace, feEssBC, metaNumber);
+    sol->initializeUnknowns(mesh, metaNumber);
+    sol->initializeEssentialBC(mesh, metaNumber);
+    // Formes (bi)lineaires
+    int nQuad = 3; // TODO : change to deg
+    std::vector<feSpace*> spaceDiffusion1D_U = {&U_M1D};
+    feBilinearForm *diff_U_M1D = new feBilinearForm(spaceDiffusion1D_U, mesh, nQuad, new feSysElm_1D_Diffusion(kd, nullptr));
+    std::vector<feSpace*> spaceSource1D_U = {&U_M1D};
+    feBilinearForm *source_U_M1D = new feBilinearForm(spaceSource1D_U, mesh, nQuad, new feSysElm_1D_Source(1.0, fSource));
 
-  feLinearSystem *linearSystem = new feLinearSystem(formMatrices, formResiduals, metaNumber, mesh);
-  linearSystem->initialize(argc,argv);
+    std::vector<feBilinearForm*> formMatrices  = {diff_U_M1D};
+    std::vector<feBilinearForm*> formResiduals  = {diff_U_M1D, source_U_M1D};
 
-  feTolerances tol{1e-9, 1e-8, 10};
-  feNorm *norm = new feNorm();
-  solveStationary(tol, metaNumber, linearSystem, formMatrices, formResiduals, sol, norm, mesh);
+    feLinearSystem *linearSystem = new feLinearSystem(formMatrices, formResiduals, metaNumber, mesh);
+    linearSystem->initialize(argc,argv);
 
-  // TODO : tester la convergence
+    feTolerances tol{1e-9, 1e-8, 10};
+    feNorm *norm = new feNorm(&U_M1D, mesh, 3);
+    normL2[2*iter] = solveStationary(tol, metaNumber, linearSystem, formMatrices, formResiduals, sol, norm, mesh);
 
-  delete norm;
-  delete linearSystem;
-  delete source_U_M1D;
-  delete diff_U_M1D;
-  delete sol;
-  delete metaNumber;
-  delete mesh;
+    delete norm;
+    delete linearSystem;
+    delete source_U_M1D;
+    delete diff_U_M1D;
+    delete sol;
+    delete metaNumber;
+    delete mesh;
+  }
+
+  // Calcul du taux de convergence
+  for(int i = 1; i < nIter; ++i){
+    normL2[2*i+1] = log(normL2[2*(i-1)]/normL2[2*i])/log(2.);
+  }
+  printf("%12s \t %12s \t %12s\n", "nElm", "||E||", "p");
+  for(int i = 0; i < nIter; ++i)
+    printf("%12d \t %12.6e \t %12.6e\n", nElm[i], normL2[2*i], normL2[2*i+1]);
 }
 
 int main(int argc, char** argv){

@@ -2,6 +2,7 @@ set(feNG_SRC
   feBilinearForm.cpp
   feLinearSystem.cpp
   feMesh.cpp
+  feNorm.cpp
   feNumber.cpp
   feSolution.cpp
   feSolutionContainer.cpp
