@@ -2,13 +2,13 @@
 
 void feSysElm::createElementarySystem(std::vector<feSpace*> &space){
   _iVar[0] = 0;
-  _jTest[0] = 0;
+  _jVar[0] = 0;
 }
 
 void feSysElm_1D_Source::createElementarySystem(std::vector<feSpace*> &space){
   _idU = 0;
   _iVar[0] = _idU;
-  _jTest[0] = _idU;
+  _jVar[0] = _idU;
   _feU.resize(space[_idU]->getNbFunctions());
   _feUdx.resize(space[_idU]->getNbFunctions());
 }
@@ -44,7 +44,7 @@ void feSysElm_1D_Source::computeBe(std::vector<feSpace*> &intSpace, feSpace *geo
 void feSysElm_1D_Diffusion::createElementarySystem(std::vector<feSpace*> &space){
   _idU = 0;
   _iVar[0] = _idU;
-  _jTest[0] = _idU;
+  _jVar[0] = _idU;
   _feU.resize(space[_idU]->getNbFunctions());
   _feUdx.resize(space[_idU]->getNbFunctions());
 }

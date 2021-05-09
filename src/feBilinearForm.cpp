@@ -26,13 +26,13 @@ feBilinearForm::feBilinearForm(std::vector<feSpace*> &space, feMesh *mesh, int n
 
   _sysElm->createElementarySystem(_intSpace);
   _iVar = _sysElm->getIVar();
-  _jTest = _sysElm->getJTest();
+  _jVar = _sysElm->getJVar();
 
   // CREERVADIJ
   _niElm = 0;
   for(int k = 0; k <  _iVar.size(); ++k) _niElm += _intSpace[_iVar[k]]->getNbFunctions();
   _njElm = 0;
-  for(int k = 0; k < _jTest.size(); ++k) _njElm += _intSpace[_jTest[k]]->getNbFunctions();
+  for(int k = 0; k < _jVar.size(); ++k) _njElm += _intSpace[_jVar[k]]->getNbFunctions();
   _adrI.resize(_niElm);
   _adrJ.resize(_njElm);
 
@@ -55,10 +55,10 @@ void feBilinearForm::initialize(feMetaNumber *metaNumber, feMesh *mesh, feSoluti
     for(int k = 0; k < nielm; ++k)
       _adrI[count++] = _intSpace[_iVar[i]]->getAddressingVectorAt(k);
   }
-  for(int i = 0, count = 0; i < _jTest.size(); ++i){
-    int nielm = _intSpace[_jTest[i]]->getNbFunctions();
+  for(int i = 0, count = 0; i < _jVar.size(); ++i){
+    int nielm = _intSpace[_jVar[i]]->getNbFunctions();
     for(int k = 0; k < nielm; ++k)
-      _adrJ[count++] = _intSpace[_jTest[i]]->getAddressingVectorAt(k);
+      _adrJ[count++] = _intSpace[_jVar[i]]->getAddressingVectorAt(k);
   }
 }
 
