@@ -98,6 +98,7 @@ feMesh1DP1::feMesh1DP1(double xA, double xB, int nElm, std::string bndA_ID, std:
     connecDomain[_nNodDomain*i+0] = i;
     connecDomain[_nNodDomain*i+1] = i+1;
   }
+
   int nCncGeo = 0;
   feCncGeo *geoDom = new feCncGeo(_nNodDomain, _nElmDomain, connecDomain, _domID, "Lg", new feSpace1DP1("xyz"));
   _cncGeo.push_back(geoDom);

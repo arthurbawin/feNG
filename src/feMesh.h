@@ -57,6 +57,7 @@ public:
   int getVertex(int cncGeoTag, int numElem, int numVertex);
   int getElement(std::string cncGeoID, int numElem);
   int getElement(int cncGeoTag, int numElem);
+
   feSpace* getGeometricSpace(std::string cncGeoID);
   feSpace* getGeometricSpace(int cncGeoTag);
 };

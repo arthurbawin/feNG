@@ -5,6 +5,7 @@ set(feNG_SRC
   feNorm.cpp
   feNumber.cpp
   feSolution.cpp
+  feQuadrature2.cpp
   feSolutionContainer.cpp
   feSolver.cpp
   feSpace.cpp
@@ -21,11 +22,13 @@ set(feNG_API
   feNorm.h
   feNumber.h
   feQuadrature.h
+  feQuadrature2.h
   feSolution.h
   feSolutionContainer.h
   feSolver.h
   feSpace.h
   feSysElm.h
+  
 )
 
 feNG_add_library(feNG "${feNG_SRC}" "${feNG_API}")

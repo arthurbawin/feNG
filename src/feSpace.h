@@ -131,7 +131,7 @@ public:
   feSpace1DP1(std::string cncGeoID) 
     : feSpace(nullptr, "GEO", cncGeoID, nullptr){
     _nFunctions = 2;
-    _Lcoor = {-1., 1.};
+    _Lcoor = {-1., 1.}; // Coord entre 0 et 1 pour un P1 il me semble (même si ça change rien)
   };
   feSpace1DP1(class feMesh *mesh, std::string fieldID, std::string cncGeoID, std::function<double(const double, const std::vector<double> &)> fct) 
     : feSpace(mesh, fieldID, cncGeoID, fct){
