@@ -1,5 +1,13 @@
 #include "feSolution.h"
 
+void feSolution::initializeTemporalSolution(double t0, double t1, int nTimeSteps){
+	_t0	= t0;
+	_t1 = t1;
+	_nTimeSteps = nTimeSteps;
+	_dt = (t1-t0)/(double) nTimeSteps;
+	_tn = t0;
+}
+
 void feSolution::initializeUnknowns(feMesh *mesh, feMetaNumber *metaNumber){
 	for(feSpace* const &fS : _space){
 		// std::cout<<"Space "<<fS->getFieldID()<<" - "<<fS->getCncGeoID()<<std::endl;
@@ -52,7 +60,37 @@ void feSolution::initializeEssentialBC(feMesh *mesh, feMetaNumber *metaNumber){
 	}
 }
 
+void feSolution::initializeEssentialBC(feMesh *mesh, feMetaNumber *metaNumber, feSolutionContainer *solContainer){
+  for(feSpace* const &fS : _essBC){
+    int nElm = mesh->getNbElm(fS->getCncGeoID());
+    std::vector<double> coor = fS->getLcoor();
+    feSpace* getGeometricSpace = mesh->getGeometricSpace(fS->getCncGeoID());
+    for(int iElm = 0; iElm < nElm; ++iElm){
+      fS->initializeAddressingVector(metaNumber->getNumbering(fS->getFieldID()), iElm);
+      std::vector<double> coocnc = mesh->getCoord(fS->getCncGeoID(), iElm);
+      for(int j = 0; j < fS->getNbFunctions(); ++j){
+        double r[3] = {coor[j],0.,0.};
+        std::vector<double> x(3,0.0);
+        x[0] = getGeometricSpace->interpolateField(coocnc, r);
+        solContainer->_sol[0][fS->getAddressingVectorAt(j)] = fS->evalFun(_tn, x);;
+      }
+    }
+  }
+}
+
+void feSolution::setSolFromContainer(feSolutionContainer *solContainer, int iSol){
+  size_t nDOFs = _sol.size();
+  for(size_t i = 0; i < nDOFs; ++i)
+    _sol[i] = solContainer->_sol[iSol][i];
+}
+
+void feSolution::setSolDotToZero(){
+  size_t nDOFs = _dsoldt.size();
+	for(size_t i = 0; i < nDOFs; ++i)
+    _dsoldt[i] = 0.0;
+}
+
 void feSolution::printSol(){
 	for(auto const &val : _sol)
-		std::cout<<val<<std::endl;
+		printf("%12.16f\n", val);
 }

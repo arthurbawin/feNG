@@ -13,8 +13,9 @@ feCncGeo* feMesh::getCncGeoByName(std::string cncGeoID){
 }
 
 feCncGeo* feMesh::getCncGeoByTag(int cncGeoTag){
-  if(cncGeoTag < _cncGeo.size())
-    return _cncGeo[cncGeoTag];
+  if(cncGeoTag >= 0)
+    if((unsigned) cncGeoTag < _cncGeo.size())
+      return _cncGeo[cncGeoTag];
   return nullptr;
 }
 
@@ -84,8 +85,8 @@ feSpace* feMesh::getGeometricSpace(int cncGeoTag){
 }
 
 feMesh1DP1::feMesh1DP1(double xA, double xB, int nElm, std::string bndA_ID, std::string bndB_ID, std::string domID)
-  : _xA(xA), _xB(xB), _nElm(nElm), _bndA_ID(bndA_ID), _bndB_ID(bndB_ID), _domID(domID),
-  _nElmDomain(nElm), _nElmBoundary(1), _nNodDomain(2), _nNodBoundary(1), feMesh(nElm+1, 1, 3, "1D")
+  : feMesh(nElm+1, 1, 3, "1D"), _nElm(nElm), _xA(xA), _xB(xB) , _bndA_ID(bndA_ID), _bndB_ID(bndB_ID), _domID(domID),
+  _nElmDomain(nElm), _nElmBoundary(1), _nNodDomain(2), _nNodBoundary(1)
 {
   // Sommets
   _coord.resize(_nNod);

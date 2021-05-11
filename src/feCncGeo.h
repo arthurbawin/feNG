@@ -17,7 +17,7 @@ protected:
 
 public:
 	feCncGeo(int nNod, int nElm, std::vector<int> connec, std::string ID, std::string forme, feSpace *space)
-    : _nNod(nNod), _nElm(nElm), _connecLoc(connec), _ID(ID), _forme(forme), _space(space)
+    :  _ID(ID), _forme(forme), _nNod(nNod), _nElm(nElm), _connecLoc(connec), _space(space)
   {
     _connecGlo.resize(nElm);
 	};

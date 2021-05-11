@@ -3,10 +3,9 @@
 #include "feNumber.h"
 #include "feSolution.h"
 
-feSpace::feSpace(class feMesh *mesh, std::string fieldID, std::string cncGeoID,
-  std::function<double(const double, const std::vector<double> &)> fct)
+feSpace::feSpace(class feMesh *mesh, std::string fieldID, std::string cncGeoID, feFunction *fct)
   : _mesh(mesh), _fieldID(fieldID), _fieldTag(-1), _cncGeoID(cncGeoID), _cncGeoTag(-1), 
-  _fct(fct), _nQuad(-1), _nFunctions(0)
+  _nQuad(-1), _nFunctions(0), _fct(fct)
 {
   if(mesh != nullptr) // Maillage existe et le fespace est associe a la bonne cncGeo
     _cncGeoTag = mesh->getCncGeoTag(cncGeoID);
@@ -31,7 +30,7 @@ void feSpace::setQuadratureRule(feQuadrature *quad){
 
   _L.resize(_nFunctions*_nQuad);
   _dLdr.resize(_nFunctions*_nQuad); // TODO : multiplier par la dimension
-  for(int i = 0; i < _xQuad.size(); ++i){
+  for(size_t i = 0; i < _xQuad.size(); ++i){
     double r[3] = {_xQuad[i], 0., 0.};
     std::vector<double>    l =    L(r);
     std::vector<double> dldr = dLdr(r);
@@ -44,13 +43,13 @@ void feSpace::setQuadratureRule(feQuadrature *quad){
 
 void feSpace::initializeSolution(feSolution *sol){
   _sol.resize(_adr.size());
-  for(int i = 0; i < _adr.size(); ++i)
+  for(size_t i = 0; i < _adr.size(); ++i)
     _sol[i] = sol->getSolAtDOF(_adr[i]);
 }
 
 void feSpace::initializeSolutionDot(feSolution *sol){
   _soldot.resize(_adr.size());
-  for(int i = 0; i < _adr.size(); ++i)
+  for(size_t i = 0; i < _adr.size(); ++i)
     _soldot[i] = sol->getSolDotAtDOF(_adr[i]);
 }
 
@@ -58,6 +57,13 @@ double feSpace::interpolateSolutionAtQuadNode(int iNode){
   double res = 0.0;
   for(int i = 0; i < _nFunctions; ++i)
     res += _sol[i]*_L[_nFunctions*iNode+i];
+  return res;
+}
+
+double feSpace::interpolateSolutionDotAtQuadNode(int iNode){
+  double res = 0.0;
+  for(int i = 0; i < _nFunctions; ++i)
+    res += _soldot[i]*_L[_nFunctions*iNode+i];
   return res;
 }
 
@@ -70,7 +76,7 @@ double feSpace::interpolateSolutionAtQuadNode_rDerivative(int iNode){
 
 double feSpace::interpolateField(std::vector<double> field, double r[3]){
   double res = 0.0;
-  if(field.size() != _nFunctions){
+  if(field.size() != (unsigned) _nFunctions){
     printf(" In feSpace::interpolateField : Erreur - Nombre de valeurs nodales non compatible avec le nombre d'interpolants de l'espace.\n");
     return res;
   }
@@ -81,7 +87,7 @@ double feSpace::interpolateField(std::vector<double> field, double r[3]){
 
 double feSpace::interpolateFieldAtQuadNode(std::vector<double> field, int iNode){
   double res = 0.0;
-  if(field.size() != _nFunctions){
+  if(field.size() != (unsigned) _nFunctions){
     printf(" In feSpace::interpolateFieldAtQuadNode : Erreur - Nombre de valeurs nodales non compatible avec le nombre d'interpolants de l'espace.\n");
     return res;
   }
@@ -92,7 +98,7 @@ double feSpace::interpolateFieldAtQuadNode(std::vector<double> field, int iNode)
 
 double feSpace::interpolateField_rDerivative(std::vector<double> field, double r[3]){
   double res = 0.0;
-  if(field.size() != _nFunctions){
+  if(field.size() != (unsigned) _nFunctions){
     printf(" In feSpace::interpolateField : Erreur - Nombre de valeurs nodales non compatible avec le nombre d'interpolants de l'espace.\n");
     return res;
   }
@@ -103,7 +109,7 @@ double feSpace::interpolateField_rDerivative(std::vector<double> field, double r
 
 double feSpace::interpolateFieldAtQuadNode_rDerivative(std::vector<double> field, int iNode){
   double res = 0.0;
-  if(field.size() != _nFunctions){
+  if(field.size() != (unsigned) _nFunctions){
     printf(" In feSpace::interpolateFieldAtQuadNode : Erreur - Nombre de valeurs nodales non compatible avec le nombre d'interpolants de l'espace.\n");
     return res;
   }

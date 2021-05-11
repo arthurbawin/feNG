@@ -4,17 +4,14 @@ project(feNG)
 ###################################
 # Options
 ###################################
-option(ENABLE_STATIONARY    "Enable stationary solver"    ON )
-option(ENABLE_TRANSIENT     "Enable transient solver"     OFF)
-option(ENABLE_GRAPHICS      "Enable graphics module"      OFF)
-option(ENABLE_INTERPOLATION "Enable interpolation module" OFF)
 option(ENABLE_OPENMP        "Enable OpenMP"               OFF)
-option(ENABLE_MPI           "Enable OpenMP"               ON )
+option(ENABLE_MPI           "Enable MPI"                  ON )
 option(ENABLE_BOOST         "Enable Boost"                OFF)
 option(ENABLE_SUNDIALS      "Enable SUNDIALS"             OFF)
 option(ENABLE_SOPLEX        "Enable SOPLEX"               OFF)
 option(ENABLE_PETSC         "Enable PETSc"                ON )
-option(ENABLE_SANITY_CHECKS "Enable sanity checks"        OFF)
+option(ENABLE_MKL           "Enable MKL"                  OFF)
+option(ENABLE_SANITY_CHECKS "Enable sanity checks"        ON )
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src)
@@ -45,26 +42,33 @@ if ((NOT MSVC) AND CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
 
   # Crash à l'exécution quand on compile en O3 ?
   #add_compile_options("-O3;-ansi;-m64")
+  add_compile_options("$<$<CONFIG:RELEASE>:-ansi;-m64;-O3;-fast>"
+                      "$<$<CONFIG:RELWITHDEBINFO>:-Wall;-ansi;-m64;-O3;-fast;-g>"
+                      "$<$<CONFIG:DEBUG>:-Wall;-Wextra;-ansi;-m64;-O0;-g>"
+                      "-Wall;-Wextra;-O3;-ansi;-m64")
 
   #### Sanity checks
   if(ENABLE_SANITY_CHECKS)
     add_compile_options("-Wall"
                         "-Wextra"
+                        "-Wno-sign-compare"
+                        "-Wno-unused-parameter"
                         "-fno-omit-frame-pointer"
                         "-Wno-missing-field-initializers"
                         "-Wpointer-arith"
                         "-Wcast-align"
-                        "-Wcast-qual"
+                        # "-Wcast-qual"
                         "-Wstrict-aliasing"
                         "-Wpointer-arith"
                         "-Winit-self"
-                        "-Wredundant-decls"
-                        "-fsanitize=address"
-                        "-fsanitize=leak"
-                        "-fsanitize=undefined")
+                        # "-Wredundant-decls"
+                        # "-fsanitize=address"
+                        # "-fsanitize=leak"
+                        # "-fsanitize=undefined"
+                        )
     
-    set(CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} \
-      -fsanitize=address -fsanitize=leak -fsanitize=undefined")
+    # set(CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} \
+    #   -fsanitize=address -fsanitize=leak -fsanitize=undefined")
   endif()
   
 ########################
@@ -146,7 +150,7 @@ if(ENABLE_OPENMP)
     list(APPEND HXT_EXTERNAL_LIBS omp_lib)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Xclang -fopenmp")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Xclang -fopenmp")
-    add_definitions("-D_OPENMP_")
+    add_definitions("-DHAVE_OPENMP")
   else()
     FIND_PACKAGE(OpenMP 4)
     if(OPENMP_FOUND)
@@ -154,7 +158,7 @@ if(ENABLE_OPENMP)
       set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
       set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
       set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
-      add_definitions("-D_OPENMP_")
+      add_definitions("-DHAVE_OPENMP")
     else()
       message(STATUS "OpenMP non trouvé\n")
     endif()
@@ -173,8 +177,29 @@ if(ENABLE_MPI)
   # MESSAGE(STATUS "MPI infos: ${MPI_CFLAGS_OTHER}")
   include_directories(${MPI_CXX_INCLUDE_PATH})
   list(APPEND feNG_EXTERNAL_LIBS ${MPI_CXX_LIBRARIES} ${MPI_CXX_LINK_FLAGS})
-  add_definitions("-D_HAVE_MPI")
+  add_definitions("-DHAVE_MPI")
   MESSAGE(STATUS "MPI found (-:")
+endif()
+
+############################################
+#  MKL
+############################################
+if(ENABLE_MKL)
+  #include(CheckLibraryExists)
+  #include(LibraryUtils)
+  #include(CheckLinkerFlag)
+  if(ENABLE_OPENMP)
+    set(MKL_USE_parallel 1)
+  endif()
+  find_package(MKL REQUIRED)
+  if(MKL_FOUND)
+    message(STATUS "MKL trouve ! (-:")
+    include_directories(${MKL_INCLUDE_DIRS})
+    list(APPEND EF_EXTERNAL_LIBS ${EF_EXTERNAL_LIBS} ${MKL_LIBRARIES})
+    add_definitions("-DHAVE_MKL")
+    else()
+    message(STATUS "MKL non trouve )-:")
+  endif()
 endif()
 
 ############################################
@@ -182,13 +207,19 @@ endif()
 ############################################
 if(ENABLE_PETSC)
   if(NOT ENABLE_MPI)
-    MESSAGE(FATAL_ERROR "PETSs requires MPI : please turn on ENABLE_MPI.")
+    MESSAGE(FATAL_ERROR "PETSc requires MPI : please turn on ENABLE_MPI.")
   endif()
+  MESSAGE(STATUS "petsc_found : ${PETSC_FOUND}")
+  unset(PETSC_FOUND CACHE)
+  MESSAGE(STATUS "petsc_found : ${PETSC_FOUND}")
   set(ENV{PKG_CONFIG_PATH} "$ENV{PKG_CONFIG_PATH}:${PETSC_DIR}/${PETSC_ARCH}/lib/pkgconfig")
+  MESSAGE(STATUS "petsc dir : ${PETSC_DIR}")
+  MESSAGE(STATUS "petsc arch : ${PETSC_ARCH}")
+  MESSAGE(STATUS "pkg config path : $ENV{PKG_CONFIG_PATH}")
   find_package(PkgConfig REQUIRED)
   pkg_check_modules(PETSC REQUIRED petsc)
   include_directories(${PETSC_INCLUDE_DIRS})
-  # MESSAGE(STATUS "petsc infos : ${PETSC_FOUND}")
+  MESSAGE(STATUS "petsc infos : ${PETSC_FOUND}")
   # MESSAGE(STATUS "petsc infos : ${PETSC_LIBRARIES}")
   # MESSAGE(STATUS "petsc infos : ${PETSC_LINK_LIBRARIES}")
   # MESSAGE(STATUS "petsc infos : ${PETSC_LIBRARY_DIRS}")
@@ -198,7 +229,7 @@ if(ENABLE_PETSC)
   # MESSAGE(STATUS "petsc infos : ${PETSC_CFLAGS}")
   # MESSAGE(STATUS "petsc infos : ${PETSC_CFLAGS_OTHER}")
   list(APPEND feNG_EXTERNAL_LIBS ${PETSC_LINK_LIBRARIES} ${PETSC_LDFLAGS})
-  add_definitions("-D_HAVE_PETSC")
+  add_definitions("-DHAVE_PETSC")
   MESSAGE(STATUS "PETSc found (-:")
 endif()
 
@@ -209,7 +240,7 @@ if(ENABLE_BOOST)
   find_package(Boost REQUIRED)
   include_directories(${Boost_INCLUDE_DIRS})
   list(APPEND feNG_EXTERNAL_LIBS ${Boost_LIBRARIES})
-  add_definitions("-D_HAVE_BOOST")
+  add_definitions("-DHAVE_BOOST")
   MESSAGE(STATUS "BOOST found (-:")
 endif()
 
@@ -220,7 +251,7 @@ if(ENABLE_SUNDIALS)
   find_package(SUNDIALS REQUIRED)
   include_directories(${SUNDIALS_INCLUDE_DIRS})
   list(APPEND feNG_EXTERNAL_LIBS ${SUNDIALS_LIBRARIES})
-  add_definitions("-D_HAVE_SUNDIALS")
+  add_definitions("-DHAVE_SUNDIALS")
   MESSAGE(STATUS "SUNDIALS found (-:")
 endif()
 
@@ -229,7 +260,7 @@ endif()
 ############################################
 if(ENABLE_SOPLEX)
   list(APPEND feNG_EXTERNAL_LIBS -lsoplex)
-  add_definitions("-D_HAVE_SOPLEX")
+  add_definitions("-DHAVE_SOPLEX")
   MESSAGE(STATUS "SOPLEX found (-:")
 endif()
 

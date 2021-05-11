@@ -5,8 +5,7 @@
 #include "feMesh.h"
 #include "feBilinearForm.h"
 #include "feSolution.h"
-
-#include "petscksp.h"
+#include "feSolutionContainer.h"
 
 class feLinearSystem{
 
@@ -16,43 +15,32 @@ protected:
   feMetaNumber *_metaNumber;
   feMesh *_mesh;
 
-  PetscInt _nInc;
-  PetscInt _nDofs;
-  Mat _A;
-  Vec _res;
-  Vec _dx;
-
-  KSP ksp;
-  PC preconditioner;
-
   bool recomputeMatrix;
 public:
 	feLinearSystem(std::vector<feBilinearForm*> &formMatrices, std::vector<feBilinearForm*> &formResiduals,
     feMetaNumber *metaNumber, feMesh *mesh)  : _formMatrices(formMatrices), _formResiduals(formResiduals), 
-  _metaNumber(metaNumber), _mesh(mesh), _nInc(metaNumber->getNbUnknowns()), _nDofs(metaNumber->getNbDOFs()),
-  recomputeMatrix(false)
+  _metaNumber(metaNumber), _mesh(mesh), recomputeMatrix(false)
   {
-    
   };
-	~feLinearSystem() {}
+	virtual ~feLinearSystem() {
+  }
 
   bool getRecomputeStatus(){ return recomputeMatrix; }
   void setRecomputeStatus(bool status){ recomputeMatrix = status; }
 
-  void viewMatrix();
-
-  PetscErrorCode initialize(int argc, char** args);
-  PetscErrorCode finalize();
-
-  PetscErrorCode setToZero();
-
-  PetscErrorCode assembleMatrices(feSolution *sol);
-  PetscErrorCode assembleResiduals(feSolution *sol);
-  PetscErrorCode assemble(feSolution *sol);
-
-  PetscErrorCode solve(double *normDx, double *normResidual);
-  void correctSolution(feSolution *sol);
-  PetscErrorCode check();
+  virtual void initialize(){};
+  // virtual void finalize();
+  virtual void setToZero() {};
+  virtual void setMatrixToZero() {};
+  virtual void setResidualToZero() {};
+  virtual void assembleMatrices(feSolution *sol) {};
+  virtual void assembleResiduals(feSolution *sol) {};
+  virtual void assemble(feSolution *sol) {};
+  virtual void solve(double *normDx, double *normResidual) {};
+  virtual void correctSolution(feSolution *sol) {};
+  virtual void assignResidualToDCResidual(feSolutionContainer *solContainer) {};
+  virtual void viewMatrix() {};
+  virtual void printResidual() {};
 };
 
 #endif

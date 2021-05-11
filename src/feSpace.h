@@ -4,9 +4,9 @@
 #include <vector>
 #include <string>
 #include <iostream>
-#include <functional>
 
 #include "feQuadrature.h"
+#include "feFunction.h"
 
 class feMesh;
 class feNumber;
@@ -39,11 +39,10 @@ protected:
   std::vector<double> _sol;
   std::vector<double> _soldot;
 
-  std::function<double(const double, const std::vector<double> &)> _fct;
+  feFunction *_fct;
 
 public:
-	feSpace(class feMesh *mesh = nullptr, std::string fieldID = "", std::string cncGeoID = "",
-    std::function<double(const double, const std::vector<double> &)> fct = nullptr);
+	feSpace(class feMesh *mesh = nullptr, std::string fieldID = "", std::string cncGeoID = "", feFunction *fct = nullptr);
 	virtual ~feSpace() {}
 
   int getDim();
@@ -80,11 +79,12 @@ public:
   std::vector<double> &getQuadratureWeights(){ return _wQuad; }
   std::vector<double> &getQuadraturePoints(){ return _xQuad; }
 
-  double evalFun(const double t, const std::vector<double> &x){ return _fct(t,x); }
+  double evalFun(const double t, const std::vector<double> &x){ return _fct->eval(t,x); }
 
   double interpolateField(std::vector<double> field, double r[3]);
   double interpolateFieldAtQuadNode(std::vector<double> field, int iNode);
   double interpolateSolutionAtQuadNode(int iNode);
+  double interpolateSolutionDotAtQuadNode(int iNode);
   double interpolateField_rDerivative(std::vector<double> field, double r[3]);
   double interpolateFieldAtQuadNode_rDerivative(std::vector<double> field, int iNode);
   double interpolateSolutionAtQuadNode_rDerivative(int iNode);
@@ -105,7 +105,7 @@ public:
     _Lcoor = {1.};
   };
   // Pour la resolution
-	feSpace1DP0(class feMesh *mesh, std::string fieldID, std::string cncGeoID, std::function<double(const double, const std::vector<double> &)> fct)
+	feSpace1DP0(class feMesh *mesh, std::string fieldID, std::string cncGeoID, feFunction *fct)
     : feSpace(mesh, fieldID, cncGeoID, fct){
     _nFunctions = 1;
     _adr.resize(_nFunctions);
@@ -133,7 +133,7 @@ public:
     _nFunctions = 2;
     _Lcoor = {-1., 1.};
   };
-  feSpace1DP1(class feMesh *mesh, std::string fieldID, std::string cncGeoID, std::function<double(const double, const std::vector<double> &)> fct) 
+  feSpace1DP1(class feMesh *mesh, std::string fieldID, std::string cncGeoID, feFunction *fct) 
     : feSpace(mesh, fieldID, cncGeoID, fct){
     _nFunctions = 2;
     _adr.resize(_nFunctions);
@@ -159,7 +159,7 @@ public:
     _nFunctions = 3;
     _Lcoor = {-1., 1., 0.};
   };
-  feSpace1DP2(class feMesh *mesh, std::string fieldID, std::string cncGeoID, std::function<double(const double, const std::vector<double> &)> fct) 
+  feSpace1DP2(class feMesh *mesh, std::string fieldID, std::string cncGeoID, feFunction *fct) 
     : feSpace(mesh, fieldID, cncGeoID, fct){
     _nFunctions = 3;
     _adr.resize(_nFunctions);
@@ -185,7 +185,7 @@ public:
     _nFunctions = 4;
     _Lcoor = {-1., 1., -1./3., 1./3.}; //TODO : écrire en long ?
   };
-  feSpace1DP3(class feMesh *mesh, std::string fieldID, std::string cncGeoID, std::function<double(const double, const std::vector<double> &)> fct) 
+  feSpace1DP3(class feMesh *mesh, std::string fieldID, std::string cncGeoID, feFunction *fct) 
     : feSpace(mesh, fieldID, cncGeoID, fct){
     _nFunctions = 4;
     _adr.resize(_nFunctions);
