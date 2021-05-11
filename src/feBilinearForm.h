@@ -1,6 +1,7 @@
 #ifndef _FEBILINEARFORM_
 #define _FEBILINEARFORM_
 
+#include "feNG.h"
 #include "feMesh.h"
 #include "feSpace.h"
 #include "feSysElm.h"
@@ -27,21 +28,17 @@ protected:
 
   std::vector<int> _iVar;
   std::vector<int> _jVar;
-  int _niElm;
-  int _njElm;
+  feInt _niElm;
+  feInt _njElm;
   std::vector<int> _adrI;
   std::vector<int> _adrJ;
 
-  std::vector<double> _Ae;
-  std::vector<double> _Be;
+  double** _Ae;
+  double* _Be;
 
 public:
 	feBilinearForm(std::vector<feSpace*> &space, feMesh *mesh, int nQuadraturePoints, feSysElm *sysElm);
-	~feBilinearForm() {
-    // if(_sysElm) delete _sysElm;
-    // freeAE(_Ae);
-    // freeBE(_Be);
-  }
+	~feBilinearForm();
 
   int getCncGeoTag(){ return _cncGeoTag; }
 
@@ -50,8 +47,8 @@ public:
   std::vector<int> &getAdrI(){ return _adrI; }
   std::vector<int> &getAdrJ(){ return _adrJ; }
 
-  std::vector<double> &getAe(){ return _Ae; }
-  std::vector<double> &getBe(){ return _Be; }
+  double** getAe(){ return _Ae; }
+  double*  getBe(){ return _Be; }
 
   void initialize_vadij_only(feMetaNumber *metaNumber, int numElem);
   void initialize(feMetaNumber *metaNumber, feMesh *mesh, feSolution *sol, int numElem);
@@ -70,18 +67,9 @@ public:
     printf("_jVar :"); for(auto val : _jVar) std::cout<<val<<" "; std::cout<<std::endl;
     printf("_adrI :"); for(auto val : _adrI) std::cout<<val<<" "; std::cout<<std::endl;
     printf("_adrJ :"); for(auto val : _adrJ)  std::cout<<val<<" "; std::cout<<std::endl;
-    printf("_Ae :"); for(auto val : _Ae) std::cout<<val<<" "; std::cout<<std::endl;
-    printf("_Be :"); for(auto val : _Be) std::cout<<val<<" "; std::cout<<std::endl;
+    // printf("_Ae :"); for(auto val : _Ae) std::cout<<val<<" "; std::cout<<std::endl;
+    // printf("_Be :"); for(auto val : _Be) std::cout<<val<<" "; std::cout<<std::endl;
   }
-
-// private:
-//   void     zeroAE(FEint M, FEint N, double** AE);
-//   double** allocateAE(FEint M, FEint N);
-//   void     freeAE(double** AE);
-//   double*  allocateBE(EFint M);
-//   void     freeBE(double* BE);
-//   void     zero(FEint M, double* BE);
-
 };
 
 #endif

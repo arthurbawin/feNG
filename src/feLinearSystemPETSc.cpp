@@ -78,7 +78,8 @@ void feLinearSystemPETSc::assembleMatrices(feSolution *sol){
       int nElm = _mesh->getNbElm(f->getCncGeoTag());
       for(int iElm = 0; iElm < nElm; ++iElm){
         f->computeMatrix(_metaNumber, _mesh, sol, iElm); // Matrice elementaire
-        std::vector<double> Ae = f->getAe();
+        // std::vector<double> Ae = f->getAe();
+        double** Ae = f->getAe();
         niElm = f->getNiElm();
         njElm = f->getNjElm();
         adrI = f->getAdrI();
@@ -89,7 +90,8 @@ void feLinearSystemPETSc::assembleMatrices(feSolution *sol){
             for(int j = 0; j < njElm; ++j){
               J = adrJ[j];
               if(J < _nInc){
-                ierr = MatSetValue(_A, I, J, Ae[njElm*i+j], ADD_VALUES); // TODO : assigner par blocs
+                // ierr = MatSetValue(_A, I, J, Ae[njElm*i+j], ADD_VALUES); // TODO : assigner par blocs
+                ierr = MatSetValue(_A, I, J, Ae[i][j], ADD_VALUES); // TODO : assigner par blocs
                 CHKERRABORT(PETSC_COMM_WORLD, ierr);
               }
             }
@@ -112,7 +114,8 @@ void feLinearSystemPETSc::assembleResiduals(feSolution *sol){
     int nElm = _mesh->getNbElm(f->getCncGeoTag());
     for(int iElm = 0; iElm < nElm; ++iElm){
       f->computeResidual(_metaNumber, _mesh, sol, iElm); // Residu elementaire
-      std::vector<double> Be = f->getBe();
+      // std::vector<double> Be = f->getBe();
+      double* Be = f->getBe();
       niElm = f->getNiElm();
       adrI = f->getAdrI();
       for(int i = 0; i < niElm; ++i){

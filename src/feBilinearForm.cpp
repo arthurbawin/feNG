@@ -1,5 +1,54 @@
 #include "feBilinearForm.h"
 
+static inline void allocateMatrix(feInt m, feInt n, double*** A){
+  *A = (double**) calloc(m, sizeof **A);
+  if(*A == nullptr){
+    printf("In feBilinearForm::allocateMatrix : Error - NULL pointer.\n");
+    return;
+  }
+  for(feInt i = 0; i < m; ++i)
+    (*A)[i] = (double*) calloc(n, sizeof ***A);
+} 
+
+static inline void setMatrixToZero(feInt m, feInt n, double*** A){
+  for(feInt i = 0; i < m; ++i)
+    for(feInt j = 0; j < n; ++j)
+      (*A)[i][j] = 0.0;
+};
+
+static inline void printMatrix(feInt m, feInt n, double*** A){
+  for(feInt i = 0; i < m; ++i)
+    for(feInt j = 0; j < n; ++j)
+      std::cout<<"A["<<i<<"]["<<j<<"] = "<<(*A)[i][j]<<std::endl;
+};
+
+static inline void freeMatrix(feInt m, double*** A){
+  for(feInt i = 0; i < m; i++)
+    free((*A)[i]);
+  free(*A); 
+}
+
+static inline void allocateResidual(feInt m, double** b){
+  *b = (double*) calloc(m, sizeof *b);
+  if(*b == nullptr){
+    printf("In feBilinearForm::allocateResidual : Error - NULL pointer.\n");
+  }
+} 
+
+static inline void setResidualToZero(feInt m, double** b){
+  for(feInt i = 0; i < m; ++i)
+    (*b)[i] = 0.0;
+};
+
+static inline void printResidual(feInt m, double** b){
+  for(feInt i = 0; i < m; ++i)
+    std::cout<<"res["<<i<<"] = "<<(*b)[i]<<std::endl;
+};
+
+static inline void freeResidual(double** b){
+  free(*b); 
+}
+
 feBilinearForm::feBilinearForm(std::vector<feSpace*> &space, feMesh *mesh, int nQuadraturePoints, feSysElm *sysElm)
   : _sysElm(sysElm), _intSpace(space), _cncGeoTag(space[0]->getCncGeoTag()),
   _geoSpace(mesh->getCncGeoByTag(_cncGeoTag)->getFeSpace()),
@@ -36,9 +85,15 @@ feBilinearForm::feBilinearForm(std::vector<feSpace*> &space, feMesh *mesh, int n
   _adrI.resize(_niElm);
   _adrJ.resize(_njElm);
 
-  _Ae.resize(_niElm * _njElm);
-  _Be.resize(_niElm);
+  allocateMatrix(_niElm, _njElm, &_Ae);
+  allocateResidual(_niElm, &_Be);
 };
+
+feBilinearForm::~feBilinearForm(){
+    // if(_sysElm) delete _sysElm;
+    freeMatrix(_niElm, &_Ae);
+    freeResidual(&_Be);
+  }
 
 void feBilinearForm::initialize_vadij_only(feMetaNumber *metaNumber, int numElem){
   for(feSpace *fS : _intSpace){
@@ -82,45 +137,12 @@ void feBilinearForm::initialize(feMetaNumber *metaNumber, feMesh *mesh, feSoluti
 
 void feBilinearForm::computeMatrix(feMetaNumber *metaNumber, feMesh *mesh, feSolution *sol, int numElem){
   this->initialize(metaNumber, mesh, sol, numElem);
-  for(int i = 0; i < _niElm * _njElm; ++i)
-    _Ae[i] = 0.0;
+  setMatrixToZero(_niElm, _njElm, &_Ae);
   _sysElm->computeAe(_intSpace, _geoSpace, _geoCoord, sol->getC0(), sol->getCurrentTime(), _Ae);
 }
 
 void feBilinearForm::computeResidual(feMetaNumber *metaNumber, feMesh *mesh, feSolution *sol, int numElem){
   this->initialize(metaNumber, mesh, sol, numElem);
-  for(int i = 0; i < _niElm; ++i)
-    _Be[i] = 0.0;
+  setResidualToZero(_niElm, &_Be);
   _sysElm->computeBe(_intSpace, _geoSpace, _geoCoord, sol->getC0(), sol->getCurrentTime(), _Be);
 }
-
-// =======================================================
-// Méthodes privées -- pour gérer l'allocation de AE er BE
-// =======================================================
-
-// void      zeroAE(FEint M, FEint N, double** AE) {
-//       for(FEint i=0;i<M*N;i++) *AE[i]=0;
-// };
-
-// double** feBilinearForm::allocateAE(FEint M, FEint N) {
-//       double*  p  = new double  [M*N];
-//       double** ae = new double* [M];
-//       double*  q  = p;
-//       for(FEint i=0;i<M;i++, q+N) ae[i] = q;
-//       return ae;
-// };
-  
-// void     feBilinearForm::freeAE(double** AE) {
-//       delete [] AE[0];
-//       delete [] AE;
-// };
-
-// double*  allocateBE(EFint M) { 
-//       return new double[M];
-// };
-// void     freeBE(double* BE) {
-//       delete [] BE;
-// };
-// void     zero(FEint M, double* BE) {
-//       for(FEint i=0;i<M;i++) BE[i]=0; 
-// };
