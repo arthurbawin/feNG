@@ -13,23 +13,12 @@ typedef struct feTol{
   double maxIter;
 } feTolerances;
 
-double solveStationary(feTolerances tol, feMetaNumber *metaNumber, feLinearSystem *linearSystem, 
+void solveStationary(double *normL2, feTolerances tol, feMetaNumber *metaNumber, feLinearSystem *linearSystem, 
   std::vector<feBilinearForm*> &formMatrices, std::vector<feBilinearForm*> &formResiduals,
   feSolution *sol, feNorm *norm, feMesh *mesh);
 
-// class feSolution{
-
-// protected:
-
-// public:
-// 	feSolution()
-// 	{
-
-// 	};
-// 	~feSolution() {
-//   }
-
-
-// };
+void solveBDF2NL(std::vector<double> &normL2, feTolerances tol, feMetaNumber *metaNumber, feLinearSystem *linearSystem, 
+  std::vector<feBilinearForm*> &formMatrices, std::vector<feBilinearForm*> &formResiduals,
+  feSolution *sol, feNorm *norm, feMesh *mesh);
 
 #endif

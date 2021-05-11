@@ -2,7 +2,7 @@
 
 feNumber::feNumber(feMesh *mesh) : _nNod(mesh->getNbNodes()){
   _nElm = 0;
-  for(int i = 0; i < mesh->getCncGeo().size(); ++i)
+  for(size_t i = 0; i < mesh->getCncGeo().size(); ++i)
     _nElm += mesh->getCncGeo()[i]->getNbElm();
 
   _nDOFVertices.resize(_nNod);
@@ -18,7 +18,7 @@ int feNumber::getDDLSommet(feMesh *mesh, std::string cncGeoID, int numElem, int 
 
 int feNumber::getDDLElement(feMesh *mesh, std::string cncGeoID, int numElem, int numDOF){
   int elem = mesh->getElement(cncGeoID, numElem);
-  return _numberingElements[_maxDOFperElem * numElem + numDOF];
+  return _numberingElements[_maxDOFperElem * elem + numDOF];
 }
 
 void feNumber::defDDLSommet(feMesh *mesh, std::string cncGeoID, int numElem, int numVertex){

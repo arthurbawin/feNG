@@ -9,8 +9,8 @@
 class feNorm{
 
 protected:
-  int cncGeoTag;
   feSpace *_intSpace;
+  int cncGeoTag;
   feSpace *geoSpace;
   int nElmGeo;
   int dim;

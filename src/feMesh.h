@@ -25,7 +25,7 @@ protected:
 
 public:
 	feMesh(int nNod, int dim, int nCncGeo, std::string ID)
-    : _nNod(nNod), _dim(dim), _nCncGeo(nCncGeo), _ID(ID) 
+    : _ID(ID), _dim(dim), _nNod(nNod), _nCncGeo(nCncGeo)
   {
 
 	};

@@ -39,6 +39,8 @@ public:
 	feBilinearForm(std::vector<feSpace*> &space, feMesh *mesh, int nQuadraturePoints, feSysElm *sysElm);
 	~feBilinearForm() {
     // if(_sysElm) delete _sysElm;
+    // freeAE(_Ae);
+    // freeBE(_Be);
   }
 
   int getCncGeoTag(){ return _cncGeoTag; }
@@ -51,10 +53,11 @@ public:
   std::vector<double> &getAe(){ return _Ae; }
   std::vector<double> &getBe(){ return _Be; }
 
+  void initialize_vadij_only(feMetaNumber *metaNumber, int numElem);
   void initialize(feMetaNumber *metaNumber, feMesh *mesh, feSolution *sol, int numElem);
 
   void computeMatrix(feMetaNumber *metaNumber, feMesh *mesh, feSolution *sol, int numElem);
-  void computeRHS(feMetaNumber *metaNumber, feMesh *mesh, feSolution *sol, int numElem);
+  void computeResidual(feMetaNumber *metaNumber, feMesh *mesh, feSolution *sol, int numElem);
 
   void printInfo(){
     printf("============== Bilinear form ==============\n");
@@ -70,6 +73,14 @@ public:
     printf("_Ae :"); for(auto val : _Ae) std::cout<<val<<" "; std::cout<<std::endl;
     printf("_Be :"); for(auto val : _Be) std::cout<<val<<" "; std::cout<<std::endl;
   }
+
+// private:
+//   void     zeroAE(FEint M, FEint N, double** AE);
+//   double** allocateAE(FEint M, FEint N);
+//   void     freeAE(double** AE);
+//   double*  allocateBE(EFint M);
+//   void     freeBE(double* BE);
+//   void     zero(FEint M, double* BE);
 
 };
 

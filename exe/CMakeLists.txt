@@ -1,17 +1,8 @@
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src)
 
-if(ENABLE_STATIONARY)
-	add_subdirectory(S)
-endif()
+feNG_add_executable(testStationnaire testStationnaire.cpp "")
+feNG_add_executable(testBDF2 testBDF2.cpp "")
+feNG_add_executable(testCSR testCSR.cpp "")
 
-if(ENABLE_TRANSIENT)
-	add_subdirectory(T)
-endif()
-
-if(ENABLE_GRAPHICS)
-	add_subdirectory(G)
-endif()
-
-if(ENABLE_INTERPOLATION)
-	add_subdirectory(I)
-endif()
+#target_include_directories(feNGt PUBLIC ${MKL_INCLUDE_DIRS})
+#target_link_libraries(feNGs ${MKL_LIBRARIES})
