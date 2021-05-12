@@ -1,4 +1,5 @@
 #include "feBilinearForm.h"
+#include "feQuadrature.h"
 
 feBilinearForm::feBilinearForm(std::vector<feSpace*> &space, feMesh *mesh, int nQuadraturePoints, feSysElm *sysElm)
   : _sysElm(sysElm), _intSpace(space), _cncGeoTag(space[0]->getCncGeoTag()),
@@ -18,7 +19,7 @@ feBilinearForm::feBilinearForm(std::vector<feSpace*> &space, feMesh *mesh, int n
   }
   
   // (Re-)initialize the interpolation functions at quadrature nodes
-  feQuadrature *rule = new feQuadrature(_nQuad);  // TODO : change this, choose the degree
+  feQuadrature2 *rule = new feQuadrature2(_nQuad);  // TODO : change this, choose the degree
   for(feSpace *fS : _intSpace)
     fS->setQuadratureRule(rule);
   _geoSpace->setQuadratureRule(rule);

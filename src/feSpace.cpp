@@ -2,6 +2,7 @@
 #include "feMesh.h"
 #include "feNumber.h"
 #include "feSolution.h"
+#include "feQuadrature.h"
 
 feSpace::feSpace(class feMesh *mesh, std::string fieldID, std::string cncGeoID, feFunction *fct)
   : _mesh(mesh), _fieldID(fieldID), _fieldTag(-1), _cncGeoID(cncGeoID), _cncGeoTag(-1), 
@@ -23,7 +24,7 @@ int feSpace::getNbNodePerElem(){
   return _mesh->getNbNodePerElem(_cncGeoTag);
 }
 
-void feSpace::setQuadratureRule(feQuadrature *quad){
+void feSpace::setQuadratureRule(feQuadrature2 *quad){
   _nQuad = (_nQuad != -1) ? _nQuad : quad->getNQuad();
   _wQuad = quad->getWeights();
   _xQuad = quad->getPoints();

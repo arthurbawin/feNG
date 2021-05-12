@@ -4,13 +4,16 @@
 #include <vector>
 #include <string>
 #include <iostream>
+#include <cmath>
 
 #include "feQuadrature.h"
 #include "feFunction.h"
 
+
 class feMesh;
 class feNumber;
 class feSolution;
+
 
 /* Un feSpace est utilisé
   - soit pour définir les interpolants géométriques sur une partie d'un maillage (sur une cncGeo)
@@ -74,7 +77,7 @@ public:
 
   int getAddressingVectorAt(int node){ return _adr[node]; }
 
-  void setQuadratureRule(feQuadrature *quad);
+  void setQuadratureRule(feQuadrature2 *quad);
   int getNbQuadPoints(){ return _nQuad; }
   std::vector<double> &getQuadratureWeights(){ return _wQuad; }
   std::vector<double> &getQuadraturePoints(){ return _xQuad; }
