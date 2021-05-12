@@ -3,7 +3,7 @@
 #include "feNumber.h"
 #include "feSolution.h"
 
-feSpace::feSpace(class feMesh *mesh, std::string fieldID, std::string cncGeoID, feFunction *fct)
+feSpace::feSpace(feMesh *mesh, std::string fieldID, std::string cncGeoID, feFunction *fct)
   : _mesh(mesh), _fieldID(fieldID), _fieldTag(-1), _cncGeoID(cncGeoID), _cncGeoTag(-1), 
   _nQuad(-1), _nFunctions(0), _fct(fct)
 {

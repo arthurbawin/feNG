@@ -42,7 +42,7 @@ protected:
   feFunction *_fct;
 
 public:
-	feSpace(class feMesh *mesh = nullptr, std::string fieldID = "", std::string cncGeoID = "", feFunction *fct = nullptr);
+	feSpace(feMesh *mesh = nullptr, std::string fieldID = "", std::string cncGeoID = "", feFunction *fct = nullptr);
 	virtual ~feSpace() {}
 
   int getDim();
@@ -105,7 +105,7 @@ public:
     _Lcoor = {1.};
   };
   // Pour la resolution
-	feSpace1DP0(class feMesh *mesh, std::string fieldID, std::string cncGeoID, feFunction *fct)
+	feSpace1DP0(feMesh *mesh, std::string fieldID, std::string cncGeoID, feFunction *fct)
     : feSpace(mesh, fieldID, cncGeoID, fct){
     _nFunctions = 1;
     _adr.resize(_nFunctions);
@@ -133,7 +133,7 @@ public:
     _nFunctions = 2;
     _Lcoor = {-1., 1.};
   };
-  feSpace1DP1(class feMesh *mesh, std::string fieldID, std::string cncGeoID, feFunction *fct) 
+  feSpace1DP1(feMesh *mesh, std::string fieldID, std::string cncGeoID, feFunction *fct) 
     : feSpace(mesh, fieldID, cncGeoID, fct){
     _nFunctions = 2;
     _adr.resize(_nFunctions);
@@ -159,7 +159,7 @@ public:
     _nFunctions = 3;
     _Lcoor = {-1., 1., 0.};
   };
-  feSpace1DP2(class feMesh *mesh, std::string fieldID, std::string cncGeoID, feFunction *fct) 
+  feSpace1DP2(feMesh *mesh, std::string fieldID, std::string cncGeoID, feFunction *fct) 
     : feSpace(mesh, fieldID, cncGeoID, fct){
     _nFunctions = 3;
     _adr.resize(_nFunctions);
@@ -185,7 +185,7 @@ public:
     _nFunctions = 4;
     _Lcoor = {-1., 1., -1./3., 1./3.}; //TODO : écrire en long ?
   };
-  feSpace1DP3(class feMesh *mesh, std::string fieldID, std::string cncGeoID, feFunction *fct) 
+  feSpace1DP3(feMesh *mesh, std::string fieldID, std::string cncGeoID, feFunction *fct) 
     : feSpace(mesh, fieldID, cncGeoID, fct){
     _nFunctions = 4;
     _adr.resize(_nFunctions);

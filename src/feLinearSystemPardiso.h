@@ -27,6 +27,7 @@ public:
   virtual void solve(double *normDx, double *normResidual);
   virtual void correctSolution(feSolution *sol);
   virtual void assignResidualToDCResidual(feSolutionContainer *solContainer);
+  virtual void applyCorrectionToResidual(feSolutionContainer *solContainer);
   virtual void viewMatrix();
   virtual void printResidual();
 };

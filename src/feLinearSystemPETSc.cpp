@@ -143,13 +143,15 @@ void feLinearSystemPETSc::solve(double *normDx, double *normResidual){
   // PetscPrintf(PETSC_COMM_WORLD,"Iterations %D\n",its);
   ierr = VecNorm(_res, NORM_2, normResidual); CHKERRABORT(PETSC_COMM_WORLD, ierr);
   ierr = VecNorm( _dx, NORM_2, normDx);       CHKERRABORT(PETSC_COMM_WORLD, ierr);
+  // TODO : Prendre la norme max pour tester
 }
 
 void feLinearSystemPETSc::correctSolution(feSolution *sol){
+  std::vector<double> &_sol = sol->getSolutionReference();
   PetscScalar *array;
   VecGetArray(_dx, &array);
   for(int i = 0; i < _nInc; ++i)
-    sol->incrementSolAtDOF(i, array[i]);
+    _sol[i] += array[i];
   VecRestoreArray(_dx, &array);
 }
 
@@ -158,6 +160,14 @@ void feLinearSystemPETSc::assignResidualToDCResidual(feSolutionContainer *solCon
   VecGetArray(_res, &array);
   for(int i = 0; i < _nInc; ++i)
     solContainer->_fResidual[0][i] = array[i];
+  VecRestoreArray(_res, &array);
+}
+
+void feLinearSystemPETSc::applyCorrectionToResidual(double coeff, std::vector<double> &d){
+  PetscScalar *array;
+  VecGetArray(_res, &array);
+  for(int i = 0; i < _nInc; ++i)
+    array[i] += coeff * d[i];
   VecRestoreArray(_res, &array);
 }
 

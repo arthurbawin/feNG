@@ -59,6 +59,8 @@ public:
   int getElement(int cncGeoTag, int numElem);
   feSpace* getGeometricSpace(std::string cncGeoID);
   feSpace* getGeometricSpace(int cncGeoTag);
+
+  void printInfo();
 };
 
 class feMesh1DP1 : public feMesh{
@@ -74,28 +76,23 @@ protected:
 
 public:
   feMesh1DP1(double xA, double xB, int nElm, std::string bndA_ID, std::string bndB_ID, std::string domID);
-  virtual ~feMesh1DP1() {
-    for(feCncGeo *cnc : _cncGeo){
-      delete cnc->getFeSpace();
-      delete cnc;
-    }
-  }
+  virtual ~feMesh1DP1();
+};
 
-  void printInfo(){
-    std::cout<<"Nombre total d'elements : "<<_nTotalElm<<std::endl;
-    std::cout<<"Nombre de connectivites : "<<_nCncGeo<<std::endl;
-    for(feCncGeo *cnc : _cncGeo){
-      std::cout<< "CncGeo "<<cnc->getID()<<std::endl;
-      for(int i = 0; i < cnc->getNbElm(); ++i)
-        std::cout<< cnc->getGlobalConnectivity(i) << std::endl;
-    }
-    for(feCncGeo *cnc : _cncGeo){
-      std::cout<< "CncGeo "<<cnc->getID()<<std::endl;
-      for(int i = 0; i < cnc->getNbElm(); ++i)
-        std::cout<< cnc->getGlobalConnectivity(i) << std::endl;
-    }
-  }
+class feMesh2DP1 : public feMesh{
 
+protected:
+  int _nElm;
+  double _xA, _xB;
+  std::string _bndA_ID, _bndB_ID, _domID;
+  int _nElmDomain;
+  int _nElmBoundary;
+  int _nNodDomain;
+  int _nNodBoundary;
+  
+public:
+  feMesh2DP1();
+  virtual ~feMesh2DP1();
 };
 
 #endif

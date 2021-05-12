@@ -42,11 +42,12 @@ int main(int argc, char** argv){
   feFunction *funSource = new feFunction(fSource, par);
 
   int nIter = 5;
-  std::vector<double> normL2(2*nIter, 0.0);
+  std::vector<double> maxNormL2BDF(2*nIter, 0.0);
+  std::vector<double> maxNormL2DC3(2*nIter, 0.0);
   std::vector<int> nElm(nIter, 0);
 
   for(int iter = 0; iter < nIter; ++iter){
-    nElm[iter] = 20 * pow(2, iter);
+    nElm[iter] = 40 * pow(2, iter);
     // Maillage
     feMesh1DP1 *mesh = new feMesh1DP1(xa,xb,nElm[iter],"BXA","BXB","M1D");
     // Espaces d'interpolation
@@ -60,7 +61,7 @@ int main(int argc, char** argv){
     // Solution
     double t0 = 0.;
     double t1 = 1.;
-    int nTimeSteps = 20 * pow(2, iter);
+    int nTimeSteps = 40 * pow(2, iter);
     feSolution *sol = new feSolution(mesh, fespace, feEssBC, metaNumber);
     sol->initializeTemporalSolution(t0,t1,nTimeSteps);
     sol->initializeUnknowns(mesh, metaNumber);
@@ -81,14 +82,14 @@ int main(int argc, char** argv){
     feNorm *norm = new feNorm(&U_M1D, mesh, nQuad);
     // Systeme lineaire
     feLinearSystemPETSc *linearSystem = new feLinearSystemPETSc(argc, argv, formMatrices, formResiduals, metaNumber, mesh);
-#ifdef HAVE_PETSC
     linearSystem->initialize();
     // Resolution
     feTolerances tol{1e-10, 1e-10, 10};
     std::vector<double> normL2BDF(nTimeSteps,0.0);
-    solveBDF2(normL2BDF, tol, metaNumber, linearSystem, formMatrices, formResiduals, sol, norm, mesh);
-    normL2[2*iter] = *std::max_element(normL2BDF.begin(), normL2BDF.end());
-#endif
+    std::vector<double> normL2DC3(nTimeSteps,0.0);
+    solveDC3(normL2BDF, normL2DC3, tol, metaNumber, linearSystem, formMatrices, formResiduals, sol, norm, mesh);
+    maxNormL2BDF[2*iter] = *std::max_element(normL2BDF.begin(), normL2BDF.end());
+    maxNormL2DC3[2*iter] = *std::max_element(normL2DC3.begin(), normL2DC3.end());
 
     delete norm;
     delete linearSystem;
@@ -104,11 +105,12 @@ int main(int argc, char** argv){
 
   // Calcul du taux de convergence
   for(int i = 1; i < nIter; ++i){
-    normL2[2*i+1] = log(normL2[2*(i-1)]/normL2[2*i])/log(2.);
+    maxNormL2BDF[2*i+1] = log(maxNormL2BDF[2*(i-1)]/maxNormL2BDF[2*i])/log(2.);
+    maxNormL2DC3[2*i+1] = log(maxNormL2DC3[2*(i-1)]/maxNormL2DC3[2*i])/log(2.);
   }
-  printf("%12s \t %12s \t %12s\n", "nElm", "||E||", "Taux BDF2");
+  printf("%12s \t %12s \t %12s\t %12s \t %12s\n", "nElm", "||E-BDF||", "Taux BDF2", "||E-DC3||", "Taux DC3");
   for(int i = 0; i < nIter; ++i)
-    printf("%12d \t %12.6e \t %12.6e\n", nElm[i], normL2[2*i], normL2[2*i+1]);
+    printf("%12d \t %12.6e \t %12.6e\t %12.6e \t %12.6e\n", nElm[i], maxNormL2BDF[2*i], maxNormL2BDF[2*i+1], maxNormL2DC3[2*i], maxNormL2DC3[2*i+1]);
 
   return 0;
 }

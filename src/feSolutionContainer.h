@@ -5,14 +5,16 @@
 #include "feSolution.h"
 #include "feMesh.h"
 
+class feLinearSystem;
+
 class feSolutionContainer{
 protected:
   int _nDofs; // NDDL
   int _nSol;
   std::vector<double> _t; // TEMPS
-  std::vector<double> _d;
 public:
   std::vector<double> _cn;
+  std::vector<double> _d;
   std::vector<std::vector<double>> _sol; // U
   std::vector<std::vector<double>> _fResidual; // F
 public:
@@ -25,7 +27,7 @@ public:
   void rotate(double dt);
   void setSol(int iSol, std::vector<double> sol){ _sol[iSol] = sol; }
   // double getSol(int iSol, int iDOF){ return _sol[iSol][iDOF]; }
-  virtual void computeSolTimeDerivative(feSolution *sol){};
+  virtual void computeSolTimeDerivative(feSolution *sol, feLinearSystem *linearSystem){};
 };
 
 class feStationarySolution : public feSolutionContainer{
@@ -34,7 +36,7 @@ public:
   feStationarySolution(int nSol, double tn, feMetaNumber *metaNumber)
     : feSolutionContainer(nSol,tn,metaNumber){};
   virtual ~feStationarySolution() {}
-  virtual void computeSolTimeDerivative(feSolution *sol);
+  virtual void computeSolTimeDerivative(feSolution *sol, feLinearSystem *linearSystem);
 };
 
 class feSolutionBDF2 : public feSolutionContainer{
@@ -43,7 +45,7 @@ public:
   feSolutionBDF2(int nSol, double tn, feMetaNumber *metaNumber)
     : feSolutionContainer(nSol,tn,metaNumber){};
   virtual ~feSolutionBDF2() {}
-  virtual void computeSolTimeDerivative(feSolution *sol);
+  virtual void computeSolTimeDerivative(feSolution *sol, feLinearSystem *linearSystem);
 };
 
 class feSolutionDCF : public feSolutionContainer{
@@ -52,7 +54,7 @@ public:
   feSolutionDCF(int nSol, double tn, feMetaNumber *metaNumber)
     : feSolutionContainer(nSol,tn,metaNumber){};
   virtual ~feSolutionDCF() {}
-  virtual void computeSolTimeDerivative(feSolution *sol);
+  virtual void computeSolTimeDerivative(feSolution *sol, feLinearSystem *linearSystem);
 };
 
 void initializeBDF2(feSolution *sol, feMetaNumber *metaNumber, feMesh *mesh, 

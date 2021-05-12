@@ -17,8 +17,12 @@ void solveStationary(double *normL2, feTolerances tol, feMetaNumber *metaNumber,
   std::vector<feBilinearForm*> &formMatrices, std::vector<feBilinearForm*> &formResiduals,
   feSolution *sol, feNorm *norm, feMesh *mesh);
 
-void solveBDF2NL(std::vector<double> &normL2, feTolerances tol, feMetaNumber *metaNumber, feLinearSystem *linearSystem, 
+void solveBDF2(std::vector<double> &normL2, feTolerances tol, feMetaNumber *metaNumber, feLinearSystem *linearSystem, 
   std::vector<feBilinearForm*> &formMatrices, std::vector<feBilinearForm*> &formResiduals,
+  feSolution *sol, feNorm *norm, feMesh *mesh);
+
+void solveDC3(std::vector<double> &normL2BDF2, std::vector<double> &normL2DC3, feTolerances tol, feMetaNumber *metaNumber, 
+	feLinearSystem *linearSystem, std::vector<feBilinearForm*> &formMatrices, std::vector<feBilinearForm*> &formResiduals,
   feSolution *sol, feNorm *norm, feMesh *mesh);
 
 #endif
