@@ -2,6 +2,7 @@
 #define _FEQUADRATURE_
 
 #include <vector>
+#include <cstdio>
 
 class feQuadrature{
 
@@ -12,17 +13,7 @@ protected:
 
 public:
 	feQuadrature(int nQuad) : _nQuad(nQuad){
-    switch(nQuad){
-      case 2:
-        _w = {1.,1.};
-        _x = {5.773502691896257e-01,-5.773502691896257e-01};
-        break;
-      case 3:
-        _w = {5.555555555555544e-01, 8.888888888888888e-01, 5.555555555555544e-01};
-        _x = {7.745966692414834e-01, 0.0                  ,-7.745966692414834e-01};
-        break;
-      
-    }
+    
 	};
 	virtual ~feQuadrature() {}
 
@@ -34,17 +25,21 @@ public:
 class feQuadrature2 : public feQuadrature{
 public:
     feQuadrature2 ( int nQuad) : feQuadrature(nQuad) {
-        calculateWeightAndRoot();
+      
+      _w.resize(nQuad+1);
+      _x.resize(nQuad+1);
+
+      calculateWeightAndRoot();
+      for(int i=0; i<nQuad;++i){
+        _w[i]=_w[i+1];
+        _x[i]=_x[i+1];
+
+      }
+      _w.resize(nQuad);
+      _x.resize(nQuad);
     }
     ~feQuadrature2() {}
 
-    
-  
-    std::vector<double> _w;
-    std::vector<double> _x;
-    // std::vector<double> mWeight;
-    // std::vector<double> mRoot;
-    int _nQuad;
 
 
     const double EPSILON =1e-15;
