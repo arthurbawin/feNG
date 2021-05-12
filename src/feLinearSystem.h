@@ -30,7 +30,7 @@ public:
 
   virtual void initialize(){};
   // virtual void finalize();
-  virtual void setToZero() {};
+  virtual void setToZero() = 0;
   virtual void setMatrixToZero() {};
   virtual void setResidualToZero() {};
   virtual void assembleMatrices(feSolution *sol) {};
@@ -39,6 +39,7 @@ public:
   virtual void solve(double *normDx, double *normResidual) {};
   virtual void correctSolution(feSolution *sol) {};
   virtual void assignResidualToDCResidual(feSolutionContainer *solContainer) {};
+  virtual void applyCorrectionToResidual(double coeff, std::vector<double> &d) {};
   virtual void viewMatrix() {};
   virtual void printResidual() {};
 };

@@ -84,6 +84,21 @@ feSpace* feMesh::getGeometricSpace(int cncGeoTag){
   return getCncGeoByTag(cncGeoTag)->getFeSpace();
 }
 
+void feMesh::printInfo(){
+  std::cout<<"Nombre total d'elements : "<<_nTotalElm<<std::endl;
+  std::cout<<"Nombre de connectivites : "<<_nCncGeo<<std::endl;
+  for(feCncGeo *cnc : _cncGeo){
+    std::cout<< "CncGeo "<<cnc->getID()<<std::endl;
+    for(int i = 0; i < cnc->getNbElm(); ++i)
+      std::cout<< cnc->getGlobalConnectivity(i) << std::endl;
+  }
+  for(feCncGeo *cnc : _cncGeo){
+    std::cout<< "CncGeo "<<cnc->getID()<<std::endl;
+    for(int i = 0; i < cnc->getNbElm(); ++i)
+      std::cout<< cnc->getGlobalConnectivity(i) << std::endl;
+  }
+}
+
 feMesh1DP1::feMesh1DP1(double xA, double xB, int nElm, std::string bndA_ID, std::string bndB_ID, std::string domID)
   : feMesh(nElm+1, 1, 3, "1D"), _nElm(nElm), _xA(xA), _xB(xB) , _bndA_ID(bndA_ID), _bndB_ID(bndB_ID), _domID(domID),
   _nElmDomain(nElm), _nElmBoundary(1), _nNodDomain(2), _nNodBoundary(1)
@@ -106,7 +121,6 @@ feMesh1DP1::feMesh1DP1(double xA, double xB, int nElm, std::string bndA_ID, std:
   _cncGeoMap[_domID] = nCncGeo;
   geoDom->getFeSpace()->setCncGeoTag(nCncGeo++);
 
-
   // Elements 0D
   std::vector<int> connecBoundaryA(_nElmBoundary*_nNodBoundary, 0);
   std::vector<int> connecBoundaryB(_nElmBoundary*_nNodBoundary, 0);
@@ -128,5 +142,15 @@ feMesh1DP1::feMesh1DP1(double xA, double xB, int nElm, std::string bndA_ID, std:
       cnc->setGlobalConnectivity(i,numElmGlo++);
   } 
   _nTotalElm = numElmGlo;
-
 };
+
+feMesh1DP1::~feMesh1DP1(){
+  for(feCncGeo *cnc : _cncGeo){
+    delete cnc->getFeSpace();
+    delete cnc;
+  }
+}
+
+// feMesh2DP1::feMesh2DP1(){
+
+// }

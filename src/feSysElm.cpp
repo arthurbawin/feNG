@@ -14,7 +14,7 @@ void feSysElm_1D_Source::createElementarySystem(std::vector<feSpace*> &space){
 }
 
 void feSysElm_1D_Source::computeBe(std::vector<feSpace*> &intSpace, feSpace *geoSpace, 
-  std::vector<double> &geoCoord, double c0, double tn, std::vector<double> &Be)
+  std::vector<double> &geoCoord, double c0, double tn, double* Be)
 {
   int                nG = geoSpace->getNbQuadPoints();
   std::vector<double> w = geoSpace->getQuadratureWeights();
@@ -49,7 +49,7 @@ void feSysElm_1D_Diffusion::createElementarySystem(std::vector<feSpace*> &space)
 }
 
 void feSysElm_1D_Diffusion::computeAe(std::vector<feSpace*> &intSpace, feSpace *geoSpace, 
-  std::vector<double> &geoCoord, double c0, double tn, std::vector<double> &Ae){
+  std::vector<double> &geoCoord, double c0, double tn, double** Ae){
   int                nG = geoSpace->getNbQuadPoints();
   std::vector<double> w = geoSpace->getQuadratureWeights();
   double             kD = _par;
@@ -70,12 +70,13 @@ void feSysElm_1D_Diffusion::computeAe(std::vector<feSpace*> &intSpace, feSpace *
 
     for(int i = 0; i < nFunctions; ++i)
       for(int j = 0; j < nFunctions; ++j)
-        Ae[nFunctions*i+j] += _feUdx[i] * kD * _feUdx[j] * J * w[k];
+        Ae[i][j] += _feUdx[i] * kD * _feUdx[j] * J * w[k];
+        // Ae[nFunctions*i+j] += _feUdx[i] * kD * _feUdx[j] * J * w[k];
   }
 }
 
 void feSysElm_1D_Diffusion::computeBe(std::vector<feSpace*> &intSpace, feSpace *geoSpace, 
-  std::vector<double> &geoCoord, double c0, double tn, std::vector<double> &Be)
+  std::vector<double> &geoCoord, double c0, double tn, double* Be)
 {
   int                nG = geoSpace->getNbQuadPoints();
   std::vector<double> w = geoSpace->getQuadratureWeights();
@@ -111,7 +112,7 @@ void feSysElm_1D_Masse::createElementarySystem(std::vector<feSpace*> &space){
 }
 
 void feSysElm_1D_Masse::computeAe(std::vector<feSpace*> &intSpace, feSpace *geoSpace, 
-  std::vector<double> &geoCoord, double c0, double tn, std::vector<double> &Ae){
+  std::vector<double> &geoCoord, double c0, double tn, double** Ae){
   int                nG = geoSpace->getNbQuadPoints();
   std::vector<double> w = geoSpace->getQuadratureWeights();
   double            rho = _par;
@@ -132,12 +133,13 @@ void feSysElm_1D_Masse::computeAe(std::vector<feSpace*> &intSpace, feSpace *geoS
 
     for(int i = 0; i < nFunctions; ++i)
       for(int j = 0; j < nFunctions; ++j)
-        Ae[nFunctions*i+j] += _feU[i] * rho * c0 * _feU[j] * J * w[k];
+        Ae[i][j] += _feU[i] * rho * c0 * _feU[j] * J * w[k];
+        // Ae[nFunctions*i+j] += _feU[i] * rho * c0 * _feU[j] * J * w[k];
   }
 }
 
 void feSysElm_1D_Masse::computeBe(std::vector<feSpace*> &intSpace, feSpace *geoSpace, 
-  std::vector<double> &geoCoord, double c0, double tn, std::vector<double> &Be)
+  std::vector<double> &geoCoord, double c0, double tn, double* Be)
 {
   int                nG = geoSpace->getNbQuadPoints();
   std::vector<double> w = geoSpace->getQuadratureWeights();
