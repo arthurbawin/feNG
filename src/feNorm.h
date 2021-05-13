@@ -18,13 +18,14 @@ protected:
   std::vector<double> geoCoord;
 
   int _nQuad;
+  int _degQuad;
   int deg;
   std::vector<double> w;
   std::vector<double> x;
 
   double norm;
 public:
-	feNorm(feSpace *intSpace, feMesh *mesh, int nQuad);
+	feNorm(feSpace *intSpace, feMesh *mesh, int degQuad);
 	~feNorm() {}
 
   double getNorm(){ return norm; }

@@ -66,19 +66,19 @@ int main(int argc, char** argv){
     sol->initializeUnknowns(mesh, metaNumber);
     sol->initializeEssentialBC(mesh, metaNumber);
     // Formes (bi)lineaires
-    int nQuad = 3; // TODO : change to deg
+    int degQuad = 5; 
     std::vector<feSpace*> spaceDiffusion1D_U = {&U_M1D};
     std::vector<feSpace*> spaceSource1D_U = {&U_M1D};
     std::vector<feSpace*> spaceMasse1D_U = {&U_M1D};
 
-    feBilinearForm *diff_U_M1D = new feBilinearForm(spaceDiffusion1D_U, mesh, nQuad, new feSysElm_1D_Diffusion(kd, nullptr));
-    feBilinearForm *source_U_M1D = new feBilinearForm(spaceSource1D_U, mesh, nQuad, new feSysElm_1D_Source(1.0, funSource));
-    feBilinearForm *masse_U_M1D = new feBilinearForm(spaceMasse1D_U, mesh, nQuad, new feSysElm_1D_Masse(1.0, nullptr));
+    feBilinearForm *diff_U_M1D = new feBilinearForm(spaceDiffusion1D_U, mesh, degQuad, new feSysElm_1D_Diffusion(kd, nullptr));
+    feBilinearForm *source_U_M1D = new feBilinearForm(spaceSource1D_U, mesh, degQuad, new feSysElm_1D_Source(1.0, funSource));
+    feBilinearForm *masse_U_M1D = new feBilinearForm(spaceMasse1D_U, mesh, degQuad, new feSysElm_1D_Masse(1.0, nullptr));
 
     std::vector<feBilinearForm*> formMatrices  = {diff_U_M1D, masse_U_M1D};
     std::vector<feBilinearForm*> formResiduals  = {diff_U_M1D, masse_U_M1D, source_U_M1D};
     // Norme de la solution
-    feNorm *norm = new feNorm(&U_M1D, mesh, nQuad);
+    feNorm *norm = new feNorm(&U_M1D, mesh, degQuad);
     // Systeme lineaire
     feLinearSystemPETSc *linearSystem = new feLinearSystemPETSc(argc, argv, formMatrices, formResiduals, metaNumber, mesh);
 #ifdef HAVE_PETSC

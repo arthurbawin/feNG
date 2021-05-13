@@ -15,16 +15,15 @@ class feQuadrature{
 
 protected:
   int _degQuad;
-  int _nQuad;
   std::vector<double> _w;
   std::vector<double> _x;
 
 public:
-	feQuadrature(int nQuad) : _nQuad(nQuad){
+	feQuadrature(int degQuad) : _degQuad(degQuad){
     
 	};
 	virtual ~feQuadrature() {}
-
+  int _nQuad = (_degQuad +2)/2;
   virtual int getNQuad(){ return _nQuad; }
   virtual std::vector<double> getWeights(){ return _w; }
   virtual std::vector<double> getPoints(){ return _x; }
@@ -32,11 +31,10 @@ public:
 
 class feQuadrature2 : public feQuadrature{
 public:
-    feQuadrature2 ( int nQuad) : feQuadrature(nQuad) {
-      //nQuad = (degQuad +2)/2;
-      _w.resize(nQuad);
-      _x.resize(nQuad);
-
+    feQuadrature2 ( int degQuad) : feQuadrature(degQuad) {
+      int _nQuad = (_degQuad +2)/2;
+      _w.resize(_nQuad);
+      _x.resize(_nQuad);
       calculateWeightAndRoot();
       
       

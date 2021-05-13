@@ -50,10 +50,10 @@ static inline void freeResidual(double** b){
   free(*b); 
 }
 
-feBilinearForm::feBilinearForm(std::vector<feSpace*> &space, feMesh *mesh, int nQuadraturePoints, feSysElm *sysElm)
+feBilinearForm::feBilinearForm(std::vector<feSpace*> &space, feMesh *mesh, int degQuadrature, feSysElm *sysElm)
   : _sysElm(sysElm), _intSpace(space), _cncGeoTag(space[0]->getCncGeoTag()),
   _geoSpace(mesh->getCncGeoByTag(_cncGeoTag)->getFeSpace()),
-   _nGeoElm(mesh->getCncGeoByTag(_cncGeoTag)->getNbElm()), _nQuad(nQuadraturePoints)
+   _nGeoElm(mesh->getCncGeoByTag(_cncGeoTag)->getNbElm()), _degQuad(degQuadrature)
 {
   _nCoord = mesh->getDim();
   _nGeoNodes = mesh->getCncGeoByTag(_cncGeoTag)->getNbNodePerElem();
@@ -68,7 +68,7 @@ feBilinearForm::feBilinearForm(std::vector<feSpace*> &space, feMesh *mesh, int n
   }
   
   // (Re-)initialize the interpolation functions at quadrature nodes
-  feQuadrature2 *rule = new feQuadrature2(_nQuad);  // TODO : change this, choose the degree
+  feQuadrature2 *rule = new feQuadrature2(_degQuad);  
   for(feSpace *fS : _intSpace)
     fS->setQuadratureRule(rule);
   _geoSpace->setQuadratureRule(rule);

@@ -58,16 +58,16 @@ int main(int argc, char** argv){
     sol->initializeUnknowns(mesh, metaNumber);
     sol->initializeEssentialBC(mesh, metaNumber);
     // Formes (bi)lineaires
-    int nQuad = 3; // TODO : change to deg
+    int degQuad = 5; 
     std::vector<feSpace*> spaceDiffusion1D_U = {&U_M1D};
-    feBilinearForm *diff_U_M1D = new feBilinearForm(spaceDiffusion1D_U, mesh, nQuad, new feSysElm_1D_Diffusion(kd, nullptr));
+    feBilinearForm *diff_U_M1D = new feBilinearForm(spaceDiffusion1D_U, mesh, degQuad, new feSysElm_1D_Diffusion(kd, nullptr));
     std::vector<feSpace*> spaceSource1D_U = {&U_M1D};
-    feBilinearForm *source_U_M1D = new feBilinearForm(spaceSource1D_U, mesh, nQuad, new feSysElm_1D_Source(1.0, funSource));
+    feBilinearForm *source_U_M1D = new feBilinearForm(spaceSource1D_U, mesh, degQuad, new feSysElm_1D_Source(1.0, funSource));
 
     std::vector<feBilinearForm*> formMatrices  = {diff_U_M1D};
     std::vector<feBilinearForm*> formResiduals  = {diff_U_M1D, source_U_M1D};
 
-    feNorm *norm = new feNorm(&U_M1D, mesh, 3);
+    feNorm *norm = new feNorm(&U_M1D, mesh, degQuad);
 #ifdef HAVE_PETSC
     feLinearSystemPETSc *linearSystem = new feLinearSystemPETSc(argc, argv, formMatrices, formResiduals, metaNumber, mesh);    
     linearSystem->initialize();
@@ -89,6 +89,10 @@ int main(int argc, char** argv){
   delete funSource;
   delete funSol;
 
+
+
+
+
   // Calcul du taux de convergence
   for(int i = 1; i < nIter; ++i){
     normL2[2*i+1] = log(normL2[2*(i-1)]/normL2[2*i])/log(2.);
@@ -96,4 +100,18 @@ int main(int argc, char** argv){
   printf("%12s \t %12s \t %12s\n", "nElm", "||E||", "p");
   for(int i = 0; i < nIter; ++i)
     printf("%12d \t %12.6e \t %12.6e\n", nElm[i], normL2[2*i], normL2[2*i+1]);
-}
+
+
+ 
+//  feQuadrature *Quad = new feQuadrature2(9);
+//  std::vector<double>w=Quad->getWeights();
+//  for(auto val :w){
+//   std::cout<< val<<std::endl;
+//   }
+
+
+// std::vector<double>x=Quad->getPoints();
+//  for(auto val :x){
+//   std::cout<< val<<std::endl;
+// }
+  }

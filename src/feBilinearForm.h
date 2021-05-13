@@ -23,6 +23,7 @@ protected:
   std::vector<double> _geoCoord;
 
   int _nQuad;
+  int _degQuad;
   std::vector<double> _w;
   std::vector<double> _x; 
 
@@ -37,7 +38,7 @@ protected:
   double* _Be;
 
 public:
-	feBilinearForm(std::vector<feSpace*> &space, feMesh *mesh, int nQuadraturePoints, feSysElm *sysElm);
+	feBilinearForm(std::vector<feSpace*> &space, feMesh *mesh, int degQuadrature, feSysElm *sysElm);
 	~feBilinearForm();
 
   int getCncGeoTag(){ return _cncGeoTag; }

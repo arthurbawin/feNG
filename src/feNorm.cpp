@@ -2,14 +2,15 @@
 #include <cmath>
 #include "feQuadrature.h"
 
-feNorm::feNorm(feSpace *intSpace, feMesh *mesh, int nQuad)
+feNorm::feNorm(feSpace *intSpace, feMesh *mesh, int degQuad)
   : _intSpace(intSpace), cncGeoTag(intSpace->getCncGeoTag()), geoSpace(mesh->getGeometricSpace(cncGeoTag)),
   nElmGeo(mesh->getNbElm(cncGeoTag)), dim(mesh->getDim()), nNodePerElem(intSpace->getNbNodePerElem()),
-  _nQuad(nQuad)
+  _degQuad(degQuad)
 {
-  feQuadrature2 *rule = new feQuadrature2(_nQuad);
+  feQuadrature2 *rule = new feQuadrature2(_degQuad);
   w = rule->getWeights();
   x = rule->getPoints();
+  _nQuad=rule->getNQuad();
   intSpace->setQuadratureRule(rule);
   geoSpace->setQuadratureRule(rule);
   delete rule;
