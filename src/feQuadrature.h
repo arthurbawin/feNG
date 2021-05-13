@@ -3,10 +3,18 @@
 
 #include <vector>
 #include <cstdio>
+#include <algorithm>
+#include <iomanip>
+#include <iostream>
+#include <string>
+#include <type_traits>
+
+
 
 class feQuadrature{
 
 protected:
+  int _degQuad;
   int _nQuad;
   std::vector<double> _w;
   std::vector<double> _x;
@@ -25,18 +33,20 @@ public:
 class feQuadrature2 : public feQuadrature{
 public:
     feQuadrature2 ( int nQuad) : feQuadrature(nQuad) {
-      
-      _w.resize(nQuad+1);
-      _x.resize(nQuad+1);
+      //nQuad = (degQuad +2)/2;
+      _w.resize(nQuad);
+      _x.resize(nQuad);
 
       calculateWeightAndRoot();
-      for(int i=0; i<nQuad;++i){
+      
+      
+      /*for(int i=0; i<nQuad;++i){
         _w[i]=_w[i+1];
         _x[i]=_x[i+1];
 
       }
       _w.resize(nQuad);
-      _x.resize(nQuad);
+      _x.resize(nQuad);*/
     }
     ~feQuadrature2() {}
 

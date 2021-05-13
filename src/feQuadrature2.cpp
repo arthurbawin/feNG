@@ -3,7 +3,7 @@
 
 
 void feQuadrature2::calculateWeightAndRoot() {
-        for(int step = 0; step <= _nQuad; step++) {
+        for(int step = 1; step <= _nQuad; step++) {
             double root = cos(M_PI * (step-0.25)/(_nQuad+0.5));
             Result result = calculatePolynomialValueAndDerivative(root);
 
@@ -14,8 +14,8 @@ void feQuadrature2::calculateWeightAndRoot() {
                 result = calculatePolynomialValueAndDerivative(root);
             } while (fabs(newtonRaphsonRatio) > EPSILON);
 
-            _x[step] = root;
-            _w[step] = 2.0/((1-root*root)*result.derivative*result.derivative);
+            _x[step-1] = root;
+            _w[step-1] = 2.0/((1-root*root)*result.derivative*result.derivative);
         }
     }
 
