@@ -36,6 +36,22 @@ protected:
   double** _Ae;
   double* _Be;
 
+  // ==================================================================
+  // Pointeur sur la méthode de construction de la matrice élémentaire
+  // (1) Utilisation d'une construction analytique
+  // (2) Construction par la méthode des différences finies
+  //     Utile pour : (i)  Pour développement rapide, mais
+  //                  (ii) Plus coûteux 
+  //     Utiulise   : R0 le résidu 
+  //                  Rh le résidu perturbé
+  //                  h0 la perturbation de la solution
+  // ==================================================================
+  double*  R0;
+  double*  Rh;
+  double   h0;
+
+  void  (feBilinearForm::*ptrComputeMatrix) (feMetaNumber *metaNumber, feMesh *mesh, feSolution *sol, int numElem); 
+
 public:
 	feBilinearForm(std::vector<feSpace*> &space, feMesh *mesh, int nQuadraturePoints, feSysElm *sysElm);
 	~feBilinearForm();
@@ -50,11 +66,18 @@ public:
   double** getAe(){ return _Ae; }
   double*  getBe(){ return _Be; }
 
+  std::string getID(){ return _sysElm->getID(); }
+
   void initialize_vadij_only(feMetaNumber *metaNumber, int numElem);
   void initialize(feMetaNumber *metaNumber, feMesh *mesh, feSolution *sol, int numElem);
 
   void computeMatrix(feMetaNumber *metaNumber, feMesh *mesh, feSolution *sol, int numElem);
+  void computeMatrixAnalytical(feMetaNumber *metaNumber, feMesh *mesh, feSolution *sol, int numElem);
+  void computeMatrixFiniteDifference(feMetaNumber *metaNumber, feMesh *mesh, feSolution *sol, int numElem);
   void computeResidual(feMetaNumber *metaNumber, feMesh *mesh, feSolution *sol, int numElem);
+
+  double getMatrixNorm();
+  double getResidualNorm();
 
   void printInfo(){
     printf("============== Bilinear form ==============\n");

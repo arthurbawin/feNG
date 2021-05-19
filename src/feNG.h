@@ -21,6 +21,7 @@
 #include <iomanip>
 #include <limits>
 #include <tuple>
+#include <utility>
 
 #if defined(HAVE_PETSC)
   #include "petscsystypes.h"
@@ -35,5 +36,14 @@
 #else
   typedef long int feInt;
 #endif
+
+// void log(){}
+
+// template<typename First, typename ...Rest>
+// void log(First && first, Rest && ...rest)
+// {
+//     std::cout << std::forward<First>(first);
+//     log(std::forward<Rest>(rest)...);
+// }
 
 #endif

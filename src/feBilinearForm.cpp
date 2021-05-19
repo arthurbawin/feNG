@@ -8,7 +8,7 @@ static inline void allocateMatrix(feInt m, feInt n, double*** A){
   }
   for(feInt i = 0; i < m; ++i)
     (*A)[i] = (double*) calloc(n, sizeof ***A);
-} 
+}
 
 static inline void setMatrixToZero(feInt m, feInt n, double*** A){
   for(feInt i = 0; i < m; ++i)
@@ -19,7 +19,8 @@ static inline void setMatrixToZero(feInt m, feInt n, double*** A){
 static inline void printMatrix(feInt m, feInt n, double*** A){
   for(feInt i = 0; i < m; ++i)
     for(feInt j = 0; j < n; ++j)
-      std::cout<<"A["<<i<<"]["<<j<<"] = "<<(*A)[i][j]<<std::endl;
+      printf("A[%d][%d] = %+10.16e\n", i,j, (*A)[i][j]);
+      // std::cout<<"A["<<i<<"]["<<j<<"] = "<<(*A)[i][j]<<std::endl;
 };
 
 static inline void freeMatrix(feInt m, double*** A){
@@ -42,7 +43,7 @@ static inline void setResidualToZero(feInt m, double** b){
 
 static inline void printResidual(feInt m, double** b){
   for(feInt i = 0; i < m; ++i)
-    std::cout<<"res["<<i<<"] = "<<(*b)[i]<<std::endl;
+    printf("b[%d] = %+10.16e\n", i, (*b)[i]);
 };
 
 static inline void freeResidual(double** b){
@@ -56,7 +57,7 @@ feBilinearForm::feBilinearForm(std::vector<feSpace*> &space, feMesh *mesh, int n
 {
   _nCoord = mesh->getDim();
   _nGeoNodes = mesh->getCncGeoByTag(_cncGeoTag)->getNbNodePerElem();
-  _geoCoord.resize(_nCoord * _nGeoNodes);
+  // _geoCoord.resize(_nCoord * _nGeoNodes);
 
   if(_geoSpace->getCncGeoTag() != _cncGeoTag)
     printf("In feBilinearForm::feBilinearForm : Erreur - Connectivité géométrique ne correspond pas à la connectivité de l'espace d'interpolation.\n");
@@ -67,7 +68,7 @@ feBilinearForm::feBilinearForm(std::vector<feSpace*> &space, feMesh *mesh, int n
   }
   
   // (Re-)initialize the interpolation functions at quadrature nodes
-  feQuadrature *rule = new feQuadrature(_nQuad);  // TODO : change this, choose the degree
+  feQuadrature *rule = new feQuadrature(_nQuad, mesh->getDim());  // TODO : change this, choose the degree
   for(feSpace *fS : _intSpace)
     fS->setQuadratureRule(rule);
   _geoSpace->setQuadratureRule(rule);
@@ -79,7 +80,7 @@ feBilinearForm::feBilinearForm(std::vector<feSpace*> &space, feMesh *mesh, int n
 
   // CREERVADIJ
   _niElm = 0;
-  for(size_t k = 0; k <  _iVar.size(); ++k) _niElm += _intSpace[_iVar[k]]->getNbFunctions();
+  for(size_t k = 0; k < _iVar.size(); ++k) _niElm += _intSpace[_iVar[k]]->getNbFunctions();
   _njElm = 0;
   for(size_t k = 0; k < _jVar.size(); ++k) _njElm += _intSpace[_jVar[k]]->getNbFunctions();
   _adrI.resize(_niElm);
@@ -87,12 +88,29 @@ feBilinearForm::feBilinearForm(std::vector<feSpace*> &space, feMesh *mesh, int n
 
   allocateMatrix(_niElm, _njElm, &_Ae);
   allocateResidual(_niElm, &_Be);
+
+  // ==================================================================
+  // Pour le calcul par différences finies de la matrice
+  // ==================================================================
+  R0 = NULL;
+  Rh = NULL; 
+  allocateResidual(_niElm, &Rh);
+  allocateResidual(_niElm, &R0);
+  h0 = pow(DBL_EPSILON,1.0/2.0);
+  // ==================================================================
+  // Pour choisir la méthode de calcul de la matrice
+  // ==================================================================
+  ptrComputeMatrix=&feBilinearForm::computeMatrixFiniteDifference;
+  if (sysElm->getMatrixAnalyticalStatus())
+    ptrComputeMatrix=&feBilinearForm::computeMatrixAnalytical;
 };
 
 feBilinearForm::~feBilinearForm(){
-    // if(_sysElm) delete _sysElm;
     freeMatrix(_niElm, &_Ae);
     freeResidual(&_Be);
+    freeResidual(&Rh);
+    freeResidual(&R0);
+    delete _sysElm;
   }
 
 void feBilinearForm::initialize_vadij_only(feMetaNumber *metaNumber, int numElem){
@@ -136,13 +154,91 @@ void feBilinearForm::initialize(feMetaNumber *metaNumber, feMesh *mesh, feSoluti
 }
 
 void feBilinearForm::computeMatrix(feMetaNumber *metaNumber, feMesh *mesh, feSolution *sol, int numElem){
+  // this->initialize(metaNumber, mesh, sol, numElem);
+  // setMatrixToZero(_niElm, _njElm, &_Ae);
+  // _sysElm->computeAe(_intSpace, _geoSpace, _geoCoord, sol->getC0(), sol->getCurrentTime(), _Ae);
+  // printMatrix(_niElm, _njElm, &_Ae);
+  (this->*feBilinearForm::ptrComputeMatrix)(metaNumber,mesh,sol,numElem);
+}
+
+void feBilinearForm::computeMatrixAnalytical(feMetaNumber *metaNumber, feMesh *mesh, feSolution *sol, int numElem) {
   this->initialize(metaNumber, mesh, sol, numElem);
   setMatrixToZero(_niElm, _njElm, &_Ae);
   _sysElm->computeAe(_intSpace, _geoSpace, _geoCoord, sol->getC0(), sol->getCurrentTime(), _Ae);
+  printMatrix(_niElm, _njElm, &_Ae);
 }
+// void feBilinearForm::computeMatrixFiniteDifference(feMetaNumber *metaNumber, feMesh *mesh, feSolution *sol, int numElem) {
+//   this->initialize(metaNumber, mesh, sol, numElem);
+//   setMatrixToZero(_niElm, _njElm, &_Ae);
+//   _sysElm->computeAe(_intSpace, _geoSpace, _geoCoord, sol->getC0(), sol->getCurrentTime(), _Ae);
+// }
 
 void feBilinearForm::computeResidual(feMetaNumber *metaNumber, feMesh *mesh, feSolution *sol, int numElem){
   this->initialize(metaNumber, mesh, sol, numElem);
   setResidualToZero(_niElm, &_Be);
   _sysElm->computeBe(_intSpace, _geoSpace, _geoCoord, sol->getC0(), sol->getCurrentTime(), _Be);
+  printResidual(_niElm, &_Be);
+}
+
+void feBilinearForm::computeMatrixFiniteDifference(feMetaNumber *metaNumber, feMesh *mesh, feSolution *sol, int numElem) {
+
+  // printf("feBilinearForm::computeMatrixFiniteDifference\n");
+  this->initialize(metaNumber, mesh, sol, numElem);
+  setMatrixToZero(_niElm, _njElm, &_Ae);
+
+  double C0 = sol->getC0();
+  // ==================================================================
+  // Le résidu non perturbé
+  // ==================================================================
+  setResidualToZero(_niElm, &R0);
+  _sysElm->computeBe(_intSpace, _geoSpace, _geoCoord, C0, sol->getCurrentTime(), R0);
+  //_sysElm->computeAe(_intSpace, _geoSpace, _geoCoord, sol->getC0(), sol->getCurrentTime(), _Ae);
+  // On boucle sur les fespace des inconnues
+  // ==================================================================
+  // Caclul des résidus perturbés
+  // ==================================================================
+  feInt numColumn = 0;
+  for(feInt k=0;k<_jVar.size();k++) {
+    feSpace* Unknowns = _intSpace[_jVar[k]];
+    std::vector<double> &_sol    = Unknowns->getSolutionReference();
+    std::vector<double> &_soldot = Unknowns->getSolutionReferenceDot();
+    // On boucle sur les coefficients de la fonction d'interpolation
+    for(feInt j=0;j<Unknowns->getNbFunctions();j++,numColumn++) {
+      double temp_sol    = _sol[j];
+      double temp_soldot = _soldot[j];
+      double delta_h     = h0 * std::max( fabs(temp_sol),1.0);
+      double invdelta_h  = 1.0/delta_h;
+
+      _sol[j]    = _sol[j]    + delta_h;
+      _soldot[j] = _soldot[j] + delta_h * C0;
+
+      setResidualToZero(_niElm, &Rh);
+      _sysElm->computeBe(_intSpace, _geoSpace, _geoCoord, C0, sol->getCurrentTime(), Rh);
+
+      for(feInt i=0;i<_niElm;i++)
+        _Ae[i][numColumn] = (-Rh[i]+R0[i])*invdelta_h;
+      
+      _sol[j]    = temp_sol;
+      _soldot[j] = temp_soldot;
+    }
+
+  }
+  printMatrix(_niElm, _njElm, &_Ae);
+}
+
+double feBilinearForm::getMatrixNorm(){
+  int res = 0.0;
+  for(feInt i = 0; i < _niElm; ++i)
+    for(feInt j = 0; j < _njElm; ++j)
+      res += _Ae[i][j] * _Ae[i][j];
+
+  res = sqrt(res);
+}
+
+double feBilinearForm::getResidualNorm(){
+  int res = 0.0;
+  for(feInt i = 0; i < _niElm; ++i)
+    res += _Be[i] * _Be[i];
+
+  res = sqrt(res);
 }

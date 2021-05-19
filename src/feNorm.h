@@ -20,7 +20,9 @@ protected:
   int _nQuad;
   int deg;
   std::vector<double> w;
-  std::vector<double> x;
+  // std::vector<double> x;
+  // std::vector<double> y;
+  // std::vector<double> z;
 
   double norm;
 public:
@@ -29,6 +31,7 @@ public:
 
   double getNorm(){ return norm; }
   void computeL2Norm(feMetaNumber *metaNumber, feSolution *sol, feMesh *mesh);
+  void computeArea(feMetaNumber *metaNumber, feSolution *sol, feMesh *mesh);
 };
 
 #endif

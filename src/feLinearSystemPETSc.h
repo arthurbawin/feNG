@@ -15,6 +15,7 @@ protected:
   Mat _A;
   Vec _res;
   Vec _dx;
+  Vec _foo;
 
   KSP ksp;
   PC preconditioner;
