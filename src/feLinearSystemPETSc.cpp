@@ -22,6 +22,8 @@ void feLinearSystemPETSc::initialize(){
   ierr = VecSetSizes(_dx, PETSC_DECIDE, _nInc);                 CHKERRABORT(PETSC_COMM_WORLD, ierr);
   ierr = VecSetFromOptions(_dx);                                CHKERRABORT(PETSC_COMM_WORLD, ierr);
   ierr = VecDuplicate(_dx, &_res);                              CHKERRABORT(PETSC_COMM_WORLD, ierr);
+  ierr = VecDuplicate(_dx, &_foo);                              CHKERRABORT(PETSC_COMM_WORLD, ierr);
+  ierr = VecSet(_dx, 1.0);
   // Allocate the matrix _A
   ierr = MatCreate(PETSC_COMM_WORLD, &_A);                      CHKERRABORT(PETSC_COMM_WORLD, ierr);
   ierr = MatSetSizes(_A,PETSC_DECIDE,PETSC_DECIDE,_nInc,_nInc); CHKERRABORT(PETSC_COMM_WORLD, ierr);
@@ -34,8 +36,15 @@ void feLinearSystemPETSc::initialize(){
   ierr = KSPGetPC(ksp,&preconditioner);                         CHKERRABORT(PETSC_COMM_WORLD, ierr);
   // ierr = PCSetType(preconditioner,PCJACOBI);                    CHKERRABORT(PETSC_COMM_WORLD, ierr);
   ierr = PCSetType(preconditioner,PCILU);                    CHKERRABORT(PETSC_COMM_WORLD, ierr);
-  ierr = KSPSetTolerances(ksp,1.e-16,1e-16,PETSC_DEFAULT,100);  CHKERRABORT(PETSC_COMM_WORLD, ierr);
+  ierr = KSPSetTolerances(ksp,1e-11,1e-11,PETSC_DEFAULT,200);  CHKERRABORT(PETSC_COMM_WORLD, ierr);
   ierr = KSPSetFromOptions(ksp);                                CHKERRABORT(PETSC_COMM_WORLD, ierr);
+  // double normResidual = 0.0;
+  // double normDx = 0.0;
+  // ierr = VecNorm(_res, NORM_MAX, &normResidual); CHKERRABORT(PETSC_COMM_WORLD, ierr);
+  // ierr = VecNorm( _dx, NORM_MAX, &normDx);       CHKERRABORT(PETSC_COMM_WORLD, ierr);
+  // std::cout<<"Taille du systeme : "<<_nInc<<std::endl;
+  // std::cout<<"Avant résolution : norme du residu :        "<<normResidual<<std::endl;
+  // std::cout<<"Avant résolution : norme de la correction : "<<normDx<<std::endl;
 };
 
 void feLinearSystemPETSc::viewMatrix(){
@@ -101,6 +110,9 @@ void feLinearSystemPETSc::assembleMatrices(feSolution *sol){
     }
     ierr = MatAssemblyBegin(_A,MAT_FINAL_ASSEMBLY); CHKERRABORT(PETSC_COMM_WORLD, ierr);
     ierr = MatAssemblyEnd(_A,MAT_FINAL_ASSEMBLY);   CHKERRABORT(PETSC_COMM_WORLD, ierr);
+    // double normMat = 0.0;
+    // ierr = MatNorm(_A, NORM_FROBENIUS, &normMat); CHKERRABORT(PETSC_COMM_WORLD, ierr);
+    // printf("Norme de la matrice : %10.10e\n", normMat);
   } // if(recomputeMatrix)
   // viewMatrix();
 }
@@ -110,6 +122,8 @@ void feLinearSystemPETSc::assembleResiduals(feSolution *sol){
   PetscInt I;
   int niElm;
   std::vector<int> adrI;
+  double normResidual = 0.0;
+  ierr = VecNorm(_res, NORM_2, &normResidual); CHKERRABORT(PETSC_COMM_WORLD, ierr);
   for(feBilinearForm *f : _formResiduals){
     int nElm = _mesh->getNbElm(f->getCncGeoTag());
     for(int iElm = 0; iElm < nElm; ++iElm){
@@ -128,6 +142,9 @@ void feLinearSystemPETSc::assembleResiduals(feSolution *sol){
     }
   }
   // VecView(_res,PETSC_VIEWER_STDOUT_WORLD);
+  // normResidual = 0.0;
+  // ierr = VecNorm(_res, NORM_2, &normResidual); CHKERRABORT(PETSC_COMM_WORLD, ierr);
+  // printf("Norme du résidu : %10.10e\n", normResidual);
 }
 
 void feLinearSystemPETSc::assemble(feSolution *sol){
@@ -136,14 +153,21 @@ void feLinearSystemPETSc::assemble(feSolution *sol){
 }
 
 void feLinearSystemPETSc::solve(double *normDx, double *normResidual){
-  // PetscInt its;
+  PetscInt its;
   PetscErrorCode ierr = KSPSolve(ksp,_res,_dx); CHKERRABORT(PETSC_COMM_WORLD, ierr);
   // KSPView(ksp,PETSC_VIEWER_STDOUT_WORLD);
-  // KSPGetIterationNumber(ksp,&its);
-  // PetscPrintf(PETSC_COMM_WORLD,"Iterations %D\n",its);
-  ierr = VecNorm(_res, NORM_2, normResidual); CHKERRABORT(PETSC_COMM_WORLD, ierr);
-  ierr = VecNorm( _dx, NORM_2, normDx);       CHKERRABORT(PETSC_COMM_WORLD, ierr);
-  // TODO : Prendre la norme max pour tester
+  KSPGetIterationNumber(ksp,&its);
+  PetscPrintf(PETSC_COMM_WORLD,"Iterations %D\n",its);
+  VecSet(_foo, 0.0);
+  MatMult(_A,_dx,_foo);
+  VecAXPY(_foo, -1.0, _res);
+  double normeAxmb = 0.0;
+  ierr = VecNorm(_res, NORM_MAX, normResidual); CHKERRABORT(PETSC_COMM_WORLD, ierr);
+  ierr = VecNorm( _dx, NORM_MAX, normDx);       CHKERRABORT(PETSC_COMM_WORLD, ierr);
+  ierr = VecNorm( _foo, NORM_MAX, &normeAxmb);       CHKERRABORT(PETSC_COMM_WORLD, ierr);
+  // std::cout<<"Norme du residu :        "<<*normResidual<<std::endl;
+  // std::cout<<"Norme de la correction : "<<*normDx<<std::endl;
+  std::cout<<"Norme du résidu matriciel Ax-b : "<<normeAxmb<<std::endl;
 }
 
 void feLinearSystemPETSc::correctSolution(feSolution *sol){

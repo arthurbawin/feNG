@@ -119,6 +119,8 @@ void solveBDF2(std::vector<double> &normL2, feTolerances tol, feMetaNumber *meta
     norm->computeL2Norm(metaNumber, sol, mesh);
     normL2[iTime] = norm->getNorm();
   }
+
+  delete solBDF2;
 }
 
 void solveDC3(std::vector<double> &normL2BDF2, std::vector<double> &normL2DC3,feTolerances tol, feMetaNumber *metaNumber, 
@@ -216,4 +218,7 @@ void solveDC3(std::vector<double> &normL2BDF2, std::vector<double> &normL2DC3,fe
     norm->computeL2Norm(metaNumber, sol, mesh);
     normL2DC3[iTime] = norm->getNorm();
   }
+
+  delete solDC3;
+  delete solBDF2;
 }

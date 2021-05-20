@@ -1,4 +1,5 @@
 #include "feQuadrature.h"
+#include "feMesh.h"
 #include <cmath>
 
 
@@ -36,5 +37,35 @@ feQuadrature2::Result feQuadrature2::calculatePolynomialValueAndDerivative(doubl
         return result;
     }
 
+
+
+void feQuadratureTriangle::calculateWeightAndRootTri() {
+        
+
+        feQuadrature2 Quad = feQuadrature2(_degQuad);
+        _x=Quad.getWeights();
+        _w=Quad.getPoints();
+
+        if (1)
+        {
+           for(int i = 1; i<= _nQuad; i++){
+
+                for(int j = 1; j <= _nQuad; j++){
+
+                     _xr[(i-1)*_nQuad + j] = (1+_x[i]) * (1-_x[j]) / 4 ; 
+                     _yr[(i-1)*_nQuad + j] = (1-_x[j])/2;
+
+                    _W[(i-1)*_nQuad + j] = _w[i]*_w[j]*(1-_x[j])/8;
+                }
+            } 
+        }
+        else{   
+            // on remplit la coordonnés z aussi 
+
+
+        }
+        
+        
+    }
 
 

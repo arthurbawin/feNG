@@ -8,8 +8,11 @@ feSpace::feSpace(feMesh *mesh, std::string fieldID, std::string cncGeoID, feFunc
   : _mesh(mesh), _fieldID(fieldID), _fieldTag(-1), _cncGeoID(cncGeoID), _cncGeoTag(-1), 
   _nQuad(-1), _nFunctions(0), _fct(fct)
 {
-  if(mesh != nullptr) // Maillage existe et le fespace est associe a la bonne cncGeo
+  if(mesh != nullptr){ // Maillage existe et le fespace est associe a la bonne cncGeo
     _cncGeoTag = mesh->getCncGeoTag(cncGeoID);
+    if(_cncGeoTag == -1)
+      printf("In feSpace::feSpace : Error - The geometric connectivity \"%s\" does not exist in the mesh.\n", cncGeoID.c_str());
+  }
 };
 
 int feSpace::getDim(){
@@ -24,21 +27,45 @@ int feSpace::getNbNodePerElem(){
   return _mesh->getNbNodePerElem(_cncGeoTag);
 }
 
+
 void feSpace::setQuadratureRule(feQuadrature2 *quad){
   _nQuad = (_nQuad != -1) ? _nQuad : quad->getNQuad();
+
+// feCncGeo* const feSpace::getCncGeo(){
+//   return _mesh->getCncGeoByTag(_cncGeoTag);
+// }
+
+// void feSpace::setQuadratureRule(feQuadrature *quad){
+//   int dim = quad->getDim();
+//   if(_nQuad == 1){
+//     printf("Warning : nQuad = 1 was already set.\n");
+//   }
+//   _nQuad = quad->getNQuad();
+
   _wQuad = quad->getWeights();
   _xQuad = quad->getPoints();
+  _yQuad = quad->getYPoints();
+  _zQuad = quad->getZPoints();
 
   _L.resize(_nFunctions*_nQuad);
-  _dLdr.resize(_nFunctions*_nQuad); // TODO : multiplier par la dimension
+  _dLdr.resize(_nFunctions*_nQuad);
+  _dLds.resize(_nFunctions*_nQuad);
+  _dLdt.resize(_nFunctions*_nQuad);
+
   for(size_t i = 0; i < _xQuad.size(); ++i){
-    double r[3] = {_xQuad[i], 0., 0.};
+    double r[3] = {_xQuad[i], _yQuad[i], _zQuad[i]};
     std::vector<double>    l =    L(r);
     std::vector<double> dldr = dLdr(r);
+    std::vector<double> dlds = dLds(r);
+    std::vector<double> dldt = dLdt(r);
     for(int j = 0; j < _nFunctions; ++j)
       _L[_nFunctions*i+j] = l[j];
     for(int j = 0; j < _nFunctions; ++j)
       _dLdr[_nFunctions*i+j] = dldr[j];
+    for(int j = 0; j < _nFunctions; ++j)
+      _dLds[_nFunctions*i+j] = dlds[j];
+    for(int j = 0; j < _nFunctions; ++j)
+      _dLdt[_nFunctions*i+j] = dldt[j];
   }
 }
 
@@ -72,6 +99,13 @@ double feSpace::interpolateSolutionAtQuadNode_rDerivative(int iNode){
   double res = 0.0;
   for(int i = 0; i < _nFunctions; ++i)
     res += _sol[i]*_dLdr[_nFunctions*iNode+i];
+  return res;
+}
+
+double feSpace::interpolateSolutionAtQuadNode_sDerivative(int iNode){
+  double res = 0.0;
+  for(int i = 0; i < _nFunctions; ++i)
+    res += _sol[i]*_dLds[_nFunctions*iNode+i];
   return res;
 }
 
@@ -117,6 +151,70 @@ double feSpace::interpolateFieldAtQuadNode_rDerivative(std::vector<double> field
   for(int i = 0; i < _nFunctions; ++i)
     res += field[i]*_dLdr[_nFunctions*iNode+i];
   return res;
+}
+
+void feSpace::interpolateVectorField(std::vector<double> field, double r[3], std::vector<double>& res){
+  // Field structure :
+  // [fx0 fy0 fz0 fx1 fy1 fz1 ... fxn fyn fzn]
+  res[0] = res[1] = res[2] = 0.0;
+  if(field.size() != 3 * (unsigned) _nFunctions){
+    printf(" In feSpace::interpolateVectorField : Erreur - Nombre de valeurs nodales non compatible avec le nombre d'interpolants de l'espace.\n");
+    return;
+  }
+  for(int i = 0; i < 3; ++i){
+    for(int j = 0; j < _nFunctions; ++j){
+      // res[i] += field[3*i+j]*L(r)[j];
+      res[i] += field[3*j+i]*L(r)[j];
+    }
+  }
+}
+
+void feSpace::interpolateVectorFieldAtQuadNode(std::vector<double> field, int iNode, std::vector<double>& res){
+  // Field structure :
+  // [fx0 fy0 fz0 fx1 fy1 fz1 ... fxn fyn fzn]
+  res[0] = res[1] = res[2] = 0.0;
+  if(field.size() != 3 * (unsigned) _nFunctions){
+    printf(" In feSpace::interpolateVectorFieldAtQuadNode : Erreur - Nombre de valeurs nodales non compatible avec le nombre d'interpolants de l'espace.\n");
+    return;
+  }
+  for(int i = 0; i < 3; ++i){
+    for(int j = 0; j < _nFunctions; ++j){
+      // res[i] += field[3*i+j]*_L[_nFunctions*iNode+j];
+      res[i] += field[3*j+i]*_L[_nFunctions*iNode+j];
+    }
+  }
+}
+
+void feSpace::interpolateVectorFieldAtQuadNode_rDerivative(std::vector<double> field, int iNode, std::vector<double>& res){
+  // Field structure :
+  // [fx0 fy0 fz0 fx1 fy1 fz1 ... fxn fyn fzn]
+  res[0] = res[1] = res[2] = 0.0;
+  if(field.size() != 3 * (unsigned) _nFunctions){
+    printf(" In feSpace::interpolateVectorFieldAtQuadNode_rDerivative : Erreur - Nombre de valeurs nodales non compatible avec le nombre d'interpolants de l'espace.\n");
+    return;
+  }
+  for(int i = 0; i < 3; ++i){
+    for(int j = 0; j < _nFunctions; ++j){
+      // res[i] += field[3*i+j]*_dLdr[_nFunctions*iNode+j];
+      res[i] += field[3*j+i]*_dLdr[_nFunctions*iNode+j];
+    }
+  }
+}
+
+void feSpace::interpolateVectorFieldAtQuadNode_sDerivative(std::vector<double> field, int iNode, std::vector<double>& res){
+  // Field structure :
+  // [fx0 fy0 fz0 fx1 fy1 fz1 ... fxn fyn fzn]
+  res[0] = res[1] = res[2] = 0.0;
+  if(field.size() != 3 * (unsigned) _nFunctions){
+    printf(" In feSpace::interpolateVectorFieldAtQuadNode_rDerivative : Erreur - Nombre de valeurs nodales non compatible avec le nombre d'interpolants de l'espace.\n");
+    return;
+  }
+  for(int i = 0; i < 3; ++i){
+    for(int j = 0; j < _nFunctions; ++j){
+      // res[i] += field[3*i+j]*_dLdr[_nFunctions*iNode+j];
+      res[i] += field[3*j+i]*_dLds[_nFunctions*iNode+j];
+    }
+  }
 }
 
 void feSpace::printL(){

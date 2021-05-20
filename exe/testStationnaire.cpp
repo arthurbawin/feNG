@@ -23,6 +23,10 @@ double fSol(const double t, const std::vector<double> x, const std::vector<doubl
   return pow(x[0],6);
 }
 
+double f0(const double t, const std::vector<double> x, const std::vector<double> par){
+  return 0.0;
+}
+
 double fSource(const double t, const std::vector<double> x, const std::vector<double> par){
   double kd = par[0];
   return kd*30.*pow(x[0],4);
@@ -39,16 +43,18 @@ int main(int argc, char** argv){
   std::vector<int> nElm(nIter, 0);
 
   feFunction *funSol = new feFunction(fSol, {kd});
+  feFunction *fun0 = new feFunction(f0, {kd});
   feFunction *funSource = new feFunction(fSource, {kd});
 
   for(int iter = 0; iter < nIter; ++iter){
     nElm[iter] = 20 * pow(2, iter);
+    // nElm[iter] = 10;
     // Maillage
     feMesh1DP1 *mesh = new feMesh1DP1(xa,xb,nElm[iter],"BXA","BXB","M1D");
     // Espaces d'interpolation
     feSpace1DP0 U_BXA = feSpace1DP0(mesh, "U", "BXA", funSol);
     feSpace1DP0 U_BXB = feSpace1DP0(mesh, "U", "BXB", funSol);
-    feSpace1DP3 U_M1D = feSpace1DP3(mesh, "U", "M1D", funSol);
+    feSpace1DP1 U_M1D = feSpace1DP1(mesh, "U", "M1D", funSol);
     std::vector<feSpace*> fespace = {&U_BXA, &U_BXB, &U_M1D};
     std::vector<feSpace*> feEssBC = {&U_BXA, &U_BXB};
     // Numerotations
@@ -67,7 +73,18 @@ int main(int argc, char** argv){
     std::vector<feBilinearForm*> formMatrices  = {diff_U_M1D};
     std::vector<feBilinearForm*> formResiduals  = {diff_U_M1D, source_U_M1D};
 
+
     feNorm *norm = new feNorm(&U_M1D, mesh, degQuad);
+
+    // for(int i = 0; i < nElm[iter]; ++i){
+    // //   diff_U_M1D->computeMatrixAnalytical(metaNumber, mesh, sol, i);
+    //   diff_U_M1D->computeResidual(metaNumber, mesh, sol, i);
+    //   diff_U_M1D->computeMatrixFiniteDifference(metaNumber, mesh, sol, i);
+    // //   diff_U_M1D->computeResidual(metaNumber, mesh, sol, i);
+    // }
+
+ 
+
 #ifdef HAVE_PETSC
     feLinearSystemPETSc *linearSystem = new feLinearSystemPETSc(argc, argv, formMatrices, formResiduals, metaNumber, mesh);    
     linearSystem->initialize();

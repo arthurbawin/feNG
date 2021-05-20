@@ -11,6 +11,8 @@ class feSolutionContainer;
 class feSolution{
 
 protected:
+  int _dim;
+
   std::vector<double> _sol;
   std::vector<double> _dsoldt;
 
@@ -27,7 +29,7 @@ protected:
   double _dt;
 public:
 	feSolution(feMesh *mesh, const std::vector<feSpace*> &space, const std::vector<feSpace*> &essBC, feMetaNumber *metaNumber)
-    : _space(space), _essBC(essBC),  _c0(0.), _tn(0.)
+    : _dim(mesh->getDim()), _space(space), _essBC(essBC),  _c0(0.), _tn(0.)
 	{
     _sol.resize(metaNumber->getNbDOFs());
     _dsoldt.resize(metaNumber->getNbDOFs());

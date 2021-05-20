@@ -11,7 +11,11 @@ option(ENABLE_SUNDIALS      "Enable SUNDIALS"             OFF)
 option(ENABLE_SOPLEX        "Enable SOPLEX"               OFF)
 option(ENABLE_PETSC         "Enable PETSc"                ON )
 option(ENABLE_MKL           "Enable MKL"                  OFF)
+<<<<<<< HEAD
 option(ENABLE_SANITY_CHECKS "Enable sanity checks"        OFF )
+=======
+option(ENABLE_SANITY_CHECKS "Enable sanity checks"        OFF)
+>>>>>>> origin/master
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src)
@@ -44,9 +48,16 @@ if ((NOT MSVC) AND CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
   #add_compile_options("-O3;-ansi;-m64")
   add_compile_options("$<$<CONFIG:RELEASE>:-ansi;-m64;-O3;-fast>"
                       "$<$<CONFIG:RELWITHDEBINFO>:-Wall;-ansi;-m64;-O3;-fast;-g>"
+<<<<<<< HEAD
                       "$<$<CONFIG:DEBUG>:-Wall;-Wextra;-ansi;-m64;-O0;-g>"
                       #"-Wall;-Wextra;-O3;-ansi;-m64"
 			)
+=======
+                      "$<$<CONFIG:DEBUG>:-ansi;-m64;-O0;-g;-ggdb3>"
+                      # "$<$<CONFIG:DEBUG>:-Wall;-Wextra;-ansi;-m64;-O0;-g;-ggdb3>"
+                      #"-Wall;-Wextra;-O3;-ansi;-m64"
+                      )
+>>>>>>> origin/master
 
   #### Sanity checks
   if(ENABLE_SANITY_CHECKS)

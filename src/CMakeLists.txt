@@ -1,10 +1,12 @@
 set(feNG_SRC
   feBilinearForm.cpp
   feCompressedRowStorage.cpp
+  feExporter.cpp
   feLinearSystem.cpp
-  feLinearSystemPardiso.cpp
+  feLinearSystemMklPardiso.cpp
   feLinearSystemPETSc.cpp
   feMesh.cpp
+  feMeshRead.cpp
   feNorm.cpp
   feNumber.cpp
   feSolution.cpp
@@ -12,6 +14,7 @@ set(feNG_SRC
   feSolutionContainer.cpp
   feSolver.cpp
   feSpace.cpp
+  feSpaceTriangle.cpp
   feSysElm.cpp
 )
 
@@ -19,9 +22,13 @@ set(feNG_API
   feBilinearForm.h
   feCncGeo.h
   feCompressedRowStorage.h
+  feEdge.h
+  feElement.h
+  feExporter.h
   feFunction.h
+  feLine.h
   feLinearSystem.h
-  feLinearSystemPardiso.h
+  feLinearSystemMklPardiso.h
   feLinearSystemPETSc.h
   feMesh.h
   feNG.h
@@ -34,7 +41,7 @@ set(feNG_API
   feSolver.h
   feSpace.h
   feSysElm.h
-  
+
 )
 
 # if(ENABLE_PETSC)
