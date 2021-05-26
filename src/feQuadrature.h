@@ -8,6 +8,7 @@
 #include <iostream>
 #include <string>
 #include <type_traits>
+#include <cmath>
 
 
 
@@ -66,6 +67,59 @@ public:
 
     
 };
+
+class feQuadratureTriangle : public feQuadrature{
+
+  protected: 
+    // std::vector<double> _W;
+    // std::vector<double> _xr;
+    // std::vector<double> _yr;
+    // std::vector<double> _zr;
+    double _W[100];
+    double _xr[100];
+    double _yr[100];
+    double _zr[100]; //TODO : construire la table avec la bonne dimension
+
+
+  public:
+    feQuadratureTriangle ( int degQuad) : feQuadrature(degQuad) {
+
+        int _nQuad = (_degQuad +2)/2;
+        int _dimQuad = 3;
+        
+
+        // int _nQuad = (_degQuad +2)/2;
+        // _W.resize(pow(_nQuad,2));
+        // _xr.resize(pow(_nQuad,2));
+        // _yr.resize(pow(_nQuad,2));
+        // _zr.resize(pow(_nQuad,2));
+
+// 
+        // _W.resize(_nQuad * _nQuad);
+        // _xr.resize(_nQuad * _nQuad);
+        // _yr.resize(_nQuad * _nQuad);
+        // _zr.resize(_nQuad * _nQuad);
+
+
+        if (_dimQuad==2) {calculateWeightAndRootTri();}
+        else {calculateWeightAndRootTetra();}
+  }
+  void calculateWeightAndRootTri();
+  void calculateWeightAndRootTetra();
+  double getXPoints(int i){ return _xr[i]; }
+  double getYPoints(int i ){ return _yr[i]; }
+  double getZPoints(int i ){ return _zr[i]; }
+  double get3DWeights(int i ){ return _W[i]; }
+
+  // std::vector<double> getXPoints(){ return _xr; }
+  // std::vector<double> getYPoints(){ return _yr; }
+  // std::vector<double> getZPoints(){ return _zr; }
+  // std::vector<double> get3DWeights(){ return _W; }
+
+};
+
+
+
 
 /*const double LegendrePolynomial::EPSILON = 1e-15;*/
 

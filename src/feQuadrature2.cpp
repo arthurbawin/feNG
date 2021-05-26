@@ -42,30 +42,92 @@ feQuadrature2::Result feQuadrature2::calculatePolynomialValueAndDerivative(doubl
 void feQuadratureTriangle::calculateWeightAndRootTri() {
         
 
-        feQuadrature2 Quad = feQuadrature2(_degQuad);
-        _x=Quad.getWeights();
-        _w=Quad.getPoints();
+        // feQuadrature2 Quad = feQuadrature2(_degQuad);
+        // std::vector<double>_wi=Quad.getWeights();
+        // std::vector<double>_xi=Quad.getPoints();
 
-        if (1)
-        {
-           for(int i = 1; i<= _nQuad; i++){
+        // int l=0; 
+        // for(int i = 0; i< _nQuad; ++i){
 
-                for(int j = 1; j <= _nQuad; j++){
+        // // feQuadrature2 Quad = feQuadrature2((_nQuad+1-i)*2);
+        // // std::vector<double>_wj=Quad.getWeights();
+        // // std::vector<double>_eta=Quad.getPoints();
 
-                     _xr[(i-1)*_nQuad + j] = (1+_x[i]) * (1-_x[j]) / 4 ; 
-                     _yr[(i-1)*_nQuad + j] = (1-_x[j])/2;
+        //     for(int j = 0; j < _nQuad; ++j){
+        //         _yr[l] = (1-_xi[i])/2;
+        //         _xr[l] = (1-_xi[i]) * (1-_xi[j]) / 4 ; 
+        //         _W[l] = _wi[j]*_wi[i]*(1+_xi[i])/8;
+        //         l=l+1;
+        //     }
 
-                    _W[(i-1)*_nQuad + j] = _w[i]*_w[j]*(1-_x[j])/8;
-                }
-            } 
-        }
-        else{   
-            // on remplit la coordonnés z aussi 
+        feQuadrature2 Quad = feQuadrature2((_nQuad-1)*2-1);
+        std::vector<double>_wi=Quad.getWeights();
+        std::vector<double>_xi=Quad.getPoints();
+
+        int l=0; 
+        for(int i = 0; i< _nQuad-1; ++i){
+
+        feQuadrature2 Quad = feQuadrature2((_nQuad-i)*2-1);
+        std::vector<double>_wj=Quad.getWeights();
+        std::vector<double>_eta=Quad.getPoints();
 
 
-        }
+            for(int j = 0; j < _nQuad-i; ++j){
+                _yr[l] = (1-_xi[i])/2;
+                _xr[l] = (1-_xi[i]) * (1-_eta[j]) / 4 ; 
+                _W[l] = _wj[j]*_wi[i]*(1+_xi[i])/8;
+                l=l+1;
+            }
+        } 
         
         
-    }
+        
+        
+}
 
+
+void feQuadratureTriangle::calculateWeightAndRootTetra() {
+        
+
+    // feQuadrature2 Quad = feQuadrature2(_degQuad);
+    // std::vector<double>_wi=Quad.getWeights();
+    // std::vector<double>_xi=Quad.getPoints();
+
+    // int l=0; 
+    // for(int i = 0; i< _nQuad; ++i){
+
+    // // feQuadrature2 Quad = feQuadrature2((_nQuad+1-i)*2);
+    // // std::vector<double>_wj=Quad.getWeights();
+    // // std::vector<double>_eta=Quad.getPoints();
+
+    //     for(int j = 0; j < _nQuad; ++j){
+    //         _yr[l] = (1-_xi[i])/2;
+    //         _xr[l] = (1-_xi[i]) * (1-_xi[j]) / 4 ; 
+    //         _W[l] = _wi[j]*_wi[i]*(1+_xi[i])/8;
+    //         l=l+1;
+    //     }
+
+    feQuadrature2 Quad = feQuadrature2(_nQuad);
+    std::vector<double>_w=Quad.getWeights();
+    std::vector<double>_x=Quad.getPoints();
+
+    int l=0; 
+    for(int i = 0; i< _nQuad; ++i){
+        for(int j = 0; j < _nQuad; ++j){
+            for(int k = 0; k < _nQuad; ++k){
+                _xr[l] = (1-_x[i])/2;
+                _yr[l] = (1+_x[i])*(1-_x[j]) /4 ; 
+                _zr[l] = (1+_x[i])*(1+_x[j])*(1-_x[k])/8;
+                _W[l] = _w[j]*_w[i]*_w[k]*(1+_x[i])*(1+_x[i])*(1+_x[j])/64;
+                l=l+1;
+
+            }
+            
+        }
+    } 
+        
+        
+        
+        
+}
 
