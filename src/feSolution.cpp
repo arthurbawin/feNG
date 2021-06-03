@@ -17,6 +17,7 @@ void feSolution::initializeUnknowns(feMesh *mesh, feMetaNumber *metaNumber){
 		// for(auto const &val : coor)
 		// 	std::cout<<val<<std::endl;
 		feSpace* geoSpace = mesh->getGeometricSpace(fS->getCncGeoID());
+    // std::cout<<geoSpace->getNbFunctions()<<"?"<<std::endl;
 		for(int iElm = 0; iElm < nElm; ++iElm){
 			// Call initializeAddressingVector() on each element of each feSpace
 			fS->initializeAddressingVector(metaNumber->getNumbering(fS->getFieldID()), iElm);
@@ -26,7 +27,6 @@ void feSolution::initializeUnknowns(feMesh *mesh, feMetaNumber *metaNumber){
 
 			for(int j = 0; j < fS->getNbFunctions(); ++j){
 				double r[3] = {coor[3*j],coor[3*j+1],coor[3*j+2]};
-				// std::cout<<r[0]<<" "<<r[1]<<" "<<r[2]<<	" "<<std::endl;
 				std::vector<double> x(3,0.0);
 				// x[0] = geoSpace->interpolateField(localCoord, r);
         geoSpace->interpolateVectorField(localCoord, r, x);

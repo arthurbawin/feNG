@@ -17,14 +17,16 @@
 #include "feExporter.h"
 
 double fSol(const double t, const std::vector<double> x, const std::vector<double> par){
-  // return pow(x[0],6);
-  return pow(x[0],3);
+  return pow(x[0],6);
+  // return pow(x[0],3);
+  // return pow(x[0],2);
 }
 
 double fSource(const double t, const std::vector<double> x, const std::vector<double> par){
   double kd = par[0];
-  // return kd*30.*pow(x[0],4);
-  return kd*6*x[0];
+  return kd*30.*pow(x[0],4);
+  // return kd*6*x[0];
+  // return kd*2;
 }
 
 int main(int argc, char** argv){
@@ -33,32 +35,36 @@ int main(int argc, char** argv){
   feFunction *funSol    = new feFunction(fSol,    {kd});
   feFunction *funSource = new feFunction(fSource, {kd});
 
-  int nIter = 4;
+  int nIter = 3;
   std::vector<double> normL2(2*nIter, 0.0);
   std::vector<int> nElm(nIter, 0);
 
   for(int iter = 0; iter < nIter; ++iter){
-    std::string meshName = "../../data/square" + std::to_string(iter+1) + "Msh2.msh";
+    std::string meshName = "../../data/square" + std::to_string(iter+1) + ".msh";
+    // std::string meshName = "../../data/squareCoarse1.msh";
 
     feMesh2DP1 *mesh = new feMesh2DP1(meshName, false);
     nElm[iter] = mesh->getNbInteriorElems();
     // mesh->printInfo();
 
-    feSpace1DP1  U_angle   = feSpace1DP1(mesh, "U", "Angle",  funSol);
-    feSpace1DP1  U_haut    = feSpace1DP1(mesh, "U", "Haut",   funSol);
-    feSpace1DP1  U_gauche  = feSpace1DP1(mesh, "U", "Gauche", funSol);
-    feSpaceTriP1 U_surface = feSpaceTriP1(mesh, "U", "Surface", funSol);
+    feSpace1DP4  U_angle   = feSpace1DP4(mesh, "U", "Angle",  funSol);
+    feSpace1DP4  U_haut    = feSpace1DP4(mesh, "U", "Haut",   funSol);
+    feSpace1DP4  U_gauche  = feSpace1DP4(mesh, "U", "Gauche", funSol);
+    feSpaceTriP4 U_surface = feSpaceTriP4(mesh, "U", "Surface", funSol);
 
     std::vector<feSpace*> fespace = {&U_angle, &U_haut, &U_gauche, &U_surface};
     std::vector<feSpace*> feEssBC = {&U_angle, &U_haut, &U_gauche};
 
     feMetaNumber *metaNumber = new feMetaNumber(mesh, fespace, feEssBC);
     // metaNumber->printNumberings();
+    // metaNumber->printCodes();
 
     feSolution *sol = new feSolution(mesh, fespace, feEssBC, metaNumber);
+    // sol->initializeUnknowns(mesh, metaNumber);
+    // sol->initializeEssentialBC(mesh, metaNumber);
 
     // Formes (bi)lineaires
-    int nQuad = 9; // TODO : change to deg
+    int nQuad = 16; // TODO : change to deg
     std::vector<feSpace*> spaceDiffusion2D_U = {&U_surface};
     feBilinearForm *diffU = new feBilinearForm(spaceDiffusion2D_U, mesh, nQuad, new feSysElm_2D_Diffusion(kd, nullptr));
     std::vector<feSpace*> spaceSource2D_U = {&U_surface};
@@ -67,12 +73,33 @@ int main(int argc, char** argv){
     std::vector<feBilinearForm*> formMatrices  = {diffU};
     std::vector<feBilinearForm*> formResiduals  = {diffU, sourceU};
 
+    // for(int i = 0; i < U_surface.getNbElm(); ++i){
+    //   diffU->computeMatrix(metaNumber, mesh, sol, i);
+    //   diffU->computeResidual(metaNumber, mesh, sol, i);
+    //   sourceU->computeResidual(metaNumber, mesh, sol, i);
+    // }
+
     feNorm *norm = new feNorm(&U_surface, mesh, nQuad, funSol);
     std::vector<feNorm*> norms = {norm};
-
+    double integral = 0.0;
+    norm->computeL2Norm(metaNumber, sol, mesh);
+    integral = norm->getNorm();
+    std::cout<<"Norme = "<<integral<<std::endl;
+    norm->computeArea(metaNumber, sol, mesh);
+    integral = norm->getNorm();
+    std::cout<<"Area = "<<integral<<std::endl;
+    norm->computeIntegral(metaNumber, sol, mesh, funSol);
+    integral = norm->getNorm();
+    std::cout<<"Integrale = "<<integral<<std::endl;
     feLinearSystemPETSc *linearSystem = new feLinearSystemPETSc(argc, argv, formMatrices, formResiduals, metaNumber, mesh);    
     linearSystem->initialize();
-    feTolerances tol{1e-9, 1e-8, 20};
+    // linearSystem->setRecomputeStatus(true);
+    // linearSystem->assembleMatrices(sol);
+    // linearSystem->viewMatrix();
+    // linearSystem->assembleTestMatrices(sol);
+    // linearSystem->viewTestMatrix();
+    // linearSystem->assembleResiduals(sol);
+    feTolerances tol{1e-9, 1e-8, 3};
     solveStationary(&normL2[2*iter], tol, metaNumber, linearSystem, formMatrices, formResiduals, sol, norms, mesh);
     linearSystem->finalize();
 

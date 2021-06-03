@@ -24,14 +24,17 @@ protected:
   // std::vector<double> y;
   // std::vector<double> z;
 
+  feFunction *_solRef;
+
   double norm;
 public:
-	feNorm(feSpace *intSpace, feMesh *mesh, int nQuad);
+	feNorm(feSpace *intSpace, feMesh *mesh, int nQuad, feFunction *solRef = nullptr);
 	~feNorm() {}
 
   double getNorm(){ return norm; }
   void computeL2Norm(feMetaNumber *metaNumber, feSolution *sol, feMesh *mesh);
   void computeArea(feMetaNumber *metaNumber, feSolution *sol, feMesh *mesh);
+  void computeIntegral(feMetaNumber *metaNumber, feSolution *sol, feMesh *mesh, feFunction *fun);
 };
 
 #endif

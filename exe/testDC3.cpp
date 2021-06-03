@@ -79,7 +79,8 @@ int main(int argc, char** argv){
     std::vector<feBilinearForm*> formMatrices  = {diff_U_M1D, masse_U_M1D};
     std::vector<feBilinearForm*> formResiduals  = {diff_U_M1D, masse_U_M1D, source_U_M1D};
     // Norme de la solution
-    feNorm *norm = new feNorm(&U_M1D, mesh, nQuad);
+    feNorm *norm = new feNorm(&U_M1D, mesh, nQuad, funSol);
+    std::vector<feNorm*> norms = {norm};
     // Systeme lineaire
     feLinearSystemPETSc *linearSystem = new feLinearSystemPETSc(argc, argv, formMatrices, formResiduals, metaNumber, mesh);
     linearSystem->initialize();
@@ -87,7 +88,7 @@ int main(int argc, char** argv){
     feTolerances tol{1e-10, 1e-10, 10};
     std::vector<double> normL2BDF(nTimeSteps,0.0);
     std::vector<double> normL2DC3(nTimeSteps,0.0);
-    solveDC3(normL2BDF, normL2DC3, tol, metaNumber, linearSystem, formMatrices, formResiduals, sol, norm, mesh);
+    solveDC3(normL2BDF, normL2DC3, tol, metaNumber, linearSystem, formMatrices, formResiduals, sol, norms, mesh, fespace);
     maxNormL2BDF[2*iter] = *std::max_element(normL2BDF.begin(), normL2BDF.end());
     maxNormL2DC3[2*iter] = *std::max_element(normL2DC3.begin(), normL2DC3.end());
 

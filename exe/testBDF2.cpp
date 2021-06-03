@@ -41,7 +41,7 @@ int main(int argc, char** argv){
   feFunction *funSol = new feFunction(fSol, par);
   feFunction *funSource = new feFunction(fSource, par);
 
-  int nIter = 3;
+  int nIter = 5;
   std::vector<double> normL2(2*nIter, 0.0);
   std::vector<int> nElm(nIter, 0);
 
@@ -52,7 +52,7 @@ int main(int argc, char** argv){
     // Espaces d'interpolation
     feSpace1DP0 U_BXA = feSpace1DP0(mesh, "U", "BXA", funSol);
     feSpace1DP0 U_BXB = feSpace1DP0(mesh, "U", "BXB", funSol);
-    feSpace1DP2 U_M1D = feSpace1DP2(mesh, "U", "M1D", funSol);
+    feSpace1DP3 U_M1D = feSpace1DP3(mesh, "U", "M1D", funSol);
     std::vector<feSpace*> fespace = {&U_BXA, &U_BXB, &U_M1D};
     std::vector<feSpace*> feEssBC = {&U_BXA, &U_BXB};
     // Numerotations
@@ -78,7 +78,8 @@ int main(int argc, char** argv){
     std::vector<feBilinearForm*> formMatrices  = {diff_U_M1D, masse_U_M1D};
     std::vector<feBilinearForm*> formResiduals  = {diff_U_M1D, masse_U_M1D, source_U_M1D};
     // Norme de la solution
-    feNorm *norm = new feNorm(&U_M1D, mesh, nQuad);
+    feNorm *norm = new feNorm(&U_M1D, mesh, nQuad, funSol);
+    std::vector<feNorm*> norms = {norm};
     // Systeme lineaire
     feLinearSystemPETSc *linearSystem = new feLinearSystemPETSc(argc, argv, formMatrices, formResiduals, metaNumber, mesh);
 #ifdef HAVE_PETSC
@@ -86,7 +87,7 @@ int main(int argc, char** argv){
     // Resolution
     feTolerances tol{1e-10, 1e-10, 10};
     std::vector<double> normL2BDF(nTimeSteps,0.0);
-    solveBDF2(normL2BDF, tol, metaNumber, linearSystem, formMatrices, formResiduals, sol, norm, mesh);
+    solveBDF2(normL2BDF, tol, metaNumber, linearSystem, formMatrices, formResiduals, sol, norms, mesh, fespace);
     normL2[2*iter] = *std::max_element(normL2BDF.begin(), normL2BDF.end());
 #endif
 

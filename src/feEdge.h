@@ -21,6 +21,8 @@ public:
   inline int getTag() const { return _tag; }
   // Tags of the vertices
   inline int getTag(int i) const { return (i==0) ? _v0->getTag() : _v1->getTag(); }
+
+  void print(){ printf("Edge %4d : %4d - %4d\n", _tag, _v0->getTag(), _v1->getTag()); }
 };
 
 struct EdgeLessThan {

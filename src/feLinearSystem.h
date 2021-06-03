@@ -36,7 +36,7 @@ public:
   virtual void assembleMatrices(feSolution *sol) {};
   virtual void assembleResiduals(feSolution *sol) {};
   virtual void assemble(feSolution *sol) {};
-  virtual void solve(double *normDx, double *normResidual) {};
+  virtual void solve(double *normDx, double *normResidual, double *normAxb, int *nIter) {};
   virtual void correctSolution(feSolution *sol) {};
   virtual void assignResidualToDCResidual(feSolutionContainer *solContainer) {};
   virtual void applyCorrectionToResidual(double coeff, std::vector<double> &d) {};

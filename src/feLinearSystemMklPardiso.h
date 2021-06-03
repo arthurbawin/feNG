@@ -48,7 +48,7 @@ public:
     // correctSolution    : somme de la correction dans le vecteur solution 
     //                      ou dans la structure solution
     // ====================================================================
-    virtual void solve(double *normDx, double *normResidual); // MATLAB : RESOUDRE 
+    virtual void solve(double *normDx, double *normResidual, double *normAxb, int *nIter); // MATLAB : RESOUDRE 
     virtual void setToZero();                           // MATLAB : INITIALISE
     virtual void setMatrixToZero();                     // MATLAB : INITIALISE_LA_MATRICE
     virtual void setResidualToZero();                   // MATLAB : INITIALISE_LE_RESIDU

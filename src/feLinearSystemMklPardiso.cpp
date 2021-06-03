@@ -88,7 +88,7 @@ void feLinearSystemMklPardiso::correctSolution(double* sol){
 }; 
 // ====================================================================
 // ====================================================================
-void feLinearSystemMklPardiso::solve(double *normDx, double *normResidual) {
+void feLinearSystemMklPardiso::solve(double *normDx, double *normResidual, double *normAxb, int *nIter) {
 	if(symbolicFactorization) mklSymbolicFactorization();
 	if(recomputeMatrix)       mklFactorization(); //printf("mklFactorization\n");}
 							  mklSolve();

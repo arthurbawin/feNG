@@ -35,9 +35,11 @@ public:
   virtual void setMatrixToZero();
   virtual void setResidualToZero();
   virtual void assembleMatrices(feSolution *sol);
+  void assembleMatricesNaive(feSolution *sol);
   virtual void assembleResiduals(feSolution *sol);
+  void assembleResidualsNaive(feSolution *sol);
   virtual void assemble(feSolution *sol);
-  virtual void solve(double *normDx, double *normResidual);
+  virtual void solve(double *normDx, double *normResidual, double *normAxb, int *nIter);
   virtual void correctSolution(feSolution *sol);
   virtual void assignResidualToDCResidual(feSolutionContainer *solContainer);
   virtual void applyCorrectionToResidual(double coeff, std::vector<double> &d);
