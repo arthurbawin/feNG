@@ -51,14 +51,19 @@ static inline void freeResidual(double** b){
   free(*b); 
 }
 
+<<<<<<< HEAD
 feBilinearForm::feBilinearForm(std::vector<feSpace*> &space, feMesh *mesh, int degQuadrature, feSysElm *sysElm)
   : _sysElm(sysElm), _intSpace(space), _cncGeoTag(space[0]->getCncGeoTag()),
   _geoSpace(mesh->getCncGeoByTag(_cncGeoTag)->getFeSpace()),
    _nGeoElm(mesh->getCncGeoByTag(_cncGeoTag)->getNbElm()), _degQuad(degQuadrature)
+=======
+feBilinearForm::feBilinearForm(std::vector<feSpace*> &space, feMesh *mesh, int nQuadraturePoints, feSysElm *sysElm)
+  : _sysElm(sysElm), _intSpace(space), _cnc(space[0]->getCncGeo()), _cncGeoTag(space[0]->getCncGeoTag()),
+  _geoSpace(_cnc->getFeSpace()), _nGeoElm(_cnc->getNbElm()), _nQuad(nQuadraturePoints)
+>>>>>>> origin/master
 {
   _nCoord = mesh->getDim();
-  _nGeoNodes = mesh->getCncGeoByTag(_cncGeoTag)->getNbNodePerElem();
-  // _geoCoord.resize(_nCoord * _nGeoNodes);
+  _nGeoNodes = _cnc->getNbNodePerElem();
 
   if(_geoSpace->getCncGeoTag() != _cncGeoTag)
     printf("In feBilinearForm::feBilinearForm : Erreur - Connectivité géométrique ne correspond pas à la connectivité de l'espace d'interpolation.\n");
@@ -86,6 +91,7 @@ feBilinearForm::feBilinearForm(std::vector<feSpace*> &space, feMesh *mesh, int d
   for(size_t k = 0; k < _iVar.size(); ++k) _niElm += _intSpace[_iVar[k]]->getNbFunctions();
   _njElm = 0;
   for(size_t k = 0; k < _jVar.size(); ++k) _njElm += _intSpace[_jVar[k]]->getNbFunctions();
+
   _adrI.resize(_niElm);
   _adrJ.resize(_njElm);
 
@@ -127,6 +133,7 @@ void feBilinearForm::initialize_vadij_only(feMetaNumber *metaNumber, int numElem
     for(int k = 0; k < nielm; ++k)
       _adrI[count++] = _intSpace[_iVar[i]]->getAddressingVectorAt(k);
   }
+  
   for(size_t i = 0, count = 0; i < _jVar.size(); ++i){
     int nielm = _intSpace[_jVar[i]]->getNbFunctions();
     for(int k = 0; k < nielm; ++k)
@@ -167,8 +174,9 @@ void feBilinearForm::computeMatrix(feMetaNumber *metaNumber, feMesh *mesh, feSol
 void feBilinearForm::computeMatrixAnalytical(feMetaNumber *metaNumber, feMesh *mesh, feSolution *sol, int numElem) {
   this->initialize(metaNumber, mesh, sol, numElem);
   setMatrixToZero(_niElm, _njElm, &_Ae);
-  _sysElm->computeAe(_intSpace, _geoSpace, _geoCoord, sol->getC0(), sol->getCurrentTime(), _Ae);
-  printMatrix(_niElm, _njElm, &_Ae);
+  std::vector<double> &J = _cnc->getJacobians();
+  _sysElm->computeAe(J, numElem, _intSpace, _geoSpace, _geoCoord, sol->getC0(), sol->getCurrentTime(), _Ae);
+  // printMatrix(_niElm, _njElm, &_Ae);
 }
 // void feBilinearForm::computeMatrixFiniteDifference(feMetaNumber *metaNumber, feMesh *mesh, feSolution *sol, int numElem) {
 //   this->initialize(metaNumber, mesh, sol, numElem);
@@ -179,13 +187,14 @@ void feBilinearForm::computeMatrixAnalytical(feMetaNumber *metaNumber, feMesh *m
 void feBilinearForm::computeResidual(feMetaNumber *metaNumber, feMesh *mesh, feSolution *sol, int numElem){
   this->initialize(metaNumber, mesh, sol, numElem);
   setResidualToZero(_niElm, &_Be);
-  _sysElm->computeBe(_intSpace, _geoSpace, _geoCoord, sol->getC0(), sol->getCurrentTime(), _Be);
-  printResidual(_niElm, &_Be);
+  std::vector<double> &J = _cnc->getJacobians();
+  _sysElm->computeBe(J, numElem, _intSpace, _geoSpace, _geoCoord, sol->getC0(), sol->getCurrentTime(), _Be);
+  // printResidual(_niElm, &_Be);
 }
 
 void feBilinearForm::computeMatrixFiniteDifference(feMetaNumber *metaNumber, feMesh *mesh, feSolution *sol, int numElem) {
 
-  // printf("feBilinearForm::computeMatrixFiniteDifference\n");
+  printf("feBilinearForm::computeMatrixFiniteDifference\n");
   this->initialize(metaNumber, mesh, sol, numElem);
   setMatrixToZero(_niElm, _njElm, &_Ae);
 
@@ -194,7 +203,8 @@ void feBilinearForm::computeMatrixFiniteDifference(feMetaNumber *metaNumber, feM
   // Le résidu non perturbé
   // ==================================================================
   setResidualToZero(_niElm, &R0);
-  _sysElm->computeBe(_intSpace, _geoSpace, _geoCoord, C0, sol->getCurrentTime(), R0);
+  std::vector<double> &J = _cnc->getJacobians();
+  _sysElm->computeBe(J, numElem, _intSpace, _geoSpace, _geoCoord, C0, sol->getCurrentTime(), R0);
   //_sysElm->computeAe(_intSpace, _geoSpace, _geoCoord, sol->getC0(), sol->getCurrentTime(), _Ae);
   // On boucle sur les fespace des inconnues
   // ==================================================================
@@ -216,7 +226,7 @@ void feBilinearForm::computeMatrixFiniteDifference(feMetaNumber *metaNumber, feM
       _soldot[j] = _soldot[j] + delta_h * C0;
 
       setResidualToZero(_niElm, &Rh);
-      _sysElm->computeBe(_intSpace, _geoSpace, _geoCoord, C0, sol->getCurrentTime(), Rh);
+      _sysElm->computeBe(J, numElem, _intSpace, _geoSpace, _geoCoord, C0, sol->getCurrentTime(), Rh);
 
       for(feInt i=0;i<_niElm;i++)
         _Ae[i][numColumn] = (-Rh[i]+R0[i])*invdelta_h;
@@ -226,7 +236,13 @@ void feBilinearForm::computeMatrixFiniteDifference(feMetaNumber *metaNumber, feM
     }
 
   }
-  printMatrix(_niElm, _njElm, &_Ae);
+  // for(auto val : _adrI)
+  //   std::cout<<val<<" ";
+  // std::cout<<std::endl;
+  // for(auto val : _adrJ)
+  //   std::cout<<val<<" ";
+  // std::cout<<std::endl;
+  // printMatrix(_niElm, _njElm, &_Ae);
 }
 
 double feBilinearForm::getMatrixNorm(){

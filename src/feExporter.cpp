@@ -70,14 +70,13 @@ void feExporterVTK::writeField(std::ostream& output, feCncGeo *cnc, int iField){
   // Pas juste : c'est le nombre de noeuds du maillage au complet et pas de cnc...
   feNumber *n = _metaNumber->getNumbering(iField);
   int nNod = n->getNbNodes();
-  output << "POINT_DATA " << nNod << std::endl;
+  // output << "POINT_DATA " << nNod << std::endl;
   output << "SCALARS " << _metaNumber->getFieldID(iField) << " double 1" << std::endl;
   output << "LOOKUP_TABLE default" << std::endl;
   for(int iNode = 0; iNode < nNod; ++iNode){
     int iDOF = n->getVertexNumber(iNode);
     output << sol[iDOF] << std::endl;
   }
-
 }
 
 feExporterVTK::feExporterVTK(std::string vtkFile, feMesh *mesh, feSolution *sol, feMetaNumber *metaNumber,
@@ -87,11 +86,14 @@ feExporterVTK::feExporterVTK(std::string vtkFile, feMesh *mesh, feSolution *sol,
   if(fb.open(vtkFile,std::ios::out)){
     std::ostream output(&fb);
     writeHeader(output);
+    // Write nodes and connectivity : (this assumes all fields are on the same connectivity : fix this in the future)
+    writeNodes(output, 0);
+    writeElementsConnectivity(output, space[3]->getCncGeo(), 0);
+    output << "POINT_DATA " << _metaNumber->getNumbering(0)->getNbNodes() << std::endl;
     // Write each field :
     for(int iField = 0; iField < metaNumber->getNbFields(); ++iField){
       std::string fieldID = metaNumber->getFieldID(iField);
-      writeNodes(output, iField);
-      
+      // writeNodes(output, iField);
       for(auto fS : space){
         if(fS->getFieldID() == fieldID){
           // std::cout<<"Field "<<fieldID<<" is defined on fespace "<<fS->getFieldID()<<" - "<<fS->getCncGeoID()<<std::endl;
@@ -99,7 +101,7 @@ feExporterVTK::feExporterVTK(std::string vtkFile, feMesh *mesh, feSolution *sol,
           // Il faudrait peut-être écrire juste les connectivités non-frontières
           // Peut-être ajouter un flag iBoundary
           if(fS->getCncGeo()->getForme() == "TriP1"){
-            writeElementsConnectivity(output, fS->getCncGeo(), iField);
+            // writeElementsConnectivity(output, fS->getCncGeo(), iField);
             writeField(output, fS->getCncGeo(), iField);
           }
         }

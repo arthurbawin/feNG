@@ -23,8 +23,8 @@ double fSol(const double t, const std::vector<double> x, const std::vector<doubl
 
 double fSource(const double t, const std::vector<double> x, const std::vector<double> par){
   double kd = par[0];
-  // return kd*30.*pow(x[0],4);
-  return kd*6*x[0];
+  return kd*30.*pow(x[0],4);
+  // return kd*6*x[0];
 }
 
 int main(int argc, char** argv){
@@ -33,32 +33,37 @@ int main(int argc, char** argv){
   feFunction *funSol    = new feFunction(fSol,    {kd});
   feFunction *funSource = new feFunction(fSource, {kd});
 
-  int nIter = 4;
+  int nIter = 1;
   std::vector<double> normL2(2*nIter, 0.0);
   std::vector<int> nElm(nIter, 0);
 
   for(int iter = 0; iter < nIter; ++iter){
-    std::string meshName = "../../data/square" + std::to_string(iter+1) + "Msh2.msh";
+    std::string meshName = "../../data/curved4.msh";
+    // std::string meshName = "../../data/squareCoarseP2.msh";
 
-    feMesh2DP1 *mesh = new feMesh2DP1(meshName, false);
+    feMesh2DP1 *mesh = new feMesh2DP1(meshName, true);
     nElm[iter] = mesh->getNbInteriorElems();
-    // mesh->printInfo();
+    mesh->printInfo();
 
-    feSpace1DP1  U_angle   = feSpace1DP1(mesh, "U", "Angle",  funSol);
-    feSpace1DP1  U_haut    = feSpace1DP1(mesh, "U", "Haut",   funSol);
-    feSpace1DP1  U_gauche  = feSpace1DP1(mesh, "U", "Gauche", funSol);
-    feSpaceTriP1 U_surface = feSpaceTriP1(mesh, "U", "Surface", funSol);
+    feSpace1DP2  U_bord   = feSpace1DP2(mesh, "U", "Bord",  funSol);
+    // feSpace1DP2  U_angle   = feSpace1DP2(mesh, "U", "Angle",  funSol);
+    // feSpace1DP2  U_haut    = feSpace1DP2(mesh, "U", "Haut",   funSol);
+    // feSpace1DP2  U_gauche  = feSpace1DP2(mesh, "U", "Gauche", funSol);
+    feSpaceTriP2 U_surface = feSpaceTriP2(mesh, "U", "Surface", funSol);
 
-    std::vector<feSpace*> fespace = {&U_angle, &U_haut, &U_gauche, &U_surface};
-    std::vector<feSpace*> feEssBC = {&U_angle, &U_haut, &U_gauche};
+    // std::vector<feSpace*> fespace = {&U_angle, &U_haut, &U_gauche, &U_surface};
+    std::vector<feSpace*> fespace = {&U_bord, &U_surface};
+    // std::vector<feSpace*> feEssBC = {&U_angle, &U_haut, &U_gauche};
+    std::vector<feSpace*> feEssBC = {&U_bord};
 
     feMetaNumber *metaNumber = new feMetaNumber(mesh, fespace, feEssBC);
-    // metaNumber->printNumberings();
+    // // metaNumber->printNumberings();
 
     feSolution *sol = new feSolution(mesh, fespace, feEssBC, metaNumber);
+    sol->initializeUnknowns(mesh, metaNumber);
 
-    // Formes (bi)lineaires
-    int nQuad = 9; // TODO : change to deg
+    // // Formes (bi)lineaires
+    int nQuad = 16; // TODO : change to deg
     std::vector<feSpace*> spaceDiffusion2D_U = {&U_surface};
     feBilinearForm *diffU = new feBilinearForm(spaceDiffusion2D_U, mesh, nQuad, new feSysElm_2D_Diffusion(kd, nullptr));
     std::vector<feSpace*> spaceSource2D_U = {&U_surface};
@@ -69,6 +74,13 @@ int main(int argc, char** argv){
 
     feNorm *norm = new feNorm(&U_surface, mesh, nQuad, funSol);
     std::vector<feNorm*> norms = {norm};
+    double integral = 0.0;
+    norm->computeArea(metaNumber, sol, mesh);
+    integral = norm->getNorm();
+    std::cout<<"Area = "<<integral<<std::endl;
+    norm->computeIntegral(metaNumber, sol, mesh, funSol);
+    integral = norm->getNorm();
+    std::cout<<"Integral = "<<integral<<std::endl;
 
     feLinearSystemPETSc *linearSystem = new feLinearSystemPETSc(argc, argv, formMatrices, formResiduals, metaNumber, mesh);    
     linearSystem->initialize();
@@ -81,8 +93,8 @@ int main(int argc, char** argv){
     // std::string vtkFile = "../../data/square" + std::to_string(iter+1) + ".vtk";
     // feExporterVTK writer(vtkFile, mesh, sol, metaNumber, fespace);
 
-    delete norm;
     delete linearSystem;
+    delete norm;
     delete sourceU;
     delete diffU;
     delete sol;

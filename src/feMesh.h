@@ -58,7 +58,7 @@ public:
   Vertex* getVertex(int iVertex){ return &_vertices[iVertex]; }
 
   int getNbCncGeo() { return _nCncGeo; }
-  std::vector<feCncGeo*> getCncGeo(){ return _cncGeo; }
+  std::vector<feCncGeo*> &getCncGeo(){ return _cncGeo; }
   int getCncGeoTag(std::string cncGeoID);
   feCncGeo* getCncGeoByName(std::string cncGeoID);
   feCncGeo* getCncGeoByTag(int cncGeoTag);
@@ -112,6 +112,8 @@ private:
     std::vector<int> connecElem;
     std::vector<int> connecNodes;
     std::vector<int> connecEdges;
+    std::vector<int> isBoundedBy;
+    std::vector<int> isBoundaryOf;
   } physicalEntity;
   // A geometric entity (building block to make physical entities)
   typedef struct entityStruct {
@@ -119,7 +121,7 @@ private:
     uint32_t tag;
     uint32_t tagGmsh;
     uint32_t numPhysicalTags;
-    std::vector<uint32_t> physicalTags;
+    std::vector<int> physicalTags;
     uint32_t gmshType;  // Type d'élément dans gmsh
     std::string cncID;
     int nElm;
@@ -128,12 +130,19 @@ private:
     std::vector<int> connecElem;
     std::vector<int> connecNodes;
     std::vector<int> connecEdges;
+    std::vector<int> isBoundedBy;
+    std::vector<int> isBoundaryOf;
   } entity;
+
+public:
+  typedef std::map<std::pair<int,int>,std::string> mapType; 
 
 protected:
   int _nPhysicalEntities;
   std::map<std::pair<int,int>,entity> _entities;
   std::vector<physicalEntity> _physicalEntities;
+
+  mapType _physicalEntitiesDescription;
 
   int _nPoints;
   int _nCurves;
@@ -145,14 +154,24 @@ protected:
 
   int _nElm;
 
+  bool _isBinary;
+  double _gmshVersion;
+
   // std::vector<feElement*> _elements;
   // std::vector<feElement*> _boundaryElements;
 
 public:
-  feMesh2DP1(std::string meshName, bool curved);
+  feMesh2DP1(std::string meshName, bool curved, mapType physicalEntitiesDescription = mapType());
   virtual ~feMesh2DP1();
 
-  int readGmsh(std::string meshName, bool curved);
+  int readMsh2(std::istream &input, bool curved, mapType physicalEntitiesDescription);
+  int readMsh4(std::istream &input, bool curved);
+  int readGmsh(std::string meshName, bool curved, mapType physicalEntitiesDescription = mapType());
+
+  bool isMeshFileBinary(){ return _isBinary; }
+  double getGmshVersion(){ return _gmshVersion; }
+
+  mapType getPhysicalEntitiesDescription(){ return _physicalEntitiesDescription; }
 };
 
 #endif

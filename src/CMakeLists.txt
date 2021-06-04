@@ -1,5 +1,6 @@
 set(feNG_SRC
   feBilinearForm.cpp
+  feCncGeo.cpp
   feCompressedRowStorage.cpp
   feExporter.cpp
   feLinearSystem.cpp
@@ -7,8 +8,11 @@ set(feNG_SRC
   feLinearSystemPETSc.cpp
   feMesh.cpp
   feMeshRead.cpp
+  feMetric.cpp
   feNorm.cpp
   feNumber.cpp
+  feRecovery.cpp
+  feSimplex.cpp
   feSolution.cpp
   feQuadrature2.cpp
   feSolutionContainer.cpp
@@ -17,6 +21,14 @@ set(feNG_SRC
   feSpaceTriangle.cpp
   feSysElm.cpp
 )
+
+if(ENABLE_EIGEN)
+  # Add Gmsh files for STensor3
+  list(APPEND feNG_SRC
+    ${CMAKE_SOURCE_DIR}/contrib/gmsh/fullMatrix.cpp
+    ${CMAKE_SOURCE_DIR}/contrib/gmsh/Numeric.cpp
+    ${CMAKE_SOURCE_DIR}/contrib/gmsh/STensor3.cpp)
+endif()
 
 set(feNG_API
   feBilinearForm.h
@@ -31,11 +43,17 @@ set(feNG_API
   feLinearSystemMklPardiso.h
   feLinearSystemPETSc.h
   feMesh.h
+  feMetric.h
   feNG.h
   feNorm.h
   feNumber.h
   feQuadrature.h
+<<<<<<< HEAD
   feQuadrature2.h
+=======
+  feRecovery.h
+  feSimplex.h
+>>>>>>> origin/master
   feSolution.h
   feSolutionContainer.h
   feSolver.h
@@ -43,6 +61,8 @@ set(feNG_API
   feSysElm.h
 
 )
+
+feNG_add_library(feNG "${feNG_SRC}" "${feNG_API}")
 
 # if(ENABLE_PETSC)
 #   list(APPEND feNG_SRC feLinearSystemPETSc.cpp)
@@ -53,4 +73,4 @@ set(feNG_API
 #   list(APPEND feNG_API feLinearSystemPardiso.h)
 # endif()
 
-feNG_add_library(feNG "${feNG_SRC}" "${feNG_API}")
+

@@ -12,8 +12,12 @@ option(ENABLE_SOPLEX        "Enable SOPLEX"               OFF)
 option(ENABLE_PETSC         "Enable PETSc"                ON )
 option(ENABLE_MKL           "Enable MKL"                  OFF)
 <<<<<<< HEAD
+<<<<<<< HEAD
 option(ENABLE_SANITY_CHECKS "Enable sanity checks"        OFF )
 =======
+=======
+option(ENABLE_EIGEN         "Enable Eigen"                ON )
+>>>>>>> origin/master
 option(ENABLE_SANITY_CHECKS "Enable sanity checks"        OFF)
 >>>>>>> origin/master
 
@@ -139,6 +143,27 @@ endif()
 ############################################
 #### End of Platform dependent settings ####
 ############################################
+
+############################################
+#  Macro pour definir une bibliotheque
+############################################
+macro(feNG_add_library LIBNAME SRC API_H)
+  foreach(HFILE ${API_H})
+    list(APPEND feNG_API_H "${CMAKE_CURRENT_SOURCE_DIR}/${HFILE}")
+  endforeach()
+  SET(feNG_API_H ${feNG_API_H} PARENT_SCOPE)
+  add_library(${LIBNAME} ${SRC})
+  install(TARGETS ${LIBNAME} DESTINATION lib)
+endmacro()
+
+############################################
+#  Macro pour ajouter un executable
+############################################
+macro(feNG_add_executable EXENAME SRC LIBS)
+  add_executable(${EXENAME} ${SRC})
+  target_link_libraries(${EXENAME} ${LIBS} feNG ${feNG_EXTERNAL_LIBS})
+  install(TARGETS ${EXENAME} DESTINATION bin)
+endmacro()
 
 if(CMAKE_BUILD_TYPE STREQUAL Debug)
   add_definitions(-DDEBUG)
@@ -277,25 +302,22 @@ if(ENABLE_SOPLEX)
 endif()
 
 ############################################
-#  Macro pour definir une bibliotheque
+#  Eigen (eigenvalues/vectors and linear algebra)
 ############################################
-macro(feNG_add_library LIBNAME SRC API_H)
-  foreach(HFILE ${API_H})
-    list(APPEND feNG_API_H "${CMAKE_CURRENT_SOURCE_DIR}/${HFILE}")
-  endforeach()
-  SET(feNG_API_H ${feNG_API_H} PARENT_SCOPE)
-  add_library(${LIBNAME} ${SRC})
-  install(TARGETS ${LIBNAME} DESTINATION lib)
-endmacro()
+if(ENABLE_EIGEN)
+  include_directories(${CMAKE_CURRENT_SOURCE_DIR}/contrib/Eigen)
+  add_definitions("-DHAVE_EIGEN")
+  MESSAGE(STATUS "Eigen found (-:")
+endif()
 
 ############################################
-#  Macro pour ajouter un executable
+#  Gmsh classes for metric tensors
 ############################################
-macro(feNG_add_executable EXENAME SRC LIBS)
-  add_executable(${EXENAME} ${SRC})
-  target_link_libraries(${EXENAME} ${LIBS} feNG ${feNG_EXTERNAL_LIBS})
-  install(TARGETS ${EXENAME} DESTINATION bin)
-endmacro()
+if(ENABLE_EIGEN)
+  include_directories(${CMAKE_CURRENT_SOURCE_DIR}/contrib/gmsh)
+  # See also src/CmakeLists.txt for the .cpp files
+  MESSAGE(STATUS "Gmsh STensor3 found (-:")
+endif()
 
 MESSAGE(STATUS "External libs for feNG : ${feNG_EXTERNAL_LIBS}")
 

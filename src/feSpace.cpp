@@ -67,12 +67,18 @@ void feSpace::setQuadratureRule(feQuadrature2 *quad){
     for(int j = 0; j < _nFunctions; ++j)
       _dLdt[_nFunctions*i+j] = dldt[j];
   }
+
+  // If the space is a geometric interpolant, precompute jacobians of the elements
+  if(_fieldID == "GEO"){
+    this->getCncGeo()->computeJacobians();
+  }
 }
 
 void feSpace::initializeSolution(feSolution *sol){
   _sol.resize(_adr.size());
-  for(size_t i = 0; i < _adr.size(); ++i)
+  for(size_t i = 0; i < _adr.size(); ++i){
     _sol[i] = sol->getSolAtDOF(_adr[i]);
+  }
 }
 
 void feSpace::initializeSolutionDot(feSolution *sol){
@@ -261,11 +267,8 @@ void feSpace1DP1::initializeNumberingEssential(feNumber *number){
 }
 
 void feSpace1DP1::initializeAddressingVector(feNumber *number, int numElem){
-  // _adr.resize(_nFunctions);
-  // for(int i = 0; i < _mesh->getNbElm(_cncGeoID); ++i){
-    _adr[0] = number->getDDLSommet(_mesh, _cncGeoID, numElem, 0);
-    _adr[1] = number->getDDLSommet(_mesh, _cncGeoID, numElem, 1);
-  // }
+  _adr[0] = number->getDDLSommet(_mesh, _cncGeoID, numElem, 0);
+  _adr[1] = number->getDDLSommet(_mesh, _cncGeoID, numElem, 1);
 }
 
 void feSpace1DP2::initializeNumberingUnknowns(feNumber *number){
@@ -273,6 +276,8 @@ void feSpace1DP2::initializeNumberingUnknowns(feNumber *number){
     number->defDDLSommet(_mesh, _cncGeoID, i, 0);
     number->defDDLSommet(_mesh, _cncGeoID, i, 1);
     number->defDDLElement(_mesh, _cncGeoID, i, 1);
+    // If the line is a boundary element, the edge should be set by the interior element
+    // number->defDDLEdge(_mesh, _cncGeoID, i, 0, 0);
   }
 }
 
@@ -281,16 +286,16 @@ void feSpace1DP2::initializeNumberingEssential(feNumber *number){
     number->defDDLSommet_essentialBC(_mesh, _cncGeoID, i, 0);
     number->defDDLSommet_essentialBC(_mesh, _cncGeoID, i, 1);
     number->defDDLElement_essentialBC(_mesh, _cncGeoID, i);
+    // Set essential BC on the edge if the line is a boundary element
+    // If the line is an interior element, there is nothing in cncGeo->connecEdges
+    number->defDDLEdge_essentialBC(_mesh, _cncGeoID, i, 0);
   }
 }
 
 void feSpace1DP2::initializeAddressingVector(feNumber *number, int numElem){
-  // _adr.resize(_nFunctions);
-  // for(int i = 0; i < _mesh->getNbElm(_cncGeoID); ++i){
-    _adr[0] = number->getDDLSommet(_mesh, _cncGeoID, numElem, 0);
-    _adr[1] = number->getDDLSommet(_mesh, _cncGeoID, numElem, 1);
-    _adr[2] = number->getDDLElement(_mesh, _cncGeoID, numElem, 0);
-  // }
+  _adr[0] = number->getDDLSommet(_mesh, _cncGeoID, numElem, 0);
+  _adr[1] = number->getDDLSommet(_mesh, _cncGeoID, numElem, 1);
+  _adr[2] = number->getDDLElement(_mesh, _cncGeoID, numElem, 0);
 }
 
 void feSpace1DP3::initializeNumberingUnknowns(feNumber *number){
@@ -306,15 +311,38 @@ void feSpace1DP3::initializeNumberingEssential(feNumber *number){
     number->defDDLSommet_essentialBC(_mesh, _cncGeoID, i, 0);
     number->defDDLSommet_essentialBC(_mesh, _cncGeoID, i, 1);
     number->defDDLElement_essentialBC(_mesh, _cncGeoID, i);
+    number->defDDLEdge_essentialBC(_mesh, _cncGeoID, i, 0);
   }
 }
 
 void feSpace1DP3::initializeAddressingVector(feNumber *number, int numElem){
-  // _adr.resize(_nFunctions);
-  // for(int i = 0; i < _mesh->getNbElm(_cncGeoID); ++i){
-    _adr[0] = number->getDDLSommet(_mesh, _cncGeoID, numElem, 0);
-    _adr[1] = number->getDDLSommet(_mesh, _cncGeoID, numElem, 1);
-    _adr[2] = number->getDDLElement(_mesh, _cncGeoID, numElem, 0);
-    _adr[3] = number->getDDLElement(_mesh, _cncGeoID, numElem, 1);
-  // }
+  _adr[0] = number->getDDLSommet(_mesh, _cncGeoID, numElem, 0);
+  _adr[1] = number->getDDLSommet(_mesh, _cncGeoID, numElem, 1);
+  _adr[2] = number->getDDLElement(_mesh, _cncGeoID, numElem, 0);
+  _adr[3] = number->getDDLElement(_mesh, _cncGeoID, numElem, 1);
+}
+
+void feSpace1DP4::initializeNumberingUnknowns(feNumber *number){
+  for(int i = 0; i < _mesh->getNbElm(_cncGeoID); ++i){
+    number->defDDLSommet(_mesh, _cncGeoID, i, 0);
+    number->defDDLSommet(_mesh, _cncGeoID, i, 1);
+    number->defDDLElement(_mesh, _cncGeoID, i, 3);
+  }
+}
+
+void feSpace1DP4::initializeNumberingEssential(feNumber *number){
+  for(int i = 0; i < _mesh->getNbElm(_cncGeoID); ++i){
+    number->defDDLSommet_essentialBC(_mesh, _cncGeoID, i, 0);
+    number->defDDLSommet_essentialBC(_mesh, _cncGeoID, i, 1);
+    number->defDDLElement_essentialBC(_mesh, _cncGeoID, i);
+    number->defDDLEdge_essentialBC(_mesh, _cncGeoID, i, 0);
+  }
+}
+
+void feSpace1DP4::initializeAddressingVector(feNumber *number, int numElem){
+  _adr[0] = number->getDDLSommet(_mesh, _cncGeoID, numElem, 0);
+  _adr[1] = number->getDDLSommet(_mesh, _cncGeoID, numElem, 1);
+  _adr[2] = number->getDDLElement(_mesh, _cncGeoID, numElem, 0);
+  _adr[3] = number->getDDLElement(_mesh, _cncGeoID, numElem, 1);
+  _adr[4] = number->getDDLElement(_mesh, _cncGeoID, numElem, 2);
 }

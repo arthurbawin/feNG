@@ -8,12 +8,15 @@
 #include "feQuadrature.h"
 #include "feNumber.h"
 #include "feSolution.h"
+#include "feCncGeo.h"
 
 class feBilinearForm{
 
 protected:
   feSysElm *_sysElm;
   std::vector<feSpace*> _intSpace;
+
+  feCncGeo *_cnc;
   
   int _cncGeoTag;
   feSpace *_geoSpace;
@@ -25,7 +28,7 @@ protected:
   int _nQuad;
   int _degQuad;
   std::vector<double> _w;
-  std::vector<double> _x; 
+  std::vector<double> _x;
 
   std::vector<int> _iVar;
   std::vector<int> _jVar;
@@ -43,7 +46,7 @@ protected:
   // (2) Construction par la méthode des différences finies
   //     Utile pour : (i)  Pour développement rapide, mais
   //                  (ii) Plus coûteux 
-  //     Utiulise   : R0 le résidu 
+  //     Utilise    : R0 le résidu 
   //                  Rh le résidu perturbé
   //                  h0 la perturbation de la solution
   // ==================================================================

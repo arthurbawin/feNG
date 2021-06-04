@@ -48,6 +48,7 @@ feCncGeo* feMesh::getCncGeoByTag(int cncGeoTag){
 //   return coord;
 // }
 
+// numElem est le numero local de l'element dans la connectivité géométrique
 std::vector<double> feMesh::getCoord(std::string cncGeoID, int numElem){
   feCncGeo* cnc = getCncGeoByName(cncGeoID);
   int nNodePerElem = cnc->getNbNodePerElem();
@@ -137,13 +138,13 @@ void feMesh::printInfo(){
     for(int i = 0; i < cnc->getNbElm(); ++i){
       std::cout<< cnc->getGlobalConnectivity(i) << std::endl;
     }
-    printf("Connectivité des arêtes :\n");
-    for(int i = 0; i < cnc->getNbElm(); ++i){
-      for(int j = 0; j < cnc->getNbEdgePerElem(); ++j){
-        std::cout<< cnc->getEdgeConnectivity(i,j)<<" - ";
-      }
-      std::cout<<std::endl;
-    }
+    // printf("Connectivité des arêtes :\n");
+    // for(int i = 0; i < cnc->getNbElm(); ++i){
+    //   for(int j = 0; j < cnc->getNbEdgePerElem(); ++j){
+    //     std::cout<< cnc->getEdgeConnectivity(i,j)<<" - ";
+    //   }
+    //   std::cout<<std::endl;
+    // }
   }
 }
 
@@ -168,7 +169,7 @@ feMesh1DP1::feMesh1DP1(double xA, double xB, int nElm, std::string bndA_ID, std:
   }
 
   int nCncGeo = 0;
-  feCncGeo *geoDom = new feCncGeo(_nNodDomain, _nElmDomain, 0, _domID, "Lg", new feSpace1DP1("xyz"), connecDomain);
+  feCncGeo *geoDom = new feCncGeo(nCncGeo, _nNodDomain, _nElmDomain, 0, _domID, "Lg", new feSpace1DP1("xyz"), connecDomain);
   _cncGeo.push_back(geoDom);
   _cncGeoMap[_domID] = nCncGeo;
   geoDom->getFeSpace()->setCncGeoTag(nCncGeo++);
@@ -178,11 +179,13 @@ feMesh1DP1::feMesh1DP1(double xA, double xB, int nElm, std::string bndA_ID, std:
   std::vector<int> connecBoundaryB(_nElmBoundary*_nNodBoundary, 0);
   connecBoundaryA[0] = 0;
   connecBoundaryB[0] = _nNod-1;
-  feCncGeo *geoBndA = new feCncGeo(_nNodBoundary, _nElmBoundary, 0, _bndA_ID, "Pt", new feSpace1DP0("xyz"), connecBoundaryA);
-  feCncGeo *geoBndB = new feCncGeo(_nNodBoundary, _nElmBoundary, 0, _bndB_ID, "Pt", new feSpace1DP0("xyz"), connecBoundaryB);
+
+  feCncGeo *geoBndA = new feCncGeo(nCncGeo, _nNodBoundary, _nElmBoundary, 0, _bndA_ID, "Pt", new feSpace1DP0("xyz"), connecBoundaryA);
   _cncGeo.push_back(geoBndA);
   _cncGeoMap[_bndA_ID] = nCncGeo;
   geoBndA->getFeSpace()->setCncGeoTag(nCncGeo++);
+
+  feCncGeo *geoBndB = new feCncGeo(nCncGeo, _nNodBoundary, _nElmBoundary, 0, _bndB_ID, "Pt", new feSpace1DP0("xyz"), connecBoundaryB);
   _cncGeo.push_back(geoBndB);
   _cncGeoMap[_bndB_ID] = nCncGeo;
   geoBndB->getFeSpace()->setCncGeoTag(nCncGeo++);
@@ -194,6 +197,12 @@ feMesh1DP1::feMesh1DP1(double xA, double xB, int nElm, std::string bndA_ID, std:
       cnc->setGlobalConnectivity(i,numElmGlo++);
   }
   _nTotalElm = numElmGlo;
+
+  // Assign pointer to the mesh to cnc and their fespace :
+  for(feCncGeo *cnc : _cncGeo){
+    cnc->setMeshPtr(this);
+    cnc->getFeSpace()->setMeshPtr(this);
+  }
 };
 
 feMesh1DP1::~feMesh1DP1(){
@@ -203,13 +212,19 @@ feMesh1DP1::~feMesh1DP1(){
   }
 }
 
-feMesh2DP1::feMesh2DP1(std::string meshName, bool curved) : feMesh(){
+feMesh2DP1::feMesh2DP1(std::string meshName, bool curved, mapType physicalEntitiesDescription) : feMesh(){
 
   _ID = "myBeautifulMesh";
   // _dim = 2; // Should be determined by readGmsh
 
-  if(readGmsh(meshName, curved)){
+  if(readGmsh(meshName, curved, physicalEntitiesDescription)){
     printf("In feMesh2DP1::feMesh2DP1 : Error in readGmsh - mesh not finalized.\n");
+  }
+
+  // Assign a pointer to this mesh to each of its geometric connectivities and their fespace
+  for(feCncGeo *cnc : _cncGeo){
+    cnc->setMeshPtr(this);
+    cnc->getFeSpace()->setMeshPtr(this);
   }
 
   // _nCncGeo = _cncGeo.size();

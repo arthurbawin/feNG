@@ -36,9 +36,9 @@ int main(int argc, char** argv){
   double xa = 0.;
   double xb = 5.;
 
-  double kd = 0.1;
+  double kd = 1.0;
 
-  int nIter = 4;
+  int nIter = 1;
   std::vector<double> normL2(2*nIter, 0.0);
   std::vector<int> nElm(nIter, 0);
 
@@ -47,18 +47,19 @@ int main(int argc, char** argv){
   feFunction *funSource = new feFunction(fSource, {kd});
 
   for(int iter = 0; iter < nIter; ++iter){
-    nElm[iter] = 20 * pow(2, iter);
+    nElm[iter] = 10 * pow(2, iter);
     // nElm[iter] = 10;
     // Maillage
     feMesh1DP1 *mesh = new feMesh1DP1(xa,xb,nElm[iter],"BXA","BXB","M1D");
     // Espaces d'interpolation
     feSpace1DP0 U_BXA = feSpace1DP0(mesh, "U", "BXA", funSol);
     feSpace1DP0 U_BXB = feSpace1DP0(mesh, "U", "BXB", funSol);
-    feSpace1DP1 U_M1D = feSpace1DP1(mesh, "U", "M1D", funSol);
+    feSpace1DP4 U_M1D = feSpace1DP4(mesh, "U", "M1D", fun0);
     std::vector<feSpace*> fespace = {&U_BXA, &U_BXB, &U_M1D};
     std::vector<feSpace*> feEssBC = {&U_BXA, &U_BXB};
     // Numerotations
     feMetaNumber *metaNumber = new feMetaNumber(mesh, fespace, feEssBC);
+    metaNumber->printNumberings();
     // Solution
     feSolution *sol = new feSolution(mesh, fespace, feEssBC, metaNumber);
     sol->initializeUnknowns(mesh, metaNumber);
@@ -73,6 +74,7 @@ int main(int argc, char** argv){
     std::vector<feBilinearForm*> formMatrices  = {diff_U_M1D};
     std::vector<feBilinearForm*> formResiduals  = {diff_U_M1D, source_U_M1D};
 
+<<<<<<< HEAD
 
     feNorm *norm = new feNorm(&U_M1D, mesh, degQuad);
 
@@ -85,11 +87,15 @@ int main(int argc, char** argv){
 
  
 
+=======
+    feNorm *norm = new feNorm(&U_M1D, mesh, nQuad, funSol);
+    std::vector<feNorm*> norms = {norm};
+>>>>>>> origin/master
 #ifdef HAVE_PETSC
     feLinearSystemPETSc *linearSystem = new feLinearSystemPETSc(argc, argv, formMatrices, formResiduals, metaNumber, mesh);    
     linearSystem->initialize();
-    feTolerances tol{1e-9, 1e-8, 20};
-    solveStationary(&normL2[2*iter], tol, metaNumber, linearSystem, formMatrices, formResiduals, sol, norm, mesh);
+    feTolerances tol{1e-9, 1e-8, 0};
+    solveStationary(&normL2[2*iter], tol, metaNumber, linearSystem, formMatrices, formResiduals, sol, norms, mesh);
     linearSystem->finalize();
 #endif
 

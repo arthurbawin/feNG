@@ -150,7 +150,7 @@ void initializeDC3F(feSolution *sol, feMetaNumber *metaNumber, feMesh *mesh, feS
     }
   }
   std::vector<double> sub(tt.begin(), tt.begin() + 3);
-  std::cout<<"sub.size() = "<<sub.size()<<std::endl;
+  // std::cout<<"sub.size() = "<<sub.size()<<std::endl;
   std::vector<double> f(nLvl, 0.0);
   size_t n = sub.size();
   std::vector<double> table(n*(n+1),0.0);
