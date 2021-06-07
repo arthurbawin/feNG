@@ -11,6 +11,7 @@ feNG_add_executable(testMetriques testMetriques.cpp "")
 feNG_add_executable(testCurved testCurved.cpp "")
 feNG_add_executable(testStokesSteady testStokesSteady.cpp "")
 feNG_add_executable(testNavierStokesSteady testNavierStokesSteady.cpp "")
+feNG_add_executable(testCylinder testCylinder.cpp "")
 # feNG_add_executable(testVecReference testVecReference.cpp "")
 
 #target_include_directories(feNGt PUBLIC ${MKL_INCLUDE_DIRS})

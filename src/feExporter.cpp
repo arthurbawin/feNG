@@ -88,7 +88,7 @@ feExporterVTK::feExporterVTK(std::string vtkFile, feMesh *mesh, feSolution *sol,
     writeHeader(output);
     // Write nodes and connectivity : (this assumes all fields are on the same connectivity : fix this in the future)
     writeNodes(output, 0);
-    writeElementsConnectivity(output, space[3]->getCncGeo(), 0);
+    writeElementsConnectivity(output, space[4]->getCncGeo(), 0);
     output << "POINT_DATA " << _metaNumber->getNumbering(0)->getNbNodes() << std::endl;
     // Write each field :
     for(int iField = 0; iField < metaNumber->getNbFields(); ++iField){
