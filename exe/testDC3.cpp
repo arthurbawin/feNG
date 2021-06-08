@@ -79,12 +79,12 @@ int main(int argc, char** argv){
     std::vector<feBilinearForm*> formMatrices  = {diff_U_M1D, masse_U_M1D};
     std::vector<feBilinearForm*> formResiduals  = {diff_U_M1D, masse_U_M1D, source_U_M1D};
     // Norme de la solution
-<<<<<<< HEAD
-    feNorm *norm = new feNorm(&U_M1D, mesh, degQuad);
-=======
-    feNorm *norm = new feNorm(&U_M1D, mesh, nQuad, funSol);
+
+    // feNorm *norm = new feNorm(&U_M1D, mesh, degQuad);
+
+    feNorm *norm = new feNorm(&U_M1D, mesh, degQuad, funSol);
     std::vector<feNorm*> norms = {norm};
->>>>>>> origin/master
+
     // Systeme lineaire
     feLinearSystemPETSc *linearSystem = new feLinearSystemPETSc(argc, argv, formMatrices, formResiduals, metaNumber, mesh);
     linearSystem->initialize();

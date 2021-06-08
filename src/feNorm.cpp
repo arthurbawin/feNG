@@ -2,27 +2,27 @@
 #include <cmath>
 #include "feQuadrature.h"
 
-<<<<<<< HEAD
-feNorm::feNorm(feSpace *intSpace, feMesh *mesh, int degQuad)
-  : _intSpace(intSpace), cncGeoTag(intSpace->getCncGeoTag()), geoSpace(mesh->getGeometricSpace(cncGeoTag)),
-  nElmGeo(mesh->getNbElm(cncGeoTag)), dim(mesh->getDim()), nNodePerElem(intSpace->getNbNodePerElem()),
-  _degQuad(degQuad)
-=======
+
+// feNorm::feNorm(feSpace *intSpace, feMesh *mesh, int degQuad)
+//   : _intSpace(intSpace), cncGeoTag(intSpace->getCncGeoTag()), geoSpace(mesh->getGeometricSpace(cncGeoTag)),
+//   nElmGeo(mesh->getNbElm(cncGeoTag)), dim(mesh->getDim()), nNodePerElem(intSpace->getNbNodePerElem()),
+//   _degQuad(degQuad)
+
 feNorm::feNorm(feSpace *intSpace, feMesh *mesh, int nQuad, feFunction *solRef)
   : _intSpace(intSpace), cncGeoTag(intSpace->getCncGeoTag()), geoSpace(mesh->getGeometricSpace(cncGeoTag)),
   nElmGeo(mesh->getNbElm(cncGeoTag)), dim(mesh->getDim()), nNodePerElem(intSpace->getNbNodePerElem()),
   _nQuad(nQuad), _solRef(solRef)
->>>>>>> origin/master
+
 {
 
-  feQuadrature2 *rule = new feQuadrature2(_degQuad);
+  feQuadrature *rule = new feQuadrature(_degQuad,_dimQuad, form);
   w = rule->getWeights();
-  x = rule->getPoints();
+  x = rule->getXPoints();
   _nQuad=rule->getNQuad();
 
   // x = rule->getPoints();
-  // y = rule->getYPoints();
-  // z = rule->getZPoints();
+  y = rule->getYPoints();
+  z = rule->getZPoints();
   // Attention : ça changle la règle de quadrature pour les interpolants avant la résolution !
   // Il faudrait choisir idépendamment les deux sans conséquences
 

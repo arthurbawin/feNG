@@ -20,20 +20,22 @@ protected:
   int _nQuad;
   int _degQuad;
   int deg;
+  int _dimQuad;
+  std::string form;
   std::vector<double> w;
-  // std::vector<double> x;
-  // std::vector<double> y;
-  // std::vector<double> z;
+  std::vector<double> x;
+  std::vector<double> y;
+  std::vector<double> z;
 
   feFunction *_solRef;
 
   double norm;
 public:
-<<<<<<< HEAD
-	feNorm(feSpace *intSpace, feMesh *mesh, int degQuad);
-=======
+
+// 	feNorm(feSpace *intSpace, feMesh *mesh, int degQuad);
+
 	feNorm(feSpace *intSpace, feMesh *mesh, int nQuad, feFunction *solRef = nullptr);
->>>>>>> origin/master
+
 	~feNorm() {}
 
   double getNorm(){ return norm; }

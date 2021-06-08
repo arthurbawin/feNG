@@ -2,7 +2,6 @@
 #include "feMesh.h"
 #include "feNumber.h"
 #include "feSolution.h"
-#include "feQuadrature.h"
 
 feSpace::feSpace(feMesh *mesh, std::string fieldID, std::string cncGeoID, feFunction *fct)
   : _mesh(mesh), _fieldID(fieldID), _fieldTag(-1), _cncGeoID(cncGeoID), _cncGeoTag(-1), 
@@ -27,23 +26,18 @@ int feSpace::getNbNodePerElem(){
   return _mesh->getNbNodePerElem(_cncGeoTag);
 }
 
+feCncGeo* const feSpace::getCncGeo(){
+  return _mesh->getCncGeoByTag(_cncGeoTag);
+}
 
-void feSpace::setQuadratureRule(feQuadrature2 *quad){
-  _nQuad = (_nQuad != -1) ? _nQuad : quad->getNQuad();
-
-// feCncGeo* const feSpace::getCncGeo(){
-//   return _mesh->getCncGeoByTag(_cncGeoTag);
-// }
-
-// void feSpace::setQuadratureRule(feQuadrature *quad){
-//   int dim = quad->getDim();
-//   if(_nQuad == 1){
-//     printf("Warning : nQuad = 1 was already set.\n");
-//   }
-//   _nQuad = quad->getNQuad();
-
+void feSpace::setQuadratureRule(feQuadrature *quad){
+  int dim = quad->getDim();
+  if(_nQuad == 1){
+    printf("Warning : nQuad = 1 was already set.\n");
+  }
+  _nQuad = quad->getNQuad();
   _wQuad = quad->getWeights();
-  _xQuad = quad->getPoints();
+  _xQuad = quad->getXPoints();
   _yQuad = quad->getYPoints();
   _zQuad = quad->getZPoints();
 

@@ -97,14 +97,8 @@ public:
 
   int getAddressingVectorAt(int node){ return _adr[node]; }
 
-<<<<<<< HEAD
-  void setQuadratureRule(feQuadrature2 *quad);
-  int getNbQuadPoints(){ return _nQuad; }
-  std::vector<double> &getQuadratureWeights(){ return _wQuad; }
-  std::vector<double> &getQuadraturePoints(){ return _xQuad; }
 
-=======
->>>>>>> origin/master
+
   double evalFun(const double t, const std::vector<double> &x){ return _fct->eval(t,x); }
 
   double interpolateField(std::vector<double> field, double r[3]);

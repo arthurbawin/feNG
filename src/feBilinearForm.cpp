@@ -51,16 +51,16 @@ static inline void freeResidual(double** b){
   free(*b); 
 }
 
-<<<<<<< HEAD
-feBilinearForm::feBilinearForm(std::vector<feSpace*> &space, feMesh *mesh, int degQuadrature, feSysElm *sysElm)
-  : _sysElm(sysElm), _intSpace(space), _cncGeoTag(space[0]->getCncGeoTag()),
-  _geoSpace(mesh->getCncGeoByTag(_cncGeoTag)->getFeSpace()),
-   _nGeoElm(mesh->getCncGeoByTag(_cncGeoTag)->getNbElm()), _degQuad(degQuadrature)
-=======
+
+// feBilinearForm::feBilinearForm(std::vector<feSpace*> &space, feMesh *mesh, int degQuadrature, feSysElm *sysElm)
+//   : _sysElm(sysElm), _intSpace(space), _cncGeoTag(space[0]->getCncGeoTag()),
+//   _geoSpace(mesh->getCncGeoByTag(_cncGeoTag)->getFeSpace()),
+//    _nGeoElm(mesh->getCncGeoByTag(_cncGeoTag)->getNbElm()), _degQuad(degQuadrature)
+
 feBilinearForm::feBilinearForm(std::vector<feSpace*> &space, feMesh *mesh, int nQuadraturePoints, feSysElm *sysElm)
   : _sysElm(sysElm), _intSpace(space), _cnc(space[0]->getCncGeo()), _cncGeoTag(space[0]->getCncGeoTag()),
   _geoSpace(_cnc->getFeSpace()), _nGeoElm(_cnc->getNbElm()), _nQuad(nQuadraturePoints)
->>>>>>> origin/master
+
 {
   _nCoord = mesh->getDim();
   _nGeoNodes = _cnc->getNbNodePerElem();
@@ -74,8 +74,9 @@ feBilinearForm::feBilinearForm(std::vector<feSpace*> &space, feMesh *mesh, int n
   }
   
   // (Re-)initialize the interpolation functions at quadrature nodes
-
-  feQuadrature2 *rule = new feQuadrature2(_degQuad);  
+  int _dimQuad = 2; 
+  std::string form = "TriP1";
+  feQuadrature *rule = new feQuadrature(_degQuad,_dimQuad,form);  
 
   for(feSpace *fS : _intSpace)
     fS->setQuadratureRule(rule);
