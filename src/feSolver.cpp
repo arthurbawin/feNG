@@ -180,7 +180,7 @@ void solveDC3(std::vector<double> &normL2BDF2, std::vector<double> &normL2DC3,fe
   // norm->computeL2Norm(metaNumber, sol, mesh);
   // normL2DC3[0] = norm->getNorm();
 
-  std::string vtkFile = "../../data/taylorGreenUnsteady" + std::to_string(0) + ".vtk";
+  std::string vtkFile = "../../data/cylFine" + std::to_string(0) + ".vtk";
   feExporterVTK writer(vtkFile, mesh, sol, metaNumber, spaces);
   int cnt = 0;
   for(auto *norm : norms){
@@ -216,7 +216,7 @@ void solveDC3(std::vector<double> &normL2BDF2, std::vector<double> &normL2DC3,fe
     // norm->computeL2Norm(metaNumber, sol, mesh);
     // normL2DC3[iTime] = norm->getNorm();
 
-    std::string vtkFile = "../../data/taylorGreenUnsteady" + std::to_string(iTime) + ".vtk";
+    std::string vtkFile = "../../data/cylFine" + std::to_string(iTime) + ".vtk";
     feExporterVTK writer(vtkFile, mesh, sol, metaNumber, spaces);
     int cnt = 0;
     for(auto *norm : norms){
@@ -256,7 +256,7 @@ void solveDC3(std::vector<double> &normL2BDF2, std::vector<double> &normL2DC3,fe
     // norm->computeL2Norm(metaNumber, sol, mesh);
     // normL2DC3[iTime] = norm->getNorm();
 
-    std::string vtkFile = "../../data/taylorGreenUnsteady" + std::to_string(iTime) + ".vtk";
+    std::string vtkFile = "../../data/cylFine" + std::to_string(iTime) + ".vtk";
     feExporterVTK writer(vtkFile, mesh, sol, metaNumber, spaces);
     int cnt = 0;
     for(auto *norm : norms){

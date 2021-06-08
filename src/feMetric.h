@@ -11,6 +11,7 @@ typedef struct feMetricOptions{
   double hMax;
   int computationMethod;
   double LpNorm;
+  int nPhi;
 } feMetricOptions;
 
 class feMetric{
