@@ -19,7 +19,7 @@ feMetric::feMetric(feRecovery *recovery, feMetricOptions metricOptions) : _recov
 
   std::map<int, std::vector<double>> &e = recovery->getErrorCoefficients();
 
-  int nPhi = 201;
+  int nPhi = _options.nPhi;
   std::vector<double> phi(nPhi, 0.); // Error curve discretization
   for(int i = 0; i < nPhi; ++i){ phi[i] = i * 2.*M_PI/nPhi; }
 
