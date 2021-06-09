@@ -81,16 +81,16 @@ int main(int argc, char** argv){
 
     feNorm *norm = new feNorm(&U_surface, mesh, nQuad, funSol);
     std::vector<feNorm*> norms = {norm};
-    double integral = 0.0;
-    norm->computeL2Norm(metaNumber, sol, mesh);
-    integral = norm->getNorm();
-    std::cout<<"Norme = "<<integral<<std::endl;
-    norm->computeArea(metaNumber, sol, mesh);
-    integral = norm->getNorm();
-    std::cout<<"Area = "<<integral<<std::endl;
-    norm->computeIntegral(metaNumber, sol, mesh, funSol);
-    integral = norm->getNorm();
-    std::cout<<"Integrale = "<<integral<<std::endl;
+    // double integral = 0.0;
+    // norm->computeL2Norm(metaNumber, sol, mesh);
+    // integral = norm->getNorm();
+    // std::cout<<"Norme = "<<integral<<std::endl;
+    // norm->computeArea(metaNumber, sol, mesh);
+    // integral = norm->getNorm();
+    // std::cout<<"Area = "<<integral<<std::endl;
+    // norm->computeIntegral(metaNumber, sol, mesh, funSol);
+    // integral = norm->getNorm();
+    // std::cout<<"Integrale = "<<integral<<std::endl;
     feLinearSystemPETSc *linearSystem = new feLinearSystemPETSc(argc, argv, formMatrices, formResiduals, metaNumber, mesh);    
     linearSystem->initialize();
     // linearSystem->setRecomputeStatus(true);

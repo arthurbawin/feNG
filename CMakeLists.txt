@@ -298,7 +298,7 @@ if(ENABLE_EIGEN)
 endif()
 
 ############################################
-#  Gmsh classes for metric tensors
+#  Gmsh classes for metric tensors and rtree
 ############################################
 if(ENABLE_EIGEN)
   include_directories(${CMAKE_CURRENT_SOURCE_DIR}/contrib/gmsh)

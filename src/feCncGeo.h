@@ -12,6 +12,7 @@ class feCncGeo{
 protected:
   std::string _ID;
   int _tag;
+  int _dim;
   std::string _forme;
   int _nNod;                   // Nombre de noeuds par element
   int _nElm;                   // Nombre d'elements dans cette connectivite
@@ -27,9 +28,9 @@ protected:
   std::vector<double> _J; // Jacobiens
 
 public:
-  feCncGeo(int tag, int nNod, int nElm, int nEdg, std::string ID, std::string forme, feSpace *space, std::vector<int> connecNodes, 
+  feCncGeo(int tag, int dim, int nNod, int nElm, int nEdg, std::string ID, std::string forme, feSpace *space, std::vector<int> connecNodes, 
     std::vector<int> connecElem  = std::vector<int>(), std::vector<int> connecEdges = std::vector<int>(),
-    std::vector<int> connecFaces = std::vector<int>()) :  _ID(ID), _tag(tag), _forme(forme), _nNod(nNod), _nElm(nElm), _nEdg(nEdg),
+    std::vector<int> connecFaces = std::vector<int>()) :  _ID(ID), _tag(tag), _dim(dim), _forme(forme), _nNod(nNod), _nElm(nElm), _nEdg(nEdg),
     _connecNodes(connecNodes),  _connecElem(connecElem), _connecEdges(connecEdges),  _connecFaces(connecFaces),  _space(space)
   {
     if(connecElem.size() == 0) _connecElem.resize(nElm);
@@ -40,6 +41,7 @@ public:
   }
 
   std::string getID(){ return _ID; }
+  int getDim(){ return _dim; }
   std::string getForme(){ return _forme; }
   int getNbNodePerElem(){ return _nNod; }
   int getNbElm()        { return _nElm; }

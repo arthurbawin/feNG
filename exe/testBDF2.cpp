@@ -52,7 +52,7 @@ int main(int argc, char** argv){
     // Espaces d'interpolation
     feSpace1DP0 U_BXA = feSpace1DP0(mesh, "U", "BXA", funSol);
     feSpace1DP0 U_BXB = feSpace1DP0(mesh, "U", "BXB", funSol);
-    feSpace1DP3 U_M1D = feSpace1DP3(mesh, "U", "M1D", funSol);
+    feSpace1DP1 U_M1D = feSpace1DP1(mesh, "U", "M1D", funSol);
     std::vector<feSpace*> fespace = {&U_BXA, &U_BXB, &U_M1D};
     std::vector<feSpace*> feEssBC = {&U_BXA, &U_BXB};
     // Numerotations

@@ -38,7 +38,7 @@ int main(int argc, char** argv){
 
   double kd = 1.0;
 
-  int nIter = 1;
+  int nIter = 4;
   std::vector<double> normL2(2*nIter, 0.0);
   std::vector<int> nElm(nIter, 0);
 
@@ -52,18 +52,18 @@ int main(int argc, char** argv){
     // Maillage
     feMesh1DP1 *mesh = new feMesh1DP1(xa,xb,nElm[iter],"BXA","BXB","M1D");
     // Espaces d'interpolation
-    feSpace1DP0 U_BXA = feSpace1DP0(mesh, "U", "BXA", funSol);
-    feSpace1DP0 U_BXB = feSpace1DP0(mesh, "U", "BXB", funSol);
-    feSpace1DP4 U_M1D = feSpace1DP4(mesh, "U", "M1D", fun0);
+    feSpace1DP0 U_BXA(mesh, "U", "BXA", funSol);
+    feSpace1DP0 U_BXB(mesh, "U", "BXB", funSol);
+    feSpace1DP3 U_M1D(mesh, "U", "M1D", fun0  );
     std::vector<feSpace*> fespace = {&U_BXA, &U_BXB, &U_M1D};
     std::vector<feSpace*> feEssBC = {&U_BXA, &U_BXB};
     // Numerotations
     feMetaNumber *metaNumber = new feMetaNumber(mesh, fespace, feEssBC);
-    metaNumber->printNumberings();
+    // metaNumber->printNumberings();
     // Solution
     feSolution *sol = new feSolution(mesh, fespace, feEssBC, metaNumber);
-    sol->initializeUnknowns(mesh, metaNumber);
-    sol->initializeEssentialBC(mesh, metaNumber);
+    // sol->initializeUnknowns(mesh, metaNumber);
+    // sol->initializeEssentialBC(mesh, metaNumber);
     // Formes (bi)lineaires
     int nQuad = 3; // TODO : change to deg
     std::vector<feSpace*> spaceDiffusion1D_U = {&U_M1D};
@@ -79,7 +79,7 @@ int main(int argc, char** argv){
 #ifdef HAVE_PETSC
     feLinearSystemPETSc *linearSystem = new feLinearSystemPETSc(argc, argv, formMatrices, formResiduals, metaNumber, mesh);    
     linearSystem->initialize();
-    feTolerances tol{1e-9, 1e-8, 0};
+    feTolerances tol{1e-9, 1e-8, 10};
     solveStationary(&normL2[2*iter], tol, metaNumber, linearSystem, formMatrices, formResiduals, sol, norms, mesh);
     linearSystem->finalize();
 #endif

@@ -58,7 +58,7 @@ int main(int argc, char** argv){
     feSolution *sol = new feSolution(mesh, fespace, feEssBC, metaNumber);
 
     // Formes (bi)lineaires
-    int nQuad = 9; // TODO : change to deg
+    int nQuad = 16; // TODO : change to deg
     std::vector<feSpace*> spaceDiffusion2D_U = {&U_surface};
     feBilinearForm *diffU = new feBilinearForm(spaceDiffusion2D_U, mesh, nQuad, new feSysElm_2D_Diffusion(kd, nullptr));
     std::vector<feSpace*> spaceSource2D_U = {&U_surface};

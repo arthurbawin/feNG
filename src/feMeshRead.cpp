@@ -1221,7 +1221,7 @@ int feMesh2DP1::readGmsh(std::string meshName, bool curved, mapType physicalEnti
     //   }
     // }
     
-    feCncGeo *cnc = new feCncGeo(nCncGeo, pE.nNodePerElem, pE.nElm, pE.nEdgePerElem, pE.name, pE.cncID, pE.geoSpace, pE.connecNodes, pE.connecElem, pE.connecEdges);
+    feCncGeo *cnc = new feCncGeo(nCncGeo, pE.dim, pE.nNodePerElem, pE.nElm, pE.nEdgePerElem, pE.name, pE.cncID, pE.geoSpace, pE.connecNodes, pE.connecElem, pE.connecEdges);
 
     // printf("Created cnc \"%s\" on domain %s with nNod = %d - nElm = %d - nEdg = %d - connecNodes.size() = %d - connecElem.size() = %d - connecEdges.size() = %d\n",
     //   pE.cncID.c_str(),
