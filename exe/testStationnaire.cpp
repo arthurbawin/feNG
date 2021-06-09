@@ -98,8 +98,6 @@ int main(int argc, char** argv){
   delete funSource;
   delete funSol;
 
-
-
   // Calcul du taux de convergence
   for(int i = 1; i < nIter; ++i){
     normL2[2*i+1] = log(normL2[2*(i-1)]/normL2[2*i])/log(2.);
