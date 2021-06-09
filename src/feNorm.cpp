@@ -2,30 +2,19 @@
 #include <cmath>
 #include "feQuadrature.h"
 
-
-// feNorm::feNorm(feSpace *intSpace, feMesh *mesh, int degQuad)
-//   : _intSpace(intSpace), cncGeoTag(intSpace->getCncGeoTag()), geoSpace(mesh->getGeometricSpace(cncGeoTag)),
-//   nElmGeo(mesh->getNbElm(cncGeoTag)), dim(mesh->getDim()), nNodePerElem(intSpace->getNbNodePerElem()),
-//   _degQuad(degQuad)
-
 feNorm::feNorm(feSpace *intSpace, feMesh *mesh, int degQuad, feFunction *solRef)
   : _intSpace(intSpace), cncGeoTag(intSpace->getCncGeoTag()), geoSpace(mesh->getGeometricSpace(cncGeoTag)),
   nElmGeo(mesh->getNbElm(cncGeoTag)), dim(mesh->getDim()), nNodePerElem(intSpace->getNbNodePerElem()),
-  /*_nQuad(nQuad),*/ _solRef(solRef) ,_degQuad(degQuad)
-
+  _solRef(solRef) ,_degQuad(degQuad)
 {
-
   feQuadrature *rule = new feQuadrature(_degQuad,intSpace->getDim(), intSpace->getCncGeo()->getForme());
   w = rule->getWeights();
   x = rule->getXPoints();
   _nQuad=rule->getNQuad();
-
-  // x = rule->getPoints();
   y = rule->getYPoints();
   z = rule->getZPoints();
   // Attention : ça changle la règle de quadrature pour les interpolants avant la résolution !
   // Il faudrait choisir idépendamment les deux sans conséquences
-
   intSpace->setQuadratureRule(rule);
   geoSpace->setQuadratureRule(rule);
   delete rule;
