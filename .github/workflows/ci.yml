@@ -32,7 +32,6 @@ jobs:
       # Runs a set of commands using the runners shell
       - name: cmake and compile
         run: |
-          ls /usr/lib/petscdir/petsc3.12/x86_64-linux-gnu-real/
-          ls /usr/lib/petscdir/petsc3.12/x86_64-linux-gnu-real/lib/
+          ls /usr/lib/petscdir/petsc3.12/x86_64-linux-gnu-real/lib/pkgconfig
           cmake -DPETSC_DIR=/usr/lib/petscdir/petsc3.12/ -DPETSC_ARCH=x86_64-linux-gnu-real $GITHUB_WORKSPACE
           make
