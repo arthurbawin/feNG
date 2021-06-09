@@ -12,6 +12,7 @@ set(feNG_SRC
   feNorm.cpp
   feNumber.cpp
   feRecovery.cpp
+  feQuadrature.cpp
   feSimplex.cpp
   feSolution.cpp
   feSolutionContainer.cpp
