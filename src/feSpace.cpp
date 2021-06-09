@@ -15,8 +15,8 @@ feSpace::feSpace(feMesh *mesh, std::string fieldID, std::string cncGeoID, feFunc
 };
 
 int feSpace::getDim(){
-  return _mesh->getDim(); // This is constant for all spaces on the same mesh...
-  // return this->getCncGeo()->getDim();
+  // return _mesh->getDim(); // This is constant for all spaces on the same mesh...
+  return this->getCncGeo()->getDim();
 }
 
 int feSpace::getNbElm(){

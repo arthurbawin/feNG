@@ -29,9 +29,9 @@ public:
   virtual ~feExporterVTK() {}
 
   void writeHeader(std::ostream& output);
-  void writeNodes(std::ostream& output, int iField);
-  void writeElementsConnectivity(std::ostream& output, feCncGeo *cnc, int iField);
-  void writeField(std::ostream& output, feCncGeo *cnc, int iField);
+  void writeNodes(std::ostream& output, feCncGeo *cnc);
+  void writeElementsConnectivity(std::ostream& output, feCncGeo *cnc);
+  void writeField(std::ostream& output, feCncGeo *cnc, std::string fieldID);
 };
 
 #endif
