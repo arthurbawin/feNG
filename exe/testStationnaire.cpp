@@ -73,20 +73,7 @@ int main(int argc, char** argv){
 
     std::vector<feBilinearForm*> formMatrices  = {diff_U_M1D};
     std::vector<feBilinearForm*> formResiduals  = {diff_U_M1D, source_U_M1D};
-
-
-    // feNorm *norm = new feNorm(&U_M1D, mesh, degQuad);
-
-    // for(int i = 0; i < nElm[iter]; ++i){
-    // //   diff_U_M1D->computeMatrixAnalytical(metaNumber, mesh, sol, i);
-    //   diff_U_M1D->computeResidual(metaNumber, mesh, sol, i);
-    //   diff_U_M1D->computeMatrixFiniteDifference(metaNumber, mesh, sol, i);
-    // //   diff_U_M1D->computeResidual(metaNumber, mesh, sol, i);
-    // }
-
- 
-
-
+    
     feNorm *norm = new feNorm(&U_M1D, mesh, degQuad, funSol);
     std::vector<feNorm*> norms = {norm};
 
@@ -113,8 +100,6 @@ int main(int argc, char** argv){
 
 
 
-
-
   // Calcul du taux de convergence
   for(int i = 1; i < nIter; ++i){
     normL2[2*i+1] = log(normL2[2*(i-1)]/normL2[2*i])/log(2.);
@@ -123,17 +108,4 @@ int main(int argc, char** argv){
   for(int i = 0; i < nIter; ++i)
     printf("%12d \t %12.6e \t %12.6e\n", nElm[i], normL2[2*i], normL2[2*i+1]);
 
-
- 
-//  feQuadrature *Quad = new feQuadrature2(9);
-//  std::vector<double>w=Quad->getWeights();
-//  for(auto val :w){
-//   std::cout<< val<<std::endl;
-//   }
-
-
-// std::vector<double>x=Quad->getPoints();
-//  for(auto val :x){
-//   std::cout<< val<<std::endl;
-// }
   }

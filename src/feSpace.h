@@ -4,17 +4,14 @@
 #include <vector>
 #include <string>
 #include <iostream>
-#include <cmath>
 
 #include "feQuadrature.h"
 #include "feFunction.h"
 #include "feCncGeo.h"
 
-
 class feMesh;
 class feNumber;
 class feSolution;
-
 
 /* Un feSpace est utilisé
   - soit pour définir les interpolants géométriques sur une partie d'un maillage (sur une cncGeo)
@@ -97,8 +94,6 @@ public:
 
   int getAddressingVectorAt(int node){ return _adr[node]; }
 
-
-
   double evalFun(const double t, const std::vector<double> &x){ return _fct->eval(t,x); }
 
   double interpolateField(std::vector<double> field, double r[3]);
@@ -163,12 +158,8 @@ public:
   feSpace1DP1(std::string cncGeoID) 
     : feSpace(nullptr, "GEO", cncGeoID, nullptr){
     _nFunctions = 2;
-
-    // _Lcoor = {-1., 1.}; // Coord entre 0 et 1 pour un P1 il me semble (même si ça change rien)
-
     _Lcoor = {-1., 0., 0.,
                1., 0., 0.};
-
   };
   feSpace1DP1(feMesh *mesh, std::string fieldID, std::string cncGeoID, feFunction *fct) 
     : feSpace(mesh, fieldID, cncGeoID, fct){

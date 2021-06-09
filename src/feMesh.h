@@ -72,10 +72,6 @@ public:
   int getElement(int cncGeoTag, int numElem);
   int getEdge(std::string cncGeoID, int numElem, int numEdge);
   int getEdge(int cncGeoTag, int numElem, int numEdge);
-
-  // int getEdge(std::string cncGeoID, int numElem, int numEdge);
-  // int getEdge(int cncGeoTag, int numElem, int numEdge);
-
   feSpace* getGeometricSpace(std::string cncGeoID);
   feSpace* getGeometricSpace(int cncGeoTag);
 
