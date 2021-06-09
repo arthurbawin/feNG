@@ -2,150 +2,49 @@
 #define _FEQUADRATURE_
 
 #include <vector>
+#include <iostream>
+#include <string>
+#include <cmath>
+#include <utility>
 
 class feQuadrature{
 
 protected:
-  int _dim;
-  int _nQuad;
+  int _degQuad;
+  int _dimQuad;
+  int _nQuad1D;
+  int _nQuadLocal;
   std::vector<double> _w;
-  std::vector<double> _x;
-  std::vector<double> _y;
-  std::vector<double> _z;
+  std::vector<double> _w1D;
+  std::vector<double> _x1D;
+  std::vector<double> _xr;
+  std::vector<double> _yr;
+  std::vector<double> _zr;
+  std::string form ;
+
+  const double EPSILON = 1e-16;
+  double result[2]; 
 
 public:
-	feQuadrature(int nQuad, int dim = 1) : _dim(dim), _nQuad(nQuad){
-    if(dim == 1){
-      switch(nQuad){
-        case 2:
-          _w = {1.,1.};
-          _x = {5.773502691896257e-01,-5.773502691896257e-01};
-          _y = {0., 0.};
-          _z = {0., 0.};
-          break;
-        case 3:
-          _w = {5.555555555555544e-01, 8.888888888888888e-01, 5.555555555555544e-01};
-          _x = {7.745966692414834e-01, 0.0                  ,-7.745966692414834e-01};
-          _y = {0., 0., 0.};
-          _z = {0., 0., 0.};
-          break;
-        default: 
-          printf("Règle d'intégration non définie.\n");
-      }
-    } else if(dim == 2){
-      switch(nQuad){
-        case 3:
-          _w = {0.166666666666667,0.166666666666667,0.166666666666667};
-          _x = {0.166666666666667,0.666666666666667,0.166666666666667};
-          _y = {0.166666666666667,0.166666666666667,0.666666666666667};
-          _z = {0., 0., 0.};
-          break;
-        case 9:
-          _x.resize(9);
-          _y.resize(9);
-          _w.resize(9);
+  feQuadrature(int degQuad, int dimQuad, std::string form  );
+  ~feQuadrature() {}
 
-          _x[0]=1.884094059521e-01;
-          _y[0]=7.876594617608e-01;
-          _w[0]=1.939638330596e-02;
-          _x[1]=5.239790677201e-01;
-          _y[1]=4.094668644407e-01;
-          _w[1]=6.367808509989e-02;
-          _x[2]=8.086943856777e-01;
-          _y[2]=8.858795951270e-02;
-          _w[2]=5.581442048304e-02;
-          _x[3]=1.061702691196e-01;
-          _y[3]=7.876594617608e-01;
-          _w[3]=3.103421328954e-02;
-          _x[4]=2.952665677796e-01;
-          _y[4]=4.094668644407e-01;
-          _w[4]=1.018849361598e-01;
-          _x[5]=4.557060202436e-01;
-          _y[5]=8.858795951270e-02;
-          _w[5]=8.930307277287e-02;
-          _x[6]=2.393113228708e-02;
-          _y[6]=7.876594617608e-01;
-          _w[6]=1.939638330596e-02;
-          _x[7]=6.655406783916e-02;
-          _y[7]=4.094668644407e-01;
-          _w[7]=6.367808509989e-02;
-          _x[8]=1.027176548096e-01;
-          _y[8]=8.858795951270e-02;
-          _w[8]=5.581442048304e-02;
-          _z.resize(9, 0.);
-          // _w = {0.16666666666666666667, 0.16666666666666666667, 0.16666666666666666667, 0.16666666666666666667, 0.16666666666666666667, 0.16666666666666666667};
-          // _x = {0.659027622374092, 0.659027622374092, 0.231933368553031, 0.231933368553031, 0.109039009072877, 0.109039009072877};
-          // _y = {0.231933368553031, 0.109039009072877, 0.659027622374092, 0.109039009072877, 0.659027622374092, 0.231933368553031};
-          // _z = {0., 0., 0., 0., 0., 0.};
-          break;
-        case 16:
-          _x.resize(16);
-          _y.resize(16);
-          _w.resize(16);
-          _z.resize(16, 0.);
+private : 
+void calculateWeightAndRoot(int _nQuadLocal); 
+void calculatePolynomialValueAndDerivative(double x, double *result); 
+void calculateWeightAndRootTri();
+void calculateWeightAndRootSquare();
+void calculateWeightAndRootCube();
+void calculateWeightAndRootTetra();
 
-          _x[0]=1.300560792168e-01;
-          _y[0]=8.602401356562e-01;
-          _w[0]=5.423225910525e-03;
-          _x[1]=3.874974834067e-01;
-          _y[1]=5.835904323689e-01;
-          _w[1]=2.258404928237e-02;
-          _x[2]=6.729468631505e-01;
-          _y[2]=2.768430136381e-01;
-          _w[2]=3.538806789809e-02;
-          _x[3]=8.774288093305e-01;
-          _y[3]=5.710419611452e-02;
-          _w[3]=2.356836819338e-02;
-          _x[4]=9.363778443733e-02;
-          _y[4]=8.602401356562e-01;
-          _w[4]=1.016725956448e-02;
-          _x[5]=2.789904634965e-01;
-          _y[5]=5.835904323689e-01;
-          _w[5]=4.233972452175e-02;
-          _x[6]=4.845083266304e-01;
-          _y[6]=2.768430136381e-01;
-          _w[6]=6.634421610705e-02;
-          _x[7]=6.317312516411e-01;
-          _y[7]=5.710419611452e-02;
-          _w[7]=4.418508852236e-02;
-          _x[8]=4.612207990645e-02;
-          _y[8]=8.602401356562e-01;
-          _w[8]=1.016725956448e-02;
-          _x[9]=1.374191041346e-01;
-          _y[9]=5.835904323689e-01;
-          _w[9]=4.233972452175e-02;
-          _x[10]=2.386486597314e-01;
-          _y[10]=2.768430136381e-01;
-          _w[10]=6.634421610705e-02;
-          _x[11]=3.111645522444e-01;
-          _y[11]=5.710419611452e-02;
-          _w[11]=4.418508852236e-02;
-          _x[12]=9.703785126946e-03;
-          _y[12]=8.602401356562e-01;
-          _w[12]=5.423225910525e-03;
-          _x[13]=2.891208422439e-02;
-          _y[13]=5.835904323689e-01;
-          _w[13]=2.258404928237e-02;
-          _x[14]=5.021012321137e-02;
-          _y[14]=2.768430136381e-01;
-          _w[14]=3.538806789809e-02;
-          _x[15]=6.546699455501e-02;
-          _y[15]=5.710419611452e-02;
-          _w[15]=2.356836819338e-02;
-          break;
-        default: 
-          printf("Règle d'intégration non définie.\n");
-      }
-    }
-	};
-	~feQuadrature() {}
+public :
+std::vector<double> getXPoints(){ return _xr; }
+std::vector<double> getYPoints(){ return _yr; }
+std::vector<double> getZPoints(){ return _zr; }
+std::vector<double> getWeights(){ return _w; }
+int getNQuad() {return _w.size();}
+int getDim(){return _dimQuad;}
 
-  int getDim(){ return _dim; };
-  int getNQuad(){ return _nQuad; }
-  std::vector<double> getWeights(){ return _w; }
-  std::vector<double> getPoints(){ return _x; }
-  std::vector<double> getYPoints(){ return _y; }
-  std::vector<double> getZPoints(){ return _z; }
 };
 
 #endif

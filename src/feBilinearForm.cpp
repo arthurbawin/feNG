@@ -1,4 +1,5 @@
 #include "feBilinearForm.h"
+#include "feQuadrature.h"
 
 static inline void allocateMatrix(feInt m, feInt n, double*** A){
   *A = (double**) calloc(m, sizeof **A);
@@ -50,9 +51,10 @@ static inline void freeResidual(double** b){
   free(*b); 
 }
 
-feBilinearForm::feBilinearForm(std::vector<feSpace*> &space, feMesh *mesh, int nQuadraturePoints, feSysElm *sysElm)
+feBilinearForm::feBilinearForm(std::vector<feSpace*> &space, feMesh *mesh, int degQuad, feSysElm *sysElm)
   : _sysElm(sysElm), _intSpace(space), _cnc(space[0]->getCncGeo()), _cncGeoTag(space[0]->getCncGeoTag()),
-  _geoSpace(_cnc->getFeSpace()), _nGeoElm(_cnc->getNbElm()), _nQuad(nQuadraturePoints)
+  _geoSpace(_cnc->getFeSpace()), _nGeoElm(_cnc->getNbElm()), _degQuad(degQuad)
+
 {
   _nCoord = mesh->getDim();
   _nGeoNodes = _cnc->getNbNodePerElem();
@@ -66,7 +68,8 @@ feBilinearForm::feBilinearForm(std::vector<feSpace*> &space, feMesh *mesh, int n
   }
   
   // (Re-)initialize the interpolation functions at quadrature nodes
-  feQuadrature *rule = new feQuadrature(_nQuad, mesh->getDim());  // TODO : change this, choose the degree
+  feQuadrature *rule = new feQuadrature(_degQuad,space[0]->getDim(), space[0]->getCncGeo()->getForme());  
+
   for(feSpace *fS : _intSpace)
     fS->setQuadratureRule(rule);
   _geoSpace->setQuadratureRule(rule);

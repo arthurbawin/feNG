@@ -38,7 +38,7 @@ void feSpace::setQuadratureRule(feQuadrature *quad){
   }
   _nQuad = quad->getNQuad();
   _wQuad = quad->getWeights();
-  _xQuad = quad->getPoints();
+  _xQuad = quad->getXPoints();
   _yQuad = quad->getYPoints();
   _zQuad = quad->getZPoints();
 

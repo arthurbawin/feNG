@@ -18,17 +18,19 @@ protected:
   std::vector<double> geoCoord;
 
   int _nQuad;
+  int _degQuad;
   int deg;
   std::vector<double> w;
-  // std::vector<double> x;
-  // std::vector<double> y;
-  // std::vector<double> z;
+  std::vector<double> x;
+  std::vector<double> y;
+  std::vector<double> z;
 
   feFunction *_solRef;
 
   double norm;
 public:
-	feNorm(feSpace *intSpace, feMesh *mesh, int nQuad, feFunction *solRef = nullptr);
+	feNorm(feSpace *intSpace, feMesh *mesh, int degQuad, feFunction *solRef = nullptr);
+
 	~feNorm() {}
 
   double getNorm(){ return norm; }

@@ -64,9 +64,9 @@ int main( int argc, char** argv )
   	std::vector<feSpace*> spaceDiffusion1D_U_M1D = {&U_M1D};
   	std::vector<feSpace*> spaceDiffusion1D_V_M1D = {&V_M1D};
 
-  	int nQuadraturePoints = 3; // TODO : change to deg
-  	feBilinearForm *bDiff_U_M1D = new feBilinearForm(spaceDiffusion1D_U_M1D, &mesh, nQuadraturePoints, diffusion1D);
-  	feBilinearForm *bDiff_V_M1D = new feBilinearForm(spaceDiffusion1D_V_M1D, &mesh, nQuadraturePoints, diffusion1D);
+  	int degQuadrature = 5; // TODO : change to deg
+  	feBilinearForm *bDiff_U_M1D = new feBilinearForm(spaceDiffusion1D_U_M1D, &mesh, degQuadrature, diffusion1D);
+  	feBilinearForm *bDiff_V_M1D = new feBilinearForm(spaceDiffusion1D_V_M1D, &mesh, degQuadrature, diffusion1D);
   	//feBilinearForm *bDiff_U_M1D = new feBilinearForm({&U_M1D}, &mesh, nQuadraturePoints, diffusion1D);
 
   	std::vector<feBilinearForm*> formMatrices  = {bDiff_U_M1D,bDiff_V_M1D};
