@@ -29,9 +29,6 @@ protected:
 
   double norm;
 public:
-
-// 	feNorm(feSpace *intSpace, feMesh *mesh, int degQuad);
-
 	feNorm(feSpace *intSpace, feMesh *mesh, int degQuad, feFunction *solRef = nullptr);
 
 	~feNorm() {}
