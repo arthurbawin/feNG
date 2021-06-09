@@ -7,7 +7,6 @@
 #include <cmath>
 #include <utility>
 
-/*  PB avec pair et version amelioré de Tri2D*/
 class feQuadrature{
 
 protected:

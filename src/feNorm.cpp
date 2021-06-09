@@ -8,14 +8,14 @@
 //   nElmGeo(mesh->getNbElm(cncGeoTag)), dim(mesh->getDim()), nNodePerElem(intSpace->getNbNodePerElem()),
 //   _degQuad(degQuad)
 
-feNorm::feNorm(feSpace *intSpace, feMesh *mesh, int nQuad, feFunction *solRef)
+feNorm::feNorm(feSpace *intSpace, feMesh *mesh, int degQuad, feFunction *solRef)
   : _intSpace(intSpace), cncGeoTag(intSpace->getCncGeoTag()), geoSpace(mesh->getGeometricSpace(cncGeoTag)),
   nElmGeo(mesh->getNbElm(cncGeoTag)), dim(mesh->getDim()), nNodePerElem(intSpace->getNbNodePerElem()),
-  _nQuad(nQuad), _solRef(solRef)
+  /*_nQuad(nQuad),*/ _solRef(solRef) ,_degQuad(degQuad)
 
 {
 
-  feQuadrature *rule = new feQuadrature(_degQuad,_dimQuad, form);
+  feQuadrature *rule = new feQuadrature(_degQuad,intSpace->getDim(), intSpace->getCncGeo()->getForme());
   w = rule->getWeights();
   x = rule->getXPoints();
   _nQuad=rule->getNQuad();

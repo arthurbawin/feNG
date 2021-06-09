@@ -29,6 +29,8 @@ protected:
   int _degQuad;
   std::vector<double> _w;
   std::vector<double> _x;
+  std::vector<double> y;
+  std::vector<double> z;
 
   std::vector<int> _iVar;
   std::vector<int> _jVar;
@@ -57,7 +59,7 @@ protected:
   void  (feBilinearForm::*ptrComputeMatrix) (feMetaNumber *metaNumber, feMesh *mesh, feSolution *sol, int numElem); 
 
 public:
-	feBilinearForm(std::vector<feSpace*> &space, feMesh *mesh, int degQuadrature, feSysElm *sysElm);
+	feBilinearForm(std::vector<feSpace*> &space, feMesh *mesh, int degQuad, feSysElm *sysElm);
 	~feBilinearForm();
 
   int getCncGeoTag(){ return _cncGeoTag; }

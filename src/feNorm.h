@@ -20,8 +20,6 @@ protected:
   int _nQuad;
   int _degQuad;
   int deg;
-  int _dimQuad;
-  std::string form;
   std::vector<double> w;
   std::vector<double> x;
   std::vector<double> y;
@@ -34,7 +32,7 @@ public:
 
 // 	feNorm(feSpace *intSpace, feMesh *mesh, int degQuad);
 
-	feNorm(feSpace *intSpace, feMesh *mesh, int nQuad, feFunction *solRef = nullptr);
+	feNorm(feSpace *intSpace, feMesh *mesh, int degQuad, feFunction *solRef = nullptr);
 
 	~feNorm() {}
 
