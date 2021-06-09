@@ -1,11 +1,6 @@
-#ifndef _EF5_
-#define _EF5_
+#ifndef _FENG_
+#define _FENG_
 
-#define _TRACE_
-
-using namespace std;
-
-// LES .h DU SYSTEME
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
@@ -26,33 +21,29 @@ using namespace std;
 #include <iomanip>
 #include <limits>
 #include <tuple>
-// #include <mpi.h>
-//#include "mkl.h"
+#include <utility>
 
-const int maxchar=1024;
-
-// LES MACROS LES PLUS UTILES
-#ifndef signe
-#define signe(a)   ( ((a)>=0.0) ? (1.0) : (-1.0) )
+#if defined(HAVE_PETSC)
+  #include "petscsystypes.h"
 #endif
 
-// NAMING CONVENTION POUR INTERFACE AVEC FORTRAN SOUS UNIX
-#define ef5_abs  labs
-
-// LES VARIABLES LOGIQUES
-#define EFint           long int 
-#define EFPARDISOint    int
-#define EFMKLPARDISOint long long int
-// LES VARIABLES LOGIQUES
-#define VRAI       (1)
-#define FAUX       (0)
-
+#if defined(HAVE_PETSC)
+  typedef PetscInt64 feInt;
+#elif defined(HAVE_MKL)
+  typedef long int feInt;
+  typedef int fePardisoInt;
+  typedef long long int feMKLPardisoInt;
+#else
+  typedef long int feInt;
 #endif
 
-// LES ENUMEROTATIONS
+// void log(){}
 
-#ifdef _OPENMP_
-extern "C" {
-#include "omp.h"
-}
+// template<typename First, typename ...Rest>
+// void log(First && first, Rest && ...rest)
+// {
+//     std::cout << std::forward<First>(first);
+//     log(std::forward<Rest>(rest)...);
+// }
+
 #endif

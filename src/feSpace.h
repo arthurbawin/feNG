@@ -4,9 +4,10 @@
 #include <vector>
 #include <string>
 #include <iostream>
-#include <functional>
 
 #include "feQuadrature.h"
+#include "feFunction.h"
+#include "feCncGeo.h"
 
 class feMesh;
 class feNumber;
@@ -25,29 +26,32 @@ protected:
   int _fieldTag;         // Number (tag) of the associated field
   std::string _cncGeoID; // Name of the geometric connectivity on which the space is defined
   int _cncGeoTag;        // Number (tag) of the geometric connectivity
-
 	// Quadrature
 	int _nQuad;
 	std::vector<double> _wQuad;
 	std::vector<double> _xQuad;
+  std::vector<double> _yQuad;
+  std::vector<double> _zQuad;
   // Interpolants
 	int _nFunctions; // nielm
   std::vector<double> _Lcoor;
 	std::vector<double> _L;
   std::vector<double> _dLdr;
+  std::vector<double> _dLds;
+  std::vector<double> _dLdt;
 
   std::vector<int>    _adr;
-  std::vector<double> _te;
-  std::vector<double> _tedot;
+  std::vector<double> _sol;
+  std::vector<double> _soldot;
 
-  std::function<double(const double, const std::vector<double> &)> _fct;
+  feFunction *_fct;
 
 public:
-	feSpace(class feMesh *mesh = nullptr, std::string fieldID = "", std::string cncGeoID = "",
-    std::function<double(const double, const std::vector<double> &)> fct = nullptr);
-	virtual ~feSpace() {}
+	feSpace(feMesh *mesh = nullptr, std::string fieldID = "", std::string cncGeoID = "", feFunction *fct = nullptr);
+	virtual ~feSpace() { _Lcoor.clear(); _Lcoor.resize(0);}
 
   int getDim();
+  int getNbElm();
   int getNbNodePerElem();
 
   std::string getFieldID(){ return _fieldID; }
@@ -56,42 +60,62 @@ public:
   int getCncGeoTag(){ return _cncGeoTag; }
   void setCncGeoTag(int tag){ _cncGeoTag = tag; } // Used to assign the tag of a geometric space after the mesh has been created
 
-  virtual int getNbFunctions(){ return 0; }
+  void setMeshPtr(feMesh *mesh){ _mesh = mesh; } // Used to assign the mesh pointer of a geometric space after the mesh has been created
+
+  feCncGeo* const getCncGeo();
+
+  // The number of degrees of freedom on an element
+  virtual int getNbFunctions() = 0;
+  // The highest degree of the polynomial basis
+  virtual int getPolynomialDegree() = 0;
 
   const std::vector<double>& getLcoor(){ return _Lcoor; }
 
-  virtual std::vector<double>    L(double r[3]){ return {0.}; };
-  virtual std::vector<double> dLdr(double r[3]){ return {0.}; };
+  virtual std::vector<double>    L(double r[3]) = 0;
+  virtual std::vector<double> dLdr(double r[3]) = 0;
+  virtual std::vector<double> dLds(double r[3]) = 0;
+  virtual std::vector<double> dLdt(double r[3]) = 0;
 
   double getFunctionAtQuadNode(int iFun, int iQuadNode){ return _L[_nFunctions*iQuadNode+iFun]; }  
   double getdFunctiondrAtQuadNode(int iFun, int iQuadNode){ return _dLdr[_nFunctions*iQuadNode+iFun]; }  
-
-  void initializeSolution(feSolution *sol);
-  void initializeSolutionDot(feSolution *sol);
-
-  virtual void initializeNumberingUnknowns(feNumber *number) {};
-  virtual void initializeNumberingEssential(feNumber *number) {};
-  virtual void initializeAddressingVector(feNumber *number, int numElem) {};
-
-  int getAddressingVectorAt(int node){ return _adr[node]; }
+  double getdFunctiondsAtQuadNode(int iFun, int iQuadNode){ return _dLds[_nFunctions*iQuadNode+iFun]; }
 
   void setQuadratureRule(feQuadrature *quad);
   int getNbQuadPoints(){ return _nQuad; }
   std::vector<double> &getQuadratureWeights(){ return _wQuad; }
   std::vector<double> &getQuadraturePoints(){ return _xQuad; }
 
-  double evalFun(const double t, const std::vector<double> &x){ return _fct(t,x); }
+  void initializeSolution(feSolution *sol);
+  void initializeSolutionDot(feSolution *sol);
+
+  virtual void initializeNumberingUnknowns(feNumber *number) = 0;
+  virtual void initializeNumberingEssential(feNumber *number) = 0;
+  virtual void initializeAddressingVector(feNumber *number, int numElem) = 0;
+
+  int getAddressingVectorAt(int node){ return _adr[node]; }
+
+  double evalFun(const double t, const std::vector<double> &x){ return _fct->eval(t,x); }
 
   double interpolateField(std::vector<double> field, double r[3]);
   double interpolateFieldAtQuadNode(std::vector<double> field, int iNode);
-  double interpolateSolutionAtQuadNode(int iNode);
   double interpolateField_rDerivative(std::vector<double> field, double r[3]);
   double interpolateFieldAtQuadNode_rDerivative(std::vector<double> field, int iNode);
+  
+  double interpolateSolutionAtQuadNode(int iNode);
   double interpolateSolutionAtQuadNode_rDerivative(int iNode);
+  double interpolateSolutionAtQuadNode_sDerivative(int iNode);
 
+  double interpolateSolutionDotAtQuadNode(int iNode);
+
+  void interpolateVectorField(std::vector<double> field, double r[3], std::vector<double>& res);
+  void interpolateVectorFieldAtQuadNode(std::vector<double> field, int iNode, std::vector<double>& res);
+  void interpolateVectorFieldAtQuadNode_rDerivative(std::vector<double> field, int iNode, std::vector<double>& res);
+  void interpolateVectorFieldAtQuadNode_sDerivative(std::vector<double> field, int iNode, std::vector<double>& res);
+
+  std::vector<double> &getSolutionReference(){ return _sol;    };
+  std::vector<double> &getSolutionReferenceDot(){ return _soldot; };
   void printL();
   void printdLdr();
-
 };
 
 // FESpace pour interpolant de Lagrange 1D de degre 0
@@ -103,22 +127,24 @@ public:
     : feSpace(nullptr, "GEO", cncGeoID, nullptr){
     _nFunctions = 1;
     _nQuad = 1;
-    _Lcoor = {1.};
+    _Lcoor = {1.,0.,0.};
   };
   // Pour la resolution
-	feSpace1DP0(class feMesh *mesh, std::string fieldID, std::string cncGeoID, std::function<double(const double, const std::vector<double> &)> fct)
+	feSpace1DP0(feMesh *mesh, std::string fieldID, std::string cncGeoID, feFunction *fct)
     : feSpace(mesh, fieldID, cncGeoID, fct){
     _nFunctions = 1;
     _adr.resize(_nFunctions);
     _nQuad = 1;
-    _Lcoor = {1.};
+    _Lcoor = {1.,0.,0.};
 	};
 	virtual ~feSpace1DP0() {}
 
-  // virtual std::string getMeshID(){ return _mesh->getID(); }
   virtual int getNbFunctions(){ return 1; }
+  virtual int getPolynomialDegree(){ return 0; }
   virtual std::vector<double>    L(double r[3]){ return {1.}; };
   virtual std::vector<double> dLdr(double r[3]){ return {0.}; };
+  virtual std::vector<double> dLds(double r[3]){ return {0.}; };
+  virtual std::vector<double> dLdt(double r[3]){ return {0.}; };
 
   virtual void initializeNumberingUnknowns(feNumber *number);
   virtual void initializeNumberingEssential(feNumber *number);
@@ -132,19 +158,24 @@ public:
   feSpace1DP1(std::string cncGeoID) 
     : feSpace(nullptr, "GEO", cncGeoID, nullptr){
     _nFunctions = 2;
-    _Lcoor = {-1., 1.};
+    _Lcoor = {-1., 0., 0.,
+               1., 0., 0.};
   };
-  feSpace1DP1(class feMesh *mesh, std::string fieldID, std::string cncGeoID, std::function<double(const double, const std::vector<double> &)> fct) 
+  feSpace1DP1(feMesh *mesh, std::string fieldID, std::string cncGeoID, feFunction *fct) 
     : feSpace(mesh, fieldID, cncGeoID, fct){
     _nFunctions = 2;
     _adr.resize(_nFunctions);
-    _Lcoor = {-1., 1.};
+    _Lcoor = {-1., 0., 0.,
+               1., 0., 0.};
   };
-  ~feSpace1DP1() {}
+  virtual ~feSpace1DP1() {}
 
   virtual int getNbFunctions(){ return 2; }
+  virtual int getPolynomialDegree(){ return 1; }
   virtual std::vector<double>    L(double r[3]){ return {(1.-r[0])/2., (1.+r[0])/2.}; };
   virtual std::vector<double> dLdr(double r[3]){ return {      -1./2.,        1./2.}; };
+  virtual std::vector<double> dLds(double r[3]){ return {          0.,           0.}; };
+  virtual std::vector<double> dLdt(double r[3]){ return {          0.,           0.}; };
 
   virtual void initializeNumberingUnknowns(feNumber *number);
   virtual void initializeNumberingEssential(feNumber *number);
@@ -158,19 +189,26 @@ public:
   feSpace1DP2(std::string cncGeoID)
     : feSpace(nullptr, "GEO", cncGeoID, nullptr){
     _nFunctions = 3;
-    _Lcoor = {-1., 1., 0.};
+    _Lcoor = {-1., 0., 0.,
+               1., 0., 0.,
+               0., 0., 0.};
   };
-  feSpace1DP2(class feMesh *mesh, std::string fieldID, std::string cncGeoID, std::function<double(const double, const std::vector<double> &)> fct) 
+  feSpace1DP2(feMesh *mesh, std::string fieldID, std::string cncGeoID, feFunction *fct) 
     : feSpace(mesh, fieldID, cncGeoID, fct){
     _nFunctions = 3;
     _adr.resize(_nFunctions);
-    _Lcoor = {-1., 1., 0.};
+    _Lcoor = {-1., 0., 0.,
+               1., 0., 0.,
+               0., 0., 0.};
   };
-  ~feSpace1DP2() {}
+  virtual ~feSpace1DP2() {}
 
   virtual int getNbFunctions(){ return 3; }
+  virtual int getPolynomialDegree(){ return 2; }
   virtual std::vector<double>    L(double r[3]){ return {-r[0]*(1.-r[0])/2. , r[0]*(1.+r[0])/2. , -(r[0]+1.)*(r[0]-1.)}; };
   virtual std::vector<double> dLdr(double r[3]){ return {   (2.*r[0]-1.)/2. ,   (2.*r[0]+1.)/2. ,             -2.*r[0]}; };
+  virtual std::vector<double> dLds(double r[3]){ return {                0. ,                0. ,                   0.}; };
+  virtual std::vector<double> dLdt(double r[3]){ return {                0. ,                0. ,                   0.}; };
 
   virtual void initializeNumberingUnknowns(feNumber *number);
   virtual void initializeNumberingEssential(feNumber *number);
@@ -184,17 +222,24 @@ public:
   feSpace1DP3(std::string cncGeoID)
     : feSpace(nullptr, "GEO", cncGeoID, nullptr){
     _nFunctions = 4;
-    _Lcoor = {-1., 1., -1./3., 1./3.}; //TODO : écrire en long ?
+    _Lcoor = {   -1., 0., 0.,
+                  1., 0., 0.,
+              -1./3., 0., 0.,
+               1./3., 0., 0.}; //TODO : écrire en long ?
   };
-  feSpace1DP3(class feMesh *mesh, std::string fieldID, std::string cncGeoID, std::function<double(const double, const std::vector<double> &)> fct) 
+  feSpace1DP3(feMesh *mesh, std::string fieldID, std::string cncGeoID, feFunction *fct) 
     : feSpace(mesh, fieldID, cncGeoID, fct){
     _nFunctions = 4;
     _adr.resize(_nFunctions);
-    _Lcoor =  {-1., 1., -1./3., 1./3.};
+    _Lcoor = {   -1., 0., 0.,
+                  1., 0., 0.,
+              -1./3., 0., 0.,
+               1./3., 0., 0.};
   };
-  ~feSpace1DP3() {}
+  virtual ~feSpace1DP3() {}
 
   virtual int getNbFunctions(){ return 4; }
+  virtual int getPolynomialDegree(){ return 3; }
   virtual std::vector<double>    L(double r[3]){
     return { -9./16.*(r[0]+1./3.)*(r[0]-1./3.)*(r[0]-1.), 
               9./16.*(r[0]+1./3.)*(r[0]-1./3.)*(r[0]+1.), 
@@ -207,6 +252,57 @@ public:
              r[0]*(-9./8.) + r[0]*r[0]*(81./16.) - 27./16.,
              r[0]*(-9./8.) - r[0]*r[0]*(81./16.) + 27./16. };
   };
+  virtual std::vector<double> dLds(double r[3]){ return { 0., 0., 0., 0.}; };
+  virtual std::vector<double> dLdt(double r[3]){ return { 0., 0., 0., 0.}; };
+
+  virtual void initializeNumberingUnknowns(feNumber *number);
+  virtual void initializeNumberingEssential(feNumber *number);
+  virtual void initializeAddressingVector(feNumber *number, int numElem);
+};
+
+// FESpace pour interpolant de Lagrange 1D de degre 4
+class feSpace1DP4 : public feSpace{
+protected:
+public:
+  feSpace1DP4(std::string cncGeoID)
+    : feSpace(nullptr, "GEO", cncGeoID, nullptr){
+    _nFunctions = 5;
+    _Lcoor = {   -1., 0., 0.,
+                  1., 0., 0.,
+              -1./2., 0., 0.,
+                  0., 0., 0.,
+               1./2., 0., 0.};
+  };
+  feSpace1DP4(feMesh *mesh, std::string fieldID, std::string cncGeoID, feFunction *fct) 
+    : feSpace(mesh, fieldID, cncGeoID, fct){
+    _nFunctions = 5;
+    _adr.resize(_nFunctions);
+    _Lcoor = {   -1., 0., 0.,
+                  1., 0., 0.,
+              -1./2., 0., 0.,
+                  0., 0., 0.,
+               1./2., 0., 0.};
+  };
+  virtual ~feSpace1DP4() {}
+
+  virtual int getNbFunctions(){ return 5; }
+  virtual int getPolynomialDegree(){ return 4; }
+  virtual std::vector<double>    L(double r[3]){
+    return {r[0]*(r[0]-1.0)*(r[0]-1.0/2.0)*(r[0]+1.0/2.0)*(2.0/3.0),
+            r[0]*(r[0]+1.0)*(r[0]-1.0/2.0)*(r[0]+1.0/2.0)*(2.0/3.0),
+            r[0]*(r[0]-1.0)*(r[0]+1.0)*(r[0]-1.0/2.0)*(-8.0/3.0),
+            (r[0]-1.0)*(r[0]+1.0)*(r[0]-1.0/2.0)*(r[0]+1.0/2.0)*4.0,
+            r[0]*(r[0]-1.0)*(r[0]+1.0)*(r[0]+1.0/2.0)*(-8.0/3.0)}; 
+  };
+  virtual std::vector<double> dLdr(double r[3]){
+    return {r[0]*(r[0]-1.0)*(r[0]-1.0/2.0)*(2.0/3.0)+r[0]*(r[0]-1.0)*(r[0]+1.0/2.0)*(2.0/3.0)+r[0]*(r[0]-1.0/2.0)*(r[0]+1.0/2.0)*(2.0/3.0)+(r[0]-1.0)*(r[0]-1.0/2.0)*(r[0]+1.0/2.0)*(2.0/3.0),
+            r[0]*(r[0]+1.0)*(r[0]-1.0/2.0)*(2.0/3.0)+r[0]*(r[0]+1.0)*(r[0]+1.0/2.0)*(2.0/3.0)+r[0]*(r[0]-1.0/2.0)*(r[0]+1.0/2.0)*(2.0/3.0)+(r[0]+1.0)*(r[0]-1.0/2.0)*(r[0]+1.0/2.0)*(2.0/3.0),
+            r[0]*(r[0]-1.0)*(r[0]+1.0)*(-8.0/3.0)-r[0]*(r[0]-1.0)*(r[0]-1.0/2.0)*(8.0/3.0)-r[0]*(r[0]+1.0)*(r[0]-1.0/2.0)*(8.0/3.0)-(r[0]-1.0)*(r[0]+1.0)*(r[0]-1.0/2.0)*(8.0/3.0) ,
+            (r[0]-1.0)*(r[0]+1.0)*(r[0]-1.0/2.0)*4.0+(r[0]-1.0)*(r[0]+1.0)*(r[0]+1.0/2.0)*4.0+(r[0]-1.0)*(r[0]-1.0/2.0)*(r[0]+1.0/2.0)*4.0+(r[0]+1.0)*(r[0]-1.0/2.0)*(r[0]+1.0/2.0)*4.0,
+            r[0]*(r[0]-1.0)*(r[0]+1.0)*(-8.0/3.0)-r[0]*(r[0]-1.0)*(r[0]+1.0/2.0)*(8.0/3.0)-r[0]*(r[0]+1.0)*(r[0]+1.0/2.0)*(8.0/3.0)-(r[0]-1.0)*(r[0]+1.0)*(r[0]+1.0/2.0)*(8.0/3.0)};
+  };
+  virtual std::vector<double> dLds(double r[3]){ return { 0., 0., 0., 0., 0.}; };
+  virtual std::vector<double> dLdt(double r[3]){ return { 0., 0., 0., 0., 0.}; };
 
   virtual void initializeNumberingUnknowns(feNumber *number);
   virtual void initializeNumberingEssential(feNumber *number);
