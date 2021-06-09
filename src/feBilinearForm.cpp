@@ -51,21 +51,13 @@ static inline void freeResidual(double** b){
   free(*b); 
 }
 
-
-// feBilinearForm::feBilinearForm(std::vector<feSpace*> &space, feMesh *mesh, int degQuadrature, feSysElm *sysElm)
-//   : _sysElm(sysElm), _intSpace(space), _cncGeoTag(space[0]->getCncGeoTag()),
-//   _geoSpace(mesh->getCncGeoByTag(_cncGeoTag)->getFeSpace()),
-//    _nGeoElm(mesh->getCncGeoByTag(_cncGeoTag)->getNbElm()), _degQuad(degQuadrature)
-
 feBilinearForm::feBilinearForm(std::vector<feSpace*> &space, feMesh *mesh, int degQuad, feSysElm *sysElm)
   : _sysElm(sysElm), _intSpace(space), _cnc(space[0]->getCncGeo()), _cncGeoTag(space[0]->getCncGeoTag()),
-  _geoSpace(_cnc->getFeSpace()), _nGeoElm(_cnc->getNbElm()), /*_nQuad(nQuadraturePoints),*/_degQuad(degQuad)
+  _geoSpace(_cnc->getFeSpace()), _nGeoElm(_cnc->getNbElm()), _degQuad(degQuad)
 
 {
   _nCoord = mesh->getDim();
   _nGeoNodes = _cnc->getNbNodePerElem();
-  // std::cout<<_degQuad<<std::endl;
-
 
   if(_geoSpace->getCncGeoTag() != _cncGeoTag)
     printf("In feBilinearForm::feBilinearForm : Erreur - Connectivité géométrique ne correspond pas à la connectivité de l'espace d'interpolation.\n");
@@ -76,16 +68,12 @@ feBilinearForm::feBilinearForm(std::vector<feSpace*> &space, feMesh *mesh, int d
   }
   
   // (Re-)initialize the interpolation functions at quadrature nodes
-  // int _dimQuad = 2; 
-   // std::string form = "QuadP1";
   feQuadrature *rule = new feQuadrature(_degQuad,space[0]->getDim(), space[0]->getCncGeo()->getForme());  
 
   for(feSpace *fS : _intSpace)
     fS->setQuadratureRule(rule);
   _geoSpace->setQuadratureRule(rule);
   delete rule;
-  // std::cout<<_geoSpace->getNbQuadPoints()<<std::endl;
-  // std::cout<<_intSpace[0]->getNbQuadPoints()<<std::endl;
 
   _sysElm->createElementarySystem(_intSpace);
   _iVar = _sysElm->getIVar();
