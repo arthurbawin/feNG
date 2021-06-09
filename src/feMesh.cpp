@@ -1,4 +1,8 @@
 #include "feMesh.h"
+#include "feNumber.h"
+
+#include "SBoundingBox3d.h"
+#include "rtree.h"
 
 #include <iostream>
 
@@ -162,6 +166,7 @@ feMesh1DP1::feMesh1DP1(double xA, double xB, int nElm, std::string bndA_ID, std:
     _vertices[i] = Vertex(xA + i * (xB-xA)/(_nNod-1), 0., 0., i);
 
   // Elements 1D
+  int dimDomain = 1;
   std::vector<int> connecDomain(_nElmDomain*_nNodDomain, 0);
   for(int i = 0; i < _nElmDomain; ++i){
     connecDomain[_nNodDomain*i+0] = i;
@@ -169,23 +174,24 @@ feMesh1DP1::feMesh1DP1(double xA, double xB, int nElm, std::string bndA_ID, std:
   }
 
   int nCncGeo = 0;
-  feCncGeo *geoDom = new feCncGeo(nCncGeo, _nNodDomain, _nElmDomain, 0, _domID, "Lg", new feSpace1DP1("xyz"), connecDomain);
+  feCncGeo *geoDom = new feCncGeo(nCncGeo, dimDomain, _nNodDomain, _nElmDomain, 0, _domID, "Lg", new feSpace1DP1("xyz"), connecDomain);
   _cncGeo.push_back(geoDom);
   _cncGeoMap[_domID] = nCncGeo;
   geoDom->getFeSpace()->setCncGeoTag(nCncGeo++);
 
   // Elements 0D
+  int dimBoundary = 0;
   std::vector<int> connecBoundaryA(_nElmBoundary*_nNodBoundary, 0);
   std::vector<int> connecBoundaryB(_nElmBoundary*_nNodBoundary, 0);
   connecBoundaryA[0] = 0;
   connecBoundaryB[0] = _nNod-1;
 
-  feCncGeo *geoBndA = new feCncGeo(nCncGeo, _nNodBoundary, _nElmBoundary, 0, _bndA_ID, "Pt", new feSpace1DP0("xyz"), connecBoundaryA);
+  feCncGeo *geoBndA = new feCncGeo(nCncGeo, dimBoundary, _nNodBoundary, _nElmBoundary, 0, _bndA_ID, "Pt", new feSpace1DP0("xyz"), connecBoundaryA);
   _cncGeo.push_back(geoBndA);
   _cncGeoMap[_bndA_ID] = nCncGeo;
   geoBndA->getFeSpace()->setCncGeoTag(nCncGeo++);
 
-  feCncGeo *geoBndB = new feCncGeo(nCncGeo, _nNodBoundary, _nElmBoundary, 0, _bndB_ID, "Pt", new feSpace1DP0("xyz"), connecBoundaryB);
+  feCncGeo *geoBndB = new feCncGeo(nCncGeo, dimBoundary, _nNodBoundary, _nElmBoundary, 0, _bndB_ID, "Pt", new feSpace1DP0("xyz"), connecBoundaryB);
   _cncGeo.push_back(geoBndB);
   _cncGeoMap[_bndB_ID] = nCncGeo;
   geoBndB->getFeSpace()->setCncGeoTag(nCncGeo++);
@@ -215,7 +221,6 @@ feMesh1DP1::~feMesh1DP1(){
 feMesh2DP1::feMesh2DP1(std::string meshName, bool curved, mapType physicalEntitiesDescription) : feMesh(){
 
   _ID = "myBeautifulMesh";
-  // _dim = 2; // Should be determined by readGmsh
 
   if(readGmsh(meshName, curved, physicalEntitiesDescription)){
     printf("In feMesh2DP1::feMesh2DP1 : Error in readGmsh - mesh not finalized.\n");
@@ -226,14 +231,6 @@ feMesh2DP1::feMesh2DP1(std::string meshName, bool curved, mapType physicalEntiti
     cnc->setMeshPtr(this);
     cnc->getFeSpace()->setMeshPtr(this);
   }
-
-  // _nCncGeo = _cncGeo.size();
-
-  // for(auto e : _edges)
-  //   std::cout<<"Edge "<<e.getTag()<<" : "<<e.getTag(0)<<" - "<<e.getTag(1)<<std::endl;
-
-  // std::cout<<_edges.size()<<std::endl;
-  
 }
 
 feMesh2DP1::~feMesh2DP1(){
@@ -242,3 +239,93 @@ feMesh2DP1::~feMesh2DP1(){
     delete cnc;
   }
 }
+
+static bool rtreeCallback(int id, void *ctx){
+  std::vector<int> *vec = reinterpret_cast<std::vector<int> *>(ctx);
+  vec->push_back(id);
+  return true;
+}
+
+void feMesh2DP1::transfer(const feMesh2DP1 *otherMesh, const feMetaNumber *myMN, const feMetaNumber *otherMN, 
+  const feSolution *mySol, feSolution* otherSol, const std::vector<feSpace*> &mySpaces, const std::vector<feSpace*> &otherSpaces){
+
+  RTree<int, double, 3>  rtree;
+
+  // Add domain (not boundary) elements to an rtree
+  for(feSpace *fS : mySpaces){
+    if(fS->getDim() == this->_dim){
+
+      feCncGeo *cnc = fS->getCncGeo();
+      int nElm = cnc->getNbElm();
+      int nNodePerElm = cnc->getNbNodePerElem(); // All nodes are used to create the bounding box, not just the vertices
+
+      for(int iElm = 0; iElm < nElm; ++iElm){
+        SBoundingBox3d bbox;
+        printf("element %2d : %2d - %2d - %2d\n", iElm, cnc->getNodeConnectivity(iElm, 0), cnc->getNodeConnectivity(iElm, 1), cnc->getNodeConnectivity(iElm, 2));
+        for(int iNode = 0; iNode < nNodePerElm; ++iNode){
+          int node = cnc->getNodeConnectivity(iElm, iNode);
+          SPoint3 pt(_vertices[node].x(), _vertices[node].y(), _vertices[node].z());
+          bbox += pt;
+          // std::cout<<"Point added :"<<std::endl;
+          // std::cout<<bbox.min().x()<<std::endl;
+          // std::cout<<bbox.min().y()<<std::endl;
+          // std::cout<<bbox.min().z()<<std::endl;
+          // std::cout<<bbox.max().x()<<std::endl;
+          // std::cout<<bbox.max().y()<<std::endl;
+          // std::cout<<bbox.max().z()<<std::endl;
+          rtree.Insert((double*)(bbox.min()), (double*)(bbox.max()), iElm);
+          // rtree.Insert(bbox.min().data(), bbox.max().data(), iElm);
+        }
+      }
+    }
+  }
+
+  // Find point 0.5,0.5,0
+  double tol = 1e-2;
+  double min[3] = {0.5-tol, 0.5-tol, 0.0-tol};
+  double max[3] = {0.5+tol, 0.5+tol, 0.0+tol};
+  std::vector<int> candidates;
+  rtree.Search(min, max, rtreeCallback, &candidates);
+
+  for(auto val : candidates){
+    std::cout<<"val = "<<val<<std::endl;
+  }
+  
+
+  SBoundingBox3d foo;
+
+// std::vector<uint64_t> candidates;
+//   forestOptions->bndRTree->Search(min, max, rtreeCallback, &candidates);
+
+  // Add bboxes of the surface mesh to rtree
+  // HXTBbox bbox_triangle;
+  // for(uint64_t i = 0; i < meshBnd->triangles.num; ++i){
+  //   hxtBboxInit(&bbox_triangle);
+  //   for(uint64_t j = 0; j < 3; ++j) {
+  //     double coord[3];
+  //     uint32_t node = meshBnd->triangles.node[3*i+j];
+  //     for(uint32_t k = 0; k < 3; ++k){ coord[k] = meshBnd->vertices.coord[(size_t) 4*node+k]; }
+  //     hxtBboxAddOne(&bbox_triangle, coord);
+  //   }
+  //   SBoundingBox3d cube_bbox(bbox_triangle.min[0], bbox_triangle.min[1], bbox_triangle.min[2],
+  //                            bbox_triangle.max[0], bbox_triangle.max[1], bbox_triangle.max[2]);
+  //   bndRTree.Insert((double*)(cube_bbox.min()), (double*)(cube_bbox.max()), i);
+  // }
+
+}
+
+// void feNorm::computeL2Norm(feMetaNumber *metaNumber, feSolution *sol, feMesh *mesh){
+//   double normL2 = 0.0, solInt, solRef, xInt, yInt, zInt, J, t = sol->getCurrentTime();
+//   int nElm = _intSpace->getNbElm();
+
+//   // std::cout<<"Computing norm of "<<_intSpace->getFieldID()<<" on "<<nElm<<" elements"<<std::endl;
+//   for(int iElm = 0; iElm < nElm; ++iElm){
+//     _intSpace->initializeAddressingVector(metaNumber->getNumbering(_intSpace->getFieldID()), iElm);
+//     _intSpace->initializeSolution(sol);
+//     geoCoord = mesh->getCoord(cncGeoTag, iElm);
+//     for(int k = 0; k < _nQuad; ++k){
+//       solInt = _intSpace->interpolateSolutionAtQuadNode(k);
+//     }
+//   }
+//   norm = sqrt(normL2);
+// }

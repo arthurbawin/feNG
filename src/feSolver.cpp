@@ -47,7 +47,7 @@ void solveStationary(double *normL2, feTolerances tol, feMetaNumber *metaNumber,
   feStationarySolution *solSta = new feStationarySolution(nSol, sol->getCurrentTime(), metaNumber);
   solSta->initialize(sol, mesh, metaNumber);
   // Solve
-  printf("\nÉtape 1 - recomputeMatrix = %s : Solution stationnaire\n", linearSystem->getRecomputeStatus() ? "true" : "false");
+  printf("\nSteady state solution - recomputeMatrix = %s\n", linearSystem->getRecomputeStatus() ? "true" : "false");
   solveQNBDF(solSta, tol, metaNumber, linearSystem, formMatrices, formResiduals, sol, mesh);
   // Compute L2 norm of solution(s)
   for(auto *norm : norms){
@@ -129,7 +129,7 @@ void solveBDF2(std::vector<double> &normL2, feTolerances tol, feMetaNumber *meta
     for(auto *norm : norms){
       norm->computeL2Norm(metaNumber, sol, mesh);
       normL2[iTime] = norm->getNorm(); // TODO : fix this
-      std::cout<<"Norme "<<cnt++<<" = "<<normL2[iTime]<<std::endl;
+      // std::cout<<"Norme "<<cnt++<<" = "<<normL2[iTime]<<std::endl;
     }
 
     // std::string vtkFile = "../../data/taylorGreenUnsteady" + std::to_string(iTime) + ".vtk";
@@ -180,15 +180,16 @@ void solveDC3(std::vector<double> &normL2BDF2, std::vector<double> &normL2DC3,fe
   // norm->computeL2Norm(metaNumber, sol, mesh);
   // normL2DC3[0] = norm->getNorm();
 
-  std::string vtkFile = "../../data/cylFine" + std::to_string(0) + ".vtk";
-  feExporterVTK writer(vtkFile, mesh, sol, metaNumber, spaces);
+  // std::string vtkFile = "../../data/cylFine" + std::to_string(0) + ".vtk";
+  // feExporterVTK writer(vtkFile, mesh, sol, metaNumber, spaces);
   int cnt = 0;
   for(auto *norm : norms){
     norm->computeL2Norm(metaNumber, sol, mesh);
-    // normL2BDF2[0+cnt] = norm->getNorm();
-    normL2DC3[0+cnt] = norm->getNorm();
+    normL2BDF2[0] = norm->getNorm();
+    normL2DC3[0] = norm->getNorm();
+    // normL2DC3[0+cnt] = norm->getNorm();
     // normL2[iTime] = norm->getNorm(); // TODO : fix this
-    std::cout<<"Norme "<<cnt++<<" = "<<normL2DC3[0+cnt]<<std::endl;
+    // std::cout<<"Norme "<<cnt++<<" = "<<normL2DC3[0+cnt]<<std::endl;
   }
 
   // Start integration with a BDF2
@@ -216,13 +217,14 @@ void solveDC3(std::vector<double> &normL2BDF2, std::vector<double> &normL2DC3,fe
     // norm->computeL2Norm(metaNumber, sol, mesh);
     // normL2DC3[iTime] = norm->getNorm();
 
-    std::string vtkFile = "../../data/cylFine" + std::to_string(iTime) + ".vtk";
-    feExporterVTK writer(vtkFile, mesh, sol, metaNumber, spaces);
+    // std::string vtkFile = "../../data/cylFine" + std::to_string(iTime) + ".vtk";
+    // feExporterVTK writer(vtkFile, mesh, sol, metaNumber, spaces);
     int cnt = 0;
     for(auto *norm : norms){
       norm->computeL2Norm(metaNumber, sol, mesh);
-      // normL2BDF2[iTime] = norm->getNorm();
-      normL2DC3[3*iTime+cnt] = norm->getNorm();
+      normL2BDF2[iTime] = norm->getNorm();
+      normL2DC3[iTime] = norm->getNorm();
+      // normL2DC3[3*iTime+cnt] = norm->getNorm();
       // normL2[iTime] = norm->getNorm(); // TODO : fix this
       std::cout<<"Norme "<<cnt++<<" = "<<normL2DC3[3*iTime+cnt]<<std::endl;
     }
@@ -256,15 +258,16 @@ void solveDC3(std::vector<double> &normL2BDF2, std::vector<double> &normL2DC3,fe
     // norm->computeL2Norm(metaNumber, sol, mesh);
     // normL2DC3[iTime] = norm->getNorm();
 
-    std::string vtkFile = "../../data/cylFine" + std::to_string(iTime) + ".vtk";
-    feExporterVTK writer(vtkFile, mesh, sol, metaNumber, spaces);
+    // std::string vtkFile = "../../data/cylFine" + std::to_string(iTime) + ".vtk";
+    // feExporterVTK writer(vtkFile, mesh, sol, metaNumber, spaces);
     int cnt = 0;
     for(auto *norm : norms){
       norm->computeL2Norm(metaNumber, sol, mesh);
-      // normL2BDF2[iTime] = norm->getNorm();
-      normL2DC3[3*iTime+cnt] = norm->getNorm();
+      normL2BDF2[iTime] = norm->getNorm();
+      normL2DC3[iTime] = norm->getNorm();
+      // normL2DC3[3*iTime+cnt] = norm->getNorm();
       // normL2[iTime] = norm->getNorm(); // TODO : fix this
-      std::cout<<"Norme "<<cnt++<<" = "<<normL2DC3[3*iTime+cnt]<<std::endl;
+      // std::cout<<"Norme "<<cnt++<<" = "<<normL2DC3[3*iTime+cnt]<<std::endl;
     }
   }
 

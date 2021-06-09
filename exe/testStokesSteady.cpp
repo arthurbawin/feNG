@@ -103,27 +103,27 @@ int main(int argc, char** argv){
     feMesh2DP1 *mesh = new feMesh2DP1(meshName, false);
     nElm[iter] = mesh->getNbInteriorElems();
 
-    feSpace1DP3  U_angle   = feSpace1DP3(mesh, "U", "Angle",  funSolU);
-    feSpace1DP3  U_haut    = feSpace1DP3(mesh, "U", "Haut",   funSolU);
-    feSpace1DP3  U_gauche  = feSpace1DP3(mesh, "U", "Gauche", funSolU);
-    feSpaceTriP3 U_surface = feSpaceTriP3(mesh,"U", "Surface",funZero);
+    feSpace1DP3    U_angle(mesh, "U", "Angle",  funSolU);
+    feSpace1DP3     U_haut(mesh, "U", "Haut",   funSolU);
+    feSpace1DP3   U_gauche(mesh, "U", "Gauche", funSolU);
+    feSpaceTriP3 U_surface(mesh, "U", "Surface",funZero);
 
-    feSpace1DP3  V_angle   = feSpace1DP3(mesh, "V", "Angle",  funSolV);
-    feSpace1DP3  V_haut    = feSpace1DP3(mesh, "V", "Haut",   funSolV);
-    feSpace1DP3  V_gauche  = feSpace1DP3(mesh, "V", "Gauche", funSolV);
-    feSpaceTriP3 V_surface = feSpaceTriP3(mesh,"V", "Surface",funZero);
+    feSpace1DP3    V_angle(mesh, "V", "Angle",  funSolV);
+    feSpace1DP3     V_haut(mesh, "V", "Haut",   funSolV);
+    feSpace1DP3   V_gauche(mesh, "V", "Gauche", funSolV);
+    feSpaceTriP3 V_surface(mesh, "V", "Surface",funZero);
 
-    feSpace1DP2  P_angle   = feSpace1DP2(mesh, "P", "Angle",  funSolP);
-    feSpace1DP2  P_haut    = feSpace1DP2(mesh, "P", "Haut",   funSolP);
-    feSpace1DP2  P_gauche  = feSpace1DP2(mesh, "P", "Gauche", funSolP);
-    feSpaceTriP2 P_surface = feSpaceTriP2(mesh,"P", "Surface",funZero);
+    feSpace1DP2    P_angle(mesh, "P", "Angle",  funSolP);
+    feSpace1DP2     P_haut(mesh, "P", "Haut",   funSolP);
+    feSpace1DP2   P_gauche(mesh, "P", "Gauche", funSolP);
+    feSpaceTriP2 P_surface(mesh, "P", "Surface",funZero);
 
     std::vector<feSpace*> fespace = {&U_angle, &U_haut, &U_gauche, &U_surface,
                                      &V_angle, &V_haut, &V_gauche, &V_surface,
                                      &P_angle, &P_haut, &P_gauche, &P_surface};
     std::vector<feSpace*> feEssBC = {&U_angle, &U_haut, &U_gauche,
-                                     &V_angle, &V_haut, &V_gauche, 
-                                     &P_angle, &P_haut, &P_gauche};
+                                     &V_angle, &V_haut, &V_gauche,
+                                     &P_haut};
 
     feMetaNumber *metaNumber = new feMetaNumber(mesh, fespace, feEssBC);
     // metaNumber->printNumberings();

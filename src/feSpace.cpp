@@ -15,7 +15,8 @@ feSpace::feSpace(feMesh *mesh, std::string fieldID, std::string cncGeoID, feFunc
 };
 
 int feSpace::getDim(){
-  return _mesh->getDim();
+  // return _mesh->getDim(); // This is constant for all spaces on the same mesh...
+  return this->getCncGeo()->getDim();
 }
 
 int feSpace::getNbElm(){
@@ -206,7 +207,7 @@ void feSpace::interpolateVectorFieldAtQuadNode_sDerivative(std::vector<double> f
   // [fx0 fy0 fz0 fx1 fy1 fz1 ... fxn fyn fzn]
   res[0] = res[1] = res[2] = 0.0;
   if(field.size() != 3 * (unsigned) _nFunctions){
-    printf(" In feSpace::interpolateVectorFieldAtQuadNode_rDerivative : Erreur - Nombre de valeurs nodales non compatible avec le nombre d'interpolants de l'espace.\n");
+    printf(" In feSpace::interpolateVectorFieldAtQuadNode_sDerivative : Erreur - Nombre de valeurs nodales non compatible avec le nombre d'interpolants de l'espace.\n");
     return;
   }
   for(int i = 0; i < 3; ++i){

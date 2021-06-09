@@ -98,6 +98,8 @@ public:
   virtual ~feMesh1DP1();
 };
 
+class feMetaNumber;
+
 class feMesh2DP1 : public feMesh{
 private:
   // A physical entity (a domain)
@@ -174,6 +176,9 @@ public:
   double getGmshVersion(){ return _gmshVersion; }
 
   mapType getPhysicalEntitiesDescription(){ return _physicalEntitiesDescription; }
+
+  void transfer(const feMesh2DP1 *otherMesh, const feMetaNumber *myMN, const feMetaNumber *otherMN, 
+  const feSolution *mySol, feSolution* otherSol, const std::vector<feSpace*> &mySpaces, const std::vector<feSpace*> &otherSpaces);
 };
 
 #endif

@@ -41,7 +41,7 @@ int main(int argc, char** argv){
   feFunction *funSol = new feFunction(fSol, par);
   feFunction *funSource = new feFunction(fSource, par);
 
-  int nIter = 3;
+  int nIter = 2;
   std::vector<double> maxNormL2BDF(2*nIter, 0.0);
   std::vector<double> maxNormL2DC3(2*nIter, 0.0);
   std::vector<int> nElm(nIter, 0);

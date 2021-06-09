@@ -33,9 +33,9 @@ void feExporterVTK::writeHeader(std::ostream& output){
   output << "ASCII\n";
 }
 
-void feExporterVTK::writeNodes(std::ostream& output, int iField){
-  feNumber *n = _metaNumber->getNumbering(iField);
-  int nNod = n->getNbNodes();
+void feExporterVTK::writeNodes(std::ostream& output, feCncGeo *cnc){
+  int nNod = cnc->getNbNodes();
+  std::cout<<nNod<<" nodes"<<std::endl;
   output << "DATASET UNSTRUCTURED_GRID\n";
   output << "POINTS " << nNod << " double\n";
   Vertex *v;
@@ -45,7 +45,7 @@ void feExporterVTK::writeNodes(std::ostream& output, int iField){
   }
 }
 
-void feExporterVTK::writeElementsConnectivity(std::ostream& output, feCncGeo *cnc, int iField){
+void feExporterVTK::writeElementsConnectivity(std::ostream& output, feCncGeo *cnc){
   int nElm = cnc->getNbElm();
   int nNodePerElem = cnc->getNbNodePerElem();
   output << "CELLS " << nElm << " " << nElm*(nNodePerElem+1) << std::endl;
@@ -58,20 +58,18 @@ void feExporterVTK::writeElementsConnectivity(std::ostream& output, feCncGeo *cn
     output << std::endl;
   }
   output << "CELL_TYPES " << nElm << std::endl;
+  int vtkElem = cncToVTKmap[cnc->getForme()];
   for(int iElm = 0; iElm < nElm; ++iElm){
-    output << cncToVTKmap[cnc->getForme()] << std::endl;
+    output << vtkElem << std::endl;
   }
 }
 
-void feExporterVTK::writeField(std::ostream& output, feCncGeo *cnc, int iField){
-  int nElm = cnc->getNbElm();
-  int nNodePerElem = cnc->getNbNodePerElem();
+void feExporterVTK::writeField(std::ostream& output, feCncGeo *cnc, std::string fieldID){
   std::vector<double>& sol = _sol->getSolutionReference();
-  // Pas juste : c'est le nombre de noeuds du maillage au complet et pas de cnc...
-  feNumber *n = _metaNumber->getNumbering(iField);
-  int nNod = n->getNbNodes();
-  // output << "POINT_DATA " << nNod << std::endl;
-  output << "SCALARS " << _metaNumber->getFieldID(iField) << " double 1" << std::endl;
+  int nNod = cnc->getNbNodes();
+  feNumber *n = _metaNumber->getNumbering(fieldID);
+  // int nNod = n->getNbNodes();
+  output << "SCALARS " << fieldID << " double 1" << std::endl;
   output << "LOOKUP_TABLE default" << std::endl;
   for(int iNode = 0; iNode < nNod; ++iNode){
     int iDOF = n->getVertexNumber(iNode);
@@ -86,28 +84,47 @@ feExporterVTK::feExporterVTK(std::string vtkFile, feMesh *mesh, feSolution *sol,
   if(fb.open(vtkFile,std::ios::out)){
     std::ostream output(&fb);
     writeHeader(output);
-    // Write nodes and connectivity : (this assumes all fields are on the same connectivity : fix this in the future)
-    writeNodes(output, 0);
-    writeElementsConnectivity(output, space[4]->getCncGeo(), 0);
-    output << "POINT_DATA " << _metaNumber->getNumbering(0)->getNbNodes() << std::endl;
-    // Write each field :
-    for(int iField = 0; iField < metaNumber->getNbFields(); ++iField){
-      std::string fieldID = metaNumber->getFieldID(iField);
-      // writeNodes(output, iField);
-      for(auto fS : space){
-        if(fS->getFieldID() == fieldID){
-          // std::cout<<"Field "<<fieldID<<" is defined on fespace "<<fS->getFieldID()<<" - "<<fS->getCncGeoID()<<std::endl;
-          // TODO : C'est de la triche : je teste si la connectivité est TriP1
-          // Il faudrait peut-être écrire juste les connectivités non-frontières
-          // Peut-être ajouter un flag iBoundary
-          if(fS->getCncGeo()->getForme() == "TriP1"){
-            // writeElementsConnectivity(output, fS->getCncGeo(), iField);
-            writeField(output, fS->getCncGeo(), iField);
-          }
-        }
 
+    // For now, we only print spaces of maximal dimension (non boundary)
+    std::vector<feSpace*> spacesToExport;
+    std::set<std::string> cncToExport;
+    for(feSpace *fS : space){
+      if(fS->getDim() == mesh->getDim()){
+        spacesToExport.push_back(fS);
+        cncToExport.insert(fS->getCncGeoID());
       }
     }
+
+    // For now we only print one domain connectivity, assuming all fields are defined on the same connectivity.
+    // To fix this, we have to join the connectivities : check which nodes are shared, and use a global numbering
+    if(cncToExport.size() > 1){
+      printf("In feExporterVTK : Warning - Multiple domains visualization is not ready yet.\n");
+      printf("Only the first domain will be exported.\n");
+    }
+
+    // Grab the connectivity from any matching fespace
+    feCncGeo *cnc;
+    for(feSpace *fS : spacesToExport){
+      if(fS->getCncGeoID() == *cncToExport.begin()){
+        cnc = fS->getCncGeo();
+        break;
+      }
+    }
+    
+    // Write nodes and elements
+    writeNodes(output, cnc);
+    writeElementsConnectivity(output, cnc);
+    output << "POINT_DATA " << cnc->getNbNodes() << std::endl;
+
+    // Write the field associated to each fespace in spacesToExport
+    for(feSpace *fS : spacesToExport){
+      if(cnc->getForme() == "TriP1"){
+        writeField(output, cnc, fS->getFieldID());
+      } else{
+        printf("In feExporterVTK : So far only P1 triangles can be exported to Paraview...\n");
+      }
+    }
+
     fb.close();
   }
 }
