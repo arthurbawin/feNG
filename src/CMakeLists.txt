@@ -20,15 +20,11 @@ set(feNG_SRC
   feSpace.cpp
   feSpaceTriangle.cpp
   feSysElm.cpp
-)
-
-if(ENABLE_EIGEN)
   # Add Gmsh files for STensor3
-  list(APPEND feNG_SRC
-    ${CMAKE_SOURCE_DIR}/contrib/gmsh/fullMatrix.cpp
-    ${CMAKE_SOURCE_DIR}/contrib/gmsh/Numeric.cpp
-    ${CMAKE_SOURCE_DIR}/contrib/gmsh/STensor3.cpp)
-endif()
+  ${CMAKE_SOURCE_DIR}/contrib/gmsh/fullMatrix.cpp
+  ${CMAKE_SOURCE_DIR}/contrib/gmsh/Numeric.cpp
+  ${CMAKE_SOURCE_DIR}/contrib/gmsh/STensor3.cpp
+)
 
 set(feNG_API
   feBilinearForm.h
@@ -59,14 +55,3 @@ set(feNG_API
 )
 
 feNG_add_library(feNG "${feNG_SRC}" "${feNG_API}")
-
-# if(ENABLE_PETSC)
-#   list(APPEND feNG_SRC feLinearSystemPETSc.cpp)
-#   list(APPEND feNG_API feLinearSystemPETSc.h)
-# endif()
-# if(ENABLE_MKL)
-#   list(APPEND feNG_SRC feLinearSystemPardiso.cpp)
-#   list(APPEND feNG_API feLinearSystemPardiso.h)
-# endif()
-
-

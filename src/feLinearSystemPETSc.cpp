@@ -93,7 +93,7 @@ void feLinearSystemPETSc::initialize(){
   // std::cout<<"Taille du systeme : "<<_nInc<<std::endl;
   // std::cout<<"Avant résolution : norme du residu :        "<<normResidual<<std::endl;
   // std::cout<<"Avant résolution : norme de la correction : "<<normDx<<std::endl;
-};
+}
 
 void feLinearSystemPETSc::viewMatrix(){
   MatView(_A,PETSC_VIEWER_STDOUT_WORLD);
@@ -169,7 +169,6 @@ void feLinearSystemPETSc::assembleMatrices(feSolution *sol){
   PetscErrorCode ierr = 0;
   if(recomputeMatrix){
     // std::cout<<"Computing matrix"<<std::endl;
-    PetscInt I,J;
     std::vector<PetscScalar> values;
     int sizeI, sizeJ;
     std::vector<int> niElm;
@@ -258,7 +257,6 @@ void feLinearSystemPETSc::assembleMatrices(feSolution *sol){
 
 void feLinearSystemPETSc::assembleResiduals(feSolution *sol){
   PetscErrorCode ierr;
-  PetscInt I;
   std::vector<PetscScalar> values;
   int sizeI;
   std::vector<int> niElm;

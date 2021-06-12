@@ -60,7 +60,7 @@ public:
 
   void printNumberingVertices(){
     printf("nNod = %d\n", _nNod);
-    for(int i = 0; i < _numberingVertices.size(); ++i){
+    for(size_t i = 0; i < _numberingVertices.size(); ++i){
       if(_codeDOFVertices[i] == ESS)
         printf("%d \t %s\n", _numberingVertices[i], "ESS");
       else if(_codeDOFVertices[i] == INC)

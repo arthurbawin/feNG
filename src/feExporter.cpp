@@ -8,15 +8,15 @@
 static int VTK_VERTEX = 1;
 static int VTK_LINE = 3;
 static int VTK_TRIANGLE = 5;
-static int VTK_QUAD = 9;
-static int VTK_TETRA = 10;
-static int VTK_HEXAHEDRON = 12;
-static int VTK_PYRAMID = 14;
+// static int VTK_QUAD = 9;
+// static int VTK_TETRA = 10;
+// static int VTK_HEXAHEDRON = 12;
+// static int VTK_PYRAMID = 14;
 static int VTK_QUADRATIC_EDGE = 21;
 static int VTK_QUADRATIC_TRIANGLE = 22;
-static int VTK_QUADRATIC_QUAD = 23;
-static int VTK_QUADRATIC_TETRA = 24;
-static int VTK_QUADRATIC_HEXAHEDRON = 25;
+// static int VTK_QUADRATIC_QUAD = 23;
+// static int VTK_QUADRATIC_TETRA = 24;
+// static int VTK_QUADRATIC_HEXAHEDRON = 25;
 
 // A etoffer au fur et a mesure
 std::map<std::string,int> cncToVTKmap = {

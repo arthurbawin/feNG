@@ -159,7 +159,7 @@ feCompressedRowStorage::feCompressedRowStorage(feMetaNumber *metaNumber, feMesh 
   // delete [] liste;
   // delete [] ddl_rngcof;
   delete [] ddl_nbrcof;
-};
+}
 
 // ====================================================================
 // Constructeur de la classe dérivée CSR MKL PARDISO
@@ -282,7 +282,7 @@ feCompressedRowStorageMklPardiso::feCompressedRowStorageMklPardiso(feMetaNumber 
     for(feInt i=0;i<nz     ;i++) Aj[i]+=1;
     for(feInt i=0;i<ordre+1;i++) Ap[i]+=1;
 
-};
+}
 
 void feCompressedRowStorageMklPardiso::print_info() {
 
@@ -293,7 +293,7 @@ void feCompressedRowStorageMklPardiso::print_info() {
          printf("\n");   
         }
 
-};
+}
 
 void  feCompressedRowStorageMklPardiso::matrixAddValues(double* Matrix, feInt nRow, feInt *Row, feInt nColumn, feInt *Column, double** Aij) {
     for(feInt i=0;i<nRow;i++) {
@@ -316,7 +316,7 @@ void  feCompressedRowStorageMklPardiso::matrixAddValues(double* Matrix, feInt nR
             }
         }
     }
-};
+}
 
 
 

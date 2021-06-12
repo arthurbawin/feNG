@@ -12,12 +12,10 @@ fePatch::fePatch(feCncGeo *cnc){
   _nVertices = _vertices.size();
   _nNodePerElm = cnc->getNbNodePerElem();
   std::vector<int> &connecNodes = cnc->getNodeConnectivityRef();
-  std::vector<int> &connecElem  = cnc->getElemConnectivityRef();
 
   int nElm = cnc->getNbElm();
   for(int i = 0; i < nElm; ++i){
     for(int j = 0; j < _nNodePerElm; ++j){
-      // vertToElems[ connecNodes[_nNodePerElm*i+j] ].insert( connecElem[i] );
       vertToElems[ connecNodes[_nNodePerElm*i+j] ].insert( i ); // TODO : A verifier
     }
   }
@@ -96,9 +94,7 @@ feRecovery::feRecovery(feMetaNumber *metaNumber, feSpace *space, feMesh *mesh, f
 
   allocateStructures();
 
-  int cnt = 0;
   for(int iDerivative = 0; iDerivative < _degSol+1; ++iDerivative){
-  // for(int iDerivative = 0; iDerivative < 2; ++iDerivative){
 
     bool recoverDerivative = (iDerivative > 0);
 
@@ -116,16 +112,7 @@ feRecovery::feRecovery(feMetaNumber *metaNumber, feSpace *space, feMesh *mesh, f
 
   getErrorPolynomials();
 
-  // for(auto pair : errorCoeff){
-  //   std::cout<<pair.first<<" : ";
-  //   for(auto val : pair.second){
-  //     std::cout<<val<<" "<<std::endl;
-  //   }
-  //   std::cout<<std::endl;
-  // }
-
   freeStructures();
-  
 }
 
 void feRecovery::allocateStructures(){

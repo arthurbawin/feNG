@@ -62,7 +62,7 @@ public:
 
   void setMeshPtr(feMesh *mesh){ _mesh = mesh; } // Used to assign the mesh pointer of a geometric space after the mesh has been created
 
-  feCncGeo* const getCncGeo();
+  feCncGeo* getCncGeo();
 
   // The number of degrees of freedom on an element
   virtual int getNbFunctions() = 0;

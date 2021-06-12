@@ -25,33 +25,6 @@ feCncGeo* feMesh::getCncGeoByTag(int cncGeoTag){
   return nullptr;
 }
 
-// std::vector<double> feMesh::getCoord(std::string cncGeoID, int numElem){
-//   feCncGeo* cnc = getCncGeoByName(cncGeoID);
-//   int nNodePerElem = cnc->getNbNodePerElem();
-//   std::vector<double> coord(nNodePerElem * _dim); // _dim = 3 pour les coordonnees
-//   for(int i = 0; i < nNodePerElem; ++i){
-//     for(int j = 0; j < _dim; ++j){
-//       coord[_dim * i + j] = _coord[_dim * cnc->getNodeConnectivity(numElem, i) + j];
-//       // coord[3 * i + 0] = _vertices[3 * cnc->getNodeConnectivity(numElem, i)].x();
-//       // coord[3 * i + 1] = _vertices[3 * cnc->getNodeConnectivity(numElem, i)].y();
-//       // coord[3 * i + 2] = _vertices[3 * cnc->getNodeConnectivity(numElem, i)].z();
-//     }
-//   }
-//   return coord;
-// }
-
-// std::vector<double> feMesh::getCoord(int cncGeoTag, int numElem){
-//   feCncGeo* cnc = getCncGeoByTag(cncGeoTag);
-//   int nNodePerElem = cnc->getNbNodePerElem();
-//   std::vector<double> coord(nNodePerElem * _dim);
-//   for(int i = 0; i < nNodePerElem; ++i){
-//     for(int j = 0; j < _dim; ++j){
-//       coord[_dim * i + j] = _coord[_dim * cnc->getNodeConnectivity(numElem, i) + j];
-//     }
-//   }
-//   return coord;
-// }
-
 // numElem est le numero local de l'element dans la connectivité géométrique
 std::vector<double> feMesh::getCoord(std::string cncGeoID, int numElem){
   feCncGeo* cnc = getCncGeoByName(cncGeoID);
@@ -208,7 +181,7 @@ feMesh1DP1::feMesh1DP1(double xA, double xB, int nElm, std::string bndA_ID, std:
     cnc->setMeshPtr(this);
     cnc->getFeSpace()->setMeshPtr(this);
   }
-};
+}
 
 feMesh1DP1::~feMesh1DP1(){
   for(feCncGeo *cnc : _cncGeo){
