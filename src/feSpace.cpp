@@ -12,7 +12,7 @@ feSpace::feSpace(feMesh *mesh, std::string fieldID, std::string cncGeoID, feFunc
     if(_cncGeoTag == -1)
       printf("In feSpace::feSpace : Error - The geometric connectivity \"%s\" does not exist in the mesh.\n", cncGeoID.c_str());
   }
-};
+}
 
 int feSpace::getDim(){
   // return _mesh->getDim(); // This is constant for all spaces on the same mesh...
@@ -27,12 +27,11 @@ int feSpace::getNbNodePerElem(){
   return _mesh->getNbNodePerElem(_cncGeoTag);
 }
 
-feCncGeo* const feSpace::getCncGeo(){
+feCncGeo* feSpace::getCncGeo(){
   return _mesh->getCncGeoByTag(_cncGeoTag);
 }
 
 void feSpace::setQuadratureRule(feQuadrature *quad){
-  int dim = quad->getDim();
   if(_nQuad == 1){
     printf("Warning : nQuad = 1 was already set.\n");
   }

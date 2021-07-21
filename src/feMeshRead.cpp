@@ -263,8 +263,8 @@ int dim_of_gmsh_element[] = {
 
 int feMesh2DP1::readMsh2(std::istream &input, bool curved, mapType physicalEntitiesDescription){
   std::string buffer;
-  int ph1, ph2, ph3, ph4, ph5, ph6;   // Placeholders
-  std::map<int, int> verticesMap;     // Gmsh tag (which may include gaps) to sequential tag. Just in case : not sure there are gaps in msh2...
+  int ph1; // Placeholder
+  std::map<int, int> verticesMap; // Gmsh tag (which may include gaps) to sequential tag. Just in case : not sure there are gaps in msh2...
   std::vector<int> numNodesInBlock;
 
   if(physicalEntitiesDescription.size() > 0){
@@ -329,7 +329,7 @@ int feMesh2DP1::readMsh2(std::istream &input, bool curved, mapType physicalEntit
         _vertices[countVertex++] = Vertex(x,y,z,gmshNumber);
       }
 
-      if(verticesMap.size() != _nNod){
+      if((int) verticesMap.size() != _nNod){
         printf("In readGmsh : Error - Vertices indices are not unique.\n");
         return 1;
       }
@@ -404,16 +404,16 @@ int feMesh2DP1::readMsh2(std::istream &input, bool curved, mapType physicalEntit
 
         // Fill geometric entity data :
         switch(elemType){
-          case  1: //  2-node line
-          case  8: if(curved){  _entities[p].cncID = "LineP2"; }//  3-node line (2nd order)
-          case 26: if(curved){  _entities[p].cncID = "LineP3"; }//  4-node line (3rd order)
-          case 27: if(curved){ /* Not supported */             }//  5-node line (4th order)
-          case 28: if(curved){ /* Not supported */             }//  6-node line (5th order)
-          case 62: if(curved){ /* Not supported */             }//  7-node line (6th order)
-          case 63: if(curved){ /* Not supported */             }//  8-node line (7th order)
-          case 64: if(curved){ /* Not supported */             }//  9-node line (8th order)
-          case 65: if(curved){ /* Not supported */             }// 10-node line (9th order)
-          case 66: if(curved){ /* Not supported */             }// 11-node line (10th order)
+          case  1: [[gnu::fallthrough]]; //  2-node line
+          case  8: if(curved){  _entities[p].cncID = "LineP2"; } [[gnu::fallthrough]]; //  3-node line (2nd order)
+          case 26: if(curved){  _entities[p].cncID = "LineP3"; } [[gnu::fallthrough]]; //  4-node line (3rd order)
+          case 27: if(curved){ /* Not supported */             } [[gnu::fallthrough]]; //  5-node line (4th order)
+          case 28: if(curved){ /* Not supported */             } [[gnu::fallthrough]]; //  6-node line (5th order)
+          case 62: if(curved){ /* Not supported */             } [[gnu::fallthrough]]; //  7-node line (6th order)
+          case 63: if(curved){ /* Not supported */             } [[gnu::fallthrough]]; //  8-node line (7th order)
+          case 64: if(curved){ /* Not supported */             } [[gnu::fallthrough]]; //  9-node line (8th order)
+          case 65: if(curved){ /* Not supported */             } [[gnu::fallthrough]]; // 10-node line (9th order)
+          case 66: if(curved){ /* Not supported */             } // 11-node line (10th order)
           {
             // Default is linear interpolation for the geometry
             if(!curved){ 
@@ -423,16 +423,16 @@ int feMesh2DP1::readMsh2(std::istream &input, bool curved, mapType physicalEntit
             _entities[p].nEdgePerElem = 0;
             break;
           }
-          case  2: //  3-node triangle
-          case  9: if(curved){ _entities[p].cncID = "TriP2"; }//  6-node triangle (2nd order)
-          case 21: if(curved){ _entities[p].cncID = "TriP3"; }// 10-node triangle (3rd order)
-          case 23: ; // 15-node triangle (4th order)
-          case 25: ; // 21-node triangle (5th order)
-          case 42: ; // 28-node triangle (6th order)
-          case 43: ; // 36-node triangle (7th order)
-          case 44: ; // 45-node triangle (8th order)
-          case 45: ; // 55-node triangle (9th order)
-          case 46: ; // 66-node triangle (10th order)
+          case  2: [[gnu::fallthrough]]; //  3-node triangle
+          case  9: if(curved){ _entities[p].cncID = "TriP2"; } [[gnu::fallthrough]]; //  6-node triangle (2nd order)
+          case 21: if(curved){ _entities[p].cncID = "TriP3"; } [[gnu::fallthrough]]; // 10-node triangle (3rd order)
+          case 23: [[gnu::fallthrough]]; // 15-node triangle (4th order)
+          case 25: [[gnu::fallthrough]]; // 21-node triangle (5th order)
+          case 42: [[gnu::fallthrough]]; // 28-node triangle (6th order)
+          case 43: [[gnu::fallthrough]]; // 36-node triangle (7th order)
+          case 44: [[gnu::fallthrough]]; // 45-node triangle (8th order)
+          case 45: [[gnu::fallthrough]]; // 55-node triangle (9th order)
+          case 46: // 66-node triangle (10th order)
           {
             if(!curved){
               _entities[p].cncID = "TriP1";
@@ -464,45 +464,45 @@ int feMesh2DP1::readMsh2(std::istream &input, bool curved, mapType physicalEntit
             }
             break;
           }
-          case  3: ; //   4-node quadrangle
-          case 10: ; //   9-node quadrangle (2nd order)
-          case 36: ; //  16-node quadrangle (3rd order)
-          case 37: ; //  25-node quadrangle (4th order)
-          case 38: ; //  36-node quadrangle (5th order)
-          case 47: ; //  49-node quadrangle (6th order)
-          case 48: ; //  64-node quadrangle (7th order)
-          case 49: ; //  81-node quadrangle (8th order)
-          case 50: ; // 100-node quadrangle (9th order)
-          case 51: ; // 121-node quadrangle (10th order)
+          case  3: [[gnu::fallthrough]]; //   4-node quadrangle
+          case 10: [[gnu::fallthrough]]; //   9-node quadrangle (2nd order)
+          case 36: [[gnu::fallthrough]]; //  16-node quadrangle (3rd order)
+          case 37: [[gnu::fallthrough]]; //  25-node quadrangle (4th order)
+          case 38: [[gnu::fallthrough]]; //  36-node quadrangle (5th order)
+          case 47: [[gnu::fallthrough]]; //  49-node quadrangle (6th order)
+          case 48: [[gnu::fallthrough]]; //  64-node quadrangle (7th order)
+          case 49: [[gnu::fallthrough]]; //  81-node quadrangle (8th order)
+          case 50: [[gnu::fallthrough]]; // 100-node quadrangle (9th order)
+          case 51: // 121-node quadrangle (10th order)
           {
             printf("In readMesh : Error - Interpolant pas (encore) pris en charge pour la géométrie de l'entité (dim = %d, tag = %d) (quad).\n", entityDim, geometricTag);
             return 1;
             break;
           }
-          case  4: ; //   4-node tetrahedron
-          case 11: ; //  10-node tetrahedron (2nd order)
-          case 29: ; //  20-node tetrahedron (3rd order)
-          case 30: ; //  35-node tetrahedron (4th order)
-          case 31: ; //  56-node tetrahedron (5th order)
-          case 71: ; //  84-node tetrahedron (6th order)
-          case 72: ; // 120-node tetrahedron (7th order)
-          case 73: ; // 165-node tetrahedron (8th order)
-          case 74: ; // 220-node tetrahedron (9th order)
-          case 75: ; // 286-node tetrahedron (10th order)
+          case  4: [[gnu::fallthrough]]; //   4-node tetrahedron
+          case 11: [[gnu::fallthrough]]; //  10-node tetrahedron (2nd order)
+          case 29: [[gnu::fallthrough]]; //  20-node tetrahedron (3rd order)
+          case 30: [[gnu::fallthrough]]; //  35-node tetrahedron (4th order)
+          case 31: [[gnu::fallthrough]]; //  56-node tetrahedron (5th order)
+          case 71: [[gnu::fallthrough]]; //  84-node tetrahedron (6th order)
+          case 72: [[gnu::fallthrough]]; // 120-node tetrahedron (7th order)
+          case 73: [[gnu::fallthrough]]; // 165-node tetrahedron (8th order)
+          case 74: [[gnu::fallthrough]]; // 220-node tetrahedron (9th order)
+          case 75: // 286-node tetrahedron (10th order)
           {
             printf("In readMesh : Error - Interpolant pas (encore) pris en charge pour la géométrie de l'entité (dim = %d, tag = %d) (tet).\n", entityDim, geometricTag);
             return 1;
             break;
           }
-          case  5: ; //    8-node hexahedron
-          case 12: ; //   27-node hexahedron (2nd order)
-          case 92: ; //   64-node hexahedron (3rd order)
-          case 93: ; //  125-node hexahedron (4th order)
-          case 94: ; //  216-node hexahedron (5th order)
-          case 95: ; //  343-node hexahedron (6th order)
-          case 96: ; //  512-node hexahedron (7th order)
-          case 97: ; //  729-node hexahedron (8th order)
-          case 98: ; // 1000-node hexahedron (9th order)
+          case  5: [[gnu::fallthrough]]; //    8-node hexahedron
+          case 12: [[gnu::fallthrough]]; //   27-node hexahedron (2nd order)
+          case 92: [[gnu::fallthrough]]; //   64-node hexahedron (3rd order)
+          case 93: [[gnu::fallthrough]]; //  125-node hexahedron (4th order)
+          case 94: [[gnu::fallthrough]]; //  216-node hexahedron (5th order)
+          case 95: [[gnu::fallthrough]]; //  343-node hexahedron (6th order)
+          case 96: [[gnu::fallthrough]]; //  512-node hexahedron (7th order)
+          case 97: [[gnu::fallthrough]]; //  729-node hexahedron (8th order)
+          case 98: // 1000-node hexahedron (9th order)
           {
             printf("In readMesh : Error - Interpolant pas (encore) pris en charge pour la géométrie de l'entité (dim = %d, tag = %d) (hex).\n", entityDim, geometricTag);
             return 1;
@@ -522,12 +522,14 @@ int feMesh2DP1::readMsh2(std::istream &input, bool curved, mapType physicalEntit
       } // for iElm
     } // if buffer = "Elements"
   } // while input
+
+  return 0;
 }
 
 int feMesh2DP1::readMsh4(std::istream &input, bool curved){
   std::string buffer;
   // Placeholders
-  int ph1, ph2, ph3, ph4, ph5, ph6;
+  int ph1, ph2, ph3;
   double ph1D, ph2D, ph3D, ph4D, ph5D, ph6D;
   // Gmsh tag (which may include gaps) to sequential tag
   std::map<int, int> verticesMap;
@@ -700,7 +702,7 @@ int feMesh2DP1::readMsh4(std::istream &input, bool curved){
           _vertices[countVertex++] = Vertex(x,y,z,serialNumber[iNode]);
         }
       }
-      if(verticesMap.size() != _nNod){
+      if((int) verticesMap.size() != _nNod){
         printf("In readGmsh : Error - vertices indices are not unique.\n");
         return 1;
       }
@@ -737,16 +739,16 @@ int feMesh2DP1::readMsh4(std::istream &input, bool curved){
 
         // Determine geometric feSpace and allocate nodes connectivity based on elemType
         switch(elemType){
-          case  1: //  2-node line
-          case  8: if(curved && _entities[p].cncID == ""){  _entities[p].cncID = "LineP2"; }//  3-node line (2nd order)
-          case 26: if(curved && _entities[p].cncID == ""){  _entities[p].cncID = "LineP3"; }//  4-node line (3rd order)
-          case 27: if(curved){ /* Not supported */             }//  5-node line (4th order)
-          case 28: if(curved){ /* Not supported */             }//  6-node line (5th order)
-          case 62: if(curved){ /* Not supported */             }//  7-node line (6th order)
-          case 63: if(curved){ /* Not supported */             }//  8-node line (7th order)
-          case 64: if(curved){ /* Not supported */             }//  9-node line (8th order)
-          case 65: if(curved){ /* Not supported */             }// 10-node line (9th order)
-          case 66: if(curved){ /* Not supported */             }// 11-node line (10th order)
+          case  1: [[gnu::fallthrough]]; //  2-node line
+          case  8: if(curved && _entities[p].cncID == ""){  _entities[p].cncID = "LineP2"; } [[gnu::fallthrough]]; //  3-node line (2nd order)
+          case 26: if(curved && _entities[p].cncID == ""){  _entities[p].cncID = "LineP3"; } [[gnu::fallthrough]]; //  4-node line (3rd order)
+          case 27: if(curved){ /* Not supported */                                         } [[gnu::fallthrough]]; //  5-node line (4th order)
+          case 28: if(curved){ /* Not supported */                                         } [[gnu::fallthrough]]; //  6-node line (5th order)
+          case 62: if(curved){ /* Not supported */                                         } [[gnu::fallthrough]]; //  7-node line (6th order)
+          case 63: if(curved){ /* Not supported */                                         } [[gnu::fallthrough]]; //  8-node line (7th order)
+          case 64: if(curved){ /* Not supported */                                         } [[gnu::fallthrough]]; //  9-node line (8th order)
+          case 65: if(curved){ /* Not supported */                                         } [[gnu::fallthrough]]; // 10-node line (9th order)
+          case 66: if(curved){ /* Not supported */                                         } // 11-node line (10th order)
           {
             // Default is linear interpolation for the geometry
             if(!curved){
@@ -757,16 +759,16 @@ int feMesh2DP1::readMsh4(std::istream &input, bool curved){
             _entities[p].connecNodes.resize(numElementsInBlock*_entities[p].nNodePerElem);
             break;
           }
-          case  2: //  3-node triangle
-          case  9: if(curved && _entities[p].cncID == ""){ _entities[p].cncID = "TriP2"; }//  6-node triangle (2nd order)
-          case 21: ; // 10-node triangle (3rd order)
-          case 23: ; // 15-node triangle (4th order)
-          case 25: ; // 21-node triangle (5th order)
-          case 42: ; // 28-node triangle (6th order)
-          case 43: ; // 36-node triangle (7th order)
-          case 44: ; // 45-node triangle (8th order)
-          case 45: ; // 55-node triangle (9th order)
-          case 46: ; // 66-node triangle (10th order)
+          case  2: [[gnu::fallthrough]]; //  3-node triangle
+          case  9: if(curved && _entities[p].cncID == ""){ _entities[p].cncID = "TriP2"; } [[gnu::fallthrough]]; //  6-node triangle (2nd order)
+          case 21: [[gnu::fallthrough]]; // 10-node triangle (3rd order)
+          case 23: [[gnu::fallthrough]]; // 15-node triangle (4th order)
+          case 25: [[gnu::fallthrough]]; // 21-node triangle (5th order)
+          case 42: [[gnu::fallthrough]]; // 28-node triangle (6th order)
+          case 43: [[gnu::fallthrough]]; // 36-node triangle (7th order)
+          case 44: [[gnu::fallthrough]]; // 45-node triangle (8th order)
+          case 45: [[gnu::fallthrough]]; // 55-node triangle (9th order)
+          case 46: // 66-node triangle (10th order)
           {
             if(!curved){
               _entities[p].cncID = "TriP1";
@@ -777,16 +779,16 @@ int feMesh2DP1::readMsh4(std::istream &input, bool curved){
             _entities[p].connecEdges.resize(numElementsInBlock*_entities[p].nEdgePerElem);
             break;
           }
-          case  3: ; //   4-node quadrangle
-          case 10: ; //   9-node quadrangle (2nd order)
-          case 36: ; //  16-node quadrangle (3rd order)
-          case 37: ; //  25-node quadrangle (4th order)
-          case 38: ; //  36-node quadrangle (5th order)
-          case 47: ; //  49-node quadrangle (6th order)
-          case 48: ; //  64-node quadrangle (7th order)
-          case 49: ; //  81-node quadrangle (8th order)
-          case 50: ; // 100-node quadrangle (9th order)
-          case 51: ; // 121-node quadrangle (10th order)
+          case  3: [[gnu::fallthrough]]; //   4-node quadrangle
+          case 10: [[gnu::fallthrough]]; //   9-node quadrangle (2nd order)
+          case 36: [[gnu::fallthrough]]; //  16-node quadrangle (3rd order)
+          case 37: [[gnu::fallthrough]]; //  25-node quadrangle (4th order)
+          case 38: [[gnu::fallthrough]]; //  36-node quadrangle (5th order)
+          case 47: [[gnu::fallthrough]]; //  49-node quadrangle (6th order)
+          case 48: [[gnu::fallthrough]]; //  64-node quadrangle (7th order)
+          case 49: [[gnu::fallthrough]]; //  81-node quadrangle (8th order)
+          case 50: [[gnu::fallthrough]]; // 100-node quadrangle (9th order)
+          case 51: // 121-node quadrangle (10th order)
           {
             _entities[p].nNodePerElem = (curved) ? nodes_of_gmsh_element[elemType-1] : 4;
             _entities[p].nEdgePerElem = 4;
@@ -796,30 +798,30 @@ int feMesh2DP1::readMsh4(std::istream &input, bool curved){
             return 1;
             break;
           }
-          case  4: ; //   4-node tetrahedron
-          case 11: ; //  10-node tetrahedron (2nd order)
-          case 29: ; //  20-node tetrahedron (3rd order)
-          case 30: ; //  35-node tetrahedron (4th order)
-          case 31: ; //  56-node tetrahedron (5th order)
-          case 71: ; //  84-node tetrahedron (6th order)
-          case 72: ; // 120-node tetrahedron (7th order)
-          case 73: ; // 165-node tetrahedron (8th order)
-          case 74: ; // 220-node tetrahedron (9th order)
-          case 75: ; // 286-node tetrahedron (10th order)
+          case  4: [[gnu::fallthrough]]; //   4-node tetrahedron
+          case 11: [[gnu::fallthrough]]; //  10-node tetrahedron (2nd order)
+          case 29: [[gnu::fallthrough]]; //  20-node tetrahedron (3rd order)
+          case 30: [[gnu::fallthrough]]; //  35-node tetrahedron (4th order)
+          case 31: [[gnu::fallthrough]]; //  56-node tetrahedron (5th order)
+          case 71: [[gnu::fallthrough]]; //  84-node tetrahedron (6th order)
+          case 72: [[gnu::fallthrough]]; // 120-node tetrahedron (7th order)
+          case 73: [[gnu::fallthrough]]; // 165-node tetrahedron (8th order)
+          case 74: [[gnu::fallthrough]]; // 220-node tetrahedron (9th order)
+          case 75: // 286-node tetrahedron (10th order)
           {
             printf("In readMesh : Error - Interpolant pas pris en charge pour la géométrie de l'entité %d (tet).\n", entityTag);
             return 1;
             break;
           }
-          case  5: ; //    8-node hexahedron
-          case 12: ; //   27-node hexahedron (2nd order)
-          case 92: ; //   64-node hexahedron (3rd order)
-          case 93: ; //  125-node hexahedron (4th order)
-          case 94: ; //  216-node hexahedron (5th order)
-          case 95: ; //  343-node hexahedron (6th order)
-          case 96: ; //  512-node hexahedron (7th order)
-          case 97: ; //  729-node hexahedron (8th order)
-          case 98: ; // 1000-node hexahedron (9th order)
+          case  5: [[gnu::fallthrough]]; //    8-node hexahedron
+          case 12: [[gnu::fallthrough]]; //   27-node hexahedron (2nd order)
+          case 92: [[gnu::fallthrough]]; //   64-node hexahedron (3rd order)
+          case 93: [[gnu::fallthrough]]; //  125-node hexahedron (4th order)
+          case 94: [[gnu::fallthrough]]; //  216-node hexahedron (5th order)
+          case 95: [[gnu::fallthrough]]; //  343-node hexahedron (6th order)
+          case 96: [[gnu::fallthrough]]; //  512-node hexahedron (7th order)
+          case 97: [[gnu::fallthrough]]; //  729-node hexahedron (8th order)
+          case 98: // 1000-node hexahedron (9th order)
           {
             printf("In readMesh : Error - Interpolant pas pris en charge pour la géométrie de l'entité %d (hex).\n", entityTag);
             return 1;
@@ -863,17 +865,16 @@ int feMesh2DP1::readMsh4(std::istream &input, bool curved){
             elemNodes[j] = it->second; // The node number (0...nNode) is used to create the connectivity
           }
 
-          int el_order = 11;
           switch (elemType){
-            case  1: //  2-node line
-            case  8: // TODO : Decider de la numerotation pour les P2+ : {0,2,1} ou {0,1,2} //  3-node line (2nd order)
-            case 26: //  4-node line (3rd order)
-            case 27: //  5-node line (4th order)
-            case 28: //  6-node line (5th order)
-            case 62: //  7-node line (6th order)
-            case 63: //  8-node line (7th order)
-            case 64: //  9-node line (8th order)
-            case 65: // 10-node line (9th order)
+            case  1: [[gnu::fallthrough]]; //  2-node line
+            case  8: [[gnu::fallthrough]]; // TODO : Decider de la numerotation pour les P2+ : {0,2,1} ou {0,1,2} //  3-node line (2nd order)
+            case 26: [[gnu::fallthrough]]; //  4-node line (3rd order)
+            case 27: [[gnu::fallthrough]]; //  5-node line (4th order)
+            case 28: [[gnu::fallthrough]]; //  6-node line (5th order)
+            case 62: [[gnu::fallthrough]]; //  7-node line (6th order)
+            case 63: [[gnu::fallthrough]]; //  8-node line (7th order)
+            case 64: [[gnu::fallthrough]]; //  9-node line (8th order)
+            case 65: [[gnu::fallthrough]]; // 10-node line (9th order)
             case 66: // 11-node line (10th order)
             {
               // Keep Gmsh numbering for the high order nodes ?
@@ -882,16 +883,16 @@ int feMesh2DP1::readMsh4(std::istream &input, bool curved){
               }
                break;
             }
-            case  2: el_order--; //  3-node triangle
-            case  9: el_order--; //  6-node triangle (2nd order)
-            case 21: el_order--; // 10-node triangle (3rd order)
-            case 23: el_order--; // 15-node triangle (4th order)
-            case 25: el_order--; // 21-node triangle (5th order)
-            case 42: el_order--; // 28-node triangle (6th order)
-            case 43: el_order--; // 36-node triangle (7th order)
-            case 44: el_order--; // 45-node triangle (8th order)
-            case 45: el_order--; // 55-node triangle (9th order)
-            case 46: el_order--; // 66-node triangle (10th order)
+            case  2: [[gnu::fallthrough]]; //  3-node triangle
+            case  9: [[gnu::fallthrough]]; //  6-node triangle (2nd order)
+            case 21: [[gnu::fallthrough]]; // 10-node triangle (3rd order)
+            case 23: [[gnu::fallthrough]]; // 15-node triangle (4th order)
+            case 25: [[gnu::fallthrough]]; // 21-node triangle (5th order)
+            case 42: [[gnu::fallthrough]]; // 28-node triangle (6th order)
+            case 43: [[gnu::fallthrough]]; // 36-node triangle (7th order)
+            case 44: [[gnu::fallthrough]]; // 45-node triangle (8th order)
+            case 45: [[gnu::fallthrough]]; // 55-node triangle (9th order)
+            case 46: // 66-node triangle (10th order)
             {
               for(int j = 0; j < nElemNodes; ++j){
                 _entities[p].connecNodes[ nElemNodes*iElm+j  ] = elemNodes[j];
@@ -921,43 +922,43 @@ int feMesh2DP1::readMsh4(std::istream &input, bool curved){
               }
               break;
             }
-            case  3: el_order--; //   4-node quadrangle
-            case 10: el_order--; //   9-node quadrangle (2nd order)
-            case 36: el_order--; //  16-node quadrangle (3rd order)
-            case 37: el_order--; //  25-node quadrangle (4th order)
-            case 38: el_order--; //  36-node quadrangle (5th order)
-            case 47: el_order--; //  49-node quadrangle (6th order)
-            case 48: el_order--; //  64-node quadrangle (7th order)
-            case 49: el_order--; //  81-node quadrangle (8th order)
-            case 50: el_order--; // 100-node quadrangle (9th order)
-            case 51: el_order--; // 121-node quadrangle (10th order)
+            case  3: [[gnu::fallthrough]]; //   4-node quadrangle
+            case 10: [[gnu::fallthrough]]; //   9-node quadrangle (2nd order)
+            case 36: [[gnu::fallthrough]]; //  16-node quadrangle (3rd order)
+            case 37: [[gnu::fallthrough]]; //  25-node quadrangle (4th order)
+            case 38: [[gnu::fallthrough]]; //  36-node quadrangle (5th order)
+            case 47: [[gnu::fallthrough]]; //  49-node quadrangle (6th order)
+            case 48: [[gnu::fallthrough]]; //  64-node quadrangle (7th order)
+            case 49: [[gnu::fallthrough]]; //  81-node quadrangle (8th order)
+            case 50: [[gnu::fallthrough]]; // 100-node quadrangle (9th order)
+            case 51: // 121-node quadrangle (10th order)
             {
               printf("In readMesh : Error - Interpolant pas pris en charge (quad).\n");
               return 1;
             }
-            case  4: el_order--; //   4-node tetrahedron
-            case 11: el_order--; //  10-node tetrahedron (2nd order)
-            case 29: el_order--; //  20-node tetrahedron (3rd order)
-            case 30: el_order--; //  35-node tetrahedron (4th order)
-            case 31: el_order--; //  56-node tetrahedron (5th order)
-            case 71: el_order--; //  84-node tetrahedron (6th order)
-            case 72: el_order--; // 120-node tetrahedron (7th order)
-            case 73: el_order--; // 165-node tetrahedron (8th order)
-            case 74: el_order--; // 220-node tetrahedron (9th order)
-            case 75: el_order--; // 286-node tetrahedron (10th order)
+            case  4: [[gnu::fallthrough]]; //   4-node tetrahedron
+            case 11: [[gnu::fallthrough]]; //  10-node tetrahedron (2nd order)
+            case 29: [[gnu::fallthrough]]; //  20-node tetrahedron (3rd order)
+            case 30: [[gnu::fallthrough]]; //  35-node tetrahedron (4th order)
+            case 31: [[gnu::fallthrough]]; //  56-node tetrahedron (5th order)
+            case 71: [[gnu::fallthrough]]; //  84-node tetrahedron (6th order)
+            case 72: [[gnu::fallthrough]]; // 120-node tetrahedron (7th order)
+            case 73: [[gnu::fallthrough]]; // 165-node tetrahedron (8th order)
+            case 74: [[gnu::fallthrough]]; // 220-node tetrahedron (9th order)
+            case 75: // 286-node tetrahedron (10th order)
             {
               printf("In readMesh : Error - Interpolant pas pris en charge (tet).\n");
               return 1;
             }
-            case  5: el_order--; //    8-node hexahedron
-            case 12: el_order--; //   27-node hexahedron (2nd order)
-            case 92: el_order--; //   64-node hexahedron (3rd order)
-            case 93: el_order--; //  125-node hexahedron (4th order)
-            case 94: el_order--; //  216-node hexahedron (5th order)
-            case 95: el_order--; //  343-node hexahedron (6th order)
-            case 96: el_order--; //  512-node hexahedron (7th order)
-            case 97: el_order--; //  729-node hexahedron (8th order)
-            case 98: el_order--; // 1000-node hexahedron (9th order)
+            case  5: [[gnu::fallthrough]]; //    8-node hexahedron
+            case 12: [[gnu::fallthrough]]; //   27-node hexahedron (2nd order)
+            case 92: [[gnu::fallthrough]]; //   64-node hexahedron (3rd order)
+            case 93: [[gnu::fallthrough]]; //  125-node hexahedron (4th order)
+            case 94: [[gnu::fallthrough]]; //  216-node hexahedron (5th order)
+            case 95: [[gnu::fallthrough]]; //  343-node hexahedron (6th order)
+            case 96: [[gnu::fallthrough]]; //  512-node hexahedron (7th order)
+            case 97: [[gnu::fallthrough]]; //  729-node hexahedron (8th order)
+            case 98: // 1000-node hexahedron (9th order)
             {
               printf("In readMesh : Error - Interpolant pas pris en charge (hex).\n");
               return 1;
@@ -981,6 +982,8 @@ int feMesh2DP1::readMsh4(std::istream &input, bool curved){
       } // for numEntities
     } // if buffer = "Elements"
   } // while input
+
+  return 0;
 }
 
 int feMesh2DP1::readGmsh(std::string meshName, bool curved, mapType physicalEntitiesDescription){
@@ -1110,7 +1113,7 @@ int feMesh2DP1::readGmsh(std::string meshName, bool curved, mapType physicalEnti
           // std::cout<<"and is bounded by geometric entities"<<std::endl;
           for(int boundedByE : e.isBoundedBy){ // loop over geometric entities bounding e...
             std::pair<int,int> p = {e.dim-1, fabs(boundedByE)};
-            int pp = (_entities[p].numPhysicalTags > 0) ? _entities[p].physicalTags[0] : -1;
+            // int pp = (_entities[p].numPhysicalTags > 0) ? _entities[p].physicalTags[0] : -1;
             // std::cout<<boundedByE<<" which is part of physical "<< pp << std::endl;
             int tag = e.physicalTags[0] - 1; // Physical entities are numbered starting at 1, sequentially by dimension
             int boundedByTag = _entities[p].physicalTags[0] - 1;

@@ -125,7 +125,7 @@ void solveBDF2(std::vector<double> &normL2, feTolerances tol, feMetaNumber *meta
     sol->setSolFromContainer(solBDF2);
     // norm->computeL2Norm(metaNumber, sol, mesh);
     // normL2[iTime] = norm->getNorm();
-    int cnt = 0;
+    // int cnt = 0;
     for(auto *norm : norms){
       norm->computeL2Norm(metaNumber, sol, mesh);
       normL2[iTime] = norm->getNorm(); // TODO : fix this
@@ -182,7 +182,7 @@ void solveDC3(std::vector<double> &normL2BDF2, std::vector<double> &normL2DC3,fe
 
   // std::string vtkFile = "../../data/cylFine" + std::to_string(0) + ".vtk";
   // feExporterVTK writer(vtkFile, mesh, sol, metaNumber, spaces);
-  int cnt = 0;
+  // int cnt = 0;
   for(auto *norm : norms){
     norm->computeL2Norm(metaNumber, sol, mesh);
     normL2BDF2[0] = norm->getNorm();
@@ -219,14 +219,14 @@ void solveDC3(std::vector<double> &normL2BDF2, std::vector<double> &normL2DC3,fe
 
     // std::string vtkFile = "../../data/cylFine" + std::to_string(iTime) + ".vtk";
     // feExporterVTK writer(vtkFile, mesh, sol, metaNumber, spaces);
-    int cnt = 0;
+    // int cnt = 0;
     for(auto *norm : norms){
       norm->computeL2Norm(metaNumber, sol, mesh);
       normL2BDF2[iTime] = norm->getNorm();
       normL2DC3[iTime] = norm->getNorm();
       // normL2DC3[3*iTime+cnt] = norm->getNorm();
       // normL2[iTime] = norm->getNorm(); // TODO : fix this
-      std::cout<<"Norme "<<cnt++<<" = "<<normL2DC3[3*iTime+cnt]<<std::endl;
+      // std::cout<<"Norme "<<cnt++<<" = "<<normL2DC3[3*iTime+cnt]<<std::endl;
     }
   }
   // Continue with DC3
@@ -260,7 +260,7 @@ void solveDC3(std::vector<double> &normL2BDF2, std::vector<double> &normL2DC3,fe
 
     // std::string vtkFile = "../../data/cylFine" + std::to_string(iTime) + ".vtk";
     // feExporterVTK writer(vtkFile, mesh, sol, metaNumber, spaces);
-    int cnt = 0;
+    // int cnt = 0;
     for(auto *norm : norms){
       norm->computeL2Norm(metaNumber, sol, mesh);
       normL2BDF2[iTime] = norm->getNorm();

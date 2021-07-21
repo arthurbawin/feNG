@@ -43,9 +43,9 @@ double fZero(const double t, const std::vector<double> &pos, const std::vector<d
 }
 
 void fSource(const double t, const std::vector<double> &pos, const std::vector<double> &par, std::vector<double> &res){
-  double rho = par[0];
+  // double rho = par[0];
   double mu = par[1];
-  double nu = mu/rho;
+  // double nu = mu/rho;
   double x = pos[0];
   double y = pos[1];
   // double dudx = 2*exp(x)*x*y*(2*y*y-3*y+1)*(x*x*x + 2*x*x - 5*x + 2);

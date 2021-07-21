@@ -95,7 +95,7 @@ void initializeBDF2(feSolution *sol, feMetaNumber *metaNumber, feMesh *mesh, feS
   int nLvl = 1;
   int orderBDF = 2, orderP1 = orderBDF+1, nTMin = orderP1;
   std::vector<double> cn(nLvl * 3);
-  if(t.size() < nTMin) printf("In feSolutionContainer::initializeBDF2 : t.size < nTMin\n");
+  if((int) t.size() < nTMin) printf("In feSolutionContainer::initializeBDF2 : t.size < nTMin\n");
   std::vector<double> tt(nTMin, 0.);
   for(int i = 0; i < nTMin; ++i) tt[i] = t[i];
   double tn = tt[0];
@@ -134,7 +134,7 @@ void initializeDC3F(feSolution *sol, feMetaNumber *metaNumber, feMesh *mesh, feS
   int nLvl = 3;
   int orderBDF = 2, orderP1 = orderBDF+1, nTMin = orderP1+2;
   std::vector<double> cn(nLvl * 3);
-  if(t.size() < nTMin) printf("In feSolutionContainer::initializeDC3F : t.size < nTMin\n");
+  if((int) t.size() < nTMin) printf("In feSolutionContainer::initializeDC3F : t.size < nTMin\n");
   std::vector<double> tt(nTMin, 0.);
   for(int i = 0; i < nTMin; ++i) tt[i] = t[i];
   double tn = tt[0];

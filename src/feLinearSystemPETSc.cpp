@@ -214,7 +214,6 @@ void feLinearSystemPETSc::assembleMatrices(feSolution *sol){
 
 void feLinearSystemPETSc::assembleResiduals(feSolution *sol){
   PetscErrorCode ierr;
-  PetscInt I;
   std::vector<PetscScalar> values;
   int sizeI;
   std::vector<int> niElm;

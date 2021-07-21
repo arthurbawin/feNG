@@ -15,14 +15,14 @@ static inline void setMatrixToZero(feInt m, feInt n, double*** A){
   for(feInt i = 0; i < m; ++i)
     for(feInt j = 0; j < n; ++j)
       (*A)[i][j] = 0.0;
-};
+}
 
 static inline void printMatrix(feInt m, feInt n, double*** A){
   for(feInt i = 0; i < m; ++i)
     for(feInt j = 0; j < n; ++j)
-      printf("A[%d][%d] = %+10.16e\n", i,j, (*A)[i][j]);
+      printf("A[%ld][%ld] = %+10.16e\n", i,j, (*A)[i][j]);
       // std::cout<<"A["<<i<<"]["<<j<<"] = "<<(*A)[i][j]<<std::endl;
-};
+}
 
 static inline void freeMatrix(feInt m, double*** A){
   for(feInt i = 0; i < m; i++)
@@ -40,12 +40,12 @@ static inline void allocateResidual(feInt m, double** b){
 static inline void setResidualToZero(feInt m, double** b){
   for(feInt i = 0; i < m; ++i)
     (*b)[i] = 0.0;
-};
+}
 
 static inline void printResidual(feInt m, double** b){
   for(feInt i = 0; i < m; ++i)
-    printf("b[%d] = %+10.16e\n", i, (*b)[i]);
-};
+    printf("b[%ld] = %+10.16e\n", i, (*b)[i]);
+}
 
 static inline void freeResidual(double** b){
   free(*b); 
@@ -105,7 +105,7 @@ feBilinearForm::feBilinearForm(std::vector<feSpace*> &space, feMesh *mesh, int d
   ptrComputeMatrix=&feBilinearForm::computeMatrixFiniteDifference;
   if (sysElm->getMatrixAnalyticalStatus())
     ptrComputeMatrix=&feBilinearForm::computeMatrixAnalytical;
-};
+}
 
 feBilinearForm::~feBilinearForm(){
     freeMatrix(_niElm, &_Ae);
@@ -204,7 +204,7 @@ void feBilinearForm::computeMatrixFiniteDifference(feMetaNumber *metaNumber, feM
   // Caclul des résidus perturbés
   // ==================================================================
   feInt numColumn = 0;
-  for(feInt k=0;k<_jVar.size();k++) {
+  for(size_t k = 0; k < _jVar.size(); k++){
     feSpace* Unknowns = _intSpace[_jVar[k]];
     std::vector<double> &_sol    = Unknowns->getSolutionReference();
     std::vector<double> &_soldot = Unknowns->getSolutionReferenceDot();
@@ -244,7 +244,7 @@ double feBilinearForm::getMatrixNorm(){
     for(feInt j = 0; j < _njElm; ++j)
       res += _Ae[i][j] * _Ae[i][j];
 
-  res = sqrt(res);
+  return sqrt(res);
 }
 
 double feBilinearForm::getResidualNorm(){
@@ -252,5 +252,5 @@ double feBilinearForm::getResidualNorm(){
   for(feInt i = 0; i < _niElm; ++i)
     res += _Be[i] * _Be[i];
 
-  res = sqrt(res);
+  return sqrt(res);
 }

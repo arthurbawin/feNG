@@ -101,8 +101,8 @@ private:
   // A physical entity (a domain)
   typedef struct physicalEntityStruct {
     std::string name;
-    uint32_t dim;
-    uint32_t tag;
+    int dim;
+    int tag;
     std::vector<int> listEntities; // Tag des entities
     std::string cncID;
     feSpace *geoSpace;
@@ -117,12 +117,12 @@ private:
   } physicalEntity;
   // A geometric entity (building block to make physical entities)
   typedef struct entityStruct {
-    uint32_t dim;
-    uint32_t tag;
-    uint32_t tagGmsh;
-    uint32_t numPhysicalTags;
+    int dim;
+    int tag;
+    int tagGmsh;
+    int numPhysicalTags;
     std::vector<int> physicalTags;
-    uint32_t gmshType;  // Type d'élément dans gmsh
+    int gmshType;  // Type d'élément dans gmsh
     std::string cncID;
     int nElm;
     int nNodePerElem;
