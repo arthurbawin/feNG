@@ -13,21 +13,16 @@ protected:
   PetscInt _nInc;
   PetscInt _nDofs;
   Mat _A;
-  Vec _res;
+  Vec _res; // True residual
   Vec _dx;
-  Vec _foo;
+  Vec _linSysRes; // Residual of the linear system : A*dx - res
 
   KSP ksp;
   PC preconditioner;
 public:
   feLinearSystemPETSc(int argc, char** argv, std::vector<feBilinearForm*> &formMatrices, 
-    std::vector<feBilinearForm*> &formResiduals, feMetaNumber *metaNumber, feMesh *mesh)
-  : feLinearSystem(formMatrices, formResiduals, metaNumber, mesh), _argc(argc), _argv(argv),
-  _nInc(metaNumber->getNbUnknowns()), _nDofs(metaNumber->getNbDOFs())
-  {
-  }
-	virtual ~feLinearSystemPETSc() {
-  }
+    std::vector<feBilinearForm*> &formResiduals, feMetaNumber *metaNumber, feMesh *mesh);
+	virtual ~feLinearSystemPETSc();
 
   virtual void initialize();
   virtual void finalize();
@@ -35,9 +30,7 @@ public:
   virtual void setMatrixToZero();
   virtual void setResidualToZero();
   virtual void assembleMatrices(feSolution *sol);
-  void assembleMatricesNaive(feSolution *sol);
   virtual void assembleResiduals(feSolution *sol);
-  void assembleResidualsNaive(feSolution *sol);
   virtual void assemble(feSolution *sol);
   virtual void solve(double *normDx, double *normResidual, double *normAxb, int *nIter);
   virtual void correctSolution(feSolution *sol);
@@ -46,5 +39,9 @@ public:
   virtual void viewMatrix();
   virtual void printResidual();
 };
+
+// To call at the very beginning and the very end of the program
+void petscInitialize(int argc, char** argv);
+void petscFinalize();
 
 #endif
