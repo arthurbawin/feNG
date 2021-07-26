@@ -25,14 +25,12 @@ set(feNG_SRC
   feTriangle.cpp
 )
 
-if(ENABLE_EIGEN)
-  # Add Gmsh files for STensor3
-  list(APPEND feNG_SRC
-    ${CMAKE_SOURCE_DIR}/contrib/gmsh/fullMatrix.cpp
-    ${CMAKE_SOURCE_DIR}/contrib/gmsh/Numeric.cpp
-    ${CMAKE_SOURCE_DIR}/contrib/gmsh/STensor3.cpp
-    ${CMAKE_SOURCE_DIR}/contrib/gmsh/poly34.cpp)
-endif()
+# Add Gmsh files for STensor3
+list(APPEND feNG_SRC
+  ${CMAKE_SOURCE_DIR}/contrib/gmsh/fullMatrix.cpp
+  ${CMAKE_SOURCE_DIR}/contrib/gmsh/Numeric.cpp
+  ${CMAKE_SOURCE_DIR}/contrib/gmsh/STensor3.cpp
+  ${CMAKE_SOURCE_DIR}/contrib/gmsh/poly34.cpp)
 
 set(feNG_API
   ellipseToolbox.h
