@@ -23,6 +23,7 @@ double fSol(const double t, const std::vector<double> x, const std::vector<doubl
   // return pow(x[0],6);
   // return pow(x[0],3);
   // return pow(x[0],2);
+  // return pow(x[0],4);
   return pow(x[0],4) * pow(x[1],4);
 }
 
@@ -31,6 +32,7 @@ double fSource(const double t, const std::vector<double> x, const std::vector<do
   // return kd*30.*pow(x[0],4);
   // return kd*6*x[0];
   // return kd*2;
+  // return kd * 12.0 * x[0]*x[0];
   return kd * 12.0 * x[0]*x[0]*x[1]*x[1] * (x[0]*x[0] + x[1]*x[1]);
 }
 
@@ -40,7 +42,7 @@ int main(int argc, char** argv){
   feFunction *funSol    = new feFunction(fSol,    {kd});
   feFunction *funSource = new feFunction(fSource, {kd});
 
-  int nIter = 5;
+  int nIter = 1;
   std::vector<double> normL2_exacte(2*nIter, 0.0);
   std::vector<double> normL2_recons(2*nIter, 0.0);
   std::vector<double> normL2_recons_exacte(2*nIter, 0.0);
@@ -81,7 +83,7 @@ int main(int argc, char** argv){
     feSolution *sol = new feSolution(mesh, fespace, feEssBC, metaNumber);
 
     // Formes (bi)lineaires
-    int nQuad = 16; // TODO : change to deg
+    int nQuad = 5; // TODO : change to deg
     std::vector<feSpace*> spaceDiffusion2D_U = {&U_surface};
     feBilinearForm *diffU = new feBilinearForm(spaceDiffusion2D_U, mesh, nQuad, new feSysElm_2D_Diffusion(kd, nullptr));
     std::vector<feSpace*> spaceSource2D_U = {&U_surface};
@@ -102,7 +104,7 @@ int main(int argc, char** argv){
     // feExporterVTK writer(vtkFile, mesh, sol, metaNumber, fespace);
 
     std::vector<double> estErreur(2, 0.);
-    feRecovery *rec = new feRecovery(metaNumber, &U_surface, mesh, sol, nQuad, estErreur, funSol);
+    feRecovery *rec = new feRecovery(metaNumber, &U_surface, mesh, sol, estErreur, funSol);
 
     std::cout<<estErreur[0]<<" -- "<<estErreur[1]<<std::endl;
     normL2_recons[2*iter] = estErreur[0];
@@ -114,6 +116,7 @@ int main(int argc, char** argv){
     metricOptions.hMax = 100;
     metricOptions.computationMethod = 1;
     metricOptions.LpNorm = 2.0;
+    metricOptions.nPhi = 501;
 
     feMetric *metric = new feMetric(rec, metricOptions);
     metric->writeSizeFieldGmsh(meshName, metricMeshName);
@@ -122,7 +125,7 @@ int main(int argc, char** argv){
     std::string cmdGMSH = "gmsh " + nextMeshName;
 
     system(cmdMMGS.c_str());
-    // system(cmdGMSH.c_str());
+    system(cmdGMSH.c_str());
 
     meshName = nextMeshName;
 

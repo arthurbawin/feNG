@@ -83,7 +83,7 @@ int main(int argc, char** argv){
   feFunction *funOne      = new feFunction(fOne , {});
   feVectorFunction *funSource   = new feVectorFunction(fSource, stokesParam);
 
-  int nIter = 2;
+  int nIter = 1;
   std::vector<double> normL2_U(2*nIter, 0.0);
   std::vector<double> normL2_V(2*nIter, 0.0);
   std::vector<double> normL2_P(2*nIter, 0.0);
@@ -134,7 +134,7 @@ int main(int argc, char** argv){
     sol->initializeEssentialBC(mesh, metaNumber);
 
     // Formes (bi)lineaires
-    int nQuad = 16;
+    int nQuad = 9;
     std::vector<feSpace*> spacesNS2D = {&U_surface, &V_surface, &P_surface};
 
     // feBilinearForm *NS2D = new feBilinearForm(spacesNS2D, mesh, nQuad, new feSysElm_2D_NavierStokes(stokesParam, funSource));

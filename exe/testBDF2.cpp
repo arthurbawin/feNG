@@ -13,7 +13,7 @@
 #include "feBilinearForm.h"
 #include "feSolver.h"
 
-#ifdef HAVE_PETSC 
+#ifdef HAVE_PETSC
 #include "feLinearSystemPETSc.h"
 #endif
 
@@ -33,6 +33,11 @@ double fSource(const double t, const std::vector<double> &x, const std::vector<d
 }
 
 int main(int argc, char** argv){
+
+#ifdef HAVE_PETSC
+  petscInitialize(argc, argv);
+#endif
+
   double xa = 0.;
   double xb = 5.;
 
@@ -62,9 +67,9 @@ int main(int argc, char** argv){
     double t1 = 1.;
     int nTimeSteps = 20 * pow(2, iter);
     feSolution *sol = new feSolution(mesh, fespace, feEssBC, metaNumber);
-    sol->initializeTemporalSolution(t0,t1,nTimeSteps);
-    sol->initializeUnknowns(mesh, metaNumber);
-    sol->initializeEssentialBC(mesh, metaNumber);
+    // sol->initializeTemporalSolution(t0,t1,nTimeSteps);
+    // sol->initializeUnknowns(mesh, metaNumber);
+    // sol->initializeEssentialBC(mesh, metaNumber);
     // Formes (bi)lineaires
     int nQuad = 3; // TODO : change to deg
     std::vector<feSpace*> spaceDiffusion1D_U = {&U_M1D};
@@ -86,8 +91,13 @@ int main(int argc, char** argv){
     linearSystem->initialize();
     // Resolution
     feTolerances tol{1e-10, 1e-10, 10};
-    std::vector<double> normL2BDF(nTimeSteps,0.0);
-    solveBDF2(normL2BDF, tol, metaNumber, linearSystem, formMatrices, formResiduals, sol, norms, mesh, fespace);
+    // std::vector<double> normL2BDF(nTimeSteps,0.0);
+
+    BDF2Solver solver(tol, metaNumber, linearSystem, sol, norms, mesh, t0, t1, nTimeSteps);
+    solver.makeSteps(nTimeSteps, fespace);
+    std::vector<double> &normL2BDF = solver.getNorm(0);
+
+    // solveBDF2(normL2BDF, tol, metaNumber, linearSystem, formMatrices, formResiduals, sol, norms, mesh, fespace);
     normL2[2*iter] = *std::max_element(normL2BDF.begin(), normL2BDF.end());
 #endif
 
@@ -110,6 +120,10 @@ int main(int argc, char** argv){
   printf("%12s \t %12s \t %12s\n", "nElm", "||E||", "Taux BDF2");
   for(int i = 0; i < nIter; ++i)
     printf("%12d \t %12.6e \t %12.6e\n", nElm[i], normL2[2*i], normL2[2*i+1]);
+
+#ifdef HAVE_PETSC
+  petscFinalize();
+#endif
 
   return 0;
 }

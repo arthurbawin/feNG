@@ -38,25 +38,6 @@ void feSolution::initializeUnknowns(feMesh *mesh, feMetaNumber *metaNumber){
 	}
 }
 
-void feSolution::initializeEssentialBC(feMesh *mesh, feMetaNumber *metaNumber){
-	for(feSpace* const &fS : _essBC){
-		int nElm = mesh->getNbElm(fS->getCncGeoID()); // On pourrait donner un _nElm au feSpace
-		std::vector<double> coor = fS->getLcoor();
-		feSpace* geoSpace = mesh->getGeometricSpace(fS->getCncGeoID());
-		for(int iElm = 0; iElm < nElm; ++iElm){
-			fS->initializeAddressingVector(metaNumber->getNumbering(fS->getFieldID()), iElm);
-			std::vector<double> localCoord = mesh->getCoord(fS->getCncGeoID(), iElm);
-			for(int j = 0; j < fS->getNbFunctions(); ++j){
-				double r[3] = {coor[3*j],coor[3*j+1],coor[3*j+2]};
-				std::vector<double> x(3,0.0);
-				// x[0] = geoSpace->interpolateField(localCoord, r);
-        geoSpace->interpolateVectorField(localCoord, r, x);
-				_sol[fS->getAddressingVectorAt(j)] = fS->evalFun(_tn, x);;
-			}
-		}
-	}
-}
-
 void feSolution::initializeEssentialBC(feMesh *mesh, feMetaNumber *metaNumber, feSolutionContainer *solContainer){
   for(feSpace* const &fS : _essBC){
     int nElm = mesh->getNbElm(fS->getCncGeoID());
@@ -68,9 +49,10 @@ void feSolution::initializeEssentialBC(feMesh *mesh, feMetaNumber *metaNumber, f
       for(int j = 0; j < fS->getNbFunctions(); ++j){
         double r[3] = {coor[3*j],coor[3*j+1],coor[3*j+2]};
         std::vector<double> x(3,0.0);
-        // x[0] = geoSpace->interpolateField(localCoord, r);
         geoSpace->interpolateVectorField(localCoord, r, x);
-        solContainer->_sol[0][fS->getAddressingVectorAt(j)] = fS->evalFun(_tn, x);;
+        _sol[fS->getAddressingVectorAt(j)] = fS->evalFun(_tn, x);
+        if(solContainer != nullptr)
+        	solContainer->_sol[0][fS->getAddressingVectorAt(j)] = fS->evalFun(_tn, x);;
       }
     }
   }

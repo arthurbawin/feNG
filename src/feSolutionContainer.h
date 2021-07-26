@@ -21,11 +21,17 @@ public:
 	feSolutionContainer(int nSol, double tn, feMetaNumber *metaNumber);
 	virtual ~feSolutionContainer() {}
 
+  int getNbDOFs(){ return _nDofs; }
+  void setNbDOFs(int nDofs){ _nDofs = nDofs; }
+  
+  int getNbSol(){ return _nSol; }
   std::vector<double> &getTime(){ return _t; }
+  std::vector<double> &getSolution(int iSol){ return _sol[iSol]; }
 
   void initialize(feSolution *sol, feMesh *mesh, feMetaNumber *metaNumber);
   void rotate(double dt);
   void setSol(int iSol, std::vector<double> sol){ _sol[iSol] = sol; }
+  void setSolAtDOF(int iSol, int iDOF, double val){ _sol[iSol][iDOF] = val; }
   // double getSol(int iSol, int iDOF){ return _sol[iSol][iDOF]; }
   virtual void computeSolTimeDerivative(feSolution *sol, feLinearSystem *linearSystem){};
 };

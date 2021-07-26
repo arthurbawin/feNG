@@ -35,7 +35,6 @@ void feExporterVTK::writeHeader(std::ostream& output){
 
 void feExporterVTK::writeNodes(std::ostream& output, feCncGeo *cnc){
   int nNod = cnc->getNbNodes();
-  std::cout<<nNod<<" nodes"<<std::endl;
   output << "DATASET UNSTRUCTURED_GRID\n";
   output << "POINTS " << nNod << " double\n";
   Vertex *v;
@@ -71,10 +70,18 @@ void feExporterVTK::writeField(std::ostream& output, feCncGeo *cnc, std::string 
   // int nNod = n->getNbNodes();
   output << "SCALARS " << fieldID << " double 1" << std::endl;
   output << "LOOKUP_TABLE default" << std::endl;
+
+  // Write field(s) to a text file
+  std::string fileName = "solution" + fieldID + ".txt";
+  FILE* f = fopen(fileName.c_str(), "w");
+
   for(int iNode = 0; iNode < nNod; ++iNode){
     int iDOF = n->getVertexNumber(iNode);
     output << sol[iDOF] << std::endl;
+    fprintf(f, "%+-16.16e\n", sol[iDOF]);
   }
+
+  fclose(f);
 }
 
 feExporterVTK::feExporterVTK(std::string vtkFile, feMesh *mesh, feSolution *sol, feMetaNumber *metaNumber,

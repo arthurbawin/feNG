@@ -39,14 +39,14 @@ int main(int argc, char** argv){
   double d = 2*r;
   double U = 2.0;
   double rho = 1.0;
-  double Re = 100.0;
+  double Re = 50.0;
   double mu = rho*U*d/Re;
 
   std::vector<double> stokesParam = {rho, mu};
   feFunction *funZero  = new feFunction(fZero, {});
   feFunction *funInlet = new feFunction(fInlet,{});
 
-  int nIter = 5;
+  int nIter = 1;
 
   std::string root, meshName, metricMeshName, nextMeshName;
   feMesh2DP1::mapType physicalEntities;
@@ -98,7 +98,7 @@ int main(int argc, char** argv){
     feSolution *sol = new feSolution(mesh, fespace, feEssBC, metaNumber);
 
     // Formes (bi)lineaires
-    int nQuad = 16;
+    int nQuad = 9;
     std::vector<feSpace*> spacesNS2D = {&U_surface, &V_surface, &P_surface};
     feBilinearForm *NS2D = new feBilinearForm(spacesNS2D, mesh, nQuad, new feSysElm_2D_NavierStokes(stokesParam, nullptr));
 
@@ -109,56 +109,58 @@ int main(int argc, char** argv){
     feLinearSystemPETSc *linearSystem = new feLinearSystemPETSc(argc, argv, formMatrices, formResiduals, metaNumber, mesh);    
     linearSystem->initialize();
     feTolerances tol{1e-9, 1e-8, 20};
-    double fooNorm;
-    solveStationary(&fooNorm, tol, metaNumber, linearSystem, formMatrices, formResiduals, sol, norms, mesh);
+    // double fooNorm;
+    // solveStationary(&fooNorm, tol, metaNumber, linearSystem, formMatrices, formResiduals, sol, norms, mesh);
     
-    // double t0 = 0.;
-    // double t1 = 10.0;
-    // int nTimeSteps = 100 * pow(2, iter);
-    // sol->initializeTemporalSolution(t0,t1,nTimeSteps);
-    // std::vector<double> normL2BDF(3*nTimeSteps,0.0);
-    // std::vector<double> normL2DC3(3*nTimeSteps,0.0);
-    // // solveBDF2(normL2BDF, tol, metaNumber, linearSystem, formMatrices, formResiduals, sol, norms, mesh, fespace);
-    // solveDC3(normL2BDF, normL2DC3, tol, metaNumber, linearSystem, formMatrices, formResiduals, sol, norms, mesh, fespace);
-    // // normL2_U[2*iter] = *std::max_element(normL2BDF.begin(), normL2BDF.end());
-    // // maxNormL2BDF[2*iter] = *std::max_element(normL2BDF.begin(), normL2BDF.end());
-    // // for (int i = 0; i < nTimeSteps; ++i){
-    // //   maxNormL2DC3_U[2*iter] = fmax(maxNormL2DC3_U[2*iter], normL2DC3[3*i]  );
-    // //   maxNormL2DC3_V[2*iter] = fmax(maxNormL2DC3_V[2*iter], normL2DC3[3*i+1]);
-    // //   maxNormL2DC3_P[2*iter] = fmax(maxNormL2DC3_P[2*iter], normL2DC3[3*i+2]);
-    // // }
+    double t0 = 0.;
+    double t1 = 3.0;
+    int nTimeSteps = 10 * pow(2, iter);
+    sol->initializeTemporalSolution(t0,t1,nTimeSteps);
+    std::vector<double> normL2BDF(3*nTimeSteps,0.0);
+    std::vector<double> normL2DC3(3*nTimeSteps,0.0);
+    // solveBDF2(normL2BDF, tol, metaNumber, linearSystem, formMatrices, formResiduals, sol, norms, mesh, fespace);
+    solveDC3(normL2BDF, normL2DC3, tol, metaNumber, linearSystem, formMatrices, formResiduals, sol, norms, mesh, fespace);
+    // normL2_U[2*iter] = *std::max_element(normL2BDF.begin(), normL2BDF.end());
+    // maxNormL2BDF[2*iter] = *std::max_element(normL2BDF.begin(), normL2BDF.end());
+    // for (int i = 0; i < nTimeSteps; ++i){
+    //   maxNormL2DC3_U[2*iter] = fmax(maxNormL2DC3_U[2*iter], normL2DC3[3*i]  );
+    //   maxNormL2DC3_V[2*iter] = fmax(maxNormL2DC3_V[2*iter], normL2DC3[3*i+1]);
+    //   maxNormL2DC3_P[2*iter] = fmax(maxNormL2DC3_P[2*iter], normL2DC3[3*i+2]);
+    // }
     
     linearSystem->finalize();
 
     std::vector<double> estErreur(2, 0.);
-    feRecovery *rec = new feRecovery(metaNumber, &U_surface, mesh, sol, nQuad, estErreur, funZero);
+    feRecovery *recU = new feRecovery(metaNumber, &U_surface, mesh, sol, estErreur, funZero);
+    feRecovery *recV = new feRecovery(metaNumber, &V_surface, mesh, sol, estErreur, funZero);
+    feRecovery *recP = new feRecovery(metaNumber, &P_surface, mesh, sol, estErreur, funZero);
 
     std::cout<<estErreur[0]<<" -- "<<estErreur[1]<<std::endl;
     // normL2_recons[2*iter] = estErreur[0];
     // normL2_recons_exacte[2*iter] = estErreur[1];
 
-    feMetricOptions metricOptions;
-    metricOptions.nTargetVertices = 2000;
-    metricOptions.hMin = 0.000001;
-    metricOptions.hMax = 100;
-    metricOptions.computationMethod = 1;
-    metricOptions.LpNorm = 2.0;
-    metricOptions.nPhi = 501;
+    // feMetricOptions metricOptions;
+    // metricOptions.nTargetVertices = 2000;
+    // metricOptions.hMin = 0.000001;
+    // metricOptions.hMax = 100;
+    // metricOptions.computationMethod = 1;
+    // metricOptions.LpNorm = 2.0;
+    // metricOptions.nPhi = 501;
 
-    feMetric *metric = new feMetric(rec, metricOptions);
-    metric->writeSizeFieldGmsh(meshName, metricMeshName);
+    // feMetric *metric = new feMetric(recU, metricOptions);
+    // metric->writeSizeFieldGmsh(meshName, metricMeshName);
  
-    std::string cmdMMGS = "mmgs " + metricMeshName + " -o " + nextMeshName + " -hgrad 100";
-    std::string cmdGMSH = "gmsh " + nextMeshName;
+    // std::string cmdMMGS = "mmgs " + metricMeshName + " -o " + nextMeshName + " -hgrad 100";
+    // std::string cmdGMSH = "gmsh " + nextMeshName;
 
-    system(cmdMMGS.c_str());
-    system(cmdGMSH.c_str());
+    // system(cmdMMGS.c_str());
+    // system(cmdGMSH.c_str());
 
-    meshName = nextMeshName;
+    // meshName = nextMeshName;
 
     // std::string vtkFile = "../../data/solutionManufacturee" + std::to_string(iter+1) + ".vtk";
-    // std::string vtkFile = "../../data/cylindreNonConfine.vtk";
-    // feExporterVTK writer(vtkFile, mesh, sol, metaNumber, fespace);
+    std::string vtkFile = "../../data/cylindreTempsFinal.vtk";
+    feExporterVTK writer(vtkFile, mesh, sol, metaNumber, fespace);
 
     // normU->computeL2Norm(metaNumber, sol, mesh);
     // normV->computeL2Norm(metaNumber, sol, mesh);

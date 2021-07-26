@@ -31,11 +31,15 @@ double fSource(const double t, const std::vector<double> x, const std::vector<do
 
 int main(int argc, char** argv){
 
+#ifdef HAVE_PETSC
+  petscInitialize(argc, argv);
+#endif
+
   double kd = 1.0;
   feFunction *funSol    = new feFunction(fSol,    {kd});
   feFunction *funSource = new feFunction(fSource, {kd});
 
-  int nIter = 3;
+  int nIter = 4;
   std::vector<double> normL2(2*nIter, 0.0);
   std::vector<double> normL2_U(2*nIter, 0.0);
   std::vector<double> normL2_V(2*nIter, 0.0);
@@ -98,7 +102,11 @@ int main(int argc, char** argv){
     linearSystem->initialize();
 
     feTolerances tol{1e-9, 1e-8, 3};
-    solveStationary(&normL2[2*iter], tol, metaNumber, linearSystem, formMatrices, formResiduals, sol, norms, mesh);
+
+    StationarySolver solver(tol, metaNumber, linearSystem, sol, norms, mesh);
+    solver.makeSteps(0, fespace);
+    normL2[2*iter] = solver.getNorm(0);
+    // solveStationary(&normL2[2*iter], tol, metaNumber, linearSystem, formMatrices, formResiduals, sol, norms, mesh);
     linearSystem->finalize();
     normL2_U[2*iter] = normU->getNorm();
     normL2_V[2*iter] = normV->getNorm();
@@ -128,6 +136,10 @@ int main(int argc, char** argv){
   printf("%12s \t %12s \t %12s \t %12s \t %12s\n", "nElm", "||E_U||", "p_U", "||E_V||", "p_V");
   for(int i = 0; i < nIter; ++i)
   printf("%12d \t %12.6e \t %12.6e \t %12.6e \t %12.6e\n", nElm[i], normL2_U[2*i], normL2_U[2*i+1], normL2_V[2*i], normL2_V[2*i+1]);
+
+#ifdef HAVE_PETSC
+  petscFinalize();
+#endif
 
   return 0;
 }

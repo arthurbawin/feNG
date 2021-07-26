@@ -90,40 +90,45 @@ int main(int argc, char** argv){
   feFunction *funZero     = new feFunction(fZero, {});
   feVectorFunction *funSource   = new feVectorFunction(fSource, stokesParam);
 
-  int nIter = 3;
+  int nIter = 4;
   std::vector<double> normL2_U(2*nIter, 0.0);
   std::vector<double> normL2_V(2*nIter, 0.0);
   std::vector<double> normL2_P(2*nIter, 0.0);
   std::vector<int> nElm(nIter, 0);
 
   for(int iter = 0; iter < nIter; ++iter){
+    // std::string meshName = "../../data/squarePression" + std::to_string(iter+1) + ".msh";
     std::string meshName = "../../data/square" + std::to_string(iter+1) + ".msh";
     // std::string meshName = "../../data/squareCoarse" + std::to_string(iter+1) + ".msh";
 
     feMesh2DP1 *mesh = new feMesh2DP1(meshName, false);
     nElm[iter] = mesh->getNbInteriorElems();
 
-    feSpace1DP3    U_angle(mesh, "U", "Angle",  funSolU);
-    feSpace1DP3     U_haut(mesh, "U", "Haut",   funSolU);
-    feSpace1DP3   U_gauche(mesh, "U", "Gauche", funSolU);
-    feSpaceTriP3 U_surface(mesh, "U", "Surface",funZero);
+    feSpace1DP2    U_angle(mesh, "U", "Angle",  funSolU);
+    feSpace1DP2     U_haut(mesh, "U", "Haut",   funSolU);
+    feSpace1DP2   U_gauche(mesh, "U", "Gauche", funSolU);
+    feSpaceTriP2 U_surface(mesh, "U", "Surface",funZero);
 
-    feSpace1DP3    V_angle(mesh, "V", "Angle",  funSolV);
-    feSpace1DP3     V_haut(mesh, "V", "Haut",   funSolV);
-    feSpace1DP3   V_gauche(mesh, "V", "Gauche", funSolV);
-    feSpaceTriP3 V_surface(mesh, "V", "Surface",funZero);
+    feSpace1DP2    V_angle(mesh, "V", "Angle",  funSolV);
+    feSpace1DP2     V_haut(mesh, "V", "Haut",   funSolV);
+    feSpace1DP2   V_gauche(mesh, "V", "Gauche", funSolV);
+    feSpaceTriP2 V_surface(mesh, "V", "Surface",funZero);
 
-    feSpace1DP2    P_angle(mesh, "P", "Angle",  funSolP);
-    feSpace1DP2     P_haut(mesh, "P", "Haut",   funSolP);
-    feSpace1DP2   P_gauche(mesh, "P", "Gauche", funSolP);
-    feSpaceTriP2 P_surface(mesh, "P", "Surface",funZero);
+    // feSpace1DP2    P_angle(mesh, "P", "Angle",  funSolP);
+    feSpace1DP1     P_haut(mesh, "P", "Haut",   funSolP);
+    // feSpace1DP2   P_gauche(mesh, "P", "Gauche", funSolP);
+    feSpaceTriP1 P_surface(mesh, "P", "Surface",funZero);
+    // feSpace1DP0 P_point(mesh, "P", "PointPression", funSolP);
 
     std::vector<feSpace*> fespace = {&U_angle, &U_haut, &U_gauche, &U_surface,
                                      &V_angle, &V_haut, &V_gauche, &V_surface,
-                                     &P_angle, &P_haut, &P_gauche, &P_surface};
+                                     // &P_surface, &P_point};
+                                     &P_surface, &P_haut};
+                                     // &P_angle, &P_haut, &P_gauche, &P_surface};
     std::vector<feSpace*> feEssBC = {&U_angle, &U_haut, &U_gauche,
                                      &V_angle, &V_haut, &V_gauche,
                                      &P_haut};
+                                     // &P_point};
 
     feMetaNumber *metaNumber = new feMetaNumber(mesh, fespace, feEssBC);
     // metaNumber->printNumberings();
@@ -133,17 +138,17 @@ int main(int argc, char** argv){
     sol->initializeEssentialBC(mesh, metaNumber);
 
     // Formes (bi)lineaires
-    int nQuad = 9;
+    int dQuad = 5;
     std::vector<feSpace*> spacesStokes2D = {&U_surface, &V_surface, &P_surface};
 
-    feBilinearForm *stokes2D = new feBilinearForm(spacesStokes2D, mesh, nQuad, new feSysElm_2D_Stokes(stokesParam, funSource));
+    feBilinearForm *stokes2D = new feBilinearForm(spacesStokes2D, mesh, dQuad, new feSysElm_2D_Stokes(stokesParam, funSource));
 
     std::vector<feBilinearForm*> formMatrices  = {stokes2D};
     std::vector<feBilinearForm*> formResiduals = {stokes2D};
 
-    feNorm *normU = new feNorm(&U_surface, mesh, nQuad, funSolU);
-    feNorm *normV = new feNorm(&V_surface, mesh, nQuad, funSolV);
-    feNorm *normP = new feNorm(&P_surface, mesh, nQuad, funSolP);
+    feNorm *normU = new feNorm(&U_surface, mesh, dQuad, funSolU);
+    feNorm *normV = new feNorm(&V_surface, mesh, dQuad, funSolV);
+    feNorm *normP = new feNorm(&P_surface, mesh, dQuad, funSolP);
     std::vector<feNorm*> norms = {normU, normV, normP};
     feLinearSystemPETSc *linearSystem = new feLinearSystemPETSc(argc, argv, formMatrices, formResiduals, metaNumber, mesh);    
     linearSystem->initialize();
@@ -153,8 +158,8 @@ int main(int argc, char** argv){
     solveStationary(&normL2_U[2*iter], tol, metaNumber, linearSystem, formMatrices, formResiduals, sol, norms, mesh);
     linearSystem->finalize();
 
-    // std::string vtkFile = "../../data/stokes.vtk";
-    // feExporterVTK writer(vtkFile, mesh, sol, metaNumber, fespace);
+    std::string vtkFile = "../../data/stokes1.vtk";
+    feExporterVTK writer(vtkFile, mesh, sol, metaNumber, fespace);
 
     normU->computeL2Norm(metaNumber, sol, mesh);
     normV->computeL2Norm(metaNumber, sol, mesh);

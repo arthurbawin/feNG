@@ -1,7 +1,9 @@
 set(feNG_SRC
+  ellipseToolbox.cpp
   feBilinearForm.cpp
   feCncGeo.cpp
   feCompressedRowStorage.cpp
+  # feCurvedAdapt.cpp
   feExporter.cpp
   feLinearSystem.cpp
   feLinearSystemMklPardiso.cpp
@@ -20,6 +22,7 @@ set(feNG_SRC
   feSpace.cpp
   feSpaceTriangle.cpp
   feSysElm.cpp
+  feTriangle.cpp
 )
 
 if(ENABLE_EIGEN)
@@ -27,18 +30,21 @@ if(ENABLE_EIGEN)
   list(APPEND feNG_SRC
     ${CMAKE_SOURCE_DIR}/contrib/gmsh/fullMatrix.cpp
     ${CMAKE_SOURCE_DIR}/contrib/gmsh/Numeric.cpp
-    ${CMAKE_SOURCE_DIR}/contrib/gmsh/STensor3.cpp)
+    ${CMAKE_SOURCE_DIR}/contrib/gmsh/STensor3.cpp
+    ${CMAKE_SOURCE_DIR}/contrib/gmsh/poly34.cpp)
 endif()
 
 set(feNG_API
+  ellipseToolbox.h
   feBilinearForm.h
   feCncGeo.h
   feCompressedRowStorage.h
-  feEdge.h
-  feElement.h
+  # feCurvedAdapt.h
+  # feEdge.h
+  # feElement.h
   feExporter.h
   feFunction.h
-  feLine.h
+  # feLine.h
   feLinearSystem.h
   feLinearSystemMklPardiso.h
   feLinearSystemPETSc.h
@@ -55,6 +61,7 @@ set(feNG_API
   feSolver.h
   feSpace.h
   feSysElm.h
+  feTriangle.h
   feVertex.h
 )
 

@@ -12,6 +12,7 @@
 #include "feVertex.h"
 #include "feEdge.h"
 #include "feElement.h"
+#include "feTriangle.h"
 
 class feMesh{
 
@@ -56,6 +57,7 @@ public:
   std::vector<double> getCoord(int cncGeoTag, int numElm);
 
   Vertex* getVertex(int iVertex){ return &_vertices[iVertex]; }
+  std::vector<Vertex> &getVertices(){ return _vertices; }
 
   int getNbCncGeo() { return _nCncGeo; }
   std::vector<feCncGeo*> &getCncGeo(){ return _cncGeo; }
@@ -95,6 +97,7 @@ public:
 };
 
 class feMetaNumber;
+class feSolutionContainer;
 
 class feMesh2DP1 : public feMesh{
 private:
@@ -157,12 +160,13 @@ protected:
   bool _isBinary;
   double _gmshVersion;
 
+  std::vector<Triangle*> _elements; // Hardcoded triangles for now
   // std::vector<feElement*> _elements;
   // std::vector<feElement*> _boundaryElements;
 
 public:
   feMesh2DP1(std::string meshName, bool curved, mapType physicalEntitiesDescription = mapType());
-  virtual ~feMesh2DP1();
+  ~feMesh2DP1();
 
   int readMsh2(std::istream &input, bool curved, mapType physicalEntitiesDescription);
   int readMsh4(std::istream &input, bool curved);
@@ -173,8 +177,8 @@ public:
 
   mapType getPhysicalEntitiesDescription(){ return _physicalEntitiesDescription; }
 
-  void transfer(const feMesh2DP1 *otherMesh, const feMetaNumber *myMN, const feMetaNumber *otherMN, 
-  const feSolution *mySol, feSolution* otherSol, const std::vector<feSpace*> &mySpaces, const std::vector<feSpace*> &otherSpaces);
+  void transfer(feMesh2DP1 *otherMesh, feMetaNumber *myMN, feMetaNumber *otherMN, 
+  feSolutionContainer* solutionContainer, const std::vector<feSpace*> &mySpaces, const std::vector<feSpace*> &mySpacesEssBC, const std::vector<feSpace*> &otherSpaces);
 };
 
 #endif

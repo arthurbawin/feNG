@@ -12,6 +12,9 @@
 
 #include "petscksp.h"
 
+#include <iostream>
+#include <fstream>
+
 // A structure for the patches of elements around vertices of a connectivity
 class fePatch{
 
@@ -34,7 +37,6 @@ public:
 class feRecovery{
 protected:
   int _degSol; // The degree of the FE solution : degree of recovery = deg of the FE solution +1
-  int _nQuad;
 
   int _dim;
   int _nTotalRecoveries;
@@ -60,7 +62,7 @@ protected:
   PetscScalar *valb;
 
   std::map<int, std::map<int,std::vector<double>>> recoveryCoeff;   // #vert : {#rec , coeffs}  
-  std::map<int, std::map<int,std::vector<double>>> derivativeCoeff; // #vert : {#der , coeffs
+  std::map<int, std::map<int,std::vector<double>>> derivativeCoeff; // #vert : {#der , coeffs}
   std::map<int, std::vector<double>> errorCoeff;                    // #vert : coeffs
 
 public:
@@ -78,7 +80,7 @@ public:
   feCncGeo *_cnc;
 
 public:
-  feRecovery(feMetaNumber *metaNumber, feSpace *space, feMesh *mesh, feSolution *sol, int nQuadraturePoints, 
+  feRecovery(feMetaNumber *metaNumber, feSpace *space, feMesh *mesh, feSolution *sol,
     std::vector<double> &norm, feFunction *solRef);
   ~feRecovery(){
     delete _patch;
@@ -98,7 +100,8 @@ public:
   void allocateStructures();
   void freeStructures();
   void solveLeastSquare(int indRecovery, bool recoverDerivative);
-  void derivative(int indRecovery);
+  // void derivative(int indRecovery, int iDerivative, FILE* derivativeFile);
+  void derivative(int indRecovery, int iDerivative, std::ostream &output);
   void getErrorPolynomials();
   void estimateError(std::vector<double> &norm, feFunction *solRef);
 };

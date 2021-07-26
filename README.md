@@ -1,31 +1,17 @@
 # feNG
-TODO : Écrire un README
 
-	feNG/src contient les fichiers sources (.cpp) et les headers (.h)
-	feNG/exe contient les codes sources associés aux exécutables
+feNG is a finite element solver for simple incompressible flow applications. It is very much a work in progress.
+Its current dependencies are PETSc or PARDISO. Current supported finite element spaces are Lagrange elements of degree 1 to 4 on triangles, 
+and implemented weak forms allow to solve 
+    * Poisson equation
+    * Stokes equations
+    * Navier-Stokes equation
 
-Pour créer un makefile et compiler le code :
+Supported mesh file format is GMSH's native .msh format (versions 2.2 and 4+).
 
-Dans feNG/, créer un répertoire build (qui est privé : il n'est pas partagé sur GitHub) :
+To create a Makefile with CMake and build :
 
  	mkdir build
  	cd build
-
- Lancer CMake en pointant vers le répertoire parent (..). CMake s'occupe de localiser MPI, mais
- il faut indiquer où se trouve petsc via les variables PETSC_DIR et PETSC_ARCH :
-
- 	cmake -DPETSC_DIR=/chemin/vers/petsc -DPETSC_ARCH=architectureDetecteeParPETSc ..
-
- Par exemple :
-
- 	cmake -DPETSC_DIR=/home/arthur/Code/petsc -DPETSC_ARCH=arch-linux-c-debug ..
-
- Pour la version graphique de CMake (pratique pour afficher les détails) :
-
- 	ccmake ..
-
- (puis "c" pour configurer, "g" pour generate and exit)
-
- Compiler dans feNG/build :
- 
- 	make
+ 	cmake -DPETSC_DIR=/path/to/petsc -DPETSC_ARCH=architecture ..
+    make

@@ -63,15 +63,11 @@ public:
   std::vector<int> &getNodeConnectivityRef(){ return _connecNodes; }
   std::vector<int> &getElemConnectivityRef(){ return _connecElem;  }
 
-  int getLocalConnectivity(int numElem, int iNode){ return _connecNodes[_nNodPerElm*numElem+iNode]; }
   int getNodeConnectivity(int numElem, int iNode) { return _connecNodes[_nNodPerElm*numElem+iNode]; }
-  int getGlobalConnectivity(int numElem)          { return _connecElem[numElem]; }
   int getElementConnectivity(int numElem)         { return _connecElem[numElem]; }
   int getEdgeConnectivity(int numElem, int iEdge) { return _connecEdges[_nEdg*numElem+iEdge]; }
 
-  void setLocalConnectivity(int numElem, int iNode, int val){ _connecNodes[_nNodPerElm*numElem+iNode] = val; }
   void setNodeConnectivity(int numElem, int iNode, int val) { _connecNodes[_nNodPerElm*numElem+iNode] = val; }
-  void setGlobalConnectivity(int numElem, int val)          { _connecElem[numElem] = val; }
   void setElementConnectivity(int numElem, int val)         { _connecElem[numElem] = val; }
   void setEdgeConnectivity(int numElem, int iEdge, int val) { _connecEdges[_nEdg*numElem+iEdge] = val; }
 

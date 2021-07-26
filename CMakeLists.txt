@@ -10,8 +10,8 @@ option(ENABLE_BOOST         "Enable Boost"                OFF)
 option(ENABLE_SUNDIALS      "Enable SUNDIALS"             OFF)
 option(ENABLE_SOPLEX        "Enable SOPLEX"               OFF)
 option(ENABLE_PETSC         "Enable PETSc"                ON )
+option(ENABLE_GMSH          "Enable Gmsh"                 OFF)
 option(ENABLE_MKL           "Enable MKL"                  OFF)
-option(ENABLE_EIGEN         "Enable Eigen"                ON )
 option(ENABLE_SANITY_CHECKS "Enable sanity checks"        OFF)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
@@ -159,7 +159,7 @@ endif()
 #### Initialize list of external libraries
 set(feNG_EXTERNAL_LIBS "")
 
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/")
 
 ############################################
 #  OpenMP
@@ -290,19 +290,25 @@ endif()
 ############################################
 #  Eigen (eigenvalues/vectors and linear algebra)
 ############################################
-if(ENABLE_EIGEN)
-  include_directories(${CMAKE_CURRENT_SOURCE_DIR}/contrib/Eigen)
-  add_definitions("-DHAVE_EIGEN")
-  MESSAGE(STATUS "Eigen found (-:")
-endif()
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/contrib/Eigen)
+add_definitions("-DHAVE_EIGEN")
 
 ############################################
 #  Gmsh classes for metric tensors and rtree
 ############################################
-if(ENABLE_EIGEN)
-  include_directories(${CMAKE_CURRENT_SOURCE_DIR}/contrib/gmsh)
-  # See also src/CmakeLists.txt for the .cpp files
-  MESSAGE(STATUS "Gmsh STensor3 found (-:")
+# See also src/CmakeLists.txt for the .cpp files
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/contrib/gmsh)
+
+############################################
+#  Gmsh
+############################################
+if(ENABLE_GMSH)
+  find_package(Gmsh)
+  set(GMSH_LIB "${GMSH_LIB}" CACHE FILEPATH "Gmsh library")
+  set(GMSH_INC "${GMSH_INC}" CACHE PATH     "Gmsh headers")
+  include_directories(${GMSH_INC})
+  list(APPEND feNG_EXTERNAL_LIBS ${GMSH_LIB})
+  MESSAGE(STATUS "Gmsh found (-:")
 endif()
 
 MESSAGE(STATUS "External libs for feNG : ${feNG_EXTERNAL_LIBS}")

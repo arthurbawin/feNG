@@ -32,19 +32,6 @@ feMetric::feMetric(feRecovery *recovery, feMetricOptions metricOptions) : _recov
   int cnt;
   for(auto v : vertices){
 
-
-    // printf("error at vertex %d (%3.4f,%3.4f,%3.4f) = %+-3.4f - %+-3.4f - %+-3.4f - %+-3.4f\n", v,
-    //         recovery->_mesh->getVertex(v)->x(),
-    //         recovery->_mesh->getVertex(v)->y(),
-    //         recovery->_mesh->getVertex(v)->z(),
-    //         e[v][0],
-    //         e[v][1],
-    //         e[v][2],
-    //         e[v][3]);
-
-
-
-
     double A, B, C;
     // Construct the discretization of the error curve
     for(int iPhi = 0; iPhi < nPhi; ++iPhi){
@@ -52,52 +39,32 @@ feMetric::feMetric(feRecovery *recovery, feMetricOptions metricOptions) : _recov
       cnt = 0;
       for(int n = 0; n < dimRecovery; ++n){
         if(expX[n] + expY[n] == degSol+1){ // Select only exponents of the homogeneous poynomial of order deg+1
-          // std::cout<<"pos = "<<cnt<<" : "<<e[v][cnt]<<std::endl;
           err += e[v][cnt++] * pow(cos(phi[iPhi]), expX[n]) * pow(sin(phi[iPhi]), expY[n]);
         }
       }
       err = fmax(fabs(err), 1e-8);
-      // std::cout<<"phi =  "<<phi[iPhi]<<std::endl;
-      // std::cout<<"cos phi =  "<<cos(phi[iPhi])<<std::endl;
-      // std::cout<<"sin phi =  "<<sin(phi[iPhi])<<std::endl;
-      // std::cout<<"1 : "<<pow(1.0/fabs(err), 1.0/(degSol+1))* cos(phi[iPhi])<<std::endl;
-      // std::cout<<"2 : "<<pow(1.0/fabs(err), 1.0/(degSol+1))* sin(phi[iPhi])<<std::endl;
-      // std::cout<<"3 : "<<pow(1.0/fabs(err), 1.0/(degSol+1))<<std::endl;
       xC[iPhi] = pow(1.0/fabs(err), 1.0/(degSol+1)) * cos(phi[iPhi]);
       yC[iPhi] = pow(1.0/fabs(err), 1.0/(degSol+1)) * sin(phi[iPhi]);
 
     }
 
-    // for(int i = 0; i < nPhi; ++i){
-    //   std::cout<<"xC : "<<xC[i]<<std::endl;
-    //   std::cout<<"yC : "<<yC[i]<<std::endl;
-    // }
     // if(false){
       // Compute brute-force metric
       metricHechtKuate(nPhi, xC, yC, A, B, C, 1e-5, xNew, yNew);
-      // std::cout<<"Computed metric : "<<A<<" - "<<B<<" - "<<C<<std::endl;
       SMetric3 M;
       M.set_m11(A);
       M.set_m21(C);
       M.set_m22(B);
-       // M.print("Mavant");
-      // TAKE ABS of eigenvalues
+      // Take absolute value of eigenvalues
       fullMatrix<double> V(3, 3);
       fullVector<double> S(3);
       M.eig(V, S, false);
-      // std::cout<<"Valeurs propres : "<<S(0)<<" - "<<S(1)<<" - "<<S(2)<<std::endl;
-      SVector3 v0(V(0,0), V(0,1), V(0,2));  // Attention c'est peut-être la transposée
+      SVector3 v0(V(0,0), V(0,1), V(0,2));
       SVector3 v1(V(1,0), V(1,1), V(1,2));
       SVector3 v2(V(2,0), V(2,1), V(2,2));
-      // std::cout<<"Vecteurs propres : "<<std::endl;
-      // v0.print();
-      // v1.print();
-      // v2.print();
       M = SMetric3(fabs(S(0)), fabs(S(1)), fabs(S(2)), v0, v1, v2);
-      // M.print("M");
       // M = SMetric3();
       // M.set_m11(100);
-
       _metrics[v] = M;
     // } else{
       // metriqueSimplexe2D(nPhi, phi, e[v], A, B, C, 50);
@@ -123,7 +90,6 @@ feMetric::feMetric(feRecovery *recovery, feMetricOptions metricOptions) : _recov
       // M.print("M");
       // // M = SMetric3();
       // // M.set_m11(100);
-
       // _metrics[v] = M;
     // }
   }
@@ -193,8 +159,9 @@ void feMetric::metricScaling(){
   }
 }
 
-void metricHechtKuate(int nbpoints, double* x, double* y, double &A, double &B, double &C, double epsilon, double* xNew, double* yNew)
-{
+/* Compute metric using a brute-force method to solve optimization problem
+   Original code from R. Kuate */
+void metricHechtKuate(int nbpoints, double* x, double* y, double &A, double &B, double &C, double epsilon, double* xNew, double* yNew){
   C = 0.0;
 
   int bool_assert = 1;
@@ -770,9 +737,9 @@ void feMetric::writeSizeFieldGmsh(std::string meshName, std::string metricMeshNa
       output << vertices.size() << std::endl;
       for(auto v : vertices){
         // std::cout<<"Writing metric at vertex "<<v;
-        printf(" (%f, %f, %f)\n", _recovery->_mesh->getVertex(v)->x(),
-            _recovery->_mesh->getVertex(v)->y(),
-            _recovery->_mesh->getVertex(v)->z());
+        // printf(" (%f, %f, %f)\n", _recovery->_mesh->getVertex(v)->x(),
+        //     _recovery->_mesh->getVertex(v)->y(),
+        //     _recovery->_mesh->getVertex(v)->z());
         SMetric3 M = _metrics[v];
         output << v+1 << " " << M(0,0) << " " << M(0,1) << " " << M(0,2) << " " << M(1,0) << " " << M(1,1) << " " << M(1,2) << " " << M(2,0)  << " " << M(2,1)  << " " << M(2,2) << std::endl;  
       }

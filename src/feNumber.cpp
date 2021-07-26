@@ -33,36 +33,36 @@ feNumber::feNumber(feMesh *mesh) : _nNod(mesh->getNbNodes()), _nEdg(mesh->getNbE
 };
 
 void feNumber::defDDLSommet(feMesh *mesh, std::string cncGeoID, int numElem, int numVertex){
-   int vert = mesh->getVertex(cncGeoID, numElem, numVertex);
-   _nDOFVertices[vert] = 1;
-   _codeDOFVertices[vert] = INC;
+  int vert = mesh->getVertex(cncGeoID, numElem, numVertex);
+  _nDOFVertices[vert] = 1;
+  _codeDOFVertices[vert] = INC;
 }
 
 void feNumber::defDDLElement(feMesh *mesh, std::string cncGeoID, int numElem, int numDOF){
-   int elem = mesh->getElement(cncGeoID, numElem);
-   _nDOFElements[elem] = numDOF;
-   _codeDOFElements[elem] = INC;
+  int elem = mesh->getElement(cncGeoID, numElem);
+  _nDOFElements[elem] = numDOF;
+  _codeDOFElements[elem] = INC;
 }
 
 void feNumber::defDDLEdge(feMesh *mesh, std::string cncGeoID, int numElem, int numEdge, int numDOF){
-   int edge = fabs(mesh->getEdge(cncGeoID, numElem, numEdge)) - 1;
-   _nDOFEdges[edge] = numDOF;
-   _codeDOFEdges[edge] = INC;
+  int edge = fabs(mesh->getEdge(cncGeoID, numElem, numEdge)) - 1;
+  _nDOFEdges[edge] = numDOF;
+  _codeDOFEdges[edge] = INC;
 }
 
 void feNumber::defDDLSommet_essentialBC(feMesh *mesh, std::string cncGeoID, int numElem, int numVertex){
-   int vert = mesh->getVertex(cncGeoID, numElem, numVertex);
-   _codeDOFVertices[vert] = ESS;
+  int vert = mesh->getVertex(cncGeoID, numElem, numVertex);
+  _codeDOFVertices[vert] = ESS;
 }
 
 void feNumber::defDDLElement_essentialBC(feMesh *mesh, std::string cncGeoID, int numElem){
-   int elem = mesh->getElement(cncGeoID, numElem);
-   _codeDOFElements[elem] = ESS;
+  int elem = mesh->getElement(cncGeoID, numElem);
+  _codeDOFElements[elem] = ESS;
 }
 
 void feNumber::defDDLEdge_essentialBC(feMesh *mesh, std::string cncGeoID, int numElem, int numEdge){
-   int edge = fabs(mesh->getEdge(cncGeoID, numElem, numEdge)) - 1;
-   _codeDOFEdges[edge] = ESS;
+  int edge = fabs(mesh->getEdge(cncGeoID, numElem, numEdge)) - 1;
+  _codeDOFEdges[edge] = ESS;
 }
 
 int feNumber::getDDLSommet(feMesh *mesh, std::string cncGeoID, int numElem, int numVertex){
@@ -80,8 +80,6 @@ int feNumber::getDDLEdge(feMesh *mesh, std::string cncGeoID, int numElem, int nu
   int edge = fabs(mesh->getEdge(cncGeoID, numElem, numEdge)) - 1;
   return _numberingEdges[_maxDOFperEdge * edge + numDOF];
 }
-
-// TODO : defDDLElement pour les P2 et +
 
 void feNumber::prepareNumbering(){
   _maxDOFperElem = *std::max_element(_nDOFElements.begin(), _nDOFElements.end());
@@ -104,7 +102,6 @@ void feNumber::prepareNumbering(){
   }
   for(int iEdg = 0; iEdg < _nEdg; ++iEdg){
     for(int iDOF = 0; iDOF < _nDOFEdges[iEdg]; ++iDOF){
-      // std::cout << _codeDOFEdges[iEdg] << std::endl;
       _numberingEdges[_maxDOFperEdge * iEdg + iDOF] = _codeDOFEdges[iEdg];
     }
   }
@@ -210,26 +207,16 @@ feMetaNumber::feMetaNumber(feMesh *mesh, const std::vector<feSpace*> &space, con
     fSBC->initializeNumberingEssential(_numberings[fSBC->getFieldID()]);
   }
   // PREPARER_NUMEROTATION
-  // for(std::map< >::iterator s : _numberings ){
-  //   string fieldID = s.first;
-  //   feNumber* number = s.second;
-  // }
   for(int i = 0; i < _nFields; ++i){
-  // for(auto const& secondIsNumber : _numberings)
-    // secondIsNumber.second->prepareNumbering();
     _numberings[_fieldIDs[i]]->prepareNumbering();
   }
   // NUMEROTER
   int globalNum = 0;
   for(int i = 0; i < _nFields; ++i){
-  // for(auto const& secondIsNumber : _numberings){
-    // globalNum = secondIsNumber.second->numberUnknowns(globalNum);
     globalNum = _numberings[_fieldIDs[i]]->numberUnknowns(globalNum);
   }
   _nInc = globalNum;
   for(int i = 0; i < _nFields; ++i){
-  // for(auto const& secondIsNumber : _numberings)
-    // globalNum = secondIsNumber.second->numberEssential(globalNum);
     globalNum = _numberings[_fieldIDs[i]]->numberEssential(globalNum);
   }
   _nDofs = globalNum;

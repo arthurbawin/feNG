@@ -1,10 +1,13 @@
 #include "feMesh.h"
 #include "feNumber.h"
+#include "feTriangle.h"
+#include "feSolution.h"
 
 #include "SBoundingBox3d.h"
 #include "rtree.h"
 
 #include <iostream>
+#include <fstream>
 
 int feMesh::getCncGeoTag(std::string cncGeoID){
   if(_cncGeoMap.find(cncGeoID) != _cncGeoMap.end())
@@ -24,33 +27,6 @@ feCncGeo* feMesh::getCncGeoByTag(int cncGeoTag){
       return _cncGeo[cncGeoTag];
   return nullptr;
 }
-
-// std::vector<double> feMesh::getCoord(std::string cncGeoID, int numElem){
-//   feCncGeo* cnc = getCncGeoByName(cncGeoID);
-//   int nNodePerElem = cnc->getNbNodePerElem();
-//   std::vector<double> coord(nNodePerElem * _dim); // _dim = 3 pour les coordonnees
-//   for(int i = 0; i < nNodePerElem; ++i){
-//     for(int j = 0; j < _dim; ++j){
-//       coord[_dim * i + j] = _coord[_dim * cnc->getNodeConnectivity(numElem, i) + j];
-//       // coord[3 * i + 0] = _vertices[3 * cnc->getNodeConnectivity(numElem, i)].x();
-//       // coord[3 * i + 1] = _vertices[3 * cnc->getNodeConnectivity(numElem, i)].y();
-//       // coord[3 * i + 2] = _vertices[3 * cnc->getNodeConnectivity(numElem, i)].z();
-//     }
-//   }
-//   return coord;
-// }
-
-// std::vector<double> feMesh::getCoord(int cncGeoTag, int numElem){
-//   feCncGeo* cnc = getCncGeoByTag(cncGeoTag);
-//   int nNodePerElem = cnc->getNbNodePerElem();
-//   std::vector<double> coord(nNodePerElem * _dim);
-//   for(int i = 0; i < nNodePerElem; ++i){
-//     for(int j = 0; j < _dim; ++j){
-//       coord[_dim * i + j] = _coord[_dim * cnc->getNodeConnectivity(numElem, i) + j];
-//     }
-//   }
-//   return coord;
-// }
 
 // numElem est le numero local de l'element dans la connectivité géométrique
 std::vector<double> feMesh::getCoord(std::string cncGeoID, int numElem){
@@ -85,7 +61,6 @@ int feMesh::getNbNodePerElem(int cncGeoTag){
   return getCncGeoByTag(cncGeoTag)->getNbNodePerElem();
 }
 
-
 int feMesh::getVertex(std::string cncGeoID, int numElem, int numVertex){
   return getCncGeoByName(cncGeoID)->getNodeConnectivity(numElem, numVertex);
 }
@@ -95,11 +70,11 @@ int feMesh::getVertex(int cncGeoTag, int numElem, int numVertex){
 }
 
 int feMesh::getElement(std::string cncGeoID, int numElem){
-  return getCncGeoByName(cncGeoID)->getGlobalConnectivity(numElem);
+  return getCncGeoByName(cncGeoID)->getElementConnectivity(numElem);
 }
 
 int feMesh::getElement(int cncGeoTag, int numElem){
-  return getCncGeoByTag(cncGeoTag)->getGlobalConnectivity(numElem);
+  return getCncGeoByTag(cncGeoTag)->getElementConnectivity(numElem);
 }
 
 int feMesh::getEdge(std::string cncGeoID, int numElem, int numEdge){
@@ -134,13 +109,13 @@ void feMesh::printInfo(){
     printf("Connectivité des noeuds :\n");
     for(int i = 0; i < cnc->getNbElm(); ++i){
       for(int j = 0; j < cnc->getNbNodePerElem(); ++j){
-        std::cout<< cnc->getLocalConnectivity(i,j)<<" ";
+        std::cout<< cnc->getNodeConnectivity(i,j)<<" ";
       }
       std::cout<<std::endl;
     }
     printf("Connectivité des éléments :\n");
     for(int i = 0; i < cnc->getNbElm(); ++i){
-      std::cout<< cnc->getGlobalConnectivity(i) << std::endl;
+      std::cout<< cnc->getElementConnectivity(i) << std::endl;
     }
     // printf("Connectivité des arêtes :\n");
     // for(int i = 0; i < cnc->getNbElm(); ++i){
@@ -199,7 +174,7 @@ feMesh1DP1::feMesh1DP1(double xA, double xB, int nElm, std::string bndA_ID, std:
   int numElmGlo = 0;
   for(feCncGeo *cnc : _cncGeo){
     for(int i = 0; i < cnc->getNbElm(); ++i)
-      cnc->setGlobalConnectivity(i,numElmGlo++);
+      cnc->setElementConnectivity(i,numElmGlo++);
   }
   _nTotalElm = numElmGlo;
 
@@ -219,20 +194,30 @@ feMesh1DP1::~feMesh1DP1(){
 
 feMesh2DP1::feMesh2DP1(std::string meshName, bool curved, mapType physicalEntitiesDescription) : feMesh(){
 
-  _ID = "myBeautifulMesh";
+  // Check if mesh file exists
+  std::ifstream f(meshName.c_str());
+  if(!f.good()){
+    printf("In feMesh2DP1::feMesh2DP1 : Error - Mesh file does not exist.\n");
+  } else{
 
-  if(readGmsh(meshName, curved, physicalEntitiesDescription)){
-    printf("In feMesh2DP1::feMesh2DP1 : Error in readGmsh - mesh not finalized.\n");
-  }
+    _ID = "myBeautifulMesh";
 
-  // Assign a pointer to this mesh to each of its geometric connectivities and their fespace
-  for(feCncGeo *cnc : _cncGeo){
-    cnc->setMeshPtr(this);
-    cnc->getFeSpace()->setMeshPtr(this);
+    if(readGmsh(meshName, curved, physicalEntitiesDescription)){
+      printf("In feMesh2DP1::feMesh2DP1 : Error in readGmsh - mesh not finalized.\n");
+    }
+
+    // Assign a pointer to this mesh to each of its geometric connectivities and their fespace
+    for(feCncGeo *cnc : _cncGeo){
+      cnc->setMeshPtr(this);
+      cnc->getFeSpace()->setMeshPtr(this);
+    }
   }
 }
 
 feMesh2DP1::~feMesh2DP1(){
+  for(Triangle *t : _elements){
+    delete t;
+  }
   for(feCncGeo *cnc : _cncGeo){
     delete cnc->getFeSpace();
     delete cnc;
@@ -245,86 +230,125 @@ static bool rtreeCallback(int id, void *ctx){
   return true;
 }
 
-void feMesh2DP1::transfer(const feMesh2DP1 *otherMesh, const feMetaNumber *myMN, const feMetaNumber *otherMN, 
-  const feSolution *mySol, feSolution* otherSol, const std::vector<feSpace*> &mySpaces, const std::vector<feSpace*> &otherSpaces){
+/* Transfers the solution(s) associated to the current mesh to another mesh.
+   The solution(s) are stored in solutionContainer and are transferred in place,
+   hence the old solutions are lost after transfer. */
+void feMesh2DP1::transfer(feMesh2DP1 *otherMesh, feMetaNumber *myMN, feMetaNumber *otherMN, 
+  feSolutionContainer* solutionContainer, const std::vector<feSpace*> &mySpaces, const std::vector<feSpace*> &mySpacesEssBC, const std::vector<feSpace*> &otherSpaces){
 
+  // A temporary solutionContainer in which the interpolated values are stored
+  feSolutionContainer *scTmp = new feSolutionContainer(*solutionContainer);
+  int nSol = scTmp->getNbSol();
+  int nDOF = otherMN->getNbDOFs();
+  // Resize to the new number of DOFs
+  for(int iSol = 0; iSol < nSol; ++iSol){
+    scTmp->_sol[iSol].resize(nDOF);
+  }
+
+  // The rtree structure in which the elements of the old mesh are stored
   RTree<int, double, 3>  rtree;
 
-  // Add domain (not boundary) elements to an rtree
-  for(feSpace *fS : mySpaces){
-    if(fS->getDim() == this->_dim){
+  // Add domain (not boundary) elements to the rtree
+  for(int i = 0; i < _elements.size(); ++i){
+    Triangle *t = _elements[i];
+    SBoundingBox3d bbox;
+    // printf("element %2d : %2d - %2d - %2d\n", t->getTag(), t->getVertex(0)->getTag(), t->getVertex(1)->getTag(), t->getVertex(2)->getTag());
+    for(int i = 0; i < 3; ++i){
+      Vertex *v = t->getVertex(i);
+      SPoint3 pt(v->x(), v->y(), v->z());
+      bbox += pt;
+    }
+    rtree.Insert((double*)(bbox.min()), (double*)(bbox.max()), i);
+  }
 
-      feCncGeo *cnc = fS->getCncGeo();
-      int nElm = cnc->getNbElm();
-      int nNodePerElm = cnc->getNbNodePerElem(); // All nodes are used to create the bounding box, not just the vertices
+  double tol = 1e-8;
 
-      for(int iElm = 0; iElm < nElm; ++iElm){
-        SBoundingBox3d bbox;
-        printf("element %2d : %2d - %2d - %2d\n", iElm, cnc->getNodeConnectivity(iElm, 0), cnc->getNodeConnectivity(iElm, 1), cnc->getNodeConnectivity(iElm, 2));
-        for(int iNode = 0; iNode < nNodePerElm; ++iNode){
-          int node = cnc->getNodeConnectivity(iElm, iNode);
-          SPoint3 pt(_vertices[node].x(), _vertices[node].y(), _vertices[node].z());
-          bbox += pt;
-          // std::cout<<"Point added :"<<std::endl;
-          // std::cout<<bbox.min().x()<<std::endl;
-          // std::cout<<bbox.min().y()<<std::endl;
-          // std::cout<<bbox.min().z()<<std::endl;
-          // std::cout<<bbox.max().x()<<std::endl;
-          // std::cout<<bbox.max().y()<<std::endl;
-          // std::cout<<bbox.max().z()<<std::endl;
-          rtree.Insert((double*)(bbox.min()), (double*)(bbox.max()), iElm);
-          // rtree.Insert(bbox.min().data(), bbox.max().data(), iElm);
+  // Check which spaces need to be interpolated
+  std::vector<std::pair<std::string, std::string>> fieldsToInterpolate;
+  for(feSpace *fS1 : mySpaces){
+    bool isBC = false;
+    if(fS1->getDim() < this->_dim){
+      printf("Not interpolating boundary field of dimension %d\n", fS1->getDim());
+      continue;
+    }
+    for(feSpace *feEss : mySpacesEssBC){
+      if(fS1->getFieldID() == feEss->getFieldID() && fS1->getCncGeoID() == feEss->getCncGeoID()){
+        isBC = true;
+        std::cout<<"Not interpolating essential BC field "<<fS1->getFieldID()<<" on connectivity "<<fS1->getCncGeoID()<<std::endl;
+      }
+    }
+    if(!isBC){
+      for(feSpace *fS2 : otherSpaces){
+        if(fS1->getFieldID() == fS2->getFieldID() && fS1->getCncGeoID() == fS2->getCncGeoID()){
+          std::cout<<"INTERPOLATING FIELD "<<fS1->getFieldID()<<" on connectivity "<<fS1->getCncGeoID()<<std::endl;
+          fieldsToInterpolate.emplace_back(fS1->getFieldID(),fS1->getCncGeoID());
+
+          int nElm = fS2->getNbElm();
+          int nDOFPerElem = fS2->getNbFunctions();
+          int cncGeoTag = fS2->getCncGeoTag();
+          const std::vector<double> &Lcoor = fS2->getLcoor();
+          feNumber *number1 = myMN->getNumbering(fS1->getFieldID());
+          feNumber *number2 = otherMN->getNumbering(fS2->getFieldID());
+          feSpace *geoSpace2 = fS2->getCncGeo()->getFeSpace();
+
+          for(int iElm = 0; iElm < nElm; ++iElm){
+            fS2->initializeAddressingVector(number2, iElm);
+            std::vector<double> geoCoord = otherMesh->getCoord(cncGeoTag, iElm);
+            // Loop over the DOFs of the element of the new mesh
+            for(int j = 0; j < nDOFPerElem; ++j){
+              // Get coordinates
+              std::vector<double> x(3, 0.);
+              double r1[3] = {Lcoor[3*j+0], Lcoor[3*j+1], Lcoor[3*j+2]};
+              geoSpace2->interpolateVectorField(geoCoord, r1, x);
+              // Locate DOF in old mesh
+              double min[3] = {x[0]-tol, x[1]-tol, x[2]-tol};
+              double max[3] = {x[0]+tol, x[1]+tol, x[2]+tol};
+              std::vector<int> candidates;
+              rtree.Search(min, max, rtreeCallback, &candidates);
+
+              for(int val : candidates){
+                Triangle *t = _elements[val];
+                // printf("element %2d : %2d - %2d - %2d", t->getTag(), t->getVertex(0)->getTag(), t->getVertex(1)->getTag(), t->getVertex(2)->getTag());
+                double r2[3]; t->xyz2uvw(x.data(), r2);
+                bool isInside = t->isInside(r2[0], r2[1], r2[2]);
+                if(isInside){
+                  fS1->initializeAddressingVector(number1, t->getTag()); // ATTENTION : I give the triangle tag as element number. Only works on triangles, not on 1D boundary elements.
+                  for(int iSol = 0; iSol < nSol; ++iSol){
+                    fS1->initializeSolution(solutionContainer->getSolution(iSol));
+                    double solInt = fS1->interpolateSolution(r2);
+                    scTmp->_sol[iSol][fS2->getAddressingVectorAt(j)] = solInt;
+                    // TODO : Interpoler le _fresidual du solutionContainer
+                  }
+                }
+              }
+            }
+          } // for iElm
+        } else{ // if fields match
+          std::cout<<"NOT INTERPOLATING : MISMATCH between "<<fS1->getFieldID()<<" - "<<fS1->getCncGeoID()<<" and "<<fS2->getFieldID()<<" - "<<fS2->getCncGeoID()<<std::endl;
         }
       }
     }
   }
 
-  // Find point 0.5,0.5,0
-  double tol = 1e-2;
-  double min[3] = {0.5-tol, 0.5-tol, 0.0-tol};
-  double max[3] = {0.5+tol, 0.5+tol, 0.0+tol};
-  std::vector<int> candidates;
-  rtree.Search(min, max, rtreeCallback, &candidates);
+  // Resize the solutionContainer
+  solutionContainer->setNbDOFs(nDOF);
+  solutionContainer->_d.resize(nDOF);
 
-  for(auto val : candidates){
-    std::cout<<"val = "<<val<<std::endl;
+  // Replace solutionContainer by scTmp
+  for(int iSol = 0; iSol < nSol; ++iSol){
+    solutionContainer->_sol[iSol].resize(nDOF);
+    solutionContainer->_fResidual[iSol].resize(nDOF);
+    for(int iDOF = 0; iDOF < nDOF; ++iDOF)
+      solutionContainer->_sol[iSol][iDOF] = scTmp->_sol[iSol][iDOF];
   }
-  
 
-  SBoundingBox3d foo;
+  for(int iDOF = 0; iDOF < 20; ++iDOF){
+    printf("%5d : ", iDOF);
+    for(int i = 0; i < solutionContainer->getNbSol(); ++i){
+      printf("%+-10.10e \t", solutionContainer->_sol[i][iDOF]);
+    }
+    printf("\n");
+  }
 
-// std::vector<uint64_t> candidates;
-//   forestOptions->bndRTree->Search(min, max, rtreeCallback, &candidates);
-
-  // Add bboxes of the surface mesh to rtree
-  // HXTBbox bbox_triangle;
-  // for(uint64_t i = 0; i < meshBnd->triangles.num; ++i){
-  //   hxtBboxInit(&bbox_triangle);
-  //   for(uint64_t j = 0; j < 3; ++j) {
-  //     double coord[3];
-  //     uint32_t node = meshBnd->triangles.node[3*i+j];
-  //     for(uint32_t k = 0; k < 3; ++k){ coord[k] = meshBnd->vertices.coord[(size_t) 4*node+k]; }
-  //     hxtBboxAddOne(&bbox_triangle, coord);
-  //   }
-  //   SBoundingBox3d cube_bbox(bbox_triangle.min[0], bbox_triangle.min[1], bbox_triangle.min[2],
-  //                            bbox_triangle.max[0], bbox_triangle.max[1], bbox_triangle.max[2]);
-  //   bndRTree.Insert((double*)(cube_bbox.min()), (double*)(cube_bbox.max()), i);
-  // }
-
+  delete scTmp;
 }
-
-// void feNorm::computeL2Norm(feMetaNumber *metaNumber, feSolution *sol, feMesh *mesh){
-//   double normL2 = 0.0, solInt, solRef, xInt, yInt, zInt, J, t = sol->getCurrentTime();
-//   int nElm = _intSpace->getNbElm();
-
-//   // std::cout<<"Computing norm of "<<_intSpace->getFieldID()<<" on "<<nElm<<" elements"<<std::endl;
-//   for(int iElm = 0; iElm < nElm; ++iElm){
-//     _intSpace->initializeAddressingVector(metaNumber->getNumbering(_intSpace->getFieldID()), iElm);
-//     _intSpace->initializeSolution(sol);
-//     geoCoord = mesh->getCoord(cncGeoTag, iElm);
-//     for(int k = 0; k < _nQuad; ++k){
-//       solInt = _intSpace->interpolateSolutionAtQuadNode(k);
-//     }
-//   }
-//   norm = sqrt(normL2);
-// }

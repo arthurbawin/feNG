@@ -69,6 +69,7 @@ void feSpace::setQuadratureRule(feQuadrature *quad){
   }
 }
 
+// Initialize solution vector from a feSolution
 void feSpace::initializeSolution(feSolution *sol){
   _sol.resize(_adr.size());
   for(size_t i = 0; i < _adr.size(); ++i){
@@ -76,10 +77,25 @@ void feSpace::initializeSolution(feSolution *sol){
   }
 }
 
+// Initialize solution vector from another vector (typically coming from a solutionContainer)
+void feSpace::initializeSolution(std::vector<double> &sol){
+  _sol.resize(_adr.size());
+  for(size_t i = 0; i < _adr.size(); ++i){
+    _sol[i] = sol[_adr[i]];
+  }
+}
+
 void feSpace::initializeSolutionDot(feSolution *sol){
   _soldot.resize(_adr.size());
   for(size_t i = 0; i < _adr.size(); ++i)
     _soldot[i] = sol->getSolDotAtDOF(_adr[i]);
+}
+
+double feSpace::interpolateSolution(double r[3]){
+  double res = 0.0;
+  for(int i = 0; i < _nFunctions; ++i)
+    res += _sol[i]*L(r)[i];
+  return res;
 }
 
 double feSpace::interpolateSolutionAtQuadNode(int iNode){
