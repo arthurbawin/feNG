@@ -16,7 +16,6 @@ protected:
   std::vector<double> _sol;
   std::vector<double> _dsoldt;
 
-
   const std::vector<feSpace*>& _space;
   const std::vector<feSpace*>& _essBC;
 
@@ -42,8 +41,7 @@ public:
 
   void initializeTemporalSolution(double t0, double t1, int nTimeSteps);
   void initializeUnknowns(feMesh *mesh, feMetaNumber *metaNumber);
-  void initializeEssentialBC(feMesh *mesh, feMetaNumber *metaNumber);
-  void initializeEssentialBC(feMesh *mesh, feMetaNumber *metaNumber, feSolutionContainer *solContainer);
+  void initializeEssentialBC(feMesh *mesh, feMetaNumber *metaNumber, feSolutionContainer *solContainer = nullptr);
 
   int getC0(){ return _c0; }
   void setC0(double c0){ _c0 = c0; }
@@ -52,6 +50,7 @@ public:
   double getTimeStep(){ return _dt; }
   double getNbTimeSteps(){ return _nTimeSteps; }
   double getInitialTime(){ return _t0; }
+  double getFinalTime(){ return _t1; }
 
   std::vector<double> getSolutionCopy(){ return _sol; }
   std::vector<double> &getSolutionReference(){ return _sol; }

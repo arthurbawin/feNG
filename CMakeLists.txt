@@ -7,6 +7,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 option(ENABLE_OPENMP        "Enable OpenMP"               OFF)
 option(ENABLE_MPI           "Enable MPI"                  ON )
 option(ENABLE_PETSC         "Enable PETSc"                ON )
+option(ENABLE_GMSH          "Enable Gmsh"                 OFF)
 option(ENABLE_MKL           "Enable MKL"                  OFF)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
@@ -59,7 +60,7 @@ endif()
 
 # Initialize list of external libraries
 set(feNG_EXTERNAL_LIBS "")
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/")
 
 #  MPI
 if(ENABLE_MPI)
@@ -119,6 +120,16 @@ endif()
 
 #  Eigen
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/contrib/Eigen)
+
+#  Gmsh
+if(ENABLE_GMSH)
+  find_package(Gmsh)
+  set(GMSH_LIB "${GMSH_LIB}" CACHE FILEPATH "Gmsh library")
+  set(GMSH_INC "${GMSH_INC}" CACHE PATH     "Gmsh headers")
+  include_directories(${GMSH_INC})
+  list(APPEND feNG_EXTERNAL_LIBS ${GMSH_LIB})
+  MESSAGE(STATUS "Gmsh found (-:")
+endif()
 
 #  Gmsh classes for metric tensors and rtree
 # See also src/CmakeLists.txt for the .cpp files

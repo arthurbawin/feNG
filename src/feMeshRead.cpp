@@ -1,5 +1,6 @@
 #include "feMesh.h"
 #include "feElement.h"
+#include "feTriangle.h"
 #include "feLine.h"
 #include "feSpaceTriangle.h"
 
@@ -348,6 +349,8 @@ int feMesh2DP1::readMsh2(std::istream &input, bool curved, mapType physicalEntit
       // number-of-elements
       input >> _nElm;
       _nTotalElm = _nElm;
+
+      int serialNumberElm = 0; // To number the elements when skipping the Points 
       for(int iElm = 0; iElm < _nElm; ++iElm){
         getline(input, buffer);
         // elm-number elm-type number-of-tags < tag > … node-number-list
@@ -358,6 +361,7 @@ int feMesh2DP1::readMsh2(std::istream &input, bool curved, mapType physicalEntit
 
         int entityDim = dim_of_gmsh_element[elemType-1];
 
+        // Not taking Points into account
         if(entityDim == 0)
           continue;
 
@@ -382,7 +386,9 @@ int feMesh2DP1::readMsh2(std::istream &input, bool curved, mapType physicalEntit
         }
 
         _entities[p].nElm++;
-        _entities[p].connecElem.push_back(gmshElemTag-1); // Gmsh elem tag starts at 1
+        // _entities[p].connecElem.push_back(gmshElemTag-1); // Gmsh elem tag starts at 1
+        // The Gmsh elem tag takes the Points into account : trying with a counter
+        _entities[p].connecElem.push_back(serialNumberElm++); // Gmsh elem tag starts at 1
 
         int nNodePerElem = nodes_of_gmsh_element[elemType-1];
         std::vector<int> elemNodesGmsh(nNodePerElem);
@@ -990,6 +996,7 @@ int feMesh2DP1::readGmsh(std::string meshName, bool curved, mapType physicalEnti
   int ret = 0;
   _gmshVersion = 0;
   std::filebuf fb;
+
   if(fb.open(meshName,std::ios::in)){
     std::istream input(&fb);
 
@@ -1049,7 +1056,7 @@ int feMesh2DP1::readGmsh(std::string meshName, bool curved, mapType physicalEnti
       bool error = false;
       for(auto ent : pE.listEntities){
         if(ent == e.tag){
-          // std::cout<<"Physical "<<pE.name<<" - entity "<<ent<<" : match"<<std::endl;
+          // std::cout<<"Physical "<<pE.name<<" - entity "<<ent<<" of dimension "<<e.dim<<" and "<<e.nElm<<" elements : match"<<std::endl;
           pE.nElm += e.nElm;
           // Assign and check nNodePerElem
           if(pE.nNodePerElem == -1) pE.nNodePerElem = e.nNodePerElem;
@@ -1251,8 +1258,24 @@ int feMesh2DP1::readGmsh(std::string meshName, bool curved, mapType physicalEnti
     if(pE.dim == _dim)   _nInteriorElm += pE.nElm;
     if(pE.dim == _dim-1) _nBoundaryElm += pE.nElm;
   }
+  // Add all interior elements (for now only triangles) to the _elements vector
+  // Physical entities are non-overlapping so we just loop over them and elements shouldn't be duplicated
+  _elements.resize(_nInteriorElm);
+  int cnt = 0;
+  for(auto& pE : _physicalEntities){
+    if(_dim == 2 && pE.dim == _dim){
+      Vertex *v0, *v1, *v2;
+      for(int i = 0; i < pE.nElm; ++i){
+        v0 = &_vertices[ pE.connecNodes[pE.nNodePerElem*i]   ];
+        v1 = &_vertices[ pE.connecNodes[pE.nNodePerElem*i+1] ];
+        v2 = &_vertices[ pE.connecNodes[pE.nNodePerElem*i+2] ];
+        // The triangle tag is i because it is local to the pE's cncgeo, hence the tag is not unique...
+        _elements[cnt++] = new Triangle(v0, v1, v2, i);
+      }
+    }
+  }
 
-  // TODO : Check for overlapping physical entities
+  // TODO : Also add boundaryElements when necessary
 
   return ret;
 }

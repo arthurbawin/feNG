@@ -2,6 +2,15 @@
 
 #include <algorithm>
 
+// The names of the reconstructed fields
+static std::map<std::pair<int,int>, std::string> suffix = {
+  {{0,0}, ""    },
+  {{1,0}, "dx"  }, {{1,1}, "dy"  },
+  {{2,0}, "dxx" }, {{2,1}, "dxy" }, {{2,2}, "dyx" }, {{2,3}, "dyy" },
+  {{3,0}, "dxxx"}, {{3,1}, "dxxy"}, {{3,2}, "dxyx"}, {{3,3}, "dxyy"},
+  {{3,4}, "dyxx"}, {{3,5}, "dyxy"}, {{3,6}, "dyyx"}, {{3,7}, "dyyy"},
+};
+
 fePatch::fePatch(feCncGeo *cnc){
   // Get unique vertex indices in the node connectivity
   _vertices = cnc->getNodeConnectivityCopy();
@@ -21,9 +30,9 @@ fePatch::fePatch(feCncGeo *cnc){
   }
 }
 
-feRecovery::feRecovery(feMetaNumber *metaNumber, feSpace *space, feMesh *mesh, feSolution* sol, int nQuadraturePoints,
+feRecovery::feRecovery(feMetaNumber *metaNumber, feSpace *space, feMesh *mesh, feSolution* sol,
   std::vector<double> &norm, feFunction *solRef)
-  : _nQuad(nQuadraturePoints), _metaNumber(metaNumber), _mesh(mesh), _sol(sol), _intSpace(space)
+  : _metaNumber(metaNumber), _mesh(mesh), _sol(sol), _intSpace(space)
 {
   _cnc = space->getCncGeo();
   _nElm = _cnc->getNbElm();
@@ -94,6 +103,29 @@ feRecovery::feRecovery(feMetaNumber *metaNumber, feSpace *space, feMesh *mesh, f
 
   allocateStructures();
 
+  // To export all derivatives to a file, so that we don't need to store them all
+  std::string derivativesFileName = "derivatives.msh";
+  FILE* dFile = fopen(derivativesFileName.c_str(), "w");
+
+  std::string meshName = "../../data/square2Msh2.msh";
+  std::string metricMeshName = "../../data/square2Msh2Adapt.msh";
+  std::filebuf fbIn, fbOut;
+  fbIn.open(meshName,std::ios::in);
+  fbOut.open(metricMeshName, std::ios::out);
+  std::istream input(&fbIn);
+  std::ostream output(&fbOut);
+  std::string buffer;
+  // Copy .msh file except for the possible previous NodeData
+  while(getline(input,buffer)){
+    if(buffer == "$NodeData"){
+      while(buffer != "$EndNodeData")
+        getline(input,buffer);
+      getline(input,buffer);
+    }
+    output << buffer << std::endl;
+  }
+
+  int cnt = 0;
   for(int iDerivative = 0; iDerivative < _degSol+1; ++iDerivative){
 
     bool recoverDerivative = (iDerivative > 0);
@@ -103,12 +135,17 @@ feRecovery::feRecovery(feMetaNumber *metaNumber, feSpace *space, feMesh *mesh, f
     }
 
     for(int i = 0; i < pow(_dim, iDerivative); ++i){
-      derivative(i);
+      // derivative(i, iDerivative, dFile);
+      derivative(i, iDerivative, output);
     }
 
     if(iDerivative == 0)
       estimateError(norm, solRef); // Compute L2 norm after the first reconstruction (the one for u)
   }
+
+  fclose(dFile);
+  fbOut.close();
+  fbIn.close();
 
   getErrorPolynomials();
 
@@ -180,6 +217,8 @@ void feRecovery::solveLeastSquare(int indRecovery, bool recoverDerivative){
   // La solution interpolée aux points d'intégration
   double u, jac;
 
+  int nQuad = _geoSpace->getNbQuadPoints();
+
   std::vector<int> &vertices = _patch->getVertices();
   for(auto v : vertices){
     // Reset matrix and RHS
@@ -196,9 +235,9 @@ void feRecovery::solveLeastSquare(int indRecovery, bool recoverDerivative){
       geoCoord = _mesh->getCoord(_intSpace->getCncGeoTag(), elem);
 
       // Loop over quad points and increment least square matrix
-      for(int k = 0; k < _nQuad; ++k){
+      for(int k = 0; k < nQuad; ++k){
 
-        jac = J[_nQuad*elem+k]; 
+        jac = J[nQuad*elem+k]; 
 
         // TODO : normaliser ?
         _geoSpace->interpolateVectorFieldAtQuadNode(geoCoord, k, x);
@@ -274,9 +313,10 @@ void feRecovery::solveLeastSquare(int indRecovery, bool recoverDerivative){
   }
 }
 
-void feRecovery::derivative(int indRecovery){
+// void feRecovery::derivative(int indRecovery, int iDerivative, FILE* dFile){
+void feRecovery::derivative(int indRecovery, int iDerivative, std::ostream &output){
+  std::vector<int> &vertices = _patch->getVertices();
   if(_dim == 2){
-    std::vector<int> &vertices = _patch->getVertices();
     for(auto v : vertices){
       int indX = 0, indY = 0;
       std::vector<double> &u = recoveryCoeff[v][indRecovery];
@@ -289,10 +329,64 @@ void feRecovery::derivative(int indRecovery){
       derivativeCoeff[v][ 2*indRecovery   ] = dudx;
       derivativeCoeff[v][ 2*indRecovery+1 ] = dudy;
     }
+
+    // Exporter les derivees aux sommets (terme indépendant)
+    std::string filename = "derivees_var" + _intSpace->getFieldID() + "_ordre" + std::to_string(iDerivative) + "_indRec" + std::to_string(indRecovery) + ".txt";
+    FILE* myfile = fopen(filename.c_str(),"w");
+    printf("Writing derivatives to %s\n", filename.c_str());
+        for(auto v : vertices){
+      fprintf(myfile, "%+-12.12f \t %+-12.12f\n", derivativeCoeff[v][2*indRecovery][0], derivativeCoeff[v][2*indRecovery+1][0]);
+    }
+    fclose(myfile);
+
     // std::cout<<"Storing dudx at "<<2*indRecovery<<std::endl;
     // std::cout<<"Storing dudy at "<<2*indRecovery+1<<std::endl;
   } else{
     printf("TODO : Derivatives for recoveries in 1D or 3D\n");
+  }
+
+  // // Print the solution at first pass
+  // if(iDerivative == 0){
+  //   fprintf(dFile, "$NodeData\n");
+  //   fprintf(dFile,"1\n\"%s\"\n1\n3000\n3\n0\n1\n%lu\n", _intSpace->getFieldID().c_str(), vertices.size());
+  //   int cnt = 1;
+  //   for(auto v : vertices){
+  //     fprintf(dFile, "%6u %12.5E\n", cnt++, recoveryCoeff[v][indRecovery][0]);
+  //   }
+  //   fprintf(dFile, "$EndNodeData\n");
+  // }
+  // // Also write the derivatives to the common file
+  // for(int i = 0; i < _dim; ++i){
+  //   fprintf(dFile, "$NodeData\n");
+  //   std::string fieldName = "d" + std::to_string(iDerivative+1) + _intSpace->getFieldID() + suffix[{iDerivative+1, _dim*indRecovery+i}];
+  //   fprintf(dFile,"1\n\"%s\"\n1\n3000\n3\n0\n1\n%lu\n", fieldName.c_str(), vertices.size());
+  //   int cnt = 1;
+  //   for(auto v : vertices){
+  //     fprintf(dFile, "%6u %12.5E\n", cnt++, derivativeCoeff[v][_dim*indRecovery+i][0]);
+  //   }
+  //   fprintf(dFile, "$EndNodeData\n");
+  // }
+
+  // Print the solution at first pass
+  if(iDerivative == 0){
+    output << "$NodeData\n";
+    output << "1\n\"" << _intSpace->getFieldID() << "\"\n1\n3000\n3\n0\n1\n" << vertices.size() << "\n";
+    int cnt = 1;
+    for(auto v : vertices){
+      output <<  cnt++ << " " << recoveryCoeff[v][indRecovery][0] << std::endl;
+    }
+    output << "$EndNodeData\n";
+  }
+  // Also write the derivatives to the common file
+  for(int i = 0; i < _dim; ++i){
+    output << "$NodeData\n";
+    std::string fieldName = "d" + std::to_string(iDerivative+1) + _intSpace->getFieldID() + suffix[{iDerivative+1, _dim*indRecovery+i}];
+    output << "1\n\"" << fieldName << "\"\n1\n3000\n3\n0\n1\n" << vertices.size() << "\n";
+    int cnt = 1;
+    for(auto v : vertices){
+      output <<  cnt++ << " " << derivativeCoeff[v][_dim*indRecovery+i][0] << std::endl;
+    }
+    output << "$EndNodeData\n";
   }
 }
 
@@ -315,19 +409,17 @@ void feRecovery::getErrorPolynomials(){
           error[1] = derivativeCoeff[v][1][0] + derivativeCoeff[v][2][0] + derivativeCoeff[v][4][0];
           error[2] = derivativeCoeff[v][3][0] + derivativeCoeff[v][5][0] + derivativeCoeff[v][6][0];
           error[3] = derivativeCoeff[v][7][0];
-          // error[0] = 0.0;
-          // error[1] = 0.0;
-          // error[2] = 0.0;
-          // error[3] = 0.0;
           errorCoeff[v] = error;
-          // printf("error at vertex %d (%3.4f,%3.4f,%3.4f) = %+-3.4f - %+-3.4f - %+-3.4f - %+-3.4f\n", v,
-          //   _mesh->getVertex(v)->x(),
-          //   _mesh->getVertex(v)->y(),
-          //   _mesh->getVertex(v)->z(),
-          //   error[0],
-          //   error[1],
-          //   error[2],
-          //   error[3]);
+        }
+        break;
+      case 3 :
+        for(auto v : vertices){
+          error[0] = derivativeCoeff[v][0][0];
+          error[1] = derivativeCoeff[v][1][0] + derivativeCoeff[v][2][0] + derivativeCoeff[v][4][0] + derivativeCoeff[v][8][0];
+          error[2] = derivativeCoeff[v][3][0] + derivativeCoeff[v][5][0] + derivativeCoeff[v][6][0] + derivativeCoeff[v][9][0] + derivativeCoeff[v][10][0] + derivativeCoeff[v][12][0];
+          error[3] = derivativeCoeff[v][7][0] + derivativeCoeff[v][11][0] + derivativeCoeff[v][13][0] + derivativeCoeff[v][14][0];
+          error[4] = derivativeCoeff[v][15][0];
+          errorCoeff[v] = error;
         }
         break;
       default :
@@ -347,6 +439,7 @@ void feRecovery::estimateError(std::vector<double> &norm, feFunction *solRef){
   std::vector<double> xLoc(3, 0.);
   std::vector<double> monomials(_dimRecovery, 0.);
 
+  int nQuad = _geoSpace->getNbQuadPoints();
   std::vector<double> &w = _geoSpace->getQuadratureWeights();
   std::vector<double> &J = _cnc->getJacobians();
 
@@ -356,7 +449,7 @@ void feRecovery::estimateError(std::vector<double> &norm, feFunction *solRef){
     _intSpace->initializeSolution(_sol);
     geoCoord = _mesh->getCoord(_intSpace->getCncGeoTag(), iElm);
 
-    for(int k = 0; k < _nQuad; ++k){
+    for(int k = 0; k < nQuad; ++k){
       // Coordonnées des points d'intégration
       _geoSpace->interpolateVectorFieldAtQuadNode(geoCoord, k, x);
 
@@ -375,9 +468,9 @@ void feRecovery::estimateError(std::vector<double> &norm, feFunction *solRef){
         }        
       }
 
-      norm[0] += J[_nQuad*iElm+k] * w[k] * pow( uReconstruit - _intSpace->interpolateSolutionAtQuadNode(k), 2);
+      norm[0] += J[nQuad*iElm+k] * w[k] * pow( uReconstruit - _intSpace->interpolateSolutionAtQuadNode(k), 2);
       if(solRef)
-        norm[1] += J[_nQuad*iElm+k] * w[k] * pow( uReconstruit - solRef->eval(0,x), 2);
+        norm[1] += J[nQuad*iElm+k] * w[k] * pow( uReconstruit - solRef->eval(0,x), 2);
     }
 
   }

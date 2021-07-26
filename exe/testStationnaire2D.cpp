@@ -33,7 +33,7 @@ int main(int argc, char** argv){
   feFunction *funSol    = new feFunction(fSol,    {kd});
   feFunction *funSource = new feFunction(fSource, {kd});
 
-  int nIter = 4;
+  int nIter = 1;
   std::vector<double> normL2(2*nIter, 0.0);
   std::vector<int> nElm(nIter, 0);
 
@@ -44,12 +44,12 @@ int main(int argc, char** argv){
     nElm[iter] = mesh->getNbInteriorElems();
     // mesh->printInfo();
 
-    feSpace1DP1  U_angle   = feSpace1DP1(mesh, "U", "Angle",  funSol);
-    feSpace1DP1  U_haut    = feSpace1DP1(mesh, "U", "Haut",   funSol);
-    feSpace1DP1  U_gauche  = feSpace1DP1(mesh, "U", "Gauche", funSol);
-    feSpaceTriP1 U_surface = feSpaceTriP1(mesh, "U", "Surface", funSol);
+    feSpace1DP2  U_angle   = feSpace1DP2(mesh, "U", "Angle",  funSol);
+    feSpace1DP2  U_haut    = feSpace1DP2(mesh, "U", "Haut",   funSol);
+    feSpaceTriP2 U_surface = feSpaceTriP2(mesh, "U", "Surface", funSol);
+    feSpace1DP2  U_gauche  = feSpace1DP2(mesh, "U", "Gauche", funSol);
 
-    std::vector<feSpace*> fespace = {&U_angle, &U_haut, &U_gauche, &U_surface};
+    std::vector<feSpace*> fespace = {&U_angle, &U_surface, &U_haut, &U_gauche};
     std::vector<feSpace*> feEssBC = {&U_angle, &U_haut, &U_gauche};
 
     feMetaNumber *metaNumber = new feMetaNumber(mesh, fespace, feEssBC);
@@ -58,16 +58,16 @@ int main(int argc, char** argv){
     feSolution *sol = new feSolution(mesh, fespace, feEssBC, metaNumber);
 
     // Formes (bi)lineaires
-    int nQuad = 16; // TODO : change to deg
+    int dQuad = 5; // TODO : change to deg
     std::vector<feSpace*> spaceDiffusion2D_U = {&U_surface};
-    feBilinearForm *diffU = new feBilinearForm(spaceDiffusion2D_U, mesh, nQuad, new feSysElm_2D_Diffusion(kd, nullptr));
+    feBilinearForm *diffU = new feBilinearForm(spaceDiffusion2D_U, mesh, dQuad, new feSysElm_2D_Diffusion(kd, nullptr));
     std::vector<feSpace*> spaceSource2D_U = {&U_surface};
-    feBilinearForm *sourceU = new feBilinearForm(spaceSource2D_U, mesh, nQuad, new feSysElm_2D_Source(1.0, funSource));
+    feBilinearForm *sourceU = new feBilinearForm(spaceSource2D_U, mesh, dQuad, new feSysElm_2D_Source(1.0, funSource));
 
     std::vector<feBilinearForm*> formMatrices  = {diffU};
     std::vector<feBilinearForm*> formResiduals  = {diffU, sourceU};
 
-    feNorm *norm = new feNorm(&U_surface, mesh, nQuad, funSol);
+    feNorm *norm = new feNorm(&U_surface, mesh, dQuad, funSol);
     std::vector<feNorm*> norms = {norm};
 
     feLinearSystemPETSc *linearSystem = new feLinearSystemPETSc(argc, argv, formMatrices, formResiduals, metaNumber, mesh);    
@@ -78,8 +78,8 @@ int main(int argc, char** argv){
 
     // sol->initializeUnknowns(mesh, metaNumber);
 
-    // std::string vtkFile = "../../data/square" + std::to_string(iter+1) + ".vtk";
-    // feExporterVTK writer(vtkFile, mesh, sol, metaNumber, fespace);
+    std::string vtkFile = "../../data/square" + std::to_string(iter+1) + ".vtk";
+    feExporterVTK writer(vtkFile, mesh, sol, metaNumber, fespace);
 
     delete norm;
     delete linearSystem;

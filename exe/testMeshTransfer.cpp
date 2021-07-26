@@ -54,14 +54,14 @@ int main(int argc, char** argv){
     nElm[iter] = mesh->getNbInteriorElems();
     // mesh->printInfo();
 
-    feSpace1DP3  U_angle   =  feSpace1DP3(mesh, "U", "Angle",   funSol);
-    feSpace1DP3  U_haut    =  feSpace1DP3(mesh, "U", "Haut",    funSol);
-    feSpace1DP3  U_gauche  =  feSpace1DP3(mesh, "U", "Gauche",  funSol);
-    feSpaceTriP3 U_surface = feSpaceTriP3(mesh, "U", "Surface", funSol);
-    feSpace1DP3  V_angle   =  feSpace1DP3(mesh, "V", "Angle",   funSol);
-    feSpace1DP3  V_haut    =  feSpace1DP3(mesh, "V", "Haut",    funSol);
-    feSpace1DP3  V_gauche  =  feSpace1DP3(mesh, "V", "Gauche",  funSol);
-    feSpaceTriP3 V_surface = feSpaceTriP3(mesh, "V", "Surface", funSol);
+    feSpace1DP1    U_angle(mesh, "U", "Angle",   funSol);
+    feSpace1DP1     U_haut(mesh, "U", "Haut",    funSol);
+    feSpace1DP1   U_gauche(mesh, "U", "Gauche",  funSol);
+    feSpaceTriP1 U_surface(mesh, "U", "Surface", funSol);
+    feSpace1DP1    V_angle(mesh, "V", "Angle",   funSol);
+    feSpace1DP1     V_haut(mesh, "V", "Haut",    funSol);
+    feSpace1DP1   V_gauche(mesh, "V", "Gauche",  funSol);
+    feSpaceTriP1 V_surface(mesh, "V", "Surface", funSol);
 
     std::vector<feSpace*> fespace = {&U_angle, &U_haut, &U_gauche, &U_surface,
                                      &V_angle, &V_haut, &V_gauche, &V_surface};
@@ -95,21 +95,33 @@ int main(int argc, char** argv){
     linearSystem->initialize();
 
     feTolerances tol{1e-9, 1e-8, 3};
-    solveStationary(&normL2[2*iter], tol, metaNumber, linearSystem, formMatrices, formResiduals, sol, norms, mesh);
+    StationarySolver solver(tol, metaNumber, linearSystem, sol, norms, mesh);
+    solver.makeSteps(0, fespace);
+    normL2[2*iter] = solver.getNorm(0);
+    // solveStationary(&normL2[2*iter], tol, metaNumber, linearSystem, formMatrices, formResiduals, sol, norms, mesh);
     linearSystem->finalize();
     // normL2_U[2*iter] = normU->getNorm();
     // normL2_V[2*iter] = normV->getNorm();
 
-    std::string otherMeshName = "../../data/square" + std::to_string(iter+2) + ".msh";
+    std::string vtkFile = "transferFrom.vtk";
+    feExporterVTK writerFrom(vtkFile, mesh, sol, metaNumber, fespace);
+
+    std::string otherMeshName = "../../data/square" + std::to_string(iter+3) + ".msh";
     feMesh2DP1 *otherMesh = new feMesh2DP1(otherMeshName, false);
-    feSpaceTriP3 U_surface2 = feSpaceTriP3(otherMesh, "U", "Surface", funZero);
-    std::vector<feSpace*> otherSpaces = {&U_surface2};
+    feSpaceTriP1 U_surface2(otherMesh, "U", "Surface", funZero);
+    feSpaceTriP1 V_surface2(otherMesh, "V", "Surface", funZero);
+    std::vector<feSpace*> otherSpaces = {&U_surface2, &V_surface2};
     std::vector<feSpace*> otherSpacesEss = {};
 
     feMetaNumber *otherMetaNumber = new feMetaNumber(otherMesh, otherSpaces, otherSpacesEss);
     feSolution *otherSol = new feSolution(otherMesh, otherSpaces, otherSpacesEss, otherMetaNumber);
 
-    mesh->transfer(otherMesh, metaNumber, otherMetaNumber, sol, otherSol, fespace, otherSpaces);
+    mesh->transfer(otherMesh, metaNumber, otherMetaNumber, solver.getSolutionContainer(), fespace, feEssBC, otherSpaces);
+
+    otherSol->setSolFromContainer(solver.getSolutionContainer(), 0);
+
+    vtkFile = "transferTo.vtk";
+    feExporterVTK writerTo(vtkFile, otherMesh, otherSol, otherMetaNumber, otherSpaces);
 
     delete normU;
     delete normV;

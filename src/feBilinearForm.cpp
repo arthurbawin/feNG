@@ -1,20 +1,45 @@
 #include "feBilinearForm.h"
 #include "feQuadrature.h"
 
-static inline void allocateMatrix(feInt m, feInt n, double*** A){
-  *A = (double**) calloc(m, sizeof **A);
-  if(*A == nullptr){
-    printf("In feBilinearForm::allocateMatrix : Error - NULL pointer.\n");
-    return;
-  }
-  for(feInt i = 0; i < m; ++i)
-    (*A)[i] = (double*) calloc(n, sizeof ***A);
+// static inline void allocateMatrix(feInt m, feInt n, double*** A){
+//   *A = (double**) calloc(m, sizeof **A);
+//   if(*A == nullptr){
+//     printf("In feBilinearForm::allocateMatrix : Error - NULL pointer.\n");
+//     return;
+//   }
+//   for(feInt i = 0; i < m; ++i)
+//     (*A)[i] = (double*) calloc(n, sizeof ***A);
+// }
+
+// static inline void setMatrixToZero(feInt m, feInt n, double*** A){
+//   for(feInt i = 0; i < m; ++i)
+//     for(feInt j = 0; j < n; ++j)
+//       (*A)[i][j] = 0.0;
+// };
+
+// static inline void freeMatrix(feInt m, double*** A){
+//   for(feInt i = 0; i < m; i++)
+//     free((*A)[i]);
+//   free(*A); 
+// }
+
+static inline double** allocateMatrix(feInt m, feInt n){
+  double*  p  = new double  [m*n];
+  double** A = new double* [m];
+  double*  q  = p;
+  for(feInt i = 0; i < m; i++, q += n)
+    A[i] = q;
+  return A;
 }
 
-static inline void setMatrixToZero(feInt m, feInt n, double*** A){
-  for(feInt i = 0; i < m; ++i)
-    for(feInt j = 0; j < n; ++j)
-      (*A)[i][j] = 0.0;
+static inline void setMatrixToZero(feInt m, feInt n, double** A){
+  for(feInt i = 0; i < m*n; ++i)
+    (*A)[i] = 0.0;
+}
+
+static inline void freeMatrix(feInt m, double** A){
+  delete [] A[0];
+  delete [] A;
 }
 
 static inline void printMatrix(feInt m, feInt n, double*** A){
@@ -22,12 +47,6 @@ static inline void printMatrix(feInt m, feInt n, double*** A){
     for(feInt j = 0; j < n; ++j)
       printf("A[%ld][%ld] = %+10.16e\n", i,j, (*A)[i][j]);
       // std::cout<<"A["<<i<<"]["<<j<<"] = "<<(*A)[i][j]<<std::endl;
-}
-
-static inline void freeMatrix(feInt m, double*** A){
-  for(feInt i = 0; i < m; i++)
-    free((*A)[i]);
-  free(*A); 
 }
 
 static inline void allocateResidual(feInt m, double** b){
@@ -88,7 +107,8 @@ feBilinearForm::feBilinearForm(std::vector<feSpace*> &space, feMesh *mesh, int d
   _adrI.resize(_niElm);
   _adrJ.resize(_njElm);
 
-  allocateMatrix(_niElm, _njElm, &_Ae);
+  _Ae = allocateMatrix(_niElm, _njElm);
+  // allocateMatrix(_niElm, _njElm, &_Ae);
   allocateResidual(_niElm, &_Be);
 
   // ==================================================================
@@ -108,7 +128,8 @@ feBilinearForm::feBilinearForm(std::vector<feSpace*> &space, feMesh *mesh, int d
 }
 
 feBilinearForm::~feBilinearForm(){
-    freeMatrix(_niElm, &_Ae);
+    // freeMatrix(_niElm, &_Ae);
+    freeMatrix(_niElm, _Ae);
     freeResidual(&_Be);
     freeResidual(&Rh);
     freeResidual(&R0);
@@ -166,7 +187,8 @@ void feBilinearForm::computeMatrix(feMetaNumber *metaNumber, feMesh *mesh, feSol
 
 void feBilinearForm::computeMatrixAnalytical(feMetaNumber *metaNumber, feMesh *mesh, feSolution *sol, int numElem) {
   this->initialize(metaNumber, mesh, sol, numElem);
-  setMatrixToZero(_niElm, _njElm, &_Ae);
+  // setMatrixToZero(_niElm, _njElm, &_Ae);
+  setMatrixToZero(_niElm, _njElm, _Ae);
   std::vector<double> &J = _cnc->getJacobians();
   _sysElm->computeAe(J, numElem, _intSpace, _geoSpace, _geoCoord, sol->getC0(), sol->getCurrentTime(), _Ae);
   // printMatrix(_niElm, _njElm, &_Ae);
@@ -189,7 +211,8 @@ void feBilinearForm::computeMatrixFiniteDifference(feMetaNumber *metaNumber, feM
 
   printf("feBilinearForm::computeMatrixFiniteDifference\n");
   this->initialize(metaNumber, mesh, sol, numElem);
-  setMatrixToZero(_niElm, _njElm, &_Ae);
+  // setMatrixToZero(_niElm, _njElm, &_Ae);
+  setMatrixToZero(_niElm, _njElm, _Ae);
 
   double C0 = sol->getC0();
   // ==================================================================

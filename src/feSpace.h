@@ -86,6 +86,7 @@ public:
   std::vector<double> &getQuadraturePoints(){ return _xQuad; }
 
   void initializeSolution(feSolution *sol);
+  void initializeSolution(std::vector<double> &sol);
   void initializeSolutionDot(feSolution *sol);
 
   virtual void initializeNumberingUnknowns(feNumber *number) = 0;
@@ -101,6 +102,7 @@ public:
   double interpolateField_rDerivative(std::vector<double> field, double r[3]);
   double interpolateFieldAtQuadNode_rDerivative(std::vector<double> field, int iNode);
   
+  double interpolateSolution(double r[3]);
   double interpolateSolutionAtQuadNode(int iNode);
   double interpolateSolutionAtQuadNode_rDerivative(int iNode);
   double interpolateSolutionAtQuadNode_sDerivative(int iNode);

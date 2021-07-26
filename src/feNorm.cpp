@@ -45,7 +45,10 @@ void feNorm::computeL2Norm(feMetaNumber *metaNumber, feSolution *sol, feMesh *me
         geoSpace->interpolateVectorFieldAtQuadNode_sDerivative(geoCoord, k, dxds);
         J = dxdr[0]*dxds[1] - dxdr[1]*dxds[0];
       }
-      solRef = _solRef->eval(t, x);
+
+      // solRef = _intSpace->evalFun(t, x);
+      solRef = (_solRef != nullptr) ? _solRef->eval(t, x) : 0.0;
+
       // printf("Solution at (%f,%f,%f) = %10.10f - ref = %10.10f\n", x[0], x[1], x[2], solInt, solRef);
       normL2 += (solInt - solRef)*(solInt - solRef) * J * w[k];
     }
