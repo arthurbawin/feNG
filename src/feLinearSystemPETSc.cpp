@@ -121,7 +121,7 @@ void feLinearSystemPETSc::initialize(){
   printf("In feLinearSystemPETSc::initialize() : Created a res vector of size %d\n", Nres);
   printf("In feLinearSystemPETSc::initialize() : Created a dx vector of size %d\n", Ndx);
   printf("In feLinearSystemPETSc::initialize() : Created a linSysRes vector of size %d\n", NlinSysRes);
-};
+}
 
 feLinearSystemPETSc::feLinearSystemPETSc(int argc, char** argv, std::vector<feBilinearForm*> &formMatrices, 
   std::vector<feBilinearForm*> &formResiduals, feMetaNumber *metaNumber, feMesh *mesh)
@@ -214,7 +214,6 @@ void feLinearSystemPETSc::assembleMatrices(feSolution *sol){
 
 void feLinearSystemPETSc::assembleResiduals(feSolution *sol){
   PetscErrorCode ierr;
-  PetscInt I;
   std::vector<PetscScalar> values;
   int sizeI;
   std::vector<int> niElm;

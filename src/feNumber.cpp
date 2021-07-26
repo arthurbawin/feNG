@@ -8,19 +8,14 @@ feNumber::feNumber(feMesh *mesh) : _nNod(mesh->getNbNodes()), _nEdg(mesh->getNbE
 
   // A global elem to edge map : if the global (line) elem is also an edge
   _elemToEdge.resize(_nElm, 0);
-  // int countElm = 0;
   for(auto const& cnc : mesh->getCncGeo()){
-    for(size_t iElm = 0; iElm < cnc->getNbElm(); ++iElm){
+    for(int iElm = 0; iElm < cnc->getNbElm(); ++iElm){
       if(cnc->getNbEdgePerElem() == 1){
         int iElmGlobal = cnc->getElementConnectivity(iElm);
         _elemToEdge[iElmGlobal] = cnc->getEdgeConnectivity(iElm,0);
-        // _elemToEdge[countElm++] = cnc->getEdgeConnectivity(iElm,0);
       }
     }
   }
-
-  // for(auto val : _elemToEdge)
-  //   std::cout<<"elemToEdge = "<<val<<std::endl;
 
   _nDOFVertices.resize(_nNod);
   _nDOFElements.resize(_nElm);
@@ -30,7 +25,7 @@ feNumber::feNumber(feMesh *mesh) : _nNod(mesh->getNbNodes()), _nEdg(mesh->getNbE
   _codeDOFEdges.resize(_nEdg, -3);
 
   // TODO : Ajouter une b-rep et verifier la compatibilite des feSpace frontieres
-};
+}
 
 void feNumber::defDDLSommet(feMesh *mesh, std::string cncGeoID, int numElem, int numVertex){
   int vert = mesh->getVertex(cncGeoID, numElem, numVertex);
@@ -220,11 +215,11 @@ feMetaNumber::feMetaNumber(feMesh *mesh, const std::vector<feSpace*> &space, con
     globalNum = _numberings[_fieldIDs[i]]->numberEssential(globalNum);
   }
   _nDofs = globalNum;
-};
+}
 
 feMetaNumber::~feMetaNumber() {
   // Delete all numberings
   for(std::map<std::string, feNumber*>::iterator it = _numberings.begin(); it != _numberings.end(); ++it){
-    delete it->second; // delete le feNumber associé à it
+    delete it->second;
   }
 }

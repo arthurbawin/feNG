@@ -236,8 +236,7 @@ void metricHechtKuate(int nbpoints, double* x, double* y, double &A, double &B, 
 
   double X0, Y0;
   double bmin= 0.,bmax=inf,b1,b2,aik=0.,bik=0.,cik=0.;
-  double Xk=0.,Yk=0.,Ck=0.,Ak =0.,Bk=0.,Xi=0.,Yi=0.,ri,detXY=0.,Ri,R0,r0;
-
+  double Xk=0.,Yk=0.,Ck=0.,Bk=0.,Xi=0.,Yi=0.,ri,detXY=0.,Ri,R0,r0;
 
   X0 = x[0];
   Y0 = y[0];
@@ -250,29 +249,6 @@ void metricHechtKuate(int nbpoints, double* x, double* y, double &A, double &B, 
   //std::cout<<" Rmin = "<<Rmin<<" Rmax =  "<<Rmax<<std::endl;
 
   double EPS = 0.0;// pour recuperer la valeur de epsilon0 optimale
-  double epsilonmax = r0*(1.-r0/Rmax)/20.;
-
-  // double Tabepsilon[20];
-
-  // int neps =4;
-  // //--------- discertisation de epsilon0----------------------------------
-  // if(epsilonmax>1e-2){
-  //     neps=10;
-
-  //     Tabepsilon[0]=1e-5;
-  //     Tabepsilon[1]=1e-4;
-  //     Tabepsilon[2]=1e-3;
-  //     for(int i=3;i<neps;i++){
-  //         Tabepsilon[i]=(i-3)*(epsilonmax-1e-2)/(neps-4.) +1e-2;
-  //     }
-  // }
-  // else{
-  //     Tabepsilon[0]=1e-5;
-  //     Tabepsilon[1]=1e-4;
-  //     Tabepsilon[2]=1e-3;
-  //     Tabepsilon[3]=1e-2;
-  // }
-  //------------------------------------------------------------------------
 
   int condition = -1;
 
@@ -492,15 +468,15 @@ void metricHechtKuate(int nbpoints, double* x, double* y, double &A, double &B, 
 
 void feMetric::metriqueSimplexe2D(int nPhi, std::vector<double> phi, std::vector<double> erreur, double &A, double &B, double &C, int max_iter){
     
-    double xi, yi, xj, yj, l1, l2, v11, v12, v21, v22, Q11, Q12, Q21, Q22;
+    double xi, yi, xj, yj, Q11, Q12, Q21, Q22;
     double err, normeXj;
     double L1, L2, L3, expL11, expL12, expL21, expL22;
     double Aprev, Bprev, Cprev;
     // Variables LAPACK
-    char jobz='v', uplo='l';
-    const int n=2, lwork=18;
-    int info;
-    double w[2], work[18];
+    // char jobz='v', uplo='l';
+    // const int n=2, lwork=18;
+    // int info;
+    // double w[2], work[18];
 
     SVector3 v0, v1, v2;
 

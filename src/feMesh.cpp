@@ -183,7 +183,7 @@ feMesh1DP1::feMesh1DP1(double xA, double xB, int nElm, std::string bndA_ID, std:
     cnc->setMeshPtr(this);
     cnc->getFeSpace()->setMeshPtr(this);
   }
-};
+}
 
 feMesh1DP1::~feMesh1DP1(){
   for(feCncGeo *cnc : _cncGeo){

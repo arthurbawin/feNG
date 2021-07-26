@@ -13,8 +13,6 @@ void feSysElm_1D_Source::computeBe(std::vector<double> &J, int numElem, std::vec
   int                nG = geoSpace->getNbQuadPoints();
   std::vector<double> w = geoSpace->getQuadratureWeights();
   int        nFunctions = intSpace[_idU]->getNbFunctions();
-  int               dim = intSpace[_idU]->getDim();
-  int      nNodePerElem = intSpace[_idU]->getNbNodePerElem();
 
   std::vector<double> x(3,0.0);
 
@@ -44,8 +42,6 @@ void feSysElm_1D_Diffusion::computeAe(std::vector<double> &J, int numElem, std::
   std::vector<double> w = geoSpace->getQuadratureWeights();
   double             kD = _par;
   int        nFunctions = intSpace[_idU]->getNbFunctions();
-  int               dim = intSpace[_idU]->getDim();
-  int      nNodePerElem = intSpace[_idU]->getNbNodePerElem();
 
   double jac;
   for(int k = 0; k < nG; ++k){
@@ -69,8 +65,6 @@ void feSysElm_1D_Diffusion::computeBe(std::vector<double> &J, int numElem, std::
   std::vector<double> w = geoSpace->getQuadratureWeights();
   double             kD = _par;
   int        nFunctions = intSpace[_idU]->getNbFunctions();
-  int               dim = intSpace[_idU]->getDim();
-  int      nNodePerElem = intSpace[_idU]->getNbNodePerElem();
 
   double jac, dudx;
   for(int k = 0; k < nG; ++k){
@@ -102,8 +96,6 @@ void feSysElm_1D_Masse::computeAe(std::vector<double> &J, int numElem, std::vect
   std::vector<double> w = geoSpace->getQuadratureWeights();
   double            rho = _par;
   int        nFunctions = intSpace[_idU]->getNbFunctions();
-  int               dim = intSpace[_idU]->getDim();
-  int      nNodePerElem = intSpace[_idU]->getNbNodePerElem();
 
   double jac;
   for(int k = 0; k < nG; ++k){
@@ -125,8 +117,6 @@ void feSysElm_1D_Masse::computeBe(std::vector<double> &J, int numElem, std::vect
   std::vector<double> w = geoSpace->getQuadratureWeights();
   double            rho = _par;
   int        nFunctions = intSpace[_idU]->getNbFunctions();
-  int               dim = intSpace[_idU]->getDim();
-  int      nNodePerElem = intSpace[_idU]->getNbNodePerElem();
 
   double jac, uDot;
   for(int k = 0; k < nG; ++k){
@@ -156,8 +146,6 @@ void feSysElm_2D_Source::computeBe(std::vector<double> &J, int numElem, std::vec
   int                nG = geoSpace->getNbQuadPoints();
   std::vector<double> w = geoSpace->getQuadratureWeights();
   int        nFunctions = intSpace[_idU]->getNbFunctions();
-  // int               dim = intSpace[_idU]->getDim();
-  // int      nNodePerElem = intSpace[_idU]->getNbNodePerElem();
 
   double jac;
   for(int k = 0; k < nG; ++k){
@@ -190,8 +178,6 @@ void feSysElm_2D_Diffusion::computeAe(std::vector<double> &Ja, int numElem, std:
   std::vector<double> w = geoSpace->getQuadratureWeights();
   double             kD = _par;
   int        nFunctions = intSpace[_idU]->getNbFunctions();
-  // int               dim = intSpace[_idU]->getDim();
-  // int      nNodePerElem = intSpace[_idU]->getNbNodePerElem();
 
   double J;
   for(int k = 0; k < nG; ++k){
@@ -228,8 +214,6 @@ void feSysElm_2D_Diffusion::computeBe(std::vector<double> &Ja, int numElem, std:
   std::vector<double> w = geoSpace->getQuadratureWeights();
   double             kD = _par;
   int        nFunctions = intSpace[_idU]->getNbFunctions();
-  // int               dim = intSpace[_idU]->getDim();
-  // int      nNodePerElem = intSpace[_idU]->getNbNodePerElem();
 
   double J, dudx, dudy;
   for(int k = 0; k < nG; ++k){
@@ -281,13 +265,11 @@ void feSysElm_2D_Stokes::computeBe(std::vector<double> &Ja, int numElem, std::ve
   // On prend les poids de geoSpace, ok pour le jacobien seulement ?
   int                nG = geoSpace->getNbQuadPoints(); 
   std::vector<double> w = geoSpace->getQuadratureWeights();
-  double             rho = _par[0];
+  // double             rho = _par[0];
   double              mu = _par[1];
   int        nFunctionsU = intSpace[_idU]->getNbFunctions();
   int        nFunctionsV = intSpace[_idV]->getNbFunctions();
   int        nFunctionsP = intSpace[_idP]->getNbFunctions();
-  // int               dim = intSpace[_idU]->getDim();
-  // int      nNodePerElem = intSpace[_idU]->getNbNodePerElem();
 
   double J, u, v, p, dudx, dudy, dvdx, dvdy, Sxx, Sxy, Syx, Syy;
   std::vector<double> x(3, 0.);
@@ -362,20 +344,18 @@ void feSysElm_2D_Stokes::computeAe(std::vector<double> &Ja, int numElem, std::ve
   // On prend les poids de geoSpace, ok pour le jacobien seulement ?
   int                nG = geoSpace->getNbQuadPoints(); 
   std::vector<double> w = geoSpace->getQuadratureWeights();
-  double             rho = _par[0];
+  // double             rho = _par[0];
   double              mu = _par[1];
   int        nFunctionsU = intSpace[_idU]->getNbFunctions();
   int        nFunctionsV = intSpace[_idV]->getNbFunctions();
   int        nFunctionsP = intSpace[_idP]->getNbFunctions();
-  // int               dim = intSpace[_idU]->getDim();
-  // int      nNodePerElem = intSpace[_idU]->getNbNodePerElem();
 
-  double jac, u, v, p, dudx, dudy, dvdx, dvdy, Sxx, Sxy, Syx, Syy;
+  double jac, dudx, dudy, dvdx, dvdy;
   std::vector<double> x(3, 0.);
-  std::vector<double> f(2, 0.); // Forces volumiques
+  std::vector<double> f(2, 0.); // Body forces
 
   for(int k = 0; k < nG; ++k){
-    // Forces volumiques
+    // Body forces
     geoSpace->interpolateVectorFieldAtQuadNode(geoCoord, k, x);
     if(_fct != nullptr) _fct->eval(tn, x, f);
 
@@ -390,10 +370,6 @@ void feSysElm_2D_Stokes::computeAe(std::vector<double> &Ja, int numElem, std::ve
     double drdy = -dxds[0]/jac;
     double dsdx = -dxdr[1]/jac;
     double dsdy =  dxdr[0]/jac;
-
-    // u = intSpace[_idU]->interpolateSolutionAtQuadNode(k);
-    // v = intSpace[_idV]->interpolateSolutionAtQuadNode(k);
-    // p = intSpace[_idP]->interpolateSolutionAtQuadNode(k);
 
     dudx = intSpace[_idU]->interpolateSolutionAtQuadNode_rDerivative(k) * drdx +
            intSpace[_idU]->interpolateSolutionAtQuadNode_sDerivative(k) * dsdx;
@@ -477,8 +453,6 @@ void feSysElm_2D_NavierStokes::computeBe(std::vector<double> &Ja, int numElem, s
   int        nFunctionsU = intSpace[_idU]->getNbFunctions();
   int        nFunctionsV = intSpace[_idV]->getNbFunctions();
   int        nFunctionsP = intSpace[_idP]->getNbFunctions();
-  // int               dim = intSpace[_idU]->getDim();
-  // int      nNodePerElem = intSpace[_idU]->getNbNodePerElem();
 
   double J, u, v, p, dudt, dvdt, dudx, dudy, dvdx, dvdy, Sxx, Sxy, Syx, Syy;
   std::vector<double> x(3, 0.);
@@ -561,10 +535,8 @@ void feSysElm_2D_NavierStokes::computeAe(std::vector<double> &Ja, int numElem, s
   int        nFunctionsU = intSpace[_idU]->getNbFunctions();
   int        nFunctionsV = intSpace[_idV]->getNbFunctions();
   int        nFunctionsP = intSpace[_idP]->getNbFunctions();
-  // int               dim = intSpace[_idU]->getDim();
-  // int      nNodePerElem = intSpace[_idU]->getNbNodePerElem();
 
-  double jac, u, v, p, dudt, dvdt, dudx, dudy, dvdx, dvdy, Sxx, Sxy, Syx, Syy;
+  double jac, u, v, dudt, dvdt, dudx, dudy, dvdx, dvdy;
   std::vector<double> x(3, 0.);
   std::vector<double> f(2, 0.); // Forces volumiques
 
@@ -587,7 +559,6 @@ void feSysElm_2D_NavierStokes::computeAe(std::vector<double> &Ja, int numElem, s
 
     u = intSpace[_idU]->interpolateSolutionAtQuadNode(k);
     v = intSpace[_idV]->interpolateSolutionAtQuadNode(k);
-    // p = intSpace[_idP]->interpolateSolutionAtQuadNode(k);
 
     dudt = intSpace[_idU]->interpolateSolutionDotAtQuadNode(k);
     dvdt = intSpace[_idV]->interpolateSolutionDotAtQuadNode(k);

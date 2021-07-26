@@ -65,7 +65,7 @@ StationarySolver::StationarySolver(feTolerances tol, feMetaNumber *metaNumber, f
   _normL2.resize(norms.size());
   for(auto &n : _normL2)
     n.resize(1, 0.);
-};
+}
 
 void StationarySolver::makeSteps(int nSteps, std::vector<feSpace*> &spaces){
   printf("StationarySolver : Advancing %d steps\n", nSteps);
@@ -151,7 +151,7 @@ void solveBDF2(std::vector<double> &normL2, feTolerances tol, feMetaNumber *meta
     sol->setSolFromContainer(solBDF2);
     // norm->computeL2Norm(metaNumber, sol, mesh);
     // normL2[iTime] = norm->getNorm();
-    int cnt = 0;
+    // int cnt = 0;
     for(auto *norm : norms){
       norm->computeL2Norm(metaNumber, sol, mesh);
       normL2[iTime] = norm->getNorm(); // TODO : fix this
@@ -179,7 +179,7 @@ BDF2Solver::BDF2Solver(feTolerances tol, feMetaNumber *metaNumber, feLinearSyste
     n.resize(_nTimeSteps, 0.);
 
   printf("Initializing BDF2 solver : integrating from t0 = %f to tEnd = %f in %d steps\n", _t0, _tEnd, _nTimeSteps);
-};
+}
 
 void BDF2Solver::makeSteps(int nSteps, std::vector<feSpace*> &spaces){
 
@@ -275,7 +275,7 @@ void solveDC3(std::vector<double> &normL2BDF2, std::vector<double> &normL2DC3,fe
 
   std::string vtkFile = "../../data/VK/cylindre" + std::to_string(0) + ".vtk";
   feExporterVTK writer(vtkFile, mesh, sol, metaNumber, spaces);
-  int cnt = 0;
+  // int cnt = 0;
   for(auto *norm : norms){
     norm->computeL2Norm(metaNumber, sol, mesh);
     normL2BDF2[0] = norm->getNorm();
@@ -313,7 +313,7 @@ void solveDC3(std::vector<double> &normL2BDF2, std::vector<double> &normL2DC3,fe
     std::string vtkFile = "../../data/VK/cylindre" + std::to_string(iTime) + ".vtk";
     feExporterVTK writer(vtkFile, mesh, sol, metaNumber, spaces);
 
-    int cnt = 0;
+    // int cnt = 0;
     for(auto *norm : norms){
       norm->computeL2Norm(metaNumber, sol, mesh);
       normL2BDF2[iTime] = norm->getNorm();
@@ -355,7 +355,7 @@ void solveDC3(std::vector<double> &normL2BDF2, std::vector<double> &normL2DC3,fe
     std::string vtkFile = "../../data/VK/cylindre" + std::to_string(iTime) + ".vtk";
     feExporterVTK writer(vtkFile, mesh, sol, metaNumber, spaces);
 
-    int cnt = 0;
+    // int cnt = 0;
     for(auto *norm : norms){
       norm->computeL2Norm(metaNumber, sol, mesh);
       normL2BDF2[iTime] = norm->getNorm();

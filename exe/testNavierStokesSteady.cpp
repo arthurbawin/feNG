@@ -35,7 +35,7 @@ double fSolV(const double t, const std::vector<double> &pos, const std::vector<d
 double fSolP(const double t, const std::vector<double> &pos, const std::vector<double> &par){
   double x = pos[0];
   double y = pos[1];
-  double rho = par[0];
+  // double rho = par[0];
   double F = exp(-2.0*t);
   return F * F * 1.0/4.0 * (cos(2.*x) + cos(2.*y)); // Taylor-Green
   // return pow(x,4) * pow(y,4);
@@ -50,9 +50,9 @@ double fZero(const double t, const std::vector<double> &pos, const std::vector<d
 }
 
 void fSource(const double t, const std::vector<double> &pos, const std::vector<double> &par, std::vector<double> &res){
-  double rho = par[0];
-  double mu = par[1];
-  double nu = mu/rho;
+  // double rho = par[0];
+  // double mu = par[1];
+  // double nu = mu/rho;
   double x = pos[0];
   double y = pos[1];
 

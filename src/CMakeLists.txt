@@ -66,14 +66,3 @@ set(feNG_API
 )
 
 feNG_add_library(feNG "${feNG_SRC}" "${feNG_API}")
-
-# if(ENABLE_PETSC)
-#   list(APPEND feNG_SRC feLinearSystemPETSc.cpp)
-#   list(APPEND feNG_API feLinearSystemPETSc.h)
-# endif()
-# if(ENABLE_MKL)
-#   list(APPEND feNG_SRC feLinearSystemPardiso.cpp)
-#   list(APPEND feNG_API feLinearSystemPardiso.h)
-# endif()
-
-
