@@ -19,13 +19,11 @@ public:
 	    // ================================================================	
     	if(ddlNumberOfElements!=NULL) delete [] ddlNumberOfElements;
     	if(ddlBiLinearForms != NULL) {
-    		
     		if(ddlBiLinearForms[0] != NULL) delete [] ddlBiLinearForms[0];
     		delete [] ddlBiLinearForms;
     	}
     	
     	if(ddlElms != NULL) {
-    		
     		if(ddlElms[0] != NULL) delete [] ddlElms[0];
     		delete [] ddlElms;
     	}

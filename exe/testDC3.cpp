@@ -12,7 +12,7 @@
 #include "feSysElm.h"
 #include "feBilinearForm.h"
 #include "feSolver.h"
-
+#define USING_PETSC
 #ifdef HAVE_PETSC 
 #include "feLinearSystemPETSc.h"
 #endif
@@ -33,6 +33,9 @@ double fSource(const double t, const std::vector<double> &x, const std::vector<d
 }
 
 int main(int argc, char** argv){
+  #ifdef USING_PETSC
+    petscInitialize(argc,argv);
+  #endif 
   double xa = 0.;
   double xb = 5.;
 
@@ -41,7 +44,7 @@ int main(int argc, char** argv){
   feFunction *funSol = new feFunction(fSol, par);
   feFunction *funSource = new feFunction(fSource, par);
 
-  int nIter = 2;
+  int nIter = 5;
   std::vector<double> maxNormL2BDF(2*nIter, 0.0);
   std::vector<double> maxNormL2DC3(2*nIter, 0.0);
   std::vector<int> nElm(nIter, 0);
@@ -112,6 +115,8 @@ int main(int argc, char** argv){
   printf("%12s \t %12s \t %12s\t %12s \t %12s\n", "nElm", "||E-BDF||", "Taux BDF2", "||E-DC3||", "Taux DC3");
   for(int i = 0; i < nIter; ++i)
     printf("%12d \t %12.6e \t %12.6e\t %12.6e \t %12.6e\n", nElm[i], maxNormL2BDF[2*i], maxNormL2BDF[2*i+1], maxNormL2DC3[2*i], maxNormL2DC3[2*i+1]);
-
+  #ifdef USING_PETSC 
+    petscFinalize();
+  #endif  
   return 0;
 }

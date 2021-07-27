@@ -34,7 +34,8 @@ void feNorm::computeL2Norm(feMetaNumber *metaNumber, feSolution *sol, feMesh *me
 
       std::vector<double> x(3,0.0);
       geoSpace->interpolateVectorFieldAtQuadNode(geoCoord, k, x);
-      if(dim == 1){
+      if(dim==0){J=1.;}
+      else if(dim == 1){
         std::vector<double> j(3, 0.0);
         geoSpace->interpolateVectorFieldAtQuadNode_rDerivative(geoCoord, k, j); // TODO : complete for dim > 1
         J = j[0];
@@ -45,7 +46,7 @@ void feNorm::computeL2Norm(feMetaNumber *metaNumber, feSolution *sol, feMesh *me
         geoSpace->interpolateVectorFieldAtQuadNode_sDerivative(geoCoord, k, dxds);
         J = dxdr[0]*dxds[1] - dxdr[1]*dxds[0];
       }
-
+      else{}
       // solRef = _intSpace->evalFun(t, x);
       solRef = (_solRef != nullptr) ? _solRef->eval(t, x) : 0.0;
 

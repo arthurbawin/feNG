@@ -1,5 +1,81 @@
 #include <feSysElm.h>
 
+void feSysElm_0D_Masse::createElementarySystem(std::vector<feSpace*> &space){
+  // _idU = 0;
+  _iVar.resize(space.size());
+  _jVar.resize(space.size());
+  for(int i=0; i<space.size(); i++){
+    _iVar[i]=i;
+    _jVar[i]=i;
+  }
+}
+
+void feSysElm_0D_Masse::computeAe(std::vector<double> &J, int numElem, std::vector<feSpace*> &intSpace, feSpace *geoSpace, 
+  std::vector<double> &geoCoord, double c0, double tn, double** Ae){
+  // int                nG = geoSpace->getNbQuadPoints();
+  std::vector<double> w = geoSpace->getQuadratureWeights();
+  double            rho = _par;
+  // int        nFunctions = intSpace[_idU]->getNbFunctions();
+
+  for(int i = 0; i < intSpace.size(); ++i){
+        Ae[i][i] = rho * c0;
+  }    
+    
+}
+
+void feSysElm_0D_Masse::computeBe(std::vector<double> &J, int numElem, std::vector<feSpace*> &intSpace, feSpace *geoSpace, 
+  std::vector<double> &geoCoord, double c0, double tn, double* Be){
+  // int                nG = geoSpace->getNbQuadPoints();
+  std::vector<double> w = geoSpace->getQuadratureWeights();
+  double            rho = _par;
+  // int        nFunctions = intSpace[_idU]->getNbFunctions();
+
+  double uDot;
+  
+  for(int i = 0; i < intSpace.size(); ++i){
+    uDot = intSpace[i]->interpolateSolutionDotAtQuadNode(0);
+    Be[i] -=   rho * uDot ;
+  }    
+}
+
+void feSysElm_0D_Source::createElementarySystem(std::vector<feSpace*> &space){
+  _idU = 0;
+  _feU.resize(space[_idU]->getNbFunctions());
+}
+
+void feSysElm_0D_Source::computeBe(std::vector<double> &J, int numElem, std::vector<feSpace*> &intSpace, feSpace *geoSpace, 
+  std::vector<double> &geoCoord, double c0, double tn, double* Be){
+  // int                nG = geoSpace->getNbQuadPoints();
+  std::vector<double> w = geoSpace->getQuadratureWeights();
+  int        nFunctions = intSpace[_idU]->getNbFunctions();
+   std::vector<double> x(3,0.0);
+  double S = _fct->eval(tn,x)
+  ;
+  Be[0] -=  S ;
+}
+
+void feSysElm_0D_Source_crossed::createElementarySystem(std::vector<feSpace*> &space){
+  _iVar.resize(space.size());
+  _jVar.resize(space.size());
+  for(int i=0; i<space.size(); i++){
+    _iVar[i]=i;
+    _jVar[i]=i;
+  }
+}
+
+void feSysElm_0D_Source_crossed::computeBe(std::vector<double> &J, int numElem, std::vector<feSpace*> &intSpace, feSpace *geoSpace, 
+  std::vector<double> &geoCoord, double c0, double tn, double* Be){
+  // int                nG = geoSpace->getNbQuadPoints();
+  std::vector<double> w = geoSpace->getQuadratureWeights();
+  // int        nFunctions = intSpace[_idU]->getNbFunctions();
+  std::vector<double> x(3,0.0);
+  std::vector<double> f(intSpace.size(),0);
+  if(_fct != nullptr) _fct->eval(tn,x,f);
+  for(int i=0;i<intSpace.size();i++){
+    Be[i] = -f[i]; 
+  }
+}
+
 void feSysElm_1D_Source::createElementarySystem(std::vector<feSpace*> &space){
   _idU = 0;
   _iVar[0] = _idU;

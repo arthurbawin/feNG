@@ -4,7 +4,7 @@
 // Constructeur de la classe de base CSR
 // ====================================================================
 feCompressedRowStorage::feCompressedRowStorage(feMetaNumber *metaNumber, feMesh *mesh, std::vector<feBilinearForm*> &formMatrices){
-  ordre = (feInt) metaNumber->getNbUnknowns();
+  ordre = (feInt) metaNumber->getNbUnknowns(); 
   nnz   = new feInt [ordre];
 
   ddlNumberOfElements = new feInt [ordre];  // à initialiser à zéro
@@ -48,7 +48,7 @@ feCompressedRowStorage::feCompressedRowStorage(feMetaNumber *metaNumber, feMesh 
   }
 
   ptr = new feInt [totalNumberOfElements];
-  for(feInt i=0;i<ordre;i++)    {
+  for(feInt i=0;i<ordre;i++)    { 
     ddlElms[i]=ptr;
     ptr+=ddlNumberOfElements[i];
   }
