@@ -6,10 +6,9 @@
 #include "petscksp.h"
 
 class feLinearSystemPETSc : public feLinearSystem {
-
 protected:
   int _argc;
-  char** _argv;
+  char **_argv;
   PetscInt _nInc;
   PetscInt _nDofs;
   Mat _A;
@@ -19,10 +18,12 @@ protected:
 
   KSP ksp;
   PC preconditioner;
+
 public:
-  feLinearSystemPETSc(int argc, char** argv, std::vector<feBilinearForm*> &formMatrices, 
-    std::vector<feBilinearForm*> &formResiduals, feMetaNumber *metaNumber, feMesh *mesh);
-	virtual ~feLinearSystemPETSc();
+  feLinearSystemPETSc(int argc, char **argv, std::vector<feBilinearForm *> &formMatrices,
+                      std::vector<feBilinearForm *> &formResiduals, feMetaNumber *metaNumber,
+                      feMesh *mesh);
+  virtual ~feLinearSystemPETSc();
 
   virtual void initialize();
   virtual void finalize();
@@ -41,7 +42,7 @@ public:
 };
 
 // To call at the very beginning and the very end of the program
-void petscInitialize(int argc, char** argv);
+void petscInitialize(int argc, char **argv);
 void petscFinalize();
 
 #endif

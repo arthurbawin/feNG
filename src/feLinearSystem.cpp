@@ -87,8 +87,8 @@
 //             for(int j = 0; j < njElm; ++j){
 //               J = adrJ[j];
 //               if(J < _nInc){
-//                 ierr = MatSetValue(_A, I, J, Ae[njElm*i+j], ADD_VALUES); // TODO : assigner par blocs
-//                 CHKERRQ(ierr);
+//                 ierr = MatSetValue(_A, I, J, Ae[njElm*i+j], ADD_VALUES); // TODO : assigner par
+//                 blocs CHKERRQ(ierr);
 //               }
 //             }
 //           }
@@ -99,7 +99,7 @@
 //     ierr = MatAssemblyEnd(_A,MAT_FINAL_ASSEMBLY);   CHKERRQ(ierr);
 //   } // if(recomputeMatrix)
 //   // viewMatrix();
-  
+
 //   // MatView(_A,PETSC_VIEWER_STDOUT_WORLD);
 //   // VecView(_res,PETSC_VIEWER_STDOUT_WORLD);
 //   // PetscViewer    viewer;
@@ -108,7 +108,7 @@
 //   // PetscViewerPushFormat(viewer,PETSC_VIEWER_DRAW_LG);
 
 //   // MatOrderingType rtype = MATORDERINGRCM;
-//   // IS isrow,iscol;  //row and column permutations 
+//   // IS isrow,iscol;  //row and column permutations
 //   // MatGetOrdering(_A,rtype,&isrow,&iscol);
 //   // ISView(isrow,PETSC_VIEWER_STDOUT_WORLD);
 //   // Mat Aperm;
@@ -217,15 +217,15 @@
 //   // ierr = VecAXPY(x,-1.0,u);CHKERRQ(ierr);
 //   // ierr = VecNorm(x,NORM_2,&norm);CHKERRQ(ierr);
 //   // ierr = KSPGetIterationNumber(ksp,&its);CHKERRQ(ierr);
-//   // ierr = PetscPrintf(PETSC_COMM_WORLD,"Norm of error %g, Iterations %D\n",(double)norm,its);CHKERRQ(ierr);
-//   return ierr;
+//   // ierr = PetscPrintf(PETSC_COMM_WORLD,"Norm of error %g, Iterations
+//   %D\n",(double)norm,its);CHKERRQ(ierr); return ierr;
 // }
-  
+
 // PetscErrorCode feLinearSystem::finalize(){
 //   PetscErrorCode ierr;
 //   ierr = KSPDestroy(&ksp);  CHKERRQ(ierr);
 //   ierr = MatDestroy(&_A);   CHKERRQ(ierr);
-//   ierr = VecDestroy(&_res); CHKERRQ(ierr); 
+//   ierr = VecDestroy(&_res); CHKERRQ(ierr);
 //   ierr = VecDestroy(&_dx);  CHKERRQ(ierr);
 //   // ierr = PetscFinalize();
 //   return ierr;

@@ -6,8 +6,7 @@
 #include "feNumber.h"
 #include "feSolution.h"
 
-class feNorm{
-
+class feNorm {
 protected:
   feSpace *_intSpace;
   int cncGeoTag;
@@ -28,12 +27,13 @@ protected:
   feFunction *_solRef;
 
   double norm;
+
 public:
-	feNorm(feSpace *intSpace, feMesh *mesh, int degQuad, feFunction *solRef = nullptr);
+  feNorm(feSpace *intSpace, feMesh *mesh, int degQuad, feFunction *solRef = nullptr);
 
-	~feNorm() {}
+  ~feNorm() {}
 
-  double getNorm(){ return norm; }
+  double getNorm() { return norm; }
   void computeL2Norm(feMetaNumber *metaNumber, feSolution *sol, feMesh *mesh);
   void computeArea(feMetaNumber *metaNumber, feSolution *sol, feMesh *mesh);
   void computeIntegral(feMetaNumber *metaNumber, feSolution *sol, feMesh *mesh, feFunction *fun);
