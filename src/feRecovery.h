@@ -16,25 +16,24 @@
 #include <fstream>
 
 // A structure for the patches of elements around vertices of a connectivity
-class fePatch{
-
+class fePatch {
 protected:
   int _nVertices; // Number of mesh vertices = number of patches
   std::vector<int> _vertices; // The indices in mesh->_vertices
 
   int _nNodePerElm; // !!! Modifier pour nVert pour des P2+ geometriques ?
 
-  std::map<int,std::set<int>> vertToElems; // A set of element tags for each mesh vertex
+  std::map<int, std::set<int> > vertToElems; // A set of element tags for each mesh vertex
 
 public:
-	fePatch(feCncGeo *cnc);
-	~fePatch() {}
+  fePatch(feCncGeo *cnc);
+  ~fePatch() {}
 
-  std::vector<int> &getVertices(){ return _vertices; }
-  std::set<int> &getPatch(int iVertex){ return vertToElems[iVertex]; }
+  std::vector<int> &getVertices() { return _vertices; }
+  std::set<int> &getPatch(int iVertex) { return vertToElems[iVertex]; }
 };
 
-class feRecovery{
+class feRecovery {
 protected:
   int _degSol; // The degree of the FE solution : degree of recovery = deg of the FE solution +1
 
@@ -44,8 +43,8 @@ protected:
   int _dimRecovery;
   int _dimDerivation;
 
-  std::vector<int> _expXRecovery; 
-  std::vector<int> _expYRecovery; 
+  std::vector<int> _expXRecovery;
+  std::vector<int> _expYRecovery;
   std::vector<int> _expZRecovery;
   std::vector<int> _expX;
   std::vector<int> _expY;
@@ -61,14 +60,14 @@ protected:
   PetscScalar *valA;
   PetscScalar *valb;
 
-  std::map<int, std::map<int,std::vector<double>>> recoveryCoeff;   // #vert : {#rec , coeffs}  
-  std::map<int, std::map<int,std::vector<double>>> derivativeCoeff; // #vert : {#der , coeffs}
-  std::map<int, std::vector<double>> errorCoeff;                    // #vert : coeffs
+  std::map<int, std::map<int, std::vector<double> > > recoveryCoeff; // #vert : {#rec , coeffs}
+  std::map<int, std::map<int, std::vector<double> > > derivativeCoeff; // #vert : {#der , coeffs}
+  std::map<int, std::vector<double> > errorCoeff; // #vert : coeffs
 
 public:
   int _nElm;
   int _nNodePerElm;
-  
+
   feMetaNumber *_metaNumber;
   feMesh *_mesh;
   feSolution *_sol;
@@ -81,21 +80,19 @@ public:
 
 public:
   feRecovery(feMetaNumber *metaNumber, feSpace *space, feMesh *mesh, feSolution *sol,
-    std::vector<double> &norm, feFunction *solRef);
-  ~feRecovery(){
-    delete _patch;
-  }
+             std::vector<double> &norm, feFunction *solRef);
+  ~feRecovery() { delete _patch; }
 
-  int getDim(){ return _dim; }
-  int getDimRecovery(){ return _dimRecovery; }
-  int getDegreeSolution(){ return _degSol; }
+  int getDim() { return _dim; }
+  int getDimRecovery() { return _dimRecovery; }
+  int getDegreeSolution() { return _degSol; }
 
-  std::vector<int> &getVertices(){ return _patch->getVertices(); }
+  std::vector<int> &getVertices() { return _patch->getVertices(); }
 
-  std::vector<int> &getXExponentsRecovery(){ return _expXRecovery; }
-  std::vector<int> &getYExponentsRecovery(){ return _expYRecovery; }
-  std::vector<int> &getZExponentsRecovery(){ return _expZRecovery; }
-  std::map<int, std::vector<double>> &getErrorCoefficients(){ return errorCoeff; }
+  std::vector<int> &getXExponentsRecovery() { return _expXRecovery; }
+  std::vector<int> &getYExponentsRecovery() { return _expYRecovery; }
+  std::vector<int> &getZExponentsRecovery() { return _expZRecovery; }
+  std::map<int, std::vector<double> > &getErrorCoefficients() { return errorCoeff; }
 
   void allocateStructures();
   void freeStructures();

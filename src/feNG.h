@@ -24,17 +24,17 @@
 #include <utility>
 
 #if defined(HAVE_PETSC)
-  #include "petscsystypes.h"
+#include "petscsystypes.h"
 #endif
 
 #if defined(HAVE_PETSC)
-  typedef PetscInt64 feInt;
+typedef PetscInt64 feInt;
 #elif defined(HAVE_MKL)
-  typedef long int feInt;
-  typedef int fePardisoInt;
-  typedef long long int feMKLPardisoInt;
+typedef long int feInt;
+typedef int fePardisoInt;
+typedef long long int feMKLPardisoInt;
 #else
-  typedef long int feInt;
+typedef long int feInt;
 #endif
 
 // void log(){}

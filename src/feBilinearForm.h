@@ -10,14 +10,13 @@
 #include "feSolution.h"
 #include "feCncGeo.h"
 
-class feBilinearForm{
-
+class feBilinearForm {
 protected:
   feSysElm *_sysElm;
-  std::vector<feSpace*> _intSpace;
+  std::vector<feSpace *> _intSpace;
 
   feCncGeo *_cnc;
-  
+
   int _cncGeoTag;
   feSpace *_geoSpace;
   int _nCoord;
@@ -39,63 +38,76 @@ protected:
   std::vector<int> _adrI;
   std::vector<int> _adrJ;
 
-  double** _Ae;
-  double* _Be;
+  double **_Ae;
+  double *_Be;
 
   // ==================================================================
   // Pointeur sur la méthode de construction de la matrice élémentaire
   // (1) Utilisation d'une construction analytique
   // (2) Construction par la méthode des différences finies
   //     Utile pour : (i)  Pour développement rapide, mais
-  //                  (ii) Plus coûteux 
-  //     Utilise    : R0 le résidu 
+  //                  (ii) Plus coûteux
+  //     Utilise    : R0 le résidu
   //                  Rh le résidu perturbé
   //                  h0 la perturbation de la solution
   // ==================================================================
-  double*  R0;
-  double*  Rh;
-  double   h0;
+  double *R0;
+  double *Rh;
+  double h0;
 
-  void  (feBilinearForm::*ptrComputeMatrix) (feMetaNumber *metaNumber, feMesh *mesh, feSolution *sol, int numElem); 
+  void (feBilinearForm::*ptrComputeMatrix)(feMetaNumber *metaNumber, feMesh *mesh, feSolution *sol,
+                                           int numElem);
 
 public:
-	feBilinearForm(std::vector<feSpace*> &space, feMesh *mesh, int degQuad, feSysElm *sysElm);
-	~feBilinearForm();
+  feBilinearForm(std::vector<feSpace *> &space, feMesh *mesh, int degQuad, feSysElm *sysElm);
+  ~feBilinearForm();
 
-  int getCncGeoTag(){ return _cncGeoTag; }
+  int getCncGeoTag() { return _cncGeoTag; }
 
-  int getNiElm(){ return _niElm; }
-  int getNjElm(){ return _njElm; }
-  std::vector<int> &getAdrI(){ return _adrI; }
-  std::vector<int> &getAdrJ(){ return _adrJ; }
+  int getNiElm() { return _niElm; }
+  int getNjElm() { return _njElm; }
+  std::vector<int> &getAdrI() { return _adrI; }
+  std::vector<int> &getAdrJ() { return _adrJ; }
 
-  double** getAe(){ return _Ae; }
-  double*  getBe(){ return _Be; }
+  double **getAe() { return _Ae; }
+  double *getBe() { return _Be; }
 
-  std::string getID(){ return _sysElm->getID(); }
+  std::string getID() { return _sysElm->getID(); }
 
   void initialize_vadij_only(feMetaNumber *metaNumber, int numElem);
   void initialize(feMetaNumber *metaNumber, feMesh *mesh, feSolution *sol, int numElem);
 
   void computeMatrix(feMetaNumber *metaNumber, feMesh *mesh, feSolution *sol, int numElem);
-  void computeMatrixAnalytical(feMetaNumber *metaNumber, feMesh *mesh, feSolution *sol, int numElem);
-  void computeMatrixFiniteDifference(feMetaNumber *metaNumber, feMesh *mesh, feSolution *sol, int numElem);
+  void computeMatrixAnalytical(feMetaNumber *metaNumber, feMesh *mesh, feSolution *sol,
+                               int numElem);
+  void computeMatrixFiniteDifference(feMetaNumber *metaNumber, feMesh *mesh, feSolution *sol,
+                                     int numElem);
   void computeResidual(feMetaNumber *metaNumber, feMesh *mesh, feSolution *sol, int numElem);
 
   double getMatrixNorm();
   double getResidualNorm();
 
-  void printInfo(){
+  void printInfo() {
     printf("============== Bilinear form ==============\n");
     printf("_cncGeoTag = %d\n", _cncGeoTag);
     printf("_nCoord = %d\n", _nCoord);
     printf("_nGeoNodes = %d\n", _nGeoNodes);
     printf("_nGeoElm = %d\n", _nGeoElm);
-    printf("_geoCoord :"); for(auto val : _geoCoord) std::cout<<val<<" "; std::cout<<std::endl;
-    printf("_iVar :"); for(auto val : _iVar) std::cout<<val<<" "; std::cout<<std::endl;
-    printf("_jVar :"); for(auto val : _jVar) std::cout<<val<<" "; std::cout<<std::endl;
-    printf("_adrI :"); for(auto val : _adrI) std::cout<<val<<" "; std::cout<<std::endl;
-    printf("_adrJ :"); for(auto val : _adrJ)  std::cout<<val<<" "; std::cout<<std::endl;
+    printf("_geoCoord :");
+    for(auto val : _geoCoord) std::cout << val << " ";
+    std::cout << std::endl;
+    printf("_iVar :");
+    for(auto val : _iVar) std::cout << val << " ";
+    std::cout << std::endl;
+    printf("_jVar :");
+    for(auto val : _jVar) std::cout << val << " ";
+    std::cout << std::endl;
+    printf("_adrI :");
+    for(auto val : _adrI) std::cout << val << " ";
+    std::cout << std::endl;
+    printf("_adrJ :");
+    for(auto val : _adrJ) std::cout << val << " ";
+    std::cout << std::endl;
     // printf("_Ae :"); for(auto val : _Ae) std::cout<<val<<" "; std::cout<<std::endl;
     // printf("_Be :"); for(auto val : _Be) std::cout<<val<<" "; std::cout<<std::endl;
   }

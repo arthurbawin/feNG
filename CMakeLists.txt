@@ -7,7 +7,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 option(ENABLE_OPENMP        "Enable OpenMP"               OFF)
 option(ENABLE_MPI           "Enable MPI"                  ON )
 option(ENABLE_PETSC         "Enable PETSc"                ON )
-option(ENABLE_GMSH          "Enable Gmsh"                 OFF)
+option(ENABLE_GMSH          "Enable Gmsh"                 ON )
 option(ENABLE_MKL           "Enable MKL"                  OFF)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
@@ -120,6 +120,7 @@ endif()
 
 #  Eigen
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/contrib/Eigen)
+add_definitions("-DHAVE_EIGEN")
 
 #  Gmsh
 if(ENABLE_GMSH)
@@ -128,6 +129,7 @@ if(ENABLE_GMSH)
   set(GMSH_INC "${GMSH_INC}" CACHE PATH     "Gmsh headers")
   include_directories(${GMSH_INC})
   list(APPEND feNG_EXTERNAL_LIBS ${GMSH_LIB})
+  add_definitions("-DHAVE_GMSH")
   MESSAGE(STATUS "Gmsh found (-:")
 endif()
 

@@ -5,7 +5,7 @@
 
 #include "STensor3.h"
 
-typedef struct feMetricOptions{
+typedef struct feMetricOptions {
   int nTargetVertices;
   double hMin;
   double hMax;
@@ -14,24 +14,24 @@ typedef struct feMetricOptions{
   int nPhi;
 } feMetricOptions;
 
-class feMetric{
+class feMetric {
 protected:
-	feRecovery *_recovery;
+  feRecovery *_recovery;
   feMetricOptions _options;
 
   std::map<int, SMetric3> _metrics;
+
 public:
   feMetric(feRecovery *recovery, feMetricOptions metricOptions);
-  ~feMetric(){
-  }
+  ~feMetric() {}
 
   void metricScaling();
-  void metriqueSimplexe2D(int nPhi, std::vector<double> phi, std::vector<double> erreur, double &A, double &B, double &C, int max_iter);
+  void metriqueSimplexe2D(int nPhi, std::vector<double> phi, std::vector<double> erreur, double &A,
+                          double &B, double &C, int max_iter);
 
   // Intersecter avec un autre feMetric
   void writeSizeFieldSol(std::string solFileName);
   void writeSizeFieldGmsh(std::string meshName, std::string metricMeshName);
-
 };
 
 #endif

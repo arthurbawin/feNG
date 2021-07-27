@@ -13,17 +13,16 @@
 */
 
 // Sign function
-template <typename T> int sgn(T val) {
-  return (T(0) < val) - (val < T(0));
-}
+template <typename T> int sgn(T val) { return (T(0) < val) - (val < T(0)); }
 
 /* p is the coefficients of the implicit form a*x^2 + b*x*y + c*y^2 + d*x + f*y + g = 0
    a and b are the explicit coefficients : x^2/a^2 + y^2/b^2 = 1
    R is the rotation matrix
    t is the translation vector */
-void getExplicitEllipse(std::vector<double> &p, double *a, double *b, std::vector<double> &R, std::vector<double> &t);
+void getExplicitEllipse(std::vector<double> &p, double *a, double *b, std::vector<double> &R,
+                        std::vector<double> &t);
 
-void getEllipsePoints(double a, double b, double c, double xC, double yC, std::vector<double> &x, std::vector<double> &y);
-
+void getEllipsePoints(double a, double b, double c, double xC, double yC, std::vector<double> &x,
+                      std::vector<double> &y);
 
 #endif
