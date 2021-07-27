@@ -7,7 +7,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 option(ENABLE_OPENMP        "Enable OpenMP"               OFF)
 option(ENABLE_MPI           "Enable MPI"                  ON )
 option(ENABLE_PETSC         "Enable PETSc"                ON )
-option(ENABLE_GMSH          "Enable Gmsh"                 ON )
+option(ENABLE_GMSH          "Enable Gmsh"                 OFF)
 option(ENABLE_MKL           "Enable MKL"                  OFF)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
