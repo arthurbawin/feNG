@@ -17,23 +17,22 @@
 #include "feLinearSystemPETSc.h"
 #endif
 
-double fSol(const double t, const std::vector<double> &x, const std::vector<double> par){
+double fSol(const double t, const std::vector<double> &x, const std::vector<double> par) {
   double c2 = par[1];
   double x1 = x[0];
-  return x1*(x1*x1-25.)*pow(t,6) + 1. + x1*x1*x1*pow(t,c2);
+  return x1 * (x1 * x1 - 25.) * pow(t, 6) + 1. + x1 * x1 * x1 * pow(t, c2);
 }
 
-double fSource(const double t, const std::vector<double> &x, const std::vector<double> par){
-
+double fSource(const double t, const std::vector<double> &x, const std::vector<double> par) {
   double c1 = par[0];
   double c2 = par[1];
-  double beta = (c2 == 0.) ? 0. : c2*pow(t,c2-1.);
-  double x1 = x[0]; 
-  return -x1*(x1*x1-25.)*6.*pow(t,5.) + c1*6.*x1*pow(t,6.) + c1*6.*x1*pow(t,c2) - x1*x1*x1*beta;
+  double beta = (c2 == 0.) ? 0. : c2 * pow(t, c2 - 1.);
+  double x1 = x[0];
+  return -x1 * (x1 * x1 - 25.) * 6. * pow(t, 5.) + c1 * 6. * x1 * pow(t, 6.) +
+         c1 * 6. * x1 * pow(t, c2) - x1 * x1 * x1 * beta;
 }
 
-int main(int argc, char** argv){
-
+int main(int argc, char **argv) {
 #ifdef HAVE_PETSC
   petscInitialize(argc, argv);
 #endif
@@ -47,19 +46,19 @@ int main(int argc, char** argv){
   feFunction *funSource = new feFunction(fSource, par);
 
   int nIter = 5;
-  std::vector<double> normL2(2*nIter, 0.0);
+  std::vector<double> normL2(2 * nIter, 0.0);
   std::vector<int> nElm(nIter, 0);
 
-  for(int iter = 0; iter < nIter; ++iter){
+  for(int iter = 0; iter < nIter; ++iter) {
     nElm[iter] = 20 * pow(2, iter);
     // Maillage
-    feMesh1DP1 *mesh = new feMesh1DP1(xa,xb,nElm[iter],"BXA","BXB","M1D");
+    feMesh1DP1 *mesh = new feMesh1DP1(xa, xb, nElm[iter], "BXA", "BXB", "M1D");
     // Espaces d'interpolation
     feSpace1DP0 U_BXA = feSpace1DP0(mesh, "U", "BXA", funSol);
     feSpace1DP0 U_BXB = feSpace1DP0(mesh, "U", "BXB", funSol);
     feSpace1DP1 U_M1D = feSpace1DP1(mesh, "U", "M1D", funSol);
-    std::vector<feSpace*> fespace = {&U_BXA, &U_BXB, &U_M1D};
-    std::vector<feSpace*> feEssBC = {&U_BXA, &U_BXB};
+    std::vector<feSpace *> fespace = {&U_BXA, &U_BXB, &U_M1D};
+    std::vector<feSpace *> feEssBC = {&U_BXA, &U_BXB};
     // Numerotations
     feMetaNumber *metaNumber = new feMetaNumber(mesh, fespace, feEssBC);
     // Solution
@@ -72,21 +71,25 @@ int main(int argc, char** argv){
     // sol->initializeEssentialBC(mesh, metaNumber);
     // Formes (bi)lineaires
     int nQuad = 3; // TODO : change to deg
-    std::vector<feSpace*> spaceDiffusion1D_U = {&U_M1D};
-    std::vector<feSpace*> spaceSource1D_U = {&U_M1D};
-    std::vector<feSpace*> spaceMasse1D_U = {&U_M1D};
+    std::vector<feSpace *> spaceDiffusion1D_U = {&U_M1D};
+    std::vector<feSpace *> spaceSource1D_U = {&U_M1D};
+    std::vector<feSpace *> spaceMasse1D_U = {&U_M1D};
 
-    feBilinearForm *diff_U_M1D = new feBilinearForm(spaceDiffusion1D_U, mesh, nQuad, new feSysElm_1D_Diffusion(kd, nullptr));
-    feBilinearForm *source_U_M1D = new feBilinearForm(spaceSource1D_U, mesh, nQuad, new feSysElm_1D_Source(1.0, funSource));
-    feBilinearForm *masse_U_M1D = new feBilinearForm(spaceMasse1D_U, mesh, nQuad, new feSysElm_1D_Masse(1.0, nullptr));
+    feBilinearForm *diff_U_M1D =
+      new feBilinearForm(spaceDiffusion1D_U, mesh, nQuad, new feSysElm_1D_Diffusion(kd, nullptr));
+    feBilinearForm *source_U_M1D =
+      new feBilinearForm(spaceSource1D_U, mesh, nQuad, new feSysElm_1D_Source(1.0, funSource));
+    feBilinearForm *masse_U_M1D =
+      new feBilinearForm(spaceMasse1D_U, mesh, nQuad, new feSysElm_1D_Masse(1.0, nullptr));
 
-    std::vector<feBilinearForm*> formMatrices  = {diff_U_M1D, masse_U_M1D};
-    std::vector<feBilinearForm*> formResiduals  = {diff_U_M1D, masse_U_M1D, source_U_M1D};
+    std::vector<feBilinearForm *> formMatrices = {diff_U_M1D, masse_U_M1D};
+    std::vector<feBilinearForm *> formResiduals = {diff_U_M1D, masse_U_M1D, source_U_M1D};
     // Norme de la solution
     feNorm *norm = new feNorm(&U_M1D, mesh, nQuad, funSol);
-    std::vector<feNorm*> norms = {norm};
+    std::vector<feNorm *> norms = {norm};
     // Systeme lineaire
-    feLinearSystemPETSc *linearSystem = new feLinearSystemPETSc(argc, argv, formMatrices, formResiduals, metaNumber, mesh);
+    feLinearSystemPETSc *linearSystem =
+      new feLinearSystemPETSc(argc, argv, formMatrices, formResiduals, metaNumber, mesh);
 #ifdef HAVE_PETSC
     linearSystem->initialize();
     // Resolution
@@ -97,8 +100,9 @@ int main(int argc, char** argv){
     solver.makeSteps(nTimeSteps, fespace);
     std::vector<double> &normL2BDF = solver.getNorm(0);
 
-    // solveBDF2(normL2BDF, tol, metaNumber, linearSystem, formMatrices, formResiduals, sol, norms, mesh, fespace);
-    normL2[2*iter] = *std::max_element(normL2BDF.begin(), normL2BDF.end());
+    // solveBDF2(normL2BDF, tol, metaNumber, linearSystem, formMatrices, formResiduals, sol, norms,
+    // mesh, fespace);
+    normL2[2 * iter] = *std::max_element(normL2BDF.begin(), normL2BDF.end());
 #endif
 
     delete norm;
@@ -114,12 +118,12 @@ int main(int argc, char** argv){
   delete funSol;
 
   // Calcul du taux de convergence
-  for(int i = 1; i < nIter; ++i){
-    normL2[2*i+1] = log(normL2[2*(i-1)]/normL2[2*i])/log(2.);
+  for(int i = 1; i < nIter; ++i) {
+    normL2[2 * i + 1] = log(normL2[2 * (i - 1)] / normL2[2 * i]) / log(2.);
   }
   printf("%12s \t %12s \t %12s\n", "nElm", "||E||", "Taux BDF2");
   for(int i = 0; i < nIter; ++i)
-    printf("%12d \t %12.6e \t %12.6e\n", nElm[i], normL2[2*i], normL2[2*i+1]);
+    printf("%12d \t %12.6e \t %12.6e\n", nElm[i], normL2[2 * i], normL2[2 * i + 1]);
 
 #ifdef HAVE_PETSC
   petscFinalize();

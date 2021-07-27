@@ -7,8 +7,7 @@
 #include <cmath>
 #include <utility>
 
-class feQuadrature{
-
+class feQuadrature {
 protected:
   int _degQuad;
   int _dimQuad;
@@ -22,27 +21,27 @@ protected:
   std::vector<double> _zr;
 
   const double EPSILON = 1e-16;
-  double result[2]; 
+  double result[2];
 
 public:
   feQuadrature(int degQuad, int dimQuad, std::string formGeo);
   ~feQuadrature() {}
 
-private : 
-  void calculateWeightAndRoot(int nQuadLocal); 
-  void calculatePolynomialValueAndDerivative(double x, double *result); 
+private:
+  void calculateWeightAndRoot(int nQuadLocal);
+  void calculatePolynomialValueAndDerivative(double x, double *result);
   void calculateWeightAndRootTri(int method);
   void calculateWeightAndRootSquare();
   void calculateWeightAndRootCube();
   void calculateWeightAndRootTetra();
 
-public :
-  std::vector<double> getXPoints(){ return _xr; }
-  std::vector<double> getYPoints(){ return _yr; }
-  std::vector<double> getZPoints(){ return _zr; }
-  std::vector<double> getWeights(){ return _w; }
+public:
+  std::vector<double> getXPoints() { return _xr; }
+  std::vector<double> getYPoints() { return _yr; }
+  std::vector<double> getZPoints() { return _zr; }
+  std::vector<double> getWeights() { return _w; }
   int getNQuad() { return _w.size(); }
-  int getDim(){ return _dimQuad; }
+  int getDim() { return _dimQuad; }
 };
 
 #endif

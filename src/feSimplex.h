@@ -15,11 +15,11 @@
 typedef long long lld;
 typedef unsigned long long llu;
 
-
 void pivot(int x, int y);
 int iterate_simplex();
 int initialise_simplex();
-std::pair<std::vector<double>, double> simplex(int nInput, int mInput, std::vector<double> AInput, std::vector<double> bInput, std::vector<double> cInput, double vInput);
-
+std::pair<std::vector<double>, double> simplex(int nInput, int mInput, std::vector<double> AInput,
+                                               std::vector<double> bInput,
+                                               std::vector<double> cInput, double vInput);
 
 #endif

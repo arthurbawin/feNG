@@ -5,14 +5,13 @@
 
 // Inspired from MFEM
 
-class feLine : public feElement{
-
+class feLine : public feElement {
 protected:
-	int nodes[2];
+  int nodes[2];
 
 public:
-	feLine() : feElement(LINE) {}
-	virtual ~feLine() {}
+  feLine() : feElement(LINE) {}
+  virtual ~feLine() {}
 
   virtual GeoType getGeoType() { return LINE; };
 };

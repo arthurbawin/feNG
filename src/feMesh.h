@@ -14,8 +14,7 @@
 #include "feElement.h"
 #include "feTriangle.h"
 
-class feMesh{
-
+class feMesh {
 protected:
   std::string _ID;
   int _dim;
@@ -29,41 +28,40 @@ protected:
   std::vector<Vertex> _vertices;
 
   int _nCncGeo;
-  std::vector<feCncGeo*> _cncGeo;
-  std::map<std::string,int> _cncGeoMap;
+  std::vector<feCncGeo *> _cncGeo;
+  std::map<std::string, int> _cncGeoMap;
 
 public:
-	feMesh(int nNod = 0, int dim = 0, int nCncGeo = 0, std::string ID = "")
-    : _ID(ID), _dim(dim), _nNod(nNod), _nEdg(0), _nCncGeo(nCncGeo)
-  {
+  feMesh(int nNod = 0, int dim = 0, int nCncGeo = 0, std::string ID = "")
+    : _ID(ID), _dim(dim), _nNod(nNod), _nEdg(0), _nCncGeo(nCncGeo){
 
-	};
-	virtual ~feMesh() {}
+                                                 };
+  virtual ~feMesh() {}
 
-  std::string getID(){ return _ID; }
-  int getDim(){ return _dim; }
-  int getNbNodes(){ return _nNod; }
-  int getNbEdges(){ return _nEdg; }
-  int getNbElems(){ return _nTotalElm; }
-  int getNbInteriorElems(){ return _nInteriorElm; }
-  int getNbBoundaryElems(){ return _nBoundaryElm; }
+  std::string getID() { return _ID; }
+  int getDim() { return _dim; }
+  int getNbNodes() { return _nNod; }
+  int getNbEdges() { return _nEdg; }
+  int getNbElems() { return _nTotalElm; }
+  int getNbInteriorElems() { return _nInteriorElm; }
+  int getNbBoundaryElems() { return _nBoundaryElm; }
 
-  std::vector<double> &getCoord(){ return _coord; }
-  double getCoordDim(int i, int dim){ return _coord[i*_dim+dim]; }
-  double getXCoord(int i){ return _coord[i*_dim]; }
-  double getYCoord(int i){ return _coord[i*_dim+1]; }
-  double getZCoord(int i){ return _coord[i*_dim+2]; }
+  std::vector<double> &getCoord() { return _coord; }
+  double getCoordDim(int i, int dim) { return _coord[i * _dim + dim]; }
+  double getXCoord(int i) { return _coord[i * _dim]; }
+  double getYCoord(int i) { return _coord[i * _dim + 1]; }
+  double getZCoord(int i) { return _coord[i * _dim + 2]; }
   std::vector<double> getCoord(std::string cncGeoID, int numElm);
   std::vector<double> getCoord(int cncGeoTag, int numElm);
 
-  Vertex* getVertex(int iVertex){ return &_vertices[iVertex]; }
-  std::vector<Vertex> &getVertices(){ return _vertices; }
+  Vertex *getVertex(int iVertex) { return &_vertices[iVertex]; }
+  std::vector<Vertex> &getVertices() { return _vertices; }
 
   int getNbCncGeo() { return _nCncGeo; }
-  std::vector<feCncGeo*> &getCncGeo(){ return _cncGeo; }
+  std::vector<feCncGeo *> &getCncGeo() { return _cncGeo; }
   int getCncGeoTag(std::string cncGeoID);
-  feCncGeo* getCncGeoByName(std::string cncGeoID);
-  feCncGeo* getCncGeoByTag(int cncGeoTag);
+  feCncGeo *getCncGeoByName(std::string cncGeoID);
+  feCncGeo *getCncGeoByTag(int cncGeoTag);
   int getNbElm(std::string cncGeoID);
   int getNbElm(int cncGeoTag);
   int getNbNodePerElem(std::string cncGeoID);
@@ -74,14 +72,13 @@ public:
   int getElement(int cncGeoTag, int numElem);
   int getEdge(std::string cncGeoID, int numElem, int numEdge);
   int getEdge(int cncGeoTag, int numElem, int numEdge);
-  feSpace* getGeometricSpace(std::string cncGeoID);
-  feSpace* getGeometricSpace(int cncGeoTag);
+  feSpace *getGeometricSpace(std::string cncGeoID);
+  feSpace *getGeometricSpace(int cncGeoTag);
 
   void printInfo();
 };
 
-class feMesh1DP1 : public feMesh{
-
+class feMesh1DP1 : public feMesh {
 protected:
   int _nElm;
   double _xA, _xB;
@@ -92,14 +89,15 @@ protected:
   int _nNodBoundary;
 
 public:
-  feMesh1DP1(double xA, double xB, int nElm, std::string bndA_ID, std::string bndB_ID, std::string domID);
+  feMesh1DP1(double xA, double xB, int nElm, std::string bndA_ID, std::string bndB_ID,
+             std::string domID);
   virtual ~feMesh1DP1();
 };
 
 class feMetaNumber;
 class feSolutionContainer;
 
-class feMesh2DP1 : public feMesh{
+class feMesh2DP1 : public feMesh {
 private:
   // A physical entity (a domain)
   typedef struct physicalEntityStruct {
@@ -125,7 +123,7 @@ private:
     int tagGmsh;
     int numPhysicalTags;
     std::vector<int> physicalTags;
-    int gmshType;  // Type d'élément dans gmsh
+    int gmshType; // Type d'élément dans gmsh
     std::string cncID;
     int nElm;
     int nNodePerElem;
@@ -138,11 +136,11 @@ private:
   } entity;
 
 public:
-  typedef std::map<std::pair<int,int>,std::string> mapType; 
+  typedef std::map<std::pair<int, int>, std::string> mapType;
 
 protected:
   int _nPhysicalEntities;
-  std::map<std::pair<int,int>,entity> _entities;
+  std::map<std::pair<int, int>, entity> _entities;
   std::vector<physicalEntity> _physicalEntities;
 
   mapType _physicalEntitiesDescription;
@@ -160,7 +158,7 @@ protected:
   bool _isBinary;
   double _gmshVersion;
 
-  std::vector<Triangle*> _elements; // Hardcoded triangles for now
+  std::vector<Triangle *> _elements; // Hardcoded triangles for now
   // std::vector<feElement*> _elements;
   // std::vector<feElement*> _boundaryElements;
 
@@ -172,13 +170,15 @@ public:
   int readMsh4(std::istream &input, bool curved);
   int readGmsh(std::string meshName, bool curved, mapType physicalEntitiesDescription = mapType());
 
-  bool isMeshFileBinary(){ return _isBinary; }
-  double getGmshVersion(){ return _gmshVersion; }
+  bool isMeshFileBinary() { return _isBinary; }
+  double getGmshVersion() { return _gmshVersion; }
 
-  mapType getPhysicalEntitiesDescription(){ return _physicalEntitiesDescription; }
+  mapType getPhysicalEntitiesDescription() { return _physicalEntitiesDescription; }
 
-  void transfer(feMesh2DP1 *otherMesh, feMetaNumber *myMN, feMetaNumber *otherMN, 
-  feSolutionContainer* solutionContainer, const std::vector<feSpace*> &mySpaces, const std::vector<feSpace*> &mySpacesEssBC, const std::vector<feSpace*> &otherSpaces);
+  void transfer(feMesh2DP1 *otherMesh, feMetaNumber *myMN, feMetaNumber *otherMN,
+                feSolutionContainer *solutionContainer, const std::vector<feSpace *> &mySpaces,
+                const std::vector<feSpace *> &mySpacesEssBC,
+                const std::vector<feSpace *> &otherSpaces);
 };
 
 #endif
