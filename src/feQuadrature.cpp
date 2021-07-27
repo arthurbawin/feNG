@@ -24,6 +24,9 @@ feQuadrature::feQuadrature(int degQuad, int dimQuad, std::string formGeo)
     calculateWeightAndRootSquare();
   } else if(_dimQuad == 3 && formGeo == "QuadP1") {
     calculateWeightAndRootCube();
+  } else if(_dimQuad == 0 && formGeo == "Pt") {
+    _w[0] = 1.;
+    _xr[0] = 0.;
   } else {
     calculateWeightAndRootTetra();
   }

@@ -28,7 +28,11 @@ void feCncGeo::computeJacobians() {
         _J[nQuad * iElm + k] = dxdr[0] * dxds[1] - dxdr[1] * dxds[0];
       }
     }
-  } else {
+  } else if(_space->getDim() == 0) {
+    _J[0] = 1.0;
+  }
+
+  else {
     printf("TODO : Implement jacobian for 3D elements.\n");
   }
 }

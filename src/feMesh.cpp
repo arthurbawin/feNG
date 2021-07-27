@@ -186,6 +186,48 @@ feMesh1DP1::~feMesh1DP1() {
   }
 }
 
+feMesh0DP0::feMesh0DP0(double xA, int nElm, std::string domID)
+  : feMesh(1, 0, 1, "0D"), _nElm(nElm), _xA(xA), _domID(domID), _nElmDomain(nElm), _nElmBoundary(1),
+    _nNodDomain(1), _nNodBoundary(1) {
+  // Sommets
+  _coord.resize(_nNod);
+  for(int i = 0; i < _nNod; ++i) { _coord[i] = xA; }
+
+  _vertices.resize(_nNod);
+  for(int i = 0; i < _nNod; ++i) { _vertices[i] = Vertex(0, 0., 0., 0); }
+
+  // Element 0D
+  int dimDomain = 0;
+  std::vector<int> connecDomain(1, 0);
+
+  int nCncGeo = 0;
+  feCncGeo *geoDom = new feCncGeo(nCncGeo, dimDomain, _nNodDomain, _nElmDomain, 0, _domID, "Pt",
+                                  new feSpace1DP0("xyz"), connecDomain);
+  _cncGeo.push_back(geoDom);
+  _cncGeoMap[_domID] = nCncGeo;
+  geoDom->getFeSpace()->setCncGeoTag(nCncGeo++);
+
+  // Fonction COMPLETER : connectivite globale des elements
+  int numElmGlo = 0;
+  for(feCncGeo *cnc : _cncGeo) {
+    for(int i = 0; i < cnc->getNbElm(); ++i) cnc->setElementConnectivity(i, numElmGlo++);
+  }
+  _nTotalElm = numElmGlo;
+
+  // Assign pointer to the mesh to cnc and their fespace :
+  for(feCncGeo *cnc : _cncGeo) {
+    cnc->setMeshPtr(this);
+    cnc->getFeSpace()->setMeshPtr(this);
+  }
+}
+
+feMesh0DP0::~feMesh0DP0() {
+  for(feCncGeo *cnc : _cncGeo) {
+    delete cnc->getFeSpace();
+    delete cnc;
+  }
+}
+
 feMesh2DP1::feMesh2DP1(std::string meshName, bool curved, mapType physicalEntitiesDescription)
   : feMesh() {
   // Check if mesh file exists

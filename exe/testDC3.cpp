@@ -14,6 +14,7 @@
 #include "feSolver.h"
 
 #ifdef HAVE_PETSC
+
 #include "feLinearSystemPETSc.h"
 #endif
 
@@ -44,6 +45,7 @@ int main(int argc, char **argv) {
   int nIter = 2;
   std::vector<double> maxNormL2BDF(2 * nIter, 0.0);
   std::vector<double> maxNormL2DC3(2 * nIter, 0.0);
+
   std::vector<int> nElm(nIter, 0);
 
   for(int iter = 0; iter < nIter; ++iter) {
@@ -117,6 +119,7 @@ int main(int argc, char **argv) {
   printf("%12s \t %12s \t %12s\t %12s \t %12s\n", "nElm", "||E-BDF||", "Taux BDF2", "||E-DC3||",
          "Taux DC3");
   for(int i = 0; i < nIter; ++i)
+
     printf("%12d \t %12.6e \t %12.6e\t %12.6e \t %12.6e\n", nElm[i], maxNormL2BDF[2 * i],
            maxNormL2BDF[2 * i + 1], maxNormL2DC3[2 * i], maxNormL2DC3[2 * i + 1]);
 
