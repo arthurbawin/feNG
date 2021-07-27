@@ -94,6 +94,21 @@ public:
   virtual ~feMesh1DP1();
 };
 
+class feMesh0DP0 : public feMesh {
+protected:
+  int _nElm;
+  double _xA;
+  std::string _domID;
+  int _nElmDomain;
+  int _nElmBoundary;
+  int _nNodDomain;
+  int _nNodBoundary;
+
+public:
+  feMesh0DP0(double xA, int nElm, std::string domID);
+  virtual ~feMesh0DP0();
+};
+
 class feMetaNumber;
 class feSolutionContainer;
 

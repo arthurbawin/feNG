@@ -3,6 +3,7 @@
 // ====================================================================
 // Constructeur de la classe de base CSR
 // ====================================================================
+
 feCompressedRowStorage::feCompressedRowStorage(feMetaNumber *metaNumber, feMesh *mesh,
                                                std::vector<feBilinearForm *> &formMatrices) {
   ordre = (feInt)metaNumber->getNbUnknowns();
