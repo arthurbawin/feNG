@@ -8,7 +8,6 @@
 
 class feCompressedRowStorage {
 public:
-
   feCompressedRowStorage(feMetaNumber *metaNumber, feMesh *mesh,
                          std::vector<feBilinearForm *> &formMatrices);
   ~feCompressedRowStorage() {
@@ -22,7 +21,6 @@ public:
       if(ddlBiLinearForms[0] != NULL) delete[] ddlBiLinearForms[0];
       delete[] ddlBiLinearForms;
     }
-
 
     if(ddlElms != NULL) {
       if(ddlElms[0] != NULL) delete[] ddlElms[0];

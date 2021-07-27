@@ -14,17 +14,22 @@ feQuadrature::feQuadrature(int degQuad, int dimQuad, std::string formGeo)
 
   int method = 1;
 
-
-  if(_dimQuad == 1){ calculateWeightAndRoot(_nQuad1D); _w=_w1D; _xr=_x1D; }
-  else if(_dimQuad == 2 && formGeo =="TriP1"  ){ calculateWeightAndRootTri(method);}
-  else if(_dimQuad == 2 && formGeo =="QuadP1" ){ calculateWeightAndRootSquare(); }
-  else if(_dimQuad == 3 && formGeo =="QuadP1" ){ calculateWeightAndRootCube(); }
-  else if(_dimQuad == 0 && formGeo =="Pt"     ){
-        _w[0]=1.;
-        _xr[0]=0.;
+  if(_dimQuad == 1) {
+    calculateWeightAndRoot(_nQuad1D);
+    _w = _w1D;
+    _xr = _x1D;
+  } else if(_dimQuad == 2 && formGeo == "TriP1") {
+    calculateWeightAndRootTri(method);
+  } else if(_dimQuad == 2 && formGeo == "QuadP1") {
+    calculateWeightAndRootSquare();
+  } else if(_dimQuad == 3 && formGeo == "QuadP1") {
+    calculateWeightAndRootCube();
+  } else if(_dimQuad == 0 && formGeo == "Pt") {
+    _w[0] = 1.;
+    _xr[0] = 0.;
+  } else {
+    calculateWeightAndRootTetra();
   }
-  else{                                          calculateWeightAndRootTetra(); }
-
 }
 
 void feQuadrature::calculateWeightAndRoot(int nQuadLocal) {

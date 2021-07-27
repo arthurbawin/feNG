@@ -9,7 +9,6 @@ feCompressedRowStorage::feCompressedRowStorage(feMetaNumber *metaNumber, feMesh 
   ordre = (feInt)metaNumber->getNbUnknowns();
   nnz = new feInt[ordre];
 
-
   ddlNumberOfElements = new feInt[ordre]; // à initialiser à zéro
   for(feInt i = 0; i < ordre; i++) ddlNumberOfElements[i] = 0;
 

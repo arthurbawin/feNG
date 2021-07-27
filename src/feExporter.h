@@ -19,7 +19,6 @@ public:
              const std::vector<feSpace *> &space)
     : _mesh(mesh), _sol(sol), _metaNumber(metaNumber), _space(space){};
   virtual ~feExporter() {}
-
 };
 
 class feExporterVTK : public feExporter {
@@ -29,12 +28,10 @@ public:
                 const std::vector<feSpace *> &space);
   virtual ~feExporterVTK() {}
 
-
   void writeHeader(std::ostream &output);
   void writeNodes(std::ostream &output, feCncGeo *cnc);
   void writeElementsConnectivity(std::ostream &output, feCncGeo *cnc);
   void writeField(std::ostream &output, feCncGeo *cnc, std::string fieldID);
-
 };
 
 #endif

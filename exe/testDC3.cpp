@@ -33,9 +33,7 @@ double fSource(const double t, const std::vector<double> &x, const std::vector<d
          c1 * 6. * x1 * pow(t, c2) - x1 * x1 * x1 * beta;
 }
 
-
 int main(int argc, char **argv) {
-
   double xa = 0.;
   double xb = 5.;
 
@@ -43,7 +41,6 @@ int main(int argc, char **argv) {
   std::vector<double> par = {kd, 6.};
   feFunction *funSol = new feFunction(fSol, par);
   feFunction *funSource = new feFunction(fSource, par);
-
 
   int nIter = 2;
   std::vector<double> maxNormL2BDF(2 * nIter, 0.0);
@@ -125,7 +122,6 @@ int main(int argc, char **argv) {
 
     printf("%12d \t %12.6e \t %12.6e\t %12.6e \t %12.6e\n", nElm[i], maxNormL2BDF[2 * i],
            maxNormL2BDF[2 * i + 1], maxNormL2DC3[2 * i], maxNormL2DC3[2 * i + 1]);
-
 
   return 0;
 }

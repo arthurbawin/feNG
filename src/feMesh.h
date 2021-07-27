@@ -94,12 +94,11 @@ public:
   virtual ~feMesh1DP1();
 };
 
-class feMesh0DP0 : public feMesh{
-
+class feMesh0DP0 : public feMesh {
 protected:
   int _nElm;
   double _xA;
-  std::string  _domID;
+  std::string _domID;
   int _nElmDomain;
   int _nElmBoundary;
   int _nNodDomain;

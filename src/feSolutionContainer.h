@@ -45,17 +45,16 @@ public:
   virtual void computeSolTimeDerivative(feSolution *sol, feLinearSystem *linearSystem);
 };
 
-class feSolutionBDF1 : public feSolutionContainer{
+class feSolutionBDF1 : public feSolutionContainer {
 protected:
 public:
   feSolutionBDF1(int nSol, double tn, feMetaNumber *metaNumber)
-    : feSolutionContainer(nSol,tn,metaNumber){};
+    : feSolutionContainer(nSol, tn, metaNumber){};
   virtual ~feSolutionBDF1() {}
   virtual void computeSolTimeDerivative(feSolution *sol, feLinearSystem *linearSystem);
 };
 
-class feSolutionBDF2 : public feSolutionContainer{
-
+class feSolutionBDF2 : public feSolutionContainer {
 protected:
 public:
   feSolutionBDF2(int nSol, double tn, feMetaNumber *metaNumber)
@@ -73,16 +72,15 @@ public:
   virtual void computeSolTimeDerivative(feSolution *sol, feLinearSystem *linearSystem);
 };
 
-void initializeBDF2(feSolution *sol, feMetaNumber *metaNumber, feMesh *mesh, 
-  feSolutionBDF2 *solBDF2);
-void initializeBDF1(feSolution *sol, feMetaNumber *metaNumber, feMesh *mesh, 
-  feSolutionBDF1 *solBDF1);
+void initializeBDF2(feSolution *sol, feMetaNumber *metaNumber, feMesh *mesh,
+                    feSolutionBDF2 *solBDF2);
+void initializeBDF1(feSolution *sol, feMetaNumber *metaNumber, feMesh *mesh,
+                    feSolutionBDF1 *solBDF1);
 void initializeBDF2withBDF1(feSolution *sol, feMetaNumber *metaNumber, feMesh *mesh,
-  feSolutionBDF1 *solBDF1, feSolutionBDF2 *solBDF2);
-void initializeDC3F(feSolution *sol, feMetaNumber *metaNumber, feMesh *mesh, 
-  feSolutionBDF2 *solBDF2, feSolutionDCF *solDC3);
-void initializeDC4F(feSolution *sol, feMetaNumber *metaNumber, feMesh *mesh, 
-  feSolutionBDF2 *solBDF2, feSolutionDCF *solDC3, feSolutionDCF *solDC4);
-
+                            feSolutionBDF1 *solBDF1, feSolutionBDF2 *solBDF2);
+void initializeDC3F(feSolution *sol, feMetaNumber *metaNumber, feMesh *mesh,
+                    feSolutionBDF2 *solBDF2, feSolutionDCF *solDC3);
+void initializeDC4F(feSolution *sol, feMetaNumber *metaNumber, feMesh *mesh,
+                    feSolutionBDF2 *solBDF2, feSolutionDCF *solDC3, feSolutionDCF *solDC4);
 
 #endif

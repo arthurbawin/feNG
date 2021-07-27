@@ -237,26 +237,26 @@ void BDF2Solver::makeSteps(int nSteps, std::vector<feSpace *> &spaces) {
 }
 
 BDF1Solver::BDF1Solver(feTolerances tol, feMetaNumber *metaNumber, feLinearSystem *linearSystem,
-  feSolution *sol, std::vector<feNorm*> &norms, feMesh *mesh, double t0, double tEnd, int nTimeSteps)
-  : TimeIntegrator(tol, metaNumber, linearSystem, sol, norms, mesh, t0, tEnd, nTimeSteps)
-{
+                       feSolution *sol, std::vector<feNorm *> &norms, feMesh *mesh, double t0,
+                       double tEnd, int nTimeSteps)
+  : TimeIntegrator(tol, metaNumber, linearSystem, sol, norms, mesh, t0, tEnd, nTimeSteps) {
   // Initialize the solution container
   int nSol = 3;
   _solutionContainer = new feSolutionBDF1(nSol, _sol->getCurrentTime(), _metaNumber);
   _solutionContainer->initialize(_sol, _mesh, _metaNumber);
 
   _normL2.resize(norms.size());
-  for(auto &n : _normL2)
-    n.resize(_nTimeSteps, 0.);
+  for(auto &n : _normL2) n.resize(_nTimeSteps, 0.);
 
-  printf("Initializing BDF1 solver : integrating from t0 = %f to tEnd = %f in %d steps\n", _t0, _tEnd, _nTimeSteps);
+  printf("Initializing BDF1 solver : integrating from t0 = %f to tEnd = %f in %d steps\n", _t0,
+         _tEnd, _nTimeSteps);
 }
 
-void BDF1Solver::makeSteps(int nSteps, std::vector<feSpace*> &spaces){
+void BDF1Solver::makeSteps(int nSteps, std::vector<feSpace *> &spaces) {
+  printf("BDF1 : Advancing %d steps from t = %f to t = %f\n", nSteps, _tCurrent,
+         _tCurrent + nSteps * _dt);
 
-  printf("BDF1 : Advancing %d steps from t = %f to t = %f\n", nSteps, _tCurrent, _tCurrent + nSteps*_dt);
-
-  if(_currentStep == 0){
+  if(_currentStep == 0) {
     // Initialization and first step
     _linearSystem->setRecomputeStatus(true);
     _solutionContainer->initialize(_sol, _mesh, _metaNumber);
@@ -265,34 +265,35 @@ void BDF1Solver::makeSteps(int nSteps, std::vector<feSpace*> &spaces){
     _tCurrent += _dt;
     ++_currentStep;
 
-    for(size_t i = 0; i < _norms.size(); ++i){
-    _norms[i]->computeL2Norm(_metaNumber, _sol, _mesh);
-    _normL2[i][0] = _norms[i]->getNorm();
-  }
+    for(size_t i = 0; i < _norms.size(); ++i) {
+      _norms[i]->computeL2Norm(_metaNumber, _sol, _mesh);
+      _normL2[i][0] = _norms[i]->getNorm();
+    }
 
     printf("Current step = %d/%d : t = %f\n", _currentStep, nSteps, _tCurrent);
 
     --nSteps; // To advance the same number of steps than if currentStep != 0
   }
 
-  for(int i = 0; i < nSteps; ++i){
+  for(int i = 0; i < nSteps; ++i) {
     _solutionContainer->rotate(_dt);
-    if(i==0)
+    if(i == 0)
       _linearSystem->setRecomputeStatus(true);
     else
       _linearSystem->setRecomputeStatus(false);
-    initializeBDF1(_sol, _metaNumber, _mesh, dynamic_cast<feSolutionBDF1*>(_solutionContainer));
+    initializeBDF1(_sol, _metaNumber, _mesh, dynamic_cast<feSolutionBDF1 *>(_solutionContainer));
     printf("\n");
-    printf("Étape 1 - recomputeMatrix = %s : Solution BDF2 - t = %6.6e\n", _linearSystem->getRecomputeStatus() ? "true" : "false", _sol->getCurrentTime());
+    printf("Étape 1 - recomputeMatrix = %s : Solution BDF2 - t = %6.6e\n",
+           _linearSystem->getRecomputeStatus() ? "true" : "false", _sol->getCurrentTime());
     solveQNBDF(_solutionContainer, _tol, _metaNumber, _linearSystem, _sol, _mesh);
     fePstClc(_sol, _linearSystem, _solutionContainer);
 
     // Compute L2 norm of the solution
     _sol->setSolFromContainer(_solutionContainer);
-    for(size_t i = 0; i < _norms.size(); ++i){
-    _norms[i]->computeL2Norm(_metaNumber, _sol, _mesh);
-    _normL2[i][_currentStep] = _norms[i]->getNorm();
-  }
+    for(size_t i = 0; i < _norms.size(); ++i) {
+      _norms[i]->computeL2Norm(_metaNumber, _sol, _mesh);
+      _normL2[i][_currentStep] = _norms[i]->getNorm();
+    }
 
     _tCurrent += _dt;
     ++_currentStep;
@@ -303,10 +304,10 @@ void BDF1Solver::makeSteps(int nSteps, std::vector<feSpace*> &spaces){
   }
 }
 
-void solveBDF1(std::vector<double> &normL2, feTolerances tol, feMetaNumber *metaNumber, feLinearSystem *linearSystem, 
-  std::vector<feBilinearForm*> &formMatrices, std::vector<feBilinearForm*> &formResiduals,
-  feSolution *sol, std::vector<feNorm*> &norms, feMesh *mesh, std::vector<feSpace*> &spaces)
-{
+void solveBDF1(std::vector<double> &normL2, feTolerances tol, feMetaNumber *metaNumber,
+               feLinearSystem *linearSystem, std::vector<feBilinearForm *> &formMatrices,
+               std::vector<feBilinearForm *> &formResiduals, feSolution *sol,
+               std::vector<feNorm *> &norms, feMesh *mesh, std::vector<feSpace *> &spaces) {
   linearSystem->setRecomputeStatus(true);
   double dt = sol->getTimeStep();
   double nSteps = sol->getNbTimeSteps();
@@ -318,8 +319,6 @@ void solveBDF1(std::vector<double> &normL2, feTolerances tol, feMetaNumber *meta
   int nSol = 5;
   feSolutionBDF1 *solBDF1 = new feSolutionBDF1(nSol, sol->getCurrentTime(), metaNumber);
   solBDF1->initialize(sol, mesh, metaNumber);
-
-
 
   // std::vector<double> tK1K2(nSteps+1, 0.0);
   // for(int i = 0; i < nSteps+1; ++i)
@@ -336,24 +335,25 @@ void solveBDF1(std::vector<double> &normL2, feTolerances tol, feMetaNumber *meta
   sol->setSolFromContainer(solBDF1);
   // norm->computeL2Norm(metaNumber, sol, mesh);
   // normL2[0] = norm->getNorm();
-  for(auto *norm : norms){
+  for(auto *norm : norms) {
     norm->computeL2Norm(metaNumber, sol, mesh);
     normL2[0] = norm->getNorm(); // TODO : fix this
   }
 
   // bool status = true;
-  for(int iTime = 1; iTime < nSteps; ++iTime){
+  for(int iTime = 1; iTime < nSteps; ++iTime) {
     // if(K1K2)
     //   dt = tK1K2[iTime+1] - tK1K2[iTime];
     solBDF1->rotate(dt);
-    if(iTime==1)
+    if(iTime == 1)
       linearSystem->setRecomputeStatus(true);
     else
       linearSystem->setRecomputeStatus(false);
     // FESOLVEBDF2NL
     initializeBDF1(sol, metaNumber, mesh, solBDF1);
     printf("\n");
-    printf("Étape 1 - recomputeMatrix = %s : Solution BDF1 - t = %6.6e\n", linearSystem->getRecomputeStatus() ? "true" : "false", sol->getCurrentTime());
+    printf("Étape 1 - recomputeMatrix = %s : Solution BDF1 - t = %6.6e\n",
+           linearSystem->getRecomputeStatus() ? "true" : "false", sol->getCurrentTime());
     solveQNBDF(solBDF1, tol, metaNumber, linearSystem, sol, mesh);
     fePstClc(sol, linearSystem, solBDF1);
     // Compute L2 norm of the solution
@@ -361,7 +361,7 @@ void solveBDF1(std::vector<double> &normL2, feTolerances tol, feMetaNumber *meta
     // norm->computeL2Norm(metaNumber, sol, mesh);
     // normL2[iTime] = norm->getNorm();
     // int cnt = 0;
-    for(auto *norm : norms){
+    for(auto *norm : norms) {
       norm->computeL2Norm(metaNumber, sol, mesh);
       normL2[iTime] = norm->getNorm(); // TODO : fix this
       // std::cout<<"Norme "<<cnt++<<" = "<<normL2[iTime]<<std::endl;
@@ -381,17 +381,16 @@ void solveBDF1(std::vector<double> &normL2, feTolerances tol, feMetaNumber *meta
     // for(int i=0; i<NumberOfDofs;i++){
     //   std::cout<<"la valeur du champ BDF1 vaut"<<lastSol[i]<<std::endl;
     // }
-
   }
 
-  delete solBDF1; 
+  delete solBDF1;
 }
 
-
-void solveDC3(std::vector<double> &normL2BDF2, std::vector<double> &normL2DC3,feTolerances tol, feMetaNumber *metaNumber, 
-  feLinearSystem *linearSystem, std::vector<feBilinearForm*> &formMatrices, std::vector<feBilinearForm*> &formResiduals,
-  feSolution *sol, std::vector<feNorm*> &norms, feMesh *mesh, std::vector<feSpace*> &spaces)
-{
+void solveDC3(std::vector<double> &normL2BDF2, std::vector<double> &normL2DC3, feTolerances tol,
+              feMetaNumber *metaNumber, feLinearSystem *linearSystem,
+              std::vector<feBilinearForm *> &formMatrices,
+              std::vector<feBilinearForm *> &formResiduals, feSolution *sol,
+              std::vector<feNorm *> &norms, feMesh *mesh, std::vector<feSpace *> &spaces) {
   linearSystem->setRecomputeStatus(true);
   double dt = sol->getTimeStep();
   double nSteps = sol->getNbTimeSteps();
