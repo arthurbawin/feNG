@@ -86,9 +86,9 @@ void initializeBDF2(feSolution *sol, feMetaNumber *metaNumber, feMesh *mesh,
 void initializeBDF1(feSolution *sol, feMetaNumber *metaNumber, feMesh *mesh,
                     feSolutionBDF1 *solBDF1);
 void initializeDC2F(feSolution *sol, feMetaNumber *metaNumber, feMesh *mesh,
-                            feSolutionBDF1 *solBDF1, feSolutionDC2F *solDC2F);
-void initializeDC3(feSolution *sol, feMetaNumber *metaNumber, feMesh *mesh,
-                    feSolutionBDF2 *solBDF2, feSolutionDCF *solDC3);
+                    feSolutionBDF1 *solBDF1, feSolutionDC2F *solDC2F);
+void initializeDC3(feSolution *sol, feMetaNumber *metaNumber, feMesh *mesh, feSolutionBDF2 *solBDF2,
+                   feSolutionDCF *solDC3);
 void initializeDC3F(feSolution *sol, feMetaNumber *metaNumber, feMesh *mesh,
                     feSolutionDC2F *solDC2F, feSolutionDCF *solDC3);
 void initializeDC4F(feSolution *sol, feMetaNumber *metaNumber, feMesh *mesh,

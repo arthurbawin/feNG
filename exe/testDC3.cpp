@@ -12,7 +12,7 @@
 #include "feSysElm.h"
 #include "feBilinearForm.h"
 #include "feSolver.h"
-
+#define USING_PETSC
 #ifdef HAVE_PETSC
 
 #include "feLinearSystemPETSc.h"
@@ -34,6 +34,9 @@ double fSource(const double t, const std::vector<double> &x, const std::vector<d
 }
 
 int main(int argc, char **argv) {
+#ifdef USING_PETSC
+  petscInitialize(argc, argv);
+#endif
   double xa = 0.;
   double xb = 5.;
 
@@ -42,14 +45,14 @@ int main(int argc, char **argv) {
   feFunction *funSol = new feFunction(fSol, par);
   feFunction *funSource = new feFunction(fSource, par);
 
-  int nIter = 2;
+  int nIter = 1;
   std::vector<double> maxNormL2BDF(2 * nIter, 0.0);
   std::vector<double> maxNormL2DC3(2 * nIter, 0.0);
 
   std::vector<int> nElm(nIter, 0);
 
   for(int iter = 0; iter < nIter; ++iter) {
-    nElm[iter] = 40 * pow(2, iter);
+    nElm[iter] = 5 * pow(2, iter);
     // Maillage
     feMesh1DP1 *mesh = new feMesh1DP1(xa, xb, nElm[iter], "BXA", "BXB", "M1D");
     // Espaces d'interpolation
@@ -122,6 +125,8 @@ int main(int argc, char **argv) {
 
     printf("%12d \t %12.6e \t %12.6e\t %12.6e \t %12.6e\n", nElm[i], maxNormL2BDF[2 * i],
            maxNormL2BDF[2 * i + 1], maxNormL2DC3[2 * i], maxNormL2DC3[2 * i + 1]);
-
+#ifdef USING_PETSC
+  petscFinalize();
+#endif
   return 0;
 }

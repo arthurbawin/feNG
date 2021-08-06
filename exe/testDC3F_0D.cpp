@@ -18,21 +18,19 @@
 #include "feLinearSystemPETSc.h"
 #endif
 
-double fSol(const double t, const std::vector<double> &x, const std::vector<double> par){
-  return pow(t,7);
+double fSol(const double t, const std::vector<double> &x, const std::vector<double> par) {
+  return pow(t, 7);
 }
 
-double fSource(const double t, const std::vector<double> &x, const std::vector<double> par){
-  return -7.*pow(t,6);
+double fSource(const double t, const std::vector<double> &x, const std::vector<double> par) {
+  return -7. * pow(t, 6);
 }
-
 
 int main(int argc, char **argv) {
-  #ifdef USING_PETSC
-    petscInitialize(argc, argv);
-  #endif
+#ifdef USING_PETSC
+  petscInitialize(argc, argv);
+#endif
   double xa = 0.;
-
 
   feFunction *funSol = new feFunction(fSol, {});
   feFunction *funSource = new feFunction(fSource, {});
@@ -57,7 +55,7 @@ int main(int argc, char **argv) {
     // Solution
     double t0 = 0.;
     double t1 = 1.;
-    int nTimeSteps =5 * pow(2, iter);
+    int nTimeSteps = 5 * pow(2, iter);
     TT[iter] = nTimeSteps;
     feSolution *solDC3F = new feSolution(mesh, fespace, feEssBC, metaNumber);
     // Formes (bi)lineaires
@@ -114,9 +112,12 @@ int main(int argc, char **argv) {
     normL2_DC2F[2 * i + 1] = log(normL2_DC2F[2 * (i - 1)] / normL2_DC2F[2 * i]) / log(2.);
     normL2_DC3F[2 * i + 1] = log(normL2_DC3F[2 * (i - 1)] / normL2_DC3F[2 * i]) / log(2.);
   }
-  printf("%12s \t %12s \t %12s \t %12s \t %12s \t %12s \t %12s \t %12s \n", "nTimeSteps", "nElm", "||E_BDF1||", "Taux BDF1", "||E_DC2F||", "Taux DC2F" , "||E_DC3F||", "Taux DC3F");
+  printf("%12s \t %12s \t %12s \t %12s \t %12s \t %12s \t %12s \t %12s \n", "nTimeSteps", "nElm",
+         "||E_BDF1||", "Taux BDF1", "||E_DC2F||", "Taux DC2F", "||E_DC3F||", "Taux DC3F");
   for(int i = 0; i < nIter; ++i)
-    printf("%12d \t %12d \t %12.6e \t %12.6e \t %12.6e \t %12.6e \t %12.6e \t %12.6e \n", TT[i], nElm[i], normL2_BDF1[2 * i], normL2_BDF1[2 * i + 1], normL2_DC2F[2 * i], normL2_DC2F[2 * i + 1], normL2_DC3F[2 * i], normL2_DC3F[2 * i + 1]);
+    printf("%12d \t %12d \t %12.6e \t %12.6e \t %12.6e \t %12.6e \t %12.6e \t %12.6e \n", TT[i],
+           nElm[i], normL2_BDF1[2 * i], normL2_BDF1[2 * i + 1], normL2_DC2F[2 * i],
+           normL2_DC2F[2 * i + 1], normL2_DC3F[2 * i], normL2_DC3F[2 * i + 1]);
 #ifdef USING_PETSC
   petscFinalize();
 #endif

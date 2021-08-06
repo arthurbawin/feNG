@@ -51,7 +51,7 @@ public:
   double getTimeStep() { return _dt; }
   double getNbTimeSteps() { return _nTimeSteps; }
   double getInitialTime() { return _t0; }
-  double getFinalTime() { return _t1;}
+  double getFinalTime() { return _t1; }
 
   std::vector<double> getSolutionCopy() { return _sol; }
   std::vector<double> &getSolutionReference() { return _sol; }

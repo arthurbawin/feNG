@@ -12,7 +12,7 @@
 #include "feSysElm.h"
 #include "feBilinearForm.h"
 #include "feSolver.h"
-#include "feGetSolFromFile.h"
+// #include "feGetSolFromFile.h"
 #define USING_PETSC
 #ifdef HAVE_PETSC
 #include "feLinearSystemPETSc.h"
@@ -23,7 +23,7 @@ double fSol(const double t, const std::vector<double> &x, const std::vector<doub
 }
 
 double fSource(const double t, const std::vector<double> &x, const std::vector<double> par) {
-  return -2*pow(t, 1);
+  return -2 * pow(t, 1);
 }
 
 int main(int argc, char **argv) {
@@ -84,7 +84,7 @@ int main(int argc, char **argv) {
     // Resolution
     feTolerances tol{1e-10, 1e-12, 10};
     // std::vector<double> normL2BDF1(nTimeSteps,0.0);
-    
+
     BDF1Solver solver(tol, metaNumber, linearSystem, sol, norms, mesh, t0, t1, nTimeSteps);
     solver.makeSteps(nTimeSteps, fespace);
     std::vector<double> &normL2BDF = solver.getNorm(0);
