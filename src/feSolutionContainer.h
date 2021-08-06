@@ -72,14 +72,25 @@ public:
   virtual void computeSolTimeDerivative(feSolution *sol, feLinearSystem *linearSystem);
 };
 
+class feSolutionDC2F : public feSolutionContainer {
+protected:
+public:
+  feSolutionDC2F(int nSol, double tn, feMetaNumber *metaNumber)
+    : feSolutionContainer(nSol, tn, metaNumber){};
+  virtual ~feSolutionDC2F() {}
+  virtual void computeSolTimeDerivative(feSolution *sol, feLinearSystem *linearSystem);
+};
+
 void initializeBDF2(feSolution *sol, feMetaNumber *metaNumber, feMesh *mesh,
                     feSolutionBDF2 *solBDF2);
 void initializeBDF1(feSolution *sol, feMetaNumber *metaNumber, feMesh *mesh,
                     feSolutionBDF1 *solBDF1);
-void initializeBDF2withBDF1(feSolution *sol, feMetaNumber *metaNumber, feMesh *mesh,
-                            feSolutionBDF1 *solBDF1, feSolutionBDF2 *solBDF2);
-void initializeDC3F(feSolution *sol, feMetaNumber *metaNumber, feMesh *mesh,
+void initializeDC2F(feSolution *sol, feMetaNumber *metaNumber, feMesh *mesh,
+                            feSolutionBDF1 *solBDF1, feSolutionDC2F *solDC2F);
+void initializeDC3(feSolution *sol, feMetaNumber *metaNumber, feMesh *mesh,
                     feSolutionBDF2 *solBDF2, feSolutionDCF *solDC3);
+void initializeDC3F(feSolution *sol, feMetaNumber *metaNumber, feMesh *mesh,
+                    feSolutionDC2F *solDC2F, feSolutionDCF *solDC3);
 void initializeDC4F(feSolution *sol, feMetaNumber *metaNumber, feMesh *mesh,
                     feSolutionBDF2 *solBDF2, feSolutionDCF *solDC3, feSolutionDCF *solDC4);
 
