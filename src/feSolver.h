@@ -132,7 +132,6 @@ public:
 class DC2FSolver : public TimeIntegrator {
 protected:
   feSolutionContainer *_solutionContainerBDF1;
-  feSolutionContainer *_solutionContainerDC2F;
 
 public:
   DC2FSolver(feTolerances tol, feMetaNumber *metaNumber, feLinearSystem *linearSystem,
@@ -140,7 +139,6 @@ public:
              int nTimeSteps);
   virtual ~DC2FSolver() {
     delete _solutionContainerBDF1;
-    delete _solutionContainerDC2F;
   }
 
   std::vector<double> &getNorm(int iNorm) { return _normL2[iNorm]; };
@@ -152,7 +150,6 @@ class DC3FSolver : public TimeIntegrator {
 protected:
   feSolutionContainer *_solutionContainerBDF1;
   feSolutionContainer *_solutionContainerDC2F;
-  feSolutionContainer *_solutionContainerDC3F;
 
 public:
   DC3FSolver(feTolerances tol, feMetaNumber *metaNumber, feLinearSystem *linearSystem,
@@ -161,7 +158,6 @@ public:
   virtual ~DC3FSolver() {
     delete _solutionContainerBDF1;
     delete _solutionContainerDC2F;
-    delete _solutionContainerDC3F;
   }
 
   std::vector<double> &getNorm(int iNorm) { return _normL2[iNorm]; };
