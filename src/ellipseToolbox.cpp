@@ -139,7 +139,7 @@ void getExplicitEllipse(std::vector<double> &p, double *semiA, double *semiB,
   double f = p[4] / 2.0;
   double g = p[5];
 
-  std::cout << a << " - " << b << " - " << c << " - " << d << " - " << f << " - " << g << std::endl;
+  // std::cout << a << " - " << b << " - " << c << " - " << d << " - " << f << " - " << g << std::endl;
 
   if(fabs(d) > 1e-10 || fabs(f) > 1e-10)
     printf("In getExplicitEllipse : Warning : ignoring extra implicit coefficients beyond p[2] (d "
@@ -149,7 +149,7 @@ void getExplicitEllipse(std::vector<double> &p, double *semiA, double *semiB,
   double D = discriminant(p);
   double delta = -g * b * b + 2 * b * d * f - c * d * d - a * f * f + a * c * g;
 
-  std::cout << D << " - " << delta << std::endl;
+  // std::cout << D << " - " << delta << std::endl;
 
   if(D > 1e-12) {
     if(fabs(delta) > 1e-12 && delta / (a + c) < 0) {

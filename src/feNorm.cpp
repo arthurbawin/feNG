@@ -25,7 +25,7 @@ void feNorm::computeL2Norm(feMetaNumber *metaNumber, feSolution *sol, feMesh *me
   double normL2 = 0.0, solInt, solRef, J, t = sol->getCurrentTime();
   int nElm = _intSpace->getNbElm();
 
-  // std::cout<<"Computing norm of "<<_intSpace->getFieldID()<<" on "<<nElm<<" elements"<<std::endl;
+  std::cout<<"Computing norm of "<<_intSpace->getFieldID()<<" on "<<nElm<<" elements"<<std::endl;
   for(int iElm = 0; iElm < nElm; ++iElm) {
     _intSpace->initializeAddressingVector(metaNumber->getNumbering(_intSpace->getFieldID()), iElm);
     _intSpace->initializeSolution(sol);

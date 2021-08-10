@@ -6,10 +6,12 @@
 #include "STensor3.h"
 
 typedef struct feMetricOptions {
+  int computationMethod;
+  int polynomialDegree;
   int nTargetVertices;
+  double eTargetError;
   double hMin;
   double hMax;
-  int computationMethod;
   double LpNorm;
   int nPhi;
 } feMetricOptions;
@@ -30,8 +32,10 @@ public:
                           double &B, double &C, int max_iter);
 
   // Intersecter avec un autre feMetric
-  void writeSizeFieldSol(std::string solFileName);
+  void writeSizeFieldSol2D(std::string solFileName);
+  void writeSizeFieldSol3D(std::string solFileName);
   void writeSizeFieldGmsh(std::string meshName, std::string metricMeshName);
+  void drawEllipsoids(std::string posFile);
 };
 
 #endif

@@ -2,6 +2,8 @@
 
 #include <algorithm>
 
+static bool firstRecovery = true;
+
 // The names of the reconstructed fields
 static std::map<std::pair<int, int>, std::string> suffix = {
   {{0, 0}, ""},     {{1, 0}, "dx"},   {{1, 1}, "dy"},   {{2, 0}, "dxx"},  {{2, 1}, "dxy"},
@@ -26,10 +28,28 @@ fePatch::fePatch(feCncGeo *cnc) {
       vertToElems[connecNodes[_nNodePerElm * i + j]].insert(i); // TODO : A verifier
     }
   }
+
+  // Increase the size of the patch if there are too few elements
+  for(auto &v : vertToElems){
+    if(v.second.size() <= 2){
+      std::vector<int> toAdd(0);
+      for(auto e : v.second){
+        for(int j = 0; j < _nNodePerElm; ++j) {
+          for(auto e2 : vertToElems[connecNodes[_nNodePerElm * e + j]]){
+            toAdd.push_back(e2);
+            // v.second.insert(e2);
+          }
+        }
+      }
+      for(auto e : toAdd)
+        v.second.insert(e);
+    }
+  }
 }
 
 feRecovery::feRecovery(feMetaNumber *metaNumber, feSpace *space, feMesh *mesh, feSolution *sol,
-                       std::vector<double> &norm, feFunction *solRef)
+                       std::vector<double> &norm, feFunction *solRef, std::string meshName, std::string metricMeshName,
+                       feVectorFunction *solRefGrad)
   : _metaNumber(metaNumber), _mesh(mesh), _sol(sol), _intSpace(space) {
   _cnc = space->getCncGeo();
   _nElm = _cnc->getNbElm();
@@ -105,44 +125,57 @@ feRecovery::feRecovery(feMetaNumber *metaNumber, feSpace *space, feMesh *mesh, f
   allocateStructures();
 
   // To export all derivatives to a file, so that we don't need to store them all
-  std::string derivativesFileName = "derivatives.msh";
-  FILE *dFile = fopen(derivativesFileName.c_str(), "w");
+  // std::string derivativesFileName = "derivatives.msh";
+  // FILE *dFile = fopen(derivativesFileName.c_str(), "w");
 
-  std::string meshName = "../../data/square2Msh2.msh";
-  std::string metricMeshName = "../../data/square2Msh2Adapt.msh";
+  std::cout<<"Derivatives will be written in "<< metricMeshName <<std::endl;
   std::filebuf fbIn, fbOut;
   fbIn.open(meshName, std::ios::in);
-  fbOut.open(metricMeshName, std::ios::out);
   std::istream input(&fbIn);
-  std::ostream output(&fbOut);
-  std::string buffer;
-  // Copy .msh file except for the possible previous NodeData
-  while(getline(input, buffer)) {
-    if(buffer == "$NodeData") {
-      while(buffer != "$EndNodeData") getline(input, buffer);
-      getline(input, buffer);
-    }
-    output << buffer << std::endl;
-  }
+  // if(firstRecovery){
+    fbOut.open(metricMeshName, std::ios::out);
+  // } else{
+  //   // Append the derivatives of the next recoveries
+  //   fbOut.open(metricMeshName, std::ios::app);
+  // }
 
-  int cnt = 0;
+  std::ostream output(&fbOut);
+  
+  // if(firstRecovery){
+    // firstRecovery = false;
+    std::string buffer;
+    // Copy .msh file
+    while(getline(input, buffer)) {
+      output << buffer << std::endl;
+    }
+    fbIn.close();
+  // }
+
   for(int iDerivative = 0; iDerivative < _degSol + 1; ++iDerivative) {
     bool recoverDerivative = (iDerivative > 0);
 
-    for(int i = 0; i < pow(_dim, iDerivative); ++i) { solveLeastSquare(i, recoverDerivative); }
-
     for(int i = 0; i < pow(_dim, iDerivative); ++i) {
-      // derivative(i, iDerivative, dFile);
-      derivative(i, iDerivative, output);
+      // Recovery of the solution if iDerivative = 0, of the derivatives if > 0
+      solveLeastSquare(i, recoverDerivative);
+      std::cout<<"Solving LEAST SQUARES"<<std::endl;
     }
 
-    if(iDerivative == 0)
-      estimateError(norm, solRef); // Compute L2 norm after the first reconstruction (the one for u)
+    for(int i = 0; i < pow(_dim, iDerivative); ++i) {
+      derivative(i, iDerivative, output);
+      printf("Computed derivatives of solution of order %d\n", iDerivative);
+    }
+
+    // if(iDerivative == 0){
+    //   estimateError(norm, solRef); // Compute L2 norm after the first reconstruction (the one for u)
+    // } else if(iDerivative == 1){
+    //   estimateH1Error(norm, solRefGrad);
+    // }
+    if(iDerivative == 0 && solRefGrad != nullptr){
+      estimateH1Error(norm, solRefGrad);
+    }
   }
 
-  fclose(dFile);
   fbOut.close();
-  fbIn.close();
 
   getErrorPolynomials();
 
@@ -152,6 +185,17 @@ feRecovery::feRecovery(feMetaNumber *metaNumber, feSpace *space, feMesh *mesh, f
 void feRecovery::allocateStructures() {
   PetscErrorCode ierr;
   // Create Petsc matrix and vectors for least square resolution
+  // std::vector<PetscInt> nnz(_dimRecovery, _dimRecovery);
+  // ierr = MatCreate(PETSC_COMM_WORLD, &A);
+  // CHKERRABORT(PETSC_COMM_WORLD, ierr);
+  // ierr = MatSetSizes(A, PETSC_DECIDE, PETSC_DECIDE, _dimRecovery, _dimRecovery);
+  // CHKERRABORT(PETSC_COMM_WORLD, ierr);
+  // ierr = MatSetFromOptions(A);
+  // CHKERRABORT(PETSC_COMM_WORLD, ierr);
+  // ierr = MatSeqAIJSetPreallocation(A, 0, nnz.data());
+  // CHKERRABORT(PETSC_COMM_WORLD, ierr);
+  // ierr = MatSetUp(A);
+
   ierr = MatCreate(PETSC_COMM_WORLD, &A);
   CHKERRABORT(PETSC_COMM_WORLD, ierr);
   ierr = MatSetType(A, MATDENSE);
@@ -178,15 +222,21 @@ void feRecovery::allocateStructures() {
   // Set solver and preconditioner
   ierr = KSPCreate(PETSC_COMM_WORLD, &ksp);
   CHKERRABORT(PETSC_COMM_WORLD, ierr);
-  ierr = KSPSetType(ksp, KSPCG);
+  ierr = KSPSetType(ksp, KSPGMRES);
   CHKERRABORT(PETSC_COMM_WORLD, ierr);
   ierr = KSPSetOperators(ksp, A, A);
   CHKERRABORT(PETSC_COMM_WORLD, ierr);
   ierr = KSPGetPC(ksp, &preconditioner);
   CHKERRABORT(PETSC_COMM_WORLD, ierr);
-  ierr = PCSetType(preconditioner, PCJACOBI);
+  ierr = PCSetType(preconditioner, PCILU);
   CHKERRABORT(PETSC_COMM_WORLD, ierr);
-  ierr = KSPSetTolerances(ksp, 1e-12, 1e-12, PETSC_DEFAULT, 500);
+
+  PetscReal rel_tol = 1e-6;
+  PetscReal abs_tol = 1e-12;
+  PetscReal div_tol = 1e6;
+  PetscInt max_iter = 500;
+
+  ierr = KSPSetTolerances(ksp, rel_tol, abs_tol, div_tol, max_iter);
   CHKERRABORT(PETSC_COMM_WORLD, ierr);
   ierr = KSPSetFromOptions(ksp);
   CHKERRABORT(PETSC_COMM_WORLD, ierr);
@@ -251,11 +301,31 @@ void feRecovery::solveLeastSquare(int indRecovery, bool recoverDerivative) {
     // Get patch of elements
     std::set<int> &elemPatch = _patch->getPatch(v);
 
+    // std::string name = "patchesVert" + std::to_string(v) + ".pos";
+
+    // FILE *file = fopen(name.c_str(),"w");
+    // std::string text = "View\"patchVertex" + std::to_string(v) + "\"{\n";
+    // fprintf(file, text.c_str());
+
     for(auto elem : elemPatch) {
       _intSpace->initializeAddressingVector(_metaNumber->getNumbering(_intSpace->getFieldID()),
                                             elem);
       _intSpace->initializeSolution(_sol);
       geoCoord = _mesh->getCoord(_intSpace->getCncGeoTag(), elem);
+
+      // Sommets de l'element
+      double r1[3] = {0., 0., 0.};
+      double r2[3] = {1., 0., 0.};
+      double r3[3] = {0., 1., 0.};
+      std::vector<double> xv1(3, 0.0);
+      std::vector<double> xv2(3, 0.0);
+      std::vector<double> xv3(3, 0.0);
+      _geoSpace->interpolateVectorField(geoCoord, r1, xv1);
+      _geoSpace->interpolateVectorField(geoCoord, r2, xv2);
+      _geoSpace->interpolateVectorField(geoCoord, r3, xv3);
+       // fprintf(file,
+       //    "ST(%g,%g,%g,%g,%g,%g,%g,%g,%g){%g,%g,%g};\n",
+       //    xv1[0], xv1[1], 0.0, xv2[0], xv2[1], 0.0, xv3[0], xv3[1], 0.0, elem, elem, elem);
 
       // Loop over quad points and increment least square matrix
       for(int k = 0; k < nQuad; ++k) {
@@ -311,6 +381,9 @@ void feRecovery::solveLeastSquare(int indRecovery, bool recoverDerivative) {
       }
     }
 
+    // fprintf(file, "};\n");
+    // fclose(file);
+
     ierr = MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY);
     CHKERRABORT(PETSC_COMM_WORLD, ierr);
     ierr = MatAssemblyEnd(A, MAT_FINAL_ASSEMBLY);
@@ -343,7 +416,6 @@ void feRecovery::solveLeastSquare(int indRecovery, bool recoverDerivative) {
   }
 }
 
-// void feRecovery::derivative(int indRecovery, int iDerivative, FILE* dFile){
 void feRecovery::derivative(int indRecovery, int iDerivative, std::ostream &output) {
   std::vector<int> &vertices = _patch->getVertices();
   if(_dim == 2) {
@@ -358,6 +430,8 @@ void feRecovery::derivative(int indRecovery, int iDerivative, std::ostream &outp
       }
       derivativeCoeff[v][2 * indRecovery] = dudx;
       derivativeCoeff[v][2 * indRecovery + 1] = dudy;
+
+      // printf("Derivee à l'emplacement %d et %d = %+-4.4f - %+-4.4f\n", 2*indRecovery, 2*indRecovery+1, derivativeCoeff[v][2 * indRecovery][0], derivativeCoeff[v][2 * indRecovery+1][0]);
     }
 
     // Exporter les derivees aux sommets (terme indépendant)
@@ -371,11 +445,8 @@ void feRecovery::derivative(int indRecovery, int iDerivative, std::ostream &outp
               derivativeCoeff[v][2 * indRecovery + 1][0]);
     }
     fclose(myfile);
-
-    // std::cout<<"Storing dudx at "<<2*indRecovery<<std::endl;
-    // std::cout<<"Storing dudy at "<<2*indRecovery+1<<std::endl;
   } else {
-    printf("TODO : Derivatives for recoveries in 1D or 3D\n");
+    printf("TODO : Derivatives for recoveries in 0D, 1D or 3D\n");
   }
 
   // // Print the solution at first pass
@@ -514,4 +585,58 @@ void feRecovery::estimateError(std::vector<double> &norm, feFunction *solRef) {
   }
   norm[0] = sqrt(norm[0]);
   norm[1] = sqrt(norm[1]);
+}
+
+void feRecovery::estimateH1Error(std::vector<double> &norm, feVectorFunction *solRefGrad) {
+  norm[0] = norm[1] = norm[2] = norm[3] = 0.0;
+
+  std::vector<double> geoCoord;
+  std::vector<double> x(3, 0.);
+  std::vector<double> xLoc(3, 0.);
+  std::vector<double> monomials(_dimRecovery, 0.);
+
+  int nQuad = _geoSpace->getNbQuadPoints();
+  std::vector<double> &w = _geoSpace->getQuadratureWeights();
+  std::vector<double> &J = _cnc->getJacobians();
+
+  for(int iElm = 0; iElm < _nElm; ++iElm) {
+    _intSpace->initializeAddressingVector(_metaNumber->getNumbering(_intSpace->getFieldID()), iElm);
+    _intSpace->initializeSolution(_sol);
+    geoCoord = _mesh->getCoord(_intSpace->getCncGeoTag(), iElm);
+
+    for(int k = 0; k < nQuad; ++k) {
+      // Coordonnées des points d'intégration
+      _geoSpace->interpolateVectorFieldAtQuadNode(geoCoord, k, x);
+
+      // derivee reconstruite au point d'intégration : interpolation des valeurs issues des sommets
+      double dudxReconstruit = 0.0;
+      double dudyReconstruit = 0.0;
+      for(int iNode = 0; iNode < _nNodePerElm; ++iNode) {
+        int v = _cnc->getNodeConnectivity(iElm, iNode);
+
+        xLoc[0] = x[0] - _mesh->getVertex(v)->x();
+        xLoc[1] = x[1] - _mesh->getVertex(v)->y();
+        xLoc[2] = x[2] - _mesh->getVertex(v)->z();
+
+        for(int i = 0; i < _dimDerivation; ++i) {
+          monomials[i] = pow(xLoc[0], _expX[i]) * pow(xLoc[1], _expY[i]);
+          dudxReconstruit += _geoSpace->getFunctionAtQuadNode(iNode, k) * derivativeCoeff[v][0][i] * monomials[i];
+          dudyReconstruit += _geoSpace->getFunctionAtQuadNode(iNode, k) * derivativeCoeff[v][1][i] * monomials[i];
+        }
+      }
+
+      norm[0] += J[nQuad * iElm + k] * w[k] * pow(dudxReconstruit - _intSpace->interpolateSolutionAtQuadNode_rDerivative(k), 2);
+      norm[1] += J[nQuad * iElm + k] * w[k] * pow(dudyReconstruit - _intSpace->interpolateSolutionAtQuadNode_sDerivative(k), 2);
+      if(solRefGrad){
+        std::vector<double> res(2,0.);
+        solRefGrad->eval(0,x,res);
+        norm[2] += J[nQuad * iElm + k] * w[k] * pow(dudxReconstruit - res[0], 2);
+        norm[3] += J[nQuad * iElm + k] * w[k] * pow(dudyReconstruit - res[1], 2);
+      }
+    }
+  }
+  norm[0] = sqrt(norm[0]);
+  norm[1] = sqrt(norm[1]);
+  norm[2] = sqrt(norm[2]);
+  norm[3] = sqrt(norm[3]);
 }

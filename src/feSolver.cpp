@@ -231,7 +231,7 @@ void BDF2Solver::makeSteps(int nSteps, std::vector<feSpace *> &spaces) {
     ++_currentStep;
     printf("Current step = %d : t = %f\n", _currentStep, _tCurrent);
 
-    std::string vtkFile = "../../data/cylindreAdapt" + std::to_string(_currentStep) + ".vtk";
+    std::string vtkFile = "../../data/cylindreJF/cylindreAdapt" + std::to_string(_currentStep) + ".vtk";
     feExporterVTK writer(vtkFile, _mesh, _sol, _metaNumber, spaces);
   }
 }
@@ -283,7 +283,7 @@ void BDF1Solver::makeSteps(int nSteps, std::vector<feSpace *> &spaces) {
       _linearSystem->setRecomputeStatus(false);
     initializeBDF1(_sol, _metaNumber, _mesh, dynamic_cast<feSolutionBDF1 *>(_solutionContainer));
     printf("\n");
-    printf("Étape 1 - recomputeMatrix = %s : Solution BDF2 - t = %6.6e\n",
+    printf("Étape 1 - recomputeMatrix = %s : Solution BDF1 - t = %6.6e\n",
            _linearSystem->getRecomputeStatus() ? "true" : "false", _sol->getCurrentTime());
     solveQNBDF(_solutionContainer, _tol, _metaNumber, _linearSystem, _sol, _mesh);
     fePstClc(_sol, _linearSystem, _solutionContainer);
@@ -299,7 +299,7 @@ void BDF1Solver::makeSteps(int nSteps, std::vector<feSpace *> &spaces) {
     ++_currentStep;
     printf("Current step = %d : t = %f\n", _currentStep, _tCurrent);
 
-    std::string vtkFile = "../../data/cylindreAdapt" + std::to_string(_currentStep) + ".vtk";
+    std::string vtkFile = "../../data/cylindreJF/cylindreAdapt" + std::to_string(_currentStep) + ".vtk";
     feExporterVTK writer(vtkFile, _mesh, _sol, _metaNumber, spaces);
   }
 }

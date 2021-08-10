@@ -80,7 +80,8 @@ public:
 
 public:
   feRecovery(feMetaNumber *metaNumber, feSpace *space, feMesh *mesh, feSolution *sol,
-             std::vector<double> &norm, feFunction *solRef);
+             std::vector<double> &norm, feFunction *solRef, std::string meshName = "", std::string metricMeshName = "",
+             feVectorFunction *solRefGrad = nullptr);
   ~feRecovery() { delete _patch; }
 
   int getDim() { return _dim; }
@@ -101,6 +102,7 @@ public:
   void derivative(int indRecovery, int iDerivative, std::ostream &output);
   void getErrorPolynomials();
   void estimateError(std::vector<double> &norm, feFunction *solRef);
+  void estimateH1Error(std::vector<double> &norm, feVectorFunction *solRefGrad);
 };
 
 #endif
