@@ -21,7 +21,7 @@
 double fSol(const double t, const std::vector<double> &x, const std::vector<double> par) {
   double c2 = par[1];
   double x1 = x[0];
-  return x1 * (x1 * x1 - 25.) * pow(t, 6) + 1. + x1 * x1 * x1 * pow(t, c2);
+  return x1 * (x1 * x1 - 25.) * pow(t, 6) + x1 * x1 * x1 * pow(t, c2) +1.;
 }
 
 double fSource(const double t, const std::vector<double> &x, const std::vector<double> par) {
@@ -32,6 +32,14 @@ double fSource(const double t, const std::vector<double> &x, const std::vector<d
   return -x1 * (x1 * x1 - 25.) * 6. * pow(t, 5.) + c1 * 6. * x1 * pow(t, 6.) +
          c1 * 6. * x1 * pow(t, c2) - x1 * x1 * x1 * beta;
 }
+
+// double fSol(const double t, const std::vector<double> &x, const std::vector<double> par) {
+//   return pow(t, 2) ;
+// }
+
+// double fSource(const double t, const std::vector<double> &x, const std::vector<double> par) {
+//   return -2 * pow(t, 1);
+// }
 
 int main(int argc, char **argv) {
 #ifdef USING_PETSC
@@ -46,13 +54,15 @@ int main(int argc, char **argv) {
   feFunction *funSource = new feFunction(fSource, par);
 
   int nIter = 1;
-  std::vector<double> maxNormL2BDF(2 * nIter, 0.0);
-  std::vector<double> maxNormL2DC3(2 * nIter, 0.0);
+  std::vector<double> normL2_BDF2(2 * nIter, 0.0);
+  std::vector<double> normL2_DC3(2 * nIter, 0.0);
 
   std::vector<int> nElm(nIter, 0);
+  std::vector<int> TT;
+  TT.resize(nIter);
 
   for(int iter = 0; iter < nIter; ++iter) {
-    nElm[iter] = 5 * pow(2, iter);
+    nElm[iter] = 5 * pow(4, iter);
     // Maillage
     feMesh1DP1 *mesh = new feMesh1DP1(xa, xb, nElm[iter], "BXA", "BXB", "M1D");
     // Espaces d'interpolation
@@ -66,11 +76,12 @@ int main(int argc, char **argv) {
     // Solution
     double t0 = 0.;
     double t1 = 1.;
-    int nTimeSteps = 40 * pow(2, iter);
-    feSolution *sol = new feSolution(mesh, fespace, feEssBC, metaNumber);
-    sol->initializeTemporalSolution(t0, t1, nTimeSteps);
-    sol->initializeUnknowns(mesh, metaNumber);
-    sol->initializeEssentialBC(mesh, metaNumber);
+    int nTimeSteps = 5 * pow(2, iter);
+    TT[iter] = nTimeSteps;
+    feSolution *solDC3 = new feSolution(mesh, fespace, feEssBC, metaNumber);
+    // solDC3->initializeTemporalSolution(t0, t1, nTimeSteps);
+    // solDC3->initializeUnknowns(mesh, metaNumber);
+    // solDC3->initializeEssentialBC(mesh, metaNumber);
     // Formes (bi)lineaires
     int degQuad = 5;
     std::vector<feSpace *> spaceDiffusion1D_U = {&U_M1D};
@@ -87,27 +98,32 @@ int main(int argc, char **argv) {
     std::vector<feBilinearForm *> formMatrices = {diff_U_M1D, masse_U_M1D};
     std::vector<feBilinearForm *> formResiduals = {diff_U_M1D, masse_U_M1D, source_U_M1D};
     // Norme de la solution
-    feNorm *norm = new feNorm(&U_M1D, mesh, degQuad, funSol);
-    std::vector<feNorm *> norms = {norm};
+    feNorm *normBDF2 = new feNorm(&U_M1D, mesh, degQuad, funSol);
+    feNorm *normDC3 = new feNorm(&U_M1D, mesh, degQuad, funSol);
+    std::vector<feNorm *> norms = {normBDF2,normDC3};
     // Systeme lineaire
     feLinearSystemPETSc *linearSystem =
       new feLinearSystemPETSc(argc, argv, formMatrices, formResiduals, metaNumber, mesh);
+  #ifdef HAVE_PETSC  
     linearSystem->initialize();
     // Resolution
-    feTolerances tol{1e-10, 1e-10, 10};
-    std::vector<double> normL2BDF(nTimeSteps, 0.0);
-    std::vector<double> normL2DC3(nTimeSteps, 0.0);
-    solveDC3(normL2BDF, normL2DC3, tol, metaNumber, linearSystem, formMatrices, formResiduals, sol,
-             norms, mesh, fespace);
-    maxNormL2BDF[2 * iter] = *std::max_element(normL2BDF.begin(), normL2BDF.end());
-    maxNormL2DC3[2 * iter] = *std::max_element(normL2DC3.begin(), normL2DC3.end());
+    feTolerances tol{1e-10, 1e-10, 20};
+    std::string CodeIni = "BDF1/DCF" ;   //Define the way of initialization |"SolEx"->for exact solution|  |"BDF1/DCF"->using only initial conditions|
+    DC3Solver solver(tol, metaNumber, linearSystem, solDC3, norms, mesh, t0, t1, nTimeSteps, CodeIni);
+    solver.makeSteps(nTimeSteps, fespace);
+    std::vector<double> &normL2BDF2 = solver.getNorm(0);
+    std::vector<double> &normL2DC3 = solver.getNorm(1);
+    normL2_BDF2[2 * iter] = *std::max_element(normL2BDF2.begin(), normL2BDF2.end());
+    normL2_DC3[2 * iter] = *std::max_element(normL2DC3.begin(), normL2DC3.end());
+#endif
 
-    delete norm;
+    delete normBDF2;
+    delete normDC3;
     delete linearSystem;
     delete masse_U_M1D;
     delete source_U_M1D;
     delete diff_U_M1D;
-    delete sol;
+    delete solDC3;
     delete metaNumber;
     delete mesh;
   }
@@ -116,15 +132,15 @@ int main(int argc, char **argv) {
 
   // Calcul du taux de convergence
   for(int i = 1; i < nIter; ++i) {
-    maxNormL2BDF[2 * i + 1] = log(maxNormL2BDF[2 * (i - 1)] / maxNormL2BDF[2 * i]) / log(2.);
-    maxNormL2DC3[2 * i + 1] = log(maxNormL2DC3[2 * (i - 1)] / maxNormL2DC3[2 * i]) / log(2.);
+    normL2_BDF2[2 * i + 1] = log(normL2_BDF2[2 * (i - 1)] / normL2_BDF2[2 * i]) / log(2.);
+    normL2_DC3[2 * i + 1]  = log(normL2_DC3 [2 * (i - 1)] / normL2_DC3 [2 * i]) / log(2.);
   }
-  printf("%12s \t %12s \t %12s\t %12s \t %12s\n", "nElm", "||E-BDF||", "Taux BDF2", "||E-DC3||",
+  printf("%12s \t %12s \t %12s \t %12s\t %12s \t %12s\n", "nSteps", "nElm", "||E-BDF||", "Taux BDF2", "||E-DC3||",
          "Taux DC3");
   for(int i = 0; i < nIter; ++i)
 
-    printf("%12d \t %12.6e \t %12.6e\t %12.6e \t %12.6e\n", nElm[i], maxNormL2BDF[2 * i],
-           maxNormL2BDF[2 * i + 1], maxNormL2DC3[2 * i], maxNormL2DC3[2 * i + 1]);
+    printf("%12d \t %12d \t %12.6e \t %12.6e\t %12.6e \t %12.6e\n", TT[i], nElm[i], normL2_BDF2[2 * i],
+           normL2_BDF2[2 * i + 1], normL2_DC3[2 * i], normL2_DC3[2 * i + 1]);
 #ifdef USING_PETSC
   petscFinalize();
 #endif

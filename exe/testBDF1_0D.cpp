@@ -19,7 +19,7 @@
 #endif
 
 double fSol(const double t, const std::vector<double> &x, const std::vector<double> par) {
-  return pow(t, 2);
+  return pow(t, 2) ;
 }
 
 double fSource(const double t, const std::vector<double> &x, const std::vector<double> par) {
@@ -35,7 +35,7 @@ int main(int argc, char **argv) {
   feFunction *funSol = new feFunction(fSol, {});
   feFunction *funSource = new feFunction(fSource, {});
 
-  int nIter = 3;
+  int nIter = 5;
   std::vector<double> normL2BDF1(2 * nIter, 0.0);
   // std::vector<double> normL2BDF2(2 * nIter, 0.0);
   std::vector<int> nElm(nIter, 0);

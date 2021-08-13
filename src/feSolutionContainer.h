@@ -32,7 +32,7 @@ public:
   void rotate(double dt);
   void setSol(int iSol, std::vector<double> sol) { _sol[iSol] = sol; }
   void setSolAtDOF(int iSol, int iDOF, double val) { _sol[iSol][iDOF] = val; }
-  // double getSol(int iSol, int iDOF){ return _sol[iSol][iDOF]; }
+  double getSol(int iSol, int iDOF){ return _sol[iSol][iDOF]; }
   virtual void computeSolTimeDerivative(feSolution *sol, feLinearSystem *linearSystem){};
 };
 

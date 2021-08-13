@@ -19,6 +19,7 @@ void feSolutionContainer::initialize(feSolution *sol, feMesh *mesh, feMetaNumber
   _fResidual[0].resize(_nDofs);
 }
 
+
 void feSolutionContainer::rotate(double dt) {
   for(int i = _nSol - 1; i > 0; --i) {
     _t[i] = _t[i - 1];
@@ -33,25 +34,28 @@ void feStationarySolution::computeSolTimeDerivative(feSolution *sol, feLinearSys
 }
 
 void feSolutionBDF2::computeSolTimeDerivative(feSolution *sol, feLinearSystem *linearSystem) {
-  for(int i = 0; i < _nDofs; ++i)
+  std::cout<< "_sol[0][0]   " << _sol[0][0]  << "    _sol[1][0]   " <<_sol[1][0] << "    _sol[2][0]   " <<_sol[2][0]<< std::endl;
+  for(int i = 0; i < _nDofs ; ++i)
     sol->setSolDotAtDOF(i, _cn[0] * _sol[0][i] + _cn[1] * _sol[1][i] + _cn[2] * _sol[2][i]);
   // std::cout<<"coeffs"<<_cn[0]<<","<<_cn[1]<<","<<_cn[2]<<"timestep"<<_t[0]<<_t[1]<<std::endl;
 }
 
 void feSolutionBDF1::computeSolTimeDerivative(feSolution *sol, feLinearSystem *linearSystem) {
+  std::cout<< "_sol[0][0]   " << _sol[0][0]  << "    _sol[1][0]   " <<_sol[1][0] <<  std::endl;
   for(int i = 0; i < _nDofs; ++i) sol->setSolDotAtDOF(i, _cn[0] * _sol[0][i] + _cn[1] * _sol[1][i]);
 
   // std::cout<<"coeffs"<<_cn[0]<<","<<_cn[1]<<","<<_cn[2]<<"timestep"<<_t[0]<<_t[1]<<std::endl;
 }
 
 void feSolutionDCF::computeSolTimeDerivative(feSolution *sol, feLinearSystem *linearSystem) {
+  std::cout<< "_sol[0][0]   " << _sol[0][0]  << "    _sol[1][0]   " <<_sol[1][0] << "    _sol[2][0]   " <<_sol[2][0]<< std::endl;
   for(int i = 0; i < _nDofs; ++i)
     sol->setSolDotAtDOF(i, _cn[0] * _sol[0][i] + _cn[1] * _sol[1][i] + _cn[2] * _sol[2][i]);
   linearSystem->applyCorrectionToResidual(-1.0, _d);
 }
 
 void feSolutionDC2F::computeSolTimeDerivative(feSolution *sol, feLinearSystem *linearSystem) {
-  // std::cout<< "_sol[0][0]   " << _sol[0][0]  << "    _sol[1][0]   " <<_sol[1][0] << std::endl;
+  std::cout<< "_sol[0][0]   " << _sol[0][0]  << "    _sol[1][0]   " <<_sol[1][0] << std::endl;
   for(int i = 0; i < _nDofs; ++i) {
     sol->setSolDotAtDOF(i, _cn[0] * _sol[0][i] + _cn[1] * _sol[1][i]);
   }
@@ -139,12 +143,12 @@ void initializeBDF2(feSolution *sol, feMetaNumber *metaNumber, feMesh *mesh,
 void initializeDC2F(feSolution *sol, feMetaNumber *metaNumber, feMesh *mesh,
                     feSolutionBDF1 *solBDF1, feSolutionDC2F *solDC2F) {
   std::vector<double> t = solBDF1->getTime();
-  int nLvl = 2;
+  int nLvl = 1;
   int orderBDF = 1, orderP1 = orderBDF + 1, nTMin = orderP1;
   std::vector<double> cn(nLvl * 3);
   if((int)t.size() < nTMin) printf("In feSolutionContainer::initializeDC2F : t.size < nTMin\n");
   std::vector<double> tt(nTMin, 0.);
-  for(int i = 0; i < nTMin; ++i) tt[i] = t[i + 1];
+  for(int i = 0; i < nTMin; ++i) tt[i] = t[i];
   double tn = tt[0];
   double k1 = tt[0] - tt[1];
   // double k2 = tt[1] - tt[2];
@@ -192,7 +196,7 @@ void initializeBDF1(feSolution *sol, feMetaNumber *metaNumber, feMesh *mesh,
   if((int)t.size() < nTMin) printf("In feSolutionContainer::initializeBDF1 : t.size < nTMin\n");
   std::vector<double> tt(nTMin, 0.);
   for(int i = 0; i < nTMin; ++i) tt[i] = t[i];
-  double tn = tt[1];
+  double tn = tt[0];
   // double k1 = tt[0] - tt[1];
   // double k2 = tt[1] - tt[2];
   // Coeffs BDF
@@ -277,7 +281,7 @@ void initializeDC3F(feSolution *sol, feMetaNumber *metaNumber, feMesh *mesh,
   if((int)t.size() < nTMin) printf("In feSolutionContainer::initializeDC3F : t.size < nTMin\n");
   std::vector<double> tt(nTMin, 0.);
   for(int i = 0; i < nTMin; ++i) tt[i] = t[i];
-  double tn = tt[0];
+  double tn = tt[1];
   double k1 = tt[0] - tt[1];
   double k2 = tt[1] - tt[2];
   // Coeffs BDF

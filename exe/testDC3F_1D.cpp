@@ -21,7 +21,7 @@
 double fSol(const double t, const std::vector<double> &x, const std::vector<double> par) {
   double c2 = par[1];
   double x1 = x[0];
-  return x1 * (x1 * x1 - 25.) * pow(t, 6) + 2.;
+  return x1 * (x1 * x1 - 25.) * pow(t, 6) ;
 }
 
 double fSource(const double t, const std::vector<double> &x, const std::vector<double> par) {
@@ -51,14 +51,14 @@ int main(int argc, char **argv) {
   petscInitialize(argc, argv);
 #endif
   double xa = 0.;
-  double xb = 5.;
+  double xb = 2.;
 
   double kd = 0.1;
   std::vector<double> par = {kd, 6.};
   feFunction *funSol = new feFunction(fSol, par);
   feFunction *funSource = new feFunction(fSource, par);
 
-  int nIter = 5;
+  int nIter = 4;
   std::vector<double> normL2_BDF1(2 * nIter, 0.0);
   std::vector<double> normL2_DC2F(2 * nIter, 0.0);
   std::vector<double> normL2_DC3F(2 * nIter, 0.0);
@@ -72,7 +72,7 @@ int main(int argc, char **argv) {
     // Espaces d'interpolation
     feSpace1DP0 U_BXA = feSpace1DP0(mesh, "U", "BXA", funSol);
     feSpace1DP0 U_BXB = feSpace1DP0(mesh, "U", "BXB", funSol);
-    feSpace1DP1 U_M1D = feSpace1DP1(mesh, "U", "M1D", funSol);
+    feSpace1DP3 U_M1D = feSpace1DP3(mesh, "U", "M1D", funSol);
     std::vector<feSpace *> fespace = {&U_BXA, &U_BXB, &U_M1D};
     std::vector<feSpace *> feEssBC = {&U_BXA, &U_BXB};
     // Numerotations
@@ -112,7 +112,7 @@ int main(int argc, char **argv) {
     feLinearSystemPETSc *linearSystem =
       new feLinearSystemPETSc(argc, argv, formMatrices, formResiduals, metaNumber, mesh);
 #ifdef HAVE_PETSC
-    linearSystem->initialize();
+    // linearSystem->initialize();
     // Resolution
     feTolerances tol{1e-10, 1e-10, 10};
 
