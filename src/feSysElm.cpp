@@ -98,10 +98,14 @@ void feSysElm_1D_Source::computeBe(std::vector<double> &J, int numElem,
   for(int k = 0; k < nG; ++k) {
     geoSpace->interpolateVectorFieldAtQuadNode(geoCoord, k, x);
     double S = _fct->eval(tn, x);
-
+    // std::cout<< "-----S = "<<S<<"---------"<<std::endl;
     for(int i = 0; i < nFunctions; ++i) {
       _feU[i] = intSpace[_idU]->getFunctionAtQuadNode(i, k);
       Be[i] -= _feU[i] * S * J[nG * numElem + k] * w[k];
+      // std::cout<<"feU["<<i<<"] = "<<_feU[i]<<std::endl;
+      // std::cout<<"J = "<<J[nG * numElem + k]<<std::endl;
+      // std::cout<<"w["<<k<<"] = "<<w[k]<<std::endl;
+      // std::cout<<"Be["<<i<<"] = "<<Be[i]<<std::endl;
     }
   }
 }
@@ -156,6 +160,7 @@ void feSysElm_1D_Diffusion::computeBe(std::vector<double> &J, int numElem,
       _feUdx[i] = intSpace[_idU]->getdFunctiondrAtQuadNode(i, k);
       _feUdx[i] /= jac;
       Be[i] -= _feUdx[i] * kD * dudx * jac * w[k];
+      // std::cout<<"Be Diff["<<i<<"] = "<<Be[i]<<std::endl;
     }
   }
 }
@@ -205,6 +210,7 @@ void feSysElm_1D_Masse::computeBe(std::vector<double> &J, int numElem,
     for(int i = 0; i < nFunctions; ++i) {
       _feU[i] = intSpace[_idU]->getFunctionAtQuadNode(i, k);
       Be[i] -= _feU[i] * rho * uDot * jac * w[k];
+      // std::cout<<"Be Mass["<<i<<"] = "<<Be[i]<<std::endl;
     }
   }
 }

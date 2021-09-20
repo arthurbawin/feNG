@@ -19,7 +19,7 @@
 #endif
 
 double fSol(const double t, const std::vector<double> &x, const std::vector<double> par) {
-  return pow(t, 2) ;
+  return pow(t, 2);
 }
 
 double fSource(const double t, const std::vector<double> &x, const std::vector<double> par) {

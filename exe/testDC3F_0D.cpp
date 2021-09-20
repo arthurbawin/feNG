@@ -18,12 +18,20 @@
 #include "feLinearSystemPETSc.h"
 #endif
 
+// double fSol(const double t, const std::vector<double> &x, const std::vector<double> par) {
+//   return sin(2*M_PI*t) +1;
+// }
+
+// double fSource(const double t, const std::vector<double> &x, const std::vector<double> par) {
+//   return -2*M_PI*cos(2*M_PI*t);
+// }
+
 double fSol(const double t, const std::vector<double> &x, const std::vector<double> par) {
-  return pow(t, 5);
+  return pow(t, 4.) + 1;
 }
 
 double fSource(const double t, const std::vector<double> &x, const std::vector<double> par) {
-  return -5. * pow(t, 4);
+  return -4. * pow(t, 3.);
 }
 
 int main(int argc, char **argv) {
@@ -55,11 +63,11 @@ int main(int argc, char **argv) {
     // Solution
     double t0 = 0.;
     double t1 = 1.;
-    int nTimeSteps = 5 * pow(2, iter);
+    int nTimeSteps = 20 * pow(2, iter);
     TT[iter] = nTimeSteps;
     feSolution *solDC3F = new feSolution(mesh, fespace, feEssBC, metaNumber);
     // Formes (bi)lineaires
-    int nQuad = 10; // TODO : change to deg
+    int nQuad = 15; // TODO : change to deg
     std::vector<feSpace *> spaceSource1D_U = {&U_M1D};
     std::vector<feSpace *> spaceMasse1D_U = {&U_M1D};
 
@@ -71,6 +79,7 @@ int main(int argc, char **argv) {
     std::vector<feBilinearForm *> formMatrices = {masse_U_M1D};
     std::vector<feBilinearForm *> formResiduals = {masse_U_M1D, source_U_M1D};
     // Norme de la solution
+
     feNorm *normBDF1 = new feNorm(&U_M1D, mesh, nQuad, funSol);
     feNorm *normDC2F = new feNorm(&U_M1D, mesh, nQuad, funSol);
     feNorm *normDC3F = new feNorm(&U_M1D, mesh, nQuad, funSol);

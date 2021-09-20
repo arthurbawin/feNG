@@ -128,8 +128,8 @@ int main(int argc, char **argv) {
     // metaNumber->printNumberings();
 
     feSolution *sol = new feSolution(mesh, fespace, feEssBC, metaNumber);
-    sol->initializeUnknowns(mesh, metaNumber);
-    sol->initializeEssentialBC(mesh, metaNumber);
+    // sol->initializeUnknowns(mesh, metaNumber);
+    // sol->initializeEssentialBC(mesh, metaNumber);
 
     // Formes (bi)lineaires
     int nQuad = 9;
@@ -165,13 +165,18 @@ int main(int argc, char **argv) {
     double t0 = 0.;
     double t1 = 1.0;
     int nTimeSteps = 20 * pow(2, iter);
-    sol->initializeTemporalSolution(t0, t1, nTimeSteps);
+    // sol->initializeTemporalSolution(t0, t1, nTimeSteps);
     std::vector<double> normL2BDF(3 * nTimeSteps, 0.0);
     std::vector<double> normL2DC3(3 * nTimeSteps, 0.0);
     // solveBDF2(normL2BDF, tol, metaNumber, linearSystem, formMatrices, formResiduals, sol, norms,
     // mesh, fespace);
-    solveDC3(normL2BDF, normL2DC3, tol, metaNumber, linearSystem, formMatrices, formResiduals, sol,
-             norms, mesh, fespace);
+    // solveDC3(normL2BDF, normL2DC3, tol, metaNumber, linearSystem, formMatrices, formResiduals,
+    // sol,
+    //          norms, mesh, fespace);
+    std::string CodeIni = "BDF1/DC"; // Define the way of initialization |"SolEx"->for exact
+                                     // solution|  |"BDF1/DCF"->using only initial conditions|
+    DC3Solver solver(tol, metaNumber, linearSystem, sol, norms, mesh, t0, t1, nTimeSteps, CodeIni);
+    solver.makeSteps(nTimeSteps, fespace);
     // normL2_U[2*iter] = *std::max_element(normL2BDF.begin(), normL2BDF.end());
     // maxNormL2BDF[2*iter] = *std::max_element(normL2BDF.begin(), normL2BDF.end());
     for(int i = 0; i < nTimeSteps; ++i) {

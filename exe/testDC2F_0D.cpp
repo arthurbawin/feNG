@@ -18,12 +18,26 @@
 #include "feLinearSystemPETSc.h"
 #endif
 
+// double fSol(const double t, const std::vector<double> &x, const std::vector<double> par) {
+//   return sin(2*M_PI*t) +1;
+// }
+
+// double fSource(const double t, const std::vector<double> &x, const std::vector<double> par) {
+//   return -2*M_PI*cos(2*M_PI*t);
+// }
+
 double fSol(const double t, const std::vector<double> &x, const std::vector<double> par) {
-  return pow(t, 2);
+  // double c2 = par[1];
+  // double x1 = x[0];
+  return pow(t, 2.);
 }
 
 double fSource(const double t, const std::vector<double> &x, const std::vector<double> par) {
-  return -2. * pow(t, 1);
+  // double c1 = par[0];
+  // double c2 = par[1];
+  // double beta = (c2 == 0.) ? 0. : c2*pow(t,c2-1.);
+  // double x1 = x[0];
+  return -2. * pow(t, 1.);
 }
 
 int main(int argc, char **argv) {
@@ -54,7 +68,7 @@ int main(int argc, char **argv) {
     // Solution
     double t0 = 0.;
     double t1 = 1.;
-    int nTimeSteps = 5 * pow(2, iter) ;
+    int nTimeSteps = 5 * pow(2, iter);
     TT[iter] = nTimeSteps;
     feSolution *solDC2 = new feSolution(mesh, fespace, feEssBC, metaNumber);
 

@@ -18,28 +18,42 @@
 #include "feLinearSystemPETSc.h"
 #endif
 
-double fSol(const double t, const std::vector<double> &x, const std::vector<double> par) {
-  double c2 = par[1];
-  double x1 = x[0];
-  return x1 * (x1 * x1 - 25.) * pow(t, 6) + x1 * x1 * x1 * pow(t, c2) +1.;
-}
-
-double fSource(const double t, const std::vector<double> &x, const std::vector<double> par) {
-  double c1 = par[0];
-  double c2 = par[1];
-  double beta = (c2 == 0.) ? 0. : c2 * pow(t, c2 - 1.);
-  double x1 = x[0];
-  return -x1 * (x1 * x1 - 25.) * 6. * pow(t, 5.) + c1 * 6. * x1 * pow(t, 6.) +
-         c1 * 6. * x1 * pow(t, c2) - x1 * x1 * x1 * beta;
-}
-
 // double fSol(const double t, const std::vector<double> &x, const std::vector<double> par) {
-//   return pow(t, 2) ;
+//   double c2 = par[1];
+//   double x1 = x[0];
+//   return x1 * (x1 * x1 - 25.) * pow(t, 6) + x1 * x1 * x1 * pow(t, c2) +1.;
 // }
 
 // double fSource(const double t, const std::vector<double> &x, const std::vector<double> par) {
-//   return -2 * pow(t, 1);
+//   double c1 = par[0];
+//   double c2 = par[1];
+//   double beta = (c2 == 0.) ? 0. : c2 * pow(t, c2 - 1.);
+//   double x1 = x[0];
+//   return -x1 * (x1 * x1 - 25.) * 6. * pow(t, 5.) + c1 * 6. * x1 * pow(t, 6.) +
+//          c1 * 6. * x1 * pow(t, c2) - x1 * x1 * x1 * beta;
 // }
+
+// double fSol(const double t, const std::vector<double> &x, const std::vector<double> par) {
+//   double x1 = x[0];
+//   return x1*x1*x1*pow(t, 6.) ;
+// }
+
+// double fSource(const double t, const std::vector<double> &x, const std::vector<double> par) {
+//   double x1 = x[0];
+//   double c1 = par[0];
+//   return -6. * pow(t, 5.)*x1*x1*x1 + 6*x1*c1*pow(t, 6.);
+// }
+
+double fSol(const double t, const std::vector<double> &x, const std::vector<double> par) {
+  // double x1 = x[0];
+  return pow(t, 2.);
+}
+
+double fSource(const double t, const std::vector<double> &x, const std::vector<double> par) {
+  // double x1 = x[0];
+  // double c1 = par[0];
+  return -2. * pow(t, 1.);
+}
 
 int main(int argc, char **argv) {
 #ifdef USING_PETSC
@@ -62,13 +76,14 @@ int main(int argc, char **argv) {
   TT.resize(nIter);
 
   for(int iter = 0; iter < nIter; ++iter) {
-    nElm[iter] = 5 * pow(4, iter);
+    nElm[iter] = 5 * pow(3, iter);
+    // nElm[iter] = 40;
     // Maillage
     feMesh1DP1 *mesh = new feMesh1DP1(xa, xb, nElm[iter], "BXA", "BXB", "M1D");
     // Espaces d'interpolation
     feSpace1DP0 U_BXA = feSpace1DP0(mesh, "U", "BXA", funSol);
     feSpace1DP0 U_BXB = feSpace1DP0(mesh, "U", "BXB", funSol);
-    feSpace1DP2 U_M1D = feSpace1DP2(mesh, "U", "M1D", funSol);
+    feSpace1DP1 U_M1D = feSpace1DP1(mesh, "U", "M1D", funSol);
     std::vector<feSpace *> fespace = {&U_BXA, &U_BXB, &U_M1D};
     std::vector<feSpace *> feEssBC = {&U_BXA, &U_BXB};
     // Numerotations
@@ -83,7 +98,7 @@ int main(int argc, char **argv) {
     // solDC3->initializeUnknowns(mesh, metaNumber);
     // solDC3->initializeEssentialBC(mesh, metaNumber);
     // Formes (bi)lineaires
-    int degQuad = 5;
+    int degQuad = 6;
     std::vector<feSpace *> spaceDiffusion1D_U = {&U_M1D};
     std::vector<feSpace *> spaceSource1D_U = {&U_M1D};
     std::vector<feSpace *> spaceMasse1D_U = {&U_M1D};
@@ -100,16 +115,18 @@ int main(int argc, char **argv) {
     // Norme de la solution
     feNorm *normBDF2 = new feNorm(&U_M1D, mesh, degQuad, funSol);
     feNorm *normDC3 = new feNorm(&U_M1D, mesh, degQuad, funSol);
-    std::vector<feNorm *> norms = {normBDF2,normDC3};
+    std::vector<feNorm *> norms = {normBDF2, normDC3};
     // Systeme lineaire
     feLinearSystemPETSc *linearSystem =
       new feLinearSystemPETSc(argc, argv, formMatrices, formResiduals, metaNumber, mesh);
-  #ifdef HAVE_PETSC  
+#ifdef HAVE_PETSC
     linearSystem->initialize();
     // Resolution
-    feTolerances tol{1e-10, 1e-10, 20};
-    std::string CodeIni = "BDF1/DCF" ;   //Define the way of initialization |"SolEx"->for exact solution|  |"BDF1/DCF"->using only initial conditions|
-    DC3Solver solver(tol, metaNumber, linearSystem, solDC3, norms, mesh, t0, t1, nTimeSteps, CodeIni);
+    feTolerances tol{1e-9, 1e-9, 20};
+    std::string CodeIni = "BDF1/DCF"; // Define the way of initialization |"SolEx"->for exact
+                                      // solution|  |"BDF1/DCF"->using only initial conditions|
+    DC3Solver solver(tol, metaNumber, linearSystem, solDC3, norms, mesh, t0, t1, nTimeSteps,
+                     CodeIni);
     solver.makeSteps(nTimeSteps, fespace);
     std::vector<double> &normL2BDF2 = solver.getNorm(0);
     std::vector<double> &normL2DC3 = solver.getNorm(1);
@@ -133,14 +150,14 @@ int main(int argc, char **argv) {
   // Calcul du taux de convergence
   for(int i = 1; i < nIter; ++i) {
     normL2_BDF2[2 * i + 1] = log(normL2_BDF2[2 * (i - 1)] / normL2_BDF2[2 * i]) / log(2.);
-    normL2_DC3[2 * i + 1]  = log(normL2_DC3 [2 * (i - 1)] / normL2_DC3 [2 * i]) / log(2.);
+    normL2_DC3[2 * i + 1] = log(normL2_DC3[2 * (i - 1)] / normL2_DC3[2 * i]) / log(2.);
   }
-  printf("%12s \t %12s \t %12s \t %12s\t %12s \t %12s\n", "nSteps", "nElm", "||E-BDF||", "Taux BDF2", "||E-DC3||",
-         "Taux DC3");
+  printf("%12s \t %12s \t %12s \t %12s\t %12s \t %12s\n", "nSteps", "nElm", "||E-BDF||",
+         "Taux BDF2", "||E-DC3||", "Taux DC3");
   for(int i = 0; i < nIter; ++i)
 
-    printf("%12d \t %12d \t %12.6e \t %12.6e\t %12.6e \t %12.6e\n", TT[i], nElm[i], normL2_BDF2[2 * i],
-           normL2_BDF2[2 * i + 1], normL2_DC3[2 * i], normL2_DC3[2 * i + 1]);
+    printf("%12d \t %12d \t %12.6e \t %12.6e\t %12.6e \t %12.6e\n", TT[i], nElm[i],
+           normL2_BDF2[2 * i], normL2_BDF2[2 * i + 1], normL2_DC3[2 * i], normL2_DC3[2 * i + 1]);
 #ifdef USING_PETSC
   petscFinalize();
 #endif

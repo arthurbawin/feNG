@@ -269,7 +269,10 @@ void feLinearSystemPETSc::assembleResiduals(feSolution *sol) {
       // Copy Be into vector
       sizeI = adrI.size();
       values.resize(sizeI);
-      for(int i = 0; i < sizeI; ++i) { values[i] = Be[niElm[i]]; }
+      for(int i = 0; i < sizeI; ++i) {
+        values[i] = Be[niElm[i]];
+        // std::cout<< "les valeurs dans Be sont "<< values[i] << std::endl;
+      }
       ierr = VecSetValues(_res, adrI.size(), adrI.data(), values.data(), ADD_VALUES);
       niElm.clear();
     }

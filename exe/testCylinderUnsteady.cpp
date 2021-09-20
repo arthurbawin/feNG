@@ -134,10 +134,12 @@ int main(int argc, char **argv) {
 
     feLinearSystemPETSc *linearSystem =
       new feLinearSystemPETSc(argc, argv, formMatrices, formResiduals, metaNumber, mesh);
-    std::string CodeIni = "BDF1/DCF" ;  //Define the way of initialization |"SolEx"->for exact solution|  |"BDF1/DCF"->using only initial conditions| 
+    std::string CodeIni = "BDF1/DCF"; // Define the way of initialization |"SolEx"->for exact
+                                      // solution|  |"BDF1/DCF"->using only initial conditions|
     if(iter == 0) {
       // Initialize a new BDF2 integrator
-      solver = new BDF2Solver(tol, metaNumber, linearSystem, sol, norms, mesh, t0, t1, nTotalSteps, CodeIni);
+      solver = new BDF2Solver(tol, metaNumber, linearSystem, sol, norms, mesh, t0, t1, nTotalSteps,
+                              CodeIni);
     } else {
       // Update the existing integrator
       sol->setSolFromContainer(solver->getSolutionContainer(), 0);
