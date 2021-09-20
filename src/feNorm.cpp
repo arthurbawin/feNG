@@ -21,6 +21,22 @@ feNorm::feNorm(feSpace *intSpace, feMesh *mesh, int degQuad, feFunction *solRef)
   delete rule;
 }
 
+void feNorm::computeL2Norm0D(feSolution *sol) {
+  double normL2 = 0.0, solInt, solRef, t = sol->getCurrentTime();
+
+  // solRef = _intSpace->evalFun(t, x);
+  solRef = (_solRef != nullptr) ? _solRef->eval(t, x) : 0.0;
+  std::cout << "la solution de ref est " << solRef << " au temps " << t << std::endl;
+  solInt = sol->getSolAtDOF(0);
+  std::cout << "la solution de numérique est " << solInt << " au temps " << t << std::endl;
+  // printf("Solution at (%f,%f,%f) = %10.10f - ref = %10.10f\n", x[0], x[1], x[2], solInt,
+  // solRef);
+  normL2 += (solInt - solRef) * (solInt - solRef);
+
+  norm = sqrt(normL2);
+  std::cout << "norme L2   " << norm << std::endl;
+}
+
 void feNorm::computeL2Norm(feMetaNumber *metaNumber, feSolution *sol, feMesh *mesh) {
   double normL2 = 0.0, solInt, solRef, J, t = sol->getCurrentTime();
   int nElm = _intSpace->getNbElm();

@@ -60,7 +60,7 @@ int main(int argc, char **argv) {
   feFunction *funSolV = new feFunction(fSolV, {});
   feVectorFunction *funSource = new feVectorFunction(fSource, par);
 
-  int nIter = 7;
+  int nIter = 1;
   std::vector<double> normL2(2 * nIter, 0.0);
   std::vector<int> nElm(nIter, 0);
   std::vector<int> numberTimeStep;

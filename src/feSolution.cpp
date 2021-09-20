@@ -52,9 +52,9 @@ void feSolution::initializeEssentialBC(feMesh *mesh, feMetaNumber *metaNumber,
         std::vector<double> x(3, 0.0);
         geoSpace->interpolateVectorField(localCoord, r, x);
         _sol[fS->getAddressingVectorAt(j)] = fS->evalFun(_tn, x);
-        if(solContainer != nullptr)
+        if(solContainer != nullptr) {
           solContainer->_sol[0][fS->getAddressingVectorAt(j)] = fS->evalFun(_tn, x);
-        ;
+        };
       }
     }
   }
