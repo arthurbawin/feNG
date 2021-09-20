@@ -135,6 +135,11 @@ void solveBDF2(std::vector<double> &normL2, feTolerances tol, feMetaNumber *meta
     normL2[0] = norm->getNorm(); // TODO : fix this
   }
 
+  {
+    std::string vtkFile = "../../data/taylorGreen" + std::to_string(0) + ".vtk";
+    feExporterVTK writer(vtkFile, mesh, sol, metaNumber, spaces);
+  }
+
   // bool status = true;
   for(int iTime = 1; iTime < nSteps; ++iTime) {
     if(K1K2) dt = tK1K2[iTime + 1] - tK1K2[iTime];
@@ -163,6 +168,8 @@ void solveBDF2(std::vector<double> &normL2, feTolerances tol, feMetaNumber *meta
 
     // std::string vtkFile = "../../data/cylindre" + std::to_string(iTime) + ".vtk";
     // feExporterVTK writer(vtkFile, mesh, sol, metaNumber, spaces);
+    std::string vtkFile = "../../data/taylorGreen" + std::to_string(iTime) + ".vtk";
+    feExporterVTK writer(vtkFile, mesh, sol, metaNumber, spaces);
   }
 
   delete solBDF2;
@@ -191,8 +198,11 @@ void BDF2Solver::makeSteps(int nSteps, std::vector<feSpace *> &spaces) {
   if(_currentStep == 0) {
     // Initialization and first step
     _linearSystem->setRecomputeStatus(true);
-    _solutionContainer->initialize(_sol, _mesh, _metaNumber);
     _solutionContainer->rotate(_dt);
+    
+    // This is cheating : the second solution is initialized using the provided function in feSolution
+    _solutionContainer->initialize(_sol, _mesh, _metaNumber);
+
     _sol->setSolFromContainer(_solutionContainer);
     _tCurrent += _dt;
     ++_currentStep;
@@ -203,6 +213,9 @@ void BDF2Solver::makeSteps(int nSteps, std::vector<feSpace *> &spaces) {
     }
 
     printf("Current step = %d/%d : t = %f\n", _currentStep, nSteps, _tCurrent);
+
+    std::string vtkFile = "../../data/taylorGreen" + std::to_string(_currentStep) + ".vtk";
+    feExporterVTK writer(vtkFile, _mesh, _sol, _metaNumber, spaces);
 
     --nSteps; // To advance the same number of steps than if currentStep != 0
   }
@@ -231,7 +244,7 @@ void BDF2Solver::makeSteps(int nSteps, std::vector<feSpace *> &spaces) {
     ++_currentStep;
     printf("Current step = %d : t = %f\n", _currentStep, _tCurrent);
 
-    std::string vtkFile = "../../data/cylindreJF/cylindreAdapt" + std::to_string(_currentStep) + ".vtk";
+    std::string vtkFile = "../../data/taylorGreen" + std::to_string(_currentStep) + ".vtk";
     feExporterVTK writer(vtkFile, _mesh, _sol, _metaNumber, spaces);
   }
 }
@@ -272,6 +285,9 @@ void BDF1Solver::makeSteps(int nSteps, std::vector<feSpace *> &spaces) {
 
     printf("Current step = %d/%d : t = %f\n", _currentStep, nSteps, _tCurrent);
 
+    std::string vtkFile = "../../data/taylorGreen" + std::to_string(_currentStep) + ".vtk";
+    feExporterVTK writer(vtkFile, _mesh, _sol, _metaNumber, spaces);
+
     --nSteps; // To advance the same number of steps than if currentStep != 0
   }
 
@@ -299,7 +315,7 @@ void BDF1Solver::makeSteps(int nSteps, std::vector<feSpace *> &spaces) {
     ++_currentStep;
     printf("Current step = %d : t = %f\n", _currentStep, _tCurrent);
 
-    std::string vtkFile = "../../data/cylindreJF/cylindreAdapt" + std::to_string(_currentStep) + ".vtk";
+    std::string vtkFile = "../../data/taylorGreen" + std::to_string(_currentStep) + ".vtk";
     feExporterVTK writer(vtkFile, _mesh, _sol, _metaNumber, spaces);
   }
 }

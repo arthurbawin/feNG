@@ -67,7 +67,8 @@ public:
                  feSolution *sol, std::vector<feNorm *> &norms, feMesh *mesh, double t0 = 0.,
                  double tEnd = 0., int nTimeSteps = 1)
     : _tol(tol), _metaNumber(metaNumber), _linearSystem(linearSystem), _sol(sol), _norms(norms),
-      _mesh(mesh), _t0(t0), _tEnd(tEnd), _nTimeSteps(nTimeSteps), _tCurrent(t0), _currentStep(0) {
+      _mesh(mesh), _t0(t0), _tEnd(tEnd), _nTimeSteps(nTimeSteps), _tCurrent(t0), _currentStep(0)
+  {
     _dt = (tEnd - t0) / (double)nTimeSteps;
     _sol->initializeTemporalSolution(_t0, _tEnd, _nTimeSteps);
   };

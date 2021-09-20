@@ -21,8 +21,8 @@
 
 // Diamètre du cylindre et nombre de Reynolds
 static double h = 4.0;
-static double cx = h/2.;
-static double cy = h/2.;
+static double cx = h / 2.;
+static double cy = h / 2.;
 static double r = 0.25;
 static double d = 2 * r;
 static double U = 1.0;
@@ -134,18 +134,10 @@ int main(int argc, char **argv) {
       printf("Unknown finite element type : %s\n", elemType.c_str());
     }
 
-    std::vector<feSpace *> fespace = {U_bas, U_haut, U_gauche, 
-                                      U_cylindre,
-                                      U_surface, V_bas, V_haut, V_gauche,
-                                      V_cylindre,
-                                      V_surface, P_surface};
+    std::vector<feSpace *> fespace = {U_bas,  U_haut,   U_gauche,   U_cylindre, U_surface, V_bas,
+                                      V_haut, V_gauche, V_cylindre, V_surface,  P_surface};
 
-    std::vector<feSpace *> feEssBC = {U_gauche,
-                                      U_cylindre,
-                                      V_bas, V_haut, 
-                                      V_gauche,
-                                      V_cylindre
-                                      };
+    std::vector<feSpace *> feEssBC = {U_gauche, U_cylindre, V_bas, V_haut, V_gauche, V_cylindre};
 
     metaNumber = new feMetaNumber(mesh, fespace, feEssBC);
     sol = new feSolution(mesh, fespace, feEssBC, metaNumber);
@@ -196,9 +188,11 @@ int main(int argc, char **argv) {
     nextMeshName = root + "adapted" + std::to_string(iter + 1) + ".msh";
 
     std::vector<double> estErreur(2, 0.);
-    feRecovery *recU = new feRecovery(metaNumber, U_surface, mesh, sol, estErreur, funZero, meshName, metricMeshName);
-    // feRecovery *recV = new feRecovery(metaNumber, V_surface, mesh, sol, estErreur, funZero, meshName, metricMeshName);
-    // feRecovery *recP = new feRecovery(metaNumber, P_surface, mesh, sol, estErreur, funZero);
+    feRecovery *recU = new feRecovery(metaNumber, U_surface, mesh, sol, estErreur, funZero,
+                                      meshName, metricMeshName);
+    // feRecovery *recV = new feRecovery(metaNumber, V_surface, mesh, sol, estErreur, funZero,
+    // meshName, metricMeshName); feRecovery *recP = new feRecovery(metaNumber, P_surface, mesh,
+    // sol, estErreur, funZero);
 
     double modelSize = 10.;
 
@@ -206,40 +200,35 @@ int main(int argc, char **argv) {
     metricOptions.computationMethod = 3;
     metricOptions.polynomialDegree = deg;
     metricOptions.nTargetVertices = 2500;
-    metricOptions.eTargetError    = 5e-4;
-    metricOptions.hMin = modelSize/10000.;
-    metricOptions.hMax = modelSize/6.;
+    metricOptions.eTargetError = 5e-5;
+    metricOptions.hMin = modelSize / 10000.;
+    metricOptions.hMax = modelSize / 6.;
     metricOptions.LpNorm = 2.0;
     metricOptions.nPhi = 801;
 
-    switch(metricOptions.computationMethod){
-      case 1 : 
-      {
-        feMetric *metric = new feMetric(recU, metricOptions);
-        metric->writeSizeFieldGmsh(meshName, metricMeshName);
+    switch(metricOptions.computationMethod) {
+    case 1: {
+      feMetric *metric = new feMetric(recU, metricOptions);
+      metric->writeSizeFieldGmsh(meshName, metricMeshName);
 
-        std::string cmdMMGS = "mmg2d " + metricMeshName + " -o " + nextMeshName + " -hgrad 3";
-        std::string cmdGMSH = "gmsh " + nextMeshName + " &";
+      std::string cmdMMGS = "mmg2d " + metricMeshName + " -o " + nextMeshName + " -hgrad 3";
+      std::string cmdGMSH = "gmsh " + nextMeshName + " &";
 
-        system(cmdMMGS.c_str());
-        system(cmdGMSH.c_str());
+      system(cmdMMGS.c_str());
+      system(cmdGMSH.c_str());
 
-        delete metric;
-      }
-      break;
+      delete metric;
+    } break;
 
-      case 3 :
-      {
-        std::vector<feRecovery*> rec = {recU};
-        int useAnalytical = 0;
-        feCurvedAdapt foo(mesh, rec, metricOptions, metricMeshName, nextMeshName, useAnalytical);
-        std::string cmdGMSH = "gmsh " + nextMeshName + " &";
-        system(cmdGMSH.c_str());
-      }
-      break;
+    case 3: {
+      std::vector<feRecovery *> rec = {recU};
+      int useAnalytical = 0;
+      feCurvedAdapt foo(mesh, rec, metricOptions, metricMeshName, nextMeshName, useAnalytical);
+      std::string cmdGMSH = "gmsh " + nextMeshName + " &";
+      system(cmdGMSH.c_str());
+    } break;
 
-      default :
-      ;
+    default:;
     }
 
     std::string vtkFile = "transferFrom" + std::to_string(iter + 1) + ".vtk";
@@ -280,17 +269,12 @@ int main(int argc, char **argv) {
       printf("Unknown finite element type : %s\n", elemType.c_str());
     }
 
-    std::vector<feSpace *> otherSpaces = {U_bas2, U_haut2, U_gauche2, 
-                                          U_cylindre2,
-                                          U_surface2, V_bas2, V_haut2, V_gauche2,
-                                          V_cylindre2,
-                                          V_surface2, P_surface2};
+    std::vector<feSpace *> otherSpaces = {U_bas2,      U_haut2,    U_gauche2, U_cylindre2,
+                                          U_surface2,  V_bas2,     V_haut2,   V_gauche2,
+                                          V_cylindre2, V_surface2, P_surface2};
 
-    std::vector<feSpace *> otherSpacesEss = {U_gauche2,
-                                             U_cylindre2,
-                                             V_bas2, V_haut2, V_gauche2, 
-                                             V_cylindre2
-                                            };
+    std::vector<feSpace *> otherSpacesEss = {U_gauche2, U_cylindre2, V_bas2,
+                                             V_haut2,   V_gauche2,   V_cylindre2};
 
     otherMetaNumber = new feMetaNumber(otherMesh, otherSpaces, otherSpacesEss);
     otherSol = new feSolution(otherMesh, otherSpaces, otherSpacesEss, otherMetaNumber);

@@ -556,6 +556,8 @@ void feSysElm_2D_NavierStokes::computeBe(std::vector<double> &Ja, int numElem,
   std::vector<double> f(2, 0.); // Forces volumiques
 
   for(int k = 0; k < nG; ++k) {
+    // Viscosité dynamique
+    // double mu = (_viscosityFct != nullptr) ? _viscosityFct->eval(tn, x) : _par[1];
     // Forces volumiques
     geoSpace->interpolateVectorFieldAtQuadNode(geoCoord, k, x);
     if(_fct != nullptr) _fct->eval(tn, x, f);
@@ -643,6 +645,8 @@ void feSysElm_2D_NavierStokes::computeAe(std::vector<double> &Ja, int numElem,
   std::vector<double> f(2, 0.); // Forces volumiques
 
   for(int k = 0; k < nG; ++k) {
+    // Viscosité dynamique
+    // double mu = (_viscosityFct != nullptr) ? _viscosityFct->eval(tn, x) : _par[1];
     // Forces volumiques
     geoSpace->interpolateVectorFieldAtQuadNode(geoCoord, k, x);
     if(_fct != nullptr) _fct->eval(tn, x, f);
