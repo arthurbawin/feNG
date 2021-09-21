@@ -44,7 +44,7 @@ public:
   void initializeEssentialBC(feMesh *mesh, feMetaNumber *metaNumber,
                              feSolutionContainer *solContainer = nullptr);
 
-  int getC0() { return _c0; }
+  double getC0() { return _c0; }
   void setC0(double c0) { _c0 = c0; }
   double getCurrentTime() { return _tn; }
   void setCurrentTime(double t) { _tn = t; }

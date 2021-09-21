@@ -33,8 +33,8 @@ void feStationarySolution::computeSolTimeDerivative(feSolution *sol, feLinearSys
 }
 
 void feSolutionBDF2::computeSolTimeDerivative(feSolution *sol, feLinearSystem *linearSystem) {
-  std::cout << "_sol[0][0]   " << _sol[0][0] << "    _sol[1][0]   " << _sol[1][0]
-            << "    _sol[2][0]   " << _sol[2][0] << std::endl;
+  std::cout << "_sol[0][0]   " << _sol[0][5] << "    _sol[1][0]   " << _sol[1][5]
+            << "    _sol[2][0]   " << _sol[2][5] << std::endl;
   for(int i = 0; i < _nDofs; ++i)
     sol->setSolDotAtDOF(i, _cn[0] * _sol[0][i] + _cn[1] * _sol[1][i] + _cn[2] * _sol[2][i]);
   // std::cout<<"coeffs"<<_cn[0]<<","<<_cn[1]<<","<<_cn[2]<<"timestep"<<_t[0]<<_t[1]<<std::endl;

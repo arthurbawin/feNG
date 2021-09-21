@@ -5,7 +5,7 @@
 feNorm::feNorm(feSpace *intSpace, feMesh *mesh, int degQuad, feFunction *solRef)
   : _intSpace(intSpace), cncGeoTag(intSpace->getCncGeoTag()),
     geoSpace(mesh->getGeometricSpace(cncGeoTag)), nElmGeo(mesh->getNbElm(cncGeoTag)),
-    dim(mesh->getDim()), nNodePerElem(intSpace->getNbNodePerElem()), _solRef(solRef),
+    dim(intSpace->getDim()), nNodePerElem(intSpace->getNbNodePerElem()), _solRef(solRef),
     _degQuad(degQuad) {
   feQuadrature *rule =
     new feQuadrature(_degQuad, intSpace->getDim(), intSpace->getCncGeo()->getForme());
@@ -31,11 +31,12 @@ void feNorm::computeL2Norm0D(feSolution *sol) {
   std::cout << "la solution de numérique est " << solInt << " au temps " << t << std::endl;
   // printf("Solution at (%f,%f,%f) = %10.10f - ref = %10.10f\n", x[0], x[1], x[2], solInt,
   // solRef);
-  normL2 += (solInt - solRef) * (solInt - solRef);
+  normL2 += (abs(solInt) - abs(solRef)) * (abs(solInt) - abs(solRef));
 
   norm = sqrt(normL2);
   std::cout << "norme L2   " << norm << std::endl;
 }
+
 
 void feNorm::computeL2Norm(feMetaNumber *metaNumber, feSolution *sol, feMesh *mesh) {
   double normL2 = 0.0, solInt, solRef, J, t = sol->getCurrentTime();

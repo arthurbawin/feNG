@@ -166,7 +166,7 @@ void fePstClc(feSolution *sol, feLinearSystem *linearSystem, feSolutionContainer
 // }
 
 // Parameter of varaible time step
-double _f = 0.25; //_f = means dt1/dt2 = 4  _f=0.25 means dt1/dt2 = 3
+double _f = 0.25; //_f =0.2 means dt1/dt2 = 4  _f=0.25 means dt1/dt2 = 3
 bool K1K2 = false;
 
 BDF2Solver::BDF2Solver(feTolerances tol, feMetaNumber *metaNumber, feLinearSystem *linearSystem,
@@ -258,17 +258,32 @@ void BDF2Solver::makeSteps(int nSteps, std::vector<feSpace *> &spaces) {
     solveQNBDF(_solutionContainer, _tol, _metaNumber, _linearSystem, _sol, _mesh);
     fePstClc(_sol, _linearSystem, _solutionContainer);
 
-    // Compute L2 norm of the solution
-    _sol->setSolFromContainer(_solutionContainer);
     for(size_t i = 0; i < _norms.size(); ++i) {
-      _norms[i]->computeL2Norm(_metaNumber, _sol, _mesh);
-      _normL2[i][_currentStep] = _norms[i]->getNorm();
-    }
+          _norms[i]->computeL2Norm(_metaNumber, _sol, _mesh);
+          _normL2[i][0] = _norms[i]->getNorm();
+        }
+    // // Compute L2 norm of the solution
+    // _sol->setSolFromContainer(_solutionContainer);
+    // _norms[0]->computeL2Norm(_metaNumber, _sol, _mesh);
+    // _normL2[0][_currentStep] = _norms[0]->getNorm();
+    
+    // // Compute L2 norm of lambda
+    // _sol->setSolFromContainer(_solutionContainer);
+ 
+    // _norms[1]->computeL2Norm(_metaNumber, _sol, _mesh);
+    // _normL2[1][_currentStep] = _norms[1]->getNorm();
+    // std::cout <<" normA = "<< _norms[1]->getNorm() <<std::endl;
+
+
+    // _norms[2]->computeL2Norm(_metaNumber, _sol, _mesh);
+    // _normL2[2][_currentStep] = _norms[2]->getNorm();
+    // std::cout <<" normB = "<< _norms[2]->getNorm() <<std::endl;
+    
 
     _tCurrent += _dt;
     ++_currentStep;
     if(K1K2) _dt = tK1K2[i + 1] - tK1K2[i];
-    std::cout << "========dt vaux ==========" << _dt << std::endl;
+    // std::cout << "========dt vaux ==========" << _dt << std::endl;
     printf("\n");
     printf("Current step = %d : t = %f\n", _currentStep, _tCurrent);
 
@@ -549,6 +564,10 @@ void DC3FSolver::makeSteps(int nSteps, std::vector<feSpace *> &spaces) {
     // _norms[0]->computeL2Norm0D(_sol);
     _norms[0]->computeL2Norm(_metaNumber, _sol, _mesh);
     _normL2[0][_currentStep] = _norms[0]->getNorm();
+    _norms[3]->computeL2Norm(_metaNumber, _sol, _mesh);
+    _normL2[3][_currentStep] = _norms[3]->getNorm();
+    _norms[4]->computeL2Norm(_metaNumber, _sol, _mesh);
+    _normL2[4][_currentStep] = _norms[4]->getNorm();
     initializeDC2F(_sol, _metaNumber, _mesh, dynamic_cast<feSolutionBDF1 *>(_solutionContainerBDF1),
                    dynamic_cast<feSolutionDC2F *>(_solutionContainerDC2F));
     printf("\n");
@@ -561,6 +580,10 @@ void DC3FSolver::makeSteps(int nSteps, std::vector<feSpace *> &spaces) {
     // _norms[1]->computeL2Norm0D(_sol);
     _norms[1]->computeL2Norm(_metaNumber, _sol, _mesh);
     _normL2[1][_currentStep] = _norms[1]->getNorm();
+    _norms[5]->computeL2Norm(_metaNumber, _sol, _mesh);
+    _normL2[5][_currentStep] = _norms[5]->getNorm();
+    _norms[6]->computeL2Norm(_metaNumber, _sol, _mesh);
+    _normL2[6][_currentStep] = _norms[6]->getNorm();
     // at this moment we fixe the DC3F à the first time step
 
     if(i == 1) {
@@ -583,6 +606,10 @@ void DC3FSolver::makeSteps(int nSteps, std::vector<feSpace *> &spaces) {
       std::cout << "la norme vaut " << _norms[2]->getNorm() << std::endl;
       _norms[2]->computeL2Norm(_metaNumber, _sol, _mesh);
       _normL2[2][_currentStep] = _norms[2]->getNorm();
+      _norms[7]->computeL2Norm(_metaNumber, _sol, _mesh);
+      _normL2[7][_currentStep] = _norms[7]->getNorm();
+      _norms[8]->computeL2Norm(_metaNumber, _sol, _mesh);
+      _normL2[8][_currentStep] = _norms[8]->getNorm();
       // _solutionContainer->setSolAtDOF(0,0,-_solutionContainer->getSol(0,0));
       // _solutionContainer->setSolAtDOF(1,0,pow(_dt,3));
     }
@@ -599,6 +626,10 @@ void DC3FSolver::makeSteps(int nSteps, std::vector<feSpace *> &spaces) {
     std::cout << "la norme vaut " << _norms[2]->getNorm() << std::endl;
     _norms[2]->computeL2Norm(_metaNumber, _sol, _mesh);
     _normL2[2][_currentStep] = _norms[2]->getNorm();
+    _norms[7]->computeL2Norm(_metaNumber, _sol, _mesh);
+    _normL2[7][_currentStep] = _norms[7]->getNorm();
+    _norms[8]->computeL2Norm(_metaNumber, _sol, _mesh);
+    _normL2[8][_currentStep] = _norms[8]->getNorm();
     // Compute L2 norm of the solution
     _sol->setSolFromContainer(_solutionContainerBDF1);
     _sol->setSolFromContainer(_solutionContainerDC2F);

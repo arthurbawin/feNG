@@ -1,5 +1,120 @@
 #include <feSysElm.h>
 
+void feSysElm_0D_weakBC::createElementarySystem(std::vector<feSpace *> &space) {
+  _idU = 0;
+  _idL = 1;
+  _iVar.resize(space.size());
+  _jVar.resize(space.size());
+  for(int i = 0; i < space.size(); i++) {
+    _iVar[i] = i;
+    _jVar[i] = i;
+  }
+}
+
+void feSysElm_0D_weakBC::computeAe(std::vector<double> &J, int numElem,
+                                  std::vector<feSpace *> &intSpace, feSpace *geoSpace,
+                                  std::vector<double> &geoCoord, double c0, double tn,
+                                  double **Ae) {
+    Ae[0][1] = Ae[1][0]=1.;
+}
+
+void feSysElm_0D_weakBC::computeBe(std::vector<double> &J, int numElem,
+                                  std::vector<feSpace *> &intSpace, feSpace *geoSpace,
+                                  std::vector<double> &geoCoord, double c0, double tn, double *Be) {
+  int nFunctionsU = intSpace[_idU]->getNbFunctions();
+  int nFunctionsL = intSpace[_idL]->getNbFunctions();
+  std::vector<double> x(3, 0.0);
+  geoSpace->interpolateVectorFieldAtQuadNode(geoCoord, 0, x);
+  double gamma = _fct->eval(tn, x);
+  double lambda = intSpace[_idL]->interpolateSolutionAtQuadNode(0);
+  double u = intSpace[_idU]->interpolateSolutionAtQuadNode(0);
+  // std::cout<<"gamma= "<<gamma<< " x= "<<x[0]<< "tn= " <<tn<<std::endl;
+  Be[0] -= lambda;
+  Be[1] -= (u- gamma);
+}
+
+void feSysElm_0D_weakBC_edo1::createElementarySystem(std::vector<feSpace *> &space) {
+  _idU = 0;
+  _idL = 1;
+  _idV = 2;
+  _iVar.resize(space.size());
+  _jVar.resize(space.size());
+  for(int i = 0; i < space.size(); i++) {
+    _iVar[i] = i;
+    _jVar[i] = i;
+  }
+}
+
+void feSysElm_0D_weakBC_edo1::computeAe(std::vector<double> &J, int numElem,
+                                  std::vector<feSpace *> &intSpace, feSpace *geoSpace,
+                                  std::vector<double> &geoCoord, double c0, double tn,
+                                  double **Ae) {
+    Ae[0][1] = Ae[1][0]=1.;
+    Ae[1][2] = -1.;
+    Ae[2][2] = c0;
+}
+
+void feSysElm_0D_weakBC_edo1::computeBe(std::vector<double> &J, int numElem,
+                                  std::vector<feSpace *> &intSpace, feSpace *geoSpace,
+                                  std::vector<double> &geoCoord, double c0, double tn, double *Be) {
+  int nFunctionsU = intSpace[_idU]->getNbFunctions();
+  int nFunctionsL = intSpace[_idL]->getNbFunctions();
+  std::vector<double> x(3, 0.0);
+  geoSpace->interpolateVectorFieldAtQuadNode(geoCoord, 0, x);
+  double gammaDot = _fct->eval(tn, x);
+  double lambda = intSpace[_idL]->interpolateSolutionAtQuadNode(0);
+  double u = intSpace[_idU]->interpolateSolutionAtQuadNode(0);
+  double v = intSpace[_idV]->interpolateSolutionAtQuadNode(0);
+  double vDot = intSpace[_idV]->interpolateSolutionDotAtQuadNode(0);
+  std::cout<<"gammaDot= "<<gammaDot<< " x= "<<x[0]<< "tn= " <<tn<<std::endl;
+  Be[0] -= lambda;
+  Be[1] -= (u- v);
+  Be[2] -= (vDot-gammaDot);
+}
+
+void feSysElm_0D_weakBC_edo2::createElementarySystem(std::vector<feSpace *> &space) {
+  _idU = 0;
+  _idL = 1;
+  _idV = 2;
+  _idW = 3;
+  _iVar.resize(space.size());
+  _jVar.resize(space.size());
+  for(int i = 0; i < space.size(); i++) {
+    _iVar[i] = i;
+    _jVar[i] = i;
+  }
+}
+
+void feSysElm_0D_weakBC_edo2::computeAe(std::vector<double> &J, int numElem,
+                                  std::vector<feSpace *> &intSpace, feSpace *geoSpace,
+                                  std::vector<double> &geoCoord, double c0, double tn,
+                                  double **Ae) {
+    Ae[0][1] = Ae[1][0]=1.;
+    Ae[1][2] = Ae[2][3] = -1.;
+    Ae[2][2] = Ae[3][3] = c0;
+}
+
+void feSysElm_0D_weakBC_edo2::computeBe(std::vector<double> &J, int numElem,
+                                  std::vector<feSpace *> &intSpace, feSpace *geoSpace,
+                                  std::vector<double> &geoCoord, double c0, double tn, double *Be) {
+  int nFunctionsU = intSpace[_idU]->getNbFunctions();
+  int nFunctionsL = intSpace[_idL]->getNbFunctions();
+  std::vector<double> x(3, 0.0);
+  geoSpace->interpolateVectorFieldAtQuadNode(geoCoord, 0, x);
+  double gammaDotDot = _fct->eval(tn, x);
+  double lambda = intSpace[_idL]->interpolateSolutionAtQuadNode(0);
+  double u = intSpace[_idU]->interpolateSolutionAtQuadNode(0);
+  double v = intSpace[_idV]->interpolateSolutionAtQuadNode(0);
+  double vDot = intSpace[_idV]->interpolateSolutionDotAtQuadNode(0);
+  double w = intSpace[_idW]->interpolateSolutionAtQuadNode(0);
+  double wDot = intSpace[_idW]->interpolateSolutionDotAtQuadNode(0);
+  Be[0] -= lambda;
+  Be[1] -= (u- v);
+  Be[2] -= (vDot-w);
+  Be[3] -= (wDot-gammaDotDot);
+}
+
+
 void feSysElm_0D_Masse::createElementarySystem(std::vector<feSpace *> &space) {
   // _idU = 0;
   _iVar.resize(space.size());
