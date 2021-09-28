@@ -157,7 +157,6 @@ feRecovery::feRecovery(feMetaNumber *metaNumber, feSpace *space, feMesh *mesh, f
     for(int i = 0; i < pow(_dim, iDerivative); ++i) {
       // Recovery of the solution if iDerivative = 0, of the derivatives if > 0
       solveLeastSquare(i, recoverDerivative);
-      std::cout<<"Solving LEAST SQUARES"<<std::endl;
     }
 
     for(int i = 0; i < pow(_dim, iDerivative); ++i) {

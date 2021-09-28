@@ -152,11 +152,11 @@ feLinearSystemPETSc::feLinearSystemPETSc(int argc, char **argv,
 
 void feLinearSystemPETSc::viewMatrix() {
   MatView(_A, PETSC_VIEWER_STDOUT_WORLD);
-  PetscViewer viewer;
-  PetscViewerDrawOpen(PETSC_COMM_WORLD, NULL, NULL, 0, 0, 600, 600, &viewer);
-  PetscObjectSetName((PetscObject)viewer, "Line graph Plot");
-  PetscViewerPushFormat(viewer, PETSC_VIEWER_DRAW_LG);
-  MatView(_A, viewer);
+  // PetscViewer viewer;
+  // PetscViewerDrawOpen(PETSC_COMM_WORLD, NULL, NULL, 0, 0, 600, 600, &viewer);
+  // PetscObjectSetName((PetscObject)viewer, "Line graph Plot");
+  // PetscViewerPushFormat(viewer, PETSC_VIEWER_DRAW_LG);
+  // MatView(_A, viewer);
 }
 
 void feLinearSystemPETSc::setToZero() {

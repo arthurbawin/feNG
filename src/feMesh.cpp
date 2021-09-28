@@ -230,6 +230,7 @@ feMesh0DP0::~feMesh0DP0() {
 
 feMesh2DP1::feMesh2DP1(std::string meshName, bool curved, mapType physicalEntitiesDescription)
   : feMesh() {
+  printf("Info : Reading mesh file : %s\n", meshName.c_str());
   // Check if mesh file exists
   std::ifstream f(meshName.c_str());
   if(!f.good()) {
@@ -302,21 +303,21 @@ void feMesh2DP1::transfer(feMesh2DP1 *otherMesh, feMetaNumber *myMN, feMetaNumbe
   for(feSpace *fS1 : mySpaces) {
     bool isBC = false;
     if(fS1->getDim() < this->_dim) {
-      printf("Not interpolating boundary field of dimension %d\n", fS1->getDim());
+      // printf("Not interpolating boundary field of dimension %d\n", fS1->getDim());
       continue;
     }
     for(feSpace *feEss : mySpacesEssBC) {
       if(fS1->getFieldID() == feEss->getFieldID() && fS1->getCncGeoID() == feEss->getCncGeoID()) {
         isBC = true;
-        std::cout << "Not interpolating essential BC field " << fS1->getFieldID()
-                  << " on connectivity " << fS1->getCncGeoID() << std::endl;
+        // std::cout << "Not interpolating essential BC field " << fS1->getFieldID()
+        //           << " on connectivity " << fS1->getCncGeoID() << std::endl;
       }
     }
     if(!isBC) {
       for(feSpace *fS2 : otherSpaces) {
         if(fS1->getFieldID() == fS2->getFieldID() && fS1->getCncGeoID() == fS2->getCncGeoID()) {
-          std::cout << "INTERPOLATING FIELD " << fS1->getFieldID() << " on connectivity "
-                    << fS1->getCncGeoID() << std::endl;
+          // std::cout << "INTERPOLATING FIELD " << fS1->getFieldID() << " on connectivity "
+          //           << fS1->getCncGeoID() << std::endl;
           fieldsToInterpolate.emplace_back(fS1->getFieldID(), fS1->getCncGeoID());
 
           int nElm = fS2->getNbElm();
@@ -364,9 +365,9 @@ void feMesh2DP1::transfer(feMesh2DP1 *otherMesh, feMetaNumber *myMN, feMetaNumbe
             }
           } // for iElm
         } else { // if fields match
-          std::cout << "NOT INTERPOLATING : MISMATCH between " << fS1->getFieldID() << " - "
-                    << fS1->getCncGeoID() << " and " << fS2->getFieldID() << " - "
-                    << fS2->getCncGeoID() << std::endl;
+          // std::cout << "NOT INTERPOLATING : MISMATCH between " << fS1->getFieldID() << " - "
+          //           << fS1->getCncGeoID() << " and " << fS2->getFieldID() << " - "
+          //           << fS2->getCncGeoID() << std::endl;
         }
       }
     }

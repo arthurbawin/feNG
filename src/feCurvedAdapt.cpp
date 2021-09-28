@@ -641,8 +641,6 @@ static double dtt (const double x, const double y, double C, double S){
 static double dttt(const double x, const double y, double C, double S) {
   const double c111 = fxxx(x, y);
   const double c222 = fyyy(x, y);
-  // const double c112 = fxxy(x, y);
-  // const double c122 = fxyy(x, y);
   const double c112 = (fxxy(x, y) + fxyx(x,y) + fyxx(x,y)) /3.;
   const double c122 = (fxyy(x, y) + fyyx(x,y) + fyxy(x,y)) /3.;
   return C * C * C * c111 + S * S * S * c222 + 3. * C * C * S * c112 + 3. * C * S * S * c122;
@@ -655,7 +653,7 @@ static void directionsFromGradient (double x, double y, FILE *F, double &C, doub
 
   double normGrad = sqrt(a*a + b*b);
 
-  if(normGrad > 1e-1){
+  if(normGrad > 1e-8){
     double theta1 = atan2(b,a);
     C = cos(theta1);
     S = sin(theta1);
@@ -663,6 +661,36 @@ static void directionsFromGradient (double x, double y, FILE *F, double &C, doub
     // fprintf(F,"VP(%g,%g,%g){%g,%g,%g};\n",x,y,0.,-S,C,0.);
   } else{
     // Gradient norm is too small : directions will be smoothed
+    C = 0.;
+    S = 0.;
+  }
+}
+
+static void directionsFromHessian (double x, double y, FILE *F, double &C, double &S){
+  
+  const double a = fxx(x,y);
+  const double b = (fxy(x,y) + fyx(x,y))/2.;
+  const double c = fyy(x,y);
+
+  // Eigenvalues and spectral radius of the hessian
+  double l1 = (a+c-sqrt(a*a-2.*a*c+4.*b*b+c*c))/2.;
+  double l2 = (a+c+sqrt(a*a-2.*a*c+4.*b*b+c*c))/2.;
+
+  double spectralRadius = fmax(fabs(l1),fabs(l2));
+
+  if(spectralRadius > 1e-8){
+    // First eigenvector
+    double v11 = a - c + sqrt(a*a + 4.*b*b + c*c - 2*a*c);
+    double v12 = 2.*b;
+    C = v11;
+    S = v12;
+    const double L = fmax(1e-10, sqrt(C * C + S * S));
+    C /= L;
+    S /= L;
+    fprintf(F,"VP(%g,%g,%g){%g,%g,%g};\n",x,y,0.,C,S,0.);
+    // fprintf(F,"VP(%g,%g,%g){%g,%g,%g};\n",x,y,0.,-S,C,0.);
+  } else{
+    // Hessian's eigenvalues are too small : directions will be smoothed
     C = 0.;
     S = 0.;
   }
@@ -843,6 +871,8 @@ void smoothDirections(std::map<size_t, double> &C, std::map<size_t, double> &S) 
   std::set<size_t> nodes_to_treat;
   std::set<size_t> nodes;
 
+  std::cout<<elementTags[0].size()<<" elements"<<std::endl;
+
   for(size_t i = 0; i < elementTags[0].size(); i++) {
     size_t n0 = nodeTags[0][3 * i + 0];
     size_t n1 = nodeTags[0][3 * i + 1];
@@ -855,7 +885,7 @@ void smoothDirections(std::map<size_t, double> &C, std::map<size_t, double> &S) 
     nodes.insert(n2);
   }
 
-  double threshold = 0.7;
+  double threshold = 0.1;
 
   for(auto n : nodes) {
     double c = C[n];
@@ -963,7 +993,7 @@ static void metricScaling(feRecovery *recovery, feMetricOptions metricOptions, s
   }
 }
 
-double ERROR_SQUARED_P1(double *xa, double *xb, double *xc) {
+double ERROR_SQUARED_P1(double *xa, double *xb, double *xc, feFunction *solExact) {
   int triangleP1 = gmsh::model::mesh::getElementType("Triangle", 1);
   std::vector<double> localCoord;
   std::vector<double> weights;
@@ -994,7 +1024,10 @@ double ERROR_SQUARED_P1(double *xa, double *xb, double *xc) {
       interpolated += basisFunctions[3 * i + j] * F[j];
     }
     double detJ = fabs(dxdu * dydv - dxdv * dydu);
-    double exact = fExact(x, y);
+    std::vector<double> pos(3,0.);
+    pos[0] = x;
+    pos[1] = y;
+    double exact = (solExact != nullptr) ? solExact->eval(0, pos) : fExact(x, y);
     double diff = exact - interpolated;
     e2 += weights[i] * diff * diff * detJ;
     // printf("e = %10.14f \t weights[%d] = %4.4f \t diff = %4.4f \t detJ = %4.4f\n", e2, i, weights[i], diff, detJ);
@@ -1002,7 +1035,7 @@ double ERROR_SQUARED_P1(double *xa, double *xb, double *xc) {
   return e2;
 }
 
-double ERROR_SQUARED_P2(double *xa, double *xb, double *xc, double *xab, double *xbc, double *xca) {
+double ERROR_SQUARED_P2(double *xa, double *xb, double *xc, double *xab, double *xbc, double *xca, feFunction *solExact) {
   int triangleP2 = gmsh::model::mesh::getElementType("Triangle", 2);
   std::vector<double> localCoord;
   std::vector<double> weights;
@@ -1034,7 +1067,10 @@ double ERROR_SQUARED_P2(double *xa, double *xb, double *xc, double *xab, double 
       interpolated += basisFunctions[6 * i + j] * F[j];
     }
     double detJ = fabs(dxdu * dydv - dxdv * dydu);
-    double exact = f(x, y);
+    std::vector<double> pos(3,0.);
+    pos[0] = x;
+    pos[1] = y;
+    double exact = (solExact != nullptr) ? solExact->eval(0, pos) : fExact(x, y);
     double diff = exact - interpolated;
     e2 += weights[i] * diff * diff * detJ;
   }
@@ -1042,7 +1078,8 @@ double ERROR_SQUARED_P2(double *xa, double *xb, double *xc, double *xab, double 
 }
 #endif
 
-feCurvedAdapt::feCurvedAdapt(feMesh *mesh, std::vector<feRecovery *> &recovery, feMetricOptions metricOptions, std::string metricMeshName, std::string nextMeshName, int analytical) : _rec(recovery) {
+feCurvedAdapt::feCurvedAdapt(feMesh *mesh, std::vector<feRecovery *> &recovery, feMetricOptions metricOptions, std::string metricMeshName, std::string nextMeshName, int analytical,
+  feFunction *solExact) : _rec(recovery) {
 #ifdef HAVE_GMSH
 
   int deg = metricOptions.polynomialDegree;
@@ -1057,19 +1094,30 @@ feCurvedAdapt::feCurvedAdapt(feMesh *mesh, std::vector<feRecovery *> &recovery, 
   gmsh::model::getCurrent(nameModel);
   gmsh::model::add("rect");
   gmsh::model::setCurrent("rect");
-  gmsh::merge(metricMeshName);
-
+  gmsh::merge(metricMeshName)
+;
   // get the nodes
   std::vector<std::size_t> nodeTags;
   std::vector<double> coord;
   std::vector<double> parametricCoord;
-  int tag = 1;
-  gmsh::model::mesh::getNodes(nodeTags, coord, parametricCoord, -1, tag, true, false);  
+  int dim = -1;
+  int tag = -1;
+  gmsh::model::mesh::getNodes(nodeTags, coord, parametricCoord, dim, tag, true, false);
+  // dim = 2;
+  // tag = 2; // Tag de l'entite physique associee a la surface
+  // gmsh::model::mesh::getNodesForPhysicalGroup(dim, tag, nodeTags, coord);  
+
+  for(auto val : nodeTags)
+    std::cout<<val<<std::endl;
 
   int viewTag = gmsh::view::add(":metricP2_straight");
   int viewTagF = gmsh::view::add("F");
+  int viewTags0 = gmsh::view::add("h0");
+  int viewTags1 = gmsh::view::add("h1");
   std::vector<std::vector<double> > data;
   std::vector<std::vector<double> > dataF;
+  std::vector<std::vector<double> > datas0;
+  std::vector<std::vector<double> > datas1;
 
   double g00, g01, g11;
 
@@ -1086,10 +1134,13 @@ feCurvedAdapt::feCurvedAdapt(feMesh *mesh, std::vector<feRecovery *> &recovery, 
     double C, S;
     switch(deg){
       case 1 :
-        computeMetricP1Hess(x, y, lMin, lMax, eps, g00, g01, g11, F, C, S);
+        directionsFromGradient(x, y, F, C, S);
+        // directionsFromHessian(x, y, F, C, S);
+        // computeMetricP1Hess(x, y, lMin, lMax, eps, g00, g01, g11, F, C, S);
         break;
       case 2 :
         directionsFromGradient(x, y, F, C, S);
+        // directionsFromHessian(x, y, F, C, S);
         // computeMetricP2(x, y, lMin, lMax, eps, g00, g01, g11, F, C, S);
         // computeMetricP2Hess(x, y, lMin, lMax, eps, g00, g01, g11, F, C, S);
         break;
@@ -1108,6 +1159,7 @@ feCurvedAdapt::feCurvedAdapt(feMesh *mesh, std::vector<feRecovery *> &recovery, 
   smoothDirections(COS, SIN);
 
   FILE* fff = fopen("ellipsesJF.pos", "w");
+  FILE* ffff = fopen("detail.pos", "w");
   fprintf(fff,"View \"ellipsesJF\"{\n");
   F = fopen("directionsAfterSmoothing.pos", "w");
   fprintf(F, "View \" \"{\n");
@@ -1118,6 +1170,17 @@ feCurvedAdapt::feCurvedAdapt(feMesh *mesh, std::vector<feRecovery *> &recovery, 
   std::vector<double> yP(nt, 0.);
 
   std::vector<SMetric3> metrics(nodeTags.size());
+  
+  // Write the .sol size field file
+  FILE *myfile = fopen("toIntersect2D.sol", "w");
+  fprintf(myfile, "MeshVersionFormatted 2\n\n");
+  fprintf(myfile, "Dimension 2\n\n");
+  fprintf(myfile, "SolAtVertices\n");
+  std::set<int> s( nodeTags.begin(), nodeTags.end() );
+  fprintf(myfile, "%ld\n", s.size());
+  fprintf(myfile, "1 3\n\n");
+
+  std::set<std::size_t> alreadyWrittenTags;
 
   for(size_t i = 0; i < nodeTags.size(); i++) {
     const double x = coord[3 * i + 0];
@@ -1127,7 +1190,7 @@ feCurvedAdapt::feCurvedAdapt(feMesh *mesh, std::vector<feRecovery *> &recovery, 
     double S = SIN[nodeTags[i]];
 
     fprintf(F, "VP(%g,%g,%g){%g,%g,%g};\n", x, y, 0., C, S, 0.);
-    // fprintf(F, "VP(%g,%g,%g){%g,%g,%g};\n", x, y, 0., -sqrt(2.)*S, sqrt(2.)*C, 0.);
+    // fprintf(F, "VP(%g,%g,%g){%g,%g,%g};\n", x, y, 0., -sq  (2.)*S, sqrt(2.)*C, 0.);
 
     double l0, l1;
     switch(deg){
@@ -1136,8 +1199,8 @@ feCurvedAdapt::feCurvedAdapt(feMesh *mesh, std::vector<feRecovery *> &recovery, 
         const double dtt0_ = fabs(dtt(x, y, C, S));
         const double dtt1_ = fabs(dtt(x, y, -S, C));
 
-        l0 = fabs(dtt0_) > 1e-14 ? pow(2 * eps / dtt0_, 0.5) : lMax;
-        l1 = fabs(dtt1_) > 1e-14 ? pow(2 * eps / dtt1_, 0.5) : lMax;
+        l0 = fabs(dtt0_) > 1e-14 ? pow(2. * eps / dtt0_, 0.5) : lMax;
+        l1 = fabs(dtt1_) > 1e-14 ? pow(2. * eps / dtt1_, 0.5) : lMax;
         break;
       }
       case 2 : 
@@ -1177,6 +1240,8 @@ feCurvedAdapt::feCurvedAdapt(feMesh *mesh, std::vector<feRecovery *> &recovery, 
 
     std::vector<double> v(9);
     std::vector<double> vF(1);
+    std::vector<double> s0(1);
+    std::vector<double> s1(1);
 
     v[0] = g00;
     v[1] = -g01;
@@ -1190,8 +1255,14 @@ feCurvedAdapt::feCurvedAdapt(feMesh *mesh, std::vector<feRecovery *> &recovery, 
     v[7] = 0;
     v[8] = f(x, y); // export f as well.
     vF[0] = f(x, y);
+
+    s0[0] = l0;
+    s1[0] = l1;
+
     data.push_back(v);
     dataF.push_back(vF);
+    datas0.push_back(s0);
+    datas1.push_back(s1);
 
     SMetric3 M;
     M.set_m11(g00);
@@ -1200,16 +1271,28 @@ feCurvedAdapt::feCurvedAdapt(feMesh *mesh, std::vector<feRecovery *> &recovery, 
     metrics[i] = M;
     getEllipsePoints(factor * M(0,0), factor * 2.0*M(0,1), factor * M(1,1), x, y, xP, yP);
     // M.print("");
-    for(int i = 0; i < nt; ++i){
-      if(i != nt-1){
-        fprintf(fff,"SL(%.16g,%.16g,%.16g,%.16g,%.16g,%.16g){%u, %u};\n", xP[i], yP[i], 0., xP[i+1], yP[i+1], 0., 1, 1);
+    for(int j = 0; j < nt; ++j){
+      if(j != nt-1){
+        fprintf(fff,"SL(%.16g,%.16g,%.16g,%.16g,%.16g,%.16g){%u, %u};\n", xP[j], yP[j], 0., xP[j+1], yP[j+1], 0., 1, 1);
       } else{
-        fprintf(fff,"SL(%.16g,%.16g,%.16g,%.16g,%.16g,%.16g){%u, %u};\n", xP[i], yP[i], 0., xP[0], yP[0], 0., 1, 1);
+        fprintf(fff,"SL(%.16g,%.16g,%.16g,%.16g,%.16g,%.16g){%u, %u};\n", xP[j], yP[j], 0., xP[0], yP[0], 0., 1, 1);
       }
     }
+
+    auto pp = alreadyWrittenTags.insert(nodeTags[i]);
+
+    if(pp.second){
+      fprintf(ffff, "%d \t %+-4.4e \t %+-4.4e : %+-4.4e \t %+-4.4e \t %+-4.4e \n", nodeTags[i], x, y, M(0, 0), M(0, 1), M(1, 1));
+      // fprintf(ffff, "%d \t %+-4.4e \t %+-4.4e : %+-4.4e \t %+-4.4e \t %+-4.4e \n", nodeTags[i], x, y, M(0, 0), M(0, 1), M(1, 1));
+      // Write .sol size field
+      fprintf(myfile, "%+-10.12f \t %+-10.12f \t %+-10.12f \t %+-10.12f \t %+-10.12f\n", x, y, M(0, 0), M(0, 1), M(1, 1));
+    }
   }
+  fprintf(myfile, "End");
+  fclose(myfile);
   fprintf(fff,"};"); fclose(fff);
   fprintf(F  ,"};"); fclose(F);
+  fclose(ffff);
 
   // // Scale the metric field to obtain a desired number of vertices
   // metricScaling(recovery[0], metricOptions, metrics);
@@ -1238,6 +1321,8 @@ feCurvedAdapt::feCurvedAdapt(feMesh *mesh, std::vector<feRecovery *> &recovery, 
 
   gmsh::view::addModelData(viewTag, 0, "rect", "NodeData", nodeTags, data);
   gmsh::view::addModelData(viewTagF, 0, "rect", "NodeData", nodeTags, dataF);
+  gmsh::view::addModelData(viewTags0, 0, "rect", "NodeData", nodeTags, datas0);
+  gmsh::view::addModelData(viewTags1, 0, "rect", "NodeData", nodeTags, datas1);
 
   printf("dataf.size = %lu\n", dataF.size());
 
@@ -1246,10 +1331,14 @@ feCurvedAdapt::feCurvedAdapt(feMesh *mesh, std::vector<feRecovery *> &recovery, 
   //  gmsh::write("metric.msh");
   gmsh::view::write(viewTagF, "sol.msh");
   gmsh::view::write(viewTag, "metric.msh");
+  gmsh::view::write(viewTags0, "s0.msh");
+  gmsh::view::write(viewTags1, "s1.msh");
   //  gmsh::view::write(viewTagF,"metric.msh",true);
 
-  std::string mmgCommand = "mmg2d metric.msh -hgrad 100 -o " + nextMeshName;
+  std::string mmgCommand  = "mmg2d metric.msh -hgrad 100 -o " + nextMeshName;
+  std::string gmshCommand = "gmsh " + nextMeshName + " &";
   system(mmgCommand.c_str());
+  system(gmshCommand.c_str());
 
   gmsh::option::setNumber("Mesh.MshFileVersion", 4);
   gmsh::model::add("adapt");
@@ -1289,63 +1378,79 @@ feCurvedAdapt::feCurvedAdapt(feMesh *mesh, std::vector<feRecovery *> &recovery, 
   // std::vector<int> elementTypes;
 
   // gmsh::model::setCurrent("rect_adapt");
-  size_t lastindex = nextMeshName.find_last_of(".");
-  std::string root = nextMeshName.substr(0, lastindex);
-  std::string infoFileName = root + ".txt";
-  std::string errorFileName = root + "_ERROR.pos";
-  FILE *infoFile = fopen(infoFileName.c_str(), "w");
+  // size_t lastindex = nextMeshName.find_last_of(".");
+  // std::string root = nextMeshName.substr(0, lastindex);
+  // std::string infoFileName = root + ".txt";
+  // std::string errorFileName = root + "_ERROR.pos";
+  // FILE *infoFile = fopen(infoFileName.c_str(), "w");
 
-  {
-    FILE *ERR = fopen(errorFileName.c_str(), "w");
-    fprintf(ERR, "View\"ERROR_P1\"{\n");
-    int triangleP1 = gmsh::model::mesh::getElementType("Triangle", 1);
-    std::vector<double> localCoord;
-    std::vector<double> weights;
-    gmsh::model::mesh::getIntegrationPoints(triangleP1, "Gauss20", localCoord, weights);
-    std::vector<double> basisFunctions;
-    int numComponents, numOrientations;
-    gmsh::model::mesh::getBasisFunctions(triangleP1, localCoord, "Lagrange", numComponents,
-                                         basisFunctions, numOrientations);
-    std::vector<int> elementTypes;
-    std::vector<std::vector<std::size_t> > elementTags;
-    std::vector<std::vector<std::size_t> > nodeTags;
-    std::vector<std::size_t> nodeTags2;
-    std::vector<double> coord;
-    std::vector<double> parametricCoord;
-    gmsh::model::mesh::getElements(elementTypes, elementTags, nodeTags, 2);
+  // {
+  //   FILE *ERR = fopen(errorFileName.c_str(), "w");
+  //   fprintf(ERR, "View\"ERROR_P1\"{\n");
+  //   int triangleP1 = gmsh::model::mesh::getElementType("Triangle", 1);
+  //   std::vector<double> localCoord;
+  //   std::vector<double> weights;
+  //   gmsh::model::mesh::getIntegrationPoints(triangleP1, "Gauss20", localCoord, weights);
+  //   std::vector<double> basisFunctions;
+  //   int numComponents, numOrientations;
+  //   gmsh::model::mesh::getBasisFunctions(triangleP1, localCoord, "Lagrange", numComponents,
+  //                                        basisFunctions, numOrientations);
+  //   std::vector<int> elementTypes;
+  //   std::vector<std::vector<std::size_t>> elementTags;
+  //   std::vector<std::vector<std::size_t>> nodeTags;
+  //   std::vector<std::size_t> nodeTags2;
+  //   std::vector<double> coord;
+  //   std::vector<double> parametricCoord;
+  //   gmsh::model::mesh::getElements(elementTypes, elementTags, nodeTags, 2);
 
-    gmsh::model::mesh::getNodes(nodeTags2, coord, parametricCoord, 2);
+  //   gmsh::model::mesh::getNodes(nodeTags2, coord, parametricCoord, 2);
 
-    fprintf(infoFile, "nElem = %d\n", elementTags[0].size());
+  //   fprintf(infoFile, "nElem = %d\n", elementTags[0].size());
 
-    double Error = 0.0;
-    printf("Computing error on %d elements\n", elementTags[0].size());
-    for(size_t e = 0; e < elementTags[0].size(); e++) {
-      int eDim, eTag;
-      std::vector<double> xa, xb, xc, pc;
-      gmsh::model::mesh::getNode(nodeTags[0][3 * e + 0], xa, pc, eDim, eTag);
-      gmsh::model::mesh::getNode(nodeTags[0][3 * e + 1], xb, pc, eDim, eTag);
-      gmsh::model::mesh::getNode(nodeTags[0][3 * e + 2], xc, pc, eDim, eTag);
-      // gmsh::model::mesh::getNode(nodeTags[0][6 * e + 3], xab, pc, eDim, eTag);
-      // gmsh::model::mesh::getNode(nodeTags[0][6 * e + 4], xbc, pc, eDim, eTag);
-      // gmsh::model::mesh::getNode(nodeTags[0][6 * e + 5], xca, pc, eDim, eTag);
-      double ErrorElement = ERROR_SQUARED_P1(&xa[0], &xb[0], &xc[0]);
-      fprintf(ERR,
-              "ST(%g,%g,%g,%g,%g,%g,%g,%g,%g){%g,%g,%g};\n",
-              xa[0], xa[1], 0.0, xb[0], xb[1], 0.0, xc[0], xc[1], 0.0, ErrorElement, ErrorElement, ErrorElement);
-      Error += ErrorElement;
-    }
+  //   double Error = 0.0;
+  //   printf("Computing error on %d elements\n", elementTags[0].size());
+  //   for(size_t e = 0; e < elementTags[0].size(); e++) {
+  //     int eDim, eTag;
+  //     std::vector<double> xa, xb, xc, xab, xbc, xca, pc;
+  //     gmsh::model::mesh::getNode(nodeTags[0][3 * e + 0], xa, pc, eDim, eTag);
+  //     gmsh::model::mesh::getNode(nodeTags[0][3 * e + 1], xb, pc, eDim, eTag);
+  //     gmsh::model::mesh::getNode(nodeTags[0][3 * e + 2], xc, pc, eDim, eTag);
+  //     if(deg > 1){
+  //       gmsh::model::mesh::getNode(nodeTags[0][6 * e + 0], xa, pc, eDim, eTag);
+  //       gmsh::model::mesh::getNode(nodeTags[0][6 * e + 1], xb, pc, eDim, eTag);
+  //       gmsh::model::mesh::getNode(nodeTags[0][6 * e + 2], xc, pc, eDim, eTag);
+  //       gmsh::model::mesh::getNode(nodeTags[0][6 * e + 3], xab, pc, eDim, eTag);
+  //       gmsh::model::mesh::getNode(nodeTags[0][6 * e + 4], xbc, pc, eDim, eTag);
+  //       gmsh::model::mesh::getNode(nodeTags[0][6 * e + 5], xca, pc, eDim, eTag);
+  //     }
+      
+  //     double ErrorElement;
+  //     switch(deg){
+  //       case 1 : 
+  //         ErrorElement = ERROR_SQUARED_P1(&xa[0], &xb[0], &xc[0], solExact);
+  //         break;
+  //       case 2 : 
+  //         ErrorElement = ERROR_SQUARED_P2(&xa[0], &xb[0], &xc[0], &xab[0], &xbc[0], &xca[0], solExact);
+  //         break;
+  //       default :
+  //         printf("Error is only computed for P1 and P2 interpolant.");
+  //     } 
+  //     fprintf(ERR,
+  //             "ST(%g,%g,%g,%g,%g,%g,%g,%g,%g){%g,%g,%g};\n",
+  //             xa[0], xa[1], 0.0, xb[0], xb[1], 0.0, xc[0], xc[1], 0.0, ErrorElement, ErrorElement, ErrorElement);
+  //     Error += ErrorElement;
+  //   }
 
-    sort( nodeTags[0].begin(), nodeTags[0].end() );
-    nodeTags[0].erase( unique( nodeTags[0].begin(), nodeTags[0].end() ), nodeTags[0].end() );
-    fprintf(infoFile, "nVertices = %d\n", nodeTags[0].size());
+  //   sort( nodeTags[0].begin(), nodeTags[0].end() );
+  //   nodeTags[0].erase( unique( nodeTags[0].begin(), nodeTags[0].end() ), nodeTags[0].end() );
+  //   fprintf(infoFile, "nVertices = %d\n", nodeTags[0].size());
 
-    fprintf(ERR, "};\n");
-    fclose(ERR);
-    printf("Error = %12.5e\n", sqrt(Error));
-    fprintf(infoFile, "erreur interpolee = %12.5e\n", sqrt(Error));
-    fclose(infoFile);
-  }
+  //   fprintf(ERR, "};\n");
+  //   fclose(ERR);
+  //   printf("Error = %12.5e\n", sqrt(Error));
+  //   fprintf(infoFile, "erreur interpolee = %12.5e\n", sqrt(Error));
+  //   fclose(infoFile);
+  // }
 
   //  {
   //   FILE *ERR = fopen("ERROR_P2.pos", "w");
@@ -1393,4 +1498,312 @@ feCurvedAdapt::feCurvedAdapt(feMesh *mesh, std::vector<feRecovery *> &recovery, 
 feCurvedAdapt::~feCurvedAdapt() {
   // for(feGridFunction *gF : _derivatives)
   // delete gF;
+}
+
+feIsotropicAdapt::feIsotropicAdapt(feMesh *mesh, std::vector<feRecovery *> &recovery, feMetricOptions metricOptions, std::string metricMeshName, std::string nextMeshName, int analytical,
+  feFunction *solExact) : _rec(recovery) {
+#ifdef HAVE_GMSH
+
+  int deg = metricOptions.polynomialDegree;
+  const double lMin = metricOptions.hMin;
+  const double lMax = metricOptions.hMax;
+  const double eps  = metricOptions.eTargetError;
+
+  useAnalytical = analytical;
+
+  gmsh::initialize();
+  gmsh::open(metricMeshName);
+  gmsh::model::getCurrent(nameModel);
+  gmsh::model::add("iso");
+  gmsh::model::setCurrent("iso");
+  gmsh::merge(metricMeshName);
+
+  // get the nodes
+  std::vector<std::size_t> nodeTags;
+  std::vector<double> coord;
+  std::vector<double> parametricCoord;
+  int tag = 1;
+  gmsh::model::mesh::getNodes(nodeTags, coord, parametricCoord, -1, tag, true, false);  
+
+  int viewTag = gmsh::view::add("isoSizeField");
+  int viewTagF = gmsh::view::add("F");
+  std::vector<std::vector<double> > data;
+  std::vector<std::vector<double> > dataF;
+
+  double g00, g01, g11;
+
+  FILE* fff = fopen("ellipsesIso.pos", "w");
+  fprintf(fff,"View \"ellipsesIso\"{\n");
+
+  double factor = 10.;
+  int nt = 30;
+  std::vector<double> xP(nt, 0.);
+  std::vector<double> yP(nt, 0.);
+
+  std::vector<SMetric3> metrics(nodeTags.size());
+
+  for(size_t i = 0; i < nodeTags.size(); i++) {
+    const double x = coord[3 * i + 0];
+    const double y = coord[3 * i + 1];
+
+    double C = 1.0;
+    double S = 0.0;
+
+    double l0, l1;
+    switch(deg){
+      case 1 :
+      {
+        const double dtt0_ = fabs(dtt(x, y, C, S));
+        const double dtt1_ = fabs(dtt(x, y, -S, C));
+
+        l0 = fabs(dtt0_) > 1e-14 ? pow(2. * eps / dtt0_, 0.5) : lMax;
+        l1 = fabs(dtt1_) > 1e-14 ? pow(2. * eps / dtt1_, 0.5) : lMax;
+        break;
+      }
+      case 2 : 
+      {
+        const double dttt0_ = fabs(dttt(x, y, C, S));
+        const double dttt1_ = fabs(dttt(x, y, -S, C));
+
+        l0 = fabs(dttt0_) > 1e-14 ? pow(6 * eps / dttt0_, 0.3333) : lMax;
+        l1 = fabs(dttt1_) > 1e-14 ? pow(6 * eps / dttt1_, 0.3333) : lMax;
+        break;
+      }
+      default :
+        printf("No metric computation scheme for deg = 0 or deg > 2\n");
+        exit(-1);
+    }
+    
+    l0 = std::min(l0, lMax);
+    l0 = std::max(l0, lMin);
+    l1 = std::min(l1, lMax);
+    l1 = std::max(l1, lMin);
+
+    double h0 = 1. / (l0 * l0);
+    double h1 = 1. / (l1 * l1);
+
+    double size = fmin(l0, l1);
+
+    double g00 = C * C * h0 + S * S * h1;
+    double g11 = S * S * h0 + C * C * h1;
+    double g01 = S * C * (h1 - h0);
+
+    if(g00*g11 - g01*g01 < 1e-10){
+      std::cout<<g00*g11 - g01*g01<<std::endl;
+      exit(-1);
+    }
+
+    std::vector<double> v(1);
+    std::vector<double> vF(1);
+
+    v[0] = size;
+    vF[0] = f(x, y);
+
+    data.push_back(v);
+    dataF.push_back(vF);
+
+    SMetric3 M;
+    M.set_m11(g00);
+    M.set_m21(-g01);
+    M.set_m22(g11);
+    metrics[i] = M;
+    getEllipsePoints(factor * M(0,0), factor * 2.0*M(0,1), factor * M(1,1), x, y, xP, yP);
+    // M.print("");
+    for(int i = 0; i < nt; ++i){
+      if(i != nt-1){
+        fprintf(fff,"SL(%.16g,%.16g,%.16g,%.16g,%.16g,%.16g){%u, %u};\n", xP[i], yP[i], 0., xP[i+1], yP[i+1], 0., 1, 1);
+      } else{
+        fprintf(fff,"SL(%.16g,%.16g,%.16g,%.16g,%.16g,%.16g){%u, %u};\n", xP[i], yP[i], 0., xP[0], yP[0], 0., 1, 1);
+      }
+    }
+  }
+  fprintf(fff,"};"); fclose(fff);
+
+  gmsh::view::addModelData(viewTag, 0, "iso", "NodeData", nodeTags, data);
+  gmsh::view::addModelData(viewTagF, 0, "iso", "NodeData", nodeTags, dataF);
+
+  printf("dataf.size = %lu\n", dataF.size());
+
+  // gmsh::option::setNumber("Mesh.MshFileVersion", 2.2);
+
+  //  gmsh::write("metric.msh");
+  gmsh::view::write(viewTagF, "solution.msh");
+  gmsh::view::write(viewTag, "isoSizeField.pos");
+
+  gmsh::model::add("myBeautifulModel");
+  // gmsh::merge("isoSizeField.pos");
+
+  double lc = 0.2, xc = 2., yc = 2., r = 0.25;
+  // Points
+  gmsh::model::occ::addPoint( 0, 0, 0, lc, 1);
+  gmsh::model::occ::addPoint(10, 0, 0, lc, 2);
+  gmsh::model::occ::addPoint(10, 4, 0, lc, 3);
+  gmsh::model::occ::addPoint( 0, 4, 0, lc, 4);
+  // Courbes : un nouveau tag est renvoye si aucun n'est specifie
+  int l1 = gmsh::model::occ::addLine(1, 2);
+  int l2 = gmsh::model::occ::addLine(2, 3);
+  int l3 = gmsh::model::occ::addLine(3, 4);
+  int l4 = gmsh::model::occ::addLine(4, 1);
+  int c1 = gmsh::model::occ::addCircle(xc, yc, 0, r);
+  int boundary = gmsh::model::occ::addCurveLoop({l1,l2,l3,l4});
+  int circle = gmsh::model::occ::addCurveLoop({c1});
+  // Surface
+  gmsh::model::occ::addPlaneSurface({boundary, circle}, 1);
+  // Creation des structures Gmsh associees a la geometrie
+  gmsh::model::occ::synchronize();
+  // Entites physiques
+  gmsh::model::addPhysicalGroup(1, {1}, 1);
+  gmsh::model::addPhysicalGroup(1, {2}, 2);
+  gmsh::model::addPhysicalGroup(1, {3}, 3);
+  gmsh::model::addPhysicalGroup(1, {4}, 4);
+  gmsh::model::addPhysicalGroup(1, {5}, 5);
+  int surface = gmsh::model::addPhysicalGroup(2, {1});
+  gmsh::model::setPhysicalName(1, 1, "Bas");
+  gmsh::model::setPhysicalName(1, 2, "Droite");
+  gmsh::model::setPhysicalName(1, 3, "Haut");
+  gmsh::model::setPhysicalName(1, 4, "Gauche");
+  gmsh::model::setPhysicalName(1, 5, "Cylindre");
+  gmsh::model::setPhysicalName(2, surface, "Surface");
+
+  gmsh::model::geo::synchronize();
+
+  int bg_field = gmsh::model::mesh::field::add("PostView");
+  gmsh::model::mesh::field::setNumber(bg_field, "ViewIndex", viewTag);
+
+  // Apply the view as the current background mesh size field:
+  gmsh::model::mesh::field::setAsBackgroundMesh(bg_field);
+
+  gmsh::option::setNumber("Mesh.MeshSizeExtendFromBoundary", 0);
+  gmsh::option::setNumber("Mesh.MeshSizeFromPoints", 0);
+  gmsh::option::setNumber("Mesh.MeshSizeFromCurvature", 0);
+
+  gmsh::model::mesh::setAlgorithm(2,1,5);
+
+  gmsh::model::mesh::generate(2);
+  // gmsh::write("aLittleTest.msh");
+  gmsh::write(nextMeshName);
+
+  // gmsh::finalize();
+
+  // std::string mmgCommand = "mmg2d metric.msh -hgrad 100 -o " + nextMeshName;
+  // system(mmgCommand.c_str());
+
+  // gmsh::option::setNumber("Mesh.MshFileVersion", 4);
+  // gmsh::model::add("adapt");
+  // gmsh::model::setCurrent("adapt");
+  // gmsh::merge(nextMeshName);
+
+  // int computePointsUsingScaledCrossFieldPlanarP2(
+  //   const char *modelForMetric, const char *modelForMesh, int VIEW_TAG, int faceTag,
+  //   std::vector<double> &pts,
+  //   double er(double *, double *, double *, double *, double *, double *));
+
+  // bool vazy = true;
+
+  // std::vector<double> pts;
+  // if(vazy)
+  //   computePointsUsingScaledCrossFieldPlanarP2("rect", "rect_adapt", viewTag, 4, pts,
+  //                                              ERROR_SQUARED_P2);
+  // gmsh::model::setCurrent("rect_adapt");
+
+  // if(!vazy) gmsh::model::mesh::setOrder(2);
+  // gmsh::model::mesh::getNodes(nodeTags, coord, parametricCoord, -1, -1, true);
+
+  // int viewTagF_adapt = gmsh::view::add("F_adapt");
+  // std::vector<std::vector<double> > dataF_adapt;
+
+  // for(size_t i = 0; i < nodeTags.size(); i++) {
+  //   const double x = coord[3 * i + 0];
+  //   const double y = coord[3 * i + 1];
+  //   std::vector<double> vF(1);
+  //   vF[0] = f(x, y);
+  //   dataF_adapt.push_back(vF);
+  // }
+  // gmsh::model::setCurrent("rect_adapt");
+  // gmsh::view::addModelData(viewTagF_adapt, 0, "rect_adapt", "NodeData", nodeTags, dataF_adapt);
+  // gmsh::view::write(viewTagF_adapt, "sol_adapt.msh");
+
+  // std::vector<int> elementTypes;
+
+  // gmsh::model::setCurrent("rect_adapt");
+  // size_t lastindex = nextMeshName.find_last_of(".");
+  // std::string root = nextMeshName.substr(0, lastindex);
+  // std::string infoFileName = root + ".txt";
+  // std::string errorFileName = root + "_ERROR.pos";
+  // FILE *infoFile = fopen(infoFileName.c_str(), "w");
+
+  // {
+  //   FILE *ERR = fopen(errorFileName.c_str(), "w");
+  //   fprintf(ERR, "View\"ERROR_P1\"{\n");
+  //   int triangleP1 = gmsh::model::mesh::getElementType("Triangle", 1);
+  //   std::vector<double> localCoord;
+  //   std::vector<double> weights;
+  //   gmsh::model::mesh::getIntegrationPoints(triangleP1, "Gauss20", localCoord, weights);
+  //   std::vector<double> basisFunctions;
+  //   int numComponents, numOrientations;
+  //   gmsh::model::mesh::getBasisFunctions(triangleP1, localCoord, "Lagrange", numComponents,
+  //                                        basisFunctions, numOrientations);
+  //   std::vector<int> elementTypes;
+  //   std::vector<std::vector<std::size_t>> elementTags;
+  //   std::vector<std::vector<std::size_t>> nodeTags;
+  //   std::vector<std::size_t> nodeTags2;
+  //   std::vector<double> coord;
+  //   std::vector<double> parametricCoord;
+  //   gmsh::model::mesh::getElements(elementTypes, elementTags, nodeTags, 2);
+
+  //   gmsh::model::mesh::getNodes(nodeTags2, coord, parametricCoord, 2);
+
+  //   fprintf(infoFile, "nElem = %d\n", elementTags[0].size());
+
+  //   double Error = 0.0;
+  //   printf("Computing error on %d elements\n", elementTags[0].size());
+  //   for(size_t e = 0; e < elementTags[0].size(); e++) {
+  //     int eDim, eTag;
+  //     std::vector<double> xa, xb, xc, xab, xbc, xca, pc;
+  //     gmsh::model::mesh::getNode(nodeTags[0][3 * e + 0], xa, pc, eDim, eTag);
+  //     gmsh::model::mesh::getNode(nodeTags[0][3 * e + 1], xb, pc, eDim, eTag);
+  //     gmsh::model::mesh::getNode(nodeTags[0][3 * e + 2], xc, pc, eDim, eTag);
+  //     if(deg > 1){
+  //       gmsh::model::mesh::getNode(nodeTags[0][6 * e + 0], xa, pc, eDim, eTag);
+  //       gmsh::model::mesh::getNode(nodeTags[0][6 * e + 1], xb, pc, eDim, eTag);
+  //       gmsh::model::mesh::getNode(nodeTags[0][6 * e + 2], xc, pc, eDim, eTag);
+  //       gmsh::model::mesh::getNode(nodeTags[0][6 * e + 3], xab, pc, eDim, eTag);
+  //       gmsh::model::mesh::getNode(nodeTags[0][6 * e + 4], xbc, pc, eDim, eTag);
+  //       gmsh::model::mesh::getNode(nodeTags[0][6 * e + 5], xca, pc, eDim, eTag);
+  //     }
+      
+  //     double ErrorElement;
+  //     switch(deg){
+  //       case 1 : 
+  //         ErrorElement = ERROR_SQUARED_P1(&xa[0], &xb[0], &xc[0], solExact);
+  //         break;
+  //       case 2 : 
+  //         ErrorElement = ERROR_SQUARED_P2(&xa[0], &xb[0], &xc[0], &xab[0], &xbc[0], &xca[0], solExact);
+  //         break;
+  //       default :
+  //         printf("Error is only computed for P1 and P2 interpolant.");
+  //     } 
+  //     fprintf(ERR,
+  //             "ST(%g,%g,%g,%g,%g,%g,%g,%g,%g){%g,%g,%g};\n",
+  //             xa[0], xa[1], 0.0, xb[0], xb[1], 0.0, xc[0], xc[1], 0.0, ErrorElement, ErrorElement, ErrorElement);
+  //     Error += ErrorElement;
+  //   }
+
+  //   sort( nodeTags[0].begin(), nodeTags[0].end() );
+  //   nodeTags[0].erase( unique( nodeTags[0].begin(), nodeTags[0].end() ), nodeTags[0].end() );
+  //   fprintf(infoFile, "nVertices = %d\n", nodeTags[0].size());
+
+  //   fprintf(ERR, "};\n");
+  //   fclose(ERR);
+  //   printf("Error = %12.5e\n", sqrt(Error));
+  //   fprintf(infoFile, "erreur interpolee = %12.5e\n", sqrt(Error));
+  //   fclose(infoFile);
+  // }
+
+#else
+  printf("In feIsotropicAdapt : Error : Gmsh is required.\n");
+#endif
+}
+
+feIsotropicAdapt::~feIsotropicAdapt() {
 }

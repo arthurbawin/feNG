@@ -29,10 +29,7 @@ protected:
   std::vector<double> _par;
 
 public:
-  feVectorFunction(std::function<void(const double, const std::vector<double> &,
-                                      const std::vector<double> &, std::vector<double> &)>
-                     fct,
-                   std::vector<double> par = std::vector<double>())
+  feVectorFunction(std::function<void(const double, const std::vector<double> &, const std::vector<double> &, std::vector<double> &)> fct, std::vector<double> par = std::vector<double>())
     : _fct(fct), _par(par){};
   ~feVectorFunction() {}
 

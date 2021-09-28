@@ -237,6 +237,7 @@ public:
 class feSysElm_2D_NavierStokes : public feSysElm {
 protected:
   feVectorFunction *_fct;
+  feFunction *_viscosityFct;
   std::vector<double> &_par; // Parametre
   int _idU;
   int _idV;
@@ -250,7 +251,7 @@ protected:
   std::vector<double> _feP;
 
 public:
-  feSysElm_2D_NavierStokes(std::vector<double> &par, feVectorFunction *fct) : _fct(fct), _par(par) {
+  feSysElm_2D_NavierStokes(std::vector<double> &par, feVectorFunction *fct, feFunction *viscosityFct = nullptr) : _fct(fct), _par(par), _viscosityFct(viscosityFct) {
     _ID = "NavierStokes2D";
     matrixAnalyticalStatus = true;
   };

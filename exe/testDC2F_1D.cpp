@@ -53,7 +53,7 @@ int main(int argc, char **argv) {
   feFunction *funSol = new feFunction(fSol, par);
   feFunction *funSource = new feFunction(fSource, par);
 
-  int nIter = 4;
+  int nIter = 3;
   std::vector<double> normL2_BDF1(2 * nIter, 0.0);
   std::vector<double> normL2_DC2F(2 * nIter, 0.0);
   std::vector<int> nElm(nIter, 0);
