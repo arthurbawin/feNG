@@ -20,34 +20,6 @@ void solveStationary(double *normL2, feTolerances tol, feMetaNumber *metaNumber,
                      std::vector<feBilinearForm *> &formResiduals, feSolution *sol,
                      std::vector<feNorm *> &norms, feMesh *mesh);
 
-void solveBDF2(std::vector<double> &normL2, feTolerances tol, feMetaNumber *metaNumber,
-               feLinearSystem *linearSystem, std::vector<feBilinearForm *> &formMatrices,
-               std::vector<feBilinearForm *> &formResiduals, feSolution *sol,
-               std::vector<feNorm *> &norms, feMesh *mesh, std::vector<feSpace *> &spaces);
-
-void solveDC3(std::vector<double> &normL2BDF2, std::vector<double> &normL2DC3, feTolerances tol,
-              feMetaNumber *metaNumber, feLinearSystem *linearSystem,
-              std::vector<feBilinearForm *> &formMatrices,
-              std::vector<feBilinearForm *> &formResiduals, feSolution *sol,
-              std::vector<feNorm *> &norms, feMesh *mesh, std::vector<feSpace *> &spaces);
-
-void solveBDF1(std::vector<double> &normL2, feTolerances tol, feMetaNumber *metaNumber,
-               feLinearSystem *linearSystem, std::vector<feBilinearForm *> &formMatrices,
-               std::vector<feBilinearForm *> &formResiduals, feSolution *sol,
-               std::vector<feNorm *> &norms, feMesh *mesh, std::vector<feSpace *> &spaces);
-
-void solveBDF2afterBDF1(std::vector<double> &normL2BDF1, std::vector<double> &normL2BDF2,
-                        feTolerances tol, feMetaNumber *metaNumber, feLinearSystem *linearSystem,
-                        std::vector<feBilinearForm *> &formMatrices,
-                        std::vector<feBilinearForm *> &formResiduals, feSolution *sol,
-                        std::vector<feNorm *> &norms, feMesh *mesh, std::vector<feSpace *> &spaces);
-
-void solveDC2F(std::vector<double> &normL2BDF1, std::vector<double> &normL2DC2F, feTolerances tol,
-               feMetaNumber *metaNumber, feLinearSystem *linearSystem,
-               std::vector<feBilinearForm *> &formMatrices,
-               std::vector<feBilinearForm *> &formResiduals, feSolution *sol,
-               std::vector<feNorm *> &norms, feMesh *mesh, std::vector<feSpace *> &spaces);
-
 class TimeIntegrator {
 protected:
   feTolerances _tol;
@@ -158,6 +130,25 @@ public:
              feSolution *sol, std::vector<feNorm *> &norms, feMesh *mesh, double t0, double tEnd,
              int nTimeSteps);
   virtual ~DC3FSolver() {
+    delete _solutionContainerBDF1;
+    delete _solutionContainerDC2F;
+  }
+
+  std::vector<double> &getNorm(int iNorm) { return _normL2[iNorm]; };
+
+  virtual void makeSteps(int nSteps, std::vector<feSpace *> &spaces);
+};
+
+class DC3FSolver_centered : public TimeIntegrator {
+protected:
+  feSolutionContainer *_solutionContainerBDF1;
+  feSolutionContainer *_solutionContainerDC2F;
+
+public:
+  DC3FSolver_centered(feTolerances tol, feMetaNumber *metaNumber, feLinearSystem *linearSystem,
+                      feSolution *sol, std::vector<feNorm *> &norms, feMesh *mesh, double t0,
+                      double tEnd, int nTimeSteps);
+  virtual ~DC3FSolver_centered() {
     delete _solutionContainerBDF1;
     delete _solutionContainerDC2F;
   }

@@ -35,7 +35,7 @@ int main(int argc, char **argv) {
   feFunction *funSol = new feFunction(fSol, {});
   feFunction *funSource = new feFunction(fSource, {});
 
-  int nIter = 5;
+  int nIter = 1;
   std::vector<double> normL2BDF1(2 * nIter, 0.0);
   // std::vector<double> normL2BDF2(2 * nIter, 0.0);
   std::vector<int> nElm(nIter, 0);

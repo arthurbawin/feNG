@@ -18,34 +18,7 @@
 #include "feLinearSystemPETSc.h"
 #endif
 
-// double fSol(const double t, const std::vector<double> &x, const std::vector<double> par) {
-//   double x1 = x[0];
-//   int a = par[1];
-//   return pow(t, a)*(x1*x1+1);
-// }
-
-// double fSource(const double t, const std::vector<double> &x, const std::vector<double> par) {
-//   double x1 = x[0];
-//   double c1 = par[0];
-//   double a = par[1];
-//   double beta = (a == 0.) ? 0. : a * pow(t, a - 1.);
-//   return -beta*(x1*x1+1) + c1*2*pow(t, a);
-// }
-
-// double flambda_A(const double t, const std::vector<double> &x, const std::vector<double> par) {
-//   double x1 = x[0];
-//   double c1 = par[0];
-//   double a = par[1];
-//   return  c1* pow(t, a)*(2*x1);
-// }
-// double flambda_B(const double t, const std::vector<double> &x, const std::vector<double> par) {
-//   double x1 = x[0];
-//   double c1 = par[0];
-//   double a = par[1];
-//   return - c1* pow(t, a)*(2*x1);
-// }
-
-/// PB avec CL indé du temps :  tab 4-71  tab -4-72.
+// PB avec CL indé du temps :  tab 4-71  tab -4-72.
 
 double fSol(const double t, const std::vector<double> &x, const std::vector<double> par) {
   double x1 = x[0];
@@ -134,7 +107,7 @@ int main(int argc, char **argv) {
     // feSpace1DP3 U_M1D = feSpace1DP3(mesh, "U", "M1D", funSol);
     feSpace1DP0 U_BXA(mesh, "U", "BXA", funSol);
     feSpace1DP0 U_BXB(mesh, "U", "BXB", funSol);
-    feSpace1DP3 U_M1D(mesh, "U", "M1D", funSol);
+    feSpace1DP4 U_M1D(mesh, "U", "M1D", funSol);
     feSpace1DP0 L_BXA(mesh, "L", "BXA", funLambda_A);
     feSpace1DP0 L_BXB(mesh, "L", "BXB", funLambda_B);
     std::vector<feSpace *> fespace = {&U_BXA, &U_BXB, &U_M1D, &L_BXA, &L_BXB};
@@ -146,7 +119,7 @@ int main(int argc, char **argv) {
     double t1 = 1.;
     int nTimeSteps = 40 * pow(2, iter);
     TT[iter] = nTimeSteps;
-    feSolution *solDC3F = new feSolution(mesh, fespace, feEssBC, metaNumber);
+    feSolution *solDC2F = new feSolution(mesh, fespace, feEssBC, metaNumber);
     // sol->initializeTemporalSolution(t0,t1,nTimeSteps);
     // sol->initializeUnknowns(fmesh, metaNumber);
     // sol->initializeEssentialBC(mesh, metaNumber);
@@ -172,21 +145,16 @@ int main(int argc, char **argv) {
     std::vector<feBilinearForm *> formMatrices = {diff_U_M1D, masse_U_M1D, weakBC_U_A, weakBC_U_B};
     std::vector<feBilinearForm *> formResiduals = {diff_U_M1D, masse_U_M1D, source_U_M1D,
                                                    weakBC_U_A, weakBC_U_B};
-    // std::vector<feBilinearForm*> formMatrices  = {masse_U_M1D};
-    // std::vector<feBilinearForm*> formResiduals  = {masse_U_M1D, source_U_M1D};
+
     // Norme de la solution
     feNorm *normBDF1 = new feNorm(&U_M1D, mesh, nQuad, funSol);
     feNorm *normDC2F = new feNorm(&U_M1D, mesh, nQuad, funSol);
-    feNorm *normDC3F = new feNorm(&U_M1D, mesh, nQuad, funSol);
     feNorm *normBDF1Lambda_A = new feNorm(&L_BXA, mesh, nQuad, funLambda_A);
     feNorm *normBDF1Lambda_B = new feNorm(&L_BXB, mesh, nQuad, funLambda_B);
     feNorm *normDC2FLambda_A = new feNorm(&L_BXA, mesh, nQuad, funLambda_A);
     feNorm *normDC2FLambda_B = new feNorm(&L_BXB, mesh, nQuad, funLambda_B);
-    feNorm *normDC3FLambda_A = new feNorm(&L_BXA, mesh, nQuad, funLambda_A);
-    feNorm *normDC3FLambda_B = new feNorm(&L_BXB, mesh, nQuad, funLambda_B);
-    std::vector<feNorm *> norms = {normBDF1,         normDC2F,         normDC3F,
-                                   normBDF1Lambda_A, normBDF1Lambda_B, normDC2FLambda_A,
-                                   normDC2FLambda_B, normDC3FLambda_A, normDC3FLambda_B};
+    std::vector<feNorm *> norms = {normBDF1,         normDC2F,         normBDF1Lambda_A,
+                                   normBDF1Lambda_B, normDC2FLambda_A, normDC2FLambda_B};
     // Systeme lineaire
     feLinearSystemPETSc *linearSystem =
       new feLinearSystemPETSc(argc, argv, formMatrices, formResiduals, metaNumber, mesh);
@@ -195,21 +163,17 @@ int main(int argc, char **argv) {
     // Resolution
     feTolerances tol{1e-9, 1e-9, 20};
 
-    DC3FSolver solver(tol, metaNumber, linearSystem, solDC3F, norms, mesh, t0, t1, nTimeSteps);
+    DC2FSolver solver(tol, metaNumber, linearSystem, solDC2F, norms, mesh, t0, t1, nTimeSteps);
     solver.makeSteps(nTimeSteps, fespace);
     std::vector<double> &normL2BDF1 = solver.getNorm(0);
     std::vector<double> &normL2DC2F = solver.getNorm(1);
-    std::vector<double> &normL2DC3F = solver.getNorm(2);
-    std::vector<double> &normL2_BDF1_Lambda_A = solver.getNorm(3);
-    std::vector<double> &normL2_BDF1_Lambda_B = solver.getNorm(4);
-    std::vector<double> &normL2_DC2F_Lambda_A = solver.getNorm(5);
-    std::vector<double> &normL2_DC2F_Lambda_B = solver.getNorm(6);
-    std::vector<double> &normL2_DC3F_Lambda_A = solver.getNorm(7);
-    std::vector<double> &normL2_DC3F_Lambda_B = solver.getNorm(8);
+    std::vector<double> &normL2_BDF1_Lambda_A = solver.getNorm(2);
+    std::vector<double> &normL2_BDF1_Lambda_B = solver.getNorm(3);
+    std::vector<double> &normL2_DC2F_Lambda_A = solver.getNorm(4);
+    std::vector<double> &normL2_DC2F_Lambda_B = solver.getNorm(5);
 
     normL2_BDF1[2 * iter] = *std::max_element(normL2BDF1.begin(), normL2BDF1.end());
     normL2_DC2F[2 * iter] = *std::max_element(normL2DC2F.begin(), normL2DC2F.end());
-    normL2_DC3F[2 * iter] = *std::max_element(normL2DC3F.begin(), normL2DC3F.end());
     normBDF1_A[2 * iter] =
       *std::max_element(normL2_BDF1_Lambda_A.begin(), normL2_BDF1_Lambda_A.end());
     normBDF1_B[2 * iter] =
@@ -218,26 +182,20 @@ int main(int argc, char **argv) {
       *std::max_element(normL2_DC2F_Lambda_A.begin(), normL2_DC2F_Lambda_A.end());
     normDC2F_B[2 * iter] =
       *std::max_element(normL2_DC2F_Lambda_B.begin(), normL2_DC2F_Lambda_B.end());
-    normDC3F_A[2 * iter] =
-      *std::max_element(normL2_DC3F_Lambda_A.begin(), normL2_DC3F_Lambda_A.end());
-    normDC3F_B[2 * iter] =
-      *std::max_element(normL2_DC3F_Lambda_B.begin(), normL2_DC3F_Lambda_B.end());
+
 #endif
 
     delete normBDF1;
     delete normDC2F;
-    delete normDC3F;
     delete normBDF1Lambda_A;
     delete normBDF1Lambda_B;
     delete normDC2FLambda_A;
     delete normDC2FLambda_B;
-    delete normDC3FLambda_A;
-    delete normDC3FLambda_B;
     delete linearSystem;
     delete masse_U_M1D;
     delete source_U_M1D;
     delete diff_U_M1D;
-    delete solDC3F;
+    delete solDC2F;
     delete metaNumber;
     delete mesh;
   }
@@ -248,21 +206,17 @@ int main(int argc, char **argv) {
   for(int i = 1; i < nIter; ++i) {
     normL2_BDF1[2 * i + 1] = log(normL2_BDF1[2 * (i - 1)] / normL2_BDF1[2 * i]) / log(2.);
     normL2_DC2F[2 * i + 1] = log(normL2_DC2F[2 * (i - 1)] / normL2_DC2F[2 * i]) / log(2.);
-    normL2_DC3F[2 * i + 1] = log(normL2_DC3F[2 * (i - 1)] / normL2_DC3F[2 * i]) / log(2.);
     normBDF1_A[2 * i + 1] = log(normBDF1_A[2 * (i - 1)] / normBDF1_A[2 * i]) / log(2.);
     normBDF1_B[2 * i + 1] = log(normBDF1_B[2 * (i - 1)] / normBDF1_B[2 * i]) / log(2.);
     normDC2F_A[2 * i + 1] = log(normDC2F_A[2 * (i - 1)] / normDC2F_A[2 * i]) / log(2.);
     normDC2F_B[2 * i + 1] = log(normDC2F_B[2 * (i - 1)] / normDC2F_B[2 * i]) / log(2.);
-    normDC3F_A[2 * i + 1] = log(normDC3F_A[2 * (i - 1)] / normDC3F_A[2 * i]) / log(2.);
-    normDC3F_B[2 * i + 1] = log(normDC3F_B[2 * (i - 1)] / normDC3F_B[2 * i]) / log(2.);
   }
   printf("\n");
-  printf("%12s \t %12s \t %12s \t %12s \t %12s \t %12s \t %12s \t %12s \n", "nTimeSteps", "nElm",
-         "||E_BDF1||", "Taux BDF1", "||E_DC2F||", "Taux DC2F", "||E_DC3F||", "Taux DC3F");
+  printf("%12s \t %12s \t %12s \t %12s \t %12s \t %12s \n", "nTimeSteps", "nElm", "||E_BDF1||",
+         "Taux BDF1", "||E_DC2F||", "Taux DC2F");
   for(int i = 0; i < nIter; ++i)
-    printf("%12d \t %12d \t %12.6e \t %12.6e \t %12.6e \t %12.6e \t %12.6e \t %12.6e \n", TT[i],
-           nElm[i], normL2_BDF1[2 * i], normL2_BDF1[2 * i + 1], normL2_DC2F[2 * i],
-           normL2_DC2F[2 * i + 1], normL2_DC3F[2 * i], normL2_DC3F[2 * i + 1]);
+    printf("%12d \t %12d \t %12.6e \t %12.6e \t %12.6e \t %12.6e \n", TT[i], nElm[i],
+           normL2_BDF1[2 * i], normL2_BDF1[2 * i + 1], normL2_DC2F[2 * i], normL2_DC2F[2 * i + 1]);
   printf("\n");
   printf("\n");
   printf("Lambda based on BDF1");
@@ -281,15 +235,7 @@ int main(int argc, char **argv) {
   for(int i = 0; i < nIter; ++i)
     printf("%12d \t %12d \t %16.6e \t %16.6e \t %16.6e \t %16.6e  \n", TT[i], nElm[i],
            normDC2F_A[2 * i], normDC2F_A[2 * i + 1], normDC2F_B[2 * i], normDC2F_B[2 * i + 1]);
-  printf("\n");
-  printf("\n");
-  printf("Lambda based on DC3F");
-  printf("\n");
-  printf("%12s \t %12s \t %16s \t %16s \t %16s \t %16s \n", "nTimeSteps", "nElm", "||E_lambda_A||",
-         "Taux lambda_A", "||E_lambda_B||", "Taux lambda_B");
-  for(int i = 0; i < nIter; ++i)
-    printf("%12d \t %12d \t %16.6e \t %16.6e \t %16.6e \t %16.6e  \n", TT[i], nElm[i],
-           normDC3F_A[2 * i], normDC3F_A[2 * i + 1], normDC3F_B[2 * i], normDC3F_B[2 * i + 1]);
+
 #ifdef USING_PETSC
   petscFinalize();
 #endif

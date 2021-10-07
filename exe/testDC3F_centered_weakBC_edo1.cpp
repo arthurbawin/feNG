@@ -18,33 +18,6 @@
 #include "feLinearSystemPETSc.h"
 #endif
 
-// double fSol(const double t, const std::vector<double> &x, const std::vector<double> par) {
-//   double x1 = x[0];
-//   return sin(4*t)*exp(2*x1) +1;
-// }
-
-// double fSource(const double t, const std::vector<double> &x, const std::vector<double> par) {
-//   double x1 = x[0];
-//   double c1 = par[0];
-//   return -4*cos(4*t)*exp(2*x1) + c1*4*sin(4*t)*exp(2*x1);
-// }
-
-// double flambda_A(const double t, const std::vector<double> &x, const std::vector<double> par) {
-//   double x1 = x[0];
-//   double c1 = par[0];
-//   return  c1*sin(4*t)*exp(2*x1)*2;
-// }
-// double flambda_B(const double t, const std::vector<double> &x, const std::vector<double> par) {
-//   double x1 = x[0];
-//   double c1 = par[0];
-//   return - c1*sin(4*t)*exp(2*x1)*2;
-// }
-
-// double fSolDot(const double t, const std::vector<double> &x, const std::vector<double> par) {
-//   double x1 = x[0];
-//   return 4*cos(4*t)*exp(2*x1) ;
-// }
-
 // PB avec CL dépendante du temps et correction de Verwer :  tab 4-75 tab 4-76.
 
 // double fSol(const double t, const std::vector<double> &x, const std::vector<double> par) {
@@ -112,65 +85,38 @@
 //   return beta*(x1*x1*x1/3 - (5./2.)*x1*x1) ;
 // }
 
-// double fSol(const double t, const std::vector<double> &x, const std::vector<double> par) {
-//   double x1 = x[0];
-//   int a = par[1];
-//   return pow(t, a)*(x1*x1 +1.);
-// }
-
-// double fSource(const double t, const std::vector<double> &x, const std::vector<double> par) {
-//   double x1 = x[0];
-//   double c1 = par[0];
-//   int a = par[1];
-//   double beta = (a == 0.) ? 0. : a * pow(t, a - 1.);
-//   return -beta*(x1*x1 +1.) + c1*2.*pow(t, a);
-// }
-
-// double flambda_A(const double t, const std::vector<double> &x, const std::vector<double> par) {
-//   double x1 = x[0];
-//   double c1 = par[0];
-//   int a = par[1];
-//   return  c1* pow(t, a)*2.*x1;
-// }
-// double flambda_B(const double t, const std::vector<double> &x, const std::vector<double> par) {
-//   double x1 = x[0];
-//   double c1 = par[0];
-//   int a = par[1];
-//   return - c1* pow(t, a)*2.*x1;
-// }
-
-// double fSolDot(const double t, const std::vector<double> &x, const std::vector<double> par) {
-//   double x1 = x[0];
-//   int a = par[1];
-//   double beta = (a == 0.) ? 0. : a * pow(t, a - 1.);
-//   return beta*(x1*x1 +1.) ;
-// }
-
-// Test a source nulle
 double fSol(const double t, const std::vector<double> &x, const std::vector<double> par) {
   double x1 = x[0];
-  return sin(x1) * exp(-t);
+  int a = par[1];
+  return pow(t, a) * x1 * (x1 - 5.);
 }
 
 double fSource(const double t, const std::vector<double> &x, const std::vector<double> par) {
-  return 0.;
+  double x1 = x[0];
+  double c1 = par[0];
+  int a = par[1];
+  double beta = (a == 0.) ? 0. : a * pow(t, a - 1.);
+  return -beta * x1 * (x1 - 5.) + c1 * 2 * pow(t, a);
 }
 
 double flambda_A(const double t, const std::vector<double> &x, const std::vector<double> par) {
   double x1 = x[0];
   double c1 = par[0];
-  // int a = par[1];
-  return c1 * cos(x1) * exp(-t);
+  int a = par[1];
+  return c1 * (pow(t, a) * (2 * x1 - 5.));
 }
 double flambda_B(const double t, const std::vector<double> &x, const std::vector<double> par) {
   double x1 = x[0];
   double c1 = par[0];
-  return -c1 * cos(x1) * exp(-t);
+  int a = par[1];
+  return -c1 * (pow(t, a) * (2 * x1 - 5.));
 }
 
 double fSolDot(const double t, const std::vector<double> &x, const std::vector<double> par) {
   double x1 = x[0];
-  return -sin(x1) * exp(-t);
+  int a = par[1];
+  double beta = (a == 0.) ? 0. : a * pow(t, a - 1.);
+  return beta * x1 * (x1 - 5.);
 }
 
 int main(int argc, char **argv) {
@@ -178,11 +124,9 @@ int main(int argc, char **argv) {
   petscInitialize(argc, argv);
 #endif
   double xa = 0.;
-  double xb = M_PI / 2.;
-  // double xb = 5;
-
-  double kd = 1;
-  double exposant = 2.;
+  double xb = 5.;
+  double kd = 0.1;
+  double exposant = 3.;
   std::vector<double> par = {kd, exposant};
   feFunction *funSol = new feFunction(fSol, par);
   feFunction *funSolDot = new feFunction(fSolDot, par);
@@ -204,8 +148,8 @@ int main(int argc, char **argv) {
   std::vector<int> TT;
   TT.resize(nIter);
   for(int iter = 0; iter < nIter; ++iter) {
-    nElm[iter] = 40 * pow(3, iter);
-    // nElm[iter] = 40 ;
+    // nElm[iter] = 40 * pow(2, iter);
+    nElm[iter] = 40;
     // Maillage
     feMesh1DP1 *mesh = new feMesh1DP1(xa, xb, nElm[iter], "BXA", "BXB", "M1D");
     // Espaces d'interpolation
@@ -214,7 +158,7 @@ int main(int argc, char **argv) {
     // feSpace1DP3 U_M1D = feSpace1DP3(mesh, "U", "M1D", funSol);
     feSpace1DP0 U_BXA(mesh, "U", "BXA", funSol);
     feSpace1DP0 U_BXB(mesh, "U", "BXB", funSol);
-    feSpace1DP3 U_M1D(mesh, "U", "M1D", funSol);
+    feSpace1DP4 U_M1D(mesh, "U", "M1D", funSol);
     feSpace1DP0 L_BXA(mesh, "L", "BXA", funLambda_A);
     feSpace1DP0 L_BXB(mesh, "L", "BXB", funLambda_B);
     feSpace1DP0 V_BXA(mesh, "V", "BXA", funSol);
@@ -225,7 +169,7 @@ int main(int argc, char **argv) {
     feMetaNumber *metaNumber = new feMetaNumber(mesh, fespace, feEssBC);
     // Solution
     double t0 = 0.;
-    double t1 = 5.;
+    double t1 = 1.;
     int nTimeSteps = 40 * pow(2, iter);
     TT[iter] = nTimeSteps;
     feSolution *solDC3F = new feSolution(mesh, fespace, feEssBC, metaNumber);
@@ -275,9 +219,10 @@ int main(int argc, char **argv) {
 #ifdef HAVE_PETSC
     // linearSystem->initialize();
     // Resolution
-    feTolerances tol{1e-10, 1e-10, 20};
+    feTolerances tol{1e-9, 1e-9, 20};
 
-    DC3FSolver solver(tol, metaNumber, linearSystem, solDC3F, norms, mesh, t0, t1, nTimeSteps);
+    DC3FSolver_centered solver(tol, metaNumber, linearSystem, solDC3F, norms, mesh, t0, t1,
+                               nTimeSteps);
     solver.makeSteps(nTimeSteps, fespace);
     std::vector<double> &normL2BDF1 = solver.getNorm(0);
     std::vector<double> &normL2DC2F = solver.getNorm(1);

@@ -27,11 +27,11 @@
 // }
 
 double fSol(const double t, const std::vector<double> &x, const std::vector<double> par) {
-  return pow(t, 4.) + 1;
+  return pow(t, 3.) + 1;
 }
 
 double fSource(const double t, const std::vector<double> &x, const std::vector<double> par) {
-  return -4. * pow(t, 3.);
+  return -3. * pow(t, 2.);
 }
 
 int main(int argc, char **argv) {
@@ -43,7 +43,7 @@ int main(int argc, char **argv) {
   feFunction *funSol = new feFunction(fSol, {});
   feFunction *funSource = new feFunction(fSource, {});
 
-  int nIter = 5;
+  int nIter = 1;
   std::vector<double> normL2_BDF1(2 * nIter, 0.0);
   std::vector<double> normL2_DC2F(2 * nIter, 0.0);
   std::vector<double> normL2_DC3F(2 * nIter, 0.0);
@@ -63,11 +63,11 @@ int main(int argc, char **argv) {
     // Solution
     double t0 = 0.;
     double t1 = 1.;
-    int nTimeSteps = 20 * pow(2, iter);
+    int nTimeSteps = 5 * pow(2, iter);
     TT[iter] = nTimeSteps;
     feSolution *solDC3F = new feSolution(mesh, fespace, feEssBC, metaNumber);
     // Formes (bi)lineaires
-    int nQuad = 15; // TODO : change to deg
+    int nQuad = 6; // TODO : change to deg
     std::vector<feSpace *> spaceSource1D_U = {&U_M1D};
     std::vector<feSpace *> spaceMasse1D_U = {&U_M1D};
 

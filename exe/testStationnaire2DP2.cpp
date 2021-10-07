@@ -102,8 +102,11 @@ int main(int argc, char **argv) {
     // linearSystem->viewTestMatrix();
     // linearSystem->assembleResiduals(sol);
     feTolerances tol{1e-9, 1e-8, 3};
-    solveStationary(&normL2[2 * iter], tol, metaNumber, linearSystem, formMatrices, formResiduals,
-                    sol, norms, mesh);
+    StationarySolver solver(tol, metaNumber, linearSystem, sol, norms, mesh);
+    solver.makeSteps(0, fespace);
+    // solveStationary(&normL2[2 * iter], tol, metaNumber, linearSystem, formMatrices,
+    // formResiduals,
+    //                 sol, norms, mesh);
     linearSystem->finalize();
 
     // sol->initializeUnknowns(mesh, metaNumber);

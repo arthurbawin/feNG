@@ -80,7 +80,10 @@ double feSpace::interpolateSolution(double r[3]) {
 
 double feSpace::interpolateSolutionAtQuadNode(int iNode) {
   double res = 0.0;
-  for(int i = 0; i < _nFunctions; ++i) res += _sol[i] * _L[_nFunctions * iNode + i];
+  for(int i = 0; i < _nFunctions; ++i) {
+    res += _sol[i] * _L[_nFunctions * iNode + i];
+    // std::cout<<"_sol [ "<< i<<"]="<<_sol[i] << "_L =" << _L[_nFunctions * iNode + i]<<std::endl;
+  }
   return res;
 }
 

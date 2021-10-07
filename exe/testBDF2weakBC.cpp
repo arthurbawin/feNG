@@ -49,24 +49,24 @@ double f0(const double t, const std::vector<double> &x, const std::vector<double
 
 double fSol(const double t, const std::vector<double> &x, const std::vector<double> par) {
   double x1 = x[0];
-  return pow(t, 3)*x1*x1 + 1;
+  return pow(t, 3) * x1 * x1 + 1;
 }
 
 double fSource(const double t, const std::vector<double> &x, const std::vector<double> par) {
   double x1 = x[0];
   double c1 = par[0];
-  return -3.*pow(t, 2)*x1*x1 + c1*2*pow(t, 3);
+  return -3. * pow(t, 2) * x1 * x1 + c1 * 2 * pow(t, 3);
 }
 
 double flambda_A(const double t, const std::vector<double> &x, const std::vector<double> par) {
   double x1 = x[0];
   double c1 = par[0];
-  return  c1* 2*pow(t, 3)*x1 ; 
+  return c1 * 2 * pow(t, 3) * x1;
 }
 double flambda_B(const double t, const std::vector<double> &x, const std::vector<double> par) {
   double x1 = x[0];
   double c1 = par[0];
-  return - c1* 2*pow(t, 3)*x1 ; 
+  return -c1 * 2 * pow(t, 3) * x1;
 }
 
 int main(int argc, char **argv) {
@@ -140,14 +140,15 @@ int main(int argc, char **argv) {
     feBilinearForm *weakBC_U_B =
       new feBilinearForm(spaceWeak_B, mesh, nQuad, new feSysElm_0D_weakBC(1.0, funSol));
 
-    std::vector<feBilinearForm *> formMatrices = {diff_U_M1D, masse_U_M1D,weakBC_U_A,weakBC_U_B};
-    std::vector<feBilinearForm *> formResiduals = {diff_U_M1D, masse_U_M1D, source_U_M1D, weakBC_U_A, weakBC_U_B};
+    std::vector<feBilinearForm *> formMatrices = {diff_U_M1D, masse_U_M1D, weakBC_U_A, weakBC_U_B};
+    std::vector<feBilinearForm *> formResiduals = {diff_U_M1D, masse_U_M1D, source_U_M1D,
+                                                   weakBC_U_A, weakBC_U_B};
 
     // Norme de la solution
     feNorm *norm = new feNorm(&U_M1D, mesh, nQuad, funSol);
     feNorm *normLambda_A = new feNorm(&L_BXA, mesh, nQuad, funLambda_A);
     feNorm *normLambda_B = new feNorm(&L_BXB, mesh, nQuad, funLambda_B);
-    std::vector<feNorm *> norms = {norm,normLambda_A,normLambda_B};
+    std::vector<feNorm *> norms = {norm, normLambda_A, normLambda_B};
     // Systeme lineaire
     feLinearSystemPETSc *linearSystem =
       new feLinearSystemPETSc(argc, argv, formMatrices, formResiduals, metaNumber, mesh);
@@ -157,7 +158,7 @@ int main(int argc, char **argv) {
     feTolerances tol{1e-9, 1e-9, 20};
     // std::vector<double> normL2BDF(nTimeSteps,0.0);
     std::string CodeIni = "BDF1/DC"; // Define the way of initialization |"SolEx"->for exact
-                                      // solution|  |"BDF1/DCF"->using only initial conditions|
+                                     // solution|  |"BDF1/DCF"->using only initial conditions|
     BDF2Solver solver(tol, metaNumber, linearSystem, sol, norms, mesh, t0, t1, nTimeSteps, CodeIni);
     solver.makeSteps(nTimeSteps, fespace);
     std::vector<double> &normL2BDF = solver.getNorm(0);
@@ -190,9 +191,13 @@ int main(int argc, char **argv) {
     normA[2 * i + 1] = log(normA[2 * (i - 1)] / normA[2 * i]) / log(2.);
     normB[2 * i + 1] = log(normB[2 * (i - 1)] / normB[2 * i]) / log(2.);
   }
-  printf("%12s \t %12s \t %12s \t %12s \t %12s \t %12s \t %12s \t %12s\n", "nTimeSteps", "nElm", "||E||", "Taux BDF2","||E_lambda_A||", "Taux lambda_A", "||E_lambda_B||", "Taux lambda_B" );
+  printf("%12s \t %12s \t %12s \t %12s \t %12s \t %12s \t %12s \t %12s\n", "nTimeSteps", "nElm",
+         "||E||", "Taux BDF2", "||E_lambda_A||", "Taux lambda_A", "||E_lambda_B||",
+         "Taux lambda_B");
   for(int i = 0; i < nIter; ++i)
-    printf("%12d \t %12d \t %12.6e \t %12.6e \t %12.6e \t %12.6e \t %12.6e \t %12.6e\n", TT[i], nElm[i], normL2[2 * i], normL2[2 * i + 1],normA[2 * i],normA[2 * i+1],normB[2 * i],normB[2 * i+1] );
+    printf("%12d \t %12d \t %12.6e \t %12.6e \t %12.6e \t %12.6e \t %12.6e \t %12.6e\n", TT[i],
+           nElm[i], normL2[2 * i], normL2[2 * i + 1], normA[2 * i], normA[2 * i + 1], normB[2 * i],
+           normB[2 * i + 1]);
 
 #ifdef HAVE_PETSC
   petscFinalize();

@@ -37,7 +37,6 @@ void feNorm::computeL2Norm0D(feSolution *sol) {
   std::cout << "norme L2   " << norm << std::endl;
 }
 
-
 void feNorm::computeL2Norm(feMetaNumber *metaNumber, feSolution *sol, feMesh *mesh) {
   double normL2 = 0.0, solInt, solRef, J, t = sol->getCurrentTime();
   int nElm = _intSpace->getNbElm();
@@ -77,6 +76,7 @@ void feNorm::computeL2Norm(feMetaNumber *metaNumber, feSolution *sol, feMesh *me
     }
   }
   norm = sqrt(normL2);
+  // std::cout<< "norm = "<< norm <<std::endl;
 }
 
 void feNorm::computeArea(feMetaNumber *metaNumber, feSolution *sol, feMesh *mesh) {

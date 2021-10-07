@@ -81,6 +81,29 @@ public:
                          double *Be);
 };
 
+class feSysElm_0D_weakBC_edo1_V2 : public feSysElm {
+protected:
+  feFunction *_fct;
+  double _par; // Parametre
+  int _idU;
+  int _idL;
+  int _idV;
+  std::vector<double> _feU;
+  std::vector<double> _feL;
+
+public:
+  feSysElm_0D_weakBC_edo1_V2(double par, feFunction *fct) : _fct(fct), _par(par){};
+  virtual ~feSysElm_0D_weakBC_edo1_V2() {}
+
+  virtual void createElementarySystem(std::vector<feSpace *> &space);
+  virtual void computeAe(std::vector<double> &J, int numElem, std::vector<feSpace *> &intSpace,
+                         feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn,
+                         double **Ae);
+  virtual void computeBe(std::vector<double> &J, int numElem, std::vector<feSpace *> &intSpace,
+                         feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn,
+                         double *Be);
+};
+
 class feSysElm_0D_weakBC_edo2 : public feSysElm {
 protected:
   feFunction *_fct;

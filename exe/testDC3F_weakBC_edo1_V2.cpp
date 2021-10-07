@@ -45,132 +45,35 @@
 //   return 4*cos(4*t)*exp(2*x1) ;
 // }
 
-// PB avec CL dépendante du temps et correction de Verwer :  tab 4-75 tab 4-76.
-
-// double fSol(const double t, const std::vector<double> &x, const std::vector<double> par) {
-//   double x1 = x[0];
-//   return x1*x1*x1* (x1 * x1 - 25.) * pow(t, 6) +  pow(x1, 5)*pow(t, 6) +1.;
-// }
-
-// double fSource(const double t, const std::vector<double> &x, const std::vector<double> par) {
-//   double c1 = par[0];
-//   double x1 = x[0];
-//   return -x1*x1*x1* (x1 * x1 - 25.) * 6. * pow(t, 5.) - 6.* pow(x1, 5)*pow(t, 5) - c1 * 150. * x1
-//   * pow(t, 6.) +
-//          c1 * 40. * x1 *
-//          x1*x1* pow(t, 6);
-// }
-
-// double flambda_A(const double t, const std::vector<double> &x, const std::vector<double> par) {
-//   double x1 = x[0];
-//   double c1 = par[0];
-//   return  c1* (10.*pow(x1,4.)*pow(t, 6) - 75.*x1*x1*pow(t, 6)) ;
-// }
-
-// double flambda_B(const double t, const std::vector<double> &x, const std::vector<double> par) {
-//   double x1 = x[0];
-//   double c1 = par[0];
-//   return - c1* (10.*pow(x1,4.)*pow(t, 6) - 75.*x1*x1*pow(t, 6)) ;
-// }
-
-// double fSolDot(const double t, const std::vector<double> &x, const std::vector<double> par) {
-//   double x1 = x[0];
-//   return 6.*x1*x1*x1* (x1 * x1 - 25.) * pow(t, 5) +  6.*pow(x1, 5)*pow(t, 5);
-// }
-
-// double fSol(const double t, const std::vector<double> &x, const std::vector<double> par) {
-//   double x1 = x[0];
-//   int a = par[1];
-//   return pow(t, a)*(x1*x1*x1/3 - (5./2.)*x1*x1) +1.;
-// }
-
-// double fSource(const double t, const std::vector<double> &x, const std::vector<double> par) {
-//   double x1 = x[0];
-//   double c1 = par[0];
-//   int a = par[1];
-//   double beta = (a == 0.) ? 0. : a * pow(t, a - 1.);
-//   return -beta*(x1*x1*x1/3 - (5./2.)*x1*x1) + c1*(2*x1-5.)*pow(t, a);
-// }
-
-// double flambda_A(const double t, const std::vector<double> &x, const std::vector<double> par) {
-//   double x1 = x[0];
-//   double c1 = par[0];
-//   int a = par[1];
-//   return  c1* pow(t, a)*x1*(x1-5.);
-// }
-// double flambda_B(const double t, const std::vector<double> &x, const std::vector<double> par) {
-//   double x1 = x[0];
-//   double c1 = par[0];
-//   int a = par[1];
-//   return - c1* pow(t, a)*x1*(x1-5.);
-// }
-
-// double fSolDot(const double t, const std::vector<double> &x, const std::vector<double> par) {
-//   double x1 = x[0];
-//   int a = par[1];
-//   double beta = (a == 0.) ? 0. : a * pow(t, a - 1.);
-//   return beta*(x1*x1*x1/3 - (5./2.)*x1*x1) ;
-// }
-
-// double fSol(const double t, const std::vector<double> &x, const std::vector<double> par) {
-//   double x1 = x[0];
-//   int a = par[1];
-//   return pow(t, a)*(x1*x1 +1.);
-// }
-
-// double fSource(const double t, const std::vector<double> &x, const std::vector<double> par) {
-//   double x1 = x[0];
-//   double c1 = par[0];
-//   int a = par[1];
-//   double beta = (a == 0.) ? 0. : a * pow(t, a - 1.);
-//   return -beta*(x1*x1 +1.) + c1*2.*pow(t, a);
-// }
-
-// double flambda_A(const double t, const std::vector<double> &x, const std::vector<double> par) {
-//   double x1 = x[0];
-//   double c1 = par[0];
-//   int a = par[1];
-//   return  c1* pow(t, a)*2.*x1;
-// }
-// double flambda_B(const double t, const std::vector<double> &x, const std::vector<double> par) {
-//   double x1 = x[0];
-//   double c1 = par[0];
-//   int a = par[1];
-//   return - c1* pow(t, a)*2.*x1;
-// }
-
-// double fSolDot(const double t, const std::vector<double> &x, const std::vector<double> par) {
-//   double x1 = x[0];
-//   int a = par[1];
-//   double beta = (a == 0.) ? 0. : a * pow(t, a - 1.);
-//   return beta*(x1*x1 +1.) ;
-// }
-
-// Test a source nulle
 double fSol(const double t, const std::vector<double> &x, const std::vector<double> par) {
   double x1 = x[0];
-  return sin(x1) * exp(-t);
+  int a = par[1];
+  return pow(t, a) * (x1 * x1 + 1);
 }
 
 double fSource(const double t, const std::vector<double> &x, const std::vector<double> par) {
-  return 0.;
+  double x1 = x[0];
+  double c1 = par[0];
+  double a = par[1];
+  double beta = (a == 0.) ? 0. : a * pow(t, a - 1.);
+  return -beta * (x1 * x1 + 1) + c1 * 2 * pow(t, a);
 }
 
 double flambda_A(const double t, const std::vector<double> &x, const std::vector<double> par) {
   double x1 = x[0];
   double c1 = par[0];
-  // int a = par[1];
-  return c1 * cos(x1) * exp(-t);
+  double a = par[1];
+  return c1 * pow(t, a) * (2 * x1);
 }
 double flambda_B(const double t, const std::vector<double> &x, const std::vector<double> par) {
   double x1 = x[0];
   double c1 = par[0];
-  return -c1 * cos(x1) * exp(-t);
+  double a = par[1];
+  return -c1 * pow(t, a) * (2 * x1);
 }
 
-double fSolDot(const double t, const std::vector<double> &x, const std::vector<double> par) {
-  double x1 = x[0];
-  return -sin(x1) * exp(-t);
+double f0(const double t, const std::vector<double> &x, const std::vector<double> par) {
+  return 0.;
 }
 
 int main(int argc, char **argv) {
@@ -178,19 +81,17 @@ int main(int argc, char **argv) {
   petscInitialize(argc, argv);
 #endif
   double xa = 0.;
-  double xb = M_PI / 2.;
-  // double xb = 5;
-
-  double kd = 1;
-  double exposant = 2.;
+  double xb = 5.;
+  double exposant = 4.;
+  double kd = 0.1;
   std::vector<double> par = {kd, exposant};
   feFunction *funSol = new feFunction(fSol, par);
-  feFunction *funSolDot = new feFunction(fSolDot, par);
+  feFunction *fun0 = new feFunction(f0, par);
   feFunction *funSource = new feFunction(fSource, par);
   feFunction *funLambda_A = new feFunction(flambda_A, par);
   feFunction *funLambda_B = new feFunction(flambda_B, par);
 
-  int nIter = 4;
+  int nIter = 1;
   std::vector<double> normL2_BDF1(2 * nIter, 0.0);
   std::vector<double> normL2_DC2F(2 * nIter, 0.0);
   std::vector<double> normL2_DC3F(2 * nIter, 0.0);
@@ -217,15 +118,15 @@ int main(int argc, char **argv) {
     feSpace1DP3 U_M1D(mesh, "U", "M1D", funSol);
     feSpace1DP0 L_BXA(mesh, "L", "BXA", funLambda_A);
     feSpace1DP0 L_BXB(mesh, "L", "BXB", funLambda_B);
-    feSpace1DP0 V_BXA(mesh, "V", "BXA", funSol);
-    feSpace1DP0 V_BXB(mesh, "V", "BXB", funSol);
+    feSpace1DP0 V_BXA(mesh, "V", "BXA", fun0);
+    feSpace1DP0 V_BXB(mesh, "V", "BXB", fun0);
     std::vector<feSpace *> fespace = {&U_BXA, &U_BXB, &U_M1D, &L_BXA, &L_BXB, &V_BXA, &V_BXB};
     std::vector<feSpace *> feEssBC = {};
     // Numerotations
     feMetaNumber *metaNumber = new feMetaNumber(mesh, fespace, feEssBC);
     // Solution
     double t0 = 0.;
-    double t1 = 5.;
+    double t1 = 1.;
     int nTimeSteps = 40 * pow(2, iter);
     TT[iter] = nTimeSteps;
     feSolution *solDC3F = new feSolution(mesh, fespace, feEssBC, metaNumber);
@@ -233,7 +134,7 @@ int main(int argc, char **argv) {
     // sol->initializeUnknowns(fmesh, metaNumber);
     // sol->initializeEssentialBC(mesh, metaNumber);
     // Formes (bi)lineaires
-    int nQuad = 11; // TODO : change to deg
+    int nQuad = 9; // TODO : change to deg
     std::vector<feSpace *> spaceDiffusion1D_U = {&U_M1D};
     std::vector<feSpace *> spaceSource1D_U = {&U_M1D};
     std::vector<feSpace *> spaceMasse1D_U = {&U_M1D};
@@ -247,9 +148,9 @@ int main(int argc, char **argv) {
     feBilinearForm *masse_U_M1D =
       new feBilinearForm(spaceMasse1D_U, mesh, nQuad, new feSysElm_1D_Masse(1.0, nullptr));
     feBilinearForm *weakBC_U_A =
-      new feBilinearForm(spaceWeak_A, mesh, nQuad, new feSysElm_0D_weakBC_edo1(1.0, funSolDot));
+      new feBilinearForm(spaceWeak_A, mesh, nQuad, new feSysElm_0D_weakBC_edo1_V2(1.0, funSol));
     feBilinearForm *weakBC_U_B =
-      new feBilinearForm(spaceWeak_B, mesh, nQuad, new feSysElm_0D_weakBC_edo1(1.0, funSolDot));
+      new feBilinearForm(spaceWeak_B, mesh, nQuad, new feSysElm_0D_weakBC_edo1_V2(1.0, funSol));
 
     std::vector<feBilinearForm *> formMatrices = {diff_U_M1D, masse_U_M1D, weakBC_U_A, weakBC_U_B};
     std::vector<feBilinearForm *> formResiduals = {diff_U_M1D, masse_U_M1D, source_U_M1D,
@@ -275,7 +176,7 @@ int main(int argc, char **argv) {
 #ifdef HAVE_PETSC
     // linearSystem->initialize();
     // Resolution
-    feTolerances tol{1e-10, 1e-10, 20};
+    feTolerances tol{1e-9, 1e-9, 20};
 
     DC3FSolver solver(tol, metaNumber, linearSystem, solDC3F, norms, mesh, t0, t1, nTimeSteps);
     solver.makeSteps(nTimeSteps, fespace);
@@ -325,7 +226,7 @@ int main(int argc, char **argv) {
   }
   delete funSource;
   delete funSol;
-  delete funSolDot;
+  // delete funSolDot;
   delete funLambda_A;
   delete funLambda_B;
 
