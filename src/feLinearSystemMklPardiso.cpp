@@ -10,7 +10,7 @@ double vectorMaxNorm(feInt N, double *V) {
   for(feInt i = 0; i < N; i++) t = fmax(t, abs(V[i]));
 
   return t;
-};
+}
 
 double vectorL2Norm(feInt N, double *V) {
   double t = 0.0;
@@ -18,13 +18,11 @@ double vectorL2Norm(feInt N, double *V) {
   for(feInt i = 0; i < N; i++) t += V[i] * V[i];
 
   return pow(t, 0.5);
-};
+}
 
 void feLinearSystemMklPardiso::print_matrix() {
   for(feInt i = 0; i < nz; i++) printf("%ld %g \n", i, Ax[i]);
-};
-// ====================================================================
-// ====================================================================
+}
 
 void feLinearSystemMklPardiso::assembleMatrices(feSolution *sol) {
   feInt NumberOfBilinearForms = _formMatrices.size();
@@ -39,15 +37,16 @@ void feLinearSystemMklPardiso::assembleMatrices(feSolution *sol) {
       equelm->computeMatrix(_metaNumber, _mesh, sol, e);
 
       feInt nRow = equelm->getNiElm();
-      std::vector<int> Row = equelm->getAdrI();
+      std::vector<feInt> Row(equelm->getAdrI().begin(), equelm->getAdrI().end());
       feInt nColumn = equelm->getNjElm();
-      std::vector<int> Column = equelm->getAdrJ();
+      std::vector<feInt> Column(equelm->getAdrJ().begin(), equelm->getAdrJ().end());
       double **Ae = equelm->getAe();
 
-      crsMklPardiso->matrixAddValues(Ax, nRow, Row, nColumn, Column, Ae);
+      crsMklPardiso->matrixAddValues(Ax, nRow, Row.data(), nColumn, Column.data(), Ae);
     }
   }
-};
+}
+
 void feLinearSystemMklPardiso::assembleResiduals(feSolution *sol) {
   feInt NumberOfBilinearForms = _formResiduals.size();
 
@@ -61,30 +60,30 @@ void feLinearSystemMklPardiso::assembleResiduals(feSolution *sol) {
       equelm->computeResidual(_metaNumber, _mesh, sol, e);
 
       feInt nRow = equelm->getNiElm();
-      std::vector<int> Row = equelm->getAdrI();
+      std::vector<feInt> Row(equelm->getAdrI().begin(), equelm->getAdrI().end());
       double *Be = equelm->getBe();
 
       for(feInt i = 0; i < nRow; i++)
         if(Row[i] < matrixOrder) residu[Row[i]] += Be[i];
     }
   }
-};
+}
 
 void feLinearSystemMklPardiso::assignResidualToDCResidual(feSolutionContainer *solContainer) {
   for(feInt i = 0; i < matrixOrder; ++i) solContainer->_fResidual[0][i] = residu[i];
-};
+}
 
 void feLinearSystemMklPardiso::correctSolution(feSolution *sol) {
   // Est-ce efficace?
   // Pourquoi ne pas avoir un pointeur sur le vecteur solution;
   // Conversion de feInt à int?
   for(feInt i = 0; i < matrixOrder; i++) sol->incrementSolAtDOF((int)i, du[i]);
-};
+}
+
 void feLinearSystemMklPardiso::correctSolution(double *sol) {
   for(feInt i = 0; i < matrixOrder; i++) sol[i] += du[i];
-};
-// ====================================================================
-// ====================================================================
+}
+
 void feLinearSystemMklPardiso::solve(double *normDx, double *normResidual, double *normAxb,
                                      int *nIter) {
   if(symbolicFactorization) mklSymbolicFactorization();
@@ -95,23 +94,28 @@ void feLinearSystemMklPardiso::solve(double *normDx, double *normResidual, doubl
 
   *normDx = vectorMaxNorm(matrixOrder, du);
   *normResidual = vectorMaxNorm(matrixOrder, residu);
-};
+  *normAxb = 0.0;
+  *nIter = 0;
+}
+
 void feLinearSystemMklPardiso::setToZero() {
   if(recomputeMatrix) setMatrixToZero();
   setResidualToZero();
-};
+}
+
 void feLinearSystemMklPardiso::setMatrixToZero() {
   for(feInt i = 0; i < nz; i++) Ax[i] = 0;
-};
+}
+
 void feLinearSystemMklPardiso::setResidualToZero() {
   for(feInt i = 0; i < matrixOrder; i++) residu[i] = 0;
-};
+}
 
 void feLinearSystemMklPardiso::assemble(feSolution *sol) {
   // printf("ICI   feLinearSystemMklPardiso::assemble\n");
   if(recomputeMatrix) assembleMatrices(sol);
   assembleResiduals(sol);
-};
+}
 
 // ====================================================================
 // Les méthodes privées
@@ -130,13 +134,15 @@ void feLinearSystemMklPardiso::mklSymbolicFactorization(void) {
   if(ERROR != 0) {
     printf("feLinearSystemMklPardiso::mklSymbolicFactorization - erreur %ld\n", ERROR);
   }
-};
+}
+
 void feLinearSystemMklPardiso::mklFactorization(void) {
   PHASE = 22;
   pardiso_64(PT, &MAXFCT, &MNUM, &MTYPE, &PHASE, &N, Ax, Ap, Aj, &IDUM, &NRHS, IPARM, &MSGLVL,
              &DDUM, &DDUM, &ERROR);
   if(ERROR != 0) { printf("eLinearSystemMklPardiso::mklFactorization- erreur %ld\n", ERROR); }
-};
+}
+
 void feLinearSystemMklPardiso::mklSolve(void) {
   PHASE = 33;
   IPARM[7] = 1;
@@ -148,7 +154,7 @@ void feLinearSystemMklPardiso::mklSolve(void) {
     printf("feLinearSystemMklPardiso::mklSolve - erreur %ld\n", ERROR);
     exit(-1);
   }
-};
+}
 
 // ====================================================================
 // Destructeur/Constructeur de la classe de base dérivée  MKL PARDISO
@@ -158,7 +164,7 @@ feLinearSystemMklPardiso::~feLinearSystemMklPardiso(void) {
   delete[] Ax;
   delete[] du;
   delete[] residu;
-};
+}
 
 feLinearSystemMklPardiso::feLinearSystemMklPardiso(std::vector<feBilinearForm *> &formMatrices,
                                                    std::vector<feBilinearForm *> &formResiduals,
@@ -228,7 +234,8 @@ feLinearSystemMklPardiso::feLinearSystemMklPardiso(std::vector<feBilinearForm *>
   // 	Factorisation symbolique
   //=================================================================
   // mklSymbolicFactorization();
-};
-void feLinearSystemMklPardiso::setPivot(int pivot) { IPARM[9] = (feMKLPardisoInt)pivot; };
+}
+
+void feLinearSystemMklPardiso::setPivot(int pivot) { IPARM[9] = (feMKLPardisoInt)pivot; }
 
 #endif
