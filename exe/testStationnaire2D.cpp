@@ -14,6 +14,7 @@
 #include "feBilinearForm.h"
 #include "feSolver.h"
 #include "feLinearSystemPETSc.h"
+#include "feLinearSystemMklPardiso.h"
 #include "feExporter.h"
 
 double fSol(const double t, const std::vector<double> x, const std::vector<double> par) {
@@ -28,6 +29,10 @@ double fSource(const double t, const std::vector<double> x, const std::vector<do
 }
 
 int main(int argc, char **argv) {
+#ifdef USING_PETSC
+  petscInitialize(argc, argv);
+#endif
+
   double kd = 1.0;
   feFunction *funSol = new feFunction(fSol, {kd});
   feFunction *funSource = new feFunction(fSource, {kd});
@@ -71,16 +76,16 @@ int main(int argc, char **argv) {
     feNorm *norm = new feNorm(&U_surface, mesh, dQuad, funSol);
     std::vector<feNorm *> norms = {norm};
 
-    feLinearSystemPETSc *linearSystem =
-      new feLinearSystemPETSc(argc, argv, formMatrices, formResiduals, metaNumber, mesh);
-    linearSystem->initialize();
+    // feLinearSystemPETSc *linearSystem = new feLinearSystemPETSc(argc, argv, formMatrices, formResiduals, metaNumber, mesh);
+    feLinearSystemMklPardiso *linearSystem = new feLinearSystemMklPardiso(formMatrices, formResiduals, metaNumber, mesh);
+    // linearSystem->initialize();
     feTolerances tol{1e-9, 1e-8, 20};
     StationarySolver solver(tol, metaNumber, linearSystem, sol, norms, mesh);
     solver.makeSteps(0, fespace);
     // solveStationary(&normL2[2 * iter], tol, metaNumber, linearSystem, formMatrices,
     // formResiduals,
     //                 sol, norms, mesh);
-    linearSystem->finalize();
+    // linearSystem->finalize();
 
     // sol->initializeUnknowns(mesh, metaNumber);
 
@@ -106,6 +111,10 @@ int main(int argc, char **argv) {
   printf("%12s \t %12s \t %12s\n", "nElm", "||E||", "p");
   for(int i = 0; i < nIter; ++i)
     printf("%12d \t %12.6e \t %12.6e\n", nElm[i], normL2[2 * i], normL2[2 * i + 1]);
+
+#ifdef USING_PETSC
+  petscFinalize();
+#endif
 
   return 0;
 }

@@ -31,10 +31,13 @@
 typedef PetscInt64 feInt;
 #elif defined(HAVE_MKL)
 typedef long int feInt;
-typedef int fePardisoInt;
-typedef long long int feMKLPardisoInt;
 #else
 typedef long int feInt;
+#endif
+
+#if defined(HAVE_MKL)
+typedef int fePardisoInt;
+typedef long long int feMKLPardisoInt;
 #endif
 
 // void log(){}

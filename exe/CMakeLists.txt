@@ -1,44 +1,43 @@
 include_directories(${CMAKE_CURRENT_SOURCE_DIR} / src)
 
-  feNG_add_executable(testStationnaire testStationnaire.cpp "") feNG_add_executable(
-    testBDF2 testBDF2.cpp "") feNG_add_executable(testBDF2weakBC testBDF2weakBC.cpp
-                                                  "") feNG_add_executable(testBDF1 testBDF1.cpp "")
-    feNG_add_executable(testBDF1_0D testBDF1_0D.cpp
-                        "") feNG_add_executable(testDC2F_1D testDC2F_1D.cpp "")
-      feNG_add_executable(testDC2F_1D_weakBC testDC2F_1D_weakBC.cpp "") feNG_add_executable(
-        testDC2F_1D_weakBC_edo1 testDC2F_1D_weakBC_edo1.cpp
-        "") feNG_add_executable(testDC2F_0D testDC2F_0D.cpp
-                                "") feNG_add_executable(testDC3F_0D testDC3F_0D.cpp "")
-        feNG_add_executable(testDC3F_0D_centered testDC3F_0D_centered.cpp
-                            "") feNG_add_executable(testDC3F_1D testDC3F_1D.cpp "")
-          feNG_add_executable(testDC3F_1D_weakBC testDC3F_1D_weakBC.cpp
-                              "") feNG_add_executable(testDC3F_weakBC_edo1 testDC3F_weakBC_edo1.cpp
-                                                      "")
-            feNG_add_executable(testDC3F_centered_weakBC_edo1 testDC3F_centered_weakBC_edo1.cpp "")
-              feNG_add_executable(testDC3F_weakBC_edo1_V2 testDC3F_weakBC_edo1_V2.cpp "")
-                feNG_add_executable(testDC3F_weakBC_edo2 testDC3F_weakBC_edo2.cpp "")
-                  feNG_add_executable(testBDF_0D_crossed_equations testBDF_0D_crossed_equations.cpp
-                                      "") feNG_add_executable(testDC3 testDC3.cpp "")
-                    feNG_add_executable(testPB_4 - 71 testPB_4 - 71.cpp "")
-                      feNG_add_executable(testPB_4 - 73 testPB_4 - 73.cpp "")
-                        feNG_add_executable(testPB_4 - 75 testPB_4 - 75.cpp "") feNG_add_executable(
-                          testDC3_weakBC_edo1 testDC3_weakBC_edo1.cpp
-                          "") feNG_add_executable(testDC3_weakBC_edo2 testDC3_weakBC_edo2.cpp
-                                                  "") feNG_add_executable(testCSR testCSR.cpp "")
-                          feNG_add_executable(testStationnaire2D testStationnaire2D.cpp "")
-                            feNG_add_executable(testStationnaire2DP2 testStationnaire2DP2.cpp "")
-                              feNG_add_executable(testStationnaire2DP3 testStationnaire2DP3.cpp "")
-                                feNG_add_executable(testMetriques testMetriques.cpp "")
-                                  feNG_add_executable(testCurved testCurved.cpp "")
-                                    feNG_add_executable(testStokesSteady testStokesSteady.cpp "")
-                                      feNG_add_executable(
-                                        testNavierStokesSteady testNavierStokesSteady.cpp
-                                        "") feNG_add_executable(testCylinder testCylinder.cpp "")
-                                        feNG_add_executable(
-                                          testCylinderUnsteady testCylinderUnsteady.cpp "")
-                                          feNG_add_executable(testMeshTransfer testMeshTransfer.cpp
-                                                              "")
-                                            feNG_add_executable(testGmsh testGmsh.cpp "")
+feNG_add_executable(testStationnaire testStationnaire.cpp "") 
+feNG_add_executable(testBDF2 testBDF2.cpp "") 
+feNG_add_executable(testBDF2weakBC testBDF2weakBC.cpp "") 
+feNG_add_executable(testBDF1 testBDF1.cpp "")
+feNG_add_executable(testBDF1_0D testBDF1_0D.cpp "") 
+feNG_add_executable(testDC2F_1D testDC2F_1D.cpp "")
+feNG_add_executable(testDC2F_1D_weakBC testDC2F_1D_weakBC.cpp "") 
+feNG_add_executable(testDC2F_1D_weakBC_edo1 testDC2F_1D_weakBC_edo1.cpp "") 
+feNG_add_executable(testDC2F_0D testDC2F_0D.cpp "") 
+feNG_add_executable(testDC3F_0D testDC3F_0D.cpp "")
+feNG_add_executable(testDC3F_0D_centered testDC3F_0D_centered.cpp "") 
+feNG_add_executable(testDC3F_1D testDC3F_1D.cpp "")
+feNG_add_executable(testDC3F_1D_weakBC testDC3F_1D_weakBC.cpp "") 
+feNG_add_executable(testDC3F_weakBC_edo1 testDC3F_weakBC_edo1.cpp "")
+feNG_add_executable(testDC3F_centered_weakBC_edo1 testDC3F_centered_weakBC_edo1.cpp "")
+feNG_add_executable(testDC3F_weakBC_edo1_V2 testDC3F_weakBC_edo1_V2.cpp "")
+feNG_add_executable(testDC3F_weakBC_edo2 testDC3F_weakBC_edo2.cpp "")
+feNG_add_executable(testBDF_0D_crossed_equations testBDF_0D_crossed_equations.cpp "") 
+feNG_add_executable(testDC3 testDC3.cpp "")
+feNG_add_executable(testDC3_2D testDC3_2D.cpp "")
+feNG_add_executable(testPB_4-71 testPB_4-71.cpp "")
+feNG_add_executable(testPB_4-73 testPB_4-73.cpp "")
+feNG_add_executable(testPB_4-75 testPB_4-75.cpp "") 
+feNG_add_executable(testDC3_weakBC_edo1 testDC3_weakBC_edo1.cpp "") 
+feNG_add_executable(testDC3_weakBC_edo2 testDC3_weakBC_edo2.cpp "") 
+feNG_add_executable(testCSR testCSR.cpp "")
+feNG_add_executable(testStationnaire2D testStationnaire2D.cpp "")
+feNG_add_executable(testStationnaire2DP2 testStationnaire2DP2.cpp "")
+feNG_add_executable(testStationnaire2DP3 testStationnaire2DP3.cpp "")
+feNG_add_executable(testMetriques testMetriques.cpp "")
+feNG_add_executable(testCurved testCurved.cpp "")
+feNG_add_executable(testStokesSteady testStokesSteady.cpp "")
+feNG_add_executable( testNavierStokesSteady testNavierStokesSteady.cpp "") 
+feNG_add_executable(testCylinder testCylinder.cpp "")
+feNG_add_executable(testCylinderUnsteady testCylinderUnsteady.cpp "")
+feNG_add_executable(testMeshTransfer testMeshTransfer.cpp "")
+feNG_add_executable(testGmsh testGmsh.cpp "")
+
 #feNG_add_executable(dummyTest dummyTest.cpp "")
 #feNG_add_executable(testTransferSingleField testTransferSingleField.cpp "")
 #feNG_add_executable(foo foo.cpp "")

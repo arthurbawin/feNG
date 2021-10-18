@@ -16,6 +16,7 @@
 #define USING_PETSC
 #ifdef HAVE_PETSC
 #include "feLinearSystemPETSc.h"
+#include "feLinearSystemMklPardiso.h"
 #endif
 
 // double fSol(const double t, const std::vector<double> &x, const std::vector<double> par) {
@@ -85,8 +86,10 @@ int main(int argc, char **argv) {
     feNorm *normDC3F = new feNorm(&U_M1D, mesh, nQuad, funSol);
     std::vector<feNorm *> norms = {normBDF1, normDC2F, normDC3F};
     // Systeme lineaire
-    feLinearSystemPETSc *linearSystem =
-      new feLinearSystemPETSc(argc, argv, formMatrices, formResiduals, metaNumber, mesh);
+    // feLinearSystemPETSc *linearSystem =
+    //   new feLinearSystemPETSc(argc, argv, formMatrices, formResiduals, metaNumber, mesh);
+      feLinearSystemMklPardiso *linearSystem =
+      new feLinearSystemMklPardiso( formMatrices, formResiduals, metaNumber, mesh);
 #ifdef HAVE_PETSC
     linearSystem->initialize();
     // Resolution

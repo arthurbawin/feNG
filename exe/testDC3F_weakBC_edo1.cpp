@@ -225,7 +225,7 @@ int main(int argc, char **argv) {
     feMetaNumber *metaNumber = new feMetaNumber(mesh, fespace, feEssBC);
     // Solution
     double t0 = 0.;
-    double t1 = 5.;
+    double t1 = 1.;
     int nTimeSteps = 40 * pow(2, iter);
     TT[iter] = nTimeSteps;
     feSolution *solDC3F = new feSolution(mesh, fespace, feEssBC, metaNumber);

@@ -118,39 +118,66 @@
 //   return x1 * (x1 * x1 - 25.) * 6. * pow(t, 5.) + x1 * x1 * x1 * beta ;
 // }
 
+// double fSol(const double t, const std::vector<double> &x, const std::vector<double> par) {
+//   double x1 = x[0];
+//   int a = par[1];
+//   return pow(t, a) * (x1 * x1 + 1);
+// }
+
+// double fSource(const double t, const std::vector<double> &x, const std::vector<double> par) {
+//   double x1 = x[0];
+//   double c1 = par[0];
+//   double a = par[1];
+//   double beta = (a == 0.) ? 0. : a * pow(t, a - 1.);
+//   return -beta * (x1 * x1 + 1) + c1 * 2 * pow(t, a);
+// }
+
+// double flambda_A(const double t, const std::vector<double> &x, const std::vector<double> par) {
+//   double x1 = x[0];
+//   double c1 = par[0];
+//   double a = par[1];
+//   return c1 * pow(t, a) * (2 * x1);
+// }
+// double flambda_B(const double t, const std::vector<double> &x, const std::vector<double> par) {
+//   double x1 = x[0];
+//   double c1 = par[0];
+//   double a = par[1];
+//   return -c1 * pow(t, a) * (2 * x1);
+// }
+
+// double fSolDot(const double t, const std::vector<double> &x, const std::vector<double> par) {
+//   double c1 = par[0];
+//   double a = par[1];
+//   double beta = (a == 0.) ? 0. : a * pow(t, a - 1.);
+//   double x1 = x[0];
+//   return beta * (x1 * x1 + 1);
+// }
+
+// Test a source nulle
 double fSol(const double t, const std::vector<double> &x, const std::vector<double> par) {
   double x1 = x[0];
-  int a = par[1];
-  return pow(t, a) * (x1 * x1 + 1);
+  return sin(x1) * exp(-t);
 }
 
 double fSource(const double t, const std::vector<double> &x, const std::vector<double> par) {
-  double x1 = x[0];
-  double c1 = par[0];
-  double a = par[1];
-  double beta = (a == 0.) ? 0. : a * pow(t, a - 1.);
-  return -beta * (x1 * x1 + 1) + c1 * 2 * pow(t, a);
+  return 0.;
 }
 
 double flambda_A(const double t, const std::vector<double> &x, const std::vector<double> par) {
   double x1 = x[0];
   double c1 = par[0];
-  double a = par[1];
-  return c1 * pow(t, a) * (2 * x1);
+  // int a = par[1];
+  return c1 * cos(x1) * exp(-t);
 }
 double flambda_B(const double t, const std::vector<double> &x, const std::vector<double> par) {
   double x1 = x[0];
   double c1 = par[0];
-  double a = par[1];
-  return -c1 * pow(t, a) * (2 * x1);
+  return -c1 * cos(x1) * exp(-t);
 }
 
 double fSolDot(const double t, const std::vector<double> &x, const std::vector<double> par) {
-  double c1 = par[0];
-  double a = par[1];
-  double beta = (a == 0.) ? 0. : a * pow(t, a - 1.);
   double x1 = x[0];
-  return beta * (x1 * x1 + 1);
+  return -sin(x1) * exp(-t);
 }
 
 int main(int argc, char **argv) {
@@ -158,9 +185,11 @@ int main(int argc, char **argv) {
   petscInitialize(argc, argv);
 #endif
   double xa = 0.;
-  double xb = 5.;
+  // double xb = 5.;
+  double xb = M_PI / 2.;
   double exposant = 3.;
-  double kd = 0.1;
+  // double kd = 0.1;
+  double kd = 1;
   std::vector<double> par = {kd, exposant};
   feFunction *funSol = new feFunction(fSol, par);
   feFunction *funSolDot = new feFunction(fSolDot, par);
