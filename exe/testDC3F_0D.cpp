@@ -86,12 +86,12 @@ int main(int argc, char **argv) {
     feNorm *normDC3F = new feNorm(&U_M1D, mesh, nQuad, funSol);
     std::vector<feNorm *> norms = {normBDF1, normDC2F, normDC3F};
     // Systeme lineaire
-    // feLinearSystemPETSc *linearSystem =
-    //   new feLinearSystemPETSc(argc, argv, formMatrices, formResiduals, metaNumber, mesh);
-      feLinearSystemMklPardiso *linearSystem =
+    feLinearSystemPETSc *linearSystem =
+      new feLinearSystemPETSc(argc, argv, formMatrices, formResiduals, metaNumber, mesh);
+      // feLinearSystemMklPardiso *linearSystem =
       new feLinearSystemMklPardiso( formMatrices, formResiduals, metaNumber, mesh);
 #ifdef HAVE_PETSC
-    linearSystem->initialize();
+    // linearSystem->initialize();
     // Resolution
     feTolerances tol{1e-10, 1e-9, 10};
     DC3FSolver solver(tol, metaNumber, linearSystem, solDC3F, norms, mesh, t0, t1, nTimeSteps);
