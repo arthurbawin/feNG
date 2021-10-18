@@ -89,7 +89,7 @@ int main(int argc, char **argv) {
     feLinearSystemPETSc *linearSystem =
       new feLinearSystemPETSc(argc, argv, formMatrices, formResiduals, metaNumber, mesh);
       // feLinearSystemMklPardiso *linearSystem =
-      new feLinearSystemMklPardiso( formMatrices, formResiduals, metaNumber, mesh);
+      // new feLinearSystemMklPardiso( formMatrices, formResiduals, metaNumber, mesh);
 #ifdef HAVE_PETSC
     // linearSystem->initialize();
     // Resolution
