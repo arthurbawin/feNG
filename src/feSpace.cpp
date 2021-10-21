@@ -272,7 +272,7 @@ void feSpace1DP2::initializeNumberingUnknowns(feNumber *number) {
     number->defDDLSommet(_mesh, _cncGeoID, i, 1);
     number->defDDLElement(_mesh, _cncGeoID, i, 1);
     // If the line is a boundary element, the edge should be set by the interior element
-    // number->defDDLEdge(_mesh, _cncGeoID, i, 0, 0);
+    number->defDDLEdge(_mesh, _cncGeoID, i, 0, 1);
   }
 }
 
@@ -298,6 +298,10 @@ void feSpace1DP3::initializeNumberingUnknowns(feNumber *number) {
     number->defDDLSommet(_mesh, _cncGeoID, i, 0);
     number->defDDLSommet(_mesh, _cncGeoID, i, 1);
     number->defDDLElement(_mesh, _cncGeoID, i, 2);
+    // TODO : add a test to check if it is in the situation of Verwer
+    number->defDDLEdge(_mesh, _cncGeoID, i, 0, 1);
+    number->defDDLEdge(_mesh, _cncGeoID, i, 0, 2);
+    number->defDDLEdge(_mesh, _cncGeoID, i, 0, 2);
   }
 }
 
@@ -322,6 +326,10 @@ void feSpace1DP4::initializeNumberingUnknowns(feNumber *number) {
     number->defDDLSommet(_mesh, _cncGeoID, i, 0);
     number->defDDLSommet(_mesh, _cncGeoID, i, 1);
     number->defDDLElement(_mesh, _cncGeoID, i, 3);
+    // TODO : add a test to check if it is in the situation of Verwer
+    number->defDDLEdge(_mesh, _cncGeoID, i, 0, 1);
+    number->defDDLEdge(_mesh, _cncGeoID, i, 0, 2);
+    number->defDDLEdge(_mesh, _cncGeoID, i, 0, 3);
   }
 }
 

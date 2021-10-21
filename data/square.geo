@@ -1,5 +1,5 @@
 lc = 1;
-p = 2*Pi;
+p = 1;
 
 Point(1) = {0, 0, 0, lc};
 Point(2) = {p, 0, 0, lc};
@@ -15,7 +15,7 @@ Curve Loop(1) = {1, 2, 3, 4};
 
 Plane Surface(1) = {1};
 
-Physical Point("PointPression") = {1};
+//Physical Point("PointPression") = {1};
 Physical Curve("Haut")   = {3};
 Physical Curve("Gauche") = {4};
 Physical Curve("Angle")  = {1,2};

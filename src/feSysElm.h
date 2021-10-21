@@ -188,6 +188,30 @@ public:
                          double *Be);
 };
 
+class feSysElm_1D_weakBC_edo1 : public feSysElm {
+protected:
+  feFunction *_fct;
+  double _par; // Parametre
+  int _idU;
+  int _idL;
+  int _idV;
+  std::vector<double> _feU;
+  std::vector<double> _feV;
+  std::vector<double> _feL;
+
+public:
+  feSysElm_1D_weakBC_edo1(double par, feFunction *fct) : _fct(fct), _par(par){};
+  virtual ~feSysElm_1D_weakBC_edo1() {}
+
+  virtual void createElementarySystem(std::vector<feSpace *> &space);
+  virtual void computeAe(std::vector<double> &J, int numElem, std::vector<feSpace *> &intSpace,
+                         feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn,
+                         double **Ae);
+  virtual void computeBe(std::vector<double> &J, int numElem, std::vector<feSpace *> &intSpace,
+                         feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn,
+                         double *Be);
+};
+
 class feSysElm_1D_Source : public feSysElm {
 protected:
   feFunction *_fct;
@@ -285,6 +309,28 @@ protected:
 public:
   feSysElm_2D_Diffusion(double par, feFunction *fct) : _fct(fct), _par(par) { _ID = "diff2D"; };
   virtual ~feSysElm_2D_Diffusion() {}
+
+  virtual void createElementarySystem(std::vector<feSpace *> &space);
+  virtual void computeAe(std::vector<double> &J, int numElem, std::vector<feSpace *> &intSpace,
+                         feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn,
+                         double **Ae);
+  virtual void computeBe(std::vector<double> &J, int numElem, std::vector<feSpace *> &intSpace,
+                         feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn,
+                         double *Be);
+};
+
+class feSysElm_2D_Masse : public feSysElm {
+protected:
+  feFunction *_fct;
+  double _par; // Parametre
+  int _idU;
+  std::vector<double> _feU;
+  std::vector<double> _feUdx;
+  std::vector<double> _feUdy;
+
+public:
+  feSysElm_2D_Masse(double par, feFunction *fct) : _fct(fct), _par(par) { _ID = "mass2D"; };
+  virtual ~feSysElm_2D_Masse() {}
 
   virtual void createElementarySystem(std::vector<feSpace *> &space);
   virtual void computeAe(std::vector<double> &J, int numElem, std::vector<feSpace *> &intSpace,

@@ -3,15 +3,20 @@
 #include <vector>
 #include <cmath>
 
+#include "feNG.h"
+#include "feFunction.h"
 #include "feMesh.h"
 #include "feQuadrature.h"
 #include "feSpace.h"
+#include "feSpaceTriangle.h"
 #include "feCncGeo.h"
 #include "feNumber.h"
 #include "feSolution.h"
 #include "feSysElm.h"
 #include "feBilinearForm.h"
 #include "feSolver.h"
+#include "feLinearSystemMklPardiso.h"
+#include "feExporter.h"
 #define USING_PETSC
 #ifdef HAVE_PETSC
 
@@ -96,7 +101,7 @@ int main(int argc, char **argv) {
   feFunction *funSol = new feFunction(fSol, par);
   feFunction *funSource = new feFunction(fSource, par);
 
-  int nIter = 4;
+  int nIter = 2;
   std::vector<double> normL2_BDF2(2 * nIter, 0.0);
   std::vector<double> normL2_DC3(2 * nIter, 0.0);
 
@@ -105,22 +110,24 @@ int main(int argc, char **argv) {
   TT.resize(nIter);
 
   for(int iter = 0; iter < nIter; ++iter) {
-    nElm[iter] = 40 * pow(2, iter);
-    // nElm[iter] = 2;
+    std::string meshName = "../../data/square" + std::to_string(iter + 1) + "Msh2.msh";
     // Maillage
-    feMesh1DP1 *mesh = new feMesh1DP1(xa, xb, nElm[iter], "BXA", "BXB", "M1D");
+     feMesh2DP1 *mesh = new feMesh2DP1(meshName, false);
+     nElm[iter] = mesh->getNbInteriorElems();
     // Espaces d'interpolation
-    feSpace1DP0 U_BXA = feSpace1DP0(mesh, "U", "BXA", funSol);
-    feSpace1DP0 U_BXB = feSpace1DP0(mesh, "U", "BXB", funSol);
-    feSpace1DP2 U_M1D = feSpace1DP2(mesh, "U", "M1D", funSol);
-    std::vector<feSpace *> fespace = {&U_BXA, &U_BXB, &U_M1D};
-    std::vector<feSpace *> feEssBC = {&U_BXA, &U_BXB};
+
+    feSpace1DP3 U_angle = feSpace1DP3(mesh, "U", "Angle", funSol);
+    feSpace1DP3 U_haut = feSpace1DP3(mesh, "U", "Haut", funSol);
+    feSpaceTriP3 U_surface = feSpaceTriP3(mesh, "U", "Surface", funSol);
+    feSpace1DP3 U_gauche = feSpace1DP3(mesh, "U", "Gauche", funSol);
+    std::vector<feSpace *> fespace = {&U_angle, &U_surface, &U_haut, &U_gauche};
+    std::vector<feSpace *> feEssBC = {&U_angle, &U_haut, &U_gauche};
     // Numerotations
     feMetaNumber *metaNumber = new feMetaNumber(mesh, fespace, feEssBC);
     // Solution
     double t0 = 0.;
     double t1 = 1.;
-    int nTimeSteps = 40 * pow(2, iter);
+    int nTimeSteps = 5 * pow(2, iter);
     TT[iter] = nTimeSteps;
     feSolution *solDC3 = new feSolution(mesh, fespace, feEssBC, metaNumber);
     // solDC3->initializeTemporalSolution(t0, t1, nTimeSteps);
@@ -128,28 +135,30 @@ int main(int argc, char **argv) {
     // solDC3->initializeEssentialBC(mesh, metaNumber);
     // Formes (bi)lineaires
     int degQuad = 11;
-    std::vector<feSpace *> spaceDiffusion1D_U = {&U_M1D};
-    std::vector<feSpace *> spaceSource1D_U = {&U_M1D};
-    std::vector<feSpace *> spaceMasse1D_U = {&U_M1D};
+    std::vector<feSpace *> spaceDiffusion2D_U = {&U_surface};
+    std::vector<feSpace *> spaceSource2D_U = {&U_surface};
+    std::vector<feSpace *> spaceMasse2D_U = {&U_surface};
 
-    feBilinearForm *diff_U_M1D =
-      new feBilinearForm(spaceDiffusion1D_U, mesh, degQuad, new feSysElm_1D_Diffusion(kd, nullptr));
-    feBilinearForm *source_U_M1D =
-      new feBilinearForm(spaceSource1D_U, mesh, degQuad, new feSysElm_1D_Source(1.0, funSource));
-    feBilinearForm *masse_U_M1D =
-      new feBilinearForm(spaceMasse1D_U, mesh, degQuad, new feSysElm_1D_Masse(1.0, nullptr));
+    feBilinearForm *diff_U_M2D =
+      new feBilinearForm(spaceDiffusion2D_U, mesh, degQuad, new feSysElm_2D_Diffusion(kd, nullptr));
+    feBilinearForm *source_U_M2D =
+      new feBilinearForm(spaceSource2D_U, mesh, degQuad, new feSysElm_2D_Source(1.0, funSource));
+    feBilinearForm *masse_U_M2D =
+      new feBilinearForm(spaceMasse2D_U, mesh, degQuad, new feSysElm_2D_Masse(1.0, nullptr));
 
-    std::vector<feBilinearForm *> formMatrices = {diff_U_M1D, masse_U_M1D};
-    std::vector<feBilinearForm *> formResiduals = {diff_U_M1D, masse_U_M1D, source_U_M1D};
+    std::vector<feBilinearForm *> formMatrices = {diff_U_M2D, masse_U_M2D};
+    std::vector<feBilinearForm *> formResiduals = {diff_U_M2D, masse_U_M2D, source_U_M2D};
     // Norme de la solution
-    feNorm *normBDF2 = new feNorm(&U_M1D, mesh, degQuad, funSol);
-    feNorm *normDC3 = new feNorm(&U_M1D, mesh, degQuad, funSol);
+    feNorm *normBDF2 = new feNorm(&U_surface, mesh, degQuad, funSol);
+    feNorm *normDC3 = new feNorm(&U_surface, mesh, degQuad, funSol);
     std::vector<feNorm *> norms = {normBDF2, normDC3};
     // Systeme lineaire
-    feLinearSystemPETSc *linearSystem =
-      new feLinearSystemPETSc(argc, argv, formMatrices, formResiduals, metaNumber, mesh);
+    // feLinearSystemPETSc *linearSystem =
+    // new feLinearSystemPETSc(argc, argv, formMatrices, formResiduals, metaNumber, mesh);
+    feLinearSystemMklPardiso *linearSystem =
+    new feLinearSystemMklPardiso( formMatrices, formResiduals, metaNumber, mesh);
 #ifdef HAVE_PETSC
-    linearSystem->initialize();
+    // linearSystem->initialize();
     // Resolution
     feTolerances tol{1e-9, 1e-9, 20};
     std::string CodeIni = "BDF1/DCF"; // Define the way of initialization |"SolEx"->for exact
@@ -161,15 +170,14 @@ int main(int argc, char **argv) {
     std::vector<double> &normL2DC3 = solver.getNorm(1);
     normL2_BDF2[2 * iter] = *std::max_element(normL2BDF2.begin(), normL2BDF2.end());
     normL2_DC3[2 * iter] = *std::max_element(normL2DC3.begin(), normL2DC3.end());
-    for(int k = 0; k < 5; k++) std::cout << normL2DC3[k] << std::endl;
 #endif
 
     delete normBDF2;
     delete normDC3;
     delete linearSystem;
-    delete masse_U_M1D;
-    delete source_U_M1D;
-    delete diff_U_M1D;
+    delete masse_U_M2D;
+    delete source_U_M2D;
+    delete diff_U_M2D;
     delete solDC3;
     delete metaNumber;
     delete mesh;

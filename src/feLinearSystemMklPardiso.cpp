@@ -72,6 +72,9 @@ void feLinearSystemMklPardiso::assembleResiduals(feSolution *sol) {
 void feLinearSystemMklPardiso::assignResidualToDCResidual(feSolutionContainer *solContainer) {
   for(feInt i = 0; i < matrixOrder; ++i) solContainer->_fResidual[0][i] = residu[i];
 }
+void feLinearSystemMklPardiso::applyCorrectionToResidual(double coeff, std::vector<double> &d) {
+  for(int i = 0; i < matrixOrder; ++i) residu[i] += coeff * d[i];
+}
 
 void feLinearSystemMklPardiso::correctSolution(feSolution *sol) {
   // Est-ce efficace?

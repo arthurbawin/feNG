@@ -13,7 +13,10 @@
 #include "feSysElm.h"
 #include "feBilinearForm.h"
 #include "feSolver.h"
+#define USING_PETSC
+#ifdef HAVE_PETSC
 #include "feLinearSystemPETSc.h"
+#endif
 #include "feLinearSystemMklPardiso.h"
 #include "feExporter.h"
 
@@ -24,7 +27,7 @@ double fSol(const double t, const std::vector<double> x, const std::vector<doubl
 
 double fSource(const double t, const std::vector<double> x, const std::vector<double> par) {
   double kd = par[0];
-  // return kd*30.*pow(x[0],4);
+  // return kd*30.*pow(x[0],)4;
   return kd * 6 * x[0];
 }
 
@@ -75,7 +78,8 @@ int main(int argc, char **argv) {
 
     feNorm *norm = new feNorm(&U_surface, mesh, dQuad, funSol);
     std::vector<feNorm *> norms = {norm};
-
+    
+#ifdef HAVE_PETSC
     feLinearSystemPETSc *linearSystem = new feLinearSystemPETSc(argc, argv, formMatrices, formResiduals, metaNumber, mesh);
     // feLinearSystemMklPardiso *linearSystem = new feLinearSystemMklPardiso(formMatrices, formResiduals, metaNumber, mesh);
     // linearSystem->initialize();
@@ -88,7 +92,7 @@ int main(int argc, char **argv) {
     // linearSystem->finalize();
 
     // sol->initializeUnknowns(mesh, metaNumber);
-
+#endif
     std::string vtkFile = "../../data/square" + std::to_string(iter + 1) + ".vtk";
     feExporterVTK writer(vtkFile, mesh, sol, metaNumber, fespace);
 

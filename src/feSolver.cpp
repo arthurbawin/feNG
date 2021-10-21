@@ -811,7 +811,7 @@ void DC3Solver::makeSteps(int nSteps, std::vector<feSpace *> &spaces) {
       _norms[0]->computeL2Norm(_metaNumber, _sol, _mesh);
       _normL2[0][_currentStep] = _norms[0]->getNorm();
       _norms[1]->computeL2Norm(_metaNumber, _sol, _mesh);
-      std::cout << "la norme vaut " << _norms[1]->getNorm() << std::endl;
+      // std::cout << "la norme vaut " << _norms[1]->getNorm() << std::endl;
       _normL2[1][_currentStep] = _norms[1]->getNorm();
   
       _dt = true_dt;
@@ -872,8 +872,10 @@ void DC3Solver::makeSteps(int nSteps, std::vector<feSpace *> &spaces) {
     _normL2[0][_currentStep] = _norms[0]->getNorm();
     if(_norms.size() > 2) {
       _norms[2]->computeL2Norm(_metaNumber, _sol, _mesh);
+      std::cout << "la norme vaut BDF2 angle" << _norms[2]->getNorm() << std::endl;
       _normL2[2][_currentStep] = _norms[2]->getNorm();
       _norms[3]->computeL2Norm(_metaNumber, _sol, _mesh);
+      std::cout << "la norme vaut BDF2 gauche" << _norms[3]->getNorm() << std::endl;
       _normL2[3][_currentStep] = _norms[3]->getNorm();
     }
     initializeDC3(_sol, _metaNumber, _mesh, dynamic_cast<feSolutionBDF2 *>(_solutionContainerBDF2),

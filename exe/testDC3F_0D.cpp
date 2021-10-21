@@ -44,7 +44,7 @@ int main(int argc, char **argv) {
   feFunction *funSol = new feFunction(fSol, {});
   feFunction *funSource = new feFunction(fSource, {});
 
-  int nIter = 1;
+  int nIter = 5;
   std::vector<double> normL2_BDF1(2 * nIter, 0.0);
   std::vector<double> normL2_DC2F(2 * nIter, 0.0);
   std::vector<double> normL2_DC3F(2 * nIter, 0.0);
@@ -86,10 +86,10 @@ int main(int argc, char **argv) {
     feNorm *normDC3F = new feNorm(&U_M1D, mesh, nQuad, funSol);
     std::vector<feNorm *> norms = {normBDF1, normDC2F, normDC3F};
     // Systeme lineaire
-    feLinearSystemPETSc *linearSystem =
-      new feLinearSystemPETSc(argc, argv, formMatrices, formResiduals, metaNumber, mesh);
-      // feLinearSystemMklPardiso *linearSystem =
-      // new feLinearSystemMklPardiso( formMatrices, formResiduals, metaNumber, mesh);
+    // feLinearSystemPETSc *linearSystem =
+    //   new feLinearSystemPETSc(argc, argv, formMatrices, formResiduals, metaNumber, mesh);
+      feLinearSystemMklPardiso *linearSystem =
+      new feLinearSystemMklPardiso( formMatrices, formResiduals, metaNumber, mesh);
 #ifdef HAVE_PETSC
     // linearSystem->initialize();
     // Resolution

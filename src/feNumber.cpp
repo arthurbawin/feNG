@@ -113,12 +113,17 @@ int feNumber::numberUnknowns(int globalNum) {
       if(_numberingElements[_maxDOFperElem * i + j] == INC) {
         ++_nInc;
         _numberingElements[_maxDOFperElem * i + j] = globalNum;
+        // std::cout<<"coucou1"<<std::endl;
         // Update _numberingEdges : element DOFs may have already been numbered by boundary elements
         if(_elemToEdge[i] != 0) {
+          // std::cout<<"coucou2"<<std::endl;
           int iEdge = fabs(_elemToEdge[i]) - 1;
+          // std::cout<<"coucou3"<<std::endl;
           // It should be OK to use j because we should have _nDOFEdges[iEdge] == _nDOFElements[i]
           // if the element is also an edge
           _numberingEdges[_maxDOFperEdge * iEdge + j] = globalNum++;
+          // std::cout<<"coucou4"<<std::endl;
+
         } else {
           globalNum++;
         }
@@ -130,6 +135,7 @@ int feNumber::numberUnknowns(int globalNum) {
       if(_numberingEdges[_maxDOFperEdge * i + j] == INC) {
         ++_nInc;
         _numberingEdges[_maxDOFperEdge * i + j] = globalNum++;
+        // std::cout<<"coucou"<<std::endl;
       }
     }
   }
@@ -192,7 +198,7 @@ feMetaNumber::feMetaNumber(feMesh *mesh, const std::vector<feSpace *> &space,
                 << std::endl;
   }
   // Une numerotation pour chaque champ
-  for(int i = 0; i < _nFields; ++i) { _numberings[_fieldIDs[i]] = new feNumber(mesh); }
+  for(int i = 0; i < _nFields; ++i) { _numberings[_fieldIDs[i]] = new feNumber(mesh);}
 
   // INITIALISE_FENUMER
   for(feSpace *fS : space) { fS->initializeNumberingUnknowns(_numberings[fS->getFieldID()]); }
@@ -207,11 +213,14 @@ feMetaNumber::feMetaNumber(feMesh *mesh, const std::vector<feSpace *> &space,
   for(int i = 0; i < _nFields; ++i) {
     globalNum = _numberings[_fieldIDs[i]]->numberUnknowns(globalNum);
   }
+  // printNumberings();
   _nInc = globalNum;
   for(int i = 0; i < _nFields; ++i) {
     globalNum = _numberings[_fieldIDs[i]]->numberEssential(globalNum);
   }
   _nDofs = globalNum;
+  // printNumberings();
+  // printCodes();
 }
 
 feMetaNumber::~feMetaNumber() {

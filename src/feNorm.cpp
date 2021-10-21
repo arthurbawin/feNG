@@ -54,12 +54,19 @@ void feNorm::computeL2Norm(feMetaNumber *metaNumber, feSolution *sol, feMesh *me
 
       if(dim == 0) {
         J = 1.;
-      } else if(dim == 1) {
-        std::vector<double> j(3, 0.0);
-        geoSpace->interpolateVectorFieldAtQuadNode_rDerivative(geoCoord, k,
-                                                               j); // TODO : complete for dim > 1
-        J = j[0];
-      } else if(dim == 2) {
+      } 
+      // else if(dim == 1) {
+      //   std::vector<double> j(3, 0.0);
+      //   geoSpace->interpolateVectorFieldAtQuadNode_rDerivative(geoCoord, k,
+      //                                                          j); // TODO : complete for dim > 1
+      //   J = j[0];
+      // } 
+      else if(dim == 1) {
+          std::vector<double> dxdr(3, 0.0); // [dx/dr, dy/dr, dz/dr]
+          geoSpace->interpolateVectorFieldAtQuadNode_rDerivative(geoCoord, k, dxdr);
+          J = sqrt(dxdr[0] * dxdr[0]+dxdr[1] * dxdr[1]);
+        } 
+      else if(dim == 2) {
         std::vector<double> dxdr(3, 0.0); // [dx/dr, dy/dr, dz/dr]
         std::vector<double> dxds(3, 0.0); // [dx/ds, dy/ds, dz/ds]
         geoSpace->interpolateVectorFieldAtQuadNode_rDerivative(geoCoord, k, dxdr);
@@ -72,6 +79,10 @@ void feNorm::computeL2Norm(feMetaNumber *metaNumber, feSolution *sol, feMesh *me
 
       // printf("Solution at (%f,%f,%f) = %10.10f - ref = %10.10f\n", x[0], x[1], x[2], solInt,
       // solRef);
+      // std::cout<<"(solInt - solRef)"<<(solInt - solRef)<<std::endl;
+      // std::cout<<"J"<<J<<std::endl;
+      // std::cout<<"w[k]"<<w[k]<<std::endl;
+
       normL2 += (solInt - solRef) * (solInt - solRef) * J * w[k];
     }
   }
