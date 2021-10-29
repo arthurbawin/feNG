@@ -25,7 +25,9 @@ feCncGeo *feMesh::getCncGeoByTag(int cncGeoTag) {
   return nullptr;
 }
 
-// numElem est le numero local de l'element dans la connectivité géométrique
+// Returns a vector containing the physical coordinates of the nodes on the 
+// element with LOCAL number "numElem" on the connectivity named "cncGeoID" :
+// coord = [x1 y1 z1 x2 y2 z2 ... xn yn zn]
 std::vector<double> feMesh::getCoord(std::string cncGeoID, int numElem) {
   feCncGeo *cnc = getCncGeoByName(cncGeoID);
   int nNodePerElem = cnc->getNbNodePerElem();
@@ -38,6 +40,9 @@ std::vector<double> feMesh::getCoord(std::string cncGeoID, int numElem) {
   return coord;
 }
 
+// Returns a vector containing the physical coordinates of the nodes on the 
+// element with LOCAL number "numElem" on the connectivity numbered "cncGeoTag" :
+// coord = [x1 y1 z1 x2 y2 z2 ... xn yn zn]
 std::vector<double> feMesh::getCoord(int cncGeoTag, int numElem) {
   feCncGeo *cnc = getCncGeoByTag(cncGeoTag);
   int nNodePerElem = cnc->getNbNodePerElem();
@@ -94,21 +99,23 @@ feSpace *feMesh::getGeometricSpace(int cncGeoTag) {
   return getCncGeoByTag(cncGeoTag)->getFeSpace();
 }
 
-void feMesh::printInfo() {
+void feMesh::printInfo(bool printConnectivities) {
   std::cout << "Nombre total d'elements : " << _nTotalElm << std::endl;
   std::cout << "Nombre de connectivites : " << _nCncGeo << std::endl;
   for(feCncGeo *cnc : _cncGeo) {
-    std::cout << "CncGeo " << cnc->getID() << std::endl;
-    printf("Connectivité des noeuds :\n");
-    for(int i = 0; i < cnc->getNbElm(); ++i) {
-      for(int j = 0; j < cnc->getNbNodePerElem(); ++j) {
-        std::cout << cnc->getNodeConnectivity(i, j) << " ";
+    std::cout << "CncGeo " << cnc->getID() << " : " << cnc->getForme() << " - " << cnc->getNbElm() << " elements"<<std::endl;
+    if(printConnectivities){
+      printf("Connectivité des noeuds :\n");
+      for(int i = 0; i < cnc->getNbElm(); ++i) {
+        for(int j = 0; j < cnc->getNbNodePerElem(); ++j) {
+          std::cout << cnc->getNodeConnectivity(i, j) << " ";
+        }
+        std::cout << std::endl;
       }
-      std::cout << std::endl;
-    }
-    printf("Connectivité des éléments :\n");
-    for(int i = 0; i < cnc->getNbElm(); ++i) {
-      std::cout << cnc->getElementConnectivity(i) << std::endl;
+      printf("Connectivité des éléments :\n");
+      for(int i = 0; i < cnc->getNbElm(); ++i) {
+        std::cout << cnc->getElementConnectivity(i) << std::endl;
+      }
     }
     // printf("Connectivité des arêtes :\n");
     // for(int i = 0; i < cnc->getNbElm(); ++i){
@@ -228,7 +235,7 @@ feMesh0DP0::~feMesh0DP0() {
   }
 }
 
-feMesh2DP1::feMesh2DP1(std::string meshName, bool curved, mapType physicalEntitiesDescription)
+feMesh2DP1::feMesh2DP1(std::string meshName, bool curved, mapType physicalEntitiesDescription, bool verbose)
   : feMesh() {
   printf("Info : Reading mesh file : %s\n", meshName.c_str());
   // Check if mesh file exists
@@ -238,8 +245,9 @@ feMesh2DP1::feMesh2DP1(std::string meshName, bool curved, mapType physicalEntiti
   } else {
     _ID = "myBeautifulMesh";
 
-    if(readGmsh(meshName, curved, physicalEntitiesDescription)) {
+    if(readGmsh(meshName, curved, physicalEntitiesDescription, verbose)) {
       printf("In feMesh2DP1::feMesh2DP1 : Error in readGmsh - mesh not finalized.\n");
+      exit(-1);
     }
 
     // Assign a pointer to this mesh to each of its geometric connectivities and their fespace
@@ -247,6 +255,7 @@ feMesh2DP1::feMesh2DP1(std::string meshName, bool curved, mapType physicalEntiti
       cnc->setMeshPtr(this);
       cnc->getFeSpace()->setMeshPtr(this);
     }
+    _nCncGeo = _cncGeo.size();
   }
 }
 
@@ -316,8 +325,8 @@ void feMesh2DP1::transfer(feMesh2DP1 *otherMesh, feMetaNumber *myMN, feMetaNumbe
     if(!isBC) {
       for(feSpace *fS2 : otherSpaces) {
         if(fS1->getFieldID() == fS2->getFieldID() && fS1->getCncGeoID() == fS2->getCncGeoID()) {
-          // std::cout << "INTERPOLATING FIELD " << fS1->getFieldID() << " on connectivity "
-          //           << fS1->getCncGeoID() << std::endl;
+          std::cout << "INTERPOLATING FIELD " << fS1->getFieldID() << " on connectivity "
+                    << fS1->getCncGeoID() << std::endl;
           fieldsToInterpolate.emplace_back(fS1->getFieldID(), fS1->getCncGeoID());
 
           int nElm = fS2->getNbElm();
@@ -385,13 +394,13 @@ void feMesh2DP1::transfer(feMesh2DP1 *otherMesh, feMetaNumber *myMN, feMetaNumbe
       solutionContainer->_sol[iSol][iDOF] = scTmp->_sol[iSol][iDOF];
   }
 
-  for(int iDOF = 0; iDOF < 20; ++iDOF) {
-    printf("%5d : ", iDOF);
-    for(int i = 0; i < solutionContainer->getNbSol(); ++i) {
-      printf("%+-10.10e \t", solutionContainer->_sol[i][iDOF]);
-    }
-    printf("\n");
-  }
+  // for(int iDOF = 0; iDOF < 20; ++iDOF) {
+  //   printf("%5d : ", iDOF);
+  //   for(int i = 0; i < solutionContainer->getNbSol(); ++i) {
+  //     printf("%+-10.10e \t", solutionContainer->_sol[i][iDOF]);
+  //   }
+  //   printf("\n");
+  // }
 
   delete scTmp;
 }

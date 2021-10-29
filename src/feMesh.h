@@ -26,6 +26,7 @@ protected:
 
   std::vector<double> _coord;
   std::vector<Vertex> _vertices;
+  std::map<int, int> _verticesMap;
 
   int _nCncGeo;
   std::vector<feCncGeo *> _cncGeo;
@@ -54,8 +55,13 @@ public:
   std::vector<double> getCoord(std::string cncGeoID, int numElm);
   std::vector<double> getCoord(int cncGeoTag, int numElm);
 
+  int getVertexSequentialTagFromGmshTag(int gmshNodeTag){ return _verticesMap[gmshNodeTag]; }
   Vertex *getVertex(int iVertex) { return &_vertices[iVertex]; }
+  Vertex *getVertexFromGmshNodeTag(int gmshNodeTag) { return &_vertices[_verticesMap[gmshNodeTag]]; }
   std::vector<Vertex> &getVertices() { return _vertices; }
+
+  std::set<Edge, EdgeLessThan> _edges;
+  std::vector<Triangle *> _elements; // Hardcoded triangles for now
 
   int getNbCncGeo() { return _nCncGeo; }
   std::vector<feCncGeo *> &getCncGeo() { return _cncGeo; }
@@ -75,7 +81,7 @@ public:
   feSpace *getGeometricSpace(std::string cncGeoID);
   feSpace *getGeometricSpace(int cncGeoTag);
 
-  void printInfo();
+  void printInfo(bool printConnectivities = true);
 };
 
 class feMesh1DP1 : public feMesh {
@@ -156,9 +162,13 @@ public:
 protected:
   int _nPhysicalEntities;
   std::map<std::pair<int, int>, entity> _entities;
-  std::vector<physicalEntity> _physicalEntities;
+  // std::vector<physicalEntity> _physicalEntities;
+  std::map<std::pair<int, int>, physicalEntity> _physicalEntities;
 
   mapType _physicalEntitiesDescription;
+
+
+  std::vector<int> _sequentialNodeToGmshNode;
 
   int _nPoints;
   int _nCurves;
@@ -166,29 +176,31 @@ protected:
   int _nVolumes;
 
   // std::vector<Vertex> _vertices;
-  std::set<Edge, EdgeLessThan> _edges;
+  // std::set<Edge, EdgeLessThan> _edges;
 
   int _nElm;
 
   bool _isBinary;
   double _gmshVersion;
 
-  std::vector<Triangle *> _elements; // Hardcoded triangles for now
+  // std::vector<Triangle *> _elements; // Hardcoded triangles for now
   // std::vector<feElement*> _elements;
   // std::vector<feElement*> _boundaryElements;
 
 public:
-  feMesh2DP1(std::string meshName, bool curved, mapType physicalEntitiesDescription = mapType());
+  feMesh2DP1(std::string meshName, bool curved, mapType physicalEntitiesDescription = mapType(), bool verbose = false);
   ~feMesh2DP1();
 
   int readMsh2(std::istream &input, bool curved, mapType physicalEntitiesDescription);
-  int readMsh4(std::istream &input, bool curved);
-  int readGmsh(std::string meshName, bool curved, mapType physicalEntitiesDescription = mapType());
+  int readMsh4(std::istream &input, bool curved, mapType physicalEntitiesDescription, bool verbose);
+  int readGmsh(std::string meshName, bool curved, mapType physicalEntitiesDescription = mapType(), bool verbose = false);
 
   bool isMeshFileBinary() { return _isBinary; }
   double getGmshVersion() { return _gmshVersion; }
 
   mapType getPhysicalEntitiesDescription() { return _physicalEntitiesDescription; }
+
+  int getGmshNodeTag(int iVertex){ return _sequentialNodeToGmshNode[iVertex]; }
 
   void transfer(feMesh2DP1 *otherMesh, feMetaNumber *myMN, feMetaNumber *otherMN,
                 feSolutionContainer *solutionContainer, const std::vector<feSpace *> &mySpaces,

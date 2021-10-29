@@ -264,7 +264,7 @@ int dim_of_gmsh_element[] = {
 int feMesh2DP1::readMsh2(std::istream &input, bool curved, mapType physicalEntitiesDescription) {
   std::string buffer;
   int ph1; // Placeholder
-  std::map<int, int> verticesMap; // Gmsh tag (which may include gaps) to sequential tag. Just in
+  // std::map<int, int> _verticesMap; // Gmsh tag (which may include gaps) to sequential tag. Just in
                                   // case : not sure there are gaps in msh2...
   std::vector<int> numNodesInBlock;
 
@@ -279,7 +279,8 @@ int feMesh2DP1::readMsh2(std::istream &input, bool curved, mapType physicalEntit
       pE.nNodePerElem = -1;
       pE.nEdgePerElem = -1;
       pE.cncID = "";
-      _physicalEntities.push_back(pE);
+      // _physicalEntities.push_back(pE);
+      _physicalEntities[pair.first] = pE;
     }
   }
 
@@ -301,16 +302,20 @@ int feMesh2DP1::readMsh2(std::istream &input, bool curved, mapType physicalEntit
         pE.nNodePerElem = -1;
         pE.nEdgePerElem = -1;
         pE.cncID = "";
-        _physicalEntities.push_back(pE);
+        // _physicalEntities.push_back(pE);
+        _physicalEntities[{pE.dim,pE.tag}] = pE;
       }
 
       // Save the description of the physical entities : this is used when looping and adapting the
       // mesh. Since mmg does not keep track of the name of the physical entities, they have to be
       // saved and loaded during the following adaptation cycles.
-      for(int i = 0; i < _nPhysicalEntities; ++i) {
-        physicalEntity pE = _physicalEntities[i];
-        std::pair<int, int> p = {pE.dim, pE.tag};
-        _physicalEntitiesDescription[p] = pE.name;
+      // for(int i = 0; i < _nPhysicalEntities; ++i) {
+      //   physicalEntity pE = _physicalEntities[i];
+      //   std::pair<int, int> p = {pE.dim, pE.tag};
+      //   _physicalEntitiesDescription[p] = pE.name;
+      // }
+      for(auto pair : _physicalEntities) {
+        _physicalEntitiesDescription[pair.first] = _physicalEntities[pair.first].name;
       }
     }
 
@@ -325,11 +330,11 @@ int feMesh2DP1::readMsh2(std::istream &input, bool curved, mapType physicalEntit
       for(int iNode = 0; iNode < _nNod; ++iNode) {
         // node-number x-coord y-coord z-coord
         input >> gmshNumber >> x >> y >> z;
-        verticesMap[gmshNumber] = countVertex;
+        _verticesMap[gmshNumber] = countVertex;
         _vertices[countVertex++] = Vertex(x, y, z, gmshNumber);
       }
 
-      if((int)verticesMap.size() != _nNod) {
+      if((int)_verticesMap.size() != _nNod) {
         printf("In readGmsh : Error - Vertices indices are not unique.\n");
         return 1;
       }
@@ -354,6 +359,7 @@ int feMesh2DP1::readMsh2(std::istream &input, bool curved, mapType physicalEntit
         getline(input, buffer);
         // elm-number elm-type number-of-tags < tag > … node-number-list
         input >> gmshElemTag >> elemType >> numEntities >> physicalTag;
+        // printf("Read %d %d %d %d\n", gmshElemTag, elemType, numEntities, physicalTag);
         // Physical and geometric entities are not separated, and physical seem to be given first.
         // Since we only accept non-overlapping physical domains (i.e. each element belongs to a
         // single physical entity), let's just assume the first number is the physical domain and
@@ -379,11 +385,14 @@ int feMesh2DP1::readMsh2(std::istream &input, bool curved, mapType physicalEntit
           bool isPartOfTheOriginalEntities = false;
           for(auto pair : physicalEntitiesDescription) {
             // pair = { {dim,tag}, name }
+            // printf("Comparing entity dim = %d - tag = %d with stored entity %s - dim = %d - tag = %d\n", entityDim, physicalTag, pair.second.c_str(), pair.first.first, pair.first.second);
             if(entityDim == pair.first.first && physicalTag == pair.first.second)
               isPartOfTheOriginalEntities = true;
           }
-          if(!isPartOfTheOriginalEntities)
+          if(!isPartOfTheOriginalEntities){
+            // printf("Continuing\n");
             continue;
+          }
         }
 
         // If geometric entity doesn't exist, create it :
@@ -395,7 +404,9 @@ int feMesh2DP1::readMsh2(std::istream &input, bool curved, mapType physicalEntit
           e.numPhysicalTags = 1;
           e.physicalTags.push_back(physicalTag);
           e.nElm = 0;
-          _physicalEntities[physicalTag - 1].listEntities.push_back(e.tag);
+          // _physicalEntities[physicalTag - 1].listEntities.push_back(e.tag);
+          std::pair<int, int> p = {e.dim, physicalTag};
+          _physicalEntities[p].listEntities.push_back(e.tag);
           _entities[p] = e;
         }
 
@@ -412,8 +423,8 @@ int feMesh2DP1::readMsh2(std::istream &input, bool curved, mapType physicalEntit
         for(int j = 0; j < nNodePerElem; ++j) {
           input >> ph1;
           // Verification
-          it = verticesMap.find(ph1);
-          if(it == verticesMap.end()) {
+          it = _verticesMap.find(ph1);
+          if(it == _verticesMap.end()) {
             printf("In readGmsh : Error - element node does not exist /-:\n");
             return 1;
           }
@@ -488,14 +499,14 @@ int feMesh2DP1::readMsh2(std::istream &input, bool curved, mapType physicalEntit
           Vertex *v0, *v1;
           for(int k = 0; k < 3; ++k) {
             if(k == 2) {
-              v0 = &_vertices[verticesMap[elemNodesGmsh[2]]];
-              v1 = &_vertices[verticesMap[elemNodesGmsh[0]]];
+              v0 = &_vertices[_verticesMap[elemNodesGmsh[2]]];
+              v1 = &_vertices[_verticesMap[elemNodesGmsh[0]]];
             } else {
-              v0 = &_vertices[verticesMap[elemNodesGmsh[k]]];
-              v1 = &_vertices[verticesMap[elemNodesGmsh[k + 1]]];
+              v0 = &_vertices[_verticesMap[elemNodesGmsh[k]]];
+              v1 = &_vertices[_verticesMap[elemNodesGmsh[k + 1]]];
             }
             std::pair<std::set<Edge, EdgeLessThan>::iterator, bool> ret;
-            Edge e(v0, v1, nEdges);
+            Edge e(v0, v1, nEdges, _entities[p].physicalTags[0]);
             ret = _edges.insert(e);
             if(ret.second) {
               // Edge was added to the set : nEdges is added to connecEdges
@@ -578,25 +589,43 @@ int feMesh2DP1::readMsh2(std::istream &input, bool curved, mapType physicalEntit
   return 0;
 }
 
-int feMesh2DP1::readMsh4(std::istream &input, bool curved) {
+int feMesh2DP1::readMsh4(std::istream &input, bool curved, mapType physicalEntitiesDescription, bool verbose) {
   std::string buffer;
   // Placeholders
   int ph1, ph2, ph3;
   double ph1D, ph2D, ph3D, ph4D, ph5D, ph6D;
-  // Gmsh tag (which may include gaps) to sequential tag
-  std::map<int, int> verticesMap;
   std::vector<int> numNodesInBlock;
+  _nPhysicalEntities = 0;
+
+  if(physicalEntitiesDescription.size() > 0) {
+    for(auto pair : physicalEntitiesDescription) {
+      // pair = { {dim,tag}, name }
+      physicalEntity pE;
+      pE.dim = pair.first.first;
+      pE.tag = pair.first.second;
+      pE.name = pair.second;
+      pE.nElm = 0;
+      pE.nNodePerElem = -1;
+      pE.nEdgePerElem = -1;
+      pE.cncID = "";
+      // _physicalEntities.push_back(pE);
+      _physicalEntities[pair.first] = pE;
+      printf("In readGmsh4 (verbose) : Created physical entity \"%s\"\n", pE.name.c_str());
+    }
+  }
 
   while(input >> buffer) {
     if(buffer == "$PhysicalNames") { // Read physical entities
       input >> _nPhysicalEntities;
       getline(input, buffer);
+      // The tag for physical entities does not necessarily start at 0
+      int sequentialTagForPhysicals = 0;
       for(int i = 0; i < _nPhysicalEntities; ++i) {
         physicalEntity pE;
         // dimension(ASCII int) - physicalTag(ASCII int) - "name"(127 characters max)
         input >> pE.dim >> pE.tag >> pE.name;
         if(pE.name == "") {
-          printf("In readGmsh : Error - Empty name for physical entity.\n");
+          printf("In readGmsh4 : Error - Empty name for physical entity.\n");
           return 1;
         }
         pE.name.pop_back();
@@ -605,16 +634,22 @@ int feMesh2DP1::readMsh4(std::istream &input, bool curved) {
         pE.nNodePerElem = -1;
         pE.nEdgePerElem = -1;
         pE.cncID = "";
-        _physicalEntities.push_back(pE);
+
+        // _physicalEntities.push_back(pE);
+        _physicalEntities[{pE.dim, pE.tag}] = pE;
+        printf("In readGmsh4 (verbose) : Created Physical entity \"%s\" with dimension %d and gmsh tag %d\n", pE.name.c_str(), pE.dim, pE.tag);
       }
 
       // Save the description of the physical entities : this is used when looping and adapting the
       // mesh. Since mmg does not keep track of the name of the physical entities, they have to be
       // saved and loaded during the following adaptation cycles.
-      for(int i = 0; i < _nPhysicalEntities; ++i) {
-        physicalEntity pE = _physicalEntities[i];
-        std::pair<int, int> p = {pE.dim, pE.tag};
-        _physicalEntitiesDescription[p] = pE.name;
+      // for(int i = 0; i < _nPhysicalEntities; ++i) {
+      //   physicalEntity pE = _physicalEntities[i];
+      //   std::pair<int, int> p = {pE.dim, pE.tag};
+      //   _physicalEntitiesDescription[p] = pE.name;
+      // }
+      for(auto pair : _physicalEntities) {
+        _physicalEntitiesDescription[pair.first] = _physicalEntities[pair.first].name;
       }
     }
 
@@ -626,6 +661,7 @@ int feMesh2DP1::readMsh4(std::istream &input, bool curved) {
       numNodesInBlock.resize(_nCurves + _nSurfaces + _nVolumes);
 
       int tagCount = 1;
+      int tagUnnumberedEntities = 0;
       // Points
       for(int i = 0; i < _nPoints; ++i) {
         entity e;
@@ -635,7 +671,7 @@ int feMesh2DP1::readMsh4(std::istream &input, bool curved) {
         //  numPhysicalTags(size_t) physicalTag(int)
         input >> e.tagGmsh >> ph1D >> ph2D >> ph3D >> e.numPhysicalTags;
         if(e.numPhysicalTags > 1) {
-          printf("In readGmsh : Error - Geometric entity can only be part of a maximum of one "
+          printf("In readGmsh4 : Error - Geometric entity can only be part of a maximum of one "
                  "physical entity (named domain).\n");
           printf("Overlapping domains are not allowed.\n");
           return 1;
@@ -643,7 +679,12 @@ int feMesh2DP1::readMsh4(std::istream &input, bool curved) {
         for(int j = 0; j < e.numPhysicalTags; ++j) {
           input >> ph1;
           e.physicalTags.push_back(ph1);
-          _physicalEntities[ph1 - 1].listEntities.push_back(e.tag);
+          // _physicalEntities[physicalTagToSequentialTag0D[ph1]].listEntities.push_back(e.tag);
+          // _physicalEntities[{e.dim, physicalTagToSequentialTag0D[ph1]}].listEntities.push_back(e.tag);
+          if(_physicalEntities.find({e.dim, ph1}) != _physicalEntities.end()){
+            _physicalEntities[{e.dim, ph1}].listEntities.push_back(e.tag);
+            if(verbose) printf("In readGmsh4 (verbose) : Geometric entity with dim = %d - tag = %d is part of Physical \"%s\"\n", e.dim, e.tagGmsh, _physicalEntities[{e.dim, ph1}].name.c_str());
+          }
         }
         _entities.insert({{e.dim, e.tagGmsh}, e});
       }
@@ -667,7 +708,26 @@ int feMesh2DP1::readMsh4(std::istream &input, bool curved) {
         for(int j = 0; j < e.numPhysicalTags; ++j) {
           input >> ph1;
           e.physicalTags.push_back(ph1);
-          _physicalEntities[ph1 - 1].listEntities.push_back(e.tag);
+          // It's possible physical groups were added to the model, but the geometric entities refer to them
+          // with the physicalTag "0" (e.g. caviteP2WithGroups.msh). For now, the fix is to sequentially
+          // number the physicals with tag 0, but it will conflict if some physicals are numbered.
+          // An alternative would be to keep a distinct list of physical groups for each dimension.
+          if(ph1 != 0){
+            if(_physicalEntities.find({e.dim, ph1}) != _physicalEntities.end()){
+              _physicalEntities[{e.dim, ph1}].listEntities.push_back(e.tag);
+              if(verbose) printf("In readGmsh4 (verbose) : Geometric entity with dim = %d - tag = %d is part of Physical \"%s\"\n", e.dim, e.tagGmsh, _physicalEntities[{e.dim, ph1}].name.c_str());
+            } else if(_physicalEntities.find({e.dim, -ph1}) != _physicalEntities.end()){ // Physical entity numbered in reverse
+              _physicalEntities[{e.dim, -ph1}].listEntities.push_back(e.tag);
+              if(verbose){
+                printf("In readGmsh4 (verbose) : Geometric entity with dim = %d - tag = %d is part of Physical \"%s\"\n", e.dim, e.tagGmsh, _physicalEntities[{e.dim, -ph1}].name.c_str());
+                printf("In readGmsh4 : Warning : Physical entity is negative on this geometric entity and is thus numbered in reverse order.\n");
+                printf("In readGmsh4 : Warning : You might want to check that.\n");
+              }
+            }
+          } else{
+            _physicalEntities[{e.dim, tagUnnumberedEntities++}].listEntities.push_back(e.tag);
+          }
+
         }
         input >> numBoundingPoints;
         for(int j = 0; j < numBoundingPoints; ++j) {
@@ -697,7 +757,21 @@ int feMesh2DP1::readMsh4(std::istream &input, bool curved) {
         for(int j = 0; j < e.numPhysicalTags; ++j) {
           input >> ph1;
           e.physicalTags.push_back(ph1);
-          _physicalEntities[ph1 - 1].listEntities.push_back(e.tag);
+          if(ph1 != 0){
+            if(_physicalEntities.find({e.dim, ph1}) != _physicalEntities.end()){
+              _physicalEntities[{e.dim, ph1}].listEntities.push_back(e.tag);
+              if(verbose) printf("In readGmsh4 (verbose) : Geometric entity with dim = %d - tag = %d is part of Physical \"%s\"\n", e.dim, ph1, _physicalEntities[{e.dim, ph1}].name.c_str());
+            } else if(_physicalEntities.find({e.dim, -ph1}) != _physicalEntities.end()){ // Physical entity numbered in reverse
+              _physicalEntities[{e.dim, -ph1}].listEntities.push_back(e.tag);
+              if(verbose){
+                printf("In readGmsh4 (verbose) : Geometric entity with dim = %d - tag = %d is part of Physical \"%s\"\n", e.dim, e.tagGmsh, _physicalEntities[{e.dim, -ph1}].name.c_str());
+                printf("In readGmsh4 : Warning : Physical entity is negative on this geometric entity and is thus numbered in reverse order.\n");
+                printf("In readGmsh4 : Warning : You might want to check that.\n");
+              }
+            }
+          } else{
+            _physicalEntities[{e.dim, tagUnnumberedEntities++}].listEntities.push_back(e.tag);
+          }
         }
         input >> numBoundingCurves;
         for(int j = 0; j < numBoundingCurves; ++j) {
@@ -727,7 +801,14 @@ int feMesh2DP1::readMsh4(std::istream &input, bool curved) {
         for(int j = 0; j < e.numPhysicalTags; ++j) {
           input >> ph1;
           e.physicalTags.push_back(ph1);
-          _physicalEntities[ph1 - 1].listEntities.push_back(e.tag);
+          if(ph1 != 0){
+            // _physicalEntities[physicalTagToSequentialTag3D[ph1]].listEntities.push_back(e.tag);
+            // _physicalEntities[{e.dim, physicalTagToSequentialTag3D[ph1]}].listEntities.push_back(e.tag);
+            _physicalEntities[{e.dim, ph1}].listEntities.push_back(e.tag);
+          } else{
+            // _physicalEntities[tagUnnumberedEntities++].listEntities.push_back(e.tag);
+            _physicalEntities[{e.dim, tagUnnumberedEntities++}].listEntities.push_back(e.tag);
+          }
         }
         input >> numBoundingSurfaces;
         for(int j = 0; j < numBoundingSurfaces; ++j) {
@@ -746,6 +827,7 @@ int feMesh2DP1::readMsh4(std::istream &input, bool curved) {
       input >> numEntityBlocks >> _nNod; // != nVertices, mais alloue _vertices : ambigu (:
       getline(input, buffer);
       _vertices.resize(_nNod);
+      _sequentialNodeToGmshNode.resize(_nNod);
       // A counter for the dim > 0 entities
       int entityCount = 0;
       for(int i = 0; i < numEntityBlocks; ++i) {
@@ -753,20 +835,20 @@ int feMesh2DP1::readMsh4(std::istream &input, bool curved) {
         // entityDim(int) entityTag(int) parametric(int; 0 or 1) numNodesInBlock(size_t)
         input >> entityDim >> ph2 >> ph3 >> numNodes;
         if(entityDim > 0) numNodesInBlock[entityCount++] = numNodes;
-        std::vector<int> serialNumber(numNodes);
+        std::vector<int> gmshNodeTag(numNodes);
         for(int iNode = 0; iNode < numNodes; ++iNode) {
           input >> ph1;
-          serialNumber[iNode] = ph1;
-          // invertVerticesMap[countVertex] = serialNumber[iNode];
-          verticesMap[serialNumber[iNode]] = countVertex++;
+          gmshNodeTag[iNode] = ph1;
+          _sequentialNodeToGmshNode[countVertex] = gmshNodeTag[iNode];
+          _verticesMap[gmshNodeTag[iNode]] = countVertex++;
         }
         countVertex -= numNodes;
         for(int iNode = 0; iNode < numNodes; ++iNode) {
           input >> x >> y >> z;
-          _vertices[countVertex++] = Vertex(x, y, z, serialNumber[iNode]);
+          _vertices[countVertex++] = Vertex(x, y, z, gmshNodeTag[iNode]);
         }
       }
-      if((int)verticesMap.size() != _nNod) {
+      if((int)_verticesMap.size() != _nNod) {
         printf("In readGmsh : Error - vertices indices are not unique.\n");
         return 1;
       }
@@ -937,7 +1019,7 @@ int feMesh2DP1::readMsh4(std::istream &input, bool curved) {
         // std::cout<<"Interpolant assigné : "<<_entities[p].cncID<<std::endl;
 
         std::map<int, int>::const_iterator it;
-
+        int nmin = 1e8, nmax = -1;
         for(int iElm = 0; iElm < numElementsInBlock; ++iElm) {
           // int nElemNodes = nodes_of_gmsh_element[elemType-1];
           int nElemNodes = _entities[p].nNodePerElem;
@@ -951,8 +1033,8 @@ int feMesh2DP1::readMsh4(std::istream &input, bool curved) {
           for(int j = 0; j < nElemNodes; ++j) {
             input >> ph1;
             // Verification
-            it = verticesMap.find(ph1);
-            if(it == verticesMap.end()) {
+            it = _verticesMap.find(ph1);
+            if(it == _verticesMap.end()) {
               printf("In readGmsh : Error - Element node %d does not exist /-:\n", ph1);
               return 1;
             }
@@ -992,21 +1074,26 @@ int feMesh2DP1::readMsh4(std::istream &input, bool curved) {
           case 45: [[gnu::fallthrough]]; // 55-node triangle (9th order)
           case 46: // 66-node triangle (10th order)
           {
+            
             for(int j = 0; j < nElemNodes; ++j) {
               _entities[p].connecNodes[nElemNodes * iElm + j] = elemNodes[j];
+              // _entities[p].connecNodes[nElemNodes * iElm + j] = elemNodesGmsh[j];
+              nmin = fmin(nmin, elemNodes[j]);
+              nmax = fmax(nmax, elemNodes[j]);
             }
+            
             // Construct the triangle edges :
             Vertex *v0, *v1;
             for(int k = 0; k < 3; ++k) {
               if(k == 2) {
-                v0 = &_vertices[verticesMap[elemNodesGmsh[2]]];
-                v1 = &_vertices[verticesMap[elemNodesGmsh[0]]];
+                v0 = &_vertices[_verticesMap[elemNodesGmsh[2]]];
+                v1 = &_vertices[_verticesMap[elemNodesGmsh[0]]];
               } else {
-                v0 = &_vertices[verticesMap[elemNodesGmsh[k]]];
-                v1 = &_vertices[verticesMap[elemNodesGmsh[k + 1]]];
+                v0 = &_vertices[_verticesMap[elemNodesGmsh[k]]];
+                v1 = &_vertices[_verticesMap[elemNodesGmsh[k + 1]]];
               }
               std::pair<std::set<Edge, EdgeLessThan>::iterator, bool> ret;
-              Edge e(v0, v1, nEdges);
+              Edge e(v0, v1, nEdges, _entities[p].physicalTags[0]);
               ret = _edges.insert(e);
               if(ret.second) {
                 // Edge was added to the set : nEdges is added to connecEdges
@@ -1077,14 +1164,25 @@ int feMesh2DP1::readMsh4(std::istream &input, bool curved) {
 
         } // for numElemInEntity
 
+        // printf("On entity %d - Max node is %d and min node is %d\n", entityTag, nmax, nmin);
+        // std::vector<int> tmp = _entities[p].connecNodes;
+        // std::sort(tmp.begin(), tmp.end());
+        // tmp.erase( std::unique(tmp.begin(), tmp.end()), tmp.end() );
+        // std::cout<<tmp.size()<<std::endl;
+
       } // for numEntities
     } // if buffer = "Elements"
   } // while input
 
+  if(_physicalEntities.size() == 0){
+    printf("In readMesh : Error - No physical entities defined on the mesh.\n");
+    return 1;
+  }
+
   return 0;
 }
 
-int feMesh2DP1::readGmsh(std::string meshName, bool curved, mapType physicalEntitiesDescription) {
+int feMesh2DP1::readGmsh(std::string meshName, bool curved, mapType physicalEntitiesDescription, bool verbose) {
   int ret = 0;
   _gmshVersion = 0;
   std::filebuf fb;
@@ -1105,7 +1203,7 @@ int feMesh2DP1::readGmsh(std::string meshName, bool curved, mapType physicalEnti
     if(_gmshVersion == 2.2) {
       ret = readMsh2(input, curved, physicalEntitiesDescription);
     } else if(_gmshVersion >= 4) {
-      ret = readMsh4(input, curved);
+      ret = readMsh4(input, curved, physicalEntitiesDescription, verbose);
     } else {
       printf("In readGmsh : Error - Mesh version should be either 2.2 or 4.1 or higher.\n");
       return 1;
@@ -1114,42 +1212,45 @@ int feMesh2DP1::readGmsh(std::string meshName, bool curved, mapType physicalEnti
     fb.close();
   } // if fb.open
 
-  // std::cout<<"Printons :"<<std::endl;
-  // for(auto const& x : _entities){
-  //   entity e = x.second;
-  //   std::cout<<"Entity dim = "<<e.dim<<" - tag = "<<e.tag<<" - tagGmsh = "<<e.tagGmsh<<std::endl;
-  //   std::cout<<e.nElm<<std::endl;
-  //   std::cout<<e.nNodePerElem<<std::endl;
-  //   std::cout<<e.cncID<<std::endl;
-  //   for(auto val : e.physicalTags)
-  //     std::cout<<val;
-  //   std::cout<<std::endl;
-  //   std::cout<<"elems : "<<std::endl;
-  //   for(auto val : e.connecElem)
-  //     std::cout<<val<<" ";
-  //   std::cout<<std::endl;
-  //   std::cout<<"nodes : "<<std::endl;
-  //   for(auto val : e.connecNodes)
-  //     std::cout<<val<<" ";
-  //   std::cout<<std::endl;
-  //   std::cout<<"edges : "<<std::endl;
-  //   for(auto val : e.connecEdges)
-  //     std::cout<<val<<" ";
-  //   std::cout<<std::endl;
-  // }
+  std::cout<<"Printons :"<<std::endl;
+  for(auto const& x : _entities){
+    entity e = x.second;
+    std::cout<<"Entity dim = "<<e.dim<<" - tag = "<<e.tag<<" - tagGmsh = "<<e.tagGmsh<<std::endl;
+    std::cout<<e.nElm<<std::endl;
+    std::cout<<e.nNodePerElem<<std::endl;
+    std::cout<<e.cncID<<std::endl;
+    for(auto val : e.physicalTags)
+      std::cout<<val;
+    std::cout<<std::endl;
+    // std::cout<<"elems : "<<std::endl;
+    // for(auto val : e.connecElem)
+    //   std::cout<<val<<" ";
+    // std::cout<<std::endl;
+    // std::cout<<"nodes : "<<std::endl;
+    // for(auto val : e.connecNodes)
+    //   std::cout<<val<<" ";
+    // std::cout<<std::endl;
+    // std::cout<<"edges : "<<std::endl;
+    // for(auto val : e.connecEdges)
+    //   std::cout<<val<<" ";
+    // std::cout<<std::endl;
+  }
 
   // Geometric connectivities are defined on the physical entities (named domains) :
   // we need to transfer the information to the physical entities.
   // Sequential tag for all entities, different from the Gmsh entity tag (reset for each dimension)
   for(auto const &x : _entities) {
     entity e = x.second;
-    // std::cout<<"Entity "<<e.tag<<std::endl;
-    for(auto &pE : _physicalEntities) {
+    std::cout<<"Entity "<<e.tag<<" (dim = "<<e.dim<<" tag Gmsh = "<<e.tagGmsh<<")"<<std::endl;
+    for(auto &p : _physicalEntities) {
+      physicalEntity &pE = p.second;
+      printf("Physical \"%s\" has %d geometric entities :\n", pE.name.c_str(), pE.listEntities.size());
       bool error = false;
       for(auto ent : pE.listEntities) {
-        if(ent == e.tag) {
-          // std::cout<<"Physical "<<pE.name<<" - entity "<<ent<<" of dimension "<<e.dim<<" and "<<e.nElm<<" elements : match"<<std::endl;
+        if(ent == e.tag && pE.dim == e.dim) {
+          std::cout<<"    Physical "<<pE.name<<" - entity "<<ent<<" (tag Gmsh = "<<e.tagGmsh<<") of dimension "<<e.dim<<" and "<<e.nElm<<" elements : match"<<std::endl;
           pE.nElm += e.nElm;
+          std::cout<<pE.nElm<<std::endl;
           // Assign and check nNodePerElem
           if(pE.nNodePerElem == -1)
             pE.nNodePerElem = e.nNodePerElem;
@@ -1181,7 +1282,8 @@ int feMesh2DP1::readGmsh(std::string meshName, bool curved, mapType physicalEnti
   }
 
   // Construct the intrinsic (physical) connectivities
-  for(auto &pE : _physicalEntities) {
+  for(auto &p : _physicalEntities) {
+    physicalEntity &pE = p.second;
     pE.connecElem.resize(pE.nElm);
     pE.connecNodes.resize(pE.nElm * pE.nNodePerElem);
     pE.connecEdges.resize(pE.nElm * pE.nEdgePerElem);
@@ -1190,6 +1292,14 @@ int feMesh2DP1::readGmsh(std::string meshName, bool curved, mapType physicalEnti
       entity e = x.second;
       for(auto ent : pE.listEntities) {
         if(ent == e.tag) {
+          // printf("In physical %s - geometric entity %d : \n", pE.name.c_str(), e.tagGmsh);
+            // std::vector<int> tmp = e.connecNodes;
+            // std::sort(tmp.begin(), tmp.end());
+            // tmp.erase( std::unique(tmp.begin(), tmp.end()), tmp.end() );
+            // std::cout<<tmp.size()<<std::endl;
+          printf("Copying info from entity (%d,%d) with %d elements and cnc %s to physical (%d,%d) named %s\n",
+            e.dim, e.tag, e.nElm, e.cncID.c_str(), pE.dim, pE.tag, pE.name.c_str());
+          printf("Physical has %d elements and connecElem.size() = %d\n", pE.nElm, pE.connecElem.size());
           for(int iElm = 0; iElm < e.nElm; ++iElm) {
             // Connec elem
             pE.connecElem[countElm] = e.connecElem[iElm];
@@ -1213,7 +1323,7 @@ int feMesh2DP1::readGmsh(std::string meshName, bool curved, mapType physicalEnti
   // Construct a boundary representation (b-rep) for the physical entities
   // Not used at the moment and only works if the boundary curved of all considered surfaces
   // are part of a physical entity, so commented for now.
-  
+
   // if(_gmshVersion >= 4) {
   //   for(auto const &x : _entities) {
   //     entity e = x.second;
@@ -1226,7 +1336,8 @@ int feMesh2DP1::readGmsh(std::string meshName, bool curved, mapType physicalEnti
   //           int pp = (_entities[p].numPhysicalTags > 0) ? _entities[p].physicalTags[0] : -1;
   //           std::cout<<boundedByE<<" which is part of physical "<< pp << std::endl;
   //           int tag = e.physicalTags[0] -
-  //                     1; // Physical entities are numbered starting at 1, sequentially by dimension
+  //                     1; // Physical entities are numbered starting at 1, sequentially by
+  //                     dimension
   //           int boundedByTag = _entities[p].physicalTags[0] - 1;
   //           // Basically unique() :
   //           if(std::find(_physicalEntities[tag].isBoundedBy.begin(),
@@ -1250,8 +1361,11 @@ int feMesh2DP1::readGmsh(std::string meshName, bool curved, mapType physicalEnti
   // Use the b-rep to transfer edge/face connectivity to boundary elements (actually, not even using
   // the b-rep...)
   int maxDim = 0;
-  for(auto &pE : _physicalEntities) { maxDim = fmax(maxDim, pE.dim); }
-  for(auto &pE : _physicalEntities) {
+  for(auto &pE : _physicalEntities) { 
+    maxDim = fmax(maxDim, pE.second.dim);
+  }
+  for(auto &p : _physicalEntities) {
+    physicalEntity &pE = p.second;
     if(maxDim == 2) {
       // Transfer edge connectivity to boundary edges
       if(pE.dim == maxDim - 1) {
@@ -1301,7 +1415,8 @@ int feMesh2DP1::readGmsh(std::string meshName, bool curved, mapType physicalEnti
   // }
 
   // Assign pointer to geometric space
-  for(auto &pE : _physicalEntities) {
+  for(auto &p : _physicalEntities) {
+    physicalEntity &pE = p.second;
     if(pE.cncID == "Point0D") {
       pE.geoSpace = new feSpace1DP0("xyz");
     } else if(pE.cncID == "LineP1") {
@@ -1323,7 +1438,8 @@ int feMesh2DP1::readGmsh(std::string meshName, bool curved, mapType physicalEnti
 
   // Finally, create geometric connectivities
   int nCncGeo = 0;
-  for(auto &pE : _physicalEntities) {
+  for(auto &p : _physicalEntities) {
+    physicalEntity &pE = p.second;
     // pE.connecElem.resize(pE.nElm);
     // pE.connecNodes.resize(pE.nElm*pE.nNodePerElem);
     // pE.connecEdges.resize(pE.nElm*pE.nEdgePerElem);
@@ -1375,7 +1491,8 @@ int feMesh2DP1::readGmsh(std::string meshName, bool curved, mapType physicalEnti
   _dim = maxDim;
   _nInteriorElm = 0;
   _nBoundaryElm = 0;
-  for(auto &pE : _physicalEntities) {
+  for(auto &p : _physicalEntities) {
+    physicalEntity &pE = p.second;
     if(pE.dim == _dim) _nInteriorElm += pE.nElm;
     if(pE.dim == _dim - 1) _nBoundaryElm += pE.nElm;
   }
@@ -1384,7 +1501,8 @@ int feMesh2DP1::readGmsh(std::string meshName, bool curved, mapType physicalEnti
   // duplicated
   _elements.resize(_nInteriorElm);
   int cnt = 0;
-  for(auto &pE : _physicalEntities) {
+  for(auto &p : _physicalEntities) {
+    physicalEntity &pE = p.second;
     if(_dim == 2 && pE.dim == _dim) {
       Vertex *v0, *v1, *v2;
       for(int i = 0; i < pE.nElm; ++i) {
@@ -1393,7 +1511,7 @@ int feMesh2DP1::readGmsh(std::string meshName, bool curved, mapType physicalEnti
         v2 = &_vertices[pE.connecNodes[pE.nNodePerElem * i + 2]];
         // The triangle tag is i because it is local to the pE's cncgeo, hence the tag is not
         // unique...
-        _elements[cnt++] = new Triangle(v0, v1, v2, i);
+        _elements[cnt++] = new Triangle(v0, v1, v2, i, pE.tag);
       }
     }
   }
