@@ -11,9 +11,10 @@ class Triangle {
 protected:
   Vertex *_v[3];
   int _tag;
+  int _pTag;
 
 public:
-  Triangle(Vertex *v0, Vertex *v1, Vertex *v2, int tag = -1) : _tag(tag) {
+  Triangle(Vertex *v0, Vertex *v1, Vertex *v2, int tag = -1, int pTag = -1) : _tag(tag), _pTag(pTag){
     _v[0] = v0;
     _v[1] = v1;
     _v[2] = v2;
@@ -21,6 +22,7 @@ public:
   ~Triangle() {}
 
   int getTag() { return _tag; }
+  int getPhysicalTag() { return _pTag; }
   Vertex *getVertex(int num) { return _v[num]; }
   void xyz2uvw(double xyz[3], double uvw[3]);
   bool isInside(double u, double v, double w) {
