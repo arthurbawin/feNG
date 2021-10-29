@@ -22,12 +22,13 @@
 #include "feBilinearForm.h"
 #include "feSolver.h"
 #include "feLinearSystemPETSc.h"
+#include "feLinearSystemMklPardiso.h"
 #include "feExporter.h"
 #include "feRecovery.h"
 #include "feMetric.h"
 #include "feCurvedAdapt.h"
 
-static double a = 1e-3;
+static double a = 1e-4;
 static double b = 0.3;
 static double c = 3.0;
 
@@ -98,7 +99,7 @@ int main(int argc, char **argv) {
   feFunction *funSource = new feFunction(fSource2, {kd});
   feFunction *funZero = new feFunction(fZero, {});
 
-  int nIter = 3;
+  int nIter = 1;
   std::vector<double> normL2(2 * nIter, 0.0);
   std::vector<double> normL2_U(2 * nIter, 0.0);
   std::vector<int> nElm(nIter, 0);
@@ -115,7 +116,7 @@ int main(int argc, char **argv) {
       // meshName = root + "veryCoarseMsh2.msh";
       // meshName = root + "veryCoarseWithEntities.msh";
       // meshName = root + "veryCoarseWithEntitiesWithoutPoints.msh";
-      meshName = root + "veryCoarseWithEntitiesWithoutPointsRenumbered.msh";
+      meshName = root + "veryCoarseWithEntitiesWithoutPointsRenumberedFine.msh";
       // meshName = root + "veryCoarseWithoutPointsMsh2.msh";
     }
 
@@ -175,8 +176,8 @@ int main(int argc, char **argv) {
     feNorm *normU = new feNorm(U_surface, mesh, dQuad, funSol);
     std::vector<feNorm *> norms = {normU};
 
-    feLinearSystemPETSc *linearSystem =
-      new feLinearSystemPETSc(argc, argv, formMatrices, formResiduals, metaNumber, mesh);
+    // feLinearSystemPETSc *linearSystem = new feLinearSystemPETSc(argc, argv, formMatrices, formResiduals, metaNumber, mesh);
+    feLinearSystemMklPardiso *linearSystem = new feLinearSystemMklPardiso(formMatrices, formResiduals, metaNumber, mesh);
 
     feTolerances tol{1e-9, 1e-8, 5};
 
@@ -235,7 +236,7 @@ int main(int argc, char **argv) {
     case 3: {
       std::vector<feRecovery *> rec = {recU};
       int useAnalytical = 0;
-      feCurvedAdapt foo(mesh, rec, metricOptions, metricMeshName, nextMeshName, useAnalytical,
+      feCurvedAdapt foo(mesh, rec, metricOptions, meshName, metricMeshName, nextMeshName, useAnalytical,
                         funSol);
       // system("gmsh output.msh &");
       // nextMeshName = "output.msh";

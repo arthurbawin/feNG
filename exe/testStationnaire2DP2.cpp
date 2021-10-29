@@ -14,10 +14,17 @@
 #include "feBilinearForm.h"
 #include "feSolver.h"
 #include "feLinearSystemPETSc.h"
+#include "feLinearSystemMklPardiso.h"
 #include "feExporter.h"
 
 double fSol(const double t, const std::vector<double> x, const std::vector<double> par) {
   return pow(x[0], 6);
+  // return pow(x[0],3);
+  // return pow(x[0],2);
+}
+
+double fSol2(const double t, const std::vector<double> x, const std::vector<double> par) {
+  return pow(x[1], 6);
   // return pow(x[0],3);
   // return pow(x[0],2);
 }
@@ -29,87 +36,80 @@ double fSource(const double t, const std::vector<double> x, const std::vector<do
   // return kd*2;
 }
 
+double fSource2(const double t, const std::vector<double> x, const std::vector<double> par) {
+  double kd = par[0];
+  return kd * 30. * pow(x[1], 4);
+  // return kd*6*x[0];
+  // return kd*2;
+}
+
 int main(int argc, char **argv) {
+#ifdef HAVE_PETSC
+  petscInitialize(argc, argv);
+#endif
+
   double kd = 1.0;
   feFunction *funSol = new feFunction(fSol, {kd});
+  feFunction *funSol2 = new feFunction(fSol2, {kd});
   feFunction *funSource = new feFunction(fSource, {kd});
+  feFunction *funSource2 = new feFunction(fSource2, {kd});
 
-  int nIter = 3;
+  int nIter = 1;
   std::vector<double> normL2(2 * nIter, 0.0);
   std::vector<int> nElm(nIter, 0);
 
   for(int iter = 0; iter < nIter; ++iter) {
-    std::string meshName = "../../data/square" + std::to_string(iter + 1) + ".msh";
-    // std::string meshName = "../../data/squareCoarse1.msh";
+    std::string meshName = "square.msh";
 
     feMesh2DP1 *mesh = new feMesh2DP1(meshName, false);
     nElm[iter] = mesh->getNbInteriorElems();
-    // mesh->printInfo();
 
-    feSpace1DP4 U_angle = feSpace1DP4(mesh, "U", "Angle", funSol);
-    feSpace1DP4 U_haut = feSpace1DP4(mesh, "U", "Haut", funSol);
-    feSpace1DP4 U_gauche = feSpace1DP4(mesh, "U", "Gauche", funSol);
-    feSpaceTriP4 U_surface = feSpaceTriP4(mesh, "U", "Surface", funSol);
+    feSpace1DP3 U_bord = feSpace1DP3(mesh, "U", "Bord", funSol);
+    feSpaceTriP3 U_surface = feSpaceTriP3(mesh, "U", "Domaine", funSol);
 
-    std::vector<feSpace *> fespace = {&U_angle, &U_haut, &U_gauche, &U_surface};
-    std::vector<feSpace *> feEssBC = {&U_angle, &U_haut, &U_gauche};
+    std::vector<feSpace *> fespace = {&U_bord, &U_surface};
+    std::vector<feSpace *> feEssBC = {&U_bord};
 
     feMetaNumber *metaNumber = new feMetaNumber(mesh, fespace, feEssBC);
-    // metaNumber->printNumberings();
-    // metaNumber->printCodes();
 
     feSolution *sol = new feSolution(mesh, fespace, feEssBC, metaNumber);
-    // sol->initializeUnknowns(mesh, metaNumber);
-    // sol->initializeEssentialBC(mesh, metaNumber);
 
-    // Formes (bi)lineaires
-    int nQuad = 16; // TODO : change to deg
+    int nQuad = 8;
     std::vector<feSpace *> spaceDiffusion2D_U = {&U_surface};
-    feBilinearForm *diffU =
-      new feBilinearForm(spaceDiffusion2D_U, mesh, nQuad, new feSysElm_2D_Diffusion(kd, nullptr));
     std::vector<feSpace *> spaceSource2D_U = {&U_surface};
-    feBilinearForm *sourceU =
-      new feBilinearForm(spaceSource2D_U, mesh, nQuad, new feSysElm_2D_Source(1.0, funSource));
+    feBilinearForm *diffU = new feBilinearForm(spaceDiffusion2D_U, mesh, nQuad, new feSysElm_2D_Diffusion(kd, nullptr));
+    feBilinearForm *sourceU = new feBilinearForm(spaceSource2D_U, mesh, nQuad, new feSysElm_2D_Source(1.0, funSource));
 
     std::vector<feBilinearForm *> formMatrices = {diffU};
     std::vector<feBilinearForm *> formResiduals = {diffU, sourceU};
 
-    // for(int i = 0; i < U_surface.getNbElm(); ++i){
-    //   diffU->computeMatrix(metaNumber, mesh, sol, i);
-    //   diffU->computeResidual(metaNumber, mesh, sol, i);
-    //   sourceU->computeResidual(metaNumber, mesh, sol, i);
-    // }
-
     feNorm *norm = new feNorm(&U_surface, mesh, nQuad, funSol);
     std::vector<feNorm *> norms = {norm};
-    // double integral = 0.0;
-    // norm->computeL2Norm(metaNumber, sol, mesh);
-    // integral = norm->getNorm();
-    // std::cout<<"Norme = "<<integral<<std::endl;
-    // norm->computeArea(metaNumber, sol, mesh);
-    // integral = norm->getNorm();
-    // std::cout<<"Area = "<<integral<<std::endl;
-    // norm->computeIntegral(metaNumber, sol, mesh, funSol);
-    // integral = norm->getNorm();
-    // std::cout<<"Integrale = "<<integral<<std::endl;
-    feLinearSystemPETSc *linearSystem =
-      new feLinearSystemPETSc(argc, argv, formMatrices, formResiduals, metaNumber, mesh);
-    linearSystem->initialize();
-    // linearSystem->setRecomputeStatus(true);
-    // linearSystem->assembleMatrices(sol);
-    // linearSystem->viewMatrix();
-    // linearSystem->assembleTestMatrices(sol);
-    // linearSystem->viewTestMatrix();
-    // linearSystem->assembleResiduals(sol);
+
     feTolerances tol{1e-9, 1e-8, 3};
-    solveStationary(&normL2[2 * iter], tol, metaNumber, linearSystem, formMatrices, formResiduals,
-                    sol, norms, mesh);
-    linearSystem->finalize();
 
-    // sol->initializeUnknowns(mesh, metaNumber);
+    // long int cnt = 0;
+    // #pragma omp parallel for private(cnt)
+    // for(int i = 0; i < 100; ++i){
+    //   // printf("Printing %3d from thread %d\n", i, omp_get_thread_num());
+    //   printf("Thread %d has printed %2d times\n", omp_get_thread_num(), cnt++);
+    // }
 
-    // std::string vtkFile = "../../data/square" + std::to_string(iter+1) + ".vtk";
-    // feExporterVTK writer(vtkFile, mesh, sol, metaNumber, fespace);
+    // printf("Measuring time from here\n");
+    // tic();
+    feLinearSystemMklPardiso *linearSystem;
+    linearSystem = new feLinearSystemMklPardiso(formMatrices, formResiduals, metaNumber, mesh);
+    // toc();
+
+    
+
+    // return 1;
+
+    StationarySolver *solver = new StationarySolver(tol, metaNumber, linearSystem, sol, norms, mesh);
+    solver->makeSteps(0, fespace);
+
+    std::string vtkFile = "sol.vtk";
+    feExporterVTK writer(vtkFile, mesh, sol, metaNumber, fespace);
 
     delete norm;
     delete linearSystem;
@@ -130,6 +130,10 @@ int main(int argc, char **argv) {
   printf("%12s \t %12s \t %12s\n", "nElm", "||E||", "p");
   for(int i = 0; i < nIter; ++i)
     printf("%12d \t %12.6e \t %12.6e\n", nElm[i], normL2[2 * i], normL2[2 * i + 1]);
+
+#ifdef HAVE_PETSC
+  petscFinalize();
+#endif
 
   return 0;
 }
