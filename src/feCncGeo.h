@@ -39,8 +39,13 @@ public:
       _connecNodes(connecNodes), _connecElem(connecElem), _connecEdges(connecEdges),
       _connecFaces(connecFaces), _space(space) {
     if(connecElem.size() == 0) _connecElem.resize(nElm);
+    // std::cout<<"before "<<connecNodes.size()<<std::endl;
     std::sort(connecNodes.begin(), connecNodes.end());
     _nNod = std::unique(connecNodes.begin(), connecNodes.end()) - connecNodes.begin();
+    // std::cout<<_nNod<<std::endl;
+    // connecNodes.erase( std::unique(connecNodes.begin(), connecNodes.end()), connecNodes.end() );
+    // _nNod = connecNodes.size();
+    // std::cout<<_nNod<<std::endl;
   };
   ~feCncGeo() {
     // if(_space != nullptr)
@@ -60,8 +65,10 @@ public:
 
   std::vector<int> getNodeConnectivityCopy() { return _connecNodes; }
   std::vector<int> &getNodeConnectivityRef() { return _connecNodes; }
+  std::vector<int> &getEdgeConnectivityRef() { return _connecEdges; }
   std::vector<int> &getElemConnectivityRef() { return _connecElem; }
 
+  int getNodeConnectivity(int iNode){ return _connecNodes[iNode]; }
   int getNodeConnectivity(int numElem, int iNode) {
     return _connecNodes[_nNodPerElm * numElem + iNode];
   }

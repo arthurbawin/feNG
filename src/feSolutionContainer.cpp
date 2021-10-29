@@ -16,6 +16,9 @@ void feSolutionContainer::initialize(feSolution *sol, feMesh *mesh, feMetaNumber
   sol->initializeUnknowns(mesh, metaNumber);
   sol->initializeEssentialBC(mesh, metaNumber);
   _sol[0] = sol->getSolutionCopy();
+  for(int i = 0; i < _nSol-1; ++i){
+    _sol[i].resize(_nDofs, 0.0);
+  }
   _fResidual[0].resize(_nDofs);
 }
 
@@ -33,30 +36,30 @@ void feStationarySolution::computeSolTimeDerivative(feSolution *sol, feLinearSys
 }
 
 void feSolutionBDF2::computeSolTimeDerivative(feSolution *sol, feLinearSystem *linearSystem) {
-  std::cout << "_sol[0][0]   " << _sol[0][0] << "    _sol[1][0]   " << _sol[1][0]
-            << "    _sol[2][0]   " << _sol[2][0] << std::endl;
+  // std::cout << "_sol[0][0]   " << _sol[0][0] << "    _sol[1][0]   " << _sol[1][0]
+            // << "    _sol[2][0]   " << _sol[2][0] << std::endl;
   for(int i = 0; i < _nDofs; ++i)
     sol->setSolDotAtDOF(i, _cn[0] * _sol[0][i] + _cn[1] * _sol[1][i] + _cn[2] * _sol[2][i]);
   // std::cout<<"coeffs"<<_cn[0]<<","<<_cn[1]<<","<<_cn[2]<<"timestep"<<_t[0]<<_t[1]<<std::endl;
 }
 
 void feSolutionBDF1::computeSolTimeDerivative(feSolution *sol, feLinearSystem *linearSystem) {
-  std::cout << "_sol[0][0]   " << _sol[0][0] << "    _sol[1][0]   " << _sol[1][0] << std::endl;
+  // std::cout << "_sol[0][0]   " << _sol[0][0] << "    _sol[1][0]   " << _sol[1][0] << std::endl;
   for(int i = 0; i < _nDofs; ++i) sol->setSolDotAtDOF(i, _cn[0] * _sol[0][i] + _cn[1] * _sol[1][i]);
 
   // std::cout<<"coeffs"<<_cn[0]<<","<<_cn[1]<<","<<_cn[2]<<"timestep"<<_t[0]<<_t[1]<<std::endl;
 }
 
 void feSolutionDCF::computeSolTimeDerivative(feSolution *sol, feLinearSystem *linearSystem) {
-  std::cout << "_sol[0][0]   " << _sol[0][0] << "    _sol[1][0]   " << _sol[1][0]
-            << "    _sol[2][0]   " << _sol[2][0] << std::endl;
+  // std::cout << "_sol[0][0]   " << _sol[0][0] << "    _sol[1][0]   " << _sol[1][0]
+            // << "    _sol[2][0]   " << _sol[2][0] << std::endl;
   for(int i = 0; i < _nDofs; ++i)
     sol->setSolDotAtDOF(i, _cn[0] * _sol[0][i] + _cn[1] * _sol[1][i] + _cn[2] * _sol[2][i]);
   linearSystem->applyCorrectionToResidual(-1.0, _d);
 }
 
 void feSolutionDC2F::computeSolTimeDerivative(feSolution *sol, feLinearSystem *linearSystem) {
-  std::cout << "_sol[0][0]   " << _sol[0][0] << "    _sol[1][0]   " << _sol[1][0] << std::endl;
+  // std::cout << "_sol[0][0]   " << _sol[0][0] << "    _sol[1][0]   " << _sol[1][0] << std::endl;
   for(int i = 0; i < _nDofs; ++i) {
     sol->setSolDotAtDOF(i, _cn[0] * _sol[0][i] + _cn[1] * _sol[1][i]);
   }

@@ -63,7 +63,7 @@ public:
   void setSolDotAtDOF(int iDOF, double val) { _dsoldt[iDOF] = val; }
   void setSolDotToZero();
 
-  void printSol();
+  void printSol(std::string file = "");
 };
 
 #endif

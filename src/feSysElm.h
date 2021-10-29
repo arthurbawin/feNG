@@ -32,7 +32,7 @@ public:
                          feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn,
                          double **Ae) = 0;
   virtual void computeBe(std::vector<double> &J, int numElem, std::vector<feSpace *> &intSpace,
-                         feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn,
+                         feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn, double dt,
                          double *Be) = 0;
 };
 
@@ -52,7 +52,7 @@ public:
                          feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn,
                          double **Ae);
   virtual void computeBe(std::vector<double> &J, int numElem, std::vector<feSpace *> &intSpace,
-                         feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn,
+                         feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn, double dt,
                          double *Be);
 };
 
@@ -72,7 +72,7 @@ public:
                          feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn,
                          double **Ae){};
   virtual void computeBe(std::vector<double> &J, int numElem, std::vector<feSpace *> &intSpace,
-                         feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn,
+                         feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn, double dt,
                          double *Be);
 };
 
@@ -92,7 +92,7 @@ public:
                          feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn,
                          double **Ae){};
   virtual void computeBe(std::vector<double> &J, int numElem, std::vector<feSpace *> &intSpace,
-                         feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn,
+                         feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn, double dt,
                          double *Be);
 };
 
@@ -113,7 +113,7 @@ public:
                          feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn,
                          double **Ae){};
   virtual void computeBe(std::vector<double> &J, int numElem, std::vector<feSpace *> &intSpace,
-                         feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn,
+                         feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn, double dt,
                          double *Be);
 };
 
@@ -134,7 +134,7 @@ public:
                          feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn,
                          double **Ae);
   virtual void computeBe(std::vector<double> &J, int numElem, std::vector<feSpace *> &intSpace,
-                         feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn,
+                         feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn, double dt,
                          double *Be);
 };
 
@@ -155,7 +155,28 @@ public:
                          feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn,
                          double **Ae);
   virtual void computeBe(std::vector<double> &J, int numElem, std::vector<feSpace *> &intSpace,
+                         feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn, double dt,
+                         double *Be);
+};
+
+class feSysElm_2D_Masse : public feSysElm {
+protected:
+  feFunction *_fct;
+  double _par; // Parametre
+  int _idU;
+  std::vector<double> _feU;
+  std::vector<double> _feUdx;
+
+public:
+  feSysElm_2D_Masse(double par, feFunction *fct) : _fct(fct), _par(par){};
+  virtual ~feSysElm_2D_Masse() {}
+
+  virtual void createElementarySystem(std::vector<feSpace *> &space);
+  virtual void computeAe(std::vector<double> &J, int numElem, std::vector<feSpace *> &intSpace,
                          feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn,
+                         double **Ae);
+  virtual void computeBe(std::vector<double> &J, int numElem, std::vector<feSpace *> &intSpace,
+                         feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn, double dt,
                          double *Be);
 };
 
@@ -177,7 +198,7 @@ public:
                          feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn,
                          double **Ae){};
   virtual void computeBe(std::vector<double> &J, int numElem, std::vector<feSpace *> &intSpace,
-                         feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn,
+                         feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn, double dt,
                          double *Be);
 };
 
@@ -199,7 +220,32 @@ public:
                          feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn,
                          double **Ae);
   virtual void computeBe(std::vector<double> &J, int numElem, std::vector<feSpace *> &intSpace,
+                         feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn, double dt,
+                         double *Be);
+};
+
+class feSysElm_2D_Advection : public feSysElm {
+protected:
+  feVectorFunction *_fct; // The imposed velocity field
+  double _par; // Parametre
+  int _idU;
+  std::vector<double> _feU;
+  std::vector<double> _feUdx;
+  std::vector<double> _feUdy;
+
+public:
+  feSysElm_2D_Advection(double par, feVectorFunction *fct) : _fct(fct), _par(par) { 
+    _ID = "adv2D";
+    matrixAnalyticalStatus = false;
+  };
+  virtual ~feSysElm_2D_Advection() {}
+
+  virtual void createElementarySystem(std::vector<feSpace *> &space);
+  virtual void computeAe(std::vector<double> &J, int numElem, std::vector<feSpace *> &intSpace,
                          feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn,
+                         double **Ae);
+  virtual void computeBe(std::vector<double> &J, int numElem, std::vector<feSpace *> &intSpace,
+                         feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn, double dt,
                          double *Be);
 };
 
@@ -230,7 +276,7 @@ public:
                          feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn,
                          double **Ae);
   virtual void computeBe(std::vector<double> &J, int numElem, std::vector<feSpace *> &intSpace,
-                         feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn,
+                         feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn, double dt,
                          double *Be);
 };
 
@@ -251,7 +297,9 @@ protected:
   std::vector<double> _feP;
 
 public:
-  feSysElm_2D_NavierStokes(std::vector<double> &par, feVectorFunction *fct, feFunction *viscosityFct = nullptr) : _fct(fct), _par(par), _viscosityFct(viscosityFct) {
+  feSysElm_2D_NavierStokes(std::vector<double> &par, feVectorFunction *fct,
+                           feFunction *viscosityFct = nullptr)
+    : _fct(fct), _par(par), _viscosityFct(viscosityFct) {
     _ID = "NavierStokes2D";
     matrixAnalyticalStatus = true;
   };
@@ -262,7 +310,41 @@ public:
                          feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn,
                          double **Ae);
   virtual void computeBe(std::vector<double> &J, int numElem, std::vector<feSpace *> &intSpace,
+                         feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn, double dt,
+                         double *Be);
+};
+
+// Outflow boundary condition
+class feSysElm_1D_DirectionalDoNothing : public feSysElm {
+protected:
+  feVectorFunction *_fct;
+  feFunction *_viscosityFct;
+  std::vector<double> &_par; // Parametre
+  int _idU;
+  int _idV;
+  std::vector<double> _feU;
+  std::vector<double> _feUdx;
+  std::vector<double> _feUdy;
+  std::vector<double> _feV;
+  std::vector<double> _feVdx;
+  std::vector<double> _feVdy;
+
+public:
+  feSysElm_1D_DirectionalDoNothing(std::vector<double> &par, feVectorFunction *fct,
+                           feFunction *viscosityFct = nullptr)
+    : _fct(fct), _par(par), _viscosityFct(viscosityFct) {
+    _ID = "DirectionalDoNothing1D";
+    matrixAnalyticalStatus = false;
+  };
+  virtual ~feSysElm_1D_DirectionalDoNothing() {}
+
+  virtual void createElementarySystem(std::vector<feSpace *> &space);
+  // Matrix not implemented : finite differences only
+  virtual void computeAe(std::vector<double> &J, int numElem, std::vector<feSpace *> &intSpace,
                          feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn,
+                         double **Ae);
+  virtual void computeBe(std::vector<double> &J, int numElem, std::vector<feSpace *> &intSpace,
+                         feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn, double dt,
                          double *Be);
 };
 

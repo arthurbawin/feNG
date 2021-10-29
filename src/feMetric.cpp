@@ -16,10 +16,10 @@ feMetric::feMetric(feRecovery *recovery, feMetricOptions metricOptions)
   int degSol = recovery->getDegreeSolution();
   int dimRecovery = recovery->getDimRecovery();
 
-  switch(_options.computationMethod){
-    case 1 :
-      printf("In feMetric : Computing metric field with the method of Hecht & Kuate.\n");
-      {
+  switch(_options.computationMethod) {
+  case 1:
+    printf("In feMetric : Computing metric field with the method of Hecht & Kuate.\n");
+    {
       std::vector<int> &expX = recovery->getXExponentsRecovery();
       std::vector<int> &expY = recovery->getYExponentsRecovery();
 
@@ -107,20 +107,15 @@ feMetric::feMetric(feRecovery *recovery, feMetricOptions metricOptions)
       free(yNew);
       free(xC);
       free(yC);
-      }
+    }
 
-      break;
-    case 2 : 
-      printf("In feMetric : Computing metric field with the method of Coulaud & Loseille.\n");
-      break;
-    case 3 :
-      printf("In feMetric : Computing metric field with JF's method.\n");
-
-      break;
-    default :
-      printf("In feMetric : Error : Unknown metric computation method.\n");
+    break;
+  case 2:
+    printf("In feMetric : Computing metric field with the method of Coulaud & Loseille.\n");
+    break;
+  case 3: printf("In feMetric : Computing metric field with JF's method.\n"); break;
+  default: printf("In feMetric : Error : Unknown metric computation method.\n");
   }
-  
 }
 
 void feMetric::metricScaling() {
@@ -698,9 +693,7 @@ void feMetric::writeSizeFieldSol2D(std::string solFileName) {
   for(auto v : vertices) {
     SMetric3 M = _metrics[v];
     if(dim == 2)
-      fprintf(myfile,
-              "%+-10.12f \t %+-10.12f \t %+-10.12f\n",
-              M(0, 0), M(0, 1), M(1, 1));
+      fprintf(myfile, "%+-10.12f \t %+-10.12f \t %+-10.12f\n", M(0, 0), M(0, 1), M(1, 1));
   }
 
   fprintf(myfile, "End");
@@ -788,10 +781,9 @@ void feMetric::writeSizeFieldGmsh(std::string meshName, std::string metricMeshNa
 }
 
 void feMetric::drawEllipsoids(std::string posFile) {
+  FILE *f = fopen(posFile.c_str(), "w");
 
-  FILE* f = fopen(posFile.c_str(), "w");
-
-  fprintf(f,"View \"ellipsesFromSimulation\"{\n");
+  fprintf(f, "View \"ellipsesFromSimulation\"{\n");
 
   double factor = 10.;
   int nt = 30;
@@ -802,15 +794,19 @@ void feMetric::drawEllipsoids(std::string posFile) {
   for(auto v : vertices) {
     SMetric3 m = _metrics[v];
     Vertex *vv = _recovery->_mesh->getVertex(v);
-    getEllipsePoints(factor * m(0,0), factor * 2.0*m(0,1), factor * m(1,1), vv->x(), vv->y(), xP, yP);
-    for(int i = 0; i < nt; ++i){
-      if(i != nt-1){
-        fprintf(f,"SL(%.16g,%.16g,%.16g,%.16g,%.16g,%.16g){%u, %u};\n", xP[i], yP[i], 0., xP[i+1], yP[i+1], 0., 1, 1);
-      } else{
-        fprintf(f,"SL(%.16g,%.16g,%.16g,%.16g,%.16g,%.16g){%u, %u};\n", xP[i], yP[i], 0., xP[0], yP[0], 0., 1, 1);
+    getEllipsePoints(factor * m(0, 0), factor * 2.0 * m(0, 1), factor * m(1, 1), vv->x(), vv->y(),
+                     xP, yP);
+    for(int i = 0; i < nt; ++i) {
+      if(i != nt - 1) {
+        fprintf(f, "SL(%.16g,%.16g,%.16g,%.16g,%.16g,%.16g){%u, %u};\n", xP[i], yP[i], 0.,
+                xP[i + 1], yP[i + 1], 0., 1, 1);
+      } else {
+        fprintf(f, "SL(%.16g,%.16g,%.16g,%.16g,%.16g,%.16g){%u, %u};\n", xP[i], yP[i], 0., xP[0],
+                yP[0], 0., 1, 1);
       }
     }
   }
 
-  fprintf(f,"};"); fclose(f);
+  fprintf(f, "};");
+  fclose(f);
 }

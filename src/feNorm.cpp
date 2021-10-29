@@ -41,7 +41,8 @@ void feNorm::computeL2Norm(feMetaNumber *metaNumber, feSolution *sol, feMesh *me
   double normL2 = 0.0, solInt, solRef, J, t = sol->getCurrentTime();
   int nElm = _intSpace->getNbElm();
 
-  std::cout<<"Computing norm of "<<_intSpace->getFieldID()<<" on "<<nElm<<" elements"<<std::endl;
+  std::cout << "Computing norm of " << _intSpace->getFieldID() << " on " << nElm << " elements"
+            << std::endl;
   for(int iElm = 0; iElm < nElm; ++iElm) {
     _intSpace->initializeAddressingVector(metaNumber->getNumbering(_intSpace->getFieldID()), iElm);
     _intSpace->initializeSolution(sol);
@@ -72,7 +73,7 @@ void feNorm::computeL2Norm(feMetaNumber *metaNumber, feSolution *sol, feMesh *me
 
       // printf("Solution at (%f,%f,%f) = %10.10f - ref = %10.10f\n", x[0], x[1], x[2], solInt,
       // solRef);
-      normL2 += (solInt - solRef) * (solInt - solRef) * J * w[k];
+      normL2 += (solInt - solRef) * (solInt - solRef) * (J) * w[k];
     }
   }
   norm = sqrt(normL2);
