@@ -15,12 +15,14 @@
 #include "feSysElm.h"
 #include "feBilinearForm.h"
 #include "feSolver.h"
-#include "feLinearSystemMklPardiso.h"
 #include "feExporter.h"
+
 #define USING_PETSC
 #ifdef HAVE_PETSC
-
 #include "feLinearSystemPETSc.h"
+#endif
+#ifdef HAVE_MKL
+#include "feLinearSystemMklPardiso.h"
 #endif
 
 // PB 7-71
@@ -218,7 +220,7 @@ int main(int argc, char **argv) {
 
   for(int iter = 0; iter < nIter; ++iter) {
     // std::string meshName = "../../data/squareTest2.msh";
-    std::string meshName = "../../data/circleP2_" + std::to_string(iter+1) + ".msh";
+    std::string meshName = "../../data/Circle/circleP2_" + std::to_string(iter+1) + ".msh";
     // Maillage
      feMesh2DP1 *mesh = new feMesh2DP1(meshName, false);
      nElm[iter] = mesh->getNbInteriorElems();
@@ -276,45 +278,47 @@ int main(int argc, char **argv) {
     // Systeme lineaire
     // feLinearSystemPETSc *linearSystem =
     // new feLinearSystemPETSc(argc, argv, formMatrices, formResiduals, metaNumber, mesh);
-    feLinearSystemMklPardiso *linearSystem =
-    new feLinearSystemMklPardiso( formMatrices, formResiduals, metaNumber, mesh);
-#ifdef HAVE_PETSC
-    // linearSystem->initialize();
-    // Resolution
-    feTolerances tol{1e-9, 1e-9, 20};
-    std::string CodeIni = "BDF1/DCF"; // Define the way of initialization |"SolEx"->for exact
-                                      // solution|  |"BDF1/DCF"->using only initial conditions|
-    DC3Solver solver(tol, metaNumber, linearSystem, solDC3, norms, mesh, t0, t1, nTimeSteps,
-                     CodeIni);
-    solver.makeSteps(nTimeSteps, fespace);
-    std::vector<double> &normL2BDF2 = solver.getNorm(0);
-    std::vector<double> &normL2DC3 = solver.getNorm(1);
-    std::vector<double> &normL2_BDF2_Lambda_bord = solver.getNorm(2);
-    std::vector<double> &normL2_DC3_Lambda_bord = solver.getNorm(4);
-    for(int i=0; i<normL2_BDF2_Lambda_bord.size(); i++) normL2_BDF2_Lambda_bord[i] = fabs(normL2_BDF2_Lambda_bord[i]);
-    for(int i=0; i<normL2_DC3_Lambda_bord.size(); i++)  normL2_DC3_Lambda_bord[i]  = fabs(normL2_DC3_Lambda_bord[i]);
-    normL2_BDF2[2 * iter] = *std::max_element(normL2BDF2.begin(), normL2BDF2.end());
-    normL2_DC3[2 * iter] = *std::max_element(normL2DC3.begin(), normL2DC3.end());
-    normBDF2_bord[2 * iter] =
-      *std::max_element(normL2_BDF2_Lambda_bord.begin(), normL2_BDF2_Lambda_bord.end());
-    normBDF2_bord[2 * iter] =
-      *std::max_element(normL2_BDF2_Lambda_bord.begin(), normL2_BDF2_Lambda_bord.end());
-    normDC3_bord[2 * iter] = *std::max_element(normL2_DC3_Lambda_bord.begin(), normL2_DC3_Lambda_bord.end());
-    normDC3_bord[2 * iter] = *std::max_element(normL2_DC3_Lambda_bord.begin(), normL2_DC3_Lambda_bord.end());
+#ifdef HAVE_MKL     
+      feLinearSystemMklPardiso *linearSystem =
+      new feLinearSystemMklPardiso( formMatrices, formResiduals, metaNumber, mesh);
+  #ifdef HAVE_PETSC
+      // linearSystem->initialize();
+      // Resolution
+      feTolerances tol{1e-9, 1e-9, 20};
+      std::string CodeIni = "BDF1/DCF"; // Define the way of initialization |"SolEx"->for exact
+                                        // solution|  |"BDF1/DCF"->using only initial conditions|
+      DC3Solver solver(tol, metaNumber, linearSystem, solDC3, norms, mesh, t0, t1, nTimeSteps,
+                       CodeIni);
+      solver.makeSteps(nTimeSteps, fespace);
+      std::vector<double> &normL2BDF2 = solver.getNorm(0);
+      std::vector<double> &normL2DC3 = solver.getNorm(1);
+      std::vector<double> &normL2_BDF2_Lambda_bord = solver.getNorm(2);
+      std::vector<double> &normL2_DC3_Lambda_bord = solver.getNorm(4);
+      for(int i=0; i<normL2_BDF2_Lambda_bord.size(); i++) normL2_BDF2_Lambda_bord[i] = fabs(normL2_BDF2_Lambda_bord[i]);
+      for(int i=0; i<normL2_DC3_Lambda_bord.size(); i++)  normL2_DC3_Lambda_bord[i]  = fabs(normL2_DC3_Lambda_bord[i]);
+      normL2_BDF2[2 * iter] = *std::max_element(normL2BDF2.begin(), normL2BDF2.end());
+      normL2_DC3[2 * iter] = *std::max_element(normL2DC3.begin(), normL2DC3.end());
+      normBDF2_bord[2 * iter] =
+        *std::max_element(normL2_BDF2_Lambda_bord.begin(), normL2_BDF2_Lambda_bord.end());
+      normBDF2_bord[2 * iter] =
+        *std::max_element(normL2_BDF2_Lambda_bord.begin(), normL2_BDF2_Lambda_bord.end());
+      normDC3_bord[2 * iter] = *std::max_element(normL2_DC3_Lambda_bord.begin(), normL2_DC3_Lambda_bord.end());
+      normDC3_bord[2 * iter] = *std::max_element(normL2_DC3_Lambda_bord.begin(), normL2_DC3_Lambda_bord.end());
+  #endif
+      std::string vtkFile = "../../data/TestDC3.vtk";
+      feExporterVTK writer(vtkFile, mesh, solDC3, metaNumber, fespace);
+      delete normBDF2;
+      delete normDC3;
+      delete int_Lambda_BDF2;
+      delete int_Lambda_DC3;
+      delete linearSystem;
+      delete masse_U_M2D;
+      delete source_U_M2D;
+      delete diff_U_M2D;
+      delete solDC3;
+      delete metaNumber;
+      delete mesh;
 #endif
-    std::string vtkFile = "../../data/TestDC3.vtk";
-    feExporterVTK writer(vtkFile, mesh, solDC3, metaNumber, fespace);
-    delete normBDF2;
-    delete normDC3;
-    delete int_Lambda_BDF2;
-    delete int_Lambda_DC3;
-    delete linearSystem;
-    delete masse_U_M2D;
-    delete source_U_M2D;
-    delete diff_U_M2D;
-    delete solDC3;
-    delete metaNumber;
-    delete mesh;
   }
   delete funSource;
   delete funSol;

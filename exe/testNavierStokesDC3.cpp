@@ -18,7 +18,7 @@
 #ifdef HAVE_PETSC
 #include "feLinearSystemPETSc.h"
 #endif
-#ifdef HAVE_PARDISO
+#ifdef HAVE_MKL
 #include "feLinearSystemMklPardiso.h"
 #endif
 
@@ -165,7 +165,7 @@ int main(int argc, char **argv) {
 
     // feLinearSystemPETSc *linearSystem =
     // new feLinearSystemPETSc(argc, argv, formMatrices, formResiduals, metaNumber, mesh);
-#ifdef HAVE_PARDISO    
+#ifdef HAVE_MKL    
     feLinearSystemMklPardiso *linearSystem =
     new feLinearSystemMklPardiso( formMatrices, formResiduals, metaNumber, mesh);
   #ifdef HAVE_PETSC
