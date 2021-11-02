@@ -207,7 +207,6 @@ int main(int argc, char **argv) {
       normL2_V[2 * iter] = normV->getNorm();
       normL2_P[2 * iter] = normP->getNorm();
   #endif
-#endif  
     // std::string vtkFile = "../../data/TestNS_DC3.vtk";
     // feExporterVTK writer(vtkFile, mesh, sol, metaNumber, fespace);
     delete normU;
@@ -218,6 +217,7 @@ int main(int argc, char **argv) {
     delete sol;
     delete metaNumber;
     delete mesh;
+#endif      
   }
   delete funSource;
   delete funSolU;
