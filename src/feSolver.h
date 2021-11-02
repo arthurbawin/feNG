@@ -40,6 +40,7 @@ protected:
   int _currentStep;
 
   std::vector<std::vector<double> > _normL2;
+  std::vector<std::vector<double> > _IntBoundary;
 
   std::string _CodeIni; // Code pour connaitre le mode d'initialisation    |"SolExacte"->avec la
                         // solution exacte|  |"BDF1/DCF"->en partant d'un BDF1 puis DCF|
@@ -173,6 +174,7 @@ public:
   }
 
   std::vector<double> &getNorm(int iNorm) { return _normL2[iNorm]; };
+  std::vector<double> &getInt(int iNorm) { return _normL2[iNorm]; };
 
   virtual void makeSteps(int nSteps, std::vector<feSpace *> &spaces);
 };

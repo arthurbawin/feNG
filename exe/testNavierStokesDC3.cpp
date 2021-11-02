@@ -13,8 +13,12 @@
 #include "feSysElm.h"
 #include "feBilinearForm.h"
 #include "feSolver.h"
-#include "feLinearSystemPETSc.h"
 #include "feExporter.h"
+#include "feLinearSystemMklPardiso.h"
+#ifdef HAVE_PETSC
+#include "feLinearSystemPETSc.h"
+#endif
+
 
 double fSolU(const double t, const std::vector<double> &pos, const std::vector<double> &par) {
   double x = pos[0];
@@ -72,6 +76,9 @@ void fSource(const double t, const std::vector<double> &pos, const std::vector<d
 }
 
 int main(int argc, char **argv) {
+#ifdef USING_PETSC
+  petscInitialize(argc, argv);
+#endif
   double rho = 1.0;
   double mu = 1.0;
   std::vector<double> stokesParam = {rho, mu};
@@ -83,7 +90,7 @@ int main(int argc, char **argv) {
   feFunction *funOne = new feFunction(fOne, {});
   feVectorFunction *funSource = new feVectorFunction(fSource, stokesParam);
 
-  int nIter = 1;
+  int nIter = 2;
   std::vector<double> normL2_U(2 * nIter, 0.0);
   std::vector<double> normL2_V(2 * nIter, 0.0);
   std::vector<double> normL2_P(2 * nIter, 0.0);
@@ -151,14 +158,16 @@ int main(int argc, char **argv) {
     // normP->computeL2Norm(metaNumber, sol, mesh);
     // std::cout<<"fooP "<<normP->getNorm()<<std::endl;
     std::vector<feNorm *> norms = {normU, normV, normP};
-    feLinearSystemPETSc *linearSystem =
-      new feLinearSystemPETSc(argc, argv, formMatrices, formResiduals, metaNumber, mesh);
-    linearSystem->initialize();
-    // linearSystem->assembleResiduals(sol);
-    // linearSystem->assembleMatrices(sol);
-    feTolerances tol{1e-9, 1e-8, 10};
-    // solveStationary(&normL2_U[2*iter], tol, metaNumber, linearSystem, formMatrices,
-    // formResiduals, sol, norms, mesh);
+    // Systeme lineaire
+
+    // feLinearSystemPETSc *linearSystem =
+    // new feLinearSystemPETSc(argc, argv, formMatrices, formResiduals, metaNumber, mesh);
+    feLinearSystemMklPardiso *linearSystem =
+    new feLinearSystemMklPardiso( formMatrices, formResiduals, metaNumber, mesh);
+#ifdef HAVE_PETSC
+    // linearSystem->initialize();
+    // Resolution
+    feTolerances tol{1e-9, 1e-9, 20};
 
     double t0 = 0.;
     double t1 = 1.0;
@@ -183,8 +192,6 @@ int main(int argc, char **argv) {
       maxNormL2DC3_P[2 * iter] = fmax(maxNormL2DC3_P[2 * iter], normL2DC3[3 * i + 2]);
     }
 
-    linearSystem->finalize();
-
     // std::string vtkFile = "../../data/solutionManufacturee" + std::to_string(iter+1) + ".vtk";
     // std::string vtkFile = "../../data/taylorGreenUnsteady" + std::to_string(iter+1) + ".vtk";
     // feExporterVTK writer(vtkFile, mesh, sol, metaNumber, fespace);
@@ -195,7 +202,9 @@ int main(int argc, char **argv) {
     normL2_U[2 * iter] = normU->getNorm();
     normL2_V[2 * iter] = normV->getNorm();
     normL2_P[2 * iter] = normP->getNorm();
-
+#endif
+    // std::string vtkFile = "../../data/TestNS_DC3.vtk";
+    // feExporterVTK writer(vtkFile, mesh, sol, metaNumber, fespace);
     delete normU;
     delete normV;
     delete normP;
@@ -239,6 +248,8 @@ int main(int argc, char **argv) {
     printf("%12d \t %12.6e \t %12.6e\t %12.6e \t %12.6e\t %12.6e \t %12.6e\n", nElm[i],
            maxNormL2DC3_U[2 * i], maxNormL2DC3_U[2 * i + 1], maxNormL2DC3_V[2 * i],
            maxNormL2DC3_V[2 * i + 1], maxNormL2DC3_P[2 * i], maxNormL2DC3_P[2 * i + 1]);
-
+#ifdef USING_PETSC
+  petscFinalize();
+#endif
   return 0;
 }

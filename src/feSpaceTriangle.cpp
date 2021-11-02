@@ -45,6 +45,49 @@ void feSpaceTriP1::initializeAddressingVector(feNumber *number, int numElem) {
 }
 
 // feSpace used to interpolate on a geometric connectivity
+feSpaceTriP1_nonConsistant::feSpaceTriP1_nonConsistant(std::string cncGeoID) : feSpace(nullptr, "GEO", cncGeoID, nullptr) {
+  _nFunctions = 3;
+  _Lcoor = {0.5, 0., 0., 0.5, 0.5, 0., 0., 0.5, 0.};
+}
+
+// feSpace used to compute (bi-)linear forms
+feSpaceTriP1_nonConsistant::feSpaceTriP1_nonConsistant(feMesh *mesh, std::string fieldID, std::string cncGeoID, feFunction *fct)
+  : feSpace(mesh, fieldID, cncGeoID, fct) {
+  _nFunctions = 3;
+  _Lcoor = {0.5, 0., 0., 0.5, 0.5, 0., 0., 0.5, 0.};
+  _adr.resize(_nFunctions);
+}
+
+std::vector<double> feSpaceTriP1_nonConsistant::L(double r[3]) { return {1-2.0*r[1],-1.0 + 2.0*r[0] +2.0* r[1], 1-2.0*r[0]}; }
+
+std::vector<double> feSpaceTriP1_nonConsistant::dLdr(double r[3]) { return {0.0, 2.0, -2.0}; }
+std::vector<double> feSpaceTriP1_nonConsistant::dLds(double r[3]) { return {-2.0, 2.0, 0.0}; }
+std::vector<double> feSpaceTriP1_nonConsistant::dLdt(double r[3]) { return {0., 0., 0.}; }
+
+void feSpaceTriP1_nonConsistant::initializeNumberingUnknowns(feNumber *number) {
+  int nDOFPerEdge = 1;
+  for(int i = 0; i < _mesh->getNbElm(_cncGeoID); ++i) {
+    number->defDDLEdge(_mesh, _cncGeoID, i, 0, nDOFPerEdge);
+    number->defDDLEdge(_mesh, _cncGeoID, i, 1, nDOFPerEdge);
+    number->defDDLEdge(_mesh, _cncGeoID, i, 2, nDOFPerEdge);
+  }
+}
+
+void feSpaceTriP1_nonConsistant::initializeNumberingEssential(feNumber *number) {
+  for(int i = 0; i < _mesh->getNbElm(_cncGeoID); ++i) {
+    number->defDDLEdge_essentialBC(_mesh, _cncGeoID, i, 0);
+    number->defDDLEdge_essentialBC(_mesh, _cncGeoID, i, 1);
+    number->defDDLEdge_essentialBC(_mesh, _cncGeoID, i, 2);
+  }
+}
+
+void feSpaceTriP1_nonConsistant::initializeAddressingVector(feNumber *number, int numElem) {
+  _adr[0] = number->getDDLEdge(_mesh, _cncGeoID, numElem, 0, 0);
+  _adr[1] = number->getDDLEdge(_mesh, _cncGeoID, numElem, 1, 0);
+  _adr[2] = number->getDDLEdge(_mesh, _cncGeoID, numElem, 2, 0);
+}
+
+// feSpace used to interpolate on a geometric connectivity
 feSpaceTriP2::feSpaceTriP2(std::string cncGeoID) : feSpace(nullptr, "GEO", cncGeoID, nullptr) {
   _nFunctions = 6;
   _Lcoor = {0., 0., 0., 1., 0., 0., 0., 1., 0., 0.5, 0., 0., 0.5, 0.5, 0., 0., 0.5, 0.};

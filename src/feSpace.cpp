@@ -266,6 +266,27 @@ void feSpace1DP1::initializeAddressingVector(feNumber *number, int numElem) {
   _adr[1] = number->getDDLSommet(_mesh, _cncGeoID, numElem, 1);
 }
 
+void feSpace1DP1_nonConsistant::initializeNumberingUnknowns(feNumber *number) {
+  for(int i = 0; i < _mesh->getNbElm(_cncGeoID); ++i) {
+    number->defDDLElement(_mesh, _cncGeoID, i, 1);
+    // If the line is a boundary element, the edge should be set by the interior element
+    number->defDDLEdge(_mesh, _cncGeoID, i, 0, 1);
+  }
+}
+
+void feSpace1DP1_nonConsistant::initializeNumberingEssential(feNumber *number) {
+  for(int i = 0; i < _mesh->getNbElm(_cncGeoID); ++i) {
+    number->defDDLElement_essentialBC(_mesh, _cncGeoID, i);
+    // Set essential BC on the edge if the line is a boundary element
+    // If the line is an interior element, there is nothing in cncGeo->connecEdges
+    number->defDDLEdge_essentialBC(_mesh, _cncGeoID, i, 0);
+  }
+}
+
+void feSpace1DP1_nonConsistant::initializeAddressingVector(feNumber *number, int numElem) {
+  _adr[0] = number->getDDLElement(_mesh, _cncGeoID, numElem, 0);
+}
+
 void feSpace1DP2::initializeNumberingUnknowns(feNumber *number) {
   for(int i = 0; i < _mesh->getNbElm(_cncGeoID); ++i) {
     number->defDDLSommet(_mesh, _cncGeoID, i, 0);

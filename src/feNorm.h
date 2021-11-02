@@ -25,20 +25,25 @@ protected:
   std::vector<double> z;
 
   feFunction *_solRef;
-
+  feVectorFunction *_gradRef = nullptr;
   double norm;
+  std::string _TypeNorm ;
 
 public:
-  feNorm(feSpace *intSpace, feMesh *mesh, int degQuad, feFunction *solRef = nullptr);
+  feNorm(feSpace *intSpace, feMesh *mesh, int degQuad, feFunction *solRef = nullptr, feVectorFunction *gradRef= nullptr, std::string TypeNorm ="");
 
   ~feNorm() {}
 
   double getNorm() { return norm; }
+  std::string getTypeNorm(){return _TypeNorm; }
   void computeL2Norm(feMetaNumber *metaNumber, feSolution *sol, feMesh *mesh);
+  void computeNormLambda(feMetaNumber *metaNumber, feSolution *sol, feMesh *mesh);
+  // void computeIntFlux(feMetaNumber *metaNumber, feSolution *sol, feMesh *mesh);
 
   void computeL2Norm0D(feSolution *sol);
   void computeArea(feMetaNumber *metaNumber, feSolution *sol, feMesh *mesh);
   void computeIntegral(feMetaNumber *metaNumber, feSolution *sol, feMesh *mesh, feFunction *fun);
 };
+
 
 #endif

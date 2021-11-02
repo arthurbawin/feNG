@@ -101,7 +101,7 @@ void fePstClc(feSolution *sol, feLinearSystem *linearSystem, feSolutionContainer
 
 // Parameter of varaible time step
 double _f = 0.20; //_f =0.2 means dt1/dt2 = 4  _f=0.25 means dt1/dt2 = 3
-bool K1K2 = true;
+bool K1K2 = false;
 
 BDF2Solver::BDF2Solver(feTolerances tol, feMetaNumber *metaNumber, feLinearSystem *linearSystem,
                        feSolution *sol, std::vector<feNorm *> &norms, feMesh *mesh, double t0,
@@ -811,7 +811,6 @@ void DC3Solver::makeSteps(int nSteps, std::vector<feSpace *> &spaces) {
       _norms[0]->computeL2Norm(_metaNumber, _sol, _mesh);
       _normL2[0][_currentStep] = _norms[0]->getNorm();
       _norms[1]->computeL2Norm(_metaNumber, _sol, _mesh);
-      // std::cout << "la norme vaut " << _norms[1]->getNorm() << std::endl;
       _normL2[1][_currentStep] = _norms[1]->getNorm();
   
       _dt = true_dt;
@@ -868,15 +867,16 @@ void DC3Solver::makeSteps(int nSteps, std::vector<feSpace *> &spaces) {
     fePstClc(_sol, _linearSystem, _solutionContainerBDF2);
     _sol->setSolFromContainer(_solutionContainerBDF2);
     // Compute L2 norm of BDF1 solution
-    _norms[0]->computeL2Norm(_metaNumber, _sol, _mesh);
-    _normL2[0][_currentStep] = _norms[0]->getNorm();
-    if(_norms.size() > 2) {
-      _norms[2]->computeL2Norm(_metaNumber, _sol, _mesh);
-      std::cout << "la norme vaut BDF2 angle" << _norms[2]->getNorm() << std::endl;
-      _normL2[2][_currentStep] = _norms[2]->getNorm();
-      _norms[3]->computeL2Norm(_metaNumber, _sol, _mesh);
-      std::cout << "la norme vaut BDF2 gauche" << _norms[3]->getNorm() << std::endl;
-      _normL2[3][_currentStep] = _norms[3]->getNorm();
+    for(int k = 0; k < _norms.size()-1; k += 2){
+
+      if(_norms[k]->getTypeNorm() == "" ) {
+          _norms[k]->computeL2Norm(_metaNumber, _sol, _mesh);
+          _normL2[k][_currentStep] = _norms[k]->getNorm();
+      }
+      else{
+        _norms[k]->computeNormLambda(_metaNumber, _sol, _mesh);
+        _normL2[k][_currentStep] = _norms[k]->getNorm();
+      }
     }
     initializeDC3(_sol, _metaNumber, _mesh, dynamic_cast<feSolutionBDF2 *>(_solutionContainerBDF2),
                   dynamic_cast<feSolutionDCF *>(_solutionContainer));
@@ -885,26 +885,28 @@ void DC3Solver::makeSteps(int nSteps, std::vector<feSpace *> &spaces) {
            _linearSystem->getRecomputeStatus() ? "true" : "false", _sol->getCurrentTime());
     solveQNBDF(_solutionContainer, _tol, _metaNumber, _linearSystem, _sol, _mesh);
     fePstClc(_sol, _linearSystem, _solutionContainer);
-    // Compute L2 norm of DC2F solution
-    _norms[1]->computeL2Norm(_metaNumber, _sol, _mesh);
-    std::cout << "la norme vaut " << _norms[1]->getNorm() << std::endl;
-    _normL2[1][_currentStep] = _norms[1]->getNorm();
-    if(_norms.size() > 4) {
-      _norms[4]->computeL2Norm(_metaNumber, _sol, _mesh);
-      _normL2[4][_currentStep] = _norms[4]->getNorm();
-      _norms[5]->computeL2Norm(_metaNumber, _sol, _mesh);
-      _normL2[5][_currentStep] = _norms[5]->getNorm();
+
+    for(int k = 1; k < _norms.size(); k += 2){
+
+      if(_norms[k]->getTypeNorm() == "" ) {
+          _norms[k]->computeL2Norm(_metaNumber, _sol, _mesh);
+          _normL2[k][_currentStep] = _norms[k]->getNorm();
+      }
+      else{
+        _norms[k]->computeNormLambda(_metaNumber, _sol, _mesh);
+        _normL2[k][_currentStep] = _norms[k]->getNorm();
+      }
     }
+
     _sol->setSolFromContainer(_solutionContainer);
 
     _tCurrent += _dt;
     ++_currentStep;
     if(K1K2) _dt = tK1K2[i + 1] - tK1K2[i];
-    std::cout << "========dt vaux ==========" << _dt << std::endl;
     printf("\n");
     printf("Current step = %d : t = %f\n", _currentStep, _tCurrent);
 
-    // std::string vtkFile = "../../data/cylindreAdapt" + std::to_string(_currentStep) + ".vtk";
-    // feExporterVTK writer(vtkFile, _mesh, _sol, _metaNumber, spaces);
+    std::string vtkFile = "../../data/NS_Square" + std::to_string(_currentStep) + ".vtk";
+    feExporterVTK writer(vtkFile, _mesh, _sol, _metaNumber, spaces);
   }
 }

@@ -40,7 +40,7 @@ int main(int argc, char **argv) {
   feFunction *funSol = new feFunction(fSol, {kd});
   feFunction *funSource = new feFunction(fSource, {kd});
 
-  int nIter = 1;
+  int nIter = 3;
   std::vector<double> normL2(2 * nIter, 0.0);
   std::vector<int> nElm(nIter, 0);
 
@@ -51,10 +51,10 @@ int main(int argc, char **argv) {
     nElm[iter] = mesh->getNbInteriorElems();
     // mesh->printInfo();
 
-    feSpace1DP2 U_angle = feSpace1DP2(mesh, "U", "Angle", funSol);
-    feSpace1DP2 U_haut = feSpace1DP2(mesh, "U", "Haut", funSol);
-    feSpaceTriP2 U_surface = feSpaceTriP2(mesh, "U", "Surface", funSol);
-    feSpace1DP2 U_gauche = feSpace1DP2(mesh, "U", "Gauche", funSol);
+    feSpace1DP1_nonConsistant U_angle = feSpace1DP1_nonConsistant(mesh, "U", "Angle", funSol);
+    feSpace1DP1_nonConsistant U_haut = feSpace1DP1_nonConsistant(mesh, "U", "Haut", funSol);
+    feSpaceTriP1_nonConsistant U_surface = feSpaceTriP1_nonConsistant(mesh, "U", "Surface", funSol);
+    feSpace1DP1_nonConsistant U_gauche = feSpace1DP1_nonConsistant(mesh, "U", "Gauche", funSol);
 
     std::vector<feSpace *> fespace = {&U_angle, &U_surface, &U_haut, &U_gauche};
     std::vector<feSpace *> feEssBC = {&U_angle, &U_haut, &U_gauche};
@@ -86,6 +86,7 @@ int main(int argc, char **argv) {
     feTolerances tol{1e-9, 1e-8, 20};
     StationarySolver solver(tol, metaNumber, linearSystem, sol, norms, mesh);
     solver.makeSteps(0, fespace);
+    normL2[2 * iter] = solver.getNorm(0);
     // solveStationary(&normL2[2 * iter], tol, metaNumber, linearSystem, formMatrices,
     // formResiduals,
     //                 sol, norms, mesh);

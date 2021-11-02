@@ -87,62 +87,11 @@
 //   return 6.*x1*x1*x1* (x1 * x1 - 25.) * pow(t, 5) +  6.*pow(x1, 5)*pow(t, 5);
 // }
 
-double fSol(const double t, const std::vector<double> &x, const std::vector<double> par) {
-  double x1 = x[0];
-  double y1 = x[1];
-  int a = par[1];
-  return pow(t, a) * sin(x1*(2*M_PI))* cos(y1*(2*M_PI));
-}
-
-double fSource(const double t, const std::vector<double> &x, const std::vector<double> par) {
-  double x1 = x[0];
-  double y1 = x[1];
-  double c1 = par[0];
-  double a = par[1];
-  double beta = (a == 0.) ? 0. : a * pow(t, a - 1.);
-  return -beta * sin(x1*(2*M_PI))* cos(y1*(2*M_PI)) - c1 *2*pow(t, a) * sin(x1*(2*M_PI))* cos(y1*(2*M_PI))*((2*M_PI)*(2*M_PI));
-}
-
-double flambda_angle(const double t, const std::vector<double> &x, const std::vector<double> par) {
-  double x1 = x[0];
-  double y1 = x[1];
-  double c1 = par[0];
-  double a = par[1];
-  if(y1==0.) return c1*pow(t, a)*sin(x1*(2*M_PI))*sin(y1*(2*M_PI))*(2*M_PI);
-  else return -c1 * pow(t, a) * cos(x1*(2*M_PI))*cos(y1*(2*M_PI))*(2*M_PI);
-}
-
-
-double flambda_gauche(const double t, const std::vector<double> &x, const std::vector<double> par) {
-  double x1 = x[0];
-  double y1 = x[1];
-  double c1 = par[0];
-  double a = par[1];
-  return c1 * pow(t, a) *cos(x1*(2*M_PI))*cos(y1*(2*M_PI))*(2*M_PI);
-}
-
-double flambda_haut(const double t, const std::vector<double> &x, const std::vector<double> par) {
-  double x1 = x[0];
-  double y1 = x[1];
-  double c1 = par[0];
-  double a = par[1];
-  return c1 * pow(t, a) *sin(x1*(2*M_PI))*sin(y1*(2*M_PI))*(2*M_PI);
-}
-
-double fSolDot(const double t, const std::vector<double> &x, const std::vector<double> par) {
-  double c1 = par[0];
-  double a = par[1];
-  double beta = (a == 0.) ? 0. : a * pow(t, a - 1.);
-  double x1 = x[0];
-  double y1 = x[1];
-  return beta * sin(x1*(2*M_PI))* cos(y1*(2*M_PI)) ;
-}
-
 // double fSol(const double t, const std::vector<double> &x, const std::vector<double> par) {
 //   double x1 = x[0];
 //   double y1 = x[1];
 //   int a = par[1];
-//   return pow(t, a) * (x1 * x1 + 1)*y1;
+//   return pow(t, a) * sin(x1*(2*M_PI))* cos(y1*(2*M_PI));
 // }
 
 // double fSource(const double t, const std::vector<double> &x, const std::vector<double> par) {
@@ -151,7 +100,7 @@ double fSolDot(const double t, const std::vector<double> &x, const std::vector<d
 //   double c1 = par[0];
 //   double a = par[1];
 //   double beta = (a == 0.) ? 0. : a * pow(t, a - 1.);
-//   return -beta * (x1 * x1 + 1)*y1  + c1 * 2 * pow(t, a)*y1;
+//   return -beta * sin(x1*(2*M_PI))* cos(y1*(2*M_PI)) - c1 *2*pow(t, a) * sin(x1*(2*M_PI))* cos(y1*(2*M_PI))*((2*M_PI)*(2*M_PI));
 // }
 
 // double flambda_angle(const double t, const std::vector<double> &x, const std::vector<double> par) {
@@ -159,25 +108,25 @@ double fSolDot(const double t, const std::vector<double> &x, const std::vector<d
 //   double y1 = x[1];
 //   double c1 = par[0];
 //   double a = par[1];
-//   if(y1==0.) return c1*pow(t, a)*(x1 * x1 + 1);
-//   else return -c1 * pow(t, a) * (2 * x1)* y1;
+//   if(y1==0.) return c1*pow(t, a)*sin(x1*(2*M_PI))*sin(y1*(2*M_PI))*(2*M_PI);
+//   else return -c1 * pow(t, a) * cos(x1*(2*M_PI))*cos(y1*(2*M_PI))*(2*M_PI);
 // }
 
-
-// double flambda_haut(const double t, const std::vector<double> &x, const std::vector<double> par) {
-//   double x1 = x[0];
-//   double y1 = x[1];
-//   double c1 = par[0];
-//   double a = par[1];
-//   return -c1*pow(t, a)*(x1 * x1 + 1);
-// }
 
 // double flambda_gauche(const double t, const std::vector<double> &x, const std::vector<double> par) {
 //   double x1 = x[0];
 //   double y1 = x[1];
 //   double c1 = par[0];
 //   double a = par[1];
-//   return c1 * pow(t, a) *y1* (2 * x1);
+//   return c1 * pow(t, a) *cos(x1*(2*M_PI))*cos(y1*(2*M_PI))*(2*M_PI);
+// }
+
+// double flambda_haut(const double t, const std::vector<double> &x, const std::vector<double> par) {
+//   double x1 = x[0];
+//   double y1 = x[1];
+//   double c1 = par[0];
+//   double a = par[1];
+//   return c1 * pow(t, a) *sin(x1*(2*M_PI))*sin(y1*(2*M_PI))*(2*M_PI);
 // }
 
 // double fSolDot(const double t, const std::vector<double> &x, const std::vector<double> par) {
@@ -186,8 +135,59 @@ double fSolDot(const double t, const std::vector<double> &x, const std::vector<d
 //   double beta = (a == 0.) ? 0. : a * pow(t, a - 1.);
 //   double x1 = x[0];
 //   double y1 = x[1];
-//   return beta * (x1 * x1 + 1)*y1;
+//   return beta * sin(x1*(2*M_PI))* cos(y1*(2*M_PI)) ;
 // }
+
+double fSol(const double t, const std::vector<double> &x, const std::vector<double> par) {
+  double x1 = x[0];
+  double y1 = x[1];
+  int a = par[1];
+  return pow(t, a) * (x1 * x1 + 1)*y1;
+}
+
+double fSource(const double t, const std::vector<double> &x, const std::vector<double> par) {
+  double x1 = x[0];
+  double y1 = x[1];
+  double c1 = par[0];
+  double a = par[1];
+  double beta = (a == 0.) ? 0. : a * pow(t, a - 1.);
+  return -beta * (x1 * x1 + 1)*y1  + c1 * 2 * pow(t, a)*y1;
+}
+
+double flambda_angle(const double t, const std::vector<double> &x, const std::vector<double> par) {
+  double x1 = x[0];
+  double y1 = x[1];
+  double c1 = par[0];
+  double a = par[1];
+  if(y1==0.) return c1*pow(t, a)*(x1 * x1 + 1);
+  else return -c1 * pow(t, a) * (2 * x1)* y1;
+}
+
+
+double flambda_haut(const double t, const std::vector<double> &x, const std::vector<double> par) {
+  double x1 = x[0];
+  double y1 = x[1];
+  double c1 = par[0];
+  double a = par[1];
+  return -c1*pow(t, a)*(x1 * x1 + 1);
+}
+
+double flambda_gauche(const double t, const std::vector<double> &x, const std::vector<double> par) {
+  double x1 = x[0];
+  double y1 = x[1];
+  double c1 = par[0];
+  double a = par[1];
+  return c1 * pow(t, a) *y1* (2 * x1);
+}
+
+double fSolDot(const double t, const std::vector<double> &x, const std::vector<double> par) {
+  double c1 = par[0];
+  double a = par[1];
+  double beta = (a == 0.) ? 0. : a * pow(t, a - 1.);
+  double x1 = x[0];
+  double y1 = x[1];
+  return beta * (x1 * x1 + 1)*y1;
+}
 
 double f0(const double t, const std::vector<double> &x, const std::vector<double> par) {
   return 0;
@@ -210,7 +210,7 @@ int main(int argc, char **argv) {
   feFunction *fun0 = new feFunction(f0, par);
 
 
-  int nIter = 3;
+  int nIter = 1;
   std::vector<double> normL2_BDF2(2 * nIter, 0.0);
   std::vector<double> normL2_DC3(2 * nIter, 0.0);
   std::vector<double> normBDF2_angle(2 * nIter, 0.0);
@@ -222,25 +222,26 @@ int main(int argc, char **argv) {
   TT.resize(nIter);
 
   for(int iter = 0; iter < nIter; ++iter) {
+    std::string meshName = "../../data/circle.msh";
     // std::string meshName = "../../data/squareTest2.msh";
-    std::string meshName = "../../data/square" + std::to_string(iter + 1) + "Msh2.msh";
+    // std::string meshName = "../../data/square" + std::to_string(iter*2 + 1) + "Msh2.msh";
     // Maillage
      feMesh2DP1 *mesh = new feMesh2DP1(meshName, false);
      nElm[iter] = mesh->getNbInteriorElems();
     // Espaces d'interpolation
 
-    feSpace1DP3 U_angle = feSpace1DP3(mesh, "U", "Angle", fun0);
-    feSpace1DP3 U_haut = feSpace1DP3(mesh, "U", "Haut", fun0);
-    feSpaceTriP3 U_surface = feSpaceTriP3(mesh, "U", "Surface", funSol);
-    feSpace1DP3 U_gauche = feSpace1DP3(mesh, "U", "Gauche", fun0);
+    feSpace1DP4 U_angle = feSpace1DP4(mesh, "U", "Angle", fun0);
+    feSpace1DP4 U_haut = feSpace1DP4(mesh, "U", "Haut", fun0);
+    feSpaceTriP4 U_surface = feSpaceTriP4(mesh, "U", "Surface", funSol);
+    feSpace1DP4 U_gauche = feSpace1DP4(mesh, "U", "Gauche", fun0);
 
-    feSpace1DP3 L_angle = feSpace1DP3(mesh, "L", "Angle", funLambda_angle);
-    feSpace1DP3 L_haut = feSpace1DP3(mesh, "L", "Haut", funLambda_haut);
-    feSpace1DP3 L_gauche = feSpace1DP3(mesh, "L", "Gauche", funLambda_gauche);
+    feSpace1DP4 L_angle = feSpace1DP4(mesh, "L", "Angle", funLambda_angle);
+    feSpace1DP4 L_haut = feSpace1DP4(mesh, "L", "Haut", funLambda_haut);
+    feSpace1DP4 L_gauche = feSpace1DP4(mesh, "L", "Gauche", funLambda_gauche);
 
-    feSpace1DP3 V_angle = feSpace1DP3(mesh, "V", "Angle", fun0);
-    feSpace1DP3 V_haut = feSpace1DP3(mesh, "V", "Haut", fun0);
-    feSpace1DP3 V_gauche = feSpace1DP3(mesh, "V", "Gauche", fun0);
+    feSpace1DP4 V_angle = feSpace1DP4(mesh, "V", "Angle", fun0);
+    feSpace1DP4 V_haut = feSpace1DP4(mesh, "V", "Haut", fun0);
+    feSpace1DP4 V_gauche = feSpace1DP4(mesh, "V", "Gauche", fun0);
 
 
     std::vector<feSpace *> fespace = {&U_angle, &U_surface, &U_haut, &U_gauche, &L_angle, &L_haut, &L_gauche, &V_angle, &V_haut, &V_gauche};
@@ -253,11 +254,7 @@ int main(int argc, char **argv) {
     int nTimeSteps = 10 * pow(2, iter);
     TT[iter] = nTimeSteps;
     feSolution *solDC3 = new feSolution(mesh, fespace, feEssBC, metaNumber);
-    // solDC3->initializeTemporalSolution(t0, t1, nTimeSteps);
-    // solDC3->initializeUnknowns(mesh, metaNumber);
-    // solDC3->initializeEssentialBC(mesh, metaNumber);
-    // std::string vtkFile = "../../data/TestDC3avantIni2.vtk";
-    // feExporterVTK writer1(vtkFile, mesh, solDC3, metaNumber, fespace);
+   
     // Formes (bi)lineaires
     int degQuad = 11;
     std::vector<feSpace *> spaceDiffusion2D_U = {&U_surface};

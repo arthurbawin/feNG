@@ -196,6 +196,34 @@ public:
   virtual void initializeAddressingVector(feNumber *number, int numElem);
 };
 
+// FESpace pour interpolant de Lagrange 1D de degre 1
+class feSpace1DP1_nonConsistant : public feSpace {
+protected:
+public:
+  feSpace1DP1_nonConsistant(std::string cncGeoID) : feSpace(nullptr, "GEO", cncGeoID, nullptr) {
+    _nFunctions = 1;
+    _Lcoor = {0., 0., 0.};
+  };
+  feSpace1DP1_nonConsistant(feMesh *mesh, std::string fieldID, std::string cncGeoID, feFunction *fct)
+    : feSpace(mesh, fieldID, cncGeoID, fct) {
+    _nFunctions = 1;
+    _adr.resize(_nFunctions);
+    _Lcoor = {0., 0., 0.};
+  };
+  virtual ~feSpace1DP1_nonConsistant() {}
+
+  virtual int getNbFunctions() { return 1; }
+  virtual int getPolynomialDegree() { return 0; }
+  virtual std::vector<double> L(double r[3]) { return {1.}; };
+  virtual std::vector<double> dLdr(double r[3]) { return {0.}; };
+  virtual std::vector<double> dLds(double r[3]) { return {0.}; };
+  virtual std::vector<double> dLdt(double r[3]) { return {0.}; };
+
+  virtual void initializeNumberingUnknowns(feNumber *number);
+  virtual void initializeNumberingEssential(feNumber *number);
+  virtual void initializeAddressingVector(feNumber *number, int numElem);
+};
+
 // FESpace pour interpolant de Lagrange 1D de degre 2
 class feSpace1DP2 : public feSpace {
 protected:
