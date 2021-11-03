@@ -18,6 +18,7 @@ protected:
   feCncGeo *_cnc;
 
   int _cncGeoTag;
+  std::string _cncGeoID;
   feSpace *_geoSpace;
   int _nCoord;
   int _nGeoNodes;

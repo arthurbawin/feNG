@@ -72,9 +72,11 @@ void feLinearSystemMklPardiso::assembleResiduals(feSolution *sol) {
 void feLinearSystemMklPardiso::assignResidualToDCResidual(feSolutionContainer *solContainer) {
   for(feInt i = 0; i < matrixOrder; ++i) solContainer->_fResidual[0][i] = residu[i];
 }
+
 void feLinearSystemMklPardiso::applyCorrectionToResidual(double coeff, std::vector<double> &d) {
   for(int i = 0; i < matrixOrder; ++i) residu[i] += coeff * d[i];
 }
+
 
 void feLinearSystemMklPardiso::correctSolution(feSolution *sol) {
   // Est-ce efficace?
@@ -90,7 +92,11 @@ void feLinearSystemMklPardiso::correctSolution(double *sol) {
 void feLinearSystemMklPardiso::solve(double *normDx, double *normResidual, double *normAxb,
                                      int *nIter) {
   if(symbolicFactorization) mklSymbolicFactorization();
-  if(recomputeMatrix) mklFactorization(); // printf("mklFactorization\n");}
+  if(recomputeMatrix){
+    tic();
+    mklFactorization();
+    toc();
+  }
   mklSolve();
 
   symbolicFactorization = false;
@@ -173,11 +179,23 @@ feLinearSystemMklPardiso::feLinearSystemMklPardiso(std::vector<feBilinearForm *>
                                                    std::vector<feBilinearForm *> &formResiduals,
                                                    feMetaNumber *metaNumber, feMesh *mesh)
   : feLinearSystem(formMatrices, formResiduals, metaNumber, mesh) {
+
+
+  // long int cnt = 0;
+  // #pragma omp parallel for private(cnt)
+  // for(int i = 0; i < 100; ++i){
+  //   // printf("Printing %3d from thread %d\n", i, omp_get_thread_num());
+  //   printf("Thread %d has printed %2d times\n", omp_get_thread_num(), cnt++);
+  // }
+
+
   recomputeMatrix = true;
   //=================================================================
   // Structure Creuse CSR de MKL
   //=================================================================
+  // tic();
   crsMklPardiso = new feCompressedRowStorageMklPardiso(metaNumber, mesh, _formMatrices);
+  // toc();
   nz = crsMklPardiso->getNz();
   Ap = (feMKLPardisoInt *)crsMklPardiso->getAp();
   Aj = (feMKLPardisoInt *)crsMklPardiso->getAj();

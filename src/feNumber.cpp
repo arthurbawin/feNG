@@ -17,9 +17,9 @@ feNumber::feNumber(feMesh *mesh) : _nNod(mesh->getNbNodes()), _nEdg(mesh->getNbE
 
   _nDOFVertices.resize(_nNod);
   _nDOFElements.resize(_nElm);
+  _nDOFEdges.resize(_nEdg);
   _codeDOFVertices.resize(_nNod, -3);
   _codeDOFElements.resize(_nElm, -3);
-  _nDOFEdges.resize(_nEdg);
   _codeDOFEdges.resize(_nEdg, -3);
 
   // TODO : Ajouter une b-rep et verifier la compatibilite des feSpace frontieres
@@ -27,12 +27,14 @@ feNumber::feNumber(feMesh *mesh) : _nNod(mesh->getNbNodes()), _nEdg(mesh->getNbE
 
 void feNumber::defDDLSommet(feMesh *mesh, std::string cncGeoID, int numElem, int numVertex) {
   int vert = mesh->getVertex(cncGeoID, numElem, numVertex);
+  // printf("Assigning INC and 1 dof at vertex %d on cnc %s on elem %d at vertex %d\n", vert, cncGeoID.c_str(), numElem, numVertex);
   _nDOFVertices[vert] = 1;
   _codeDOFVertices[vert] = INC;
 }
 
 void feNumber::defDDLElement(feMesh *mesh, std::string cncGeoID, int numElem, int numDOF) {
   int elem = mesh->getElement(cncGeoID, numElem);
+  // printf("Assigning INC and %d dof(s) at elem %d on cnc %s on elem %d\n", numDOF, elem, cncGeoID.c_str(), numElem);
   _nDOFElements[elem] = numDOF;
   _codeDOFElements[elem] = INC;
 }
@@ -40,6 +42,7 @@ void feNumber::defDDLElement(feMesh *mesh, std::string cncGeoID, int numElem, in
 void feNumber::defDDLEdge(feMesh *mesh, std::string cncGeoID, int numElem, int numEdge,
                           int numDOF) {
   int edge = fabs(mesh->getEdge(cncGeoID, numElem, numEdge)) - 1;
+  // printf("Assigning INC and %d dof(s) at edge %d which is edge number %d of elem %d on cnc %s\n", numDOF, edge, numEdge, numElem, cncGeoID.c_str());
   _nDOFEdges[edge] = numDOF;
   _codeDOFEdges[edge] = INC;
 }
@@ -47,17 +50,20 @@ void feNumber::defDDLEdge(feMesh *mesh, std::string cncGeoID, int numElem, int n
 void feNumber::defDDLSommet_essentialBC(feMesh *mesh, std::string cncGeoID, int numElem,
                                         int numVertex) {
   int vert = mesh->getVertex(cncGeoID, numElem, numVertex);
+  // printf("Setting global vertex %d as ESS - on cnc %s on elem %d at vertex %d\n", vert, cncGeoID.c_str(), numElem, numVertex);
   _codeDOFVertices[vert] = ESS;
 }
 
 void feNumber::defDDLElement_essentialBC(feMesh *mesh, std::string cncGeoID, int numElem) {
   int elem = mesh->getElement(cncGeoID, numElem);
+  // printf("Setting global element %d as ESS - on cnc %s on elem %d\n", elem, cncGeoID.c_str(), numElem);
   _codeDOFElements[elem] = ESS;
 }
 
 void feNumber::defDDLEdge_essentialBC(feMesh *mesh, std::string cncGeoID, int numElem,
                                       int numEdge) {
   int edge = fabs(mesh->getEdge(cncGeoID, numElem, numEdge)) - 1;
+  // printf("Setting global edge %d as ESS which is edge number %d of elem %d on cnc %s\n", edge, numEdge, numElem, cncGeoID.c_str());
   _codeDOFEdges[edge] = ESS;
 }
 
@@ -89,15 +95,30 @@ void feNumber::prepareNumbering() {
   for(int iVertex = 0; iVertex < _nNod; ++iVertex) {
     if(_nDOFVertices[iVertex] == 1) _numberingVertices[iVertex] = _codeDOFVertices[iVertex];
   }
+  // printf("Numérotation des sommets : \n");
+  // for(int iVertex = 0; iVertex < _nNod; ++iVertex) {
+  //   std::cout<<_numberingVertices[iVertex]<<std::endl;
+  // }
   for(int iElm = 0; iElm < _nElm; ++iElm) {
     for(int iDOF = 0; iDOF < _nDOFElements[iElm]; ++iDOF)
       _numberingElements[_maxDOFperElem * iElm + iDOF] = _codeDOFElements[iElm];
   }
+  // printf("Numérotation des elements : \n");
+  // for(int iElm = 0; iElm < _nElm; ++iElm) {
+  //   for(int iDOF = 0; iDOF < _nDOFElements[iElm]; ++iDOF)
+  //     std::cout<<_numberingElements[_maxDOFperElem * iElm + iDOF]<<std::endl;
+  // }
   for(int iEdg = 0; iEdg < _nEdg; ++iEdg) {
     for(int iDOF = 0; iDOF < _nDOFEdges[iEdg]; ++iDOF) {
       _numberingEdges[_maxDOFperEdge * iEdg + iDOF] = _codeDOFEdges[iEdg];
     }
   }
+  // printf("Numérotation des aretes : \n");
+  // for(int iEdg = 0; iEdg < _nEdg; ++iEdg) {
+  //   for(int iDOF = 0; iDOF < _nDOFEdges[iEdg]; ++iDOF) {
+  //     std::cout<<_numberingEdges[_maxDOFperEdge * iEdg + iDOF]<<std::endl;
+  //   }
+  // }
 }
 
 int feNumber::numberUnknowns(int globalNum) {

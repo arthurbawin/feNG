@@ -2,6 +2,7 @@
 #define _FECURVEDADAPT_
 
 #include "feRecovery.h"
+#include "feMetric.h"
 // #include "feGridFunction.h"
 
 #include "rtree.h"
@@ -20,8 +21,21 @@ private:
                        double &g01, double &g11, FILE *F, double &C, double &S);
 
 public:
-  feCurvedAdapt(feMesh *mesh, std::vector<feRecovery *> &recovery);
+  feCurvedAdapt(feMesh *mesh, std::vector<feRecovery *> &recovery, feMetricOptions metricOptions,
+                std::string meshName = "", std::string metricMeshName = "", std::string nextMeshName = "",
+                int useAnalytical = 0, feFunction *solExact = nullptr);
   ~feCurvedAdapt();
+};
+
+class feIsotropicAdapt {
+protected:
+  std::vector<feRecovery *> &_rec;
+
+public:
+  feIsotropicAdapt(feMesh *mesh, std::vector<feRecovery *> &recovery, feMetricOptions metricOptions,
+                   std::string metricMeshName = "", std::string nextMeshName = "",
+                   int useAnalytical = 0, feFunction *solExact = nullptr);
+  ~feIsotropicAdapt();
 };
 
 #endif

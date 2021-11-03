@@ -20,14 +20,24 @@
 #include "feCurvedAdapt.h"
 
 // Diamètre du cylindre et nombre de Reynolds
+// static double h = 4.0;
+// static double cx = h/2.;
+// static double cy = h/2.;
+// static double r = 0.25;
+// static double d = 2 * r;
+// static double U = 1.0;
+// static double rho = 1.0;
+// static double Re = 50.0;
+// static double mu = rho * U * d / Re;
+
 static double h = 4.0;
-static double cx = h / 2.;
-static double cy = h / 2.;
-static double r = 0.25;
+static double cx = 3.;
+static double cy = 2.;
+static double r = 0.5;
 static double d = 2 * r;
 static double U = 1.0;
 static double rho = 1.0;
-static double Re = 100.0;
+static double Re = 50.0;
 static double mu = rho * U * d / Re;
 
 double fInlet(const double t, const std::vector<double> &pos, const std::vector<double> &par) {
@@ -35,23 +45,13 @@ double fInlet(const double t, const std::vector<double> &pos, const std::vector<
   double tEnd = 2.0;
   double tRamp = fmin(1.0, t / tEnd);
 
-  return 1.0 + 2.0 * y / h * (1.0 - tRamp);
-  // return 1.0;
+  // return 1.0 + y / h * (1.0 - tRamp);
+  return 1.0;
 }
 
 double fZero(const double t, const std::vector<double> &pos, const std::vector<double> &par) {
   return 0.0;
 }
-
-// double fMu(const double t, const std::vector<double> &pos, const std::vector<double> &par) {
-//   double x = pos[0];
-//   double y = pos[1];
-//   if((x-cx)*(x-cx) + (y-cy)*(y-cy) > r*r){
-//     return mu;
-//   } else{
-//     return mu * 10000.0;
-//   }
-// }
 
 int main(int argc, char **argv) {
 #ifdef HAVE_PETSC
@@ -61,12 +61,12 @@ int main(int argc, char **argv) {
   std::vector<double> stokesParam = {rho, mu};
   feFunction *funZero = new feFunction(fZero, {});
   feFunction *funInlet = new feFunction(fInlet, {});
-  // feFunction *funViscosity = new feFunction(fMu, {});
 
   std::string root, meshName, metricMeshName, nextMeshName;
 
-  root = "../../data/cylindreJF/";
-  meshName = "../../data/cylindreJF/cylindre.msh";
+  root = "../../data/cylindreIsoAdapt/";
+  // meshName = "../../data/cylindreIsoAdapt/cylindre.msh";
+  meshName = "../../data/cylindreIsoAdapt/foo.msh";
 
   feMesh2DP1 *mesh = new feMesh2DP1(meshName, false);
   feMesh2DP1 *otherMesh;
@@ -87,14 +87,14 @@ int main(int argc, char **argv) {
   feTolerances tol{1e-6, 1e-6, 50};
 
   double t0 = 0.;
-  double t1 = 50.0;
-  int nIter = 10;
-  int nStepsPerAdaptationCycle = 10;
+  double t1 = 1.0;
+  int nIter = 3;
+  int nStepsPerAdaptationCycle = 1;
   int nTotalSteps = nIter * nStepsPerAdaptationCycle;
 
   int dQuad = 15;
 
-  BDF2Solver *solver;
+  StationarySolver *solver;
 
   std::string elemType = "P2P1";
   int deg = 2;
@@ -150,12 +150,10 @@ int main(int argc, char **argv) {
 
     feLinearSystemPETSc *linearSystem =
       new feLinearSystemPETSc(argc, argv, formMatrices, formResiduals, metaNumber, mesh);
-    std::string CodeIni = "BDF1/DCF"; // Define the way of initialization |"SolEx"->for exact
-                                      // solution|  |"BDF1/DCF"->using only initial conditions|
+
     if(iter == 0) {
-      // Initialize a new BDF2 integrator
-      solver = new BDF2Solver(tol, metaNumber, linearSystem, sol, norms, mesh, t0, t1, nTotalSteps,
-                              CodeIni);
+      // Initialize a new time integrator
+      solver = new StationarySolver(tol, metaNumber, linearSystem, sol, norms, mesh);
     } else {
       // Update the existing integrator
       sol->setSolFromContainer(solver->getSolutionContainer(), 0);
@@ -199,10 +197,10 @@ int main(int argc, char **argv) {
     double modelSize = 10.;
 
     feMetricOptions metricOptions;
-    metricOptions.computationMethod = 3;
+    metricOptions.computationMethod = 4;
     metricOptions.polynomialDegree = deg;
     metricOptions.nTargetVertices = 2500;
-    metricOptions.eTargetError = 5e-5;
+    metricOptions.eTargetError = 1e-3;
     metricOptions.hMin = modelSize / 10000.;
     metricOptions.hMax = modelSize / 6.;
     metricOptions.LpNorm = 2.0;
@@ -225,7 +223,15 @@ int main(int argc, char **argv) {
     case 3: {
       std::vector<feRecovery *> rec = {recU};
       int useAnalytical = 0;
-      feCurvedAdapt foo(mesh, rec, metricOptions, meshName, metricMeshName, nextMeshName, useAnalytical);
+      feCurvedAdapt foo(mesh, rec, metricOptions, metricMeshName, nextMeshName, useAnalytical);
+      std::string cmdGMSH = "gmsh " + nextMeshName + " &";
+      system(cmdGMSH.c_str());
+    } break;
+
+    case 4: {
+      std::vector<feRecovery *> rec = {recU};
+      int useAnalytical = 0;
+      feIsotropicAdapt foo(mesh, rec, metricOptions, metricMeshName, nextMeshName, useAnalytical);
       std::string cmdGMSH = "gmsh " + nextMeshName + " &";
       system(cmdGMSH.c_str());
     } break;

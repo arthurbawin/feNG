@@ -35,7 +35,11 @@ int main(int argc, char **argv) {
   feFunction *funSol = new feFunction(fSol, {});
   feFunction *funSource = new feFunction(fSource, {});
 
+<<<<<<< HEAD
   int nIter = 1;
+=======
+  int nIter = 3;
+>>>>>>> origin/arthur
   std::vector<double> normL2BDF1(2 * nIter, 0.0);
   // std::vector<double> normL2BDF2(2 * nIter, 0.0);
   std::vector<int> nElm(nIter, 0);
@@ -82,7 +86,7 @@ int main(int argc, char **argv) {
 #ifdef HAVE_PETSC
     linearSystem->initialize();
     // Resolution
-    feTolerances tol{1e-10, 1e-12, 10};
+    feTolerances tol{1e-8, 1e-8, 10};
     // std::vector<double> normL2BDF1(nTimeSteps,0.0);
 
     BDF1Solver solver(tol, metaNumber, linearSystem, sol, norms, mesh, t0, t1, nTimeSteps);

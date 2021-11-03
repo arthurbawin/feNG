@@ -143,6 +143,45 @@ SMetric3 intersection(const SMetric3 &m1, const SMetric3 &m2)
   return iv;
 }
 
+SMetric3 intersection_reductionSimultanee(const SMetric3 &m1, const SMetric3 &m2)
+{
+  // The common basis (reduction simultanee) is NOT symmetric in the general case
+  STensor3 im1(m1.invert());
+  STensor3 tm2(m2);
+  im1 *= tm2;
+  fullMatrix<double> V(3, 3);
+  fullVector<double> S(3);
+  im1.eig(V, S, false); // Conserve eigenvectors ordering
+  // If the matrix N = inv(m1)*m2 has a triple eigenvalue, one metric is a multiple of the other
+  if(fabs(S(0)-S(1)) < 1e-12 && fabs(S(0)-S(2)) < 1e-12){
+    if(S(0) <= 1.){
+      return m1;
+    } else{
+      return m2;
+    }
+  }
+  SVector3 v0(V(0, 0), V(1, 0), V(2, 0));
+  SVector3 v1(V(0, 1), V(1, 1), V(2, 1));
+  SVector3 v2(V(0, 2), V(1, 2), V(2, 2));
+  // v0.print("regV0");
+  // v1.print("regV1");
+  // v2.print("regV2");
+  double l0 = std::max(dot(v0, m1, v0), dot(v0, m2, v0));
+  double l1 = std::max(dot(v1, m1, v1), dot(v1, m2, v1));
+  double l2 = std::max(dot(v2, m1, v2), dot(v2, m2, v2));
+  im1.setMat(V);
+  im1 = im1.transpose();
+  im1 = im1.invert();
+  v0 = SVector3(im1(0, 0), im1(1, 0), im1(2, 0));
+  v1 = SVector3(im1(0, 1), im1(1, 1), im1(2, 1));
+  v2 = SVector3(im1(0, 2), im1(1, 2), im1(2, 2));
+  // v0.print("regV0TI");
+  // v1.print("regV1TI");
+  // v2.print("regV2TI");
+  SMetric3 iv(l0, l1, l2, v0, v1, v2);
+  return iv;
+}
+
 SMetric3 intersection_alauzet(const SMetric3 &m1, const SMetric3 &m2)
 {
   SMetric3 im1 = m1.invert();

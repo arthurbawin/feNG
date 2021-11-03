@@ -22,6 +22,10 @@
 #include <limits>
 #include <tuple>
 #include <utility>
+#include <chrono>
+#include <thread>
+
+#include "omp.h"
 
 #if defined(HAVE_PETSC)
 #include "petscsystypes.h"
@@ -40,13 +44,7 @@ typedef int fePardisoInt;
 typedef long long int feMKLPardisoInt;
 #endif
 
-// void log(){}
-
-// template<typename First, typename ...Rest>
-// void log(First && first, Rest && ...rest)
-// {
-//     std::cout << std::forward<First>(first);
-//     log(std::forward<Rest>(rest)...);
-// }
+void tic(int mode = 0);
+void toc();
 
 #endif

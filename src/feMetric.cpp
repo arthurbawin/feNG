@@ -2,6 +2,8 @@
 #include "fullMatrix.h"
 #include "feSimplex.h"
 
+#include "ellipseToolbox.h"
+
 #include <assert.h>
 #include <iostream>
 #include <fstream>
@@ -13,93 +15,107 @@ feMetric::feMetric(feRecovery *recovery, feMetricOptions metricOptions)
   : _recovery(recovery), _options(metricOptions) {
   int degSol = recovery->getDegreeSolution();
   int dimRecovery = recovery->getDimRecovery();
-  std::vector<int> &expX = recovery->getXExponentsRecovery();
-  std::vector<int> &expY = recovery->getYExponentsRecovery();
 
-  std::vector<int> &vertices = recovery->getVertices();
+  switch(_options.computationMethod) {
+  case 1:
+    printf("In feMetric : Computing metric field with the method of Hecht & Kuate.\n");
+    {
+      std::vector<int> &expX = recovery->getXExponentsRecovery();
+      std::vector<int> &expY = recovery->getYExponentsRecovery();
 
-  std::map<int, std::vector<double> > &e = recovery->getErrorCoefficients();
+      std::vector<int> &vertices = recovery->getVertices();
 
-  int nPhi = _options.nPhi;
-  std::vector<double> phi(nPhi, 0.); // Error curve discretization
-  for(int i = 0; i < nPhi; ++i) { phi[i] = i * 2. * M_PI / nPhi; }
+      std::map<int, std::vector<double> > &e = recovery->getErrorCoefficients();
 
-  double *xC = (double *)malloc(sizeof(double) * nPhi);
-  double *yC = (double *)malloc(sizeof(double) * nPhi);
-  double *xNew = (double *)malloc(sizeof(double) * nPhi);
-  double *yNew = (double *)malloc(sizeof(double) * nPhi);
+      int nPhi = _options.nPhi;
+      std::vector<double> phi(nPhi, 0.); // Error curve discretization
+      for(int i = 0; i < nPhi; ++i) { phi[i] = i * 2. * M_PI / nPhi; }
 
-  double err;
-  int cnt;
-  for(auto v : vertices) {
-    double A, B, C;
-    // Construct the discretization of the error curve
-    for(int iPhi = 0; iPhi < nPhi; ++iPhi) {
-      err = 0.0;
-      cnt = 0;
-      for(int n = 0; n < dimRecovery; ++n) {
-        if(expX[n] + expY[n] ==
-           degSol + 1) { // Select only exponents of the homogeneous poynomial of order deg+1
-          err += e[v][cnt++] * pow(cos(phi[iPhi]), expX[n]) * pow(sin(phi[iPhi]), expY[n]);
+      double *xC = (double *)malloc(sizeof(double) * nPhi);
+      double *yC = (double *)malloc(sizeof(double) * nPhi);
+      double *xNew = (double *)malloc(sizeof(double) * nPhi);
+      double *yNew = (double *)malloc(sizeof(double) * nPhi);
+
+      double err;
+      int cnt;
+      for(auto v : vertices) {
+        double A, B, C;
+        // Construct the discretization of the error curve
+        for(int iPhi = 0; iPhi < nPhi; ++iPhi) {
+          err = 0.0;
+          cnt = 0;
+          for(int n = 0; n < dimRecovery; ++n) {
+            if(expX[n] + expY[n] ==
+               degSol + 1) { // Select only exponents of the homogeneous poynomial of order deg+1
+              err += e[v][cnt++] * pow(cos(phi[iPhi]), expX[n]) * pow(sin(phi[iPhi]), expY[n]);
+            }
+          }
+          err = fmax(fabs(err), 1e-8);
+          xC[iPhi] = pow(1.0 / fabs(err), 1.0 / (degSol + 1)) * cos(phi[iPhi]);
+          yC[iPhi] = pow(1.0 / fabs(err), 1.0 / (degSol + 1)) * sin(phi[iPhi]);
         }
+
+        // if(false){
+        // Compute brute-force metric
+        metricHechtKuate(nPhi, xC, yC, A, B, C, 1e-5, xNew, yNew);
+        SMetric3 M;
+        M.set_m11(A);
+        M.set_m21(C);
+        M.set_m22(B);
+        // Take absolute value of eigenvalues
+        fullMatrix<double> V(3, 3);
+        fullVector<double> S(3);
+        M.eig(V, S, false);
+        SVector3 v0(V(0, 0), V(0, 1), V(0, 2));
+        SVector3 v1(V(1, 0), V(1, 1), V(1, 2));
+        SVector3 v2(V(2, 0), V(2, 1), V(2, 2));
+        M = SMetric3(fabs(S(0)), fabs(S(1)), fabs(S(2)), v0, v1, v2);
+        // M = SMetric3();
+        // M.set_m11(100);
+        _metrics[v] = M;
+        // } else{
+        // metriqueSimplexe2D(nPhi, phi, e[v], A, B, C, 50);
+        // std::cout<<"Computed metric simplexe : "<<A<<" - "<<B<<" - "<<C<<std::endl;
+        // SMetric3 M;
+        // M.set_m11(A);
+        // M.set_m21(C);
+        // M.set_m22(B);
+        //  M.print("Mavant");
+        // // TAKE ABS of eigenvalues
+        // fullMatrix<double> V(3, 3);
+        // fullVector<double> S(3);
+        // M.eig(V, S, false);
+        // // std::cout<<"Valeurs propres : "<<S(0)<<" - "<<S(1)<<" - "<<S(2)<<std::endl;
+        // SVector3 v0(V(0,0), V(0,1), V(0,2));  // Attention c'est peut-être la transposée
+        // SVector3 v1(V(1,0), V(1,1), V(1,2));
+        // SVector3 v2(V(2,0), V(2,1), V(2,2));
+        // // std::cout<<"Vecteurs propres : "<<std::endl;
+        // // v0.print();
+        // // v1.print();
+        // // v2.print();
+        // M = SMetric3(fabs(S(0)), fabs(S(1)), fabs(S(2)), v0, v1, v2);
+        // M.print("M");
+        // // M = SMetric3();
+        // // M.set_m11(100);
+        // _metrics[v] = M;
+        // }
       }
-      err = fmax(fabs(err), 1e-8);
-      xC[iPhi] = pow(1.0 / fabs(err), 1.0 / (degSol + 1)) * cos(phi[iPhi]);
-      yC[iPhi] = pow(1.0 / fabs(err), 1.0 / (degSol + 1)) * sin(phi[iPhi]);
+
+      metricScaling();
+
+      free(xNew);
+      free(yNew);
+      free(xC);
+      free(yC);
     }
 
-    // if(false){
-    // Compute brute-force metric
-    metricHechtKuate(nPhi, xC, yC, A, B, C, 1e-5, xNew, yNew);
-    SMetric3 M;
-    M.set_m11(A);
-    M.set_m21(C);
-    M.set_m22(B);
-    // Take absolute value of eigenvalues
-    fullMatrix<double> V(3, 3);
-    fullVector<double> S(3);
-    M.eig(V, S, false);
-    SVector3 v0(V(0, 0), V(0, 1), V(0, 2));
-    SVector3 v1(V(1, 0), V(1, 1), V(1, 2));
-    SVector3 v2(V(2, 0), V(2, 1), V(2, 2));
-    M = SMetric3(fabs(S(0)), fabs(S(1)), fabs(S(2)), v0, v1, v2);
-    // M = SMetric3();
-    // M.set_m11(100);
-    _metrics[v] = M;
-    // } else{
-    // metriqueSimplexe2D(nPhi, phi, e[v], A, B, C, 50);
-    // std::cout<<"Computed metric simplexe : "<<A<<" - "<<B<<" - "<<C<<std::endl;
-    // SMetric3 M;
-    // M.set_m11(A);
-    // M.set_m21(C);
-    // M.set_m22(B);
-    //  M.print("Mavant");
-    // // TAKE ABS of eigenvalues
-    // fullMatrix<double> V(3, 3);
-    // fullVector<double> S(3);
-    // M.eig(V, S, false);
-    // // std::cout<<"Valeurs propres : "<<S(0)<<" - "<<S(1)<<" - "<<S(2)<<std::endl;
-    // SVector3 v0(V(0,0), V(0,1), V(0,2));  // Attention c'est peut-être la transposée
-    // SVector3 v1(V(1,0), V(1,1), V(1,2));
-    // SVector3 v2(V(2,0), V(2,1), V(2,2));
-    // // std::cout<<"Vecteurs propres : "<<std::endl;
-    // // v0.print();
-    // // v1.print();
-    // // v2.print();
-    // M = SMetric3(fabs(S(0)), fabs(S(1)), fabs(S(2)), v0, v1, v2);
-    // M.print("M");
-    // // M = SMetric3();
-    // // M.set_m11(100);
-    // _metrics[v] = M;
-    // }
+    break;
+  case 2:
+    printf("In feMetric : Computing metric field with the method of Coulaud & Loseille.\n");
+    break;
+  case 3: printf("In feMetric : Computing metric field with JF's method.\n"); break;
+  default: printf("In feMetric : Error : Unknown metric computation method.\n");
   }
-
-  metricScaling();
-
-  free(xNew);
-  free(yNew);
-  free(xC);
-  free(yC);
 }
 
 void feMetric::metricScaling() {
@@ -662,7 +678,29 @@ void feMetric::metriqueSimplexe2D(int nPhi, std::vector<double> phi, std::vector
   }
 }
 
-void feMetric::writeSizeFieldSol(std::string solFileName) {
+void feMetric::writeSizeFieldSol2D(std::string solFileName) {
+  // Write the size field to a .sol file
+  int dim = _recovery->getDim();
+  std::vector<int> &vertices = _recovery->getVertices();
+
+  FILE *myfile = fopen(solFileName.c_str(), "w");
+  fprintf(myfile, "MeshVersionFormatted 2\n\n");
+  fprintf(myfile, "Dimension 2\n\n");
+  fprintf(myfile, "SolAtVertices\n");
+  fprintf(myfile, "%ld\n", _recovery->getVertices().size());
+  fprintf(myfile, "1 3\n\n");
+
+  for(auto v : vertices) {
+    SMetric3 M = _metrics[v];
+    if(dim == 2)
+      fprintf(myfile, "%+-10.12f \t %+-10.12f \t %+-10.12f\n", M(0, 0), M(0, 1), M(1, 1));
+  }
+
+  fprintf(myfile, "End");
+  fclose(myfile);
+}
+
+void feMetric::writeSizeFieldSol3D(std::string solFileName) {
   // Write the size field to a .sol file
   int dim = _recovery->getDim();
   std::vector<int> &vertices = _recovery->getVertices();
@@ -680,10 +718,6 @@ void feMetric::writeSizeFieldSol(std::string solFileName) {
       fprintf(myfile,
               "%+-10.12f \t %+-10.12f \t %+-10.12f \t %+-10.12f \t %+-10.12f \t %+-10.12f\n",
               M(0, 0), M(0, 1), M(1, 1), M(0, 2), M(1, 2), M(2, 2));
-    // if(dimelm == 2) fprintf(myfile, "%+-10.12f \t %+-10.12f \t %+-10.12f\n",
-    // fmax(A[iVar][i],B[iVar][i]), 0.0, fmax(A[iVar][i],B[iVar][i])); if(dim == 3) fprintf(myfile,
-    // "%+-10.12f \t %+-10.12f \t %+-10.12f \t %+-10.12f \t %+-10.12f \t %+-10.12f\n", A[iVar][i],
-    // B[iVar][i], D[iVar][i], C[iVar][i], E[iVar][i], F[iVar][i]);
   }
 
   fprintf(myfile, "End");
@@ -733,10 +767,6 @@ void feMetric::writeSizeFieldGmsh(std::string meshName, std::string metricMeshNa
       output << 9 << std::endl; // metric type ( 1:scalar, 3:vector, 9:tensor)
       output << vertices.size() << std::endl;
       for(auto v : vertices) {
-        // std::cout<<"Writing metric at vertex "<<v;
-        // printf(" (%f, %f, %f)\n", _recovery->_mesh->getVertex(v)->x(),
-        //     _recovery->_mesh->getVertex(v)->y(),
-        //     _recovery->_mesh->getVertex(v)->z());
         SMetric3 M = _metrics[v];
         output << v + 1 << " " << M(0, 0) << " " << M(0, 1) << " " << M(0, 2) << " " << M(1, 0)
                << " " << M(1, 1) << " " << M(1, 2) << " " << M(2, 0) << " " << M(2, 1) << " "
@@ -748,4 +778,35 @@ void feMetric::writeSizeFieldGmsh(std::string meshName, std::string metricMeshNa
     }
     fbIn.close();
   }
+}
+
+void feMetric::drawEllipsoids(std::string posFile) {
+  FILE *f = fopen(posFile.c_str(), "w");
+
+  fprintf(f, "View \"ellipsesFromSimulation\"{\n");
+
+  double factor = 10.;
+  int nt = 30;
+  std::vector<double> xP(nt, 0.);
+  std::vector<double> yP(nt, 0.);
+
+  std::vector<int> &vertices = _recovery->getVertices();
+  for(auto v : vertices) {
+    SMetric3 m = _metrics[v];
+    Vertex *vv = _recovery->_mesh->getVertex(v);
+    getEllipsePoints(factor * m(0, 0), factor * 2.0 * m(0, 1), factor * m(1, 1), vv->x(), vv->y(),
+                     xP, yP);
+    for(int i = 0; i < nt; ++i) {
+      if(i != nt - 1) {
+        fprintf(f, "SL(%.16g,%.16g,%.16g,%.16g,%.16g,%.16g){%u, %u};\n", xP[i], yP[i], 0.,
+                xP[i + 1], yP[i + 1], 0., 1, 1);
+      } else {
+        fprintf(f, "SL(%.16g,%.16g,%.16g,%.16g,%.16g,%.16g){%u, %u};\n", xP[i], yP[i], 0., xP[0],
+                yP[0], 0., 1, 1);
+      }
+    }
+  }
+
+  fprintf(f, "};");
+  fclose(f);
 }

@@ -69,7 +69,6 @@ void feNorm::computeL2Norm(feMetaNumber *metaNumber, feSolution *sol, feMesh *me
         J = dxdr[0] * dxds[1] - dxdr[1] * dxds[0];
       } else {
       }
-
       solRef = (_solRef != nullptr) ? _solRef->eval(t, x) : 0.0;  
       normL2 += (solInt - solRef) * (solInt - solRef) * J * w[k];
     }

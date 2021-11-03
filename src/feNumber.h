@@ -57,7 +57,7 @@ public:
   int numberUnknowns(int globalNum);
   int numberEssential(int globalNum);
 
-  int getVertexNumber(int iVertex) { return _numberingVertices[iVertex]; };
+  int getDOFNumberAtVertex(int iVertex) { return _numberingVertices[iVertex]; };
 
   void printNumberingVertices() {
     printf("nNod = %d\n", _nNod);

@@ -75,7 +75,7 @@ int main(int argc, char **argv) {
   feFunction *funSource = new feFunction(fSource, par);
   feFunction *fun0 = new feFunction(f0, {});
 
-  int nIter = 4;
+  int nIter = 1;
   std::vector<double> normL2(2 * nIter, 0.0);
   std::vector<int> nElm(nIter, 0);
   std::vector<int> TT;

@@ -18,7 +18,7 @@ feQuadrature::feQuadrature(int degQuad, int dimQuad, std::string formGeo)
     calculateWeightAndRoot(_nQuad1D);
     _w = _w1D;
     _xr = _x1D;
-  } else if(_dimQuad == 2 && formGeo == "TriP1") {
+  } else if(_dimQuad == 2 && (formGeo == "TriP1" || formGeo == "TriP2")) {
     calculateWeightAndRootTri(method);
   } else if(_dimQuad == 2 && formGeo == "QuadP1") {
     calculateWeightAndRootSquare();

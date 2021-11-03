@@ -161,6 +161,9 @@ void BDF2Solver::makeSteps(int nSteps, std::vector<feSpace *> &spaces) {
 
     printf("Current step = %d/%d : t = %f\n", _currentStep, nSteps, _tCurrent);
 
+    std::string vtkFile = "sol" + std::to_string(_currentStep) + ".vtk";
+    feExporterVTK writer(vtkFile, _mesh, _sol, _metaNumber, spaces);
+
     --nSteps; // To advance the same number of steps than if currentStep != 0
   }
 
@@ -202,8 +205,8 @@ void BDF2Solver::makeSteps(int nSteps, std::vector<feSpace *> &spaces) {
     printf("\n");
     printf("Current step = %d : t = %f\n", _currentStep, _tCurrent);
 
-    // std::string vtkFile = "../../data/cylindreAdapt" + std::to_string(_currentStep) + ".vtk";
-    // feExporterVTK writer(vtkFile, _mesh, _sol, _metaNumber, spaces);
+    std::string vtkFile = "sol" + std::to_string(_currentStep) + ".vtk";
+    feExporterVTK writer(vtkFile, _mesh, _sol, _metaNumber, spaces);
   }
 }
 
@@ -273,8 +276,8 @@ void BDF1Solver::makeSteps(int nSteps, std::vector<feSpace *> &spaces) {
     if(K1K2) _dt = tK1K2[i + 1] - tK1K2[i];
     printf("Current step = %d : t = %f\n", _currentStep, _tCurrent);
 
-    std::string vtkFile = "../../data/cylindreAdapt" + std::to_string(_currentStep) + ".vtk";
-    feExporterVTK writer(vtkFile, _mesh, _sol, _metaNumber, spaces);
+    // std::string vtkFile = "../../data/taylorGreen" + std::to_string(_currentStep) + ".vtk";
+    // feExporterVTK writer(vtkFile, _mesh, _sol, _metaNumber, spaces);
   }
 }
 
