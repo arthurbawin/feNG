@@ -66,7 +66,7 @@ static void PROBE(int TAG, double x, double y, double z, std::vector<double> &va
   // gmsh::model::getCurrent(foo);
   // std::cout<<"current model in PROBE is "<<foo<<std::endl;
   gmsh::view::probe(TAG, x, y, z, val, step, numComp, 0, 1.e-3);
-  if(val.empty()){
+  if(val.empty()) {
     printf("Error - val is empty on view %d at pos %f - %f - %f\n", TAG, x, y, z);
     val.push_back(0.);
     // gmsh::view::probe(TAG, 0.5, 0.5, 0.0, val, step, numComp, 0, 1.e-3);
@@ -78,27 +78,26 @@ static void PROBE(int TAG, double x, double y, double z, std::vector<double> &va
   }
 }
 
-static bool isOutsideCylinder(double* x){
-  return ((x[0] - 2.0)*(x[0] - 2.0) + (x[1] - 2.0)*(x[1] - 2.0)) > 0.25*0.25;
+static bool isOutsideCylinder(double *x) {
+  return ((x[0] - 2.0) * (x[0] - 2.0) + (x[1] - 2.0) * (x[1] - 2.0)) > 0.25 * 0.25;
 }
 
-static bool isInsideRectangle(double* x){
-  if (x[0] < 0) return false;
-  if (x[1] < 0) return false;
-  if (x[0] > 10.0) return false;
-  if (x[1] > 4.0) return false;
+static bool isInsideRectangle(double *x) {
+  if(x[0] < 0) return false;
+  if(x[1] < 0) return false;
+  if(x[0] > 10.0) return false;
+  if(x[1] > 4.0) return false;
   return true;
 }
 
-static bool INSIDE (double* x){
-
+static bool INSIDE(double *x) {
   // For the cylinder only
   // return isOutsideCylinder(x) && isInsideRectangle(x);
 
-  if (x[0] < 0) return false;
-  if (x[1] < 0) return false;
-  if (x[0] > 1) return false;
-  if (x[1] > 1) return false;
+  if(x[0] < 0) return false;
+  if(x[1] < 0) return false;
+  if(x[0] > 1) return false;
+  if(x[1] > 1) return false;
   return true;
 }
 
@@ -1069,7 +1068,8 @@ double ERROR_SQUARED_P1(double *xa, double *xb, double *xc, feFunction *solExact
   return e2;
 }
 
-double ERROR_SQUARED_P2(double *xa, double *xb, double *xc, double *xab, double *xbc, double *xca) { //, feFunction *solExact) {
+double ERROR_SQUARED_P2(double *xa, double *xb, double *xc, double *xab, double *xbc,
+                        double *xca) { //, feFunction *solExact) {
   int triangleP2 = gmsh::model::mesh::getElementType("Triangle", 2);
   std::vector<double> localCoord;
   std::vector<double> weights;
@@ -1114,8 +1114,9 @@ double ERROR_SQUARED_P2(double *xa, double *xb, double *xc, double *xab, double 
 #endif
 
 feCurvedAdapt::feCurvedAdapt(feMesh *mesh, std::vector<feRecovery *> &recovery,
-                             feMetricOptions metricOptions, std::string meshName, std::string metricMeshName,
-                             std::string nextMeshName, int analytical, feFunction *solExact)
+                             feMetricOptions metricOptions, std::string meshName,
+                             std::string metricMeshName, std::string nextMeshName, int analytical,
+                             feFunction *solExact)
   : _rec(recovery) {
 #ifdef HAVE_GMSH
 
@@ -1126,12 +1127,12 @@ feCurvedAdapt::feCurvedAdapt(feMesh *mesh, std::vector<feRecovery *> &recovery,
 
   useAnalytical = analytical;
 
-  std::cout<<"metricMeshName = "<<metricMeshName<<std::endl;
+  std::cout << "metricMeshName = " << metricMeshName << std::endl;
 
   gmsh::initialize();
   gmsh::open(metricMeshName);
   gmsh::model::getCurrent(modelName);
-  std::cout<<"modelName is "<<modelName<<std::endl;
+  std::cout << "modelName is " << modelName << std::endl;
   gmsh::model::add("test");
   gmsh::model::setCurrent("test");
 
@@ -1168,14 +1169,14 @@ feCurvedAdapt::feCurvedAdapt(feMesh *mesh, std::vector<feRecovery *> &recovery,
   // gmsh::model::setPhysicalName(1, 4, "Cylindre");
   // gmsh::model::setPhysicalName(2, surface, "Surface");
 
-  gmsh::option::setNumber("Mesh.MeshSizeMin", modelSize/50);
-  gmsh::option::setNumber("Mesh.MeshSizeMax", modelSize/50);
+  gmsh::option::setNumber("Mesh.MeshSizeMin", modelSize / 50);
+  gmsh::option::setNumber("Mesh.MeshSizeMax", modelSize / 50);
   gmsh::model::mesh::generate();
 #endif
   gmsh::merge(metricMeshName);
   std::string foo;
   gmsh::model::getCurrent(foo);
-  std::cout<<"current model is "<<foo<<std::endl;
+  std::cout << "current model is " << foo << std::endl;
   // gmsh::fltk::run();
 
   // get the nodes
@@ -1190,9 +1191,10 @@ feCurvedAdapt::feCurvedAdapt(feMesh *mesh, std::vector<feRecovery *> &recovery,
   gmsh::model::mesh::getNodesForPhysicalGroup(dim, tag, nodeTags, coord);
 
   if(nodeTags.size() != _rec[0]->getVertices().size()) {
-    printf(
-      "In feCurvedAdapt : Error - the number of node tags obtained from Gmsh (%d) does not match the "
-      "number of vertices in the recovery structure. The tag and/or dimension may be wrong.\n", nodeTags.size());
+    printf("In feCurvedAdapt : Error - the number of node tags obtained from Gmsh (%d) does not "
+           "match the "
+           "number of vertices in the recovery structure. The tag and/or dimension may be wrong.\n",
+           nodeTags.size());
     exit(-1);
   }
 
@@ -1217,8 +1219,10 @@ feCurvedAdapt::feCurvedAdapt(feMesh *mesh, std::vector<feRecovery *> &recovery,
 
     printf("%+-6.6f - %+-6.6f vs %+-6.6f - %+-6.6f\n", x, y, v->x(), v->y());
     int seqV = mesh->getVertexSequentialTagFromGmshTag(nodeTags[i]);
-    printf("%+-6.6f - %+-6.6f vs %+-6.6f - %+-6.6f\n", x, y, mesh->getVertex(seqV)->x(), mesh->getVertex(seqV)->y());
-    printf("dudx avec probe = %+-6.6e - avec recovery = %+-6.6e\n", fxx(x,y), recovery[0]->recoveryCoeff[seqV][0][0]);
+    printf("%+-6.6f - %+-6.6f vs %+-6.6f - %+-6.6f\n", x, y, mesh->getVertex(seqV)->x(),
+           mesh->getVertex(seqV)->y());
+    printf("dudx avec probe = %+-6.6e - avec recovery = %+-6.6e\n", fxx(x, y),
+           recovery[0]->recoveryCoeff[seqV][0][0]);
 
     double C, S;
     switch(deg) {
@@ -1288,11 +1292,11 @@ feCurvedAdapt::feCurvedAdapt(feMesh *mesh, std::vector<feRecovery *> &recovery,
       const double dtt0_ = fabs(dtt(x, y, C, S));
       const double dtt1_ = fabs(dtt(x, y, -S, C));
 
-      std::cout<<fabs(dtt0_)<<std::endl;
-      std::cout<<fabs(dtt1_)<<std::endl;
-      std::cout<<pow(2. * eps / dtt0_, 0.5)<<std::endl;
-      std::cout<<pow(2. * eps / dtt1_, 0.5)<<std::endl;
-      std::cout<<std::endl;
+      std::cout << fabs(dtt0_) << std::endl;
+      std::cout << fabs(dtt1_) << std::endl;
+      std::cout << pow(2. * eps / dtt0_, 0.5) << std::endl;
+      std::cout << pow(2. * eps / dtt1_, 0.5) << std::endl;
+      std::cout << std::endl;
       l0 = fabs(dtt0_) > 1e-14 ? pow(2. * eps / dtt0_, 0.5) : lMax;
       l1 = fabs(dtt1_) > 1e-14 ? pow(2. * eps / dtt1_, 0.5) : lMax;
       break;
@@ -1313,8 +1317,8 @@ feCurvedAdapt::feCurvedAdapt(feMesh *mesh, std::vector<feRecovery *> &recovery,
     l1 = std::min(l1, lMax);
     l1 = std::max(l1, lMin);
 
-    fprintf(scaled, "VP(%g,%g,0){%g,%g,0};", x, y,  l0*C, l0*S);
-    fprintf(scaled, "VP(%g,%g,0){%g,%g,0};", x, y, -l1*S, l1*C);
+    fprintf(scaled, "VP(%g,%g,0){%g,%g,0};", x, y, l0 * C, l0 * S);
+    fprintf(scaled, "VP(%g,%g,0){%g,%g,0};", x, y, -l1 * S, l1 * C);
 
     double h0 = 1. / (l0 * l0);
     double h1 = 1. / (l1 * l1);
@@ -1375,7 +1379,8 @@ feCurvedAdapt::feCurvedAdapt(feMesh *mesh, std::vector<feRecovery *> &recovery,
               y, M(0, 0), M(0, 1), M(1, 1));
       // fprintf(ffff, "%d \t %+-4.4e \t %+-4.4e : %+-4.4e \t %+-4.4e \t %+-4.4e \n", nodeTags[i],
       // x, y, M(0, 0), M(0, 1), M(1, 1)); Write .sol size field
-      // fprintf(myfile, "%+-10.12f \t %+-10.12f \t %+-10.12f \t %+-10.12f \t %+-10.12f\n", x, y, M(0, 0), M(0, 1), M(1, 1));
+      // fprintf(myfile, "%+-10.12f \t %+-10.12f \t %+-10.12f \t %+-10.12f \t %+-10.12f\n", x, y,
+      // M(0, 0), M(0, 1), M(1, 1));
       fprintf(myfile, "%+-10.12f \t %+-10.12f \t %+-10.12f\n", M(0, 0), M(0, 1), M(1, 1));
     }
   }
@@ -1440,9 +1445,10 @@ feCurvedAdapt::feCurvedAdapt(feMesh *mesh, std::vector<feRecovery *> &recovery,
   // system(mmgCommand.c_str());
   // system(gmshCommand.c_str());
 
-  std::string saveMesh = "gmsh " + meshName + " -o test.mesh -0"; // N'exporte pas les physicals : RIP
+  std::string saveMesh =
+    "gmsh " + meshName + " -o test.mesh -0"; // N'exporte pas les physicals : RIP
   system(saveMesh.c_str());
-  // Ajouter à la main les entités physiques : 
+  // Ajouter à la main les entités physiques :
   // Uniquement pour les Edges et Triangles pour le moment
   printf("Converted %s to temporary MEDIT file \"test.msh\"\n", meshName.c_str());
   printf("Adding physical group tags to temporary file \"testWithPhysicalTags.mesh\"\n");
@@ -1458,7 +1464,7 @@ feCurvedAdapt::feCurvedAdapt(feMesh *mesh, std::vector<feRecovery *> &recovery,
       int nEdges = 0;
       input >> nEdges;
       output << nEdges << std::endl;
-      for(int i = 0; i < nEdges; ++i){
+      for(int i = 0; i < nEdges; ++i) {
         getline(input, buffer);
         int p0, p1, tag;
         input >> p0 >> p1 >> tag;
@@ -1472,14 +1478,13 @@ feCurvedAdapt::feCurvedAdapt(feMesh *mesh, std::vector<feRecovery *> &recovery,
         it = mesh->_edges.find(e);
         if(it != mesh->_edges.end()) {
           output << p0 << " " << p1 << " " << it->getPhysicalTag();
-          if(i+1 != nEdges)
-            output << std::endl;
+          if(i + 1 != nEdges) output << std::endl;
         } else {
           // Edge should be in the set...
-          printf(
-            "In feCurvedAdapt : Error while transferring physical entities to testWithPhysicalTags.mesh\n" 
-            "The edge (%d,%d) was not found in the set of edges...\n",
-            v0->getTag(), v1->getTag());
+          printf("In feCurvedAdapt : Error while transferring physical entities to "
+                 "testWithPhysicalTags.mesh\n"
+                 "The edge (%d,%d) was not found in the set of edges...\n",
+                 v0->getTag(), v1->getTag());
           exit(-1);
         }
       }
@@ -1488,36 +1493,35 @@ feCurvedAdapt::feCurvedAdapt(feMesh *mesh, std::vector<feRecovery *> &recovery,
       int nTri = 0;
       input >> nTri;
       output << nTri << std::endl;
-      for(int i = 0; i < nTri; ++i){
+      for(int i = 0; i < nTri; ++i) {
         getline(input, buffer);
         int p0, p1, p2, tag;
         input >> p0 >> p1 >> p2 >> tag;
         // printf("Read tri %d %d %d %d\n", p0, p1, p2, tag);
         Vertex *v0, *v1, *v2;
-        std::vector<Triangle*>::iterator it;
+        std::vector<Triangle *>::iterator it;
         v0 = mesh->getVertexFromGmshNodeTag(p0);
         v1 = mesh->getVertexFromGmshNodeTag(p1);
         v2 = mesh->getVertexFromGmshNodeTag(p2);
         Triangle t(v0, v1, v2);
         // Brute force )-: Should make a proper triangle compare function
         bool isFound = false;
-        for(int j = 0; j < mesh->_elements.size(); ++j){
+        for(int j = 0; j < mesh->_elements.size(); ++j) {
           if(mesh->_elements[j]->getVertex(0)->getTag() == v0->getTag() &&
              mesh->_elements[j]->getVertex(1)->getTag() == v1->getTag() &&
-             mesh->_elements[j]->getVertex(2)->getTag() == v2->getTag()){
+             mesh->_elements[j]->getVertex(2)->getTag() == v2->getTag()) {
             isFound = true;
             output << p0 << " " << p1 << " " << p2 << " " << mesh->_elements[j]->getPhysicalTag();
-            if(i+1 != nTri)
-              output << std::endl;
+            if(i + 1 != nTri) output << std::endl;
             break;
           }
         }
 
-        if(!isFound){
-          printf(
-            "In feCurvedAdapt : Error while transferring physical entities to testWithPhysicalTags.mesh\n" 
-            "The triangle (%d,%d,%d) was not found...\n",
-            v0->getTag(), v1->getTag(), v2->getTag());
+        if(!isFound) {
+          printf("In feCurvedAdapt : Error while transferring physical entities to "
+                 "testWithPhysicalTags.mesh\n"
+                 "The triangle (%d,%d,%d) was not found...\n",
+                 v0->getTag(), v1->getTag(), v2->getTag());
           exit(-1);
         }
 
@@ -1528,21 +1532,22 @@ feCurvedAdapt::feCurvedAdapt(feMesh *mesh, std::vector<feRecovery *> &recovery,
         // } else {
         //   // Triangle should be in vector...
         //   printf(
-        //     "In feCurvedAdapt : Error while transferring physical entities to testWithPhysicalTags.mesh\n" 
-        //     "The triangle (%d,%d,%d) was not found...\n",
+        //     "In feCurvedAdapt : Error while transferring physical entities to
+        //     testWithPhysicalTags.mesh\n" "The triangle (%d,%d,%d) was not found...\n",
         //     v0->getTag(), v1->getTag(), v2->getTag());
         //   exit(-1);
         // }
-
       }
-    } else{
+    } else {
       output << buffer << std::endl;
     }
   }
   fbIn.close();
 
   std::string saveMesh2D = "mmg3Dto2D testWithPhysicalTags.mesh";
-  std::string mmgCommand = "mmg2d testWithPhysicalTags2D.mesh -sol toIntersect2D.sol -hgrad 3 -hausd 100 -o " + nextMeshName;
+  std::string mmgCommand =
+    "mmg2d testWithPhysicalTags2D.mesh -sol toIntersect2D.sol -hgrad 3 -hausd 100 -o " +
+    nextMeshName;
   // std::string renumberCommand = "gmsh " + nextMeshName + " -o " + nextMeshName + " -2";
   std::string gmshCommand = "gmsh " + nextMeshName + " &";
   // system(saveMesh.c_str());
@@ -1552,7 +1557,7 @@ feCurvedAdapt::feCurvedAdapt(feMesh *mesh, std::vector<feRecovery *> &recovery,
   system(gmshCommand.c_str());
 
   // // The intersection generates a new .p4est file with the root name of the input mesh
-  // // This should be run in the data/... directory 
+  // // This should be run in the data/... directory
   // std::string intersect = "gmsh " + meshName + " -size_field -4 0 0 1 input.p4est";
   // std::cout<<"Running "<<intersect<<std::endl;
   // system(intersect.c_str());
@@ -1561,9 +1566,8 @@ feCurvedAdapt::feCurvedAdapt(feMesh *mesh, std::vector<feRecovery *> &recovery,
   // std::string root = meshName.substr(0, lastindex);
   // lastindex = nextMeshName.find_last_of(".");
   // std::string nextRoot = nextMeshName.substr(0, lastindex);
-  // std::string adapt = "python3 adaptGeoAndSimulation.py " + root + ".p4est " + root + " " + nextRoot + " 5";
-  // std::cout<<"Running "<<adapt<<std::endl;
-  // system(adapt.c_str());
+  // std::string adapt = "python3 adaptGeoAndSimulation.py " + root + ".p4est " + root + " " +
+  // nextRoot + " 5"; std::cout<<"Running "<<adapt<<std::endl; system(adapt.c_str());
 
 #if defined(CURVED)
   system("mmg2d metric.msh -hgrad 3");
@@ -1576,21 +1580,19 @@ feCurvedAdapt::feCurvedAdapt(feMesh *mesh, std::vector<feRecovery *> &recovery,
 
   // gmsh::finalize();
 
-  int computePointsUsingScaledCrossFieldPlanarP2 (const char *modelForMetric,
-              const char *modelForMesh,
-              int VIEW_TAG,
-              int faceTag, std::vector<double> &pts,
-              double er (double *, double *, double *,
-                   double *, double *, double *),
-              bool inside(double *));
+  int computePointsUsingScaledCrossFieldPlanarP2(
+    const char *modelForMetric, const char *modelForMesh, int VIEW_TAG, int faceTag,
+    std::vector<double> &pts, double er(double *, double *, double *, double *, double *, double *),
+    bool inside(double *));
 
-  bool vazy = true;//false;
-  
+  bool vazy = true; // false;
+
   std::vector<double> pts;
   // gmsh::fltk::run();
-  if(vazy){
+  if(vazy) {
     printf("Meshing...");
-    computePointsUsingScaledCrossFieldPlanarP2 ("test", "adapt", viewTag, 0, pts, ERROR_SQUARED_P2, INSIDE);
+    computePointsUsingScaledCrossFieldPlanarP2("test", "adapt", viewTag, 0, pts, ERROR_SQUARED_P2,
+                                               INSIDE);
     printf("Done");
   }
   gmsh::model::setCurrent("adapt");
@@ -1600,23 +1602,22 @@ feCurvedAdapt::feCurvedAdapt(feMesh *mesh, std::vector<feRecovery *> &recovery,
   // int tagBord = gmsh::model::addPhysicalGroup(1,{0});
   // gmsh::model::setPhysicalName(1,tagBord,"Bord");
 
-  if (!vazy)gmsh::model::mesh::setOrder(2);
-  gmsh::model::mesh::getNodes(nodeTags,coord, parametricCoord,-1,-1,true);
-  
-  int viewTagF_adapt = gmsh::view::add ("F_adapt");
+  if(!vazy) gmsh::model::mesh::setOrder(2);
+  gmsh::model::mesh::getNodes(nodeTags, coord, parametricCoord, -1, -1, true);
+
+  int viewTagF_adapt = gmsh::view::add("F_adapt");
   std::vector<std::vector<double> > dataF_adapt;
 
-  for (size_t i=0 ; i < nodeTags.size() ; i++){
-    const double x = coord [3*i + 0];
-    const double y = coord [3*i + 1];
+  for(size_t i = 0; i < nodeTags.size(); i++) {
+    const double x = coord[3 * i + 0];
+    const double y = coord[3 * i + 1];
     std::vector<double> vF(1);
-    vF[0] = f(x,y);
-    dataF_adapt.push_back(vF);    
+    vF[0] = f(x, y);
+    dataF_adapt.push_back(vF);
   }
   gmsh::model::setCurrent("adapt");
-  gmsh::view::addModelData(viewTagF_adapt, 0, "adapt", "NodeData",
-         nodeTags, dataF_adapt);
-  gmsh::view::write(viewTagF_adapt,"sol_adapt.msh");
+  gmsh::view::addModelData(viewTagF_adapt, 0, "adapt", "NodeData", nodeTags, dataF_adapt);
+  gmsh::view::write(viewTagF_adapt, "sol_adapt.msh");
   system("gmsh sol_adapt.msh &");
 #endif
 

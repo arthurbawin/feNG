@@ -68,7 +68,7 @@ public:
   std::vector<int> &getEdgeConnectivityRef() { return _connecEdges; }
   std::vector<int> &getElemConnectivityRef() { return _connecElem; }
 
-  int getNodeConnectivity(int iNode){ return _connecNodes[iNode]; }
+  int getNodeConnectivity(int iNode) { return _connecNodes[iNode]; }
   int getNodeConnectivity(int numElem, int iNode) {
     return _connecNodes[_nNodPerElm * numElem + iNode];
   }

@@ -25,7 +25,7 @@ feCncGeo *feMesh::getCncGeoByTag(int cncGeoTag) {
   return nullptr;
 }
 
-// Returns a vector containing the physical coordinates of the nodes on the 
+// Returns a vector containing the physical coordinates of the nodes on the
 // element with LOCAL number "numElem" on the connectivity named "cncGeoID" :
 // coord = [x1 y1 z1 x2 y2 z2 ... xn yn zn]
 std::vector<double> feMesh::getCoord(std::string cncGeoID, int numElem) {
@@ -40,7 +40,7 @@ std::vector<double> feMesh::getCoord(std::string cncGeoID, int numElem) {
   return coord;
 }
 
-// Returns a vector containing the physical coordinates of the nodes on the 
+// Returns a vector containing the physical coordinates of the nodes on the
 // element with LOCAL number "numElem" on the connectivity numbered "cncGeoTag" :
 // coord = [x1 y1 z1 x2 y2 z2 ... xn yn zn]
 std::vector<double> feMesh::getCoord(int cncGeoTag, int numElem) {
@@ -103,8 +103,9 @@ void feMesh::printInfo(bool printConnectivities) {
   std::cout << "Nombre total d'elements : " << _nTotalElm << std::endl;
   std::cout << "Nombre de connectivites : " << _nCncGeo << std::endl;
   for(feCncGeo *cnc : _cncGeo) {
-    std::cout << "CncGeo " << cnc->getID() << " : " << cnc->getForme() << " - " << cnc->getNbElm() << " elements"<<std::endl;
-    if(printConnectivities){
+    std::cout << "CncGeo " << cnc->getID() << " : " << cnc->getForme() << " - " << cnc->getNbElm()
+              << " elements" << std::endl;
+    if(printConnectivities) {
       printf("Connectivité des noeuds :\n");
       for(int i = 0; i < cnc->getNbElm(); ++i) {
         for(int j = 0; j < cnc->getNbNodePerElem(); ++j) {
@@ -235,7 +236,8 @@ feMesh0DP0::~feMesh0DP0() {
   }
 }
 
-feMesh2DP1::feMesh2DP1(std::string meshName, bool curved, mapType physicalEntitiesDescription, bool verbose)
+feMesh2DP1::feMesh2DP1(std::string meshName, bool curved, mapType physicalEntitiesDescription,
+                       bool verbose)
   : feMesh() {
   printf("Info : Reading mesh file : %s\n", meshName.c_str());
   // Check if mesh file exists

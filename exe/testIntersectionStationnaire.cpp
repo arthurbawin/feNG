@@ -176,8 +176,10 @@ int main(int argc, char **argv) {
     feNorm *normU = new feNorm(U_surface, mesh, dQuad, funSol);
     std::vector<feNorm *> norms = {normU};
 
-    // feLinearSystemPETSc *linearSystem = new feLinearSystemPETSc(argc, argv, formMatrices, formResiduals, metaNumber, mesh);
-    feLinearSystemMklPardiso *linearSystem = new feLinearSystemMklPardiso(formMatrices, formResiduals, metaNumber, mesh);
+    // feLinearSystemPETSc *linearSystem = new feLinearSystemPETSc(argc, argv, formMatrices,
+    // formResiduals, metaNumber, mesh);
+    feLinearSystemMklPardiso *linearSystem =
+      new feLinearSystemMklPardiso(formMatrices, formResiduals, metaNumber, mesh);
 
     feTolerances tol{1e-9, 1e-8, 5};
 
@@ -236,8 +238,8 @@ int main(int argc, char **argv) {
     case 3: {
       std::vector<feRecovery *> rec = {recU};
       int useAnalytical = 0;
-      feCurvedAdapt foo(mesh, rec, metricOptions, meshName, metricMeshName, nextMeshName, useAnalytical,
-                        funSol);
+      feCurvedAdapt foo(mesh, rec, metricOptions, meshName, metricMeshName, nextMeshName,
+                        useAnalytical, funSol);
       // system("gmsh output.msh &");
       // nextMeshName = "output.msh";
     } break;

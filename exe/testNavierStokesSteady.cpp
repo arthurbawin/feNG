@@ -118,7 +118,7 @@ int main(int argc, char **argv) {
 
   for(int iter = 0; iter < nIter; ++iter) {
     // std::string meshName = "../../data/squareTaylorGreen2.msh";
-    std::string meshName = "../../data/Square/squareNS" + std::to_string(iter+1) + ".msh";
+    std::string meshName = "../../data/Square/squareNS" + std::to_string(iter + 1) + ".msh";
     // std::string meshName = "../../data/squarePression" + std::to_string(iter+1) + ".msh";
 
     // mesh = new feMesh2DP1(meshName, false);
@@ -251,7 +251,8 @@ int main(int argc, char **argv) {
 
     std::vector<feRecovery *> rec = {recU};
     int useAnalytical = 0;
-    feCurvedAdapt foo(mesh, rec, metricOptions, meshName, metricMeshName, nextMeshName, useAnalytical);
+    feCurvedAdapt foo(mesh, rec, metricOptions, meshName, metricMeshName, nextMeshName,
+                      useAnalytical);
     std::string cmdGMSH = "gmsh " + nextMeshName + " &";
     system(cmdGMSH.c_str());
 

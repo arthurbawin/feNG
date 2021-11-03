@@ -16,7 +16,7 @@
 #include <fstream>
 
 #if defined(HAVE_EIGEN)
- #include "../contrib/Eigen/Dense"
+#include "../contrib/Eigen/Dense"
 #endif
 
 // A structure for the patches of elements around vertices of a connectivity
@@ -68,10 +68,10 @@ protected:
   PetscScalar *valb;
 
 #if defined(HAVE_EIGEN)
-  std::map<int, Eigen::Matrix<double, 6, 6>> lsInvAtVertices6;
-  std::map<int, Eigen::Matrix<double, 6, 6>> lsInvAtVertices6OnEdges;
-  std::map<int, Eigen::Matrix<double, 10, 10>> lsInvAtVertices10;
-  std::map<int, Eigen::Matrix<double, 10, 10>> lsInvAtVertices10OnEdges;
+  std::map<int, Eigen::Matrix<double, 6, 6> > lsInvAtVertices6;
+  std::map<int, Eigen::Matrix<double, 6, 6> > lsInvAtVertices6OnEdges;
+  std::map<int, Eigen::Matrix<double, 10, 10> > lsInvAtVertices10;
+  std::map<int, Eigen::Matrix<double, 10, 10> > lsInvAtVertices10OnEdges;
 #endif
 
 public:
@@ -89,15 +89,18 @@ public:
   feCncGeo *_cnc;
 
   std::map<int, std::map<int, std::vector<double> > > recoveryCoeff; // #vert : {#rec , coeffs}
-  std::map<int, std::map<int, std::map<int, std::vector<double> > > > recoveryCoeffOnEdges; // #edge : {#dof : {#rec , coeffs}}
+  std::map<int, std::map<int, std::map<int, std::vector<double> > > >
+    recoveryCoeffOnEdges; // #edge : {#dof : {#rec , coeffs}}
   std::map<int, std::map<int, std::vector<double> > > derivativeCoeff; // #vert : {#der , coeffs}
-  std::map<int, std::map<int, std::map<int, std::vector<double> > > > derivativeCoeffOnEdges; // #edge : {#dof : {#rec , coeffs}}
+  std::map<int, std::map<int, std::map<int, std::vector<double> > > >
+    derivativeCoeffOnEdges; // #edge : {#dof : {#rec , coeffs}}
   std::map<int, std::vector<double> > errorCoeff; // #vert : coeffs
 
 public:
   feRecovery(feMetaNumber *metaNumber, feSpace *space, feMesh *mesh, feSolution *sol,
              std::vector<double> &norm, feFunction *solRef, std::string meshName = "",
-             std::string metricMeshName = "", feVectorFunction *solRefGrad = nullptr, feVectorFunction *solRefHess = nullptr, bool append = false);
+             std::string metricMeshName = "", feVectorFunction *solRefGrad = nullptr,
+             feVectorFunction *solRefHess = nullptr, bool append = false);
   ~feRecovery() { delete _patch; }
 
   int getDim() { return _dim; }

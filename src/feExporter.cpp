@@ -116,13 +116,13 @@ feExporterVTK::feExporterVTK(std::string vtkFile, feMesh *mesh, feSolution *sol,
     feCncGeo *cnc;
     for(feSpace *fS : spacesToExport) {
       if(fS->getCncGeoID() == *cncToExport.begin()) {
-      // if(fS->getCncGeoID() == "first") {
+        // if(fS->getCncGeoID() == "first") {
         cnc = fS->getCncGeo();
         break;
       }
     }
 
-    std::cout<<"Exporting cnc "<<cnc->getID()<<std::endl;
+    std::cout << "Exporting cnc " << cnc->getID() << std::endl;
 
     // Write nodes and elements
     writeNodes(output, cnc);
@@ -135,7 +135,8 @@ feExporterVTK::feExporterVTK(std::string vtkFile, feMesh *mesh, feSolution *sol,
       if(cnc->getForme() == "TriP1" || cnc->getForme() == "TriP2") {
         writeField(output, cnc, fS->getFieldID());
       } else {
-        printf("In feExporterVTK : So far only P1 and P2 triangles can be exported to a VTK file...\n");
+        printf(
+          "In feExporterVTK : So far only P1 and P2 triangles can be exported to a VTK file...\n");
       }
     }
 

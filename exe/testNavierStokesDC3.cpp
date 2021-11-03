@@ -22,7 +22,6 @@
 #include "feLinearSystemMklPardiso.h"
 #endif
 
-
 double fSolU(const double t, const std::vector<double> &pos, const std::vector<double> &par) {
   double x = pos[0];
   double y = pos[1];
@@ -107,7 +106,7 @@ int main(int argc, char **argv) {
 
   for(int iter = 0; iter < nIter; ++iter) {
     // std::string meshName = "../../data/squareTaylorGreen2.msh";
-    std::string meshName = "../../data/Square/squareNS" + std::to_string(iter+1) + ".msh";
+    std::string meshName = "../../data/Square/squareNS" + std::to_string(iter + 1) + ".msh";
     // std::string meshName = "../../data/squarePression" + std::to_string(iter+1) + ".msh";
 
     feMesh2DP1 *mesh = new feMesh2DP1(meshName, false);
@@ -165,48 +164,48 @@ int main(int argc, char **argv) {
 
     // feLinearSystemPETSc *linearSystem =
     // new feLinearSystemPETSc(argc, argv, formMatrices, formResiduals, metaNumber, mesh);
-#ifdef HAVE_MKL    
+#ifdef HAVE_MKL
     feLinearSystemMklPardiso *linearSystem =
-    new feLinearSystemMklPardiso( formMatrices, formResiduals, metaNumber, mesh);
-  #ifdef HAVE_PETSC
-      // linearSystem->initialize();
-      // Resolution
-      feTolerances tol{1e-9, 1e-9, 20};
+      new feLinearSystemMklPardiso(formMatrices, formResiduals, metaNumber, mesh);
+#ifdef HAVE_PETSC
+    // linearSystem->initialize();
+    // Resolution
+    feTolerances tol{1e-9, 1e-9, 20};
 
-      double t0 = 0.;
-      double t1 = 1.0;
-      int nTimeSteps = 20 * pow(2, iter);
-      // sol->initializeTemporalSolution(t0, t1, nTimeSteps);
-      std::vector<double> normL2BDF(3 * nTimeSteps, 0.0);
-      std::vector<double> normL2DC3(3 * nTimeSteps, 0.0);
-      // solveBDF2(normL2BDF, tol, metaNumber, linearSystem, formMatrices, formResiduals, sol, norms,
-      // mesh, fespace);
-      // solveDC3(normL2BDF, normL2DC3, tol, metaNumber, linearSystem, formMatrices, formResiduals,
-      // sol,
-      //          norms, mesh, fespace);
-      std::string CodeIni = "BDF1/DC"; // Define the way of initialization |"SolEx"->for exact
-                                       // solution|  |"BDF1/DCF"->using only initial conditions|
-      DC3Solver solver(tol, metaNumber, linearSystem, sol, norms, mesh, t0, t1, nTimeSteps, CodeIni);
-      solver.makeSteps(nTimeSteps, fespace);
-      // normL2_U[2*iter] = *std::max_element(normL2BDF.begin(), normL2BDF.end());
-      // maxNormL2BDF[2*iter] = *std::max_element(normL2BDF.begin(), normL2BDF.end());
-      for(int i = 0; i < nTimeSteps; ++i) {
-        maxNormL2DC3_U[2 * iter] = fmax(maxNormL2DC3_U[2 * iter], normL2DC3[3 * i]);
-        maxNormL2DC3_V[2 * iter] = fmax(maxNormL2DC3_V[2 * iter], normL2DC3[3 * i + 1]);
-        maxNormL2DC3_P[2 * iter] = fmax(maxNormL2DC3_P[2 * iter], normL2DC3[3 * i + 2]);
-      }
+    double t0 = 0.;
+    double t1 = 1.0;
+    int nTimeSteps = 20 * pow(2, iter);
+    // sol->initializeTemporalSolution(t0, t1, nTimeSteps);
+    std::vector<double> normL2BDF(3 * nTimeSteps, 0.0);
+    std::vector<double> normL2DC3(3 * nTimeSteps, 0.0);
+    // solveBDF2(normL2BDF, tol, metaNumber, linearSystem, formMatrices, formResiduals, sol, norms,
+    // mesh, fespace);
+    // solveDC3(normL2BDF, normL2DC3, tol, metaNumber, linearSystem, formMatrices, formResiduals,
+    // sol,
+    //          norms, mesh, fespace);
+    std::string CodeIni = "BDF1/DC"; // Define the way of initialization |"SolEx"->for exact
+                                     // solution|  |"BDF1/DCF"->using only initial conditions|
+    DC3Solver solver(tol, metaNumber, linearSystem, sol, norms, mesh, t0, t1, nTimeSteps, CodeIni);
+    solver.makeSteps(nTimeSteps, fespace);
+    // normL2_U[2*iter] = *std::max_element(normL2BDF.begin(), normL2BDF.end());
+    // maxNormL2BDF[2*iter] = *std::max_element(normL2BDF.begin(), normL2BDF.end());
+    for(int i = 0; i < nTimeSteps; ++i) {
+      maxNormL2DC3_U[2 * iter] = fmax(maxNormL2DC3_U[2 * iter], normL2DC3[3 * i]);
+      maxNormL2DC3_V[2 * iter] = fmax(maxNormL2DC3_V[2 * iter], normL2DC3[3 * i + 1]);
+      maxNormL2DC3_P[2 * iter] = fmax(maxNormL2DC3_P[2 * iter], normL2DC3[3 * i + 2]);
+    }
 
-      // std::string vtkFile = "../../data/solutionManufacturee" + std::to_string(iter+1) + ".vtk";
-      // std::string vtkFile = "../../data/taylorGreenUnsteady" + std::to_string(iter+1) + ".vtk";
-      // feExporterVTK writer(vtkFile, mesh, sol, metaNumber, fespace);
+    // std::string vtkFile = "../../data/solutionManufacturee" + std::to_string(iter+1) + ".vtk";
+    // std::string vtkFile = "../../data/taylorGreenUnsteady" + std::to_string(iter+1) + ".vtk";
+    // feExporterVTK writer(vtkFile, mesh, sol, metaNumber, fespace);
 
-      normU->computeL2Norm(metaNumber, sol, mesh);
-      normV->computeL2Norm(metaNumber, sol, mesh);
-      normP->computeL2Norm(metaNumber, sol, mesh);
-      normL2_U[2 * iter] = normU->getNorm();
-      normL2_V[2 * iter] = normV->getNorm();
-      normL2_P[2 * iter] = normP->getNorm();
-  #endif
+    normU->computeL2Norm(metaNumber, sol, mesh);
+    normV->computeL2Norm(metaNumber, sol, mesh);
+    normP->computeL2Norm(metaNumber, sol, mesh);
+    normL2_U[2 * iter] = normU->getNorm();
+    normL2_V[2 * iter] = normV->getNorm();
+    normL2_P[2 * iter] = normP->getNorm();
+#endif
     // std::string vtkFile = "../../data/TestNS_DC3.vtk";
     // feExporterVTK writer(vtkFile, mesh, sol, metaNumber, fespace);
     delete normU;
@@ -217,7 +216,7 @@ int main(int argc, char **argv) {
     delete sol;
     delete metaNumber;
     delete mesh;
-#endif      
+#endif
   }
   delete funSource;
   delete funSolU;

@@ -182,7 +182,7 @@ void BDF2Solver::makeSteps(int nSteps, std::vector<feSpace *> &spaces) {
         printf("Continue with BDF2 \n");
         printf(" ----------------------------- \n");
         printf("\n");
-      } 
+      }
     } else {
       _linearSystem->setRecomputeStatus(false);
     }
@@ -242,7 +242,6 @@ void BDF1Solver::makeSteps(int nSteps, std::vector<feSpace *> &spaces) {
     }
 
     printf("Current step = %d/%d : t = %f\n", _currentStep, nSteps, _tCurrent);
-
   }
 
   std::vector<double> tK1K2(nSteps + 1, 0.0);
@@ -320,7 +319,6 @@ void DC2FSolver::makeSteps(int nSteps, std::vector<feSpace *> &spaces) {
     std::cout << "========dt vaux ==========" << _dt << std::endl;
     printf("\n");
     printf("Current step = %d/%d : t = %f\n", _currentStep, nSteps, _tCurrent);
-
   }
 
   std::vector<double> tK1K2(nSteps + 1, 0.0);
@@ -425,7 +423,6 @@ void DC3FSolver::makeSteps(int nSteps, std::vector<feSpace *> &spaces) {
     printf("-----------------------------------------------------------------");
     printf("\n");
     printf("Current step = %d/%d : t = %f\n", _currentStep, nSteps, _tCurrent);
-
   }
 
   std::vector<double> tK1K2(nSteps + 1, 0.0);
@@ -610,7 +607,6 @@ void DC3FSolver_centered::makeSteps(int nSteps, std::vector<feSpace *> &spaces) 
     printf("-----------------------------------------------------------------");
     printf("\n");
     printf("Current step = %d/%d : t = %f\n", _currentStep, nSteps, _tCurrent);
-
   }
 
   std::vector<double> tK1K2(nSteps + 1, 0.0);
@@ -692,7 +688,6 @@ void DC3FSolver_centered::makeSteps(int nSteps, std::vector<feSpace *> &spaces) 
     // at this moment we fixe the DC3F à the first time step
 
     if(i == 1) {
-    
       initializeDC3F_centered(
         _sol, _metaNumber, _mesh, dynamic_cast<feSolutionDC2F *>(_solutionContainerDC2F),
         dynamic_cast<feSolutionDC2F *>(
@@ -815,7 +810,7 @@ void DC3Solver::makeSteps(int nSteps, std::vector<feSpace *> &spaces) {
       _normL2[0][_currentStep] = _norms[0]->getNorm();
       _norms[1]->computeL2Norm(_metaNumber, _sol, _mesh);
       _normL2[1][_currentStep] = _norms[1]->getNorm();
-  
+
       _dt = true_dt;
       _solutionContainer->rotate(_dt);
       _solutionContainerBDF2->rotate(_dt);
@@ -870,13 +865,11 @@ void DC3Solver::makeSteps(int nSteps, std::vector<feSpace *> &spaces) {
     fePstClc(_sol, _linearSystem, _solutionContainerBDF2);
     _sol->setSolFromContainer(_solutionContainerBDF2);
     // Compute L2 norm of BDF1 solution
-    for(int k = 0; k < _norms.size()-1; k += 2){
-
-      if(_norms[k]->getTypeNorm() == "" ) {
-          _norms[k]->computeL2Norm(_metaNumber, _sol, _mesh);
-          _normL2[k][_currentStep] = _norms[k]->getNorm();
-      }
-      else{
+    for(int k = 0; k < _norms.size() - 1; k += 2) {
+      if(_norms[k]->getTypeNorm() == "") {
+        _norms[k]->computeL2Norm(_metaNumber, _sol, _mesh);
+        _normL2[k][_currentStep] = _norms[k]->getNorm();
+      } else {
         _norms[k]->computeNormLambda(_metaNumber, _sol, _mesh);
         _normL2[k][_currentStep] = _norms[k]->getNorm();
       }
@@ -889,13 +882,11 @@ void DC3Solver::makeSteps(int nSteps, std::vector<feSpace *> &spaces) {
     solveQNBDF(_solutionContainer, _tol, _metaNumber, _linearSystem, _sol, _mesh);
     fePstClc(_sol, _linearSystem, _solutionContainer);
 
-    for(int k = 1; k < _norms.size(); k += 2){
-
-      if(_norms[k]->getTypeNorm() == "" ) {
-          _norms[k]->computeL2Norm(_metaNumber, _sol, _mesh);
-          _normL2[k][_currentStep] = _norms[k]->getNorm();
-      }
-      else{
+    for(int k = 1; k < _norms.size(); k += 2) {
+      if(_norms[k]->getTypeNorm() == "") {
+        _norms[k]->computeL2Norm(_metaNumber, _sol, _mesh);
+        _normL2[k][_currentStep] = _norms[k]->getNorm();
+      } else {
         _norms[k]->computeNormLambda(_metaNumber, _sol, _mesh);
         _normL2[k][_currentStep] = _norms[k]->getNorm();
       }

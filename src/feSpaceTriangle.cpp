@@ -45,20 +45,24 @@ void feSpaceTriP1::initializeAddressingVector(feNumber *number, int numElem) {
 }
 
 // feSpace used to interpolate on a geometric connectivity
-feSpaceTriP1_nonConsistant::feSpaceTriP1_nonConsistant(std::string cncGeoID) : feSpace(nullptr, "GEO", cncGeoID, nullptr) {
+feSpaceTriP1_nonConsistant::feSpaceTriP1_nonConsistant(std::string cncGeoID)
+  : feSpace(nullptr, "GEO", cncGeoID, nullptr) {
   _nFunctions = 3;
   _Lcoor = {0.5, 0., 0., 0.5, 0.5, 0., 0., 0.5, 0.};
 }
 
 // feSpace used to compute (bi-)linear forms
-feSpaceTriP1_nonConsistant::feSpaceTriP1_nonConsistant(feMesh *mesh, std::string fieldID, std::string cncGeoID, feFunction *fct)
+feSpaceTriP1_nonConsistant::feSpaceTriP1_nonConsistant(feMesh *mesh, std::string fieldID,
+                                                       std::string cncGeoID, feFunction *fct)
   : feSpace(mesh, fieldID, cncGeoID, fct) {
   _nFunctions = 3;
   _Lcoor = {0.5, 0., 0., 0.5, 0.5, 0., 0., 0.5, 0.};
   _adr.resize(_nFunctions);
 }
 
-std::vector<double> feSpaceTriP1_nonConsistant::L(double r[3]) { return {1-2.0*r[1],-1.0 + 2.0*r[0] +2.0* r[1], 1-2.0*r[0]}; }
+std::vector<double> feSpaceTriP1_nonConsistant::L(double r[3]) {
+  return {1 - 2.0 * r[1], -1.0 + 2.0 * r[0] + 2.0 * r[1], 1 - 2.0 * r[0]};
+}
 
 std::vector<double> feSpaceTriP1_nonConsistant::dLdr(double r[3]) { return {0.0, 2.0, -2.0}; }
 std::vector<double> feSpaceTriP1_nonConsistant::dLds(double r[3]) { return {-2.0, 2.0, 0.0}; }
@@ -125,10 +129,10 @@ std::vector<double> feSpaceTriP2::dLdt(double r[3]) { return {0., 0., 0., 0., 0.
 void feSpaceTriP2::initializeNumberingUnknowns(feNumber *number) {
   int nDOFPerEdge = 1;
   for(int i = 0; i < _mesh->getNbElm(_cncGeoID); ++i) {
-    for(int j = 0; j < this->getCncGeo()->getNbNodePerElem(); ++j){
+    for(int j = 0; j < this->getCncGeo()->getNbNodePerElem(); ++j) {
       number->defDDLSommet(_mesh, _cncGeoID, i, j);
     }
-    if(this->getCncGeo()->getFeSpace()->getPolynomialDegree() != 2){
+    if(this->getCncGeo()->getFeSpace()->getPolynomialDegree() != 2) {
       number->defDDLEdge(_mesh, _cncGeoID, i, 0, nDOFPerEdge);
       number->defDDLEdge(_mesh, _cncGeoID, i, 1, nDOFPerEdge);
       number->defDDLEdge(_mesh, _cncGeoID, i, 2, nDOFPerEdge);
@@ -138,10 +142,10 @@ void feSpaceTriP2::initializeNumberingUnknowns(feNumber *number) {
 
 void feSpaceTriP2::initializeNumberingEssential(feNumber *number) {
   for(int i = 0; i < _mesh->getNbElm(_cncGeoID); ++i) {
-    for(int j = 0; j < this->getCncGeo()->getNbNodePerElem(); ++j){
+    for(int j = 0; j < this->getCncGeo()->getNbNodePerElem(); ++j) {
       number->defDDLSommet_essentialBC(_mesh, _cncGeoID, i, j);
     }
-    if(this->getCncGeo()->getFeSpace()->getPolynomialDegree() != 2){
+    if(this->getCncGeo()->getFeSpace()->getPolynomialDegree() != 2) {
       number->defDDLEdge_essentialBC(_mesh, _cncGeoID, i, 0);
       number->defDDLEdge_essentialBC(_mesh, _cncGeoID, i, 1);
       number->defDDLEdge_essentialBC(_mesh, _cncGeoID, i, 2);
@@ -153,16 +157,17 @@ void feSpaceTriP2::initializeAddressingVector(feNumber *number, int numElem) {
   _adr[0] = number->getDDLSommet(_mesh, _cncGeoID, numElem, 0);
   _adr[1] = number->getDDLSommet(_mesh, _cncGeoID, numElem, 1);
   _adr[2] = number->getDDLSommet(_mesh, _cncGeoID, numElem, 2);
-  if(this->getCncGeo()->getFeSpace()->getPolynomialDegree() == 2){
+  if(this->getCncGeo()->getFeSpace()->getPolynomialDegree() == 2) {
     _adr[3] = number->getDDLSommet(_mesh, _cncGeoID, numElem, 3);
     _adr[4] = number->getDDLSommet(_mesh, _cncGeoID, numElem, 4);
     _adr[5] = number->getDDLSommet(_mesh, _cncGeoID, numElem, 5);
-  } else{
+  } else {
     _adr[3] = number->getDDLEdge(_mesh, _cncGeoID, numElem, 0, 0);
     _adr[4] = number->getDDLEdge(_mesh, _cncGeoID, numElem, 1, 0);
     _adr[5] = number->getDDLEdge(_mesh, _cncGeoID, numElem, 2, 0);
   }
-  // printf("Vecteur d'adressage elm %d : [%3d %3d %3d %3d %3d %3d]\n", numElem, _adr[0],_adr[1],_adr[2],_adr[3],_adr[4],_adr[5]);
+  // printf("Vecteur d'adressage elm %d : [%3d %3d %3d %3d %3d %3d]\n", numElem,
+  // _adr[0],_adr[1],_adr[2],_adr[3],_adr[4],_adr[5]);
 }
 
 // feSpace used to interpolate on a geometric connectivity

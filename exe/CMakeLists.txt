@@ -24,7 +24,7 @@ feNG_add_executable(testDC3 testDC3.cpp "")
 # feNG_add_executable(testDC3_UP1_LbdP0_randomShape testDC3_UP1_LbdP0_randomShape.cpp "")
 # feNG_add_executable(testDC3_randomShape_IntFlux testDC3_randomShape_IntFlux.cpp "")
 feNG_add_executable(testDC3_2D testDC3_2D.cpp "")
-# feNG_add_executable(testDC3_2D_withoutCorner testDC3_2D_withoutCorner.cpp "")
+feNG_add_executable(testDC3_2D_withoutCorner testDC3_2D_withoutCorner.cpp "")
 # feNG_add_executable(testDC3_2D_intFlux testDC3_2D_intFlux.cpp "")
 # feNG_add_executable(testDC3_Circle_IntFlux testDC3_Circle_IntFlux.cpp "")
 feNG_add_executable(testDC3_Circle testDC3_Circle.cpp "")
@@ -51,9 +51,8 @@ feNG_add_executable(testGmsh testGmsh.cpp "")
 
 #feNG_add_executable(dummyTest dummyTest.cpp "")
 
-feNG_add_executable(testIntersectionStationnaire testIntersectionStationnaire.cpp "")
+# feNG_add_executable(testIntersectionStationnaire testIntersectionStationnaire.cpp "")
 # feNG_add_executable(gmshAPITest gmshAPITest.cpp "")
 # feNG_add_executable(dummyTest dummyTest.cpp "")
 
-#feNG_add_executable(testTransferSingleField testTransferSingleField.cpp "")
-#feNG_add_executable(foo foo.cpp "")
+#feNG_add_executable(testTransferSingleField test

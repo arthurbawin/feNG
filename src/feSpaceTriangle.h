@@ -26,7 +26,8 @@ class feSpaceTriP1_nonConsistant : public feSpace {
 protected:
 public:
   feSpaceTriP1_nonConsistant(std::string cncGeoID);
-  feSpaceTriP1_nonConsistant(feMesh *mesh, std::string fieldID, std::string cncGeoID, feFunction *fct);
+  feSpaceTriP1_nonConsistant(feMesh *mesh, std::string fieldID, std::string cncGeoID,
+                             feFunction *fct);
   ~feSpaceTriP1_nonConsistant() {}
 
   virtual int getNbFunctions() { return 3; }

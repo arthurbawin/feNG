@@ -39,7 +39,7 @@ public:
   void eval(const double t, const std::vector<double> &x, std::vector<double> &res) {
     return _fct(t, x, _par, res);
   }
-  std::vector<double> getParam(){return _par;}
+  std::vector<double> getParam() { return _par; }
 };
 
 #endif

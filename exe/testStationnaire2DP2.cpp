@@ -77,8 +77,10 @@ int main(int argc, char **argv) {
     int nQuad = 8;
     std::vector<feSpace *> spaceDiffusion2D_U = {&U_surface};
     std::vector<feSpace *> spaceSource2D_U = {&U_surface};
-    feBilinearForm *diffU = new feBilinearForm(spaceDiffusion2D_U, mesh, nQuad, new feSysElm_2D_Diffusion(kd, nullptr));
-    feBilinearForm *sourceU = new feBilinearForm(spaceSource2D_U, mesh, nQuad, new feSysElm_2D_Source(1.0, funSource));
+    feBilinearForm *diffU =
+      new feBilinearForm(spaceDiffusion2D_U, mesh, nQuad, new feSysElm_2D_Diffusion(kd, nullptr));
+    feBilinearForm *sourceU =
+      new feBilinearForm(spaceSource2D_U, mesh, nQuad, new feSysElm_2D_Source(1.0, funSource));
 
     std::vector<feBilinearForm *> formMatrices = {diffU};
     std::vector<feBilinearForm *> formResiduals = {diffU, sourceU};
@@ -87,14 +89,6 @@ int main(int argc, char **argv) {
     std::vector<feNorm *> norms = {norm};
 
     feTolerances tol{1e-9, 1e-8, 3};
-
-    StationarySolver solver(tol, metaNumber, linearSystem, sol, norms, mesh);
-    solver.makeSteps(0, fespace);
-    // solveStationary(&normL2[2 * iter], tol, metaNumber, linearSystem, formMatrices,
-    // formResiduals,
-    //                 sol, norms, mesh);
-    linearSystem->finalize();
-
 
     // long int cnt = 0;
     // #pragma omp parallel for private(cnt)
@@ -109,11 +103,10 @@ int main(int argc, char **argv) {
     linearSystem = new feLinearSystemMklPardiso(formMatrices, formResiduals, metaNumber, mesh);
     // toc();
 
-    
-
     // return 1;
 
-    StationarySolver *solver = new StationarySolver(tol, metaNumber, linearSystem, sol, norms, mesh);
+    StationarySolver *solver =
+      new StationarySolver(tol, metaNumber, linearSystem, sol, norms, mesh);
     solver->makeSteps(0, fespace);
 
     std::string vtkFile = "sol.vtk";

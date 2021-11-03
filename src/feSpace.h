@@ -71,7 +71,7 @@ public:
 
   feCncGeo *getCncGeo();
 
-  bool isFctDefined(){ return !(_fct==nullptr); }
+  bool isFctDefined() { return !(_fct == nullptr); }
 
   // The number of degrees of freedom on an element
   virtual int getNbFunctions() = 0;
@@ -130,17 +130,18 @@ public:
   void interpolateVectorFieldAtQuadNode_rDerivative(std::vector<double> field, int iNode,
                                                     std::vector<double> &res);
 
-//   inline void interpolateVectorFieldAtQuadNode_rDerivative(std::vector<double> field, int iNode,
-//                                                            std::vector<double> &res) {
-//   // Field structure :
-//   // [fx0 fy0 fz0 fx1 fy1 fz1 ... fxn fyn fzn]
-//   res[0] = res[1] = res[2] = 0.0;
-//   for(int i = 0; i < 3; ++i) {
-//     for(int j = 0; j < _nFunctions; ++j) {
-//       res[i] += field[3 * j + i] * _dLdr[_nFunctions * iNode + j];
-//     }
-//   }
-// }
+  //   inline void interpolateVectorFieldAtQuadNode_rDerivative(std::vector<double> field, int
+  //   iNode,
+  //                                                            std::vector<double> &res) {
+  //   // Field structure :
+  //   // [fx0 fy0 fz0 fx1 fy1 fz1 ... fxn fyn fzn]
+  //   res[0] = res[1] = res[2] = 0.0;
+  //   for(int i = 0; i < 3; ++i) {
+  //     for(int j = 0; j < _nFunctions; ++j) {
+  //       res[i] += field[3 * j + i] * _dLdr[_nFunctions * iNode + j];
+  //     }
+  //   }
+  // }
 
   void interpolateVectorFieldAtQuadNode_sDerivative(std::vector<double> field, int iNode,
                                                     std::vector<double> &res);
@@ -219,7 +220,8 @@ public:
     _nFunctions = 1;
     _Lcoor = {0., 0., 0.};
   };
-  feSpace1DP1_nonConsistant(feMesh *mesh, std::string fieldID, std::string cncGeoID, feFunction *fct)
+  feSpace1DP1_nonConsistant(feMesh *mesh, std::string fieldID, std::string cncGeoID,
+                            feFunction *fct)
     : feSpace(mesh, fieldID, cncGeoID, fct) {
     _nFunctions = 1;
     _adr.resize(_nFunctions);

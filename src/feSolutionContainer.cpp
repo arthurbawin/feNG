@@ -16,9 +16,7 @@ void feSolutionContainer::initialize(feSolution *sol, feMesh *mesh, feMetaNumber
   sol->initializeUnknowns(mesh, metaNumber);
   sol->initializeEssentialBC(mesh, metaNumber);
   _sol[0] = sol->getSolutionCopy();
-  for(int i = 0; i < _nSol-1; ++i){
-    _sol[i].resize(_nDofs, 0.0);
-  }
+  for(int i = 0; i < _nSol - 1; ++i) { _sol[i].resize(_nDofs, 0.0); }
   _fResidual[0].resize(_nDofs);
 }
 

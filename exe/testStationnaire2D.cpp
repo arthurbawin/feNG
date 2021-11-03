@@ -78,11 +78,12 @@ int main(int argc, char **argv) {
 
     feNorm *norm = new feNorm(&U_surface, mesh, dQuad, funSol);
     std::vector<feNorm *> norms = {norm};
-    
+
 #ifdef HAVE_PETSC
-    feLinearSystemPETSc *linearSystem = new feLinearSystemPETSc(argc, argv, formMatrices, formResiduals, metaNumber, mesh);
-    // feLinearSystemMklPardiso *linearSystem = new feLinearSystemMklPardiso(formMatrices, formResiduals, metaNumber, mesh);
-    // linearSystem->initialize();
+    feLinearSystemPETSc *linearSystem =
+      new feLinearSystemPETSc(argc, argv, formMatrices, formResiduals, metaNumber, mesh);
+    // feLinearSystemMklPardiso *linearSystem = new feLinearSystemMklPardiso(formMatrices,
+    // formResiduals, metaNumber, mesh); linearSystem->initialize();
     feTolerances tol{1e-9, 1e-8, 20};
     StationarySolver solver(tol, metaNumber, linearSystem, sol, norms, mesh);
     solver.makeSteps(0, fespace);

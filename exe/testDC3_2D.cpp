@@ -103,7 +103,7 @@ int main(int argc, char **argv) {
   feFunction *funSol = new feFunction(fSol, par);
   feFunction *funSource = new feFunction(fSource, par);
 
-  int nIter = 2;
+  int nIter = 3;
   std::vector<double> normL2_BDF2(2 * nIter, 0.0);
   std::vector<double> normL2_DC3(2 * nIter, 0.0);
 
@@ -112,10 +112,10 @@ int main(int argc, char **argv) {
   TT.resize(nIter);
 
   for(int iter = 0; iter < nIter; ++iter) {
-    std::string meshName = "../../data/Square/square" + std::to_string(iter + 1) + "Msh2.msh";
+    std::string meshName = "../../data/Square/square_2.0_" + std::to_string(iter + 1) + ".msh";
     // Maillage
-     feMesh2DP1 *mesh = new feMesh2DP1(meshName, false);
-     nElm[iter] = mesh->getNbInteriorElems();
+    feMesh2DP1 *mesh = new feMesh2DP1(meshName, false);
+    nElm[iter] = mesh->getNbInteriorElems();
     // Espaces d'interpolation
 
     feSpace1DP3 U_angle = feSpace1DP3(mesh, "U", "Angle", funSol);
@@ -157,34 +157,34 @@ int main(int argc, char **argv) {
     // Systeme lineaire
     // feLinearSystemPETSc *linearSystem =
     // new feLinearSystemPETSc(argc, argv, formMatrices, formResiduals, metaNumber, mesh);
-#ifdef HAVE_MKL    
-      feLinearSystemMklPardiso *linearSystem =
-      new feLinearSystemMklPardiso( formMatrices, formResiduals, metaNumber, mesh);
-  #ifdef HAVE_PETSC
-      // linearSystem->initialize();
-      // Resolution
-      feTolerances tol{1e-9, 1e-9, 20};
-      std::string CodeIni = "BDF1/DCF"; // Define the way of initialization |"SolEx"->for exact
-                                        // solution|  |"BDF1/DCF"->using only initial conditions|
-      DC3Solver solver(tol, metaNumber, linearSystem, solDC3, norms, mesh, t0, t1, nTimeSteps,
-                       CodeIni);
-      solver.makeSteps(nTimeSteps, fespace);
-      std::vector<double> &normL2BDF2 = solver.getNorm(0);
-      std::vector<double> &normL2DC3 = solver.getNorm(1);
-      normL2_BDF2[2 * iter] = *std::max_element(normL2BDF2.begin(), normL2BDF2.end());
-      normL2_DC3[2 * iter] = *std::max_element(normL2DC3.begin(), normL2DC3.end());
-  #endif
+#ifdef HAVE_MKL
+    feLinearSystemMklPardiso *linearSystem =
+      new feLinearSystemMklPardiso(formMatrices, formResiduals, metaNumber, mesh);
+#ifdef HAVE_PETSC
+    // linearSystem->initialize();
+    // Resolution
+    feTolerances tol{1e-9, 1e-9, 20};
+    std::string CodeIni = "BDF1/DCF"; // Define the way of initialization |"SolEx"->for exact
+                                      // solution|  |"BDF1/DCF"->using only initial conditions|
+    DC3Solver solver(tol, metaNumber, linearSystem, solDC3, norms, mesh, t0, t1, nTimeSteps,
+                     CodeIni);
+    solver.makeSteps(nTimeSteps, fespace);
+    std::vector<double> &normL2BDF2 = solver.getNorm(0);
+    std::vector<double> &normL2DC3 = solver.getNorm(1);
+    normL2_BDF2[2 * iter] = *std::max_element(normL2BDF2.begin(), normL2BDF2.end());
+    normL2_DC3[2 * iter] = *std::max_element(normL2DC3.begin(), normL2DC3.end());
+#endif
 
-      delete normBDF2;
-      delete normDC3;
-      delete linearSystem;
-      delete masse_U_M2D;
-      delete source_U_M2D;
-      delete diff_U_M2D;
-      delete solDC3;
-      delete metaNumber;
-      delete mesh;
-#endif    
+    delete normBDF2;
+    delete normDC3;
+    delete linearSystem;
+    delete masse_U_M2D;
+    delete source_U_M2D;
+    delete diff_U_M2D;
+    delete solDC3;
+    delete metaNumber;
+    delete mesh;
+#endif
   }
   delete funSource;
   delete funSol;

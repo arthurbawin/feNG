@@ -89,34 +89,34 @@ int main(int argc, char **argv) {
     // Systeme lineaire
     // feLinearSystemPETSc *linearSystem =
     //   new feLinearSystemPETSc(argc, argv, formMatrices, formResiduals, metaNumber, mesh);
-#ifdef HAVE_MKL    
-        feLinearSystemMklPardiso *linearSystem =
-        new feLinearSystemMklPardiso( formMatrices, formResiduals, metaNumber, mesh);
-  #ifdef HAVE_PETSC
-      // linearSystem->initialize();
-      // Resolution
-      feTolerances tol{1e-10, 1e-9, 10};
-      DC3FSolver solver(tol, metaNumber, linearSystem, solDC3F, norms, mesh, t0, t1, nTimeSteps);
-      solver.makeSteps(nTimeSteps, fespace);
-      std::vector<double> &normL2BDF1 = solver.getNorm(0);
-      std::vector<double> &normL2DC2F = solver.getNorm(1);
-      std::vector<double> &normL2DC3F = solver.getNorm(2);
+#ifdef HAVE_MKL
+    feLinearSystemMklPardiso *linearSystem =
+      new feLinearSystemMklPardiso(formMatrices, formResiduals, metaNumber, mesh);
+#ifdef HAVE_PETSC
+    // linearSystem->initialize();
+    // Resolution
+    feTolerances tol{1e-10, 1e-9, 10};
+    DC3FSolver solver(tol, metaNumber, linearSystem, solDC3F, norms, mesh, t0, t1, nTimeSteps);
+    solver.makeSteps(nTimeSteps, fespace);
+    std::vector<double> &normL2BDF1 = solver.getNorm(0);
+    std::vector<double> &normL2DC2F = solver.getNorm(1);
+    std::vector<double> &normL2DC3F = solver.getNorm(2);
 
-      normL2_BDF1[2 * iter] = *std::max_element(normL2BDF1.begin(), normL2BDF1.end());
-      normL2_DC2F[2 * iter] = *std::max_element(normL2DC2F.begin(), normL2DC2F.end());
-      normL2_DC3F[2 * iter] = *std::max_element(normL2DC3F.begin(), normL2DC3F.end());
-  #endif
+    normL2_BDF1[2 * iter] = *std::max_element(normL2BDF1.begin(), normL2BDF1.end());
+    normL2_DC2F[2 * iter] = *std::max_element(normL2DC2F.begin(), normL2DC2F.end());
+    normL2_DC3F[2 * iter] = *std::max_element(normL2DC3F.begin(), normL2DC3F.end());
+#endif
 
-      delete normBDF1;
-      delete normDC2F;
-      delete normDC3F;
-      delete linearSystem;
-      delete masse_U_M1D;
-      delete source_U_M1D;
-      delete solDC3F;
-      delete metaNumber;
-      delete mesh;
-#endif   
+    delete normBDF1;
+    delete normDC2F;
+    delete normDC3F;
+    delete linearSystem;
+    delete masse_U_M1D;
+    delete source_U_M1D;
+    delete solDC3F;
+    delete metaNumber;
+    delete mesh;
+#endif
   }
   delete funSource;
   delete funSol;

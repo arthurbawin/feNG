@@ -14,7 +14,8 @@ protected:
   int _pTag;
 
 public:
-  Triangle(Vertex *v0, Vertex *v1, Vertex *v2, int tag = -1, int pTag = -1) : _tag(tag), _pTag(pTag){
+  Triangle(Vertex *v0, Vertex *v1, Vertex *v2, int tag = -1, int pTag = -1)
+    : _tag(tag), _pTag(pTag) {
     _v[0] = v0;
     _v[1] = v1;
     _v[2] = v2;

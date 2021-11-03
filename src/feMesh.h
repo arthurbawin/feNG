@@ -55,9 +55,11 @@ public:
   std::vector<double> getCoord(std::string cncGeoID, int numElm);
   std::vector<double> getCoord(int cncGeoTag, int numElm);
 
-  int getVertexSequentialTagFromGmshTag(int gmshNodeTag){ return _verticesMap[gmshNodeTag]; }
+  int getVertexSequentialTagFromGmshTag(int gmshNodeTag) { return _verticesMap[gmshNodeTag]; }
   Vertex *getVertex(int iVertex) { return &_vertices[iVertex]; }
-  Vertex *getVertexFromGmshNodeTag(int gmshNodeTag) { return &_vertices[_verticesMap[gmshNodeTag]]; }
+  Vertex *getVertexFromGmshNodeTag(int gmshNodeTag) {
+    return &_vertices[_verticesMap[gmshNodeTag]];
+  }
   std::vector<Vertex> &getVertices() { return _vertices; }
 
   std::set<Edge, EdgeLessThan> _edges;
@@ -167,7 +169,6 @@ protected:
 
   mapType _physicalEntitiesDescription;
 
-
   std::vector<int> _sequentialNodeToGmshNode;
 
   int _nPoints;
@@ -188,19 +189,21 @@ protected:
   // std::vector<feElement*> _boundaryElements;
 
 public:
-  feMesh2DP1(std::string meshName, bool curved, mapType physicalEntitiesDescription = mapType(), bool verbose = false);
+  feMesh2DP1(std::string meshName, bool curved, mapType physicalEntitiesDescription = mapType(),
+             bool verbose = false);
   ~feMesh2DP1();
 
   int readMsh2(std::istream &input, bool curved, mapType physicalEntitiesDescription);
   int readMsh4(std::istream &input, bool curved, mapType physicalEntitiesDescription, bool verbose);
-  int readGmsh(std::string meshName, bool curved, mapType physicalEntitiesDescription = mapType(), bool verbose = false);
+  int readGmsh(std::string meshName, bool curved, mapType physicalEntitiesDescription = mapType(),
+               bool verbose = false);
 
   bool isMeshFileBinary() { return _isBinary; }
   double getGmshVersion() { return _gmshVersion; }
 
   mapType getPhysicalEntitiesDescription() { return _physicalEntitiesDescription; }
 
-  int getGmshNodeTag(int iVertex){ return _sequentialNodeToGmshNode[iVertex]; }
+  int getGmshNodeTag(int iVertex) { return _sequentialNodeToGmshNode[iVertex]; }
 
   void transfer(feMesh2DP1 *otherMesh, feMetaNumber *myMN, feMetaNumber *otherMN,
                 feSolutionContainer *solutionContainer, const std::vector<feSpace *> &mySpaces,
