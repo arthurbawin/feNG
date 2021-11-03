@@ -14,8 +14,10 @@
 #include "feBilinearForm.h"
 #include "feSolver.h"
 #include "feLinearSystemPETSc.h"
-#include "feLinearSystemMklPardiso.h"
 #include "feExporter.h"
+#ifdef HAVE_MKL
+#include "feLinearSystemMklPardiso.h"
+#endif
 
 double fSol(const double t, const std::vector<double> x, const std::vector<double> par) {
   return pow(x[0], 6);
@@ -99,6 +101,7 @@ int main(int argc, char **argv) {
 
     // printf("Measuring time from here\n");
     // tic();
+#ifdef HAVE_MKL    
     feLinearSystemMklPardiso *linearSystem;
     linearSystem = new feLinearSystemMklPardiso(formMatrices, formResiduals, metaNumber, mesh);
     // toc();
@@ -119,6 +122,7 @@ int main(int argc, char **argv) {
     delete sol;
     delete metaNumber;
     delete mesh;
+#endif    
   }
   delete funSource;
   delete funSol;
