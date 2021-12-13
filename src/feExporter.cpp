@@ -63,10 +63,10 @@ void feExporterVTK::writeElementsConnectivity(std::ostream &output, feCncGeo *cn
   for(int iElm = 0; iElm < nElm; ++iElm) { output << vtkElem << std::endl; }
 }
 
-void feExporterVTK::writeField(std::ostream &output, feCncGeo *cnc, std::string fieldID) {
+void feExporterVTK::writeField(std::ostream &output, feCncGeo *cnc, std::string fieldID, bool LoopOverCnc) {
   std::vector<double> &sol = _sol->getSolutionReference();
   // int nNod = cnc->getNbNodes();
-  int nNod = _mesh->getNbNodes();
+  int nNod = LoopOverCnc ? cnc->getNbNodes() : _mesh->getNbNodes();
   feNumber *n = _metaNumber->getNumbering(fieldID);
   // int nNod = n->getNbNodes();
   output << "SCALARS " << fieldID << " double 1" << std::endl;
@@ -75,13 +75,27 @@ void feExporterVTK::writeField(std::ostream &output, feCncGeo *cnc, std::string 
   // Write field(s) to a text file
   std::string fileName = "solution" + fieldID + ".txt";
   FILE *f = fopen(fileName.c_str(), "w");
-
+  std::vector <double> V(_mesh->getNbNodes(), 0.);
   for(int iNode = 0; iNode < nNod; ++iNode) {
-    int iDOF = n->getDOFNumberAtVertex(iNode);
-    output << sol[iDOF] << std::endl;
-    fprintf(f, "%+-16.16e\n", sol[iDOF]);
-  }
+    int iDOF ;
+    if(LoopOverCnc == false) iDOF = n->getDOFNumberAtVertex(iNode);
+    if(LoopOverCnc == true){ 
+      iDOF = n->getDOFNumberAtVertex(cnc->getNodeConnectivity(iNode));
+      V[cnc->getNodeConnectivity(iNode)] = sol[iDOF] ;  
+    }
+    if(LoopOverCnc == false ){
 
+      output << sol[iDOF] << std::endl;
+      fprintf(f, "%+-16.16e\n", sol[iDOF]);
+    }
+  
+  }
+  if(LoopOverCnc == true){
+   for(int iNode = 0; iNode < _mesh->getNbNodes(); ++iNode) {
+    output << V[iNode] << std::endl;
+    fprintf(f, "%+-16.16e\n", V[iNode]);
+    }
+  }
   fclose(f);
 }
 
@@ -97,20 +111,22 @@ feExporterVTK::feExporterVTK(std::string vtkFile, feMesh *mesh, feSolution *sol,
     std::vector<feSpace *> spacesToExport;
     std::set<std::string> cncToExport;
     for(feSpace *fS : space) {
-      if(fS->getDim() == mesh->getDim()) {
-        spacesToExport.push_back(fS);
-        // std::cout<<fS->getCncGeoID()<<std::endl;
-        cncToExport.insert(fS->getCncGeoID());
-      }
+      // if(fS->getDim() == mesh->getDim()) {
+      //   spacesToExport.push_back(fS);
+      //   // std::cout<<fS->getCncGeoID()<<std::endl;
+      //   cncToExport.insert(fS->getCncGeoID());
+      // }
+      spacesToExport.push_back(fS);
+      cncToExport.insert(fS->getCncGeoID());
     }
 
     // For now we only print one domain connectivity, assuming all fields are defined on the same
     // connectivity. To fix this, we have to join the connectivities : check which nodes are shared,
     // and use a global numbering
-    if(cncToExport.size() > 1) {
-      printf("In feExporterVTK : Warning - Multiple domains visualization is not ready yet.\n");
-      printf("Only the first domain will be exported.\n");
-    }
+    // if(cncToExport.size() > 1) {
+    //   printf("In feExporterVTK : Warning - Multiple domains visualization is not ready yet.\n");
+    //   printf("Only the first domain will be exported.\n");
+    // }
 
     // Grab the connectivity from any matching fespace
     feCncGeo *cnc;
@@ -125,6 +141,7 @@ feExporterVTK::feExporterVTK(std::string vtkFile, feMesh *mesh, feSolution *sol,
     std::cout << "Exporting cnc " << cnc->getID() << std::endl;
 
     // Write nodes and elements
+    cnc = spacesToExport[3] ->getCncGeo() ;
     writeNodes(output, cnc);
     writeElementsConnectivity(output, cnc);
     // output << "POINT_DATA " << cnc->getNbNodes() << std::endl;
@@ -132,11 +149,13 @@ feExporterVTK::feExporterVTK(std::string vtkFile, feMesh *mesh, feSolution *sol,
 
     // Write the field associated to each fespace in spacesToExport
     for(feSpace *fS : spacesToExport) {
-      if(cnc->getForme() == "TriP1" || cnc->getForme() == "TriP2") {
-        writeField(output, cnc, fS->getFieldID());
+      // if(cnc->getForme() == "TriP1" || cnc->getForme() == "TriP2") {
+      if(fS->getDim() == mesh->getDim()) {
+        writeField(output, fS->getCncGeo(), fS->getFieldID(), false);
       } else {
-        printf(
-          "In feExporterVTK : So far only P1 and P2 triangles can be exported to a VTK file...\n");
+        writeField(output, fS->getCncGeo(), fS->getFieldID(), true);
+        // printf(
+        //   "In feExporterVTK : So far only P1 and P2 triangles can be exported to a VTK file...\n");
       }
     }
 

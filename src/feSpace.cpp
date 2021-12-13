@@ -292,13 +292,6 @@ void feSpace1DP1_nonConsistant::initializeAddressingVector(feNumber *number, int
 
 void feSpace1DP2::initializeNumberingUnknowns(feNumber *number) {
   for(int i = 0; i < _mesh->getNbElm(_cncGeoID); ++i) {
-    // <<<<<<< HEAD
-    //     number->defDDLSommet(_mesh, _cncGeoID, i, 0);
-    //     number->defDDLSommet(_mesh, _cncGeoID, i, 1);
-    //     number->defDDLElement(_mesh, _cncGeoID, i, 1);
-    //     // If the line is a boundary element, the edge should be set by the interior element
-    //     number->defDDLEdge(_mesh, _cncGeoID, i, 0, 1);
-    // =======
     // Loop over the elements nodes on geometric interpolant (> 2 if curved)
     for(int j = 0; j < this->getCncGeo()->getNbNodePerElem(); ++j) {
       number->defDDLSommet(_mesh, _cncGeoID, i, j);
@@ -347,8 +340,6 @@ void feSpace1DP3::initializeNumberingUnknowns(feNumber *number) {
     number->defDDLSommet(_mesh, _cncGeoID, i, 1);
     number->defDDLElement(_mesh, _cncGeoID, i, 2);
     // TODO : add a test to check if it is in the situation of Verwer
-    number->defDDLEdge(_mesh, _cncGeoID, i, 0, 1);
-    number->defDDLEdge(_mesh, _cncGeoID, i, 0, 2);
     number->defDDLEdge(_mesh, _cncGeoID, i, 0, 2);
   }
 }
@@ -366,8 +357,17 @@ void feSpace1DP3::initializeNumberingEssential(feNumber *number) {
 void feSpace1DP3::initializeAddressingVector(feNumber *number, int numElem) {
   _adr[0] = number->getDDLSommet(_mesh, _cncGeoID, numElem, 0);
   _adr[1] = number->getDDLSommet(_mesh, _cncGeoID, numElem, 1);
-  _adr[2] = number->getDDLElement(_mesh, _cncGeoID, numElem, 0);
-  _adr[3] = number->getDDLElement(_mesh, _cncGeoID, numElem, 1);
+  int e = _mesh->getEdge(_cncGeoID, numElem, 0);
+  if(e > 0){
+    _adr[2] = number->getDDLElement(_mesh, _cncGeoID, numElem, 0);
+    _adr[3] = number->getDDLElement(_mesh, _cncGeoID, numElem, 1);
+  }
+  else {
+    _adr[2] = number->getDDLElement(_mesh, _cncGeoID, numElem, 1);
+    _adr[3] = number->getDDLElement(_mesh, _cncGeoID, numElem, 0);
+
+  }
+  
 }
 
 void feSpace1DP4::initializeNumberingUnknowns(feNumber *number) {
@@ -396,7 +396,16 @@ void feSpace1DP4::initializeNumberingEssential(feNumber *number) {
 void feSpace1DP4::initializeAddressingVector(feNumber *number, int numElem) {
   _adr[0] = number->getDDLSommet(_mesh, _cncGeoID, numElem, 0);
   _adr[1] = number->getDDLSommet(_mesh, _cncGeoID, numElem, 1);
-  _adr[2] = number->getDDLElement(_mesh, _cncGeoID, numElem, 0);
-  _adr[3] = number->getDDLElement(_mesh, _cncGeoID, numElem, 1);
-  _adr[4] = number->getDDLElement(_mesh, _cncGeoID, numElem, 2);
+  int e = _mesh->getEdge(_cncGeoID, numElem, 0);
+  if(e > 0){
+    _adr[2] = number->getDDLElement(_mesh, _cncGeoID, numElem, 0);
+    _adr[3] = number->getDDLElement(_mesh, _cncGeoID, numElem, 1);
+    _adr[4] = number->getDDLElement(_mesh, _cncGeoID, numElem, 2);
+  }
+  else{
+    _adr[4] = number->getDDLElement(_mesh, _cncGeoID, numElem, 0);
+    _adr[3] = number->getDDLElement(_mesh, _cncGeoID, numElem, 1);
+    _adr[2] = number->getDDLElement(_mesh, _cncGeoID, numElem, 2);
+
+  }
 }

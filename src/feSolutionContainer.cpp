@@ -34,20 +34,23 @@ void feStationarySolution::computeSolTimeDerivative(feSolution *sol, feLinearSys
 }
 
 void feSolutionBDF2::computeSolTimeDerivative(feSolution *sol, feLinearSystem *linearSystem) {
+  // std::cout << "_sol[0][0]   " << _sol[0][0] << "    _sol[1][0]   " << _sol[1][0]<<std::endl;
   for(int i = 0; i < _nDofs; ++i)
     sol->setSolDotAtDOF(i, _cn[0] * _sol[0][i] + _cn[1] * _sol[1][i] + _cn[2] * _sol[2][i]);
-  // std::cout<<"coeffs"<<_cn[0]<<","<<_cn[1]<<","<<_cn[2]<<"timestep"<<_t[0]<<_t[1]<<std::endl;
+  // std::cout<<"coeffs "<<_cn[0]<<","<<_cn[1]<<","<<_cn[2]<<"timestep"<<_t[0]<<_t[1]<<std::endl;
 }
 
 void feSolutionBDF1::computeSolTimeDerivative(feSolution *sol, feLinearSystem *linearSystem) {
   // std::cout << "_sol[0][0]   " << _sol[0][0] << "    _sol[1][0]   " << _sol[1][0] << std::endl;
+  // std::cout << "_sol[0][1]   " << _sol[0][1] << "    _sol[1][1]   " << _sol[1][1] << std::endl;
+  // std::cout<<"nb de sol" << _nDofs << std::endl;
   for(int i = 0; i < _nDofs; ++i) sol->setSolDotAtDOF(i, _cn[0] * _sol[0][i] + _cn[1] * _sol[1][i]);
 
   // std::cout<<"coeffs"<<_cn[0]<<","<<_cn[1]<<","<<_cn[2]<<"timestep"<<_t[0]<<_t[1]<<std::endl;
 }
 
 void feSolutionDCF::computeSolTimeDerivative(feSolution *sol, feLinearSystem *linearSystem) {
-  // std::cout << "_sol[0][0]   " << _sol[0][0] << "    _sol[1][0]   " << _sol[1][0]
+  // std::cout << "_sol[0][0]   " << _sol[0][0] << "    _sol[1][0]   " << _sol[1][0]<< "    _sol[2][0]   " << _sol[2][0]<<std::endl;
   for(int i = 0; i < _nDofs; ++i)
     sol->setSolDotAtDOF(i, _cn[0] * _sol[0][i] + _cn[1] * _sol[1][i] + _cn[2] * _sol[2][i]);
   linearSystem->applyCorrectionToResidual(-1.0, _d);
@@ -264,6 +267,7 @@ void initializeDC3(feSolution *sol, feMetaNumber *metaNumber, feMesh *mesh, feSo
       2.0 * delta[n]; // Indexé par delta[i][j] = delta[n*j+i] : delta(1,2) = delta[0][1] = delta[n]
     // std::cout << "le derivee trosieme vaut " << d3u << std::endl;
     solDC3->_d[k] = d3u / 6.0 * k1 * (k1 + k2);
+    // std::cout<<"les residus valent "<<f[0]<< " ,  "<< f[1]<< " et " << f[2] <<std::endl;
     // std::cout << "la correction du DC3F vaut " << d3u / 6.0 * k1 * (k1 + k2) << std::endl;
   }
   // Init FESOL
@@ -385,7 +389,7 @@ void initializeDC3F(feSolution *sol, feMetaNumber *metaNumber, feMesh *mesh,
     // std::endl;
     d3u =
       2.0 * delta[n]; // Indexé par delta[i][j] = delta[n*j+i] : delta(1,2) = delta[0][1] = delta[n]
-    // d2u = delta[0] + delta[n] *(k1-k2);
+    d2u = delta[0] + delta[n] *(k1-k2);
     d2u = delta[0] + delta[n] * k1;
     // std::cout<< "le derivee deuxieme vaut " << d2u << std::endl;
     // std::cout<< "le derivee trosieme vaut " << d3u << std::endl;

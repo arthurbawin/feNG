@@ -31,7 +31,7 @@ public:
   void writeHeader(std::ostream &output);
   void writeNodes(std::ostream &output, feCncGeo *cnc);
   void writeElementsConnectivity(std::ostream &output, feCncGeo *cnc);
-  void writeField(std::ostream &output, feCncGeo *cnc, std::string fieldID);
+  void writeField(std::ostream &output, feCncGeo *cnc, std::string fieldID, bool LoopOverCnc = false);
 };
 
 #endif

@@ -36,6 +36,76 @@ public:
                          double dt, double *Be) = 0;
 };
 
+class feSysElm_0D_StiffSpring : public feSysElm {
+protected:
+  feFunction *_fct;
+  std::vector<double> _par; // Parametre
+  int _idX; //pos
+  int _idV; //vit
+  std::vector<double> _feX;
+  std::vector<double> _feV;
+
+public:
+  feSysElm_0D_StiffSpring(std::vector<double> par, feFunction *fct) : _fct(fct), _par(par){};
+  virtual ~feSysElm_0D_StiffSpring() {}
+
+  virtual void createElementarySystem(std::vector<feSpace *> &space);
+  virtual void computeAe(std::vector<double> &J, int numElem, std::vector<feSpace *> &intSpace,
+                         feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn,
+                         double **Ae);
+  virtual void computeBe(std::vector<double> &J, int numElem, std::vector<feSpace *> &intSpace,
+                         feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn,
+                         double dt, double *Be);
+};
+
+class feSysElm_0D_Stiff2 : public feSysElm {
+protected:
+  feFunction *_fct;
+  double _par; // Parametre
+  int _idX; 
+  int _idY;
+  int _idZ;
+  std::vector<double> _feX;
+  std::vector<double> _feY;
+  std::vector<double> _feZ;
+
+public:
+  feSysElm_0D_Stiff2(double par, feFunction *fct) : _fct(fct), _par(par){};
+  virtual ~feSysElm_0D_Stiff2() {}
+
+  virtual void createElementarySystem(std::vector<feSpace *> &space);
+  virtual void computeAe(std::vector<double> &J, int numElem, std::vector<feSpace *> &intSpace,
+                         feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn,
+                         double **Ae);
+  virtual void computeBe(std::vector<double> &J, int numElem, std::vector<feSpace *> &intSpace,
+                         feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn,
+                         double dt, double *Be);
+};
+
+class feSysElm_0D_Stiff3 : public feSysElm {
+protected:
+  feFunction *_fct;
+  double _par; // Parametre
+  int _idX; 
+  int _idY;
+  int _idZ;
+  std::vector<double> _feX;
+  std::vector<double> _feY;
+  std::vector<double> _feZ;
+
+public:
+  feSysElm_0D_Stiff3(double par, feFunction *fct) : _fct(fct), _par(par){};
+  virtual ~feSysElm_0D_Stiff3() {}
+
+  virtual void createElementarySystem(std::vector<feSpace *> &space);
+  virtual void computeAe(std::vector<double> &J, int numElem, std::vector<feSpace *> &intSpace,
+                         feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn,
+                         double **Ae);
+  virtual void computeBe(std::vector<double> &J, int numElem, std::vector<feSpace *> &intSpace,
+                         feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn,
+                         double dt, double *Be);
+};
+
 class feSysElm_0D_weakBC : public feSysElm {
 protected:
   feFunction *_fct;
@@ -211,7 +281,33 @@ public:
                          feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn,
                          double dt, double *Be);
 };
+// class feSysElm_1D_weakBC_Vec : public feSysElm {
+// protected:
+//   feVectorFunction *_fct;
+//   std::vector<double> &_par; // Parametre
+//   int _idU;
+//   int _idV;
+//   int _idL;
+//   int _idBu;
+//   int _idBv;
+//   std::vector<double> _feU;
+//   std::vector<double> _feV;
+//   std::vector<double> _feL;
+//   std::vector<double> _feBu;
+//   std::vector<double> _feBv;
 
+// public:
+//   feSysElm_1D_weakBC_Vec(std::vector<double> &par, feVectorFunction *fct) : _fct(fct), _par(par){};
+//   virtual ~feSysElm_1D_weakBC_Vec() {}
+
+//   virtual void createElementarySystem(std::vector<feSpace *> &space);
+//   virtual void computeAe(std::vector<double> &J, int numElem, std::vector<feSpace *> &intSpace,
+//                          feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn,
+//                          double **Ae);
+//   virtual void computeBe(std::vector<double> &J, int numElem, std::vector<feSpace *> &intSpace,
+//                          feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn,
+//                          double dt, double *Be);
+// };
 class feSysElm_1D_Source : public feSysElm {
 protected:
   feFunction *_fct;

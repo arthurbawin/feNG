@@ -24,6 +24,9 @@ protected:
   std::vector<int> _connecEdges; // Connectivite des aretes
   std::vector<int> _connecFaces; // Connectivite des faces
 
+  // std::map <int, int> _globNodeToLocNode ; 
+
+
   feSpace *_space;
   feMesh *_mesh; // Ou alors donner le vecteur de Vertex de la cnc
 
@@ -46,6 +49,9 @@ public:
     // connecNodes.erase( std::unique(connecNodes.begin(), connecNodes.end()), connecNodes.end() );
     // _nNod = connecNodes.size();
     // std::cout<<_nNod<<std::endl;
+    // int cnt = 0;
+    // for(int node : connecNodes) 
+    //   _globNodeToLocNode[node] = cnt++ ;
   };
   ~feCncGeo() {
     // if(_space != nullptr)
@@ -72,6 +78,7 @@ public:
   int getNodeConnectivity(int numElem, int iNode) {
     return _connecNodes[_nNodPerElm * numElem + iNode];
   }
+  // int getLocalNode(int mshNode){return _globNodeToLocNode[mshNode];}
   int getElementConnectivity(int numElem) { return _connecElem[numElem]; }
   int getEdgeConnectivity(int numElem, int iEdge) { return _connecEdges[_nEdg * numElem + iEdge]; }
 
