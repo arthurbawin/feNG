@@ -1,7 +1,7 @@
 include_directories(${CMAKE_CURRENT_SOURCE_DIR} / src)
 
 feNG_add_executable(testStationnaire testStationnaire.cpp "") 
-feNG_add_executable(Stiff_Eq_0D_BDF Stiff_Eq_0D_BDF.cpp "") 
+# feNG_add_executable(Stiff_Eq_0D_BDF Stiff_Eq_0D_BDF.cpp "") 
 # feNG_add_executable(Stiff2_0D_BDF Stiff2_0D_BDF.cpp "") 
 # feNG_add_executable(Stiff3_0D_BDF Stiff3_0D_BDF.cpp "") 
 # feNG_add_executable(Stiff_Eq_0D_DCBDF1 Stiff_Eq_0D_DCBDF1.cpp "") 
@@ -73,7 +73,7 @@ feNG_add_executable(VonKarman_BDF VonKarman_BDF.cpp "")
 
 
 #feNG_add_executable(dummyTest dummyTest.cpp "")
-feNG_add_executable(test_Andre test_Andre.cpp "")
+# feNG_add_executable(test_Andre test_Andre.cpp "")
 
 # feNG_add_executable(testIntersectionStationnaire testIntersectionStationnaire.cpp "")
 # feNG_add_executable(gmshAPITest gmshAPITest.cpp "")
