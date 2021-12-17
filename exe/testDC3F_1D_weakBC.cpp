@@ -18,57 +18,57 @@
 #include "feLinearSystemPETSc.h"
 #endif
 
-// double fSol(const double t, const std::vector<double> &x, const std::vector<double> par) {
-//   double x1 = x[0];
-//   int a = par[1];
-//   return pow(t, a)*(x1*x1+1);
-// }
-
-// double fSource(const double t, const std::vector<double> &x, const std::vector<double> par) {
-//   double x1 = x[0];
-//   double c1 = par[0];
-//   double a = par[1];
-//   double beta = (a == 0.) ? 0. : a * pow(t, a - 1.);
-//   return -beta*(x1*x1+1) + c1*2*pow(t, a);
-// }
-
-// double flambda_A(const double t, const std::vector<double> &x, const std::vector<double> par) {
-//   double x1 = x[0];
-//   double c1 = par[0];
-//   double a = par[1];
-//   return  c1* pow(t, a)*(2*x1);
-// }
-// double flambda_B(const double t, const std::vector<double> &x, const std::vector<double> par) {
-//   double x1 = x[0];
-//   double c1 = par[0];
-//   double a = par[1];
-//   return - c1* pow(t, a)*(2*x1);
-// }
-
-/// PB avec CL indé du temps :  tab 4-71  tab -4-72.
-
 double fSol(const double t, const std::vector<double> &x, const std::vector<double> par) {
   double x1 = x[0];
-  return x1 * x1 * x1 * (x1 * x1 - 25.) * pow(t, 6) + pow(x1, 5) + 1.;
+  int a = par[1];
+  return pow(t, a) * (x1 * x1 + 1);
 }
 
 double fSource(const double t, const std::vector<double> &x, const std::vector<double> par) {
-  double c1 = par[0];
   double x1 = x[0];
-  return -x1 * x1 * x1 * (x1 * x1 - 25.) * 6. * pow(t, 5.) - c1 * 150. * x1 * pow(t, 6.) +
-         c1 * 20. * x1 * x1 * x1 * (pow(t, 6) + 1.);
+  double c1 = par[0];
+  double a = par[1];
+  double beta = (a == 0.) ? 0. : a * pow(t, a - 1.);
+  return -beta * (x1 * x1 + 1) + c1 * 2 * pow(t, a);
 }
 
 double flambda_A(const double t, const std::vector<double> &x, const std::vector<double> par) {
   double x1 = x[0];
   double c1 = par[0];
-  return c1 * (5. * pow(x1, 4.) * (pow(t, 6) + 1) - 75. * x1 * x1 * pow(t, 6));
+  double a = par[1];
+  return c1 * pow(t, a) * (2 * x1);
 }
 double flambda_B(const double t, const std::vector<double> &x, const std::vector<double> par) {
   double x1 = x[0];
   double c1 = par[0];
-  return -c1 * (5. * pow(x1, 4.) * (pow(t, 6) + 1) - 75. * x1 * x1 * pow(t, 6));
+  double a = par[1];
+  return -c1 * pow(t, a) * (2 * x1);
 }
+
+/// PB avec CL indé du temps :  tab 4-71  tab -4-72.
+
+// double fSol(const double t, const std::vector<double> &x, const std::vector<double> par) {
+//   double x1 = x[0];
+//   return x1 * x1 * x1 * (x1 * x1 - 25.) * pow(t, 6) + pow(x1, 5) + 1.;
+// }
+
+// double fSource(const double t, const std::vector<double> &x, const std::vector<double> par) {
+//   double c1 = par[0];
+//   double x1 = x[0];
+//   return -x1 * x1 * x1 * (x1 * x1 - 25.) * 6. * pow(t, 5.) - c1 * 150. * x1 * pow(t, 6.) +
+//          c1 * 20. * x1 * x1 * x1 * (pow(t, 6) + 1.);
+// }
+
+// double flambda_A(const double t, const std::vector<double> &x, const std::vector<double> par) {
+//   double x1 = x[0];
+//   double c1 = par[0];
+//   return c1 * (5. * pow(x1, 4.) * (pow(t, 6) + 1) - 75. * x1 * x1 * pow(t, 6));
+// }
+// double flambda_B(const double t, const std::vector<double> &x, const std::vector<double> par) {
+//   double x1 = x[0];
+//   double c1 = par[0];
+//   return -c1 * (5. * pow(x1, 4.) * (pow(t, 6) + 1) - 75. * x1 * x1 * pow(t, 6));
+// }
 
 // PB avec CL dépendante du temps :  tab 4-73 tab 4-74.
 
@@ -105,13 +105,13 @@ int main(int argc, char **argv) {
   double xb = 5.;
 
   double kd = 0.1;
-  std::vector<double> par = {kd, 6.};
+  std::vector<double> par = {kd, 1.};
   feFunction *funSol = new feFunction(fSol, par);
   feFunction *funSource = new feFunction(fSource, par);
   feFunction *funLambda_A = new feFunction(flambda_A, par);
   feFunction *funLambda_B = new feFunction(flambda_B, par);
 
-  int nIter = 4;
+  int nIter = 1;
   std::vector<double> normL2_BDF1(2 * nIter, 0.0);
   std::vector<double> normL2_DC2F(2 * nIter, 0.0);
   std::vector<double> normL2_DC3F(2 * nIter, 0.0);
@@ -144,7 +144,7 @@ int main(int argc, char **argv) {
     // Solution
     double t0 = 0.;
     double t1 = 1.;
-    int nTimeSteps = 40 * pow(2, iter);
+    int nTimeSteps = 5 * pow(2, iter);
     TT[iter] = nTimeSteps;
     feSolution *solDC3F = new feSolution(mesh, fespace, feEssBC, metaNumber);
     // sol->initializeTemporalSolution(t0,t1,nTimeSteps);
@@ -185,8 +185,8 @@ int main(int argc, char **argv) {
     feNorm *normDC3FLambda_A = new feNorm(&L_BXA, mesh, nQuad, funLambda_A);
     feNorm *normDC3FLambda_B = new feNorm(&L_BXB, mesh, nQuad, funLambda_B);
     std::vector<feNorm *> norms = {normBDF1,         normDC2F,         normDC3F,
-                                   normBDF1Lambda_A, normBDF1Lambda_B, normDC2FLambda_A,
-                                   normDC2FLambda_B, normDC3FLambda_A, normDC3FLambda_B};
+                                   normBDF1Lambda_A, normDC2FLambda_A, normDC3FLambda_A,
+                                   normBDF1Lambda_B, normDC2FLambda_B, normDC3FLambda_B};
     // Systeme lineaire
     feLinearSystemPETSc *linearSystem =
       new feLinearSystemPETSc(argc, argv, formMatrices, formResiduals, metaNumber, mesh);
@@ -206,7 +206,9 @@ int main(int argc, char **argv) {
     std::vector<double> &normL2_DC2F_Lambda_B = solver.getNorm(6);
     std::vector<double> &normL2_DC3F_Lambda_A = solver.getNorm(7);
     std::vector<double> &normL2_DC3F_Lambda_B = solver.getNorm(8);
-
+    for(int k = 0; k < normL2DC3F.size(); k++) std::cout << normL2DC3F[k] << std::endl;
+    for(int k = 0; k < normL2DC2F.size(); k++) std::cout << normL2DC2F[k] << std::endl;
+    for(int k = 0; k < normL2BDF1.size(); k++) std::cout << normL2BDF1[k] << std::endl;
     normL2_BDF1[2 * iter] = *std::max_element(normL2BDF1.begin(), normL2BDF1.end());
     normL2_DC2F[2 * iter] = *std::max_element(normL2DC2F.begin(), normL2DC2F.end());
     normL2_DC3F[2 * iter] = *std::max_element(normL2DC3F.begin(), normL2DC3F.end());

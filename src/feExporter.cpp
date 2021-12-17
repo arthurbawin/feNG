@@ -63,7 +63,8 @@ void feExporterVTK::writeElementsConnectivity(std::ostream &output, feCncGeo *cn
   for(int iElm = 0; iElm < nElm; ++iElm) { output << vtkElem << std::endl; }
 }
 
-void feExporterVTK::writeField(std::ostream &output, feCncGeo *cnc, std::string fieldID, bool LoopOverCnc) {
+void feExporterVTK::writeField(std::ostream &output, feCncGeo *cnc, std::string fieldID,
+                               bool LoopOverCnc) {
   std::vector<double> &sol = _sol->getSolutionReference();
   // int nNod = cnc->getNbNodes();
   int nNod = LoopOverCnc ? cnc->getNbNodes() : _mesh->getNbNodes();
@@ -75,25 +76,23 @@ void feExporterVTK::writeField(std::ostream &output, feCncGeo *cnc, std::string 
   // Write field(s) to a text file
   std::string fileName = "solution" + fieldID + ".txt";
   FILE *f = fopen(fileName.c_str(), "w");
-  std::vector <double> V(_mesh->getNbNodes(), 0.);
+  std::vector<double> V(_mesh->getNbNodes(), 0.);
   for(int iNode = 0; iNode < nNod; ++iNode) {
-    int iDOF ;
+    int iDOF;
     if(LoopOverCnc == false) iDOF = n->getDOFNumberAtVertex(iNode);
-    if(LoopOverCnc == true){ //  !!!! Only works for P1 geometry !!!!
-      iDOF = n->getDOFNumberAtVertex(cnc->getNodeConnectivity(2*iNode));
-      V[cnc->getNodeConnectivity(2*iNode)] = sol[iDOF] ;
+    if(LoopOverCnc == true) { //  !!!! Only works for P1 geometry !!!!
+      iDOF = n->getDOFNumberAtVertex(cnc->getNodeConnectivity(2 * iNode));
+      V[cnc->getNodeConnectivity(2 * iNode)] = sol[iDOF];
     }
-    if(LoopOverCnc == false ){
-
+    if(LoopOverCnc == false) {
       output << sol[iDOF] << std::endl;
       fprintf(f, "%+-16.16e\n", sol[iDOF]);
     }
-  
   }
-  if(LoopOverCnc == true){
-   for(int iNode = 0; iNode < _mesh->getNbNodes(); ++iNode) {
-    output << V[iNode] << std::endl;
-    fprintf(f, "%+-16.16e\n", V[iNode]);
+  if(LoopOverCnc == true) {
+    for(int iNode = 0; iNode < _mesh->getNbNodes(); ++iNode) {
+      output << V[iNode] << std::endl;
+      fprintf(f, "%+-16.16e\n", V[iNode]);
     }
   }
   fclose(f);
@@ -141,7 +140,7 @@ feExporterVTK::feExporterVTK(std::string vtkFile, feMesh *mesh, feSolution *sol,
     std::cout << "Exporting cnc " << cnc->getID() << std::endl;
 
     // Write nodes and elements
-    cnc = spacesToExport[3] ->getCncGeo() ;
+    cnc = spacesToExport[3]->getCncGeo();
     writeNodes(output, cnc);
     writeElementsConnectivity(output, cnc);
     // output << "POINT_DATA " << cnc->getNbNodes() << std::endl;
@@ -155,7 +154,8 @@ feExporterVTK::feExporterVTK(std::string vtkFile, feMesh *mesh, feSolution *sol,
       } else {
         writeField(output, fS->getCncGeo(), fS->getFieldID(), true);
         // printf(
-        //   "In feExporterVTK : So far only P1 and P2 triangles can be exported to a VTK file...\n");
+        //   "In feExporterVTK : So far only P1 and P2 triangles can be exported to a VTK
+        //   file...\n");
       }
     }
 

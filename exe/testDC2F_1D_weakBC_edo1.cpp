@@ -64,7 +64,7 @@ int main(int argc, char **argv) {
   feFunction *funLambda_A = new feFunction(flambda_A, par);
   feFunction *funLambda_B = new feFunction(flambda_B, par);
 
-  int nIter = 4;
+  int nIter = 1;
   std::vector<double> normL2_BDF1(2 * nIter, 0.0);
   std::vector<double> normL2_DC2F(2 * nIter, 0.0);
   std::vector<double> normL2_DC3F(2 * nIter, 0.0);

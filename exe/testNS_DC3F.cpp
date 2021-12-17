@@ -75,7 +75,7 @@
 //   double u = -pow(y,p) * (1-pow(x,q))*ft;
 //   double v = pow(x,p) * (1-pow(y,q))*ft;
 //   double uHat = -pow(y,p) * (1-pow(x,q));
-//   double vHat = pow(x,p) * (1-pow(y,q)) ; 
+//   double vHat = pow(x,p) * (1-pow(y,q)) ;
 
 //   //dx
 //   double dudx   = pow(y,p)*q*pow(x,p)*ft;
@@ -100,39 +100,38 @@ double fSolU(const double t, const std::vector<double> &pos, const std::vector<d
   double x = pos[0];
   double y = pos[1];
   double q = par[2];
-  double p = q -1.0;
+  double p = q - 1.0;
   double a = par[3];
-  return -pow(y,p) * (1.-pow(x,q))*pow(t,a);
+  return -pow(y, p) * (1. - pow(x, q)) * pow(t, a);
 }
 
 double fSolV(const double t, const std::vector<double> &pos, const std::vector<double> &par) {
   double x = pos[0];
   double y = pos[1];
   double q = par[2];
-  double p = q -1.0;
+  double p = q - 1.0;
   double a = par[3];
-  return pow(x,p) * (1.-pow(y,q))*pow(t,a);
+  return pow(x, p) * (1. - pow(y, q)) * pow(t, a);
 }
 void fVecVeloc(const double t, const std::vector<double> &pos, const std::vector<double> &par,
-             std::vector<double> &res) {
+               std::vector<double> &res) {
   double x = pos[0];
   double y = pos[1];
   double q = par[2];
-  double p = q -1.0;
+  double p = q - 1.0;
   double a = par[3];
-  res[0] = -pow(y,p) * (1.-pow(x,q))*pow(t,a);       //u
-  res[1] = pow(x,p) * (1.-pow(y,q))*pow(t,a);        //v
-  res[2] = pow(y,p)*q*pow(x,p)*pow(t,a);             //dudx
-  res[3] = -p*pow(y,p-1.) * (1-pow(x,q))*pow(t,a);   //dudy
-  res[4] = p*pow(x,p-1.) * (1-pow(y,q))*pow(t,a);    //dvdx
-  res[5] = -pow(x,p)*q*pow(y,p)*pow(t,a);            //dvdy
-
+  res[0] = -pow(y, p) * (1. - pow(x, q)) * pow(t, a); // u
+  res[1] = pow(x, p) * (1. - pow(y, q)) * pow(t, a); // v
+  res[2] = pow(y, p) * q * pow(x, p) * pow(t, a); // dudx
+  res[3] = -p * pow(y, p - 1.) * (1 - pow(x, q)) * pow(t, a); // dudy
+  res[4] = p * pow(x, p - 1.) * (1 - pow(y, q)) * pow(t, a); // dvdx
+  res[5] = -pow(x, p) * q * pow(y, p) * pow(t, a); // dvdy
 }
 double fSolP(const double t, const std::vector<double> &pos, const std::vector<double> &par) {
   double x = pos[0];
   double y = pos[1];
   double q = par[2];
-  double p = q -1.0;
+  double p = q - 1.0;
   double a = par[3];
   // return (2. +x +y );
   return 0;
@@ -148,34 +147,34 @@ void fSource(const double t, const std::vector<double> &pos, const std::vector<d
   double x = pos[0];
   double y = pos[1];
   double q = par[2];
-  double p = q -1.0;
+  double p = q - 1.0;
   double a = par[3];
-  double ft = pow(t,a) ;
-  double u = -pow(y,p) * (1-pow(x,q))*ft;
-  double v = pow(x,p) * (1-pow(y,q))*ft;
-  double uHat = -pow(y,p) * (1-pow(x,q));
-  double vHat = pow(x,p) * (1-pow(y,q)) ; 
+  double ft = pow(t, a);
+  double u = -pow(y, p) * (1 - pow(x, q)) * ft;
+  double v = pow(x, p) * (1 - pow(y, q)) * ft;
+  double uHat = -pow(y, p) * (1 - pow(x, q));
+  double vHat = pow(x, p) * (1 - pow(y, q));
 
-  //dx
-  double dudx   = pow(y,p)*q*pow(x,p)*ft;
-  double d2udx2 = pow(y,p)*q*p*pow(x,p-1.)*ft;
-  double dvdx   = p*pow(x,p-1.) * (1-pow(y,q))*ft;
-  double d2vdx2 = p*(p-1.)*pow(x,p-2.) * (1-pow(y,q))*ft;
-  //dy
-  double dudy   = -p*pow(y,p-1.) * (1-pow(x,q))*ft;
-  double d2udy2 = -p*(p-1.)*pow(y,p-2.) * (1-pow(x,q))*ft;
-  double dvdy   = -pow(x,p)*q*pow(y,p)*ft;
-  double d2vdy2 = -pow(x,p)*q*p*pow(y,p-1.)*ft;
+  // dx
+  double dudx = pow(y, p) * q * pow(x, p) * ft;
+  double d2udx2 = pow(y, p) * q * p * pow(x, p - 1.) * ft;
+  double dvdx = p * pow(x, p - 1.) * (1 - pow(y, q)) * ft;
+  double d2vdx2 = p * (p - 1.) * pow(x, p - 2.) * (1 - pow(y, q)) * ft;
+  // dy
+  double dudy = -p * pow(y, p - 1.) * (1 - pow(x, q)) * ft;
+  double d2udy2 = -p * (p - 1.) * pow(y, p - 2.) * (1 - pow(x, q)) * ft;
+  double dvdy = -pow(x, p) * q * pow(y, p) * ft;
+  double d2vdy2 = -pow(x, p) * q * p * pow(y, p - 1.) * ft;
 
   double dpdx = 0;
   double dpdy = 0;
   double rho = par[0];
 
-  res[0] = rho*a*pow(t,a-1.)*uHat + rho*(u*dudx + v* dudy)  - mu* (d2udx2 + d2udy2)+ dpdx;
-  res[1] = rho*a*pow(t,a-1.)*vHat + rho*(u*dvdx + v* dvdy) - mu*(d2vdx2 + d2vdy2 ) + dpdy;
-
+  res[0] =
+    rho * a * pow(t, a - 1.) * uHat + rho * (u * dudx + v * dudy) - mu * (d2udx2 + d2udy2) + dpdx;
+  res[1] =
+    rho * a * pow(t, a - 1.) * vHat + rho * (u * dvdx + v * dvdy) - mu * (d2vdx2 + d2vdy2) + dpdy;
 }
-
 
 int main(int argc, char **argv) {
 #ifdef USING_PETSC
@@ -231,7 +230,7 @@ int main(int argc, char **argv) {
                                       &V_haut,  &V_gauche, &P_point};
 
     feMetaNumber *metaNumber = new feMetaNumber(mesh, fespace, feEssBC);
-   
+
     double t0 = 0.;
     double t1 = 1.;
     int nTimeSteps = 5 * pow(2, iter);
@@ -249,17 +248,19 @@ int main(int argc, char **argv) {
 
     std::vector<feBilinearForm *> formMatrices = {NS2D};
     std::vector<feBilinearForm *> formResiduals = {NS2D};
-    
-    
-    
+
     std::vector<feSpace *> fespaceNorm = {&U_surface, &V_surface};
-    feNorm *normVecVeloc_BDF1 = new feNorm(fespaceNorm, mesh, nQuad,funZero,funVecVeloc, "NormL2");
-    feNorm *normVecVeloc_DC2F = new feNorm(fespaceNorm, mesh, nQuad,funZero,funVecVeloc, "NormL2");
-    feNorm *normVecVeloc_DC3F = new feNorm(fespaceNorm, mesh, nQuad,funZero,funVecVeloc, "NormL2");
+    feNorm *normVecVeloc_BDF1 =
+      new feNorm(fespaceNorm, mesh, nQuad, funZero, funVecVeloc, "NormL2");
+    feNorm *normVecVeloc_DC2F =
+      new feNorm(fespaceNorm, mesh, nQuad, funZero, funVecVeloc, "NormL2");
+    feNorm *normVecVeloc_DC3F =
+      new feNorm(fespaceNorm, mesh, nQuad, funZero, funVecVeloc, "NormL2");
     feNorm *normPression_BDF1 = new feNorm(&P_surface, mesh, nQuad, funSolP);
     feNorm *normPression_DC2F = new feNorm(&P_surface, mesh, nQuad, funSolP);
     feNorm *normPression_DC3F = new feNorm(&P_surface, mesh, nQuad, funSolP);
-    std::vector<feNorm *> norms = {normVecVeloc_BDF1, normVecVeloc_DC2F,normVecVeloc_DC3F,normPression_BDF1, normPression_DC2F, normPression_DC3F };
+    std::vector<feNorm *> norms = {normVecVeloc_BDF1, normVecVeloc_DC2F, normVecVeloc_DC3F,
+                                   normPression_BDF1, normPression_DC2F, normPression_DC3F};
     // Systeme lineaire
 
     // feLinearSystemPETSc *linearSystem =
@@ -270,10 +271,10 @@ int main(int argc, char **argv) {
 #ifdef HAVE_PETSC
     // Resolution
     feTolerances tol{1e-6, 1e-9, 20};
-    
+
     DC3FSolver solver(tol, metaNumber, linearSystem, sol, norms, mesh, t0, t1, nTimeSteps);
     solver.makeSteps(nTimeSteps, fespace);
-    
+
     // maxNormL2DC3_U[2 * iter] = fmax(maxNormL2DC3_U[2 * iter], normL2DC3[3 * i]);
     // maxNormL2DC3_V[2 * iter] = fmax(maxNormL2DC3_V[2 * iter], normL2DC3[3 * i + 1]);
     // maxNormL2DC3_P[2 * iter] = fmax(maxNormL2DC3_P[2 * iter], normL2DC3[3 * i + 2]);
@@ -325,22 +326,26 @@ int main(int argc, char **argv) {
     normP_DC2F[2 * i + 1] =
       -log(normP_DC2F[2 * i] / normP_DC2F[2 * (i - 1)]) / log(sqrt(nElm[i]) / sqrt(nElm[i - 1]));
     normP_DC3F[2 * i + 1] =
-      -log(normP_DC3F[2 * i] / normP_DC3F[2 * (i - 1)]) / log(sqrt(nElm[i]) / sqrt(nElm[i - 1]));    
+      -log(normP_DC3F[2 * i] / normP_DC3F[2 * (i - 1)]) / log(sqrt(nElm[i]) / sqrt(nElm[i - 1]));
   }
   printf("\n");
   printf("\n");
-  printf("%12s \t %12s \t %12s \t %12s \t %12s \t %12s \t %12s \t %12s \t \n", "nSteps", "nElm", "||u-uh||_BDF1", "tauxU_BDF1",
-         "||u-uh||_DC2F", "tauxU_DC2F", "||u-uh||_DC3F", "tauxU_DC3F");
+  printf("%12s \t %12s \t %12s \t %12s \t %12s \t %12s \t %12s \t %12s \t \n", "nSteps", "nElm",
+         "||u-uh||_BDF1", "tauxU_BDF1", "||u-uh||_DC2F", "tauxU_DC2F", "||u-uh||_DC3F",
+         "tauxU_DC3F");
   for(int i = 0; i < nIter; ++i)
-    printf("%12d \t %12d \t %12.6e \t %12.6e \t %12.6e \t %12.6e \t %12.6e \t %12.6e \n", TT[i], nElm[i],
-           normU_BDF1[2 * i], normU_BDF1[2 * i + 1], normU_DC2F[2 * i], normU_DC2F[2 * i + 1], normU_DC3F[2 * i], normU_DC3F[2 * i + 1]);
+    printf("%12d \t %12d \t %12.6e \t %12.6e \t %12.6e \t %12.6e \t %12.6e \t %12.6e \n", TT[i],
+           nElm[i], normU_BDF1[2 * i], normU_BDF1[2 * i + 1], normU_DC2F[2 * i],
+           normU_DC2F[2 * i + 1], normU_DC3F[2 * i], normU_DC3F[2 * i + 1]);
   printf("\n");
   printf("\n");
-  printf("%12s \t %12s \t %12s \t %12s \t %12s \t %12s \t %12s \t %12s \t \n", "nSteps", "nElm", "||p-ph||_BDF1", "tauxP_BDF1",
-         "||p-ph||_DC2F", "tauxP_DC2F", "||p-ph||_DC3F", "tauxP_DC3F");
+  printf("%12s \t %12s \t %12s \t %12s \t %12s \t %12s \t %12s \t %12s \t \n", "nSteps", "nElm",
+         "||p-ph||_BDF1", "tauxP_BDF1", "||p-ph||_DC2F", "tauxP_DC2F", "||p-ph||_DC3F",
+         "tauxP_DC3F");
   for(int i = 0; i < nIter; ++i)
-    printf("%12d \t %12d \t %12.6e \t %12.6e \t %12.6e \t %12.6e \t %12.6e \t %12.6e \n", TT[i], nElm[i],
-           normP_BDF1[2 * i], normP_BDF1[2 * i + 1], normP_DC2F[2 * i], normP_DC2F[2 * i + 1], normP_DC3F[2 * i], normP_DC3F[2 * i + 1]);
+    printf("%12d \t %12d \t %12.6e \t %12.6e \t %12.6e \t %12.6e \t %12.6e \t %12.6e \n", TT[i],
+           nElm[i], normP_BDF1[2 * i], normP_BDF1[2 * i + 1], normP_DC2F[2 * i],
+           normP_DC2F[2 * i + 1], normP_DC3F[2 * i], normP_DC3F[2 * i + 1]);
 
 #ifdef USING_PETSC
   petscFinalize();

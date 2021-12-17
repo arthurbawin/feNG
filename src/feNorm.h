@@ -9,7 +9,7 @@
 class feNorm {
 protected:
   std::vector<feSpace *> _VecfeSpace;
-  feSpace *_intSpace; //assossiated with _VecfeSpace[0]
+  feSpace *_intSpace; // assossiated with _VecfeSpace[0]
   int NbFields = 1;
   int cncGeoTag;
   feSpace *geoSpace;
@@ -32,18 +32,16 @@ protected:
   std::string _TypeNorm;
 
 public:
-  
-
-  feNorm(std::vector<feSpace *> &VecfeSpace, feMesh *mesh, int degQuad, feFunction *solRef = nullptr,
-         feVectorFunction *VecSolRef = nullptr, std::string TypeNorm = "");
+  feNorm(std::vector<feSpace *> &VecfeSpace, feMesh *mesh, int degQuad,
+         feFunction *solRef = nullptr, feVectorFunction *VecSolRef = nullptr,
+         std::string TypeNorm = "");
   feNorm(feSpace *intSpace, feMesh *mesh, int degQuad, feFunction *solRef = nullptr,
          feVectorFunction *VecSolRef = nullptr, std::string TypeNorm = "");
   ~feNorm() {}
   // ~feNormVec() {}
 
-
   double getNorm() { return norm; }
-  int getNbFields(){ return NbFields; }
+  int getNbFields() { return NbFields; }
   std::string getTypeNorm() { return _TypeNorm; }
   void computeL2Norm(feMetaNumber *metaNumber, feSolution *sol, feMesh *mesh);
   void computeL2NormVec(feMetaNumber *metaNumber, feSolution *sol, feMesh *mesh);

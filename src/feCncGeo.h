@@ -24,8 +24,7 @@ protected:
   std::vector<int> _connecEdges; // Connectivite des aretes
   std::vector<int> _connecFaces; // Connectivite des faces
 
-  // std::map <int, int> _globNodeToLocNode ; 
-
+  // std::map <int, int> _globNodeToLocNode ;
 
   feSpace *_space;
   feMesh *_mesh; // Ou alors donner le vecteur de Vertex de la cnc
@@ -45,14 +44,13 @@ public:
     // std::cout<<"before "<<connecNodes.size()<<std::endl;
     std::sort(connecNodes.begin(), connecNodes.end());
     _nNod = std::unique(connecNodes.begin(), connecNodes.end()) - connecNodes.begin();
-    for(int k=0; k<90 ; k++){
-    }
+    for(int k = 0; k < 90; k++) {}
     // std::cout<<_nNod<<std::endl;
     // connecNodes.erase( std::unique(connecNodes.begin(), connecNodes.end()), connecNodes.end() );
     // _nNod = connecNodes.size();
     // std::cout<<_nNod<<std::endl;
     // int cnt = 0;
-    // for(int node : connecNodes) 
+    // for(int node : connecNodes)
     //   _globNodeToLocNode[node] = cnt++ ;
   };
   ~feCncGeo() {

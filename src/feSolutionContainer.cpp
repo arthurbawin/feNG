@@ -50,7 +50,8 @@ void feSolutionBDF1::computeSolTimeDerivative(feSolution *sol, feLinearSystem *l
 }
 
 void feSolutionDCF::computeSolTimeDerivative(feSolution *sol, feLinearSystem *linearSystem) {
-  // std::cout << "_sol[0][0]   " << _sol[0][0] << "    _sol[1][0]   " << _sol[1][0]<< "    _sol[2][0]   " << _sol[2][0]<<std::endl;
+  // std::cout << "_sol[0][0]   " << _sol[0][0] << "    _sol[1][0]   " << _sol[1][0]<< " _sol[2][0]
+  // " << _sol[2][0]<<std::endl;
   for(int i = 0; i < _nDofs; ++i)
     sol->setSolDotAtDOF(i, _cn[0] * _sol[0][i] + _cn[1] * _sol[1][i] + _cn[2] * _sol[2][i]);
   linearSystem->applyCorrectionToResidual(-1.0, _d);
@@ -389,7 +390,7 @@ void initializeDC3F(feSolution *sol, feMetaNumber *metaNumber, feMesh *mesh,
     // std::endl;
     d3u =
       2.0 * delta[n]; // Indexé par delta[i][j] = delta[n*j+i] : delta(1,2) = delta[0][1] = delta[n]
-    d2u = delta[0] + delta[n] *(k1-k2);
+    d2u = delta[0] + delta[n] * (k1 - k2);
     d2u = delta[0] + delta[n] * k1;
     // std::cout<< "le derivee deuxieme vaut " << d2u << std::endl;
     // std::cout<< "le derivee trosieme vaut " << d3u << std::endl;

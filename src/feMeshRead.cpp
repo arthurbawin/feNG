@@ -1408,7 +1408,7 @@ int feMesh2DP1::readGmsh(std::string meshName, bool curved, mapType physicalEnti
           Edge e(v0, v1);
           it = _edges.find(e);
           if(it != _edges.end()) {
-            if(v0->getTag() == it->getTag(0)){
+            if(v0->getTag() == it->getTag(0)) {
               pE.connecEdges[i] = it->getTag();
             } else {
               pE.connecEdges[i] = -it->getTag();

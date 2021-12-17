@@ -29,11 +29,11 @@
 // }
 
 double fSol(const double t, const std::vector<double> &x, const std::vector<double> par) {
-  return pow(t, 3.) + 1;
+  return pow(t, 1.) + 1;
 }
 
 double fSource(const double t, const std::vector<double> &x, const std::vector<double> par) {
-  return -3. * pow(t, 2.);
+  return -1. * pow(t, 0.);
 }
 
 int main(int argc, char **argv) {

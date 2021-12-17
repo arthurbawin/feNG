@@ -358,16 +358,13 @@ void feSpace1DP3::initializeAddressingVector(feNumber *number, int numElem) {
   _adr[0] = number->getDDLSommet(_mesh, _cncGeoID, numElem, 0);
   _adr[1] = number->getDDLSommet(_mesh, _cncGeoID, numElem, 1);
   int e = _mesh->getEdge(_cncGeoID, numElem, 0);
-  if(e > 0){
+  if(e > 0) {
     _adr[2] = number->getDDLElement(_mesh, _cncGeoID, numElem, 0);
     _adr[3] = number->getDDLElement(_mesh, _cncGeoID, numElem, 1);
-  }
-  else {
+  } else {
     _adr[2] = number->getDDLElement(_mesh, _cncGeoID, numElem, 1);
     _adr[3] = number->getDDLElement(_mesh, _cncGeoID, numElem, 0);
-
   }
-  
 }
 
 void feSpace1DP4::initializeNumberingUnknowns(feNumber *number) {
@@ -397,15 +394,13 @@ void feSpace1DP4::initializeAddressingVector(feNumber *number, int numElem) {
   _adr[0] = number->getDDLSommet(_mesh, _cncGeoID, numElem, 0);
   _adr[1] = number->getDDLSommet(_mesh, _cncGeoID, numElem, 1);
   int e = _mesh->getEdge(_cncGeoID, numElem, 0);
-  if(e > 0){
+  if(e > 0) {
     _adr[2] = number->getDDLElement(_mesh, _cncGeoID, numElem, 0);
     _adr[3] = number->getDDLElement(_mesh, _cncGeoID, numElem, 1);
     _adr[4] = number->getDDLElement(_mesh, _cncGeoID, numElem, 2);
-  }
-  else{
+  } else {
     _adr[4] = number->getDDLElement(_mesh, _cncGeoID, numElem, 0);
     _adr[3] = number->getDDLElement(_mesh, _cncGeoID, numElem, 1);
     _adr[2] = number->getDDLElement(_mesh, _cncGeoID, numElem, 2);
-
   }
 }

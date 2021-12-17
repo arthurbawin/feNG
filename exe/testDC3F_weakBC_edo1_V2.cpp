@@ -76,6 +76,15 @@ double f0(const double t, const std::vector<double> &x, const std::vector<double
   return 0.;
 }
 
+void fgrad(const double t, const std::vector<double> &x, const std::vector<double> &par,
+           std::vector<double> &res) {
+  double x1 = x[0];
+  double y1 = x[1];
+  double c1 = par[0];
+  double a = par[1];
+  res[0] = pow(t, a) * (2 * x1);
+}
+
 int main(int argc, char **argv) {
 #ifdef USING_PETSC
   petscInitialize(argc, argv);
@@ -90,6 +99,7 @@ int main(int argc, char **argv) {
   feFunction *funSource = new feFunction(fSource, par);
   feFunction *funLambda_A = new feFunction(flambda_A, par);
   feFunction *funLambda_B = new feFunction(flambda_B, par);
+  feVectorFunction *fungrad = new feVectorFunction(fgrad, par);
 
   int nIter = 1;
   std::vector<double> normL2_BDF1(2 * nIter, 0.0);

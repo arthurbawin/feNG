@@ -212,7 +212,7 @@ int main(int argc, char **argv) {
   feFunction *funLambda_haut = new feFunction(flambda_haut, par);
   feFunction *fun0 = new feFunction(f0, par);
 
-  int nIter = 1;
+  int nIter = 2;
   std::vector<double> normL2_BDF2(2 * nIter, 0.0);
   std::vector<double> normL2_DC3(2 * nIter, 0.0);
   std::vector<double> normBDF2_angle(2 * nIter, 0.0);
@@ -226,7 +226,7 @@ int main(int argc, char **argv) {
   for(int iter = 0; iter < nIter; ++iter) {
     // std::string meshName = "../../data/Circle/circle.msh";
     // std::string meshName = "../../data/squareTest2.msh";
-    std::string meshName = "../../data/Square/square" + std::to_string(iter * 2 + 1) + "Msh2.msh";
+    std::string meshName = "../../data/Square/square" + std::to_string(iter + 1) + "Msh2.msh";
     // Maillage
     feMesh2DP1 *mesh = new feMesh2DP1(meshName, false);
     nElm[iter] = mesh->getNbInteriorElems();
@@ -253,7 +253,7 @@ int main(int argc, char **argv) {
     // Solution
     double t0 = 0.;
     double t1 = 1.;
-    int nTimeSteps = 10 * pow(2, iter);
+    int nTimeSteps = 5 * pow(2, iter);
     TT[iter] = nTimeSteps;
     feSolution *solDC3 = new feSolution(mesh, fespace, feEssBC, metaNumber);
 

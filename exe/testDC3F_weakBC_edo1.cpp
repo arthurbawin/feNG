@@ -12,10 +12,11 @@
 #include "feSysElm.h"
 #include "feBilinearForm.h"
 #include "feSolver.h"
-// #include "feGetSolFromFile.h"
-#define USING_PETSC
 #ifdef HAVE_PETSC
 #include "feLinearSystemPETSc.h"
+#endif
+#ifdef HAVE_MKL
+#include "feLinearSystemMklPardiso.h"
 #endif
 
 // double fSol(const double t, const std::vector<double> &x, const std::vector<double> par) {
@@ -112,66 +113,66 @@
 //   return beta*(x1*x1*x1/3 - (5./2.)*x1*x1) ;
 // }
 
-// double fSol(const double t, const std::vector<double> &x, const std::vector<double> par) {
-//   double x1 = x[0];
-//   int a = par[1];
-//   return pow(t, a)*(x1*x1 +1.);
-// }
-
-// double fSource(const double t, const std::vector<double> &x, const std::vector<double> par) {
-//   double x1 = x[0];
-//   double c1 = par[0];
-//   int a = par[1];
-//   double beta = (a == 0.) ? 0. : a * pow(t, a - 1.);
-//   return -beta*(x1*x1 +1.) + c1*2.*pow(t, a);
-// }
-
-// double flambda_A(const double t, const std::vector<double> &x, const std::vector<double> par) {
-//   double x1 = x[0];
-//   double c1 = par[0];
-//   int a = par[1];
-//   return  c1* pow(t, a)*2.*x1;
-// }
-// double flambda_B(const double t, const std::vector<double> &x, const std::vector<double> par) {
-//   double x1 = x[0];
-//   double c1 = par[0];
-//   int a = par[1];
-//   return - c1* pow(t, a)*2.*x1;
-// }
-
-// double fSolDot(const double t, const std::vector<double> &x, const std::vector<double> par) {
-//   double x1 = x[0];
-//   int a = par[1];
-//   double beta = (a == 0.) ? 0. : a * pow(t, a - 1.);
-//   return beta*(x1*x1 +1.) ;
-// }
-
-// Test a source nulle
 double fSol(const double t, const std::vector<double> &x, const std::vector<double> par) {
   double x1 = x[0];
-  return sin(x1) * exp(-t);
+  int a = par[1];
+  return pow(t, a) * (x1 * x1) + 1.;
 }
 
 double fSource(const double t, const std::vector<double> &x, const std::vector<double> par) {
-  return 0.;
+  double x1 = x[0];
+  double c1 = par[0];
+  int a = par[1];
+  double beta = (a == 0.) ? 0. : a * pow(t, a - 1.);
+  return -beta * x1 * x1 + c1 * 2. * pow(t, a);
 }
 
 double flambda_A(const double t, const std::vector<double> &x, const std::vector<double> par) {
   double x1 = x[0];
   double c1 = par[0];
-  // int a = par[1];
-  return c1 * cos(x1) * exp(-t);
+  int a = par[1];
+  return c1 * pow(t, a) * 2. * x1;
 }
 double flambda_B(const double t, const std::vector<double> &x, const std::vector<double> par) {
   double x1 = x[0];
   double c1 = par[0];
-  return -c1 * cos(x1) * exp(-t);
+  int a = par[1];
+  return -c1 * pow(t, a) * 2. * x1;
 }
 
 double fSolDot(const double t, const std::vector<double> &x, const std::vector<double> par) {
   double x1 = x[0];
-  return -sin(x1) * exp(-t);
+  int a = par[1];
+  double beta = (a == 0.) ? 0. : a * pow(t, a - 1.);
+  return beta * (x1 * x1) + 1.;
 }
+
+// Test a source nulle
+// double fSol(const double t, const std::vector<double> &x, const std::vector<double> par) {
+//   double x1 = x[0];
+//   return sin(x1) * exp(-t);
+// }
+
+// double fSource(const double t, const std::vector<double> &x, const std::vector<double> par) {
+//   return 0.;
+// }
+
+// double flambda_A(const double t, const std::vector<double> &x, const std::vector<double> par) {
+//   double x1 = x[0];
+//   double c1 = par[0];
+//   // int a = par[1];
+//   return c1 * cos(x1) * exp(-t);
+// }
+// double flambda_B(const double t, const std::vector<double> &x, const std::vector<double> par) {
+//   double x1 = x[0];
+//   double c1 = par[0];
+//   return -c1 * cos(x1) * exp(-t);
+// }
+
+// double fSolDot(const double t, const std::vector<double> &x, const std::vector<double> par) {
+//   double x1 = x[0];
+//   return -sin(x1) * exp(-t);
+// }
 
 int main(int argc, char **argv) {
 #ifdef USING_PETSC
@@ -181,8 +182,8 @@ int main(int argc, char **argv) {
   double xb = M_PI / 2.;
   // double xb = 5;
 
-  double kd = 1;
-  double exposant = 2.;
+  double kd = 0.1;
+  double exposant = 4.;
   std::vector<double> par = {kd, exposant};
   feFunction *funSol = new feFunction(fSol, par);
   feFunction *funSolDot = new feFunction(fSolDot, par);
@@ -214,7 +215,7 @@ int main(int argc, char **argv) {
     // feSpace1DP3 U_M1D = feSpace1DP3(mesh, "U", "M1D", funSol);
     feSpace1DP0 U_BXA(mesh, "U", "BXA", funSol);
     feSpace1DP0 U_BXB(mesh, "U", "BXB", funSol);
-    feSpace1DP3 U_M1D(mesh, "U", "M1D", funSol);
+    feSpace1DP4 U_M1D(mesh, "U", "M1D", funSol);
     feSpace1DP0 L_BXA(mesh, "L", "BXA", funLambda_A);
     feSpace1DP0 L_BXB(mesh, "L", "BXB", funLambda_B);
     feSpace1DP0 V_BXA(mesh, "V", "BXA", funSol);
@@ -270,10 +271,15 @@ int main(int argc, char **argv) {
                                    normBDF1Lambda_A, normBDF1Lambda_B, normDC2FLambda_A,
                                    normDC2FLambda_B, normDC3FLambda_A, normDC3FLambda_B};
     // Systeme lineaire
-    feLinearSystemPETSc *linearSystem =
-      new feLinearSystemPETSc(argc, argv, formMatrices, formResiduals, metaNumber, mesh);
+    // Systeme lineaire
+    // Systeme lineaire
+    // feLinearSystemPETSc *linearSystem =
+    //   new feLinearSystemPETSc(argc, argv, formMatrices, formResiduals, metaNumber, mesh);
+#ifdef HAVE_MKL
+    feLinearSystemMklPardiso *linearSystem =
+      new feLinearSystemMklPardiso(formMatrices, formResiduals, metaNumber, mesh);
 #ifdef HAVE_PETSC
-    // linearSystem->initialize();
+    linearSystem->initialize();
     // Resolution
     feTolerances tol{1e-10, 1e-10, 20};
 
@@ -322,6 +328,7 @@ int main(int argc, char **argv) {
     delete solDC3F;
     delete metaNumber;
     delete mesh;
+#endif
   }
   delete funSource;
   delete funSol;

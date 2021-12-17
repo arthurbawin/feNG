@@ -91,9 +91,7 @@ void feLinearSystemMklPardiso::correctSolution(double *sol) {
 void feLinearSystemMklPardiso::solve(double *normDx, double *normResidual, double *normAxb,
                                      int *nIter) {
   if(symbolicFactorization) mklSymbolicFactorization();
-  if(recomputeMatrix) {
-    mklFactorization();
-  }
+  if(recomputeMatrix) { mklFactorization(); }
   mklSolve();
 
   symbolicFactorization = false;
@@ -119,16 +117,14 @@ void feLinearSystemMklPardiso::setResidualToZero() {
 
 void feLinearSystemMklPardiso::assemble(feSolution *sol) {
   // printf("ICI   feLinearSystemMklPardiso::assemble\n");
-  // tic();
-  if(recomputeMatrix) {
-    assembleMatrices(sol);
-  }
-  // toc(); 
-  // printf("is the time the assembleMatrices \n");
-  // tic();
+  tic();
+  if(recomputeMatrix) { assembleMatrices(sol); }
+  toc();
+  printf("is the time the assembleMatrices \n");
+  tic();
   assembleResiduals(sol);
-  // toc(); 
-  // printf(" is the time the assembleResiduals \n");
+  toc();
+  printf(" is the time the assembleResiduals \n");
 }
 
 // ====================================================================

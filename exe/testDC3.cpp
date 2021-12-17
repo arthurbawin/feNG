@@ -54,7 +54,7 @@ double fSol(const double t, const std::vector<double> &x, const std::vector<doub
 double fSource(const double t, const std::vector<double> &x, const std::vector<double> par) {
   double x1 = x[0];
   double c1 = par[0];
-  return -4. * pow(t, 3.)  * x1 ;
+  return -4. * pow(t, 3.) * x1;
 }
 
 // double fSol(const double t, const std::vector<double> &x, const std::vector<double> par) {
@@ -151,13 +151,13 @@ int main(int argc, char **argv) {
     //   new feLinearSystemPETSc(argc, argv, formMatrices, formResiduals, metaNumber, mesh);
 #ifdef HAVE_MKL
     feLinearSystemMklPardiso *linearSystem =
-      new feLinearSystemMklPardiso(formMatrices, formResiduals, metaNumber, mesh);    
+      new feLinearSystemMklPardiso(formMatrices, formResiduals, metaNumber, mesh);
 #ifdef HAVE_PETSC
     linearSystem->initialize();
     // Resolution
     feTolerances tol{1e-9, 1e-9, 20};
     std::string CodeIni = "BDF1/DC"; // Define the way of initialization |"SolEx"->for exact
-                                      // solution|  |"BDF1/DCF"->using only initial conditions|
+                                     // solution|  |"BDF1/DCF"->using only initial conditions|
     DC3Solver solver(tol, metaNumber, linearSystem, solDC3, norms, mesh, t0, t1, nTimeSteps,
                      CodeIni);
     solver.makeSteps(nTimeSteps, fespace);

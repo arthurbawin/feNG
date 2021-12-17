@@ -72,7 +72,7 @@ double fSol(const double t, const std::vector<double> &x, const std::vector<doub
 double fSource(const double t, const std::vector<double> &x, const std::vector<double> par) {
   double x1 = x[0];
   double c1 = par[0];
-  return -5. * pow(t, 4.)  * x1 ;
+  return -5. * pow(t, 4.) * x1;
 }
 
 int main(int argc, char **argv) {
@@ -141,19 +141,19 @@ int main(int argc, char **argv) {
     feNorm *norm = new feNorm(&U_M1D, mesh, nQuad, funSol);
     std::vector<feNorm *> norms = {norm};
     // Systeme lineaire
-   // Systeme lineaire
+    // Systeme lineaire
     // feLinearSystemPETSc *linearSystem =
     //   new feLinearSystemPETSc(argc, argv, formMatrices, formResiduals, metaNumber, mesh);
 #ifdef HAVE_MKL
     feLinearSystemMklPardiso *linearSystem =
-      new feLinearSystemMklPardiso(formMatrices, formResiduals, metaNumber, mesh);    
+      new feLinearSystemMklPardiso(formMatrices, formResiduals, metaNumber, mesh);
 #ifdef HAVE_PETSC
-      linearSystem->initialize();
+    linearSystem->initialize();
     // Resolution
     feTolerances tol{1e-9, 1e-9, 20};
     // std::vector<double> normL2BDF(nTimeSteps,0.0);
     std::string CodeIni = "BDF1/DC"; // Define the way of initialization |"SolEx"->for exact
-                                      // solution|  |"BDF1/DCF"->using only initial conditions|
+                                     // solution|  |"BDF1/DCF"->using only initial conditions|
     BDF2Solver solver(tol, metaNumber, linearSystem, sol, norms, mesh, t0, t1, nTimeSteps, CodeIni);
     solver.makeSteps(nTimeSteps, fespace);
     std::vector<double> &normL2BDF = solver.getNorm(0);
@@ -171,7 +171,7 @@ int main(int argc, char **argv) {
     delete sol;
     delete metaNumber;
     delete mesh;
-#endif    
+#endif
   }
   delete funSource;
   delete funSol;

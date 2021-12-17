@@ -40,8 +40,8 @@ class feSysElm_0D_StiffSpring : public feSysElm {
 protected:
   feFunction *_fct;
   std::vector<double> _par; // Parametre
-  int _idX; //pos
-  int _idV; //vit
+  int _idX; // pos
+  int _idV; // vit
   std::vector<double> _feX;
   std::vector<double> _feV;
 
@@ -62,7 +62,7 @@ class feSysElm_0D_Stiff2 : public feSysElm {
 protected:
   feFunction *_fct;
   double _par; // Parametre
-  int _idX; 
+  int _idX;
   int _idY;
   int _idZ;
   std::vector<double> _feX;
@@ -86,7 +86,7 @@ class feSysElm_0D_Stiff3 : public feSysElm {
 protected:
   feFunction *_fct;
   double _par; // Parametre
-  int _idX; 
+  int _idX;
   int _idY;
   int _idZ;
   std::vector<double> _feX;
@@ -297,8 +297,8 @@ public:
 //   std::vector<double> _feBv;
 
 // public:
-//   feSysElm_1D_weakBC_Vec(std::vector<double> &par, feVectorFunction *fct) : _fct(fct), _par(par){};
-//   virtual ~feSysElm_1D_weakBC_Vec() {}
+//   feSysElm_1D_weakBC_Vec(std::vector<double> &par, feVectorFunction *fct) : _fct(fct),
+//   _par(par){}; virtual ~feSysElm_1D_weakBC_Vec() {}
 
 //   virtual void createElementarySystem(std::vector<feSpace *> &space);
 //   virtual void computeAe(std::vector<double> &J, int numElem, std::vector<feSpace *> &intSpace,

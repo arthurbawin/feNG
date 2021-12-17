@@ -101,7 +101,7 @@ int main(int argc, char **argv) {
 
     // printf("Measuring time from here\n");
     // tic();
-#ifdef HAVE_MKL    
+#ifdef HAVE_MKL
     feLinearSystemMklPardiso *linearSystem;
     linearSystem = new feLinearSystemMklPardiso(formMatrices, formResiduals, metaNumber, mesh);
     // toc();
@@ -122,7 +122,7 @@ int main(int argc, char **argv) {
     delete sol;
     delete metaNumber;
     delete mesh;
-#endif    
+#endif
   }
   delete funSource;
   delete funSol;

@@ -75,7 +75,7 @@ int main(int argc, char **argv) {
     std::vector<feBilinearForm *> formResiduals = {masse_U_M1D, source_U_M1D};
     // Norme de la solution
     feNorm *norm = new feNorm(&U_M1D, mesh, nQuad, funSol);
-    std::vector<feNorm *> norms = {norm,norm};
+    std::vector<feNorm *> norms = {norm, norm};
     // Systeme lineaire
     feLinearSystemPETSc *linearSystem =
       new feLinearSystemPETSc(argc, argv, formMatrices, formResiduals, metaNumber, mesh);
@@ -85,13 +85,13 @@ int main(int argc, char **argv) {
     feTolerances tol{1e-8, 1e-8, 10};
     // std::vector<double> normL2BDF1(nTimeSteps,0.0);
     // std::string CodeIni = "BDF1/DC"; // Define the way of initialization |"SolEx"->for exact
-                                      // solution|  |"BDF1/DCF"->using only initial conditions|
-    
+    // solution|  |"BDF1/DCF"->using only initial conditions|
+
     BDF1Solver solver(tol, metaNumber, linearSystem, sol, norms, mesh, t0, t1, nTimeSteps);
     // BDF2Solver solver(tol, metaNumber, linearSystem, sol, norms, mesh, t0, t1, nTimeSteps,
     //                  CodeIni);
     solver.makeSteps(nTimeSteps, fespace);
-    
+
     std::vector<double> &normL2BDF = solver.getNorm(0);
     // solveBDF2afterBDF1(normL2BDF1,normL2BDF2, tol, metaNumber, linearSystem, formMatrices,
     // formResiduals, sol, norms, mesh, fespace);
