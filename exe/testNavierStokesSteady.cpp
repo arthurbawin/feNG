@@ -227,8 +227,8 @@ int main(int argc, char **argv) {
     // std::string vtkFile = "../../data/taylorGreenUnsteady" + std::to_string(iter+1) + ".vtk";
     // feExporterVTK writer(vtkFile, mesh, sol, metaNumber, fespace);
 
-    metricMeshName = root + "sizeField" + std::to_string(iter + 1) + ".msh";
-    nextMeshName = root + "adapted" + std::to_string(iter + 1) + ".msh";
+    // metricMeshName = root + "sizeField" + std::to_string(iter + 1) + ".msh";
+    // nextMeshName = root + "adapted" + std::to_string(iter + 1) + ".msh";
 
     std::vector<double> estErreur(2, 0.);
     feRecovery *recU = new feRecovery(metaNumber, U_surface, mesh, sol, estErreur, funZero,

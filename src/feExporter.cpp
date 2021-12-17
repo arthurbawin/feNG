@@ -79,9 +79,9 @@ void feExporterVTK::writeField(std::ostream &output, feCncGeo *cnc, std::string 
   for(int iNode = 0; iNode < nNod; ++iNode) {
     int iDOF ;
     if(LoopOverCnc == false) iDOF = n->getDOFNumberAtVertex(iNode);
-    if(LoopOverCnc == true){ 
-      iDOF = n->getDOFNumberAtVertex(cnc->getNodeConnectivity(iNode));
-      V[cnc->getNodeConnectivity(iNode)] = sol[iDOF] ;  
+    if(LoopOverCnc == true){ //  !!!! Only works for P1 geometry !!!!
+      iDOF = n->getDOFNumberAtVertex(cnc->getNodeConnectivity(2*iNode));
+      V[cnc->getNodeConnectivity(2*iNode)] = sol[iDOF] ;
     }
     if(LoopOverCnc == false ){
 

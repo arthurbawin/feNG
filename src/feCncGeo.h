@@ -45,6 +45,8 @@ public:
     // std::cout<<"before "<<connecNodes.size()<<std::endl;
     std::sort(connecNodes.begin(), connecNodes.end());
     _nNod = std::unique(connecNodes.begin(), connecNodes.end()) - connecNodes.begin();
+    for(int k=0; k<90 ; k++){
+    }
     // std::cout<<_nNod<<std::endl;
     // connecNodes.erase( std::unique(connecNodes.begin(), connecNodes.end()), connecNodes.end() );
     // _nNod = connecNodes.size();

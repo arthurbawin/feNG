@@ -1,31 +1,59 @@
 #include "feSolver.h"
 #include "feSolutionContainer.h"
 #include "feExporter.h"
+#include "feExporter.h"
+#include "feNG.h"
+
+double _normR0, _normFirstR0;
 
 void solveQNBDF(feSolutionContainer *solDot, feTolerances tol, feMetaNumber *metaNumber,
                 feLinearSystem *linearSystem, feSolution *sol, feMesh *mesh) {
   bool newton = true;
   bool status = linearSystem->getRecomputeStatus();
+  bool prev_status = status;
   int iter = 0, linearSystemIter;
   double normDx, normResidual, normAxb;
-
+  int cnt = 0; // nb of iteration without recompute the matrix
+  // std::cout<<"linearSystem == "<<status<<std::endl;
+  // if(status == false) prev_status =
   while(newton) {
+    // linearSystem->setRecomputeStatus(false); //By default, we don't reassemble the matrix
+    // tic();
     linearSystem->setToZero();
     solDot->computeSolTimeDerivative(sol, linearSystem);
     linearSystem->assemble(sol);
     linearSystem->solve(&normDx, &normResidual, &normAxb, &linearSystemIter);
+    if(iter == 0 && status==1) _normR0 = normResidual ;
+    if(iter == 0 && status==0) _normFirstR0 = normResidual;  //in case we have to recalculate the matrix and update the R0
     // FECORRECTIONSOLUTION
     linearSystem->correctSolution(sol);
     solDot->setSol(0, sol->getSolutionCopy());
-
+    // toc();
     printf(
       "iter %2d : ||A*dx-res|| = %10.10e (%4d iter.) \t ||dx|| = %10.10e \t ||res|| = %10.10e\n",
       ++iter, normAxb, linearSystemIter, normDx, normResidual);
 
     newton = !((normDx <= tol.tolDx && normResidual <= tol.tolResidual) || iter > tol.maxIter);
 
-    linearSystem->setRecomputeStatus(true);
+    // linearSystem->setRecomputeStatus(true);
+    // std::cout<<"R0 == "<<_normR0<<std::endl;
+    // std::cout<<"normResidual / _normR0 == "<<normResidual / _normR0<<std::endl;
+    // std::cout<<"cnt == "<<cnt<<std::endl;
+    if((iter>2 || prev_status==0 ) && ((normResidual / _normR0)<0.001) && cnt<8){
+      linearSystem->setRecomputeStatus(false);
+      
+      // std::cout<<"On garde la matrice"<<std::endl;
+    }
+    else if (iter==1 && prev_status==0)linearSystem->setRecomputeStatus(false); //we decide to try with the old matrix at the first iteration just to see if it's enough 
+    else{
+      if(iter==2 && prev_status==0) _normR0 = _normFirstR0; //if we have to recompute the matrix we update the R0
+      linearSystem->setRecomputeStatus(true);
+      // std::cout<<"On recalcule la matrice"<<std::endl;
+      cnt=0;
+    }
+    cnt++;    
   }
+  
   if(iter > tol.maxIter) {
     printf("=== ! === Not converged at iter %2d : ||A*dx-res|| = %10.10e  (%4d iter.) \t ||dx|| = "
            "%10.10e \t ||res|| = %10.10e\n",
@@ -368,7 +396,8 @@ void BDF1Solver::makeSteps(int nSteps, std::vector<feSpace *> &spaces) {
     if(K1K2) _dt = tK1K2[i + 1] - tK1K2[i];
     printf("Current step = %d : t = %f\n", _currentStep, _tCurrent);
 
-    std::string vtkFile = "../../data/VTK_VonKarman/data" + std::to_string(_currentStep) + ".vtk";
+    std::string vtkFile = "../../data/VTK_VonKarman/dataTestV3" + std::to_string(_currentStep) + ".vtk";
+    // std::string vtkFile = "../../data/VTK_VonKarman/dataTestBullShit" + std::to_string(_currentStep) + ".vtk";
     feExporterVTK writer(vtkFile, _mesh, _sol, _metaNumber, spaces);
   }
 }

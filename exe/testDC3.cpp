@@ -12,10 +12,11 @@
 #include "feSysElm.h"
 #include "feBilinearForm.h"
 #include "feSolver.h"
-#define USING_PETSC
 #ifdef HAVE_PETSC
-
 #include "feLinearSystemPETSc.h"
+#endif
+#ifdef HAVE_MKL
+#include "feLinearSystemMklPardiso.h"
 #endif
 
 // double fSol(const double t, const std::vector<double> &x, const std::vector<double> par) {
@@ -47,13 +48,13 @@
 
 double fSol(const double t, const std::vector<double> &x, const std::vector<double> par) {
   double x1 = x[0];
-  return x1 * x1 * x1 * pow(t, 6.);
+  return x1 * pow(t, 4.);
 }
 
 double fSource(const double t, const std::vector<double> &x, const std::vector<double> par) {
   double x1 = x[0];
   double c1 = par[0];
-  return -6. * pow(t, 5.) * x1 * x1 * x1 + 6 * x1 * c1 * pow(t, 6.);
+  return -4. * pow(t, 3.)  * x1 ;
 }
 
 // double fSol(const double t, const std::vector<double> &x, const std::vector<double> par) {
@@ -90,7 +91,7 @@ int main(int argc, char **argv) {
 #endif
   double xa = 0.;
   double xb = 5.;
-  double exposant = 6.;
+  double exposant = 4.;
   double kd = 0.1;
   std::vector<double> par = {kd, exposant};
   feFunction *funSol = new feFunction(fSol, par);
@@ -105,14 +106,14 @@ int main(int argc, char **argv) {
   TT.resize(nIter);
 
   for(int iter = 0; iter < nIter; ++iter) {
-    nElm[iter] = 40 * pow(2, iter);
+    nElm[iter] = 5 * pow(2, iter);
     // nElm[iter] = 2;
     // Maillage
     feMesh1DP1 *mesh = new feMesh1DP1(xa, xb, nElm[iter], "BXA", "BXB", "M1D");
     // Espaces d'interpolation
     feSpace1DP0 U_BXA = feSpace1DP0(mesh, "U", "BXA", funSol);
     feSpace1DP0 U_BXB = feSpace1DP0(mesh, "U", "BXB", funSol);
-    feSpace1DP2 U_M1D = feSpace1DP2(mesh, "U", "M1D", funSol);
+    feSpace1DP1 U_M1D = feSpace1DP1(mesh, "U", "M1D", funSol);
     std::vector<feSpace *> fespace = {&U_BXA, &U_BXB, &U_M1D};
     std::vector<feSpace *> feEssBC = {&U_BXA, &U_BXB};
     // Numerotations
@@ -146,13 +147,16 @@ int main(int argc, char **argv) {
     feNorm *normDC3 = new feNorm(&U_M1D, mesh, degQuad, funSol);
     std::vector<feNorm *> norms = {normBDF2, normDC3};
     // Systeme lineaire
-    feLinearSystemPETSc *linearSystem =
-      new feLinearSystemPETSc(argc, argv, formMatrices, formResiduals, metaNumber, mesh);
+    // feLinearSystemPETSc *linearSystem =
+    //   new feLinearSystemPETSc(argc, argv, formMatrices, formResiduals, metaNumber, mesh);
+#ifdef HAVE_MKL
+    feLinearSystemMklPardiso *linearSystem =
+      new feLinearSystemMklPardiso(formMatrices, formResiduals, metaNumber, mesh);    
 #ifdef HAVE_PETSC
     linearSystem->initialize();
     // Resolution
     feTolerances tol{1e-9, 1e-9, 20};
-    std::string CodeIni = "BDF1/DCF"; // Define the way of initialization |"SolEx"->for exact
+    std::string CodeIni = "BDF1/DC"; // Define the way of initialization |"SolEx"->for exact
                                       // solution|  |"BDF1/DCF"->using only initial conditions|
     DC3Solver solver(tol, metaNumber, linearSystem, solDC3, norms, mesh, t0, t1, nTimeSteps,
                      CodeIni);
@@ -173,6 +177,7 @@ int main(int argc, char **argv) {
     delete solDC3;
     delete metaNumber;
     delete mesh;
+#endif
   }
   delete funSource;
   delete funSol;

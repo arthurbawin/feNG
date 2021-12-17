@@ -61,13 +61,13 @@ int main(int argc, char **argv) {
   std::vector<int> nElm(nIter, 0);
 
   for(int iter = 0; iter < nIter; ++iter) {
-    std::string meshName = "square.msh";
+    std::string meshName = "../../data/Square/square_1edge_1.msh";
 
     feMesh2DP1 *mesh = new feMesh2DP1(meshName, false);
     nElm[iter] = mesh->getNbInteriorElems();
 
     feSpace1DP3 U_bord = feSpace1DP3(mesh, "U", "Bord", funSol);
-    feSpaceTriP3 U_surface = feSpaceTriP3(mesh, "U", "Domaine", funSol);
+    feSpaceTriP3 U_surface = feSpaceTriP3(mesh, "U", "Surface", funSol);
 
     std::vector<feSpace *> fespace = {&U_bord, &U_surface};
     std::vector<feSpace *> feEssBC = {&U_bord};

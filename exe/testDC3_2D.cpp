@@ -103,7 +103,7 @@ int main(int argc, char **argv) {
   feFunction *funSol = new feFunction(fSol, par);
   feFunction *funSource = new feFunction(fSource, par);
 
-  int nIter = 3;
+  int nIter = 1;
   std::vector<double> normL2_BDF2(2 * nIter, 0.0);
   std::vector<double> normL2_DC3(2 * nIter, 0.0);
 
@@ -112,7 +112,8 @@ int main(int argc, char **argv) {
   TT.resize(nIter);
 
   for(int iter = 0; iter < nIter; ++iter) {
-    std::string meshName = "../../data/Square/square_2.0_" + std::to_string(iter + 1) + ".msh";
+    // std::string meshName = "../../data/Square/square" + std::to_string(iter + 1) + "Msh2.msh";
+    std::string meshName = "../../data/Square/squareEqChaleur.msh";
     // Maillage
     feMesh2DP1 *mesh = new feMesh2DP1(meshName, false);
     nElm[iter] = mesh->getNbInteriorElems();
