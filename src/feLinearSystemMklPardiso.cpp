@@ -88,9 +88,9 @@ void feLinearSystemMklPardiso::solve(double *normDx, double *normResidual, doubl
                                      int *nIter) {
   if(symbolicFactorization) mklSymbolicFactorization();
   if(recomputeMatrix){
-    tic();
+    // tic();
     mklFactorization();
-    toc();
+    // toc();
   }
   mklSolve();
 
@@ -170,11 +170,9 @@ feLinearSystemMklPardiso::~feLinearSystemMklPardiso(void) {
   delete[] residu;
 }
 
-feLinearSystemMklPardiso::feLinearSystemMklPardiso(std::vector<feBilinearForm *> &formMatrices,
-                                                   std::vector<feBilinearForm *> &formResiduals,
+feLinearSystemMklPardiso::feLinearSystemMklPardiso(std::vector<feBilinearForm*> bilinearForms,
                                                    feMetaNumber *metaNumber, feMesh *mesh)
-  : feLinearSystem(formMatrices, formResiduals, metaNumber, mesh) {
-
+  : feLinearSystem(bilinearForms, metaNumber, mesh) {
 
   // long int cnt = 0;
   // #pragma omp parallel for private(cnt)
@@ -182,7 +180,6 @@ feLinearSystemMklPardiso::feLinearSystemMklPardiso(std::vector<feBilinearForm *>
   //   // printf("Printing %3d from thread %d\n", i, omp_get_thread_num());
   //   printf("Thread %d has printed %2d times\n", omp_get_thread_num(), cnt++);
   // }
-
 
   recomputeMatrix = true;
   //=================================================================

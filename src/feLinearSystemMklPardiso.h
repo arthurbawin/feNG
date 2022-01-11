@@ -13,9 +13,7 @@
 
 class feLinearSystemMklPardiso : public feLinearSystem {
 public:
-  feLinearSystemMklPardiso(std::vector<feBilinearForm *> &formMatrices,
-                           std::vector<feBilinearForm *> &formResiduals, feMetaNumber *metaNumber,
-                           feMesh *mesh);
+  feLinearSystemMklPardiso(std::vector<feBilinearForm*> bilinearForms, feMetaNumber *metaNumber, feMesh *mesh);
   virtual ~feLinearSystemMklPardiso();
 
   // ====================================================================

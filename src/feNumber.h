@@ -41,6 +41,7 @@ public:
   ~feNumber() {}
 
   int getNbNodes() { return _nNod; }
+  int getNbDOFs() { return _nDofs; }
 
   void defDDLSommet(feMesh *mesh, std::string cncGeoID, int numElem, int numVertex);
   void defDDLElement(feMesh *mesh, std::string cncGeoID, int numElem, int numDOF);
@@ -132,6 +133,7 @@ public:
 
   int getNbUnknowns() { return _nInc; }
   int getNbDOFs() { return _nDofs; }
+  int getNbDOFs(std::string fieldID) { return _numberings[fieldID]->getNbDOFs(); }
   int getNbFields() { return _nFields; }
   std::string getFieldID(int iField) { return _fieldIDs[iField]; }
 

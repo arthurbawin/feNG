@@ -60,10 +60,12 @@ protected:
                                            int numElem);
 
 public:
-  feBilinearForm(std::vector<feSpace *> &space, feMesh *mesh, int degQuad, feSysElm *sysElm);
+  feBilinearForm(std::vector<feSpace *> space, feMesh *mesh, int degQuad, feSysElm *sysElm);
   ~feBilinearForm();
 
   int getCncGeoTag() { return _cncGeoTag; }
+
+  bool hasMatrix(){ return _sysElm->hasMatrix(); }
 
   int getNiElm() { return _niElm; }
   int getNjElm() { return _njElm; }

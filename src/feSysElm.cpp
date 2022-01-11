@@ -236,6 +236,7 @@ void feSysElm_2D_Source::computeBe(std::vector<double> &J, int numElem,
   int nG = geoSpace->getNbQuadPoints();
   std::vector<double> w = geoSpace->getQuadratureWeights();
   int nFunctions = intSpace[_idU]->getNbFunctions();
+  bool globalFunctions = false; // intSpace[_idU]->useGlobalFunctions();
 
   double jac;
   for(int k = 0; k < nG; ++k) {
@@ -247,7 +248,11 @@ void feSysElm_2D_Source::computeBe(std::vector<double> &J, int numElem,
     double S = _fct->eval(tn, x);
 
     for(int i = 0; i < nFunctions; ++i) {
-      _feU[i] = intSpace[_idU]->getFunctionAtQuadNode(i, k);
+      if(!globalFunctions){
+        _feU[i] = intSpace[_idU]->getFunctionAtQuadNode(i, k);
+      } else{
+        _feU[i] = intSpace[_idU]->getGlobalFunctionAtQuadNode(numElem, i, k);
+      }
       Be[i] -= _feU[i] * S * jac * w[k];
     }
   }
@@ -270,8 +275,10 @@ void feSysElm_2D_Diffusion::computeAe(std::vector<double> &Ja, int numElem,
   std::vector<double> w = geoSpace->getQuadratureWeights();
   double kD = _par;
   int nFunctions = intSpace[_idU]->getNbFunctions();
+  bool globalFunctions = true; //= intSpace[_idU]->useGlobalFunctions();
 
   double J;
+  // Integral over the elements
   for(int k = 0; k < nG; ++k) {
     std::vector<double> dxdr(3, 0.0); // [dx/dr, dy/dr, dz/dr]
     std::vector<double> dxds(3, 0.0); // [dx/ds, dy/ds, dz/ds]
@@ -279,23 +286,172 @@ void feSysElm_2D_Diffusion::computeAe(std::vector<double> &Ja, int numElem,
     geoSpace->interpolateVectorFieldAtQuadNode_sDerivative(geoCoord, k, dxds);
     J = dxdr[0] * dxds[1] - dxdr[1] * dxds[0];
 
-    double drdx = dxds[1] / J;
-    double drdy = -dxds[0] / J;
-    double dsdx = -dxdr[1] / J;
-    double dsdy = dxdr[0] / J;
+    if(!globalFunctions){
+      // Using local interpolation functions
+      double drdx = dxds[1] / J;
+      double drdy = -dxds[0] / J;
+      double dsdx = -dxdr[1] / J;
+      double dsdy = dxdr[0] / J;
 
-    for(int i = 0; i < nFunctions; ++i) {
-      _feUdx[i] = intSpace[_idU]->getdFunctiondrAtQuadNode(i, k) * drdx +
-                  intSpace[_idU]->getdFunctiondsAtQuadNode(i, k) * dsdx;
-      _feUdy[i] = intSpace[_idU]->getdFunctiondrAtQuadNode(i, k) * drdy +
-                  intSpace[_idU]->getdFunctiondsAtQuadNode(i, k) * dsdy;
-    }
+      for(int i = 0; i < nFunctions; ++i) {
+        _feUdx[i] = intSpace[_idU]->getdFunctiondrAtQuadNode(i, k) * drdx +
+                    intSpace[_idU]->getdFunctiondsAtQuadNode(i, k) * dsdx;
+        _feUdy[i] = intSpace[_idU]->getdFunctiondrAtQuadNode(i, k) * drdy +
+                    intSpace[_idU]->getdFunctiondsAtQuadNode(i, k) * dsdy;
+      }
 
-    for(int i = 0; i < nFunctions; ++i) {
-      for(int j = 0; j < nFunctions; ++j) {
-        Ae[i][j] += (_feUdx[i] * _feUdx[j] + _feUdy[i] * _feUdy[j]) * kD * J * w[k];
+      for(int i = 0; i < nFunctions; ++i) {
+        for(int j = 0; j < nFunctions; ++j) {
+          Ae[i][j] += (_feUdx[i] * _feUdx[j] + _feUdy[i] * _feUdy[j]) * kD * J * w[k];
+        }
+      }
+
+    } else{
+      // Using global interpolation functions
+      for(int i = 0; i < nFunctions; ++i) {
+        _feUdx[i] = intSpace[_idU]->getdGlobalFunctiondxAtQuadNode(numElem, i, k);
+        _feUdy[i] = intSpace[_idU]->getdGlobalFunctiondyAtQuadNode(numElem, i, k);
+      }
+
+      for(int i = 0; i < nFunctions; ++i) {
+        for(int j = 0; j < nFunctions; ++j) {
+          Ae[i][j] += (_feUdx[i] * _feUdx[j] + _feUdy[i] * _feUdy[j]) * kD * J * w[k];
+        }
       }
     }
+
+    // for(int i = 0; i < nFunctions; ++i) {
+    //   for(int j = 0; j < nFunctions; ++j) {
+    //     Ae[i][j] += (_feUdx[i] * _feUdx[j] + _feUdy[i] * _feUdy[j]) * kD * J * w[k];
+    //   }
+    // }
+  }
+
+  if(true){
+  // 1D quadrature rule to integrate over edges
+  feQuadrature rule(20, 1, "");
+  std::vector<double> x1D = rule.getXPoints();
+  std::vector<double> w1D = rule.getWeights();
+  std::vector<double> r1D(x1D.size());
+  int n1D = rule.getNQuad();
+  // 1D quad nodes from [-1,1] to [0,1]
+  for(int i = 0; i < n1D; ++i){
+    r1D[i] = (x1D[i] + 1.0)/2.0;
+  }
+
+  double drdt[3] = {1.0, -1.0,  0.0};
+  double dsdt[3] = {0.0,  1.0, -1.0};
+
+  // Il faut recalculer les fonctions globales aux noeuds de quadrature 1D
+  // Pas tres efficace : elles ont ete precalculees mais seulement aux noeuds 2D
+  // TODO : stocker les matrices de coeff
+  std::vector<double> l(nFunctions, 0.0);
+  std::vector<double> dldx(nFunctions, 0.0);
+  std::vector<double> dldy(nFunctions, 0.0);
+
+  std::string name = "elem" + std::to_string(numElem) + ".pos";
+  FILE *f = fopen(name.c_str(),"w");
+  fprintf(f, "View \"elem\" {\n");
+
+  // Integrale sur les bords (devra devenir une autre forme faible si ça fonctionne)
+  for(int iEdge = 0; iEdge < 3; ++iEdge){
+    double longueur = 0.0;
+    double longueur2 = 0.0;
+    for(int k = 0; k < n1D; ++k) {
+      std::vector<double> x(3, 0.0);
+      std::vector<double> dxdr(3, 0.0); // [dx/dr, dy/dr, dz/dr]
+      std::vector<double> dxds(3, 0.0); // [dx/ds, dy/ds, dz/ds]
+
+      double jac1D; 
+
+      switch(iEdge){
+        case 0 :
+        {
+          double r[3] = {r1D[k], 0., 0.};
+          // These interpolations use local functions because geometry is defined with Lagrange local polynomials
+          geoSpace->interpolateVectorField(geoCoord, r, x);
+          geoSpace->interpolateVectorField_rDerivative(geoCoord, r, dxdr);
+          geoSpace->interpolateVectorField_sDerivative(geoCoord, r, dxds);
+
+          double tx = dxdr[0] * drdt[iEdge] + dxds[0] * dsdt[iEdge];
+          double ty = dxdr[1] * drdt[iEdge] + dxds[1] * dsdt[iEdge];
+
+          // printf("Tangential vector on edge 12 at phys point (%+-4.4f, %+-4.4f) - ref point (%4.4f, %4.4f) = (%+-4.4f, %+-4.4f)\n",
+            // x[0], x[1], r[0], r[1], tx, ty);
+          // fprintf(f,"VP(%.16g,%.16g,%.16g){%.16g,%.16g,%.16g};\n",x[0],x[1],0.,tx,ty,0.0);
+          // fprintf(f,"VP(%.16g,%.16g,%.16g){%.16g,%.16g,%.16g};\n",x[0],x[1],0.,ty,-tx,0.0);
+          break;
+        }
+        case 1 :
+        {
+          double r[3] = {r1D[k], 1.0 - r1D[k], 0.};
+          geoSpace->interpolateVectorField(geoCoord, r, x);
+          geoSpace->interpolateVectorField_rDerivative(geoCoord, r, dxdr);
+          geoSpace->interpolateVectorField_sDerivative(geoCoord, r, dxds);
+          double tx = dxdr[0] * drdt[iEdge] + dxds[0] * dsdt[iEdge];
+          double ty = dxdr[1] * drdt[iEdge] + dxds[1] * dsdt[iEdge];
+
+          // printf("Tangential vector on edge 23 at phys point (%+-4.4f, %+-4.4f) - ref point (%4.4f, %4.4f) = (%+-4.4f, %+-4.4f)\n",
+          //   x[0], x[1], r[0], r[1], tx, ty);
+          // fprintf(f,"VP(%.16g,%.16g,%.16g){%.16g,%.16g,%.16g};\n",x[0],x[1],0.,tx,ty,0.0);
+          // fprintf(f,"VP(%.16g,%.16g,%.16g){%.16g,%.16g,%.16g};\n",x[0],x[1],0.,ty,-tx,0.0);
+          break;
+        }
+        case 2 :
+        {
+          double r[3] = {0.0, r1D[k], 0.};
+          geoSpace->interpolateVectorField(geoCoord, r, x);
+          geoSpace->interpolateVectorField_rDerivative(geoCoord, r, dxdr);
+          geoSpace->interpolateVectorField_sDerivative(geoCoord, r, dxds);
+          double tx = dxdr[0] * drdt[iEdge] + dxds[0] * dsdt[iEdge];
+          double ty = dxdr[1] * drdt[iEdge] + dxds[1] * dsdt[iEdge];
+
+          // printf("Tangential vector on edge 31 at phys point (%+-4.4f, %+-4.4f) - ref point (%4.4f, %4.4f) = (%+-4.4f, %+-4.4f)\n",
+          //   x[0], x[1], r[0], r[1], tx, ty);
+          // fprintf(f,"VP(%.16g,%.16g,%.16g){%.16g,%.16g,%.16g};\n",x[0],x[1],0.,tx,ty,0.0);
+          // fprintf(f,"VP(%.16g,%.16g,%.16g){%.16g,%.16g,%.16g};\n",x[0],x[1],0.,ty,-tx,0.0);
+          break;
+        }
+      }
+
+      double dxdt = dxdr[0] * drdt[iEdge] + dxds[0] * dsdt[iEdge];
+      double dydt = dxdr[1] * drdt[iEdge] + dxds[1] * dsdt[iEdge];
+
+      // Le 1/2 vient de la transformation de [-1,1] à [0,1], qui est ensuite envoyé dans l'espace physique
+      jac1D = sqrt(dxdt*dxdt + dydt*dydt)/2.0;
+
+      longueur += jac1D * w1D[k];
+      longueur2 += J * w1D[k];
+
+      double nx =  dydt;
+      double ny = -dxdt;
+      double N = 2.0*jac1D;
+      nx /= N;
+      ny /= N;
+      fprintf(f,"VP(%.16g,%.16g,%.16g){%.16g,%.16g,%.16g};\n",x[0],x[1],0.,-ny,nx,0.0);
+      fprintf(f,"VP(%.16g,%.16g,%.16g){%.16g,%.16g,%.16g};\n",x[0],x[1],0.,nx,ny,0.0);
+
+      intSpace[_idU]->Lphys(numElem, x, l, dldx, dldy);
+      
+      for(int i = 0; i < nFunctions; ++i) {
+        _feU[i] = l[i];
+        _feUdx[i] = dldx[i];
+        _feUdy[i] = dldy[i];
+      }
+
+      for(int i = 0; i < nFunctions; ++i) {
+        for(int j = 0; j < nFunctions; ++j) {
+          Ae[i][j] -= (_feU[i] * (_feUdx[j] * nx + _feUdy[j] * ny)) * kD * jac1D * w1D[k];
+        }
+      }
+      
+    }
+    // printf("Longueur = %4.4f et %4.4f\n", longueur, longueur2);
+
+  }
+
+  fprintf(f,"};");
+  fclose(f);
   }
 }
 
@@ -307,6 +463,7 @@ void feSysElm_2D_Diffusion::computeBe(std::vector<double> &Ja, int numElem,
   std::vector<double> w = geoSpace->getQuadratureWeights();
   double kD = _par;
   int nFunctions = intSpace[_idU]->getNbFunctions();
+  bool globalFunctions = false; // intSpace[_idU]->useGlobalFunctions();
 
   double J, dudx, dudy;
   for(int k = 0; k < nG; ++k) {
@@ -316,23 +473,153 @@ void feSysElm_2D_Diffusion::computeBe(std::vector<double> &Ja, int numElem,
     geoSpace->interpolateVectorFieldAtQuadNode_sDerivative(geoCoord, k, dxds);
     J = dxdr[0] * dxds[1] - dxdr[1] * dxds[0];
 
-    double drdx = dxds[1] / J;
-    double drdy = -dxds[0] / J;
-    double dsdx = -dxdr[1] / J;
-    double dsdy = dxdr[0] / J;
+    if(!globalFunctions){
+      double drdx = dxds[1] / J;
+      double drdy = -dxds[0] / J;
+      double dsdx = -dxdr[1] / J;
+      double dsdy = dxdr[0] / J;
 
-    dudx = intSpace[_idU]->interpolateSolutionAtQuadNode_rDerivative(k) * drdx +
-           intSpace[_idU]->interpolateSolutionAtQuadNode_sDerivative(k) * dsdx;
-    dudy = intSpace[_idU]->interpolateSolutionAtQuadNode_rDerivative(k) * drdy +
-           intSpace[_idU]->interpolateSolutionAtQuadNode_sDerivative(k) * dsdy;
+      dudx = intSpace[_idU]->interpolateSolutionAtQuadNode_rDerivative(k) * drdx +
+             intSpace[_idU]->interpolateSolutionAtQuadNode_sDerivative(k) * dsdx;
+      dudy = intSpace[_idU]->interpolateSolutionAtQuadNode_rDerivative(k) * drdy +
+             intSpace[_idU]->interpolateSolutionAtQuadNode_sDerivative(k) * dsdy;
 
-    for(int i = 0; i < nFunctions; ++i) {
-      _feUdx[i] = intSpace[_idU]->getdFunctiondrAtQuadNode(i, k) * drdx +
-                  intSpace[_idU]->getdFunctiondsAtQuadNode(i, k) * dsdx;
-      _feUdy[i] = intSpace[_idU]->getdFunctiondrAtQuadNode(i, k) * drdy +
-                  intSpace[_idU]->getdFunctiondsAtQuadNode(i, k) * dsdy;
-      Be[i] -= (_feUdx[i] * dudx + _feUdy[i] * dudy) * kD * J * w[k];
+      for(int i = 0; i < nFunctions; ++i) {
+        _feUdx[i] = intSpace[_idU]->getdFunctiondrAtQuadNode(i, k) * drdx +
+                    intSpace[_idU]->getdFunctiondsAtQuadNode(i, k) * dsdx;
+        _feUdy[i] = intSpace[_idU]->getdFunctiondrAtQuadNode(i, k) * drdy +
+                    intSpace[_idU]->getdFunctiondsAtQuadNode(i, k) * dsdy;
+        Be[i] -= (_feUdx[i] * dudx + _feUdy[i] * dudy) * kD * J * w[k];
+      }
+    } else{
+      dudx = intSpace[_idU]->interpolateSolutionAtQuadNode_xDerivative(numElem, k);
+      dudy = intSpace[_idU]->interpolateSolutionAtQuadNode_yDerivative(numElem, k);
+
+      for(int i = 0; i < nFunctions; ++i) {
+        _feUdx[i] = intSpace[_idU]->getdGlobalFunctiondxAtQuadNode(numElem, i, k);
+        _feUdy[i] = intSpace[_idU]->getdGlobalFunctiondyAtQuadNode(numElem, i, k);
+        Be[i] -= (_feUdx[i] * dudx + _feUdy[i] * dudy) * kD * J * w[k];
+      }
     }
+  }
+
+  if(false){
+    // 1D quadrature rule to integrate over edges
+    feQuadrature rule(30, 1, "");
+    std::vector<double> x1D = rule.getXPoints();
+    std::vector<double> w1D = rule.getWeights();
+    std::vector<double> r1D(x1D.size());
+    int n1D = rule.getNQuad();
+    // 1D quad nodes from [-1,1] to [0,1]
+    for(int i = 0; i < n1D; ++i){
+      r1D[i] = (x1D[i] + 1.0)/2.0;
+    }
+
+    double drdt[3] = {1.0, -1.0,  0.0};
+    double dsdt[3] = {0.0,  1.0, -1.0};
+
+    std::string name = "elem" + std::to_string(numElem) + ".pos";
+    FILE *f = fopen(name.c_str(),"w");
+    fprintf(f, "View \"elem\" {\n");
+
+    // Il faut recalculer les fonctions globales aux noeuds de quadrature 1D
+    // Pas tres efficace : elles ont ete precalculees mais seulement aux noeuds 2D
+    // TODO : stocker les matrices de coeff
+    std::vector<double> l(nFunctions, 0.0);
+    std::vector<double> dldx(nFunctions, 0.0);
+    std::vector<double> dldy(nFunctions, 0.0);
+
+    std::vector<double> xc(3, 0.0);
+    double rc[3] = {1./3.,1./3.,1./3.};
+    geoSpace->interpolateVectorField(geoCoord, rc, xc);
+
+    // Integrale sur les bords (devra devenir une autre forme faible si ça fonctionne)
+    for(int iEdge = 0; iEdge < 3; ++iEdge){
+      double longueur = 0.0;
+      double longueur2 = 0.0;
+
+      double intEdge = 0.0;
+
+      for(int k = 0; k < n1D; ++k) {
+        std::vector<double> x(3, 0.0);
+        std::vector<double> dxdr(3, 0.0); // [dx/dr, dy/dr, dz/dr]
+        std::vector<double> dxds(3, 0.0); // [dx/ds, dy/ds, dz/ds]
+
+        double jac1D; 
+
+        switch(iEdge){
+          case 0 :
+          {
+            double r[3] = {r1D[k], 0., 0.};
+            // These interpolations use local functions because geometry is defined with Lagrange local polynomials
+            geoSpace->interpolateVectorField(geoCoord, r, x);
+            geoSpace->interpolateVectorField_rDerivative(geoCoord, r, dxdr);
+            geoSpace->interpolateVectorField_sDerivative(geoCoord, r, dxds);
+            break;
+          }
+          case 1 :
+          {
+            double r[3] = {1.0 - r1D[k], r1D[k], 0.};
+            geoSpace->interpolateVectorField(geoCoord, r, x);
+            geoSpace->interpolateVectorField_rDerivative(geoCoord, r, dxdr);
+            geoSpace->interpolateVectorField_sDerivative(geoCoord, r, dxds);
+            break;
+          }
+          case 2 :
+          {
+            double r[3] = {0.0, 1.0 - r1D[k], 0.};
+            geoSpace->interpolateVectorField(geoCoord, r, x);
+            geoSpace->interpolateVectorField_rDerivative(geoCoord, r, dxdr);
+            geoSpace->interpolateVectorField_sDerivative(geoCoord, r, dxds);
+            break;
+          }
+        }
+
+        double dxdt = dxdr[0] * drdt[iEdge] + dxds[0] * dsdt[iEdge];
+        double dydt = dxdr[1] * drdt[iEdge] + dxds[1] * dsdt[iEdge];
+
+        // Le 1/2 vient de la transformation de [-1,1] à [0,1], qui est ensuite envoyé dans l'espace physique
+        jac1D = sqrt(dxdt*dxdt + dydt*dydt);
+
+        longueur += jac1D * w1D[k];
+        // longueur2 += J * w1D[k];
+
+        double nx =  dydt;
+        double ny = -dxdt;
+        double N = sqrt(dxdt*dxdt + dydt*dydt);
+        nx /= N;
+        ny /= N;
+        fprintf(f,"VP(%.16g,%.16g,%.16g){%.16g,%.16g,%.16g};\n",x[0],x[1],0.,-ny,nx,0.0);
+        fprintf(f,"VP(%.16g,%.16g,%.16g){%.16g,%.16g,%.16g};\n",x[0],x[1],0.,nx,ny,0.0);
+
+        x[0] -= xc[0];
+        x[1] -= xc[1];
+        x[2] -= xc[2];
+
+        intSpace[_idU]->Lphys(numElem, x, l, dldx, dldy);
+
+        dudx = intSpace[_idU]->interpolateSolution_xDerivative(numElem, x);
+        dudy = intSpace[_idU]->interpolateSolution_yDerivative(numElem, x);
+
+        // double sumPhi = 0.0;
+        for(int i = 0; i < nFunctions; ++i) {
+          _feU[i] = l[i];
+          Be[i] += _feU[i] * (dudx * nx + dudy * ny) * kD * jac1D * w1D[k];
+          intEdge += (_feU[i] * (dudx * nx + dudy * ny)) * kD * jac1D * w1D[k];
+          // sumPhi += _feU[i];
+          // sumPhi += dldx[i];
+          // sumPhi += dldy[i];
+          // std::cout<<_feU[i]<<" - "<<dudx<<" - "<<dudy<<" - "<<nx<<" - "<<ny<<" - "<<jac1D<<" - "<<w1D[k]<<std::endl;
+        }
+        // printf("Sumphi = %+-10.10e\n", sumPhi);
+        
+      }
+      printf("Integrale sur l'arete %d de l'elm %d = %+-10.10e\n", iEdge, numElem, intEdge);
+      printf("Longueur = %10.16e\n", longueur);
+
+    }
+    fprintf(f,"};");
+    fclose(f);
   }
 }
 

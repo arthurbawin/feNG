@@ -3,12 +3,15 @@
 
 #include "feLinearSystem.h"
 
+#if defined(HAVE_PETSC)
 #include "petscksp.h"
+#endif
 
 class feLinearSystemPETSc : public feLinearSystem {
 protected:
   int _argc;
   char **_argv;
+#if defined(HAVE_PETSC)
   PetscInt _nInc;
   PetscInt _nDofs;
   Mat _A;
@@ -18,11 +21,10 @@ protected:
 
   KSP ksp;
   PC preconditioner;
+#endif
 
 public:
-  feLinearSystemPETSc(int argc, char **argv, std::vector<feBilinearForm *> &formMatrices,
-                      std::vector<feBilinearForm *> &formResiduals, feMetaNumber *metaNumber,
-                      feMesh *mesh);
+  feLinearSystemPETSc(int argc, char **argv, std::vector<feBilinearForm*> bilinearForms, feMetaNumber *metaNumber, feMesh *mesh);
   virtual ~feLinearSystemPETSc();
 
   virtual void initialize();

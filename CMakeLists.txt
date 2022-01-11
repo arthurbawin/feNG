@@ -4,7 +4,7 @@ project(feNG)
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-option(ENABLE_OPENMP        "Enable OpenMP"               OFF)
+option(ENABLE_OPENMP        "Enable OpenMP"               ON )
 option(ENABLE_MPI           "Enable MPI"                  ON )
 option(ENABLE_PETSC         "Enable PETSc"                ON )
 option(ENABLE_GMSH          "Enable Gmsh"                 OFF)
@@ -62,6 +62,17 @@ endif()
 set(feNG_EXTERNAL_LIBS "")
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/")
 
+#  OpenMP
+if(ENABLE_OPENMP)
+  find_package(OpenMP)
+  if(OpenMP_CXX_FOUND)
+    MESSAGE(STATUS "OpenMP found (-:")
+    # target_link_libraries(feNG PUBLIC OpenMP::OpenMP_CXX)
+    list(APPEND feNG_EXTERNAL_LIBS OpenMP::OpenMP_CXX)
+    add_definitions("-DHAVE_OMP")
+  endif()
+endif()
+
 #  MPI
 if(ENABLE_MPI)
   find_package(MPI REQUIRED)
@@ -85,8 +96,13 @@ if(ENABLE_MKL)
   #   set(MKL_USE_parallel 1)
   # endif()
   find_package(MKL REQUIRED)
+  message(STATUS "Found MKL_FOUND:\n${MKL_FOUND} ")
+  message(STATUS "Found MKL_ROOT_DIR:\n${MKL_ROOT_DIR} ")
+  message(STATUS "Found MKL_INCLUDE_DIR:\n${MKL_INCLUDE_DIR} ")
+  message(STATUS "Found MKL_LIBRARIES:\n${MKL_LIBRARIES} ")
+  message(STATUS "Found MKL_LIBRARY_DIR:\n${MKL_LIBRARY_DIR} ")
   include_directories(${MKL_INCLUDE_DIRS})
-  list(APPEND EF_EXTERNAL_LIBS ${EF_EXTERNAL_LIBS} ${MKL_LIBRARIES})
+  list(APPEND feNG_EXTERNAL_LIBS ${feNG_EXTERNAL_LIBS} ${MKL_LIBRARIES})
   add_definitions("-DHAVE_MKL")
   message(STATUS "MKL found ! (-:")
 endif()
@@ -133,9 +149,11 @@ if(ENABLE_GMSH)
   MESSAGE(STATUS "Gmsh found (-:")
 endif()
 
-#  Gmsh classes for metric tensors and rtree
+#  Gmsh classes for metric tensors and rtree 
 # See also src/CmakeLists.txt for the .cpp files
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/contrib/gmsh)
+
+list(APPEND feNG_EXTERNAL_LIBS "-Wl,-no-as-needed,-lprofiler")
 
 MESSAGE(STATUS "External libs for feNG : ${feNG_EXTERNAL_LIBS}")
 

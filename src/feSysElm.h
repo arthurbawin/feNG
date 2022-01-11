@@ -13,8 +13,11 @@ protected:
 
   bool matrixAnalyticalStatus = true;
 
+  // Does this form has an elementary matrix to assemble ?
+  bool _hasMatrix = false;
+
 public:
-  feSysElm() {
+  feSysElm(bool hasMatrix) : _hasMatrix(hasMatrix) {
     _iVar.resize(1);
     _jVar.resize(1);
   };
@@ -26,6 +29,8 @@ public:
   std::string getID() { return _ID; }
 
   bool getMatrixAnalyticalStatus() { return matrixAnalyticalStatus; };
+
+  bool hasMatrix(){ return _hasMatrix; }
 
   virtual void createElementarySystem(std::vector<feSpace *> &space) = 0;
   virtual void computeAe(std::vector<double> &J, int numElem, std::vector<feSpace *> &intSpace,
@@ -44,7 +49,7 @@ protected:
   std::vector<double> _feU;
 
 public:
-  feSysElm_0D_Masse(double par, feFunction *fct) : _fct(fct), _par(par){};
+  feSysElm_0D_Masse(double par, feFunction *fct) : feSysElm(true), _fct(fct), _par(par) {};
   virtual ~feSysElm_0D_Masse() {}
 
   virtual void createElementarySystem(std::vector<feSpace *> &space);
@@ -64,7 +69,7 @@ protected:
   std::vector<double> _feU;
 
 public:
-  feSysElm_0D_Source(double par, feFunction *fct) : _fct(fct), _par(par){};
+  feSysElm_0D_Source(double par, feFunction *fct) : feSysElm(false), _fct(fct), _par(par){};
   virtual ~feSysElm_0D_Source() {}
 
   virtual void createElementarySystem(std::vector<feSpace *> &space);
@@ -84,7 +89,7 @@ protected:
   std::vector<double> _feU;
 
 public:
-  feSysElm_0D_Source_crossed(double par, feVectorFunction *fct) : _fct(fct), _par(par){};
+  feSysElm_0D_Source_crossed(double par, feVectorFunction *fct) : feSysElm(false), _fct(fct), _par(par){};
   virtual ~feSysElm_0D_Source_crossed() {}
 
   virtual void createElementarySystem(std::vector<feSpace *> &space);
@@ -105,7 +110,7 @@ protected:
   std::vector<double> _feUdx;
 
 public:
-  feSysElm_1D_Source(double par, feFunction *fct) : _fct(fct), _par(par){};
+  feSysElm_1D_Source(double par, feFunction *fct) : feSysElm(false), _fct(fct), _par(par){};
   virtual ~feSysElm_1D_Source() {}
 
   virtual void createElementarySystem(std::vector<feSpace *> &space);
@@ -126,7 +131,7 @@ protected:
   std::vector<double> _feUdx;
 
 public:
-  feSysElm_1D_Diffusion(double par, feFunction *fct) : _fct(fct), _par(par){};
+  feSysElm_1D_Diffusion(double par, feFunction *fct) : feSysElm(true), _fct(fct), _par(par){};
   virtual ~feSysElm_1D_Diffusion() {}
 
   virtual void createElementarySystem(std::vector<feSpace *> &space);
@@ -147,7 +152,7 @@ protected:
   std::vector<double> _feUdx;
 
 public:
-  feSysElm_1D_Masse(double par, feFunction *fct) : _fct(fct), _par(par){};
+  feSysElm_1D_Masse(double par, feFunction *fct) : feSysElm(true), _fct(fct), _par(par){};
   virtual ~feSysElm_1D_Masse() {}
 
   virtual void createElementarySystem(std::vector<feSpace *> &space);
@@ -159,6 +164,27 @@ public:
                          double *Be);
 };
 
+// class feSysElm_1D_NeumannBC : public feSysElm {
+// protected:
+//   feFunction *_fct;
+//   double _par; // Parametres 
+//   int _idU;
+//   std::vector<double> _feU;
+//   std::vector<double> _feUdx;
+
+// public:
+//   feSysElm_1D_Masse(double par, feFunction *fct) : _fct(fct), _par(par){};
+//   virtual ~feSysElm_1D_Masse() {}
+
+//   virtual void createElementarySystem(std::vector<feSpace *> &space);
+//   virtual void computeAe(std::vector<double> &J, int numElem, std::vector<feSpace *> &intSpace,
+//                          feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn,
+//                          double **Ae);
+//   virtual void computeBe(std::vector<double> &J, int numElem, std::vector<feSpace *> &intSpace,
+//                          feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn, double dt,
+//                          double *Be);
+// };
+
 class feSysElm_2D_Masse : public feSysElm {
 protected:
   feFunction *_fct;
@@ -168,7 +194,7 @@ protected:
   std::vector<double> _feUdx;
 
 public:
-  feSysElm_2D_Masse(double par, feFunction *fct) : _fct(fct), _par(par){};
+  feSysElm_2D_Masse(double par, feFunction *fct) : feSysElm(true), _fct(fct), _par(par){};
   virtual ~feSysElm_2D_Masse() {}
 
   virtual void createElementarySystem(std::vector<feSpace *> &space);
@@ -190,7 +216,7 @@ protected:
   std::vector<double> _feUdy;
 
 public:
-  feSysElm_2D_Source(double par, feFunction *fct) : _fct(fct), _par(par) { _ID = "source2D"; };
+  feSysElm_2D_Source(double par, feFunction *fct) : feSysElm(false), _fct(fct), _par(par) { _ID = "source2D"; };
   virtual ~feSysElm_2D_Source() {}
 
   virtual void createElementarySystem(std::vector<feSpace *> &space);
@@ -212,7 +238,11 @@ protected:
   std::vector<double> _feUdy;
 
 public:
-  feSysElm_2D_Diffusion(double par, feFunction *fct) : _fct(fct), _par(par) { _ID = "diff2D"; };
+  feSysElm_2D_Diffusion(double par, feFunction *fct) : feSysElm(true), _fct(fct), _par(par) 
+  { 
+    _ID = "diff2D";
+    matrixAnalyticalStatus = false;
+  };
   virtual ~feSysElm_2D_Diffusion() {}
 
   virtual void createElementarySystem(std::vector<feSpace *> &space);
@@ -234,7 +264,7 @@ protected:
   std::vector<double> _feUdy;
 
 public:
-  feSysElm_2D_Advection(double par, feVectorFunction *fct) : _fct(fct), _par(par) { 
+  feSysElm_2D_Advection(double par, feVectorFunction *fct) : feSysElm(true), _fct(fct), _par(par) { 
     _ID = "adv2D";
     matrixAnalyticalStatus = false;
   };
@@ -265,7 +295,8 @@ protected:
   std::vector<double> _feP;
 
 public:
-  feSysElm_2D_Stokes(std::vector<double> &par, feVectorFunction *fct) : _fct(fct), _par(par) {
+  feSysElm_2D_Stokes(std::vector<double> &par, feVectorFunction *fct) : feSysElm(true), _fct(fct), _par(par)
+  {
     _ID = "Stokes2D";
     matrixAnalyticalStatus = true;
   };
@@ -299,7 +330,8 @@ protected:
 public:
   feSysElm_2D_NavierStokes(std::vector<double> &par, feVectorFunction *fct,
                            feFunction *viscosityFct = nullptr)
-    : _fct(fct), _par(par), _viscosityFct(viscosityFct) {
+    : feSysElm(true), _fct(fct), _par(par), _viscosityFct(viscosityFct)
+  {
     _ID = "NavierStokes2D";
     matrixAnalyticalStatus = true;
   };
@@ -332,7 +364,8 @@ protected:
 public:
   feSysElm_1D_DirectionalDoNothing(std::vector<double> &par, feVectorFunction *fct,
                            feFunction *viscosityFct = nullptr)
-    : _fct(fct), _par(par), _viscosityFct(viscosityFct) {
+    : feSysElm(true), _fct(fct), _par(par), _viscosityFct(viscosityFct)
+  {
     _ID = "DirectionalDoNothing1D";
     matrixAnalyticalStatus = false;
   };

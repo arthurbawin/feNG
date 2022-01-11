@@ -4,7 +4,8 @@ feNumber::feNumber(feMesh *mesh) : _nNod(mesh->getNbNodes()), _nEdg(mesh->getNbE
   _nElm = 0;
   for(size_t i = 0; i < mesh->getCncGeo().size(); ++i) _nElm += mesh->getCncGeo()[i]->getNbElm();
 
-  // A global elem to edge map : if the global (line) elem is also an edge
+  // A global elem to edge map : if the global (line) elem is also an edge.
+  // Edges are numbered starting from 1, so a 0 value means the element is not an edge.
   _elemToEdge.resize(_nElm, 0);
   for(auto const &cnc : mesh->getCncGeo()) {
     for(int iElm = 0; iElm < cnc->getNbElm(); ++iElm) {
@@ -88,9 +89,9 @@ void feNumber::prepareNumbering() {
   _maxDOFperEdge = 0;
   if(_nEdg > 0) { _maxDOFperEdge = *std::max_element(_nDOFEdges.begin(), _nDOFEdges.end()); }
 
-  _numberingVertices.resize(_nNod);
-  _numberingElements.resize(_nElm * _maxDOFperElem);
-  _numberingEdges.resize(_nEdg * _maxDOFperEdge);
+  _numberingVertices.resize(_nNod, -3);
+  _numberingElements.resize(_nElm * _maxDOFperElem, -3);
+  _numberingEdges.resize(_nEdg * _maxDOFperEdge, -3);
 
   for(int iVertex = 0; iVertex < _nNod; ++iVertex) {
     if(_nDOFVertices[iVertex] == 1) _numberingVertices[iVertex] = _codeDOFVertices[iVertex];

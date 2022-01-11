@@ -27,16 +27,8 @@ protected:
   double _dt;
 
 public:
-  feSolution(feMesh *mesh, const std::vector<feSpace *> &space, const std::vector<feSpace *> &essBC,
-             feMetaNumber *metaNumber)
-    : _dim(mesh->getDim()), _space(space), _essBC(essBC), _c0(0.), _tn(0.) {
-    _sol.resize(metaNumber->getNbDOFs());
-    _dsoldt.resize(metaNumber->getNbDOFs());
-    for(int i = 0; i < metaNumber->getNbDOFs(); ++i) {
-      _sol[i] = 0.0;
-      _dsoldt[i] = 0.0;
-    }
-  };
+  feSolution(feMesh *mesh, const std::vector<feSpace *> &space, const std::vector<feSpace *> &essBC, feMetaNumber *metaNumber);
+  feSolution(std::string solutionFile);
   ~feSolution() {}
 
   void initializeTemporalSolution(double t0, double t1, int nTimeSteps);

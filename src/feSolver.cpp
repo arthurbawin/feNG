@@ -2,8 +2,44 @@
 #include "feSolutionContainer.h"
 #include "feExporter.h"
 
+extern int FE_VERBOSE;
+
+feStatus createTimeIntegrator(TimeIntegrator *&solver,
+                              timeIntegratorScheme scheme,
+                              feTolerances tolerances,
+                              feLinearSystem *system,
+                              feMetaNumber *metaNumber,
+                              feSolution *solution,
+                              feMesh *mesh,
+                              std::vector<feNorm*> &norms,
+                              feExportData exportData,
+                              double tBegin,
+                              double tEnd,
+                              int nTimeSteps,
+                              std::string initializationCode)
+{
+  switch(scheme){
+    case STATIONARY :
+      solver = new StationarySolver(tolerances, metaNumber, system, solution, norms, mesh, exportData); break;
+    case BDF1 :
+      solver = new BDF1Solver(tolerances, metaNumber, system, solution, norms, mesh, exportData, tBegin, tEnd, nTimeSteps); break;
+    case BDF2 :
+      solver = new BDF2Solver(tolerances, metaNumber, system, solution, norms, mesh, exportData, tBegin, tEnd, nTimeSteps, initializationCode); break;
+    case DC2F :
+      solver = new DC2FSolver(tolerances, metaNumber, system, solution, norms, mesh, exportData, tBegin, tEnd, nTimeSteps); break;
+    case DC3 :
+      solver = new DC3Solver(tolerances, metaNumber, system, solution, norms, mesh, exportData, tBegin, tEnd, nTimeSteps, initializationCode); break;
+    case DC3F :
+      solver = new DC3FSolver(tolerances, metaNumber, system, solution, norms, mesh, exportData, tBegin, tEnd, nTimeSteps); break;
+    default :
+      return feErrorMsg(FE_STATUS_ERROR, "Unsupported time integration scheme.");
+  }
+  return FE_STATUS_OK;
+}
+
 void solveQNBDF(feSolutionContainer *solDot, feTolerances tol, feMetaNumber *metaNumber,
-                feLinearSystem *linearSystem, feSolution *sol, feMesh *mesh) {
+                feLinearSystem *linearSystem, feSolution *sol, feMesh *mesh)
+{
   bool newton = true;
   bool status = linearSystem->getRecomputeStatus();
   int iter = 0, linearSystemIter;
@@ -18,8 +54,7 @@ void solveQNBDF(feSolutionContainer *solDot, feTolerances tol, feMetaNumber *met
     linearSystem->correctSolution(sol);
     solDot->setSol(0, sol->getSolutionCopy());
 
-    printf(
-      "iter %2d : ||A*dx-res|| = %10.10e (%4d iter.) \t ||dx|| = %10.10e \t ||res|| = %10.10e\n",
+    feInfoCond(FE_VERBOSE > 0, "    iter %2d : ||A*dx-res|| = %10.10e (%4d iter.) \t ||dx|| = %10.10e \t ||res|| = %10.10e",
       ++iter, normAxb, linearSystemIter, normDx, normResidual);
 
     newton = !((normDx <= tol.tolDx && normResidual <= tol.tolResidual) || iter > tol.maxIter);
@@ -27,16 +62,17 @@ void solveQNBDF(feSolutionContainer *solDot, feTolerances tol, feMetaNumber *met
     linearSystem->setRecomputeStatus(true);
   }
   if(iter > tol.maxIter) {
-    printf("=== ! === Not converged at iter %2d : ||A*dx-res|| = %10.10e  (%4d iter.) \t ||dx|| = "
-           "%10.10e \t ||res|| = %10.10e\n",
+    feWarning("Not converged at iter %2d : ||A*dx-res|| = %10.10e  (%4d iter.) \t ||dx|| = "
+           "%10.10e \t ||res|| = %10.10e",
            iter, normAxb, linearSystemIter, normDx, normResidual);
   } else {
-    printf("Converged in %2d iterations : ||dx|| = %10.10e \t ||res|| = %10.10e\n", iter, normDx,
+    feInfoCond(FE_VERBOSE > 0, "Converged in %2d Newton iterations : ||dx|| = %10.10e \t ||res|| = %10.10e", iter, normDx,
            normResidual);
   }
   linearSystem->setRecomputeStatus(status);
 }
 
+// Deprecated
 void solveStationary(double *normL2, feTolerances tol, feMetaNumber *metaNumber,
                      feLinearSystem *linearSystem, std::vector<feBilinearForm *> &formMatrices,
                      std::vector<feBilinearForm *> &formResiduals, feSolution *sol,
@@ -61,8 +97,9 @@ void solveStationary(double *normL2, feTolerances tol, feMetaNumber *metaNumber,
 
 StationarySolver::StationarySolver(feTolerances tol, feMetaNumber *metaNumber,
                                    feLinearSystem *linearSystem, feSolution *sol,
-                                   std::vector<feNorm *> &norms, feMesh *mesh)
-  : TimeIntegrator(tol, metaNumber, linearSystem, sol, norms, mesh) {
+                                   std::vector<feNorm *> &norms, feMesh *mesh, feExportData exportData)
+  : TimeIntegrator(tol, metaNumber, linearSystem, sol, norms, mesh, exportData)
+{
   // Initialize the solution container with a single solution
   int nSol = 1;
   _solutionContainer = new feStationarySolution(nSol, _sol->getCurrentTime(), _metaNumber);
@@ -72,20 +109,27 @@ StationarySolver::StationarySolver(feTolerances tol, feMetaNumber *metaNumber,
   for(auto &n : _normL2) n.resize(1, 0.);
 }
 
-void StationarySolver::makeSteps(int nSteps, std::vector<feSpace *> &spaces) {
-  printf("StationarySolver : Advancing %d steps\n", nSteps);
+feStatus StationarySolver::makeSteps(int nSteps)
+{
+  feInfoCond(FE_VERBOSE > 0, "Solving for steady state solution - recomputeMatrix = %s",
+         _linearSystem->getRecomputeStatus() ? "true" : "false");
   _linearSystem->setRecomputeStatus(true);
   _sol->initializeUnknowns(_mesh, _metaNumber);
   _sol->initializeEssentialBC(_mesh, _metaNumber);
   // Solve
-  printf("\nSteady state solution - recomputeMatrix = %s\n",
-         _linearSystem->getRecomputeStatus() ? "true" : "false");
   solveQNBDF(_solutionContainer, _tol, _metaNumber, _linearSystem, _sol, _mesh);
   // Compute L2 norm of solution(s)
   for(size_t i = 0; i < _norms.size(); ++i) {
     _norms[i]->computeL2Norm(_metaNumber, _sol, _mesh);
     _normL2[i][0] = _norms[i]->getNorm();
   }
+  // Export for visualization
+  if(_exportData.exporter != nullptr){
+    std::string fileName = _exportData.fileNameRoot + "Stationary.vtk";
+    feCheck(_exportData.exporter->writeStep(fileName));
+  }
+
+  return FE_STATUS_OK;
 }
 
 /* Nom cryptique :
@@ -99,80 +143,14 @@ void fePstClc(feSolution *sol, feLinearSystem *linearSystem, feSolutionContainer
   linearSystem->assignResidualToDCResidual(solContainer);
 }
 
-// void solveBDF2(std::vector<double> &normL2, feTolerances tol, feMetaNumber *metaNumber,
-//                feLinearSystem *linearSystem, std::vector<feBilinearForm *> &formMatrices,
-//                std::vector<feBilinearForm *> &formResiduals, feSolution *sol,
-//                std::vector<feNorm *> &norms, feMesh *mesh, std::vector<feSpace *> &spaces) {
-//   linearSystem->setRecomputeStatus(true);
-//   double dt = sol->getTimeStep();
-//   double nSteps = sol->getNbTimeSteps();
-//   double t0 = sol->getInitialTime();
-
-//   sol->initializeUnknowns(mesh, metaNumber);
-//   sol->initializeEssentialBC(mesh, metaNumber);
-
-//   int nSol = 5;
-//   feSolutionBDF2 *solBDF2 = new feSolutionBDF2(nSol, sol->getCurrentTime(), metaNumber);
-//   solBDF2->initialize(sol, mesh, metaNumber);
-
-//   std::vector<double> tK1K2(nSteps + 1, 0.0);
-//   for(int i = 0; i < nSteps + 1; ++i) tK1K2[i] = t0 + i * dt;
-//   for(int i = 0; i < nSteps; i += 2)
-//     if(i + 2 < nSteps + 1) tK1K2[i + 1] = tK1K2[i] + f * (tK1K2[i + 2] - tK1K2[i]);
-
-//   // Initialization
-//   if(K1K2) dt = tK1K2[1] - tK1K2[0];
-//   solBDF2->rotate(dt);
-//   solBDF2->initialize(sol, mesh, metaNumber);
-//   sol->setSolFromContainer(solBDF2);
-//   // norm->computeL2Norm(metaNumber, sol, mesh);
-//   // normL2[0] = norm->getNorm();
-//   for(auto *norm : norms) {
-//     norm->computeL2Norm(metaNumber, sol, mesh);
-//     normL2[0] = norm->getNorm(); // TODO : fix this
-//   }
-
-//   // bool status = true;
-//   for(int iTime = 1; iTime < nSteps; ++iTime) {
-//     if(K1K2) dt = tK1K2[iTime + 1] - tK1K2[iTime];
-//     solBDF2->rotate(dt);
-//     if(iTime == 1)
-//       linearSystem->setRecomputeStatus(true);
-//     else
-//       linearSystem->setRecomputeStatus(false);
-//     // FESOLVEBDF2NL
-//     initializeBDF2(sol, metaNumber, mesh, solBDF2);
-//     printf("\n");
-//     printf("Étape 1 - recomputeMatrix = %s : Solution BDF2 - t = %6.6e\n",
-//            linearSystem->getRecomputeStatus() ? "true" : "false", sol->getCurrentTime());
-//     solveQNBDF(solBDF2, tol, metaNumber, linearSystem, sol, mesh);
-//     fePstClc(sol, linearSystem, solBDF2);
-//     // Compute L2 norm of the solution
-//     sol->setSolFromContainer(solBDF2);
-//     // norm->computeL2Norm(metaNumber, sol, mesh);
-//     // normL2[iTime] = norm->getNorm();
-//     // int cnt = 0;
-//     for(auto *norm : norms) {
-//       norm->computeL2Norm(metaNumber, sol, mesh);
-//       normL2[iTime] = norm->getNorm(); // TODO : fix this
-//       // std::cout<<"Norme "<<cnt++<<" = "<<normL2[iTime]<<std::endl;
-//     }
-
-//     // std::string vtkFile = "../../data/cylindre" + std::to_string(iTime) + ".vtk";
-//     // feExporterVTK writer(vtkFile, mesh, sol, metaNumber, spaces);
-//   }
-
-//   delete solBDF2;
-// }
-
-// Parameter of varaible time step
+// Parameter of variable time step
 double _f = 0.25; //_f = means dt1/dt2 = 4  _f=0.25 means dt1/dt2 = 3
 bool K1K2 = false;
 
 BDF2Solver::BDF2Solver(feTolerances tol, feMetaNumber *metaNumber, feLinearSystem *linearSystem,
-                       feSolution *sol, std::vector<feNorm *> &norms, feMesh *mesh, double t0,
+                       feSolution *sol, std::vector<feNorm *> &norms, feMesh *mesh, feExportData exportData, double t0,
                        double tEnd, int nTimeSteps, std::string CodeIni)
-  : TimeIntegrator(tol, metaNumber, linearSystem, sol, norms, mesh, t0, tEnd, nTimeSteps, CodeIni) {
+  : TimeIntegrator(tol, metaNumber, linearSystem, sol, norms, mesh, exportData, t0, tEnd, nTimeSteps, CodeIni) {
   // Initialize the solution container
   int nSol = 3;
   _solutionContainer = new feSolutionBDF2(nSol, _sol->getCurrentTime(), _metaNumber);
@@ -185,7 +163,7 @@ BDF2Solver::BDF2Solver(feTolerances tol, feMetaNumber *metaNumber, feLinearSyste
   //        _tEnd, _nTimeSteps);
 }
 
-void BDF2Solver::makeSteps(int nSteps, std::vector<feSpace *> &spaces) {
+feStatus BDF2Solver::makeSteps(int nSteps) {
   printf("BDF2 : Advancing %d steps from t = %f to t = %f\n", nSteps, _tCurrent,
          _tCurrent + nSteps * _dt);
 
@@ -201,8 +179,8 @@ void BDF2Solver::makeSteps(int nSteps, std::vector<feSpace *> &spaces) {
       double _t_ini = _t0 + 2 * _dt;
       std::vector<feNorm *> norms2 = {
         _norms[0], _norms[0]}; // Il faut un vecteur norme de taille 2 sinon pb //!!!A changer!!!
-      DC2FSolver solver(_tol, _metaNumber, _linearSystem, _sol, norms2, _mesh, _t0, _t_ini, 2);
-      solver.makeSteps(2, spaces);
+      DC2FSolver solver(_tol, _metaNumber, _linearSystem, _sol, norms2, _mesh, _exportData, _t0, _t_ini, 2);
+      solver.makeSteps(2);
       feSolutionContainer *_solutionContainerDC2F = solver.getSolutionContainer();
       _solutionContainer->setSol(0, _solutionContainerDC2F->getSolution(0));
       _solutionContainer->setSol(1, _solutionContainerDC2F->getSolution(1));
@@ -225,10 +203,12 @@ void BDF2Solver::makeSteps(int nSteps, std::vector<feSpace *> &spaces) {
       _normL2[i][0] = _norms[i]->getNorm();
     }
 
-    printf("Current step = %d/%d : t = %f\n", _currentStep, nSteps, _tCurrent);
+    feInfoCond(FE_VERBOSE > 0, "Current step = %d/%d : t = %f\n", _currentStep, nSteps, _tCurrent);
 
-    std::string vtkFile = "sol" + std::to_string(_currentStep) + ".vtk";
-    feExporterVTK writer(vtkFile, _mesh, _sol, _metaNumber, spaces);
+    if(_exportData.exporter != nullptr && (_currentStep % _exportData.exportEveryNSteps) == 0){
+      std::string fileName = _exportData.fileNameRoot + std::to_string(_currentStep) + ".vtk";
+      feCheck(_exportData.exporter->writeStep(fileName));
+    }
 
     --nSteps; // To advance the same number of steps than if currentStep != 0
   }
@@ -275,15 +255,22 @@ void BDF2Solver::makeSteps(int nSteps, std::vector<feSpace *> &spaces) {
     printf("\n");
     printf("Current step = %d : t = %f\n", _currentStep, _tCurrent);
 
-    std::string vtkFile = "sol" + std::to_string(_currentStep) + ".vtk";
-    feExporterVTK writer(vtkFile, _mesh, _sol, _metaNumber, spaces);
+    if(_exportData.exporter != nullptr && (_currentStep % _exportData.exportEveryNSteps) == 0){
+      std::string fileName = _exportData.fileNameRoot + std::to_string(_currentStep) + ".vtk";
+      _exportData.exporter->writeStep(fileName);
+    }
+
+    // std::string vtkFile = "sol" + std::to_string(_currentStep) + ".vtk";
+    // feExporterVTK writer(vtkFile, _mesh, _sol, _metaNumber, spaces);
   }
+
+  return FE_STATUS_OK;
 }
 
 BDF1Solver::BDF1Solver(feTolerances tol, feMetaNumber *metaNumber, feLinearSystem *linearSystem,
-                       feSolution *sol, std::vector<feNorm *> &norms, feMesh *mesh, double t0,
+                       feSolution *sol, std::vector<feNorm *> &norms, feMesh *mesh, feExportData exportData, double t0,
                        double tEnd, int nTimeSteps)
-  : TimeIntegrator(tol, metaNumber, linearSystem, sol, norms, mesh, t0, tEnd, nTimeSteps) {
+  : TimeIntegrator(tol, metaNumber, linearSystem, sol, norms, mesh, exportData, t0, tEnd, nTimeSteps) {
   // Initialize the solution container
   int nSol = 2;
   _solutionContainer = new feSolutionBDF1(nSol, _sol->getCurrentTime(), _metaNumber);
@@ -296,7 +283,7 @@ BDF1Solver::BDF1Solver(feTolerances tol, feMetaNumber *metaNumber, feLinearSyste
          _tEnd, _nTimeSteps);
 }
 
-void BDF1Solver::makeSteps(int nSteps, std::vector<feSpace *> &spaces) {
+feStatus BDF1Solver::makeSteps(int nSteps) {
   printf("BDF1 : Advancing %d steps from t = %f to t = %f\n", nSteps, _tCurrent,
          _tCurrent + nSteps * _dt);
 
@@ -355,12 +342,14 @@ void BDF1Solver::makeSteps(int nSteps, std::vector<feSpace *> &spaces) {
     // std::string vtkFile = "../../data/taylorGreen" + std::to_string(_currentStep) + ".vtk";
     // feExporterVTK writer(vtkFile, _mesh, _sol, _metaNumber, spaces);
   }
+
+  return FE_STATUS_OK;
 }
 
 DC2FSolver::DC2FSolver(feTolerances tol, feMetaNumber *metaNumber, feLinearSystem *linearSystem,
-                       feSolution *sol, std::vector<feNorm *> &norms, feMesh *mesh, double t0,
+                       feSolution *sol, std::vector<feNorm *> &norms, feMesh *mesh, feExportData exportData, double t0,
                        double tEnd, int nTimeSteps)
-  : TimeIntegrator(tol, metaNumber, linearSystem, sol, norms, mesh, t0, tEnd, nTimeSteps) {
+  : TimeIntegrator(tol, metaNumber, linearSystem, sol, norms, mesh, exportData, t0, tEnd, nTimeSteps) {
   // Initialize the solution container
   int nSol = 3;
   _solutionContainerBDF1 = new feSolutionBDF1(nSol, _sol->getCurrentTime(), _metaNumber);
@@ -376,7 +365,7 @@ DC2FSolver::DC2FSolver(feTolerances tol, feMetaNumber *metaNumber, feLinearSyste
          _t0, _tEnd, _nTimeSteps);
 }
 
-void DC2FSolver::makeSteps(int nSteps, std::vector<feSpace *> &spaces) {
+feStatus DC2FSolver::makeSteps(int nSteps) {
   printf("DC2 : Advancing %d steps from t = %f to t = %f\n", nSteps, _tCurrent,
          _tCurrent + nSteps * _dt);
 
@@ -442,12 +431,14 @@ void DC2FSolver::makeSteps(int nSteps, std::vector<feSpace *> &spaces) {
     // std::string vtkFile = "../../data/cylindreAdapt" + std::to_string(_currentStep) + ".vtk";
     // feExporterVTK writer(vtkFile, _mesh, _sol, _metaNumber, spaces);
   }
+
+  return FE_STATUS_OK;
 }
 
 DC3FSolver::DC3FSolver(feTolerances tol, feMetaNumber *metaNumber, feLinearSystem *linearSystem,
-                       feSolution *sol, std::vector<feNorm *> &norms, feMesh *mesh, double t0,
+                       feSolution *sol, std::vector<feNorm *> &norms, feMesh *mesh, feExportData exportData, double t0,
                        double tEnd, int nTimeSteps)
-  : TimeIntegrator(tol, metaNumber, linearSystem, sol, norms, mesh, t0, tEnd, nTimeSteps) {
+  : TimeIntegrator(tol, metaNumber, linearSystem, sol, norms, mesh, exportData, t0, tEnd, nTimeSteps) {
   // Initialize the solution container
   int nSol = 5;
   _solutionContainerBDF1 = new feSolutionBDF1(nSol, _sol->getCurrentTime(), _metaNumber);
@@ -467,7 +458,7 @@ DC3FSolver::DC3FSolver(feTolerances tol, feMetaNumber *metaNumber, feLinearSyste
          _t0, _tEnd, _nTimeSteps);
 }
 
-void DC3FSolver::makeSteps(int nSteps, std::vector<feSpace *> &spaces) {
+feStatus DC3FSolver::makeSteps(int nSteps) {
   printf("DC2 : Advancing %d steps from t = %f to t = %f\n", nSteps, _tCurrent,
          _tCurrent + nSteps * _dt);
 
@@ -621,92 +612,14 @@ void DC3FSolver::makeSteps(int nSteps, std::vector<feSpace *> &spaces) {
   }
   // std::cout<<"Solution finale du DC2"<<std::endl;
   // _sol->printSol();
+
+  return FE_STATUS_OK;
 }
 
-// void solveBDF1(std::vector<double> &normL2, feTolerances tol, feMetaNumber *metaNumber,
-//                feLinearSystem *linearSystem, std::vector<feBilinearForm *> &formMatrices,
-//                std::vector<feBilinearForm *> &formResiduals, feSolution *sol,
-//                std::vector<feNorm *> &norms, feMesh *mesh, std::vector<feSpace *> &spaces) {
-//   linearSystem->setRecomputeStatus(true);
-//   double dt = sol->getTimeStep();
-//   double nSteps = sol->getNbTimeSteps();
-//   // double t0 = sol->getInitialTime();
-//   sol->initializeUnknowns(mesh, metaNumber);
-//   sol->initializeEssentialBC(mesh, metaNumber);
-
-//   int nSol = 5;
-//   feSolutionBDF1 *solBDF1 = new feSolutionBDF1(nSol, sol->getCurrentTime(), metaNumber);
-//   solBDF1->initialize(sol, mesh, metaNumber);
-
-//   // std::vector<double> tK1K2(nSteps+1, 0.0);
-//   // for(int i = 0; i < nSteps+1; ++i)
-//   //   tK1K2[i] = t0 + i*dt;
-//   // for(int i = 0; i < nSteps; i+=2)
-//   //   if(i+2 < nSteps+1)
-//   //     tK1K2[i+1] = tK1K2[i] + f*(tK1K2[i+2] - tK1K2[i]);
-
-//   // Initialization
-//   // if(K1K2)
-//   //   dt = tK1K2[1] - tK1K2[0];
-//   solBDF1->rotate(dt);
-//   solBDF1->initialize(sol, mesh, metaNumber);
-//   sol->setSolFromContainer(solBDF1);
-//   // norm->computeL2Norm(metaNumber, sol, mesh);
-//   // normL2[0] = norm->getNorm();
-//   for(auto *norm : norms) {
-//     norm->computeL2Norm(metaNumber, sol, mesh);
-//     normL2[0] = norm->getNorm(); // TODO : fix this
-//   }
-
-//   // bool status = true;
-//   for(int iTime = 1; iTime < nSteps; ++iTime) {
-//     // if(K1K2)
-//     //   dt = tK1K2[iTime+1] - tK1K2[iTime];
-//     solBDF1->rotate(dt);
-//     if(iTime == 1)
-//       linearSystem->setRecomputeStatus(true);
-//     else
-//       linearSystem->setRecomputeStatus(false);
-//     // FESOLVEBDF2NL
-//     initializeBDF1(sol, metaNumber, mesh, solBDF1);
-//     printf("\n");
-//     printf("Étape 1 - recomputeMatrix = %s : Solution BDF1 - t = %6.6e\n",
-//            linearSystem->getRecomputeStatus() ? "true" : "false", sol->getCurrentTime());
-//     solveQNBDF(solBDF1, tol, metaNumber, linearSystem, sol, mesh);
-//     fePstClc(sol, linearSystem, solBDF1);
-//     // Compute L2 norm of the solution
-//     sol->setSolFromContainer(solBDF1);
-//     // norm->computeL2Norm(metaNumber, sol, mesh);
-//     // normL2[iTime] = norm->getNorm();
-//     // int cnt = 0;
-//     for(auto *norm : norms) {
-//       norm->computeL2Norm(metaNumber, sol, mesh);
-//       normL2[iTime] = norm->getNorm(); // TODO : fix this
-//       // std::cout<<"Norme "<<cnt++<<" = "<<normL2[iTime]<<std::endl;
-//     }
-
-//     // std::string vtkFile = "../../data/BDF1__" + std::to_string(iTime) + ".vtk";
-//     // feExporterVTK writer(vtkFile, mesh, sol, metaNumber, spaces);
-//     // int NumberOfDofs=81;
-//     // getNDofsFromFile(vtkFile, NumberOfDofs);
-//     // std::cout<<"Nb de Dofs"<<NumberOfDofs<<std::endl;
-
-//     // std::vector<double> lastSol;
-//     // lastSol.resize(NumberOfDofs);
-//     // readLastSol(vtkFile, lastSol);
-//     // std::cout<<"le fichier en question est le"<<vtkFile<<std::endl;
-//     // std::cout<<"le nombre de Dofs est de "<<NumberOfDofs<<std::endl;
-//     // for(int i=0; i<NumberOfDofs;i++){
-//     //   std::cout<<"la valeur du champ BDF1 vaut"<<lastSol[i]<<std::endl;
-//     // }
-//   }
-//   delete solBDF1;
-// }
-
 DC3Solver::DC3Solver(feTolerances tol, feMetaNumber *metaNumber, feLinearSystem *linearSystem,
-                     feSolution *sol, std::vector<feNorm *> &norms, feMesh *mesh, double t0,
+                     feSolution *sol, std::vector<feNorm *> &norms, feMesh *mesh, feExportData exportData, double t0,
                      double tEnd, int nTimeSteps, std::string CodeIni)
-  : TimeIntegrator(tol, metaNumber, linearSystem, sol, norms, mesh, t0, tEnd, nTimeSteps, CodeIni) {
+  : TimeIntegrator(tol, metaNumber, linearSystem, sol, norms, mesh, exportData, t0, tEnd, nTimeSteps, CodeIni) {
   // Initialize the solution container
   int nSol = 5;
   _solutionContainer = new feSolutionDCF(nSol, _sol->getCurrentTime(), _metaNumber);
@@ -724,7 +637,7 @@ DC3Solver::DC3Solver(feTolerances tol, feMetaNumber *metaNumber, feLinearSystem 
          _tEnd, _nTimeSteps);
 }
 
-void DC3Solver::makeSteps(int nSteps, std::vector<feSpace *> &spaces) {
+feStatus DC3Solver::makeSteps(int nSteps) {
   printf("BDF2 : Advancing %d steps from t = %f to t = %f\n", nSteps, _tCurrent,
          _tCurrent + nSteps * _dt);
   if(_currentStep == 0) {
@@ -739,8 +652,8 @@ void DC3Solver::makeSteps(int nSteps, std::vector<feSpace *> &spaces) {
       double _t_ini = _t0 + 2 * _dt;
       std::vector<feNorm *> norms2 = {_norms[0], _norms[0],
                                       _norms[0]}; // Il faut un vecteur norme de taille 3 sinon pb
-      DC3FSolver solver(_tol, _metaNumber, _linearSystem, _sol, norms2, _mesh, _t0, _t_ini, 2);
-      solver.makeSteps(3, spaces);
+      DC3FSolver solver(_tol, _metaNumber, _linearSystem, _sol, norms2, _mesh, _exportData, _t0, _t_ini, 2);
+      solver.makeSteps(3);
       _solutionContainerDC3F = solver.getSolutionContainer();
       _solutionContainerBDF2->setSol(0, _solutionContainerDC3F->getSolution(1));
       _solutionContainerBDF2->setSol(1, _solutionContainerDC3F->getSolution(2));
@@ -863,144 +776,6 @@ void DC3Solver::makeSteps(int nSteps, std::vector<feSpace *> &spaces) {
     // std::string vtkFile = "../../data/cylindreAdapt" + std::to_string(_currentStep) + ".vtk";
     // feExporterVTK writer(vtkFile, _mesh, _sol, _metaNumber, spaces);
   }
+
+  return FE_STATUS_OK;
 }
-
-// void solveDC3(std::vector<double> &normL2BDF2, std::vector<double> &normL2DC3, feTolerances tol,
-//               feMetaNumber *metaNumber, feLinearSystem *linearSystem,
-//               std::vector<feBilinearForm *> &formMatrices,
-//               std::vector<feBilinearForm *> &formResiduals, feSolution *sol,
-//               std::vector<feNorm *> &norms, feMesh *mesh, std::vector<feSpace *> &spaces) {
-//   linearSystem->setRecomputeStatus(true);
-//   double dt = sol->getTimeStep();
-//   double nSteps = sol->getNbTimeSteps();
-//   double t0 = sol->getInitialTime();
-
-//   sol->initializeUnknowns(mesh, metaNumber);
-//   sol->initializeEssentialBC(mesh, metaNumber);
-
-//   int nSol = 5;
-//   feSolutionBDF2 *solBDF2 = new feSolutionBDF2(nSol, sol->getCurrentTime(), metaNumber);
-//   feSolutionDCF *solDC3 = new feSolutionDCF(nSol, sol->getCurrentTime(), metaNumber);
-//   solBDF2->initialize(sol, mesh, metaNumber);
-//   solDC3->initialize(sol, mesh, metaNumber);
-
-//   std::vector<double> tK1K2(nSteps + 1, 0.0);
-//   for(int i = 0; i < nSteps + 1; ++i) tK1K2[i] = t0 + i * dt;
-//   for(int i = 0; i < nSteps; i += 2)
-//     if(i + 2 < nSteps + 1) tK1K2[i + 1] = tK1K2[i] + f * (tK1K2[i + 2] - tK1K2[i]);
-
-//   // Initialization
-//   if(K1K2) dt = tK1K2[1] - tK1K2[0];
-//   solBDF2->rotate(dt);
-//   solDC3->rotate(dt);
-//   solBDF2->initialize(sol, mesh, metaNumber);
-//   solDC3->initialize(sol, mesh, metaNumber);
-
-//   sol->setSolFromContainer(solBDF2);
-//   // norm->computeL2Norm(metaNumber, sol, mesh);
-//   // normL2BDF2[0] = norm->getNorm();
-
-//   sol->setSolFromContainer(solDC3);
-//   // norm->computeL2Norm(metaNumber, sol, mesh);
-//   // normL2DC3[0] = norm->getNorm();
-
-//   std::string vtkFile = "../../data/VK/cylindre" + std::to_string(0) + ".vtk";
-//   feExporterVTK writer(vtkFile, mesh, sol, metaNumber, spaces);
-//   // int cnt = 0;
-//   for(auto *norm : norms) {
-//     norm->computeL2Norm(metaNumber, sol, mesh);
-//     normL2BDF2[0] = norm->getNorm();
-//     normL2DC3[0] = norm->getNorm();
-//     // normL2DC3[0+cnt] = norm->getNorm();
-//     // normL2[iTime] = norm->getNorm(); // TODO : fix this
-//     // std::cout<<"Norme "<<cnt++<<" = "<<normL2DC3[0+cnt]<<std::endl;
-//   }
-
-//   // Start integration with a BDF2
-//   for(int iTime = 1; iTime <= 2; ++iTime) {
-//     if(K1K2) dt = tK1K2[iTime + 1] - tK1K2[iTime];
-//     solBDF2->rotate(dt);
-//     solDC3->rotate(dt);
-//     solDC3->initialize(sol, mesh, metaNumber);
-//     if(iTime == 1)
-//       linearSystem->setRecomputeStatus(true);
-//     else
-//       linearSystem->setRecomputeStatus(false);
-//     // FESOLVEBDF2NL
-//     initializeBDF2(sol, metaNumber, mesh, solBDF2);
-//     printf("\n");
-//     printf("Étape 1 - recomputeMatrix = %s : Solution BDF2 - t = %6.6e\n",
-//            linearSystem->getRecomputeStatus() ? "true" : "false", sol->getCurrentTime());
-//     solveQNBDF(solBDF2, tol, metaNumber, linearSystem, sol, mesh);
-//     fePstClc(sol, linearSystem, solBDF2);
-//     // Compute L2 norm of the solution
-//     sol->setSolFromContainer(solBDF2);
-//     // norm->computeL2Norm(metaNumber, sol, mesh);
-//     // normL2BDF2[iTime] = norm->getNorm();
-//     sol->setSolFromContainer(solDC3);
-//     // norm->computeL2Norm(metaNumber, sol, mesh);
-//     // normL2DC3[iTime] = norm->getNorm();
-
-//     std::string vtkFile = "../../data/VK/cylindre" + std::to_string(iTime) + ".vtk";
-//     feExporterVTK writer(vtkFile, mesh, sol, metaNumber, spaces);
-
-//     // int cnt = 0;
-//     for(auto *norm : norms) {
-//       norm->computeL2Norm(metaNumber, sol, mesh);
-//       normL2BDF2[iTime] = norm->getNorm();
-//       normL2DC3[iTime] = norm->getNorm();
-//       // normL2DC3[3*iTime+cnt] = norm->getNorm();
-//       // normL2[iTime] = norm->getNorm(); // TODO : fix this
-//       // std::cout<<"Norme "<<cnt++<<" = "<<normL2DC3[3*iTime+cnt]<<std::endl;
-//     }
-//   }
-//   // Continue with DC3
-//   for(int iTime = 3; iTime < nSteps; ++iTime) {
-//     // for(int iTime = 3; iTime < 4; ++iTime){
-//     if(K1K2) dt = tK1K2[iTime + 1] - tK1K2[iTime];
-//     solBDF2->rotate(dt);
-//     solDC3->rotate(dt);
-//     // if(iTime==3)
-//     //   linearSystem->setRecomputeStatus(true);
-//     // else
-//     //   linearSystem->setRecomputeStatus(false);
-//     // FESOLVEDC3F
-//     initializeBDF2(sol, metaNumber, mesh, solBDF2);
-//     printf("\n");
-//     printf("Étape 2 - recomputeMatrix = %s : Solution DC3F - t = %6.6e\n",
-//            linearSystem->getRecomputeStatus() ? "true" : "false", sol->getCurrentTime());
-//     solveQNBDF(solBDF2, tol, metaNumber, linearSystem, sol, mesh);
-//     fePstClc(sol, linearSystem, solBDF2);
-//     std::cout << "Solution du BDF2 pour la correction" << std::endl;
-//     sol->printSol();
-//     linearSystem->setRecomputeStatus(false);
-//     initializeDC3(sol, metaNumber, mesh, solBDF2, solDC3);
-//     solveQNBDF(solDC3, tol, metaNumber, linearSystem, sol, mesh);
-//     fePstClc(sol, linearSystem, solDC3);
-//     std::cout << "Solution du DC3 après la correction" << std::endl;
-//     sol->printSol();
-//     // // Compute L2 norm of the solution
-//     sol->setSolFromContainer(solBDF2);
-//     // norm->computeL2Norm(metaNumber, sol, mesh);
-//     // normL2BDF2[iTime] = norm->getNorm();
-//     sol->setSolFromContainer(solDC3);
-//     // norm->computeL2Norm(metaNumber, sol, mesh);
-//     // normL2DC3[iTime] = norm->getNorm();
-
-//     std::string vtkFile = "../../data/VK/cylindre" + std::to_string(iTime) + ".vtk";
-//     feExporterVTK writer(vtkFile, mesh, sol, metaNumber, spaces);
-
-//     // int cnt = 0;
-//     for(auto *norm : norms) {
-//       norm->computeL2Norm(metaNumber, sol, mesh);
-//       normL2BDF2[iTime] = norm->getNorm();
-//       normL2DC3[iTime] = norm->getNorm();
-//       // normL2DC3[3*iTime+cnt] = norm->getNorm();
-//       // normL2[iTime] = norm->getNorm(); // TODO : fix this
-//       // std::cout<<"Norme "<<cnt++<<" = "<<normL2DC3[3*iTime+cnt]<<std::endl;
-//     }
-//   }
-
-//   delete solDC3;
-//   delete solBDF2;
-// }

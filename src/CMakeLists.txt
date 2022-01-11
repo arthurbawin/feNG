@@ -1,5 +1,6 @@
 set(feNG_SRC
     ellipseToolbox.cpp
+    feAdaptMesh.cpp
     feBilinearForm.cpp
     feCncGeo.cpp
     feCompressedRowStorage.cpp
@@ -10,10 +11,15 @@ set(feNG_SRC
     feLinearSystemPETSc.cpp
     feMesh.cpp
     feMeshRead.cpp
+    feMessage.cpp
     feMetric.cpp
+    feMetricTools.cpp
     feNG.cpp
     feNorm.cpp
     feNumber.cpp
+    feOptionsParser.cpp
+    fePolynomial.cpp
+    fePostProc.cpp
     feRecovery.cpp
     feQuadrature.cpp
     feSimplex.cpp
@@ -36,6 +42,8 @@ list(
 
 set(feNG_API
     ellipseToolbox.h
+    feAdaptMesh.h
+    feAPI.h
     feBilinearForm.h
     feCncGeo.h
     feCompressedRowStorage.h
@@ -48,10 +56,15 @@ set(feNG_API
     feLinearSystemMklPardiso.h
     feLinearSystemPETSc.h
     feMesh.h
+    feMessage.h
     feMetric.h
+    feMetricTools.h
     feNG.h
     feNorm.h
     feNumber.h
+    feOptionsParser.h
+    fePolynomial.h
+    fePostProc.h
     feQuadrature.h
     feRecovery.h
     feSimplex.h

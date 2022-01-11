@@ -1,28 +1,6 @@
 #include "feBilinearForm.h"
 #include "feQuadrature.h"
 
-// static inline void allocateMatrix(feInt m, feInt n, double*** A){
-//   *A = (double**) calloc(m, sizeof **A);
-//   if(*A == nullptr){
-//     printf("In feBilinearForm::allocateMatrix : Error - NULL pointer.\n");
-//     return;
-//   }
-//   for(feInt i = 0; i < m; ++i)
-//     (*A)[i] = (double*) calloc(n, sizeof ***A);
-// }
-
-// static inline void setMatrixToZero(feInt m, feInt n, double*** A){
-//   for(feInt i = 0; i < m; ++i)
-//     for(feInt j = 0; j < n; ++j)
-//       (*A)[i][j] = 0.0;
-// };
-
-// static inline void freeMatrix(feInt m, double*** A){
-//   for(feInt i = 0; i < m; i++)
-//     free((*A)[i]);
-//   free(*A);
-// }
-
 static inline double **allocateMatrix(feInt m, feInt n) {
   double *p = new double[m * n];
   double **A = new double *[m];
@@ -61,7 +39,7 @@ static inline void printResidual(feInt m, double **b) {
 
 static inline void freeResidual(double **b) { free(*b); }
 
-feBilinearForm::feBilinearForm(std::vector<feSpace *> &space, feMesh *mesh, int degQuad,
+feBilinearForm::feBilinearForm(std::vector<feSpace *> space, feMesh *mesh, int degQuad,
                                feSysElm *sysElm)
   : _sysElm(sysElm), _intSpace(space), _cnc(space[0]->getCncGeo()), _cncGeoID(space[0]->getCncGeoID()),
     _cncGeoTag(space[0]->getCncGeoTag()), _geoSpace(_cnc->getFeSpace()), _nGeoElm(_cnc->getNbElm()),
@@ -81,29 +59,28 @@ feBilinearForm::feBilinearForm(std::vector<feSpace *> &space, feMesh *mesh, int 
              "connectivité.\n");
   }
 
+  // CHANGED : The quadrature rules are set when each fespace is created
   // (Re-)initialize the interpolation functions at quadrature nodes
-  feQuadrature *rule =
-    new feQuadrature(_degQuad, space[0]->getDim(), space[0]->getCncGeo()->getForme());
+  // feQuadrature *rule =
+  //   new feQuadrature(_degQuad, space[0]->getDim(), space[0]->getCncGeo()->getForme());
 
-  for(feSpace *fS : _intSpace) fS->setQuadratureRule(rule);
-  _geoSpace->setQuadratureRule(rule);
-  delete rule;
+  // for(feSpace *fS : _intSpace) fS->setQuadratureRule(rule);
+  // _geoSpace->setQuadratureRule(rule);
+  // delete rule;
 
   _sysElm->createElementarySystem(_intSpace);
   _iVar = _sysElm->getIVar();
   _jVar = _sysElm->getJVar();
 
   // CREERVADIJ
-  _niElm = 0;
+  _niElm = _njElm = 0;
   for(size_t k = 0; k < _iVar.size(); ++k) _niElm += _intSpace[_iVar[k]]->getNbFunctions();
-  _njElm = 0;
   for(size_t k = 0; k < _jVar.size(); ++k) _njElm += _intSpace[_jVar[k]]->getNbFunctions();
 
   _adrI.resize(_niElm);
   _adrJ.resize(_njElm);
 
   _Ae = allocateMatrix(_niElm, _njElm);
-  // allocateMatrix(_niElm, _njElm, &_Ae);
   allocateResidual(_niElm, &_Be);
 
   // ==================================================================

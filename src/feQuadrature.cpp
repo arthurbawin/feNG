@@ -3,7 +3,8 @@
 #include <cmath>
 
 feQuadrature::feQuadrature(int degQuad, int dimQuad, std::string formGeo)
-  : _degQuad(degQuad), _dimQuad(dimQuad) {
+  : _degQuad(degQuad), _dimQuad(dimQuad)
+{
   _nQuad1D = (_degQuad + 2) / 2;
   _w.resize(pow(_nQuad1D, _dimQuad));
   _xr.resize(pow(_nQuad1D, _dimQuad));
@@ -25,7 +26,9 @@ feQuadrature::feQuadrature(int degQuad, int dimQuad, std::string formGeo)
   } else if(_dimQuad == 3 && formGeo == "QuadP1") {
     calculateWeightAndRootCube();
   } else if(_dimQuad == 0 && formGeo == "Pt") {
+    _w.resize(1);
     _w[0] = 1.;
+    _xr.resize(1);
     _xr[0] = 0.;
   } else {
     calculateWeightAndRootTetra();

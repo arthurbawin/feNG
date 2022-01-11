@@ -65,7 +65,9 @@ static void PROBE(int TAG, double x, double y, double z, std::vector<double> &va
   // std::string foo;
   // gmsh::model::getCurrent(foo);
   // std::cout<<"current model in PROBE is "<<foo<<std::endl;
-  gmsh::view::probe(TAG, x, y, z, val, step, numComp, 0, 1.e-3);
+  // gmsh::view::probe(TAG, x, y, z, val, step, numComp, 0, 1.e-3);
+  double distance;
+  gmsh::view::probe(TAG, x, y, z, val, distance, step, numComp, 0, 1.e-3);
   if(val.empty()){
     printf("Error - val is empty on view %d at pos %f - %f - %f\n", TAG, x, y, z);
     val.push_back(0.);
@@ -76,30 +78,6 @@ static void PROBE(int TAG, double x, double y, double z, std::vector<double> &va
     //   exit(-1);
     // }
   }
-}
-
-static bool isOutsideCylinder(double* x){
-  return ((x[0] - 2.0)*(x[0] - 2.0) + (x[1] - 2.0)*(x[1] - 2.0)) > 0.25*0.25;
-}
-
-static bool isInsideRectangle(double* x){
-  if (x[0] < 0) return false;
-  if (x[1] < 0) return false;
-  if (x[0] > 10.0) return false;
-  if (x[1] > 4.0) return false;
-  return true;
-}
-
-static bool INSIDE (double* x){
-
-  // For the cylinder only
-  // return isOutsideCylinder(x) && isInsideRectangle(x);
-
-  if (x[0] < 0) return false;
-  if (x[1] < 0) return false;
-  if (x[0] > 1) return false;
-  if (x[1] > 1) return false;
-  return true;
 }
 
 static double fExact(double x, double y) {
@@ -158,10 +136,6 @@ static double fx(double x, double y) {
   }
   }
 }
-
-// static double fxFromRec(feRecovery *rec, int iVert){
-//   return rec->recoveryCoeff[]
-// }
 
 static double fy(double x, double y) {
   switch(useAnalytical) {
@@ -670,25 +644,418 @@ static double fyyy(double x, double y) {
   }
 }
 
-static double dtt(const double x, const double y, double C, double S) {
-  const double c11 = fxx(x, y);
-  const double c12 = (fxy(x, y) + fyx(x, y)) / 2.;
-  const double c22 = fyy(x, y);
-  return C * C * c11 + S * S * c22 + 2. * C * S * c12;
+static double evalFromRec(int indexDerivative, feRecovery *rec, double x, double y){
+  std::vector<double> pos = {x,y,0.0};
+  return rec->evalDerivative(indexDerivative, pos);
 }
 
-static double dttt(const double x, const double y, double C, double S) {
-  const double c111 = fxxx(x, y);
-  const double c222 = fyyy(x, y);
-  const double c112 = (fxxy(x, y) + fxyx(x, y) + fyxx(x, y)) / 3.;
-  const double c122 = (fxyy(x, y) + fyyx(x, y) + fyxy(x, y)) / 3.;
-  return C * C * C * c111 + S * S * S * c222 + 3. * C * C * S * c112 + 3. * C * S * S * c122;
+static double fFromRec(std::vector<feRecovery *> rec, double x, double y){ 
+  switch(useAnalytical){
+    case 1:
+      return cos(2.0*M_PI*y)*sin(2.0*M_PI*x);
+      return pow(x,4)*pow(y,4);
+      return -atan(20.0*x - 10.0*sin((3.0*M_PI*y)/2.0));
+    case -1 :{
+      double u = evalFromRec(U_, rec[0], x, y);
+      double v = evalFromRec(U_, rec[1], x, y);
+      return u*u + v*v;
+    }
+    default :
+      return evalFromRec(U_, rec[0], x, y);
+  }
+}
+static double fxFromRec(std::vector<feRecovery *> rec, double x, double y){ 
+  switch(useAnalytical){
+    case 1 :
+      return 2.0*M_PI*cos(2.0*M_PI*x)*cos(2.0*M_PI*y);
+      return 4.0*pow(x,3)*pow(y,4);
+      return -20/(pow(20.0*x - 10.0*sin((3.0*M_PI*y)/2),2) + 1.0);
+    case -1 :
+    {
+      double u = evalFromRec(U_, rec[0], x, y);
+      double v = evalFromRec(U_, rec[1], x, y);
+      double ux = evalFromRec(U_X, rec[0], x, y);
+      double vx = evalFromRec(U_X, rec[1], x, y);
+      return 2.0 * u * ux + 2.0 * v * vx;
+    }
+    default :
+      return evalFromRec(U_X, rec[0], x, y);
+  }
+}
+static double fyFromRec(std::vector<feRecovery *> rec, double x, double y){ 
+  switch(useAnalytical){
+    case 1 :
+      return -2.0*M_PI*sin(2.0*M_PI*x)*sin(2.0*M_PI*y);
+      return 4.0*pow(x,4)*pow(y,3);
+      return (15*M_PI*cos((3.0*M_PI*y)/2))/(pow(20.0*x - 10.0*sin((3.0*M_PI*y)/2),2) + 1.0);
+    case -1 :
+    {
+      double u = evalFromRec(U_, rec[0], x, y);
+      double v = evalFromRec(U_, rec[1], x, y);
+      double uy = evalFromRec(U_Y, rec[0], x, y);
+      double vy = evalFromRec(U_Y, rec[1], x, y);
+      return 2.0 * u * uy + 2.0 * v * vy;
+    }
+    default :
+      return evalFromRec(U_Y, rec[0], x, y);
+  }
+}
+static double fxxFromRec(std::vector<feRecovery *> rec, double x, double y){ 
+  switch(useAnalytical){
+    case 1 :
+      return -4.0*M_PI*M_PI*cos(2.0*M_PI*y)*sin(2.0*M_PI*x);
+      return 12.0*pow(x,2)*pow(y,4);
+      return (20.0*(800.0*x - 400.0*sin((3.0*M_PI*y)/2)))/pow(pow(20.0*x - 10.0*sin((3.0*y*M_PI)/2.0),2) + 1.0,2);
+    case -1 :
+    {
+      double u = evalFromRec(U_, rec[0], x, y);
+      double v = evalFromRec(U_, rec[1], x, y);
+      double ux = evalFromRec(U_X, rec[0], x, y);
+      double vx = evalFromRec(U_X, rec[1], x, y);
+      double uxx = evalFromRec(U_XX, rec[0], x, y);
+      double vxx = evalFromRec(U_XX, rec[1], x, y);
+      return 2.0 * ux * ux + 2.0 * u * uxx + 2.0 * vx * vx + 2.0 * v * vxx;
+    }
+    default :
+      return evalFromRec(U_XX, rec[0], x, y);
+  }
+}
+static double fxyFromRec(std::vector<feRecovery *> rec, double x, double y){ 
+  switch(useAnalytical){
+    case 1 :
+      return -4.0*M_PI*M_PI*cos(2.0*M_PI*x)*sin(2.0*M_PI*y);
+      return 16.0*pow(x,3)*pow(y,3);
+      return -(600*M_PI*cos((3.0*M_PI*y)/2.0)*(20.0*x - 10.0*sin((3.0*M_PI*y)/2.0)))/pow(pow(20.0*x - 10.0*sin((3.0*y*M_PI)/2.0),2) + 1.0,2);
+    case -1 :
+    {
+      double u = evalFromRec(U_, rec[0], x, y);
+      double v = evalFromRec(U_, rec[1], x, y);
+      double ux = evalFromRec(U_X, rec[0], x, y);
+      double uy = evalFromRec(U_Y, rec[0], x, y);
+      double vx = evalFromRec(U_X, rec[1], x, y);
+      double vy = evalFromRec(U_Y, rec[1], x, y);
+      double uxy = evalFromRec(U_XY, rec[0], x, y);
+      double vxy = evalFromRec(U_XY, rec[1], x, y);
+      return 2.0 * ux * uy + 2.0 * u * uxy + 2.0 * vx * vy + 2.0 * v * vxy;
+    }
+    default :
+      return evalFromRec(U_XY, rec[0], x, y);
+  }
+}
+static double fyxFromRec(std::vector<feRecovery *> rec, double x, double y){ 
+  switch(useAnalytical){
+    case 1 :
+      return -4.0*M_PI*M_PI*cos(2.0*M_PI*x)*sin(2.0*M_PI*y);
+      return 16.0*pow(x,3)*pow(y,3);
+      return -(600*M_PI*cos((3.0*M_PI*y)/2.0)*(20.0*x - 10.0*sin((3.0*M_PI*y)/2.0)))/pow(pow(20.0*x - 10.0*sin((3.0*y*M_PI)/2.0),2) + 1.0,2);
+    case -1 :
+    {
+      double u = evalFromRec(U_, rec[0], x, y);
+      double v = evalFromRec(U_, rec[1], x, y);
+      double ux = evalFromRec(U_X, rec[0], x, y);
+      double uy = evalFromRec(U_Y, rec[0], x, y);
+      double vx = evalFromRec(U_X, rec[1], x, y);
+      double vy = evalFromRec(U_Y, rec[1], x, y);
+      double uyx = evalFromRec(U_YX, rec[0], x, y);
+      double vyx = evalFromRec(U_YX, rec[1], x, y);
+      return 2.0 * ux * uy + 2.0 * u * uyx + 2.0 * vx * vy + 2.0 * v * vyx;
+    }
+    default :
+      return evalFromRec(U_YX, rec[0], x, y);
+  }
+}
+static double fyyFromRec(std::vector<feRecovery *> rec, double x, double y){ 
+  switch(useAnalytical){
+    case 1 :
+      return -4.0*M_PI*M_PI*cos(2.0*M_PI*y)*sin(2.0*M_PI*x);
+      return 12.0*pow(x,4)*pow(y,2);
+      return (450*M_PI*M_PI* pow(cos((3.0*M_PI*y)/2.0),2) *(20.0*x - 10.0*sin((3.0*M_PI*y)/2.0)))/pow(pow(20.0*x - 10.0*sin((3.0*y*M_PI)/2.0),2) + 1.0,2) - (45*M_PI*M_PI*sin((3.0*M_PI*y)/2.0))/(2*(pow(20.0*x - 10.0*sin((3.0*M_PI*y)/2.0),2) + 1.0));
+    case -1 :
+    {
+      double u = evalFromRec(U_, rec[0], x, y);
+      double v = evalFromRec(U_, rec[1], x, y);
+      double uy = evalFromRec(U_Y, rec[0], x, y);
+      double vy = evalFromRec(U_Y, rec[1], x, y);
+      double uyy = evalFromRec(U_Y, rec[0], x, y);
+      double vyy = evalFromRec(U_Y, rec[1], x, y);
+      return 2.0 * uy * uy + 2.0 * u * uyy + 2.0 * vy * vy + 2.0 * v * vyy;
+    }
+    default :
+      return evalFromRec(U_YY, rec[0], x, y);
+  }
+}
+static double fxxxFromRec(std::vector<feRecovery *> rec, double x, double y){ 
+  switch(useAnalytical){
+    case 1 :
+      return -8.0*M_PI*M_PI*M_PI*cos(2.0*M_PI*x)*cos(2.0*M_PI*y);
+      return 24.0*pow(x,1)*pow(y,4);
+      return 16000.0/pow(pow(20.0*x - 10.0*sin((3.0*y*M_PI)/2.0),2) + 1.0,2) - (40*pow(800.0*x - 400.0*sin((3.0*M_PI*y)/2.0),2))/pow(pow(20.0*x - 10.0*sin((3.0*y*M_PI)/2.0),2) + 1.0,3);
+    case -1 :
+    {
+      double u = evalFromRec(U_, rec[0], x, y);
+      double v = evalFromRec(U_, rec[1], x, y);
+      double ux = evalFromRec(U_X, rec[0], x, y);
+      double vx = evalFromRec(U_X, rec[1], x, y);
+      double uxx = evalFromRec(U_XX, rec[0], x, y);
+      double vxx = evalFromRec(U_XX, rec[1], x, y);
+      double uxxx = evalFromRec(U_XXX, rec[0], x, y);
+      double vxxx = evalFromRec(U_XXX, rec[1], x, y);
+      return 6.0 * (ux * uxx + vx * vxx) + 2.0 * (u * uxxx + v * vxxx);
+    }
+    default :
+      return evalFromRec(U_XXX, rec[0], x, y);
+  }
+}
+static double fxxyFromRec(std::vector<feRecovery *> rec, double x, double y){ 
+  switch(useAnalytical){
+    case 1 :
+      return 8.0*M_PI*M_PI*M_PI*sin(2.0*M_PI*x)*sin(2.0*M_PI*y);
+      return 48.0*pow(x,2)*pow(y,3);
+      return (1200*M_PI*cos((3.0*M_PI*y)/2.0)*(20.0*x - 10.0*sin((3.0*M_PI*y)/2.0))*(800.0*x - 400.0*sin((3.0*M_PI*y)/2.0)))/pow(pow(20.0*x - 10.0*sin((3.0*y*M_PI)/2.0),2) + 1.0,3) - (12000.0*M_PI*cos((3.0*M_PI*y)/2.0))/pow(pow(20.0*x - 10.0*sin((3.0*y*M_PI)/2.0),2) + 1.0,2);
+    case -1 :
+    {
+      double u = evalFromRec(U_, rec[0], x, y);
+      double v = evalFromRec(U_, rec[1], x, y);
+      double ux = evalFromRec(U_X, rec[0], x, y);
+      double uy = evalFromRec(U_Y, rec[0], x, y);
+      double vx = evalFromRec(U_X, rec[1], x, y);
+      double vy = evalFromRec(U_Y, rec[1], x, y);
+      double uxx = evalFromRec(U_XX, rec[0], x, y);
+      double uxy = evalFromRec(U_XY, rec[0], x, y);
+      // double uyx = evalFromRec(U_YX, rec[0], x, y);
+      double vxx = evalFromRec(U_XX, rec[1], x, y);
+      double vxy = evalFromRec(U_XY, rec[1], x, y);
+      // double vyx = evalFromRec(U_YX, rec[1], x, y);
+      double uxxy = evalFromRec(U_XXY, rec[0], x, y);
+      double vxxy = evalFromRec(U_XXY, rec[1], x, y);
+      return 4.0 * (ux * uxy + vx * vxy) + 2.0 * (uy * uxx + vy * vxx + u * uxxy + v * vxxy);
+    }
+    default :
+      return evalFromRec(U_XXY, rec[0], x, y);
+  }
+}
+static double fxyxFromRec(std::vector<feRecovery *> rec, double x, double y){ 
+  switch(useAnalytical){
+    case 1 :
+      return 8.0*M_PI*M_PI*M_PI*sin(2.0*M_PI*x)*sin(2.0*M_PI*y);
+      return 48.0*pow(x,2)*pow(y,3);
+      return (1200*M_PI*cos((3.0*M_PI*y)/2.0)*(20.0*x - 10.0*sin((3.0*M_PI*y)/2.0))*(800.0*x - 400.0*sin((3.0*M_PI*y)/2.0)))/pow(pow(20.0*x - 10.0*sin((3.0*y*M_PI)/2.0),2) + 1.0,3) - (12000.0*M_PI*cos((3.0*M_PI*y)/2.0))/pow(pow(20.0*x - 10.0*sin((3.0*y*M_PI)/2.0),2) + 1.0,2);
+    case -1 :
+    {
+      double u = evalFromRec(U_, rec[0], x, y);
+      double v = evalFromRec(U_, rec[1], x, y);
+      double ux = evalFromRec(U_X, rec[0], x, y);
+      double uy = evalFromRec(U_Y, rec[0], x, y);
+      double vx = evalFromRec(U_X, rec[1], x, y);
+      double vy = evalFromRec(U_Y, rec[1], x, y);
+      double uxx = evalFromRec(U_XX, rec[0], x, y);
+      double uxy = evalFromRec(U_XY, rec[0], x, y);
+      double uyx = evalFromRec(U_YX, rec[0], x, y);
+      double vxx = evalFromRec(U_XX, rec[1], x, y);
+      double vxy = evalFromRec(U_XY, rec[1], x, y);
+      double vyx = evalFromRec(U_YX, rec[1], x, y);
+      double uxyx = evalFromRec(U_XYX, rec[0], x, y);
+      double vxyx = evalFromRec(U_XYX, rec[1], x, y);
+      return 2.0 * (uyx * ux + uy * uxx + ux * uxy + vyx * vx + vy * vxx + vx * vxy + u * uxyx + v * vxyx);
+    }
+    default :
+      return evalFromRec(U_XYX, rec[0], x, y);
+  }
+}
+static double fxyyFromRec(std::vector<feRecovery *> rec, double x, double y){ 
+  switch(useAnalytical){
+    case 1 :
+      return -8.0*M_PI*M_PI*M_PI*cos(2.0*M_PI*x)*cos(2.0*M_PI*y);
+      return 48.0*pow(x,3)*pow(y,2);
+      return (9000.0*M_PI*M_PI*pow(cos((3.0*M_PI*y)/2.0),2))/pow(pow(20.0*x - 10.0*sin((3.0*y*M_PI)/2.0),2) + 1.0,2) + (45*M_PI*M_PI*sin((3.0*M_PI*y)/2.0)*(800.0*x - 400.0*sin((3.0*M_PI*y)/2.0)))/(2*pow(pow(20.0*x - 10.0*sin((3.0*y*M_PI)/2.0),2) + 1.0,2)) - (900*M_PI*M_PI*pow(cos((3.0*M_PI*y)/2.0),2)*(20.0*x - 10.0*sin((3.0*M_PI*y)/2.0))*(800.0*x - 400.0*sin((3.0*M_PI*y)/2.0)))/pow(pow(20.0*x - 10.0*sin((3.0*y*M_PI)/2.0),2) + 1.0,3);
+    case -1 :
+    {
+      double u = evalFromRec(U_, rec[0], x, y);
+      double v = evalFromRec(U_, rec[1], x, y);
+      double ux = evalFromRec(U_X, rec[0], x, y);
+      double uy = evalFromRec(U_Y, rec[0], x, y);
+      double vx = evalFromRec(U_X, rec[1], x, y);
+      double vy = evalFromRec(U_Y, rec[1], x, y);
+      double uxy = evalFromRec(U_XY, rec[0], x, y);
+      double uyy = evalFromRec(U_YY, rec[0], x, y);
+      double vxy = evalFromRec(U_XY, rec[1], x, y);
+      double vyy = evalFromRec(U_YY, rec[1], x, y);
+      double uxyy = evalFromRec(U_XYY, rec[0], x, y);
+      double vxyy = evalFromRec(U_XYY, rec[1], x, y);
+      return 4.0 * (uy * uxy + vy * vxy) + 2.0 * (uyy * ux + u * uxyy + vyy * vx + v * vxyy);
+    }
+    default :
+      return evalFromRec(U_XYY, rec[0], x, y);
+  }
+}
+static double fyxxFromRec(std::vector<feRecovery *> rec, double x, double y){ 
+  switch(useAnalytical){
+    case 1 :
+      return 8.0*M_PI*M_PI*M_PI*sin(2.0*M_PI*x)*sin(2.0*M_PI*y);
+      return 48.0*pow(x,2)*pow(y,3);
+      return (1200*M_PI*cos((3.0*M_PI*y)/2.0)*(20.0*x - 10.0*sin((3.0*M_PI*y)/2.0))*(800.0*x - 400.0*sin((3.0*M_PI*y)/2.0)))/pow(pow(20.0*x - 10.0*sin((3.0*y*M_PI)/2.0),2) + 1.0,3) - (12000.0*M_PI*cos((3.0*M_PI*y)/2.0))/pow(pow(20.0*x - 10.0*sin((3.0*y*M_PI)/2.0),2) + 1.0,2);
+    case -1 :
+    {
+      double u = evalFromRec(U_, rec[0], x, y);
+      double v = evalFromRec(U_, rec[1], x, y);
+      double ux = evalFromRec(U_X, rec[0], x, y);
+      double uy = evalFromRec(U_Y, rec[0], x, y);
+      double vx = evalFromRec(U_X, rec[1], x, y);
+      double vy = evalFromRec(U_Y, rec[1], x, y);
+      double uxy = evalFromRec(U_XY, rec[0], x, y);
+      double uyx = evalFromRec(U_YX, rec[0], x, y);
+      double uyy = evalFromRec(U_YY, rec[0], x, y);
+      double vxy = evalFromRec(U_XY, rec[1], x, y);
+      double vyx = evalFromRec(U_YX, rec[1], x, y);
+      double vyy = evalFromRec(U_YY, rec[1], x, y);
+      double uyxy = evalFromRec(U_YXY, rec[0], x, y);
+      double vyxy = evalFromRec(U_YXY, rec[1], x, y);
+      return 2.0 * (uy * uxy + vy * vxy + ux * uyy + vx * vyy + uy * uyx + vy * vyx + u * uyxy + v * vyxy);
+    }
+    default :
+      return evalFromRec(U_YXX, rec[0], x, y);
+  }
+}
+static double fyxyFromRec(std::vector<feRecovery *> rec, double x, double y){ 
+  switch(useAnalytical){
+    case 1 :
+      return -8.0*M_PI*M_PI*M_PI*cos(2.0*M_PI*x)*cos(2.0*M_PI*y);
+      return 48.0*pow(x,3)*pow(y,2);
+      return (9000.0*M_PI*M_PI*pow(cos((3.0*M_PI*y)/2.0),2))/pow(pow(20.0*x - 10.0*sin((3.0*y*M_PI)/2.0),2) + 1.0,2) + (45*M_PI*M_PI*sin((3.0*M_PI*y)/2.0)*(800.0*x - 400.0*sin((3.0*M_PI*y)/2.0)))/(2*pow(pow(20.0*x - 10.0*sin((3.0*y*M_PI)/2.0),2) + 1.0,2)) - (900*M_PI*M_PI*pow(cos((3.0*M_PI*y)/2.0),2)*(20.0*x - 10.0*sin((3.0*M_PI*y)/2.0))*(800.0*x - 400.0*sin((3.0*M_PI*y)/2.0)))/pow(pow(20.0*x - 10.0*sin((3.0*y*M_PI)/2.0),2) + 1.0,3);
+    case -1 :
+    {
+      double u = evalFromRec(U_, rec[0], x, y);
+      double v = evalFromRec(U_, rec[1], x, y);
+      double ux = evalFromRec(U_X, rec[0], x, y);
+      double uy = evalFromRec(U_Y, rec[0], x, y);
+      double vx = evalFromRec(U_X, rec[1], x, y);
+      double vy = evalFromRec(U_Y, rec[1], x, y);
+      double uxy = evalFromRec(U_XY, rec[0], x, y);
+      double uyx = evalFromRec(U_YX, rec[0], x, y);
+      double uyy = evalFromRec(U_YY, rec[0], x, y);
+      double vxy = evalFromRec(U_XY, rec[1], x, y);
+      double vyx = evalFromRec(U_YX, rec[1], x, y);
+      double vyy = evalFromRec(U_YY, rec[1], x, y);
+      double uyxy = evalFromRec(U_YXY, rec[0], x, y);
+      double vyxy = evalFromRec(U_YXY, rec[1], x, y);
+      return 2.0 * (uy * uxy + vy * vxy + ux * uyy + vx * vyy + uy * uyx + vy * vyx + u * uyxy + v * vyxy);
+    }
+    default :
+      return evalFromRec(U_YXY, rec[0], x, y);
+  }
+}
+static double fyyxFromRec(std::vector<feRecovery *> rec, double x, double y){ 
+  switch(useAnalytical){
+    case 1 :
+      return -8.0*M_PI*M_PI*M_PI*cos(2.0*M_PI*x)*cos(2.0*M_PI*y);
+      return 48.0*pow(x,3)*pow(y,2);
+      return (9000.0*M_PI*M_PI*pow(cos((3.0*M_PI*y)/2.0),2))/pow(pow(20.0*x - 10.0*sin((3.0*y*M_PI)/2.0),2) + 1.0,2) + (45*M_PI*M_PI*sin((3.0*M_PI*y)/2.0)*(800.0*x - 400.0*sin((3.0*M_PI*y)/2.0)))/(2*pow(pow(20.0*x - 10.0*sin((3.0*y*M_PI)/2.0),2) + 1.0,2)) - (900*M_PI*M_PI*pow(cos((3.0*M_PI*y)/2.0),2)*(20.0*x - 10.0*sin((3.0*M_PI*y)/2.0))*(800.0*x - 400.0*sin((3.0*M_PI*y)/2.0)))/pow(pow(20.0*x - 10.0*sin((3.0*y*M_PI)/2.0),2) + 1.0,3);
+    case -1 :
+    {
+      double u = evalFromRec(U_, rec[0], x, y);
+      double v = evalFromRec(U_, rec[1], x, y);
+      double ux = evalFromRec(U_X, rec[0], x, y);
+      double uy = evalFromRec(U_Y, rec[0], x, y);
+      double vx = evalFromRec(U_X, rec[1], x, y);
+      double vy = evalFromRec(U_Y, rec[1], x, y);
+      double uyx = evalFromRec(U_YX, rec[0], x, y);
+      double uyy = evalFromRec(U_YY, rec[0], x, y);
+      double vyx = evalFromRec(U_YX, rec[1], x, y);
+      double vyy = evalFromRec(U_YY, rec[1], x, y);
+      double uyyx = evalFromRec(U_YYX, rec[0], x, y);
+      double vyyx = evalFromRec(U_YYX, rec[1], x, y);
+      return 4.0 * (uy * uyx + vy * vyx) + 2.0 * (ux * uyy + vx * vyy + u * uyyx + v * vyyx);
+    }
+    default :
+      return evalFromRec(U_YYX, rec[0], x, y);
+  }
+}
+static double fyyyFromRec(std::vector<feRecovery *> rec, double x, double y){ 
+  switch(useAnalytical){
+    case 1 :
+      return 8.0*M_PI*M_PI*M_PI*sin(2.0*M_PI*x)*sin(2.0*M_PI*y);
+      return 24.0*pow(x,4)*pow(y,1);
+      return (27000.0*M_PI*M_PI*M_PI*pow(cos((3.0*M_PI*y)/2.0),3)*pow(20.0*x - 10.0*sin((3.0*M_PI*y)/2.0),2))/pow(pow(20.0*x - 10.0*sin((3.0*y*M_PI)/2.0),2) + 1.0,3) - (135.0*M_PI*M_PI*M_PI*cos((3.0*M_PI*y)/2.0))/(4*(pow(20.0*x - 10.0*sin((3.0*M_PI*y)/2.0),2) + 1.0)) - (6750.0*M_PI*M_PI*M_PI*pow(cos((3.0*M_PI*y)/2.0),3))/pow(pow(20.0*x - 10.0*sin((3.0*y*M_PI)/2.0),2) + 1.0,2) - (2025*M_PI*M_PI*M_PI*cos((3.0*M_PI*y)/2.0)*sin((3.0*M_PI*y)/2.0)*(20.0*x - 10.0*sin((3.0*M_PI*y)/2.0)))/pow(pow(20.0*x - 10.0*sin((3.0*y*M_PI)/2.0),2) + 1.0,2);
+    case -1 :
+    {
+      double u = evalFromRec(U_, rec[0], x, y);
+      double v = evalFromRec(U_, rec[1], x, y);
+      double uy = evalFromRec(U_Y, rec[0], x, y);
+      double vy = evalFromRec(U_Y, rec[1], x, y);
+      double uyy = evalFromRec(U_YY, rec[0], x, y);
+      double vyy = evalFromRec(U_YY, rec[1], x, y);
+      double uyyy = evalFromRec(U_YYY, rec[0], x, y);
+      double vyyy = evalFromRec(U_YYY, rec[1], x, y);
+      return 6.0 * (uy * uyy + vy * vyy) + 2.0 * (u * uyyy + v * vyyy);
+    }
+    default :
+      return evalFromRec(U_YYY, rec[0], x, y);
+  }
 }
 
-static void directionsFromGradient(double x, double y, FILE *F, double &C, double &S) {
-  const double a = fx(x, y);
-  const double b = fy(x, y);
+static double dtt(const double x, const double y, double C, double S, std::vector<feRecovery *> rec = std::vector<feRecovery*>()) {
+  if(rec.size() > 0){
+    const double c11 =  fxxFromRec(rec, x, y);
+    const double c12 = (fxyFromRec(rec, x, y) + fyxFromRec(rec, x, y)) / 2.;
+    const double c22 =  fyyFromRec(rec, x, y);
+    return C * C * c11 + S * S * c22 + 2. * C * S * c12;
+  } else{
+    const double c11 = fxx(x, y);
+    const double c12 = (fxy(x, y) + fyx(x, y)) / 2.;
+    const double c22 = fyy(x, y);
+    return C * C * c11 + S * S * c22 + 2. * C * S * c12;
+  }
+}
 
+static double dttt(const double x, const double y, double C, double S, std::vector<feRecovery *> rec = std::vector<feRecovery*>(), int direction = -1) {
+  if(rec.size() > 0){
+    const double c111 =  fxxxFromRec(rec,x, y);
+    const double c222 =  fyyyFromRec(rec,x, y);
+    const double c112 = (fxxyFromRec(rec,x, y) + fxyxFromRec(rec,x, y) + fyxxFromRec(rec,x, y)) / 3.;
+    const double c122 = (fxyyFromRec(rec,x, y) + fyyxFromRec(rec,x, y) + fyxyFromRec(rec,x, y)) / 3.;
+
+    const double c11 =  fxxFromRec(rec, x, y);
+    const double c12 = (fxyFromRec(rec, x, y) + fyxFromRec(rec, x, y)) / 2.;
+    const double c22 =  fyyFromRec(rec, x, y);
+
+    const double c1 = fxFromRec(rec, x, y);
+    const double c2 = fyFromRec(rec, x, y);
+
+    double kappa1 = (-c2*c2*c11 + 2.0 * c1*c2*c12 - c1*c1*c22) / (pow(c1*c1 + c2*c2, 3.0/2.0));
+    double kappa2 = (c1*c2*(c22-c11) + (c1*c1-c2*c2)*c12) / (pow(c1*c1 + c2*c2, 3.0/2.0));
+
+    double g11 = C;
+    double g12 = S;
+    double g21 = -S;
+    double g22 = C;
+    // if(direction == 0){
+    //   // return C * C * C * c111 + S * S * S * c222 + 3. * C * C * S * c112 + 3. * C * S * S * c122 + 3.0 * kappa1 * (g11*g21*c11 + g11*g22*c12 + g12*g21*c12 + g12*g22*c22);
+    //   return g11 * g11 * g11 * c111 + g12 * g12 * g12 * c222 + 3. * g11 * g11 * g12 * c112 + 3. * g11 * g12 * g12 * c122; // + 3.0 * kappa1 * (g11*g21*c11 + g11*g22*c12 + g12*g21*c12 + g12*g22*c22);
+    // } else if(direction == 1){
+    //   // return C * C * C * c111 + S * S * S * c222 + 3. * C * C * S * c112 + 3. * C * S * S * c122 + 3.0 * kappa2 * (g11*g21*c11 + g21*g12*c12 + g22*g11*c12 + g12*g22*c22);
+    //   return g21 * g21 * g21 * c111 + g22 * g22 * g22 * c222 + 3. * g21 * g21 * g22 * c112 + 3. * g21 * g22 * g22 * c122; // + 3.0 * kappa2 * (g11*g21*c11 + g21*g12*c12 + g22*g11*c12 + g12*g22*c22);
+    // } else{
+      return C * C * C * c111 + S * S * S * c222 + 3. * C * C * S * c112 + 3. * C * S * S * c122;
+    // }
+  } else{
+    const double c111 = fxxx(x, y);
+    const double c222 = fyyy(x, y);
+    const double c112 = (fxxy(x, y) + fxyx(x, y) + fyxx(x, y)) / 3.;
+    const double c122 = (fxyy(x, y) + fyyx(x, y) + fyxy(x, y)) / 3.;
+    return C * C * C * c111 + S * S * S * c222 + 3. * C * C * S * c112 + 3. * C * S * S * c122;
+  }
+}
+
+static void directionsFromGradient(double x, double y, FILE *F, double &C, double &S, std::vector<feRecovery *> rec = std::vector<feRecovery*>()) {
+  double a, b;
+  if(rec.size() > 0){
+    a = fxFromRec(rec, x, y);
+    b = fyFromRec(rec, x, y);
+  } else{
+    a = fx(x, y);
+    b = fy(x, y);
+  }
+  
   double normGrad = sqrt(a * a + b * b);
 
   if(normGrad > 1e-8) {
@@ -704,10 +1071,17 @@ static void directionsFromGradient(double x, double y, FILE *F, double &C, doubl
   }
 }
 
-static void directionsFromHessian(double x, double y, FILE *F, double &C, double &S) {
-  const double a = fxx(x, y);
-  const double b = (fxy(x, y) + fyx(x, y)) / 2.;
-  const double c = fyy(x, y);
+static void directionsFromHessian(double x, double y, FILE *F, double &C, double &S, std::vector<feRecovery *> rec = std::vector<feRecovery*>()) {
+  double a, b, c;
+  if(rec.size() > 0){
+    a =  fxxFromRec(rec, x, y);
+    b = (fxyFromRec(rec, x, y) + fyxFromRec(rec, x, y)) / 2.;
+    c =  fyyFromRec(rec, x, y);
+  } else{
+    a = fxx(x, y);
+    b = (fxy(x, y) + fyx(x, y)) / 2.;
+    c = fyy(x, y);
+  }
 
   // Eigenvalues and spectral radius of the hessian
   double l1 = (a + c - sqrt(a * a - 2. * a * c + 4. * b * b + c * c)) / 2.;
@@ -1135,17 +1509,37 @@ feCurvedAdapt::feCurvedAdapt(feMesh *mesh, std::vector<feRecovery *> &recovery,
   gmsh::model::add("test");
   gmsh::model::setCurrent("test");
 
+# define CURVED 1
 #if defined(CURVED)
-  double modelSize = 1.0;
-  gmsh::model::occ::addRectangle(0, 0, 0, 1, 1, 1);
+  double modelSize = fmin(metricOptions.modelSizeX, metricOptions.modelSizeY);
+  
+  // gmsh::model::occ::addRectangle(0, 0, 0, metricOptions.modelSizeX, metricOptions.modelSizeY, 1);
 
-  // // Create a new model
+  // Square
+  double xmax = metricOptions.modelSizeX;
+  double ymax = metricOptions.modelSizeY;
+  double lc = modelSize/50.0;
+  // Points
+  gmsh::model::occ::addPoint(0, 0, 0, lc, 1);
+  gmsh::model::occ::addPoint(xmax, 0, 0, lc, 2);
+  gmsh::model::occ::addPoint(xmax, ymax, 0, lc, 3);
+  gmsh::model::occ::addPoint(0, ymax, 0, lc, 4);
+  int l1 = gmsh::model::occ::addLine(1, 2);
+  int l2 = gmsh::model::occ::addLine(2, 3);
+  int l3 = gmsh::model::occ::addLine(3, 4);
+  int l4 = gmsh::model::occ::addLine(4, 1);
+  int boundary = gmsh::model::occ::addCurveLoop({l1, l2, l3, l4});
+  gmsh::model::occ::addPlaneSurface({boundary}, 1);
+
+  // Cylinder
+  // double xmax = metricOptions.modelSizeX;
+  // double ymax = metricOptions.modelSizeY;
   // double lc = modelSize/50.0, xc = 2., yc = 2., r = 0.25;
   // // Points
   // gmsh::model::occ::addPoint(0, 0, 0, lc, 1);
-  // gmsh::model::occ::addPoint(10, 0, 0, lc, 2);
-  // gmsh::model::occ::addPoint(10, 4, 0, lc, 3);
-  // gmsh::model::occ::addPoint(0, 4, 0, lc, 4);
+  // gmsh::model::occ::addPoint(xmax, 0, 0, lc, 2);
+  // gmsh::model::occ::addPoint(xmax, ymax, 0, lc, 3);
+  // gmsh::model::occ::addPoint(0, ymax, 0, lc, 4);
   // int l1 = gmsh::model::occ::addLine(1, 2);
   // int l2 = gmsh::model::occ::addLine(2, 3);
   // int l3 = gmsh::model::occ::addLine(3, 4);
@@ -1171,30 +1565,31 @@ feCurvedAdapt::feCurvedAdapt(feMesh *mesh, std::vector<feRecovery *> &recovery,
   gmsh::option::setNumber("Mesh.MeshSizeMin", modelSize/50);
   gmsh::option::setNumber("Mesh.MeshSizeMax", modelSize/50);
   gmsh::model::mesh::generate();
+  // gmsh::fltk::run();
 #endif
-  gmsh::merge(metricMeshName);
-  std::string foo;
-  gmsh::model::getCurrent(foo);
-  std::cout<<"current model is "<<foo<<std::endl;
+  // gmsh::merge(metricMeshName);
+  // std::string foo;
+  // gmsh::model::getCurrent(foo);
+  // std::cout<<"current model is "<<foo<<std::endl;
   // gmsh::fltk::run();
 
   // get the nodes
   std::vector<std::size_t> nodeTags;
   std::vector<double> coord;
   std::vector<double> parametricCoord;
-  int dim = -1;
+  int dim = 2;
   int tag = -1;
-  // gmsh::model::mesh::getNodes(nodeTags, coord, parametricCoord, dim, tag, true, false);
-  dim = 2;
-  tag = 1; // Tag de l'entite physique associee a la surface
-  gmsh::model::mesh::getNodesForPhysicalGroup(dim, tag, nodeTags, coord);
+  gmsh::model::mesh::getNodes(nodeTags, coord, parametricCoord, dim, tag, true, false);
+  // dim = 2;
+  // tag = 1; // Tag de l'entite physique associee a la surface
+  // gmsh::model::mesh::getNodesForPhysicalGroup(dim, tag, nodeTags, coord);
 
-  if(nodeTags.size() != _rec[0]->getVertices().size()) {
-    printf(
-      "In feCurvedAdapt : Error - the number of node tags obtained from Gmsh (%d) does not match the "
-      "number of vertices in the recovery structure. The tag and/or dimension may be wrong.\n", nodeTags.size());
-    exit(-1);
-  }
+  // if(nodeTags.size() != _rec[0]->getVertices().size()) {
+  //   printf(
+  //     "In feCurvedAdapt : Error - the number of node tags obtained from Gmsh (%d) does not match the "
+  //     "number of vertices in the recovery structure. The tag and/or dimension may be wrong.\n", nodeTags.size());
+  //   exit(-1);
+  // }
 
   int viewTag = gmsh::view::add(":metricP2_straight");
   // int viewTagF = gmsh::view::add("F");
@@ -1213,30 +1608,30 @@ feCurvedAdapt::feCurvedAdapt(feMesh *mesh, std::vector<feRecovery *> &recovery,
     const double x = coord[3 * i + 0];
     const double y = coord[3 * i + 1];
 
-    Vertex *v = mesh->getVertexFromGmshNodeTag(nodeTags[i]);
+    // Vertex *v = mesh->getVertexFromGmshNodeTag(nodeTags[i]);
 
-    printf("%+-6.6f - %+-6.6f vs %+-6.6f - %+-6.6f\n", x, y, v->x(), v->y());
-    int seqV = mesh->getVertexSequentialTagFromGmshTag(nodeTags[i]);
-    printf("%+-6.6f - %+-6.6f vs %+-6.6f - %+-6.6f\n", x, y, mesh->getVertex(seqV)->x(), mesh->getVertex(seqV)->y());
-    printf("dudx avec probe = %+-6.6e - avec recovery = %+-6.6e\n", fxx(x,y), recovery[0]->recoveryCoeff[seqV][0][0]);
+    // printf("%+-6.6f - %+-6.6f vs %+-6.6f - %+-6.6f\n", x, y, v->x(), v->y());
+    // int seqV = mesh->getVertexSequentialTagFromGmshTag(nodeTags[i]);
+    // printf("%+-6.6f - %+-6.6f vs %+-6.6f - %+-6.6f\n", x, y, mesh->getVertex(seqV)->x(), mesh->getVertex(seqV)->y());
+    // printf("dudx avec probe = %+-6.6e - avec recovery = %+-6.6e\n", fxx(x,y), recovery[0]->recoveryCoeff[seqV][0][0]);
 
     double C, S;
     switch(deg) {
     case 1:
       // directionsFromGradient(x, y, F, C, S);
+      // directionsFromHessian(x, y, F, C, S, _rec[0]);
       directionsFromHessian(x, y, F, C, S);
       // computeMetricP1Hess(x, y, lMin, lMax, eps, g00, g01, g11, F, C, S);
       break;
     case 2:
-      directionsFromGradient(x, y, F, C, S);
+      directionsFromGradient(x, y, F, C, S, _rec);
+      // directionsFromGradient(x, y, F, C, S);
       // directionsFromHessian(x, y, F, C, S);
       // computeMetricP2(x, y, lMin, lMax, eps, g00, g01, g11, F, C, S);
       // computeMetricP2Hess(x, y, lMin, lMax, eps, g00, g01, g11, F, C, S);
       break;
     default: printf("No metric computation scheme for deg = 0 or deg > 2\n"); exit(-1);
     }
-
-    // std::cout<<C<<" - "<<S<<std::endl;
 
     COS[nodeTags[i]] = C;
     SIN[nodeTags[i]] = S;
@@ -1285,7 +1680,9 @@ feCurvedAdapt::feCurvedAdapt(feMesh *mesh, std::vector<feRecovery *> &recovery,
     double l0, l1;
     switch(deg) {
     case 1: {
+      // const double dtt0_ = fabs(dtt(x, y, C, S, _rec[0]));
       const double dtt0_ = fabs(dtt(x, y, C, S));
+      // const double dtt1_ = fabs(dtt(x, y, -S, C, _rec[0]));
       const double dtt1_ = fabs(dtt(x, y, -S, C));
 
       std::cout<<fabs(dtt0_)<<std::endl;
@@ -1298,8 +1695,21 @@ feCurvedAdapt::feCurvedAdapt(feMesh *mesh, std::vector<feRecovery *> &recovery,
       break;
     }
     case 2: {
-      const double dttt0_ = fabs(dttt(x, y, C, S));
-      const double dttt1_ = fabs(dttt(x, y, -S, C));
+      const double test0  = fabs(dttt(x, y, C, S, _rec));
+      const double dttt0_ = fabs(dttt(x, y, C, S, _rec));
+      // const double dttt0_ = fabs(dttt(x, y, C, S, _rec, 0));
+
+      const double test1  = fabs(dttt(x, y, -S, C, _rec));
+      const double dttt1_ = fabs(dttt(x, y, -S, C, _rec));
+      // const double dttt1_ = fabs(dttt(x, y, C, S, _rec, 1));
+
+      // printf("E without H = %4.4e - with H in dir 1 = %4.4e : ", test0, dttt0_);
+      // if(dttt0_ < test0) printf(" Smaller\n");
+      // else printf("Not smaller\n");
+      // printf("E without H = %4.4e - with H in dir 2 = %4.4e : ", test1, dttt1_);
+      // if(dttt1_ < test1) printf(" Smaller\n");
+      // else printf("Not smaller\n");
+      // std::cout<<std::endl;
 
       l0 = fabs(dttt0_) > 1e-14 ? pow(6 * eps / dttt0_, 0.3333) : lMax;
       l1 = fabs(dttt1_) > 1e-14 ? pow(6 * eps / dttt1_, 0.3333) : lMax;
@@ -1343,10 +1753,18 @@ feCurvedAdapt::feCurvedAdapt(feMesh *mesh, std::vector<feRecovery *> &recovery,
     v[4] = g11;
     v[5] = 0;
 
+    // v[0] = 10.0;
+    // v[1] = 0.0;
+    // v[2] = 0;
+
+    // v[3] = 0.0;
+    // v[4] = 1.0;
+    // v[5] = 0;
+
     v[6] = 0;
     v[7] = 0;
     v[8] = 1.0; // export f as well.
-    vF[0] = f(x, y);
+    vF[0] = fFromRec(_rec, x, y);
 
     data.push_back(v);
     // dataF.push_back(vF);
@@ -1434,136 +1852,146 @@ feCurvedAdapt::feCurvedAdapt(feMesh *mesh, std::vector<feRecovery *> &recovery,
   //  gmsh::view::write(viewTagF,"metric.msh",true);
 
   // // Adapt on the simulation metric field only
-  // std::string mmgCommand = "mmg2d " + toAdapt + " -hgrad 3 -hausd 100 -o " + nextMeshName;
+  // std::string mmgCommand = "mmg2d " + toAdapt + " -hgrad 3 -o " + nextMeshName;
   // // std::string mmgCommand = "mmg2d -in metric.msh -hgrad 3 -hausd 100 -o " + nextMeshName;
   // std::string gmshCommand = "gmsh " + nextMeshName + " &";
   // system(mmgCommand.c_str());
   // system(gmshCommand.c_str());
 
-  std::string saveMesh = "gmsh " + meshName + " -o test.mesh -0"; // N'exporte pas les physicals : RIP
-  system(saveMesh.c_str());
-  // Ajouter à la main les entités physiques : 
-  // Uniquement pour les Edges et Triangles pour le moment
-  printf("Converted %s to temporary MEDIT file \"test.msh\"\n", meshName.c_str());
-  printf("Adding physical group tags to temporary file \"testWithPhysicalTags.mesh\"\n");
-  std::filebuf fbIn, fbOut;
-  fbIn.open("test.mesh", std::ios::in);
-  fbOut.open("testWithPhysicalTags.mesh", std::ios::out);
-  std::istream input(&fbIn);
-  std::ostream output(&fbOut);
-  std::string buffer;
-  while(getline(input, buffer)) {
-    if(buffer == "Edges" || buffer == " Edges") {
-      output << buffer << std::endl;
-      int nEdges = 0;
-      input >> nEdges;
-      output << nEdges << std::endl;
-      for(int i = 0; i < nEdges; ++i){
-        getline(input, buffer);
-        int p0, p1, tag;
-        input >> p0 >> p1 >> tag;
-        // printf("Read edge %d %d %d\n", p0, p1, tag);
-        // Create edge and get its physical entity
-        Vertex *v0, *v1;
-        std::set<Edge, EdgeLessThan>::iterator it;
-        v0 = mesh->getVertexFromGmshNodeTag(p0);
-        v1 = mesh->getVertexFromGmshNodeTag(p1);
-        Edge e(v0, v1);
-        it = mesh->_edges.find(e);
-        if(it != mesh->_edges.end()) {
-          output << p0 << " " << p1 << " " << it->getPhysicalTag();
-          if(i+1 != nEdges)
-            output << std::endl;
-        } else {
-          // Edge should be in the set...
-          printf(
-            "In feCurvedAdapt : Error while transferring physical entities to testWithPhysicalTags.mesh\n" 
-            "The edge (%d,%d) was not found in the set of edges...\n",
-            v0->getTag(), v1->getTag());
-          exit(-1);
-        }
-      }
-    } else if(buffer == "Triangles" || buffer == " Triangles") {
-      output << buffer << std::endl;
-      int nTri = 0;
-      input >> nTri;
-      output << nTri << std::endl;
-      for(int i = 0; i < nTri; ++i){
-        getline(input, buffer);
-        int p0, p1, p2, tag;
-        input >> p0 >> p1 >> p2 >> tag;
-        // printf("Read tri %d %d %d %d\n", p0, p1, p2, tag);
-        Vertex *v0, *v1, *v2;
-        std::vector<Triangle*>::iterator it;
-        v0 = mesh->getVertexFromGmshNodeTag(p0);
-        v1 = mesh->getVertexFromGmshNodeTag(p1);
-        v2 = mesh->getVertexFromGmshNodeTag(p2);
-        Triangle t(v0, v1, v2);
-        // Brute force )-: Should make a proper triangle compare function
-        bool isFound = false;
-        for(int j = 0; j < mesh->_elements.size(); ++j){
-          if(mesh->_elements[j]->getVertex(0)->getTag() == v0->getTag() &&
-             mesh->_elements[j]->getVertex(1)->getTag() == v1->getTag() &&
-             mesh->_elements[j]->getVertex(2)->getTag() == v2->getTag()){
-            isFound = true;
-            output << p0 << " " << p1 << " " << p2 << " " << mesh->_elements[j]->getPhysicalTag();
-            if(i+1 != nTri)
-              output << std::endl;
-            break;
-          }
-        }
+  // return;
 
-        if(!isFound){
-          printf(
-            "In feCurvedAdapt : Error while transferring physical entities to testWithPhysicalTags.mesh\n" 
-            "The triangle (%d,%d,%d) was not found...\n",
-            v0->getTag(), v1->getTag(), v2->getTag());
-          exit(-1);
-        }
-
-        // it = std::find(mesh->_elements.begin(), mesh->_elements.end(), &t);
-        // if(it != mesh->_elements.end()) {
-        //   printf("Found triangle %d %d %d - %d\n", p0, p1, p2, (*it)->getPhysicalTag());
-        //   output << p0 << " " << p1 << " " << (*it)->getPhysicalTag() << std::endl;
-        // } else {
-        //   // Triangle should be in vector...
-        //   printf(
-        //     "In feCurvedAdapt : Error while transferring physical entities to testWithPhysicalTags.mesh\n" 
-        //     "The triangle (%d,%d,%d) was not found...\n",
-        //     v0->getTag(), v1->getTag(), v2->getTag());
-        //   exit(-1);
-        // }
-
-      }
-    } else{
-      output << buffer << std::endl;
-    }
-  }
-  fbIn.close();
-
-  std::string saveMesh2D = "mmg3Dto2D testWithPhysicalTags.mesh";
-  std::string mmgCommand = "mmg2d testWithPhysicalTags2D.mesh -sol toIntersect2D.sol -hgrad 3 -hausd 100 -o " + nextMeshName;
-  // std::string renumberCommand = "gmsh " + nextMeshName + " -o " + nextMeshName + " -2";
-  std::string gmshCommand = "gmsh " + nextMeshName + " &";
+  // std::string saveMesh = "gmsh " + meshName + " -o test.mesh -0"; // N'exporte pas les physicals : RIP
   // system(saveMesh.c_str());
-  system(saveMesh2D.c_str());
-  system(mmgCommand.c_str());
-  // system(renumberCommand.c_str());
-  system(gmshCommand.c_str());
+  // // Ajouter à la main les entités physiques : 
+  // // Uniquement pour les Edges et Triangles pour le moment
+  // printf("Converted %s to temporary MEDIT file \"test.mesh\"\n", meshName.c_str());
+  // printf("Adding physical group tags to temporary file \"testWithPhysicalTags.mesh\"\n");
+  // std::filebuf fbIn, fbOut;
+  // fbIn.open("test.mesh", std::ios::in);
+  // fbOut.open("testWithPhysicalTags.mesh", std::ios::out);
+  // std::istream input(&fbIn);
+  // std::ostream output(&fbOut);
+  // std::string buffer;
+  // while(getline(input, buffer)) {
+  //   if(buffer == "Edges" || buffer == " Edges") {
+  //     output << buffer << std::endl;
+  //     int nEdges = 0;
+  //     input >> nEdges;
+  //     output << nEdges << std::endl;
+  //     for(int i = 0; i < nEdges; ++i){
+  //       getline(input, buffer);
+  //       int p0, p1, tag;
+  //       input >> p0 >> p1 >> tag;
+  //       // printf("Read edge %d %d %d\n", p0, p1, tag);
+  //       // Create edge and get its physical entity
+  //       Vertex *v0, *v1;
+  //       std::set<Edge, EdgeLessThan>::iterator it;
+  //       v0 = mesh->getVertexFromGmshNodeTag(p0);
+  //       v1 = mesh->getVertexFromGmshNodeTag(p1);
+  //       Edge e(v0, v1);
+  //       it = mesh->_edges.find(e);
+  //       if(it != mesh->_edges.end()) {
+  //         output << p0 << " " << p1 << " " << it->getPhysicalTag();
+  //         if(i+1 != nEdges)
+  //           output << std::endl;
+  //       } else {
+  //         // Edge should be in the set...
+  //         printf(
+  //           "In feCurvedAdapt : Error while transferring physical entities to testWithPhysicalTags.mesh\n" 
+  //           "The edge (%d,%d) was not found in the set of edges...\n",
+  //           v0->getTag(), v1->getTag());
+  //         exit(-1);
+  //       }
+  //     }
+  //   } else if(buffer == "Triangles" || buffer == " Triangles") {
+  //     output << buffer << std::endl;
+  //     int nTri = 0;
+  //     input >> nTri;
+  //     output << nTri << std::endl;
+  //     for(int i = 0; i < nTri; ++i){
+  //       getline(input, buffer);
+  //       int p0, p1, p2, tag;
+  //       input >> p0 >> p1 >> p2 >> tag;
+  //       // printf("Read tri %d %d %d %d\n", p0, p1, p2, tag);
+  //       Vertex *v0, *v1, *v2;
+  //       std::vector<Triangle*>::iterator it;
+  //       v0 = mesh->getVertexFromGmshNodeTag(p0);
+  //       v1 = mesh->getVertexFromGmshNodeTag(p1);
+  //       v2 = mesh->getVertexFromGmshNodeTag(p2);
+  //       Triangle t(v0, v1, v2);
+  //       // Brute force )-: Should make a proper triangle compare function
+  //       bool isFound = false;
+  //       for(int j = 0; j < mesh->_elements.size(); ++j){
+  //         // printf("Comparing with element %d : (%d, %d, %d)\n", j, 
+  //         //   mesh->_elements[j]->getVertex(0)->getTag(),
+  //         //   mesh->_elements[j]->getVertex(1)->getTag(),
+  //         //   mesh->_elements[j]->getVertex(2)->getTag());
+  //         int e0 = mesh->_elements[j]->getVertex(0)->getTag();
+  //         int e1 = mesh->_elements[j]->getVertex(1)->getTag();
+  //         int e2 = mesh->_elements[j]->getVertex(2)->getTag();
+  //         bool match  = (e0 == v0->getTag() || e1 == v0->getTag() || e2 == v0->getTag());
+  //              match &= (e0 == v1->getTag() || e1 == v1->getTag() || e2 == v1->getTag());
+  //              match &= (e0 == v2->getTag() || e1 == v2->getTag() || e2 == v2->getTag());
+  //         if(match){
+  //           isFound = true;
+  //           output << p0 << " " << p1 << " " << p2 << " " << mesh->_elements[j]->getPhysicalTag();
+  //           if(i+1 != nTri)
+  //             output << std::endl;
+  //           break;
+  //         }
+  //       }
 
-  // // The intersection generates a new .p4est file with the root name of the input mesh
-  // // This should be run in the data/... directory 
-  // std::string intersect = "gmsh " + meshName + " -size_field -4 0 0 1 input.p4est";
-  // std::cout<<"Running "<<intersect<<std::endl;
-  // system(intersect.c_str());
+  //       if(!isFound){
+  //         printf(
+  //           "In feCurvedAdapt : Error while transferring physical entities to testWithPhysicalTags.mesh\n" 
+  //           "The triangle (%d,%d,%d) was not found...\n",
+  //           v0->getTag(), v1->getTag(), v2->getTag());
+  //         exit(-1);
+  //       }
 
-  // size_t lastindex = meshName.find_last_of(".");
-  // std::string root = meshName.substr(0, lastindex);
-  // lastindex = nextMeshName.find_last_of(".");
-  // std::string nextRoot = nextMeshName.substr(0, lastindex);
-  // std::string adapt = "python3 adaptGeoAndSimulation.py " + root + ".p4est " + root + " " + nextRoot + " 5";
-  // std::cout<<"Running "<<adapt<<std::endl;
-  // system(adapt.c_str());
+  //       // it = std::find(mesh->_elements.begin(), mesh->_elements.end(), &t);
+  //       // if(it != mesh->_elements.end()) {
+  //       //   printf("Found triangle %d %d %d - %d\n", p0, p1, p2, (*it)->getPhysicalTag());
+  //       //   output << p0 << " " << p1 << " " << (*it)->getPhysicalTag() << std::endl;
+  //       // } else {
+  //       //   // Triangle should be in vector...
+  //       //   printf(
+  //       //     "In feCurvedAdapt : Error while transferring physical entities to testWithPhysicalTags.mesh\n" 
+  //       //     "The triangle (%d,%d,%d) was not found...\n",
+  //       //     v0->getTag(), v1->getTag(), v2->getTag());
+  //       //   exit(-1);
+  //       // }
+
+  //     }
+  //   } else{
+  //     output << buffer << std::endl;
+  //   }
+  // }
+  // fbIn.close();
+
+  // std::string saveMesh2D = "mmg3Dto2D testWithPhysicalTags.mesh";
+  // std::string mmgCommand = "mmg2d testWithPhysicalTags2D.mesh -sol toIntersect2D.sol -hgrad 3 -hausd 100 -o " + nextMeshName;
+  // // std::string renumberCommand = "gmsh " + nextMeshName + " -o " + nextMeshName + " -2";
+  // std::string gmshCommand = "gmsh " + nextMeshName + " &";
+  // // system(saveMesh.c_str());
+  // system(saveMesh2D.c_str());
+  // system(mmgCommand.c_str());
+  // // system(renumberCommand.c_str());
+  // system(gmshCommand.c_str());
+
+  // // // The intersection generates a new .p4est file with the root name of the input mesh
+  // // // This should be run in the data/... directory 
+  // // std::string intersect = "gmsh " + meshName + " -size_field -4 0 0 1 input.p4est";
+  // // std::cout<<"Running "<<intersect<<std::endl;
+  // // system(intersect.c_str());
+
+  // // size_t lastindex = meshName.find_last_of(".");
+  // // std::string root = meshName.substr(0, lastindex);
+  // // lastindex = nextMeshName.find_last_of(".");
+  // // std::string nextRoot = nextMeshName.substr(0, lastindex);
+  // // std::string adapt = "python3 adaptGeoAndSimulation.py " + root + ".p4est " + root + " " + nextRoot + " 5";
+  // // std::cout<<"Running "<<adapt<<std::endl;
+  // // system(adapt.c_str());
 
 #if defined(CURVED)
   system("mmg2d metric.msh -hgrad 3");
@@ -1582,23 +2010,46 @@ feCurvedAdapt::feCurvedAdapt(feMesh *mesh, std::vector<feRecovery *> &recovery,
               int faceTag, std::vector<double> &pts,
               double er (double *, double *, double *,
                    double *, double *, double *),
-              bool inside(double *));
+              bool inside(double *),
+              void grad_er(double *, double *, double *, double *, double *, double *, std::vector<double>&) = nullptr);
 
   bool vazy = true;//false;
   
   std::vector<double> pts;
   // gmsh::fltk::run();
   if(vazy){
-    printf("Meshing...");
-    computePointsUsingScaledCrossFieldPlanarP2 ("test", "adapt", viewTag, 0, pts, ERROR_SQUARED_P2, INSIDE);
-    printf("Done");
+    printf("Meshing...\n");
+    gmsh::fltk::run();
+    computePointsUsingScaledCrossFieldPlanarP2 ("test", "adapt", viewTag, 0, pts, ERROR_SQUARED_P2, metricOptions.inside);
+    printf("Done\n");
   }
   gmsh::model::setCurrent("adapt");
 
-  // int tagSurf = gmsh::model::addPhysicalGroup(2,{0});
-  // gmsh::model::setPhysicalName(2,tagSurf,"Domaine");
+  // For the regular square
+  int tagSurf = gmsh::model::addPhysicalGroup(2,{0});
+  gmsh::model::setPhysicalName(2,tagSurf,"Domaine");
+
   // int tagBord = gmsh::model::addPhysicalGroup(1,{0});
   // gmsh::model::setPhysicalName(1,tagBord,"Bord");
+  int tagBasCotes = gmsh::model::addPhysicalGroup(1,{0,1,3});
+  gmsh::model::setPhysicalName(1,tagBasCotes,"Bas");
+  int tagHaut = gmsh::model::addPhysicalGroup(1,{2});
+  gmsh::model::setPhysicalName(1,tagHaut,"Bas");
+
+  int tagPoint = gmsh::model::addPhysicalGroup(0,{0});
+  gmsh::model::setPhysicalName(0,tagPoint,"Point");
+
+  // For the cylinder
+  // int entree   = gmsh::model::addPhysicalGroup(1, {4});
+  // int bord     = gmsh::model::addPhysicalGroup(1, {1, 3});
+  // int sortie   = gmsh::model::addPhysicalGroup(1, {2});
+  // int cylindre = gmsh::model::addPhysicalGroup(1, {5});
+  // int surface = gmsh::model::addPhysicalGroup(2, {1});
+  // gmsh::model::setPhysicalName(1, entree, "Entree");
+  // gmsh::model::setPhysicalName(1, bord, "Bord");
+  // gmsh::model::setPhysicalName(1, sortie, "Sortie");
+  // gmsh::model::setPhysicalName(1, cylindre, "Cylindre");
+  // gmsh::model::setPhysicalName(2, surface, "Surface");
 
   if (!vazy)gmsh::model::mesh::setOrder(2);
   gmsh::model::mesh::getNodes(nodeTags,coord, parametricCoord,-1,-1,true);
@@ -1607,17 +2058,20 @@ feCurvedAdapt::feCurvedAdapt(feMesh *mesh, std::vector<feRecovery *> &recovery,
   std::vector<std::vector<double> > dataF_adapt;
 
   for (size_t i=0 ; i < nodeTags.size() ; i++){
-    const double x = coord [3*i + 0];
-    const double y = coord [3*i + 1];
+    const double x = coord [3.0*i + 0];
+    const double y = coord [3.0*i + 1];
     std::vector<double> vF(1);
-    vF[0] = f(x,y);
+    vF[0] = fFromRec(_rec,x,y);
     dataF_adapt.push_back(vF);    
   }
   gmsh::model::setCurrent("adapt");
   gmsh::view::addModelData(viewTagF_adapt, 0, "adapt", "NodeData",
          nodeTags, dataF_adapt);
-  gmsh::view::write(viewTagF_adapt,"sol_adapt.msh");
-  system("gmsh sol_adapt.msh &");
+  // gmsh::view::write(viewTagF_adapt,"sol_adapt.msh");
+  gmsh::view::write(viewTagF_adapt,nextMeshName.c_str());
+  std::string foo2 = "gmsh " + nextMeshName + " &";
+  // system("gmsh sol_adapt.msh &");
+  system(foo2.c_str());
 #endif
 
   gmsh::finalize();

@@ -37,15 +37,15 @@ public:
            std::vector<int> connecFaces = std::vector<int>())
     : _ID(ID), _tag(tag), _dim(dim), _forme(forme), _nNodPerElm(nNod), _nElm(nElm), _nEdg(nEdg),
       _connecNodes(connecNodes), _connecElem(connecElem), _connecEdges(connecEdges),
-      _connecFaces(connecFaces), _space(space) {
+      _connecFaces(connecFaces), _space(space)
+  {
     if(connecElem.size() == 0) _connecElem.resize(nElm);
-    // std::cout<<"before "<<connecNodes.size()<<std::endl;
+    if(connecEdges.size() == 0) _connecEdges.resize(nElm*nEdg);
+
     std::sort(connecNodes.begin(), connecNodes.end());
     _nNod = std::unique(connecNodes.begin(), connecNodes.end()) - connecNodes.begin();
-    // std::cout<<_nNod<<std::endl;
     // connecNodes.erase( std::unique(connecNodes.begin(), connecNodes.end()), connecNodes.end() );
     // _nNod = connecNodes.size();
-    // std::cout<<_nNod<<std::endl;
   };
   ~feCncGeo() {
     // if(_space != nullptr)

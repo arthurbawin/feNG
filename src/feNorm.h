@@ -9,6 +9,7 @@
 class feNorm {
 protected:
   feSpace *_intSpace;
+
   int cncGeoTag;
   feSpace *geoSpace;
   int nElmGeo;
@@ -25,6 +26,7 @@ protected:
   std::vector<double> z;
 
   feFunction *_solRef;
+  feVectorFunction *_solRefVec;
 
   double norm;
 
@@ -38,6 +40,8 @@ public:
   void computeL2Norm0D(feSolution *sol);
   void computeArea(feMetaNumber *metaNumber, feSolution *sol, feMesh *mesh);
   void computeIntegral(feMetaNumber *metaNumber, feSolution *sol, feMesh *mesh, feFunction *fun);
+  void computeErrorNormFromExternalSolution(feMetaNumber *metaNumber, feSolution *sol, feMesh *mesh, 
+    feMetaNumber *refMN, feSolution *refSol, feMesh *refMesh, const std::vector<feSpace *> refSpaces);
 };
 
 #endif

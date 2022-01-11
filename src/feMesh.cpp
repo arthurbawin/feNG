@@ -4,7 +4,6 @@
 #include "feSolution.h"
 
 #include "SBoundingBox3d.h"
-#include "rtree.h"
 
 #include <iostream>
 #include <fstream>
@@ -141,14 +140,26 @@ feMesh1DP1::feMesh1DP1(double xA, double xB, int nElm, std::string bndA_ID, std:
 
   // Elements 1D
   int dimDomain = 1;
-  std::vector<int> connecDomain(_nElmDomain * _nNodDomain, 0);
+  std::vector<int> connecNodeDomain(_nElmDomain * _nNodDomain, 0);
   for(int i = 0; i < _nElmDomain; ++i) {
-    connecDomain[_nNodDomain * i + 0] = i;
-    connecDomain[_nNodDomain * i + 1] = i + 1;
+    connecNodeDomain[_nNodDomain * i + 0] = i;
+    connecNodeDomain[_nNodDomain * i + 1] = i + 1;
   }
+  // Create edges
+  int nEdges = 1; // Numbered starting at 1 to match the 2D numbering
+  std::vector<int> connecEdgeDomain(_nElmDomain, 0);
+  for(int i = 0; i < _nElmDomain; ++i, ++nEdges) {
+    Vertex *v0 = &_vertices[i];
+    Vertex *v1 = &_vertices[i+1];
+    Edge e(v0, v1, nEdges, 0);
+    _edges.insert(e);
+    connecEdgeDomain[i] = nEdges; // Trivial edge connectivity but starting at 1
+  }
+  _nEdg = _nElmDomain;
+
   int nCncGeo = 0;
-  feCncGeo *geoDom = new feCncGeo(nCncGeo, dimDomain, _nNodDomain, _nElmDomain, 0, _domID, "Lg",
-                                  new feSpace1DP1("xyz"), connecDomain);
+  feCncGeo *geoDom = new feCncGeo(nCncGeo, dimDomain, _nNodDomain, _nElmDomain, 1, _domID, "Lg",
+                                  new feSpace1DP1("xyz"), connecNodeDomain, std::vector<int>(), connecEdgeDomain);
   _cncGeo.push_back(geoDom);
   _cncGeoMap[_domID] = nCncGeo;
   geoDom->getFeSpace()->setCncGeoTag(nCncGeo++);
@@ -235,27 +246,19 @@ feMesh0DP0::~feMesh0DP0() {
   }
 }
 
-feMesh2DP1::feMesh2DP1(std::string meshName, bool curved, mapType physicalEntitiesDescription, bool verbose)
-  : feMesh() {
-  printf("Info : Reading mesh file : %s\n", meshName.c_str());
-  // Check if mesh file exists
-  std::ifstream f(meshName.c_str());
-  if(!f.good()) {
-    printf("In feMesh2DP1::feMesh2DP1 : Error - Mesh file does not exist.\n");
-  } else {
-    _ID = "myBeautifulMesh";
+static bool rtreeCallback(int id, void *ctx) {
+  std::vector<int> *vec = reinterpret_cast<std::vector<int> *>(ctx);
+  vec->push_back(id);
+  return true;
+}
 
-    if(readGmsh(meshName, curved, physicalEntitiesDescription, verbose)) {
-      printf("In feMesh2DP1::feMesh2DP1 : Error in readGmsh - mesh not finalized.\n");
-      exit(-1);
-    }
-
-    // Assign a pointer to this mesh to each of its geometric connectivities and their fespace
-    for(feCncGeo *cnc : _cncGeo) {
-      cnc->setMeshPtr(this);
-      cnc->getFeSpace()->setMeshPtr(this);
-    }
-    _nCncGeo = _cncGeo.size();
+feMesh2DP1::feMesh2DP1(std::string meshName, bool curved, mapType physicalEntitiesDescription)
+  : feMesh()
+{
+  feStatus s = readGmsh(meshName, curved, physicalEntitiesDescription);
+  if(s != FE_STATUS_OK){
+    feInfo("Error in readGmsh - mesh not finalized.\n");
+    std::exit(1);
   }
 }
 
@@ -267,10 +270,29 @@ feMesh2DP1::~feMesh2DP1() {
   }
 }
 
-static bool rtreeCallback(int id, void *ctx) {
-  std::vector<int> *vec = reinterpret_cast<std::vector<int> *>(ctx);
-  vec->push_back(id);
-  return true;
+/* Locates the vertex witth coordinates x in the mesh using an RTree.
+   The search is performed in elements of the highest dimension only.
+   The element number is assigned to iElm and the reference coordinates
+   are assigned in u. */
+bool feMesh2DP1::locateVertex(std::vector<double> &x, int &iElm, std::vector<double> &u, double tol){
+  double r[3];
+  double min[3] = {x[0] - tol, x[1] - tol, x[2] - tol};
+  double max[3] = {x[0] + tol, x[1] + tol, x[2] + tol};
+  std::vector<int> candidates;
+  _rtree.Search(min, max, rtreeCallback, &candidates);
+  bool isFound = false;
+  for(int val : candidates) {
+    Triangle *t = _elements[val];
+    t->xyz2uvw(x.data(), r);
+    if(t->isInside(r[0], r[1], r[2])) {
+      iElm = val;
+      u[0] = r[0];
+      u[1] = r[1];
+      u[2] = r[2];
+      isFound = true;
+    }
+  }
+  return isFound;
 }
 
 /* Transfers the solution(s) associated to the current mesh to another mesh.
@@ -350,7 +372,7 @@ void feMesh2DP1::transfer(feMesh2DP1 *otherMesh, feMetaNumber *myMN, feMetaNumbe
               double min[3] = {x[0] - tol, x[1] - tol, x[2] - tol};
               double max[3] = {x[0] + tol, x[1] + tol, x[2] + tol};
               std::vector<int> candidates;
-              rtree.Search(min, max, rtreeCallback, &candidates);
+              _rtree.Search(min, max, rtreeCallback, &candidates);
 
               for(int val : candidates) {
                 Triangle *t = _elements[val];

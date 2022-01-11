@@ -1,34 +1,41 @@
 #ifndef _FELINEARSYSTEM_
 #define _FELINEARSYSTEM_
 
+#include "feMessage.h"
 #include "feNumber.h"
 #include "feMesh.h"
 #include "feBilinearForm.h"
 #include "feSolution.h"
 #include "feSolutionContainer.h"
 
+/* Supported linear solvers */
+typedef enum {MKLPARDISO, PETSC} linearSolverType;
+
 class feLinearSystem {
 protected:
-  std::vector<feBilinearForm *> &_formMatrices;
-  std::vector<feBilinearForm *> &_formResiduals;
+  std::vector<feBilinearForm*> _formMatrices;
+  std::vector<feBilinearForm*> _formResiduals;
   feMetaNumber *_metaNumber;
   feMesh *_mesh;
 
   bool recomputeMatrix;
 
 public:
-  feLinearSystem(std::vector<feBilinearForm *> &formMatrices,
-                 std::vector<feBilinearForm *> &formResiduals, feMetaNumber *metaNumber,
-                 feMesh *mesh)
-    : _formMatrices(formMatrices), _formResiduals(formResiduals), _metaNumber(metaNumber),
-      _mesh(mesh), recomputeMatrix(false){};
+  feLinearSystem(std::vector<feBilinearForm*> bilinearForms, feMetaNumber *metaNumber, feMesh *mesh)
+    : _metaNumber(metaNumber), _mesh(mesh), recomputeMatrix(false)
+  {
+    for(feBilinearForm* f : bilinearForms){
+      _formResiduals.push_back(f);
+      if(f->hasMatrix())
+        _formMatrices.push_back(f);
+    }
+  };
   virtual ~feLinearSystem() {}
 
   bool getRecomputeStatus() { return recomputeMatrix; }
   void setRecomputeStatus(bool status) { recomputeMatrix = status; }
 
   virtual void initialize(){};
-  // virtual void finalize();
   virtual void setToZero() = 0;
   virtual void setMatrixToZero(){};
   virtual void setResidualToZero(){};
@@ -42,5 +49,13 @@ public:
   virtual void viewMatrix(){};
   virtual void printResidual(){};
 };
+
+feStatus createLinearSystem(feLinearSystem *&system,
+                            linearSolverType type,
+                            std::vector<feBilinearForm*> bilinearForms,
+                            feMetaNumber *metaNumber,
+                            feMesh *mesh,
+                            int argc = 0,
+                            char **argv = nullptr);
 
 #endif
