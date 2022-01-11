@@ -22,6 +22,10 @@
 #include <limits>
 #include <tuple>
 #include <utility>
+#include <chrono>
+#include <thread>
+
+#include "omp.h"
 
 #if defined(HAVE_PETSC)
 #include "petscsystypes.h"
@@ -31,19 +35,16 @@
 typedef PetscInt64 feInt;
 #elif defined(HAVE_MKL)
 typedef long int feInt;
-typedef int fePardisoInt;
-typedef long long int feMKLPardisoInt;
 #else
 typedef long int feInt;
 #endif
 
-// void log(){}
+#if defined(HAVE_MKL)
+typedef int fePardisoInt;
+typedef long long int feMKLPardisoInt;
+#endif
 
-// template<typename First, typename ...Rest>
-// void log(First && first, Rest && ...rest)
-// {
-//     std::cout << std::forward<First>(first);
-//     log(std::forward<Rest>(rest)...);
-// }
+void tic(int mode = 0);
+void toc();
 
 #endif

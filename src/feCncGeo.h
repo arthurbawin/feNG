@@ -9,7 +9,8 @@
 class feSpace;
 class feMesh;
 
-class feCncGeo {
+class feCncGeo
+{
 protected:
   std::string _ID;
   int _tag;
@@ -37,12 +38,16 @@ public:
            std::vector<int> connecFaces = std::vector<int>())
     : _ID(ID), _tag(tag), _dim(dim), _forme(forme), _nNodPerElm(nNod), _nElm(nElm), _nEdg(nEdg),
       _connecNodes(connecNodes), _connecElem(connecElem), _connecEdges(connecEdges),
-      _connecFaces(connecFaces), _space(space) {
+      _connecFaces(connecFaces), _space(space)
+  {
     if(connecElem.size() == 0) _connecElem.resize(nElm);
+    if(connecEdges.size() == 0) _connecEdges.resize(nElm * nEdg);
+
     std::sort(connecNodes.begin(), connecNodes.end());
     _nNod = std::unique(connecNodes.begin(), connecNodes.end()) - connecNodes.begin();
   };
-  ~feCncGeo() {
+  ~feCncGeo()
+  {
     // if(_space != nullptr)
     //   delete _space;
   }
@@ -60,19 +65,24 @@ public:
 
   std::vector<int> getNodeConnectivityCopy() { return _connecNodes; }
   std::vector<int> &getNodeConnectivityRef() { return _connecNodes; }
+  std::vector<int> &getEdgeConnectivityRef() { return _connecEdges; }
   std::vector<int> &getElemConnectivityRef() { return _connecElem; }
 
-  int getNodeConnectivity(int numElem, int iNode) {
+  int getNodeConnectivity(int iNode) { return _connecNodes[iNode]; }
+  int getNodeConnectivity(int numElem, int iNode)
+  {
     return _connecNodes[_nNodPerElm * numElem + iNode];
   }
   int getElementConnectivity(int numElem) { return _connecElem[numElem]; }
   int getEdgeConnectivity(int numElem, int iEdge) { return _connecEdges[_nEdg * numElem + iEdge]; }
 
-  void setNodeConnectivity(int numElem, int iNode, int val) {
+  void setNodeConnectivity(int numElem, int iNode, int val)
+  {
     _connecNodes[_nNodPerElm * numElem + iNode] = val;
   }
   void setElementConnectivity(int numElem, int val) { _connecElem[numElem] = val; }
-  void setEdgeConnectivity(int numElem, int iEdge, int val) {
+  void setEdgeConnectivity(int numElem, int iEdge, int val)
+  {
     _connecEdges[_nEdg * numElem + iEdge] = val;
   }
 

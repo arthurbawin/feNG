@@ -5,7 +5,8 @@
 // ====================================================================
 
 feCompressedRowStorage::feCompressedRowStorage(feMetaNumber *metaNumber, feMesh *mesh,
-                                               std::vector<feBilinearForm *> &formMatrices) {
+                                               std::vector<feBilinearForm *> &formMatrices)
+{
   ordre = (feInt)metaNumber->getNbUnknowns();
   nnz = new feInt[ordre];
 
@@ -18,11 +19,21 @@ feCompressedRowStorage::feCompressedRowStorage(feMetaNumber *metaNumber, feMesh 
   // ================================================================
   feInt NumberOfBilinearForms = formMatrices.size();
 
+  // int cnt = 0;
+  // #pragma omp parallel for private(cnt)
+  // for(int i = 0; i < 100; ++i){
+  //   // printf("Printing %3d from thread %d\n", i, omp_get_thread_num());
+  //   printf("Thread %d has printed %2d times\n", omp_get_thread_num(), cnt++);
+  // }
+
   for(feInt eq = 0; eq < NumberOfBilinearForms; eq++) {
     feBilinearForm *equelm = formMatrices[eq];
     feInt cncGeoTag = equelm->getCncGeoTag();
     feInt nbElems = mesh->getNbElm(cncGeoTag);
+    // #pragma omp parallel for
     for(feInt e = 0; e < nbElems; e++) {
+      // printf("Assembling element %8d on thread %d/%d\n", e, omp_get_thread_num(),
+      // omp_get_num_threads());
       equelm->initialize_vadij_only(metaNumber, e);
       feInt NBRI = equelm->getNiElm();
       std::vector<int> VADI = equelm->getAdrI(); // &VADI ????
@@ -164,7 +175,8 @@ feCompressedRowStorage::feCompressedRowStorage(feMetaNumber *metaNumber, feMesh 
 // fonction pour comprarer deux entiers, pour le tri
 // d'une liste d'entiers par la fonction qsort
 //========================================================================================================
-int compint(const void *a, const void *b) {
+int compint(const void *a, const void *b)
+{
   const feInt *aa = (const feInt *)a;
   const feInt *bb = (const feInt *)b;
   int code = 0;
@@ -180,7 +192,8 @@ int compint(const void *a, const void *b) {
 
 feCompressedRowStorageMklPardiso::feCompressedRowStorageMklPardiso(
   feMetaNumber *metaNumber, feMesh *mesh, std::vector<feBilinearForm *> &formMatrices)
-  : feCompressedRowStorage(metaNumber, mesh, formMatrices) {
+  : feCompressedRowStorage(metaNumber, mesh, formMatrices)
+{
   // ================================================================
   // ALLOUER LA STRUCTURE CSR DE MKL PARDISO
   // ================================================================
@@ -275,7 +288,8 @@ feCompressedRowStorageMklPardiso::feCompressedRowStorageMklPardiso(
   for(feInt i = 0; i < ordre + 1; i++) Ap[i] += 1;
 }
 
-void feCompressedRowStorageMklPardiso::print_info() {
+void feCompressedRowStorageMklPardiso::print_info()
+{
   // for(feInt i=0;i<nz;i++) printf(" %ld \n", Aj[i]);
   for(feInt i = 0; i < ordre; i++) {
     printf("rangee (%ld) ", i + 1);
@@ -285,7 +299,8 @@ void feCompressedRowStorageMklPardiso::print_info() {
 }
 
 void feCompressedRowStorageMklPardiso::matrixAddValues(double *Matrix, feInt nRow, feInt *Row,
-                                                       feInt nColumn, feInt *Column, double **Aij) {
+                                                       feInt nColumn, feInt *Column, double **Aij)
+{
   for(feInt i = 0; i < nRow; i++) {
     feInt I = Row[i];
     if(I < ordre) {
@@ -297,7 +312,7 @@ void feCompressedRowStorageMklPardiso::matrixAddValues(double *Matrix, feInt nRo
       for(feInt j = 0; j < nColumn; j++) {
         feInt J = Column[j];
         if(J < ordre) {
-          printf("irangee %ld Aij %g\n", irangee[J], Aij[i][j]);
+          // printf("irangee %ld Aij %g\n", irangee[J], Aij[i][j]);
           Matrix[irangee[J]] += Aij[i][j];
         }
       }

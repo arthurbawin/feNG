@@ -9,8 +9,8 @@ AlignOperands:   true
 AlignTrailingComments: false
 AllowAllParametersOfDeclarationOnNextLine: true
 #AllowAllArgumentsOnNextLine: true
-AllowShortBlocksOnASingleLine: true
-AllowShortCaseLabelsOnASingleLine: true
+AllowShortBlocksOnASingleLine: false
+AllowShortCaseLabelsOnASingleLine: false
 AllowShortFunctionsOnASingleLine: All
 AllowShortIfStatementsOnASingleLine: true
 AllowShortLoopsOnASingleLine: true
@@ -36,7 +36,7 @@ BraceWrapping:
   SplitEmptyRecord: true
   SplitEmptyNamespace: true
 BreakBeforeBinaryOperators: None
-BreakBeforeBraces: Custom
+BreakBeforeBraces: Linux
 BreakBeforeInheritanceComma: true
 BreakBeforeTernaryOperators: false
 BreakConstructorInitializersBeforeComma: false
@@ -65,7 +65,7 @@ IncludeCategories:
   - Regex:           '.*'
     Priority:        1
 IncludeIsMainRegex: '(Test)?$'
-IndentCaseLabels: false
+IndentCaseLabels: true
 IndentWidth:     2
 IndentWrappedFunctionNames: false
 JavaScriptQuotes: Leave

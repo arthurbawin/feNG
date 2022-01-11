@@ -10,12 +10,15 @@ double A[MAX_M][MAX_N], b[MAX_M], c[MAX_N], v;
 int N[MAX_N], B[MAX_M]; // nonbasic & basic
 
 // pivot yth variable around xth constraint
-inline void pivot(int x, int y) {
+inline void pivot(int x, int y)
+{
   // printf("Pivoting variable %d around constraint %d.\n", y, x);
 
   // first rearrange the x-th row
   for(int j = 0; j < n; j++) {
-    if(j != y) { A[x][j] /= -A[x][y]; }
+    if(j != y) {
+      A[x][j] /= -A[x][y];
+    }
   }
   b[x] /= -A[x][y];
   A[x][y] = 1.0 / A[x][y];
@@ -24,7 +27,9 @@ inline void pivot(int x, int y) {
   for(int i = 0; i < m; i++) {
     if(i != x) {
       for(int j = 0; j < n; j++) {
-        if(j != y) { A[i][j] += A[i][y] * A[x][j]; }
+        if(j != y) {
+          A[i][j] += A[i][y] * A[x][j];
+        }
       }
       b[i] += A[i][y] * b[x];
       A[i][y] *= A[x][y];
@@ -33,7 +38,9 @@ inline void pivot(int x, int y) {
 
   // now rearrange the objective function
   for(int j = 0; j < n; j++) {
-    if(j != y) { c[j] += c[y] * A[x][j]; }
+    if(j != y) {
+      c[j] += c[y] * A[x][j];
+    }
   }
   v += c[y] * b[x];
   c[y] *= A[x][y];
@@ -44,7 +51,8 @@ inline void pivot(int x, int y) {
 
 // Run a single iteration of the simplex algorithm.
 // Returns: 0 if OK, 1 if STOP, -1 if UNBOUNDED
-inline int iterate_simplex() {
+inline int iterate_simplex()
+{
   // printf("--------------------\n");
   // printf("State:\n");
   // printf("Maximise: ");
@@ -91,7 +99,8 @@ inline int iterate_simplex() {
 
 // (Possibly) converts the LP into a slack form with a feasible basic solution.
 // Returns 0 if OK, -1 if INFEASIBLE
-inline int initialise_simplex() {
+inline int initialise_simplex()
+{
   int k = -1;
   double min_b = -1;
   for(int i = 0; i < m; i++) {
@@ -157,7 +166,9 @@ inline int initialise_simplex() {
   }
   assert(z_nonbasic != -1);
 
-  for(int i = 0; i < m; i++) { A[i][z_nonbasic] = A[i][n - 1]; }
+  for(int i = 0; i < m; i++) {
+    A[i][z_nonbasic] = A[i][n - 1];
+  }
   swap(N[z_nonbasic], N[n - 1]);
 
   n--;
@@ -181,7 +192,9 @@ inline int initialise_simplex() {
     if(ok) continue;
     for(int i = 0; i < m; i++) {
       if(j == B[i]) {
-        for(int jj = 0; jj < n; jj++) { c[jj] += c_old[j] * A[i][jj]; }
+        for(int jj = 0; jj < n; jj++) {
+          c[jj] += c_old[j] * A[i][jj];
+        }
         v += c_old[j] * b[i];
         break;
       }
@@ -220,21 +233,30 @@ inline int initialise_simplex() {
 // }
 
 pair<vector<double>, double> simplex(int nInput, int mInput, vector<double> AInput,
-                                     vector<double> bInput, vector<double> cInput, double vInput) {
+                                     vector<double> bInput, vector<double> cInput, double vInput)
+{
   n = nInput;
   m = mInput;
 
   for(int i = 0; i < m; ++i) {
-    for(int j = 0; j < n; ++j) { A[i][j] = AInput[i * n + j]; }
+    for(int j = 0; j < n; ++j) {
+      A[i][j] = AInput[i * n + j];
+    }
   }
 
-  for(int i = 0; i < n; ++i) { c[i] = cInput[i]; }
+  for(int i = 0; i < n; ++i) {
+    c[i] = cInput[i];
+  }
 
-  for(int i = 0; i < m; ++i) { b[i] = bInput[i]; }
+  for(int i = 0; i < m; ++i) {
+    b[i] = bInput[i];
+  }
 
   v = vInput;
 
-  if(initialise_simplex() == -1) { return make_pair(vector<double>(n + m, -2), INFINITY); }
+  if(initialise_simplex() == -1) {
+    return make_pair(vector<double>(n + m, -2), INFINITY);
+  }
 
   int code;
   while(!(code = iterate_simplex()))
@@ -244,8 +266,12 @@ pair<vector<double>, double> simplex(int nInput, int mInput, vector<double> AInp
 
   vector<double> ret;
   ret.resize(n + m);
-  for(int j = 0; j < n; j++) { ret[N[j]] = 0; }
-  for(int i = 0; i < m; i++) { ret[B[i]] = b[i]; }
+  for(int j = 0; j < n; j++) {
+    ret[N[j]] = 0;
+  }
+  for(int i = 0; i < m; i++) {
+    ret[B[i]] = b[i];
+  }
 
   return make_pair(ret, v);
 }

@@ -19,24 +19,26 @@
 double fSolU(const double t, const std::vector<double> &pos, const std::vector<double> &par) {
   double x = pos[0];
   double y = pos[1];
-  // return 2. * exp(x) * (x-1.)*(x-1.) *x*x* (y*y - y) * (2.*y - 1.);
-  return x * x * x * x * y * y * y * y;
+  return 2. * exp(x) * (x - 1.) * (x - 1.) * x * x * (y * y - y) * (2. * y - 1.);
+  // return x * x * x * x * y * y * y * y;
 }
 
 double fSolV(const double t, const std::vector<double> &pos, const std::vector<double> &par) {
   double x = pos[0];
   double y = pos[1];
-  // return exp(x) * (x-1.) *x* (x*x + 3.*x - 2.) * (y*y - 1.) * y*y;
-  return -4. / 5. * x * x * x * y * y * y * y * y;
+  return exp(x) * (x - 1.) * x * (x * x + 3. * x - 2.) * (y * y - 1.) * y * y;
+  // return -4. / 5. * x * x * x * y * y * y * y * y;
 }
 
 double fSolP(const double t, const std::vector<double> &pos, const std::vector<double> &par) {
   double x = pos[0];
   double y = pos[1];
-  // return -424. + 156.*exp(1) + (y*y - y) * (-456. + exp(x)*(456. + x*x*(228.-5.*(y*y-y))
-  // + 2.*x*(y*y-y-228.)
-  //   +2.*x*x*x*(y*y-y-36.) + x*x*x*x*(y*y-y + 12.) ));
-  return x * x * y * y;
+  return -424. + 156. * exp(1) +
+         (y * y - y) *
+           (-456. +
+            exp(x) * (456. + x * x * (228. - 5. * (y * y - y)) + 2. * x * (y * y - y - 228.) +
+                      2. * x * x * x * (y * y - y - 36.) + x * x * x * x * (y * y - y + 12.)));
+  // return x * x * y * y;
 }
 
 double fZero(const double t, const std::vector<double> &pos, const std::vector<double> &par) {
@@ -82,6 +84,10 @@ void fSource(const double t, const std::vector<double> &pos, const std::vector<d
 }
 
 int main(int argc, char **argv) {
+#ifdef HAVE_PETSC
+  petscInitialize(argc, argv);
+#endif
+
   double rho = 1.0;
   double mu = 1.0;
   std::vector<double> stokesParam = {rho, mu};
@@ -203,5 +209,8 @@ int main(int argc, char **argv) {
            normL2_U[2 * i], normL2_U[2 * i + 1], normL2_V[2 * i], normL2_V[2 * i + 1],
            normL2_P[2 * i], normL2_P[2 * i + 1]);
 
+#ifdef HAVE_PETSC
+  petscFinalize();
+#endif
   return 0;
 }

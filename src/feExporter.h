@@ -7,31 +7,53 @@
 #include "feSolution.h"
 #include "feNumber.h"
 
-class feExporter {
+/* Supported visualization formats */
+typedef enum { VTK } visualizationFormat;
+
+class feExporter
+{
 protected:
   feMesh *_mesh;
   feSolution *_sol;
   feMetaNumber *_metaNumber;
-  const std::vector<feSpace *> &_space;
+  const std::vector<feSpace *> &_spaces;
 
 public:
   feExporter(feMesh *mesh, feSolution *sol, feMetaNumber *metaNumber,
-             const std::vector<feSpace *> &space)
-    : _mesh(mesh), _sol(sol), _metaNumber(metaNumber), _space(space){};
+             const std::vector<feSpace *> &feSpaces)
+    : _mesh(mesh), _sol(sol), _metaNumber(metaNumber), _spaces(feSpaces){};
   virtual ~feExporter() {}
+
+  virtual feStatus writeStep(std::string fileName) = 0;
 };
 
-class feExporterVTK : public feExporter {
+class feExporterVTK : public feExporter
+{
 protected:
 public:
-  feExporterVTK(std::string vtkFile, feMesh *mesh, feSolution *sol, feMetaNumber *metaNumber,
-                const std::vector<feSpace *> &space);
+  feExporterVTK(feMesh *mesh, feSolution *sol, feMetaNumber *metaNumber,
+                const std::vector<feSpace *> &feSpaces)
+    : feExporter(mesh, sol, metaNumber, feSpaces){};
   virtual ~feExporterVTK() {}
 
+  virtual feStatus writeStep(std::string fileName);
+
+private:
   void writeHeader(std::ostream &output);
   void writeNodes(std::ostream &output, feCncGeo *cnc);
   void writeElementsConnectivity(std::ostream &output, feCncGeo *cnc);
-  void writeField(std::ostream &output, feCncGeo *cnc, std::string fieldID);
+  void writeField(std::ostream &output, feCncGeo *cnc, feSpace *intSpace, std::string fieldID,
+                  bool LoopOverCnc = false);
 };
+
+typedef struct feExportData {
+  feExporter *exporter;
+  int exportEveryNSteps;
+  std::string fileNameRoot;
+} feExportData;
+
+feStatus createVisualizationExporter(feExporter *&exporter, visualizationFormat format,
+                                     feMetaNumber *metaNumber, feSolution *solution, feMesh *mesh,
+                                     const std::vector<feSpace *> &feSpaces);
 
 #endif

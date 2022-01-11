@@ -8,7 +8,8 @@
 
 class feSolutionContainer;
 
-class feSolution {
+class feSolution
+{
 protected:
   int _dim;
 
@@ -28,15 +29,8 @@ protected:
 
 public:
   feSolution(feMesh *mesh, const std::vector<feSpace *> &space, const std::vector<feSpace *> &essBC,
-             feMetaNumber *metaNumber)
-    : _dim(mesh->getDim()), _space(space), _essBC(essBC), _c0(0.), _tn(0.) {
-    _sol.resize(metaNumber->getNbDOFs());
-    _dsoldt.resize(metaNumber->getNbDOFs());
-    for(int i = 0; i < metaNumber->getNbDOFs(); ++i) {
-      _sol[i] = 0.0;
-      _dsoldt[i] = 0.0;
-    }
-  };
+             feMetaNumber *metaNumber);
+  feSolution(std::string solutionFile);
   ~feSolution() {}
 
   void initializeTemporalSolution(double t0, double t1, int nTimeSteps);
@@ -44,7 +38,7 @@ public:
   void initializeEssentialBC(feMesh *mesh, feMetaNumber *metaNumber,
                              feSolutionContainer *solContainer = nullptr);
 
-  int getC0() { return _c0; }
+  double getC0() { return _c0; }
   void setC0(double c0) { _c0 = c0; }
   double getCurrentTime() { return _tn; }
   void setCurrentTime(double t) { _tn = t; }
@@ -63,7 +57,7 @@ public:
   void setSolDotAtDOF(int iDOF, double val) { _dsoldt[iDOF] = val; }
   void setSolDotToZero();
 
-  void printSol();
+  void printSol(std::string file = "");
 };
 
 #endif

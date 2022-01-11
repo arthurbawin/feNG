@@ -3,7 +3,8 @@
 
 // Inspired from MFEM
 
-class feElement {
+class feElement
+{
 public:
   enum GeoType { POINT, LINE, TRIANGLE, QUADRILATERAL };
 

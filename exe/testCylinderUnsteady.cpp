@@ -17,43 +17,56 @@
 #include "feExporter.h"
 #include "feRecovery.h"
 #include "feMetric.h"
+#include "feCurvedAdapt.h"
+
+// Diamètre du cylindre et nombre de Reynolds
+static double h = 4.0;
+static double cx = h / 2.;
+static double cy = h / 2.;
+static double r = 0.25;
+static double d = 2 * r;
+static double U = 1.0;
+static double rho = 1.0;
+static double Re = 100.0;
+static double mu = rho * U * d / Re;
 
 double fInlet(const double t, const std::vector<double> &pos, const std::vector<double> &par) {
   double y = pos[1];
-  double h = 4.0;
   double tEnd = 2.0;
   double tRamp = fmin(1.0, t / tEnd);
 
   return 1.0 + 2.0 * y / h * (1.0 - tRamp);
+  // return 1.0;
 }
 
 double fZero(const double t, const std::vector<double> &pos, const std::vector<double> &par) {
   return 0.0;
 }
 
+// double fMu(const double t, const std::vector<double> &pos, const std::vector<double> &par) {
+//   double x = pos[0];
+//   double y = pos[1];
+//   if((x-cx)*(x-cx) + (y-cy)*(y-cy) > r*r){
+//     return mu;
+//   } else{
+//     return mu * 10000.0;
+//   }
+// }
+
 int main(int argc, char **argv) {
 #ifdef HAVE_PETSC
   petscInitialize(argc, argv);
 #endif
 
-  // Diamètre du cylindre et nombre de Reynolds
-  double r = 0.25;
-  double d = 2 * r;
-  double U = 1.0;
-  double rho = 1.0;
-  double Re = 100.0;
-  double mu = rho * U * d / Re;
-
   std::vector<double> stokesParam = {rho, mu};
   feFunction *funZero = new feFunction(fZero, {});
   feFunction *funInlet = new feFunction(fInlet, {});
+  // feFunction *funViscosity = new feFunction(fMu, {});
 
   std::string root, meshName, metricMeshName, nextMeshName;
 
-  // meshName = "../../data/cyl1Msh2.msh";
-  meshName = "../../data/cylLargeBox1Msh2.msh";
-  size_t lastindex = meshName.find_last_of(".");
-  root = meshName.substr(0, lastindex);
+  root = "../../data/cylindreJF/";
+  meshName = "../../data/cylindreJF/cylindre.msh";
 
   feMesh2DP1 *mesh = new feMesh2DP1(meshName, false);
   feMesh2DP1 *otherMesh;
@@ -74,19 +87,21 @@ int main(int argc, char **argv) {
   feTolerances tol{1e-6, 1e-6, 50};
 
   double t0 = 0.;
-  double t1 = 20.0;
-  int nIter = 20;
-  int nStepsPerAdaptationCycle = 4;
+  double t1 = 50.0;
+  int nIter = 10;
+  int nStepsPerAdaptationCycle = 10;
   int nTotalSteps = nIter * nStepsPerAdaptationCycle;
 
-  int dQuad = 9;
+  int dQuad = 15;
 
   BDF2Solver *solver;
 
   std::string elemType = "P2P1";
+  int deg = 2;
 
   for(int iter = 0; iter < nIter; ++iter) {
     if(elemType == "P2P1") {
+      deg = 2;
       U_bas = new feSpace1DP2(mesh, "U", "Bas", funZero);
       U_haut = new feSpace1DP2(mesh, "U", "Haut", funZero);
       U_gauche = new feSpace1DP2(mesh, "U", "Gauche", funInlet); // Inlet
@@ -101,6 +116,7 @@ int main(int argc, char **argv) {
 
       P_surface = new feSpaceTriP1(mesh, "P", "Surface", funZero);
     } else if(elemType == "P3P2") {
+      deg = 3;
       U_bas = new feSpace1DP3(mesh, "U", "Bas", funZero);
       U_haut = new feSpace1DP3(mesh, "U", "Haut", funZero);
       U_gauche = new feSpace1DP3(mesh, "U", "Gauche", funInlet); // Inlet
@@ -134,10 +150,12 @@ int main(int argc, char **argv) {
 
     feLinearSystemPETSc *linearSystem =
       new feLinearSystemPETSc(argc, argv, formMatrices, formResiduals, metaNumber, mesh);
-
+    std::string CodeIni = "BDF1/DCF"; // Define the way of initialization |"SolEx"->for exact
+                                      // solution|  |"BDF1/DCF"->using only initial conditions|
     if(iter == 0) {
       // Initialize a new BDF2 integrator
-      solver = new BDF2Solver(tol, metaNumber, linearSystem, sol, norms, mesh, t0, t1, nTotalSteps);
+      solver = new BDF2Solver(tol, metaNumber, linearSystem, sol, norms, mesh, t0, t1, nTotalSteps,
+                              CodeIni);
     } else {
       // Update the existing integrator
       sol->setSolFromContainer(solver->getSolutionContainer(), 0);
@@ -168,30 +186,53 @@ int main(int argc, char **argv) {
 
     solver->makeSteps(nStepsPerAdaptationCycle, fespace);
 
+    metricMeshName = root + "sizeField" + std::to_string(iter + 1) + ".msh";
+    nextMeshName = root + "adapted" + std::to_string(iter + 1) + ".msh";
+
     std::vector<double> estErreur(2, 0.);
-    feRecovery *recU = new feRecovery(metaNumber, U_surface, mesh, sol, estErreur, funZero);
-    // feRecovery *recV = new feRecovery(metaNumber, V_surface, mesh, sol, estErreur, funZero);
-    // feRecovery *recP = new feRecovery(metaNumber, P_surface, mesh, sol, estErreur, funZero);
+    feRecovery *recU = new feRecovery(metaNumber, U_surface, mesh, sol, estErreur, funZero,
+                                      meshName, metricMeshName);
+    // feRecovery *recV = new feRecovery(metaNumber, V_surface, mesh, sol, estErreur, funZero,
+    // meshName, metricMeshName); feRecovery *recP = new feRecovery(metaNumber, P_surface, mesh,
+    // sol, estErreur, funZero);
+
+    double modelSize = 10.;
 
     feMetricOptions metricOptions;
+    metricOptions.computationMethod = 3;
+    metricOptions.polynomialDegree = deg;
     metricOptions.nTargetVertices = 2500;
-    metricOptions.hMin = 0.000001;
-    metricOptions.hMax = 100;
-    metricOptions.computationMethod = 1;
+    metricOptions.eTargetError = 5e-5;
+    metricOptions.hMin = modelSize / 10000.;
+    metricOptions.hMax = modelSize / 6.;
     metricOptions.LpNorm = 2.0;
     metricOptions.nPhi = 801;
 
-    metricMeshName = root + "SizeField" + std::to_string(iter + 1) + ".msh";
-    nextMeshName = root + "Adapted" + std::to_string(iter + 1) + ".msh";
+    switch(metricOptions.computationMethod) {
+    case 1: {
+      feMetric *metric = new feMetric(recU, metricOptions);
+      metric->writeSizeFieldGmsh(meshName, metricMeshName);
 
-    feMetric *metric = new feMetric(recU, metricOptions);
-    metric->writeSizeFieldGmsh(meshName, metricMeshName);
+      std::string cmdMMGS = "mmg2d " + metricMeshName + " -o " + nextMeshName + " -hgrad 3";
+      std::string cmdGMSH = "gmsh " + nextMeshName + " &";
 
-    std::string cmdMMGS = "mmg2d " + metricMeshName + " -o " + nextMeshName + " -hgrad 100";
-    std::string cmdGMSH = "gmsh " + nextMeshName + " &";
+      system(cmdMMGS.c_str());
+      system(cmdGMSH.c_str());
 
-    system(cmdMMGS.c_str());
-    system(cmdGMSH.c_str());
+      delete metric;
+    } break;
+
+    case 3: {
+      std::vector<feRecovery *> rec = {recU};
+      int useAnalytical = 0;
+      feCurvedAdapt foo(mesh, rec, metricOptions, meshName, metricMeshName, nextMeshName,
+                        useAnalytical);
+      std::string cmdGMSH = "gmsh " + nextMeshName + " &";
+      system(cmdGMSH.c_str());
+    } break;
+
+    default:;
+    }
 
     std::string vtkFile = "transferFrom" + std::to_string(iter + 1) + ".vtk";
     feExporterVTK writerFrom(vtkFile, mesh, sol, metaNumber, fespace);
@@ -268,7 +309,6 @@ int main(int argc, char **argv) {
     delete otherMetaNumber;
 
     for(feSpace *fS : otherSpaces) delete fS;
-    delete metric;
     delete recU;
     delete linearSystem;
     delete NS2D;

@@ -4,7 +4,8 @@
 #include <vector>
 #include <functional>
 
-class feFunction {
+class feFunction
+{
 protected:
   std::function<double(const double, const std::vector<double> &, const std::vector<double> &)>
     _fct;
@@ -21,7 +22,8 @@ public:
   double eval(const double t, const std::vector<double> &x) { return _fct(t, x, _par); }
 };
 
-class feVectorFunction {
+class feVectorFunction
+{
 protected:
   std::function<void(const double, const std::vector<double> &, const std::vector<double> &,
                      std::vector<double> &)>
@@ -36,9 +38,11 @@ public:
     : _fct(fct), _par(par){};
   ~feVectorFunction() {}
 
-  void eval(const double t, const std::vector<double> &x, std::vector<double> &res) {
+  void eval(const double t, const std::vector<double> &x, std::vector<double> &res)
+  {
     return _fct(t, x, _par, res);
   }
+  std::vector<double> getParam() { return _par; }
 };
 
 #endif

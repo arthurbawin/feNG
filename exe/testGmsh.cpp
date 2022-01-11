@@ -80,19 +80,19 @@ int main(int argc, char **argv) {
     feRecovery recovery(&metaNumber, &U_surface, &mesh, &sol, estErreur, &funSol);
     std::vector<feRecovery *> rec = {&recovery};
 
-    feCurvedAdapt foo(&mesh, rec);
+    // feMetricOptions metricOptions;
+    // metricOptions.computationMethod = 1;
+    // metricOptions.nTargetVertices = 1000 * pow(2,iter);
+    // metricOptions.hMin = 0.000001;
+    // metricOptions.hMax = 100;
+    // metricOptions.LpNorm = 2.0;
+    // metricOptions.nPhi = 501;
+
+    // feCurvedAdapt foo(&mesh, rec);
 
     // std::cout<<estErreur[0]<<" -- "<<estErreur[1]<<std::endl;
     // normL2_recons[2*iter] = estErreur[0];
     // normL2_recons_exacte[2*iter] = estErreur[1];
-
-    // feMetricOptions metricOptions;
-    // metricOptions.nTargetVertices = 1000 * pow(2,iter);
-    // metricOptions.hMin = 0.000001;
-    // metricOptions.hMax = 100;
-    // metricOptions.computationMethod = 1;
-    // metricOptions.LpNorm = 2.0;
-    // metricOptions.nPhi = 501;
 
     // feMetric *metric = new feMetric(rec, metricOptions);
     // metric->writeSizeFieldGmsh(meshName, metricMeshName);

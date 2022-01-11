@@ -11,10 +11,10 @@
 
 #if defined(HAVE_MKL)
 
-class feLinearSystemMklPardiso : public feLinearSystem {
+class feLinearSystemMklPardiso : public feLinearSystem
+{
 public:
-  feLinearSystemMklPardiso(std::vector<feBilinearForm *> &formMatrices,
-                           std::vector<feBilinearForm *> &formResiduals, feMetaNumber *metaNumber,
+  feLinearSystemMklPardiso(std::vector<feBilinearForm *> bilinearForms, feMetaNumber *metaNumber,
                            feMesh *mesh);
   virtual ~feLinearSystemMklPardiso();
 
@@ -28,11 +28,13 @@ public:
   void setPardisoMsglvlLow() { MSGLVL = 0; };
   void print_matrix();
   bool getSymbolicFactorizationStatus() { return symbolicFactorization; }
-  void setSymbolicFactorizationStatus(bool status) {
+  void setSymbolicFactorizationStatus(bool status)
+  {
     symbolicFactorization = status;
     if(symbolicFactorization) recomputeMatrix = true;
   }
-  void toggleSymbolicFactorizationStatus() {
+  void toggleSymbolicFactorizationStatus()
+  {
     symbolicFactorization = !symbolicFactorization;
     if(symbolicFactorization) recomputeMatrix = true;
   }
@@ -57,6 +59,7 @@ public:
   virtual void assembleResiduals(feSolution *sol); // MATLAB : SOMME_LE RESIDU
   virtual void assemble(feSolution *sol); // MATLAB : SOMME MATRICE ET RESIDU
   virtual void assignResidualToDCResidual(feSolutionContainer *solContainer);
+  virtual void applyCorrectionToResidual(double coeff, std::vector<double> &d);
   virtual void correctSolution(feSolution *sol); // MATLAB : ------
   virtual void correctSolution(double *sol); // MATLAB : ------
 protected:
