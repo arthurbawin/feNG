@@ -153,7 +153,7 @@ endif()
 # See also src/CmakeLists.txt for the .cpp files
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/contrib/gmsh)
 
-list(APPEND feNG_EXTERNAL_LIBS "-Wl,-no-as-needed,-lprofiler")
+# list(APPEND feNG_EXTERNAL_LIBS "-Wl,-no-as-needed,-lprofiler")
 
 MESSAGE(STATUS "External libs for feNG : ${feNG_EXTERNAL_LIBS}")
 
