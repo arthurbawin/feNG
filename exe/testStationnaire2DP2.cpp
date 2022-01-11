@@ -14,8 +14,10 @@
 #include "feBilinearForm.h"
 #include "feSolver.h"
 #include "feLinearSystemPETSc.h"
-#include "feLinearSystemMklPardiso.h"
 #include "feExporter.h"
+#ifdef HAVE_MKL
+#include "feLinearSystemMklPardiso.h"
+#endif
 
 double fSol(const double t, const std::vector<double> x, const std::vector<double> par) {
   return pow(x[0], 6);
@@ -59,13 +61,13 @@ int main(int argc, char **argv) {
   std::vector<int> nElm(nIter, 0);
 
   for(int iter = 0; iter < nIter; ++iter) {
-    std::string meshName = "square.msh";
+    std::string meshName = "../../data/Square/square_1edge_1.msh";
 
     feMesh2DP1 *mesh = new feMesh2DP1(meshName, false);
     nElm[iter] = mesh->getNbInteriorElems();
 
     feSpace1DP3 U_bord = feSpace1DP3(mesh, "U", "Bord", funSol);
-    feSpaceTriP3 U_surface = feSpaceTriP3(mesh, "U", "Domaine", funSol);
+    feSpaceTriP3 U_surface = feSpaceTriP3(mesh, "U", "Surface", funSol);
 
     std::vector<feSpace *> fespace = {&U_bord, &U_surface};
     std::vector<feSpace *> feEssBC = {&U_bord};
@@ -77,8 +79,10 @@ int main(int argc, char **argv) {
     int nQuad = 8;
     std::vector<feSpace *> spaceDiffusion2D_U = {&U_surface};
     std::vector<feSpace *> spaceSource2D_U = {&U_surface};
-    feBilinearForm *diffU = new feBilinearForm(spaceDiffusion2D_U, mesh, nQuad, new feSysElm_2D_Diffusion(kd, nullptr));
-    feBilinearForm *sourceU = new feBilinearForm(spaceSource2D_U, mesh, nQuad, new feSysElm_2D_Source(1.0, funSource));
+    feBilinearForm *diffU =
+      new feBilinearForm(spaceDiffusion2D_U, mesh, nQuad, new feSysElm_2D_Diffusion(kd, nullptr));
+    feBilinearForm *sourceU =
+      new feBilinearForm(spaceSource2D_U, mesh, nQuad, new feSysElm_2D_Source(1.0, funSource));
 
     std::vector<feBilinearForm *> formMatrices = {diffU};
     std::vector<feBilinearForm *> formResiduals = {diffU, sourceU};
@@ -97,15 +101,15 @@ int main(int argc, char **argv) {
 
     // printf("Measuring time from here\n");
     // tic();
+#ifdef HAVE_MKL
     feLinearSystemMklPardiso *linearSystem;
     linearSystem = new feLinearSystemMklPardiso(formMatrices, formResiduals, metaNumber, mesh);
     // toc();
 
-    
-
     // return 1;
 
-    StationarySolver *solver = new StationarySolver(tol, metaNumber, linearSystem, sol, norms, mesh);
+    StationarySolver *solver =
+      new StationarySolver(tol, metaNumber, linearSystem, sol, norms, mesh);
     solver->makeSteps(0, fespace);
 
     std::string vtkFile = "sol.vtk";
@@ -118,6 +122,7 @@ int main(int argc, char **argv) {
     delete sol;
     delete metaNumber;
     delete mesh;
+#endif
   }
   delete funSource;
   delete funSol;

@@ -547,16 +547,20 @@ int mainTriangleInterpolation(int argc, char **argv) {
   return 0;
 }
 
-static SMetric3 gradationAlauzet(double grad, const SMetric3 &mp, const SMetric3 &mq, double xp, double yp, double xq, double yq){
-  double lpq = sqrt((xp-xq)*(xp-xq) + (yp-yq)*(yp-yq));
+static SMetric3 gradationAlauzet(double grad, const SMetric3 &mp, const SMetric3 &mq, double xp,
+                                 double yp, double xq, double yq) {
+  double lpq = sqrt((xp - xq) * (xp - xq) + (yp - yq) * (yp - yq));
   fullMatrix<double> V(3, 3);
   fullVector<double> S(3);
   mq.eig(V, S, false);
-  double eta1sq = (1. + sqrt(S(0)) * lpq * log(grad)); eta1sq = 1./(eta1sq*eta1sq);
-  double eta2sq = (1. + sqrt(S(1)) * lpq * log(grad)); eta2sq = 1./(eta2sq*eta2sq);
-  double eta3sq = (1. + sqrt(S(2)) * lpq * log(grad)); eta3sq = 1./(eta3sq*eta3sq);
+  double eta1sq = (1. + sqrt(S(0)) * lpq * log(grad));
+  eta1sq = 1. / (eta1sq * eta1sq);
+  double eta2sq = (1. + sqrt(S(1)) * lpq * log(grad));
+  eta2sq = 1. / (eta2sq * eta2sq);
+  double eta3sq = (1. + sqrt(S(2)) * lpq * log(grad));
+  eta3sq = 1. / (eta3sq * eta3sq);
   SMetric3 N(eta1sq, eta2sq, eta3sq, E_X, E_Y, E_Z);
-  SMetric3 L(S(0),   S(1),   S(2),   E_X, E_Y, E_Z);
+  SMetric3 L(S(0), S(1), S(2), E_X, E_Y, E_Z);
   // Compute V^T*N*Diag(lambda)*V
   STensor3 R, Rt;
   R.setMat(V);
@@ -566,7 +570,7 @@ static SMetric3 gradationAlauzet(double grad, const SMetric3 &mp, const SMetric3
   Rt *= R;
   Rt.set_m33(1.0); // Enforce M_33 = 1
   // Check result is symmetric
-  if(fabs(Rt(0,1) - Rt(1,0)) > 1e-6){
+  if(fabs(Rt(0, 1) - Rt(1, 0)) > 1e-6) {
     Rt.print("Rt");
     exit(-1);
   }
@@ -580,73 +584,129 @@ static SMetric3 gradationAlauzet(double grad, const SMetric3 &mp, const SMetric3
   // return intersection_reductionSimultanee(tmp, mp);
 }
 
-static SMetric3 gradationAlauzetExplicite(double grad, const SMetric3 &mp, const SMetric3 &mq, double xp, double yp, double xq, double yq){
-  double lpq = sqrt((xp-xq)*(xp-xq) + (yp-yq)*(yp-yq));
-  double lxyGrad = lpq*log(grad);
-  double a1 = mq(0,0);
-  double b1 = mq(0,1);
-  double c1 = mq(1,1);
+static SMetric3 gradationAlauzetExplicite(double grad, const SMetric3 &mp, const SMetric3 &mq,
+                                          double xp, double yp, double xq, double yq) {
+  double lpq = sqrt((xp - xq) * (xp - xq) + (yp - yq) * (yp - yq));
+  double lxyGrad = lpq * log(grad);
+  double a1 = mq(0, 0);
+  double b1 = mq(0, 1);
+  double c1 = mq(1, 1);
 
-  double a = (pow((c1/b1 - (a1/2 + c1/2 - sqrt(a1*a1 - 2*a1*c1 + 4*b1*b1 + c1*c1)/2)/b1),2)*(a1/2 + c1/2 - sqrt(a1*a1 - 2*a1*c1 + 4*b1*b1 + c1*c1)/2)) / 
-  (pow((lxyGrad*sqrt(a1/2 + c1/2 - sqrt(a1*a1 - 2*a1*c1 + 4*b1*b1 + c1*c1)/2) + 1),2) * (pow(fabs(c1/b1 - (a1/2 + c1/2 - sqrt(a1*a1 - 2*a1*c1 + 4*b1*b1 + c1*c1)/2)/b1),2) + 1)) + 
-  (pow((c1/b1 - (a1/2 + c1/2 + sqrt(a1*a1 - 2*a1*c1 + 4*b1*b1 + c1*c1)/2)/b1),2)*(a1/2 + c1/2 + sqrt(a1*a1 - 2*a1*c1 + 4*b1*b1 + c1*c1)/2)) / 
-  (pow((lxyGrad*sqrt(a1/2 + c1/2 + sqrt(a1*a1 - 2*a1*c1 + 4*b1*b1 + c1*c1)/2) + 1),2)*(pow(fabs(c1/b1 - (a1/2 + c1/2 + sqrt(a1*a1 - 2*a1*c1 + 4*b1*b1 + c1*c1)/2)/b1),2) + 1));
+  double a =
+    (pow(
+       (c1 / b1 - (a1 / 2 + c1 / 2 - sqrt(a1 * a1 - 2 * a1 * c1 + 4 * b1 * b1 + c1 * c1) / 2) / b1),
+       2) *
+     (a1 / 2 + c1 / 2 - sqrt(a1 * a1 - 2 * a1 * c1 + 4 * b1 * b1 + c1 * c1) / 2)) /
+      (pow((lxyGrad *
+              sqrt(a1 / 2 + c1 / 2 - sqrt(a1 * a1 - 2 * a1 * c1 + 4 * b1 * b1 + c1 * c1) / 2) +
+            1),
+           2) *
+       (pow(fabs(c1 / b1 -
+                 (a1 / 2 + c1 / 2 - sqrt(a1 * a1 - 2 * a1 * c1 + 4 * b1 * b1 + c1 * c1) / 2) / b1),
+            2) +
+        1)) +
+    (pow(
+       (c1 / b1 - (a1 / 2 + c1 / 2 + sqrt(a1 * a1 - 2 * a1 * c1 + 4 * b1 * b1 + c1 * c1) / 2) / b1),
+       2) *
+     (a1 / 2 + c1 / 2 + sqrt(a1 * a1 - 2 * a1 * c1 + 4 * b1 * b1 + c1 * c1) / 2)) /
+      (pow((lxyGrad *
+              sqrt(a1 / 2 + c1 / 2 + sqrt(a1 * a1 - 2 * a1 * c1 + 4 * b1 * b1 + c1 * c1) / 2) +
+            1),
+           2) *
+       (pow(fabs(c1 / b1 -
+                 (a1 / 2 + c1 / 2 + sqrt(a1 * a1 - 2 * a1 * c1 + 4 * b1 * b1 + c1 * c1) / 2) / b1),
+            2) +
+        1));
 
-  double b = - ((c1/b1 - (a1/2 + c1/2 - sqrt(a1*a1 - 2*a1*c1 + 4*b1*b1 + c1*c1)/2)/b1)*(a1/2 + c1/2 - sqrt(a1*a1 - 2*a1*c1 + 4*b1*b1 + c1*c1)/2)) / 
-  (pow((lxyGrad*sqrt(a1/2 + c1/2 - sqrt(a1*a1 - 2*a1*c1 + 4*b1*b1 + c1*c1)/2) + 1),2)*(pow(fabs(c1/b1 - (a1/2 + c1/2 - sqrt(a1*a1 - 2*a1*c1 + 4*b1*b1 + c1*c1)/2)/b1),2) + 1)) -
-  ((c1/b1 - (a1/2 + c1/2 + sqrt(a1*a1 - 2*a1*c1 + 4*b1*b1 + c1*c1)/2)/b1)*(a1/2 + c1/2 + sqrt(a1*a1 - 2*a1*c1 + 4*b1*b1 + c1*c1)/2)) / 
-  (pow((lxyGrad*sqrt(a1/2 + c1/2 + sqrt(a1*a1 - 2*a1*c1 + 4*b1*b1 + c1*c1)/2) + 1),2)*(pow(fabs(c1/b1 - (a1/2 + c1/2 + sqrt(a1*a1 - 2*a1*c1 + 4*b1*b1 + c1*c1)/2)/b1),2) + 1));
+  double b =
+    -((c1 / b1 - (a1 / 2 + c1 / 2 - sqrt(a1 * a1 - 2 * a1 * c1 + 4 * b1 * b1 + c1 * c1) / 2) / b1) *
+      (a1 / 2 + c1 / 2 - sqrt(a1 * a1 - 2 * a1 * c1 + 4 * b1 * b1 + c1 * c1) / 2)) /
+      (pow((lxyGrad *
+              sqrt(a1 / 2 + c1 / 2 - sqrt(a1 * a1 - 2 * a1 * c1 + 4 * b1 * b1 + c1 * c1) / 2) +
+            1),
+           2) *
+       (pow(fabs(c1 / b1 -
+                 (a1 / 2 + c1 / 2 - sqrt(a1 * a1 - 2 * a1 * c1 + 4 * b1 * b1 + c1 * c1) / 2) / b1),
+            2) +
+        1)) -
+    ((c1 / b1 - (a1 / 2 + c1 / 2 + sqrt(a1 * a1 - 2 * a1 * c1 + 4 * b1 * b1 + c1 * c1) / 2) / b1) *
+     (a1 / 2 + c1 / 2 + sqrt(a1 * a1 - 2 * a1 * c1 + 4 * b1 * b1 + c1 * c1) / 2)) /
+      (pow((lxyGrad *
+              sqrt(a1 / 2 + c1 / 2 + sqrt(a1 * a1 - 2 * a1 * c1 + 4 * b1 * b1 + c1 * c1) / 2) +
+            1),
+           2) *
+       (pow(fabs(c1 / b1 -
+                 (a1 / 2 + c1 / 2 + sqrt(a1 * a1 - 2 * a1 * c1 + 4 * b1 * b1 + c1 * c1) / 2) / b1),
+            2) +
+        1));
 
-  double c = (a1/2 + c1/2 - sqrt(a1*a1 - 2*a1*c1 + 4*b1*b1 + c1*c1)/2) / 
-  (pow((lxyGrad*sqrt(a1/2 + c1/2 - sqrt(a1*a1 - 2*a1*c1 + 4*b1*b1 + c1*c1)/2) + 1),2) * (pow(fabs(c1/b1 - (a1/2 + c1/2 - sqrt(a1*a1 - 2*a1*c1 + 4*b1*b1 + c1*c1)/2)/b1),2) + 1)) +
-  (a1/2 + c1/2 + sqrt(a1*a1 - 2*a1*c1 + 4*b1*b1 + c1*c1)/2) / 
-  (pow((lxyGrad*sqrt(a1/2 + c1/2 + sqrt(a1*a1 - 2*a1*c1 + 4*b1*b1 + c1*c1)/2) + 1),2) * (pow(fabs(c1/b1 - (a1/2 + c1/2 + sqrt(a1*a1 - 2*a1*c1 + 4*b1*b1 + c1*c1)/2)/b1),2) + 1));
+  double c =
+    (a1 / 2 + c1 / 2 - sqrt(a1 * a1 - 2 * a1 * c1 + 4 * b1 * b1 + c1 * c1) / 2) /
+      (pow((lxyGrad *
+              sqrt(a1 / 2 + c1 / 2 - sqrt(a1 * a1 - 2 * a1 * c1 + 4 * b1 * b1 + c1 * c1) / 2) +
+            1),
+           2) *
+       (pow(fabs(c1 / b1 -
+                 (a1 / 2 + c1 / 2 - sqrt(a1 * a1 - 2 * a1 * c1 + 4 * b1 * b1 + c1 * c1) / 2) / b1),
+            2) +
+        1)) +
+    (a1 / 2 + c1 / 2 + sqrt(a1 * a1 - 2 * a1 * c1 + 4 * b1 * b1 + c1 * c1) / 2) /
+      (pow((lxyGrad *
+              sqrt(a1 / 2 + c1 / 2 + sqrt(a1 * a1 - 2 * a1 * c1 + 4 * b1 * b1 + c1 * c1) / 2) +
+            1),
+           2) *
+       (pow(fabs(c1 / b1 -
+                 (a1 / 2 + c1 / 2 + sqrt(a1 * a1 - 2 * a1 * c1 + 4 * b1 * b1 + c1 * c1) / 2) / b1),
+            2) +
+        1));
 
   SMetric3 m(1.0);
-  fullMatrix<double> mat(3,3);
-  mat.set(0,0,a);
-  mat.set(0,1,b);
-  mat.set(1,0,b);
-  mat.set(1,1,c);
-  mat.set(0,2,0.0);
-  mat.set(2,0,0.0);
-  mat.set(1,2,0.0);
-  mat.set(2,1,0.0);
-  mat.set(2,2,1.0);
+  fullMatrix<double> mat(3, 3);
+  mat.set(0, 0, a);
+  mat.set(0, 1, b);
+  mat.set(1, 0, b);
+  mat.set(1, 1, c);
+  mat.set(0, 2, 0.0);
+  mat.set(2, 0, 0.0);
+  mat.set(1, 2, 0.0);
+  mat.set(2, 1, 0.0);
+  mat.set(2, 2, 1.0);
   m.setMat(mat);
   return m;
 }
 
-static SMetric3 gradationAlauzetExpliciteDiagonale(double grad, const SMetric3 &mp, const SMetric3 &mq, double xp, double yp, double xq, double yq){
-  double lpq = sqrt((xp-xq)*(xp-xq) + (yp-yq)*(yp-yq));
-  double lxyGrad = lpq*log(grad);
-  std::cout<<lxyGrad<<std::endl;
-  double a1 = mq(0,0);
-  double b1 = mq(0,1);
-  double c1 = mq(1,1);
-  double a = a1/pow((sqrt(a1)*lxyGrad + 1),2);
+static SMetric3 gradationAlauzetExpliciteDiagonale(double grad, const SMetric3 &mp,
+                                                   const SMetric3 &mq, double xp, double yp,
+                                                   double xq, double yq) {
+  double lpq = sqrt((xp - xq) * (xp - xq) + (yp - yq) * (yp - yq));
+  double lxyGrad = lpq * log(grad);
+  std::cout << lxyGrad << std::endl;
+  double a1 = mq(0, 0);
+  double b1 = mq(0, 1);
+  double c1 = mq(1, 1);
+  double a = a1 / pow((sqrt(a1) * lxyGrad + 1), 2);
   double b = 0.0;
-  double c =  c1/pow((sqrt(c1)*lxyGrad + 1),2);
+  double c = c1 / pow((sqrt(c1) * lxyGrad + 1), 2);
   SMetric3 m(0.0);
-  fullMatrix<double> mat(3,3);
-  mat.set(0,0,a);
-  mat.set(0,1,b);
-  mat.set(1,0,b);
-  mat.set(1,1,c);
-  mat.set(0,2,0.0);
-  mat.set(2,0,0.0);
-  mat.set(1,2,0.0);
-  mat.set(2,1,0.0);
-  mat.set(2,2,1.0);
+  fullMatrix<double> mat(3, 3);
+  mat.set(0, 0, a);
+  mat.set(0, 1, b);
+  mat.set(1, 0, b);
+  mat.set(1, 1, c);
+  mat.set(0, 2, 0.0);
+  mat.set(2, 0, 0.0);
+  mat.set(1, 2, 0.0);
+  mat.set(2, 1, 0.0);
+  mat.set(2, 2, 1.0);
   m.setMat(mat);
   return m;
 }
 
-
-static SMetric3 gradationAlauzet2(double grad, const SMetric3 &mp, const SMetric3 &mq, double xp, double yp, double xq, double yq){
-
-  SVector3 pq(xp-xq, yp-yq, 0.);
-  double eta1sq = (1. + sqrt(dot(pq,mq,pq)) * log(grad)); eta1sq = 1./(eta1sq*eta1sq);
+static SMetric3 gradationAlauzet2(double grad, const SMetric3 &mp, const SMetric3 &mq, double xp,
+                                  double yp, double xq, double yq) {
+  SVector3 pq(xp - xq, yp - yq, 0.);
+  double eta1sq = (1. + sqrt(dot(pq, mq, pq)) * log(grad));
+  eta1sq = 1. / (eta1sq * eta1sq);
 
   SMetric3 tmp(mq);
   tmp *= eta1sq;
@@ -656,7 +716,7 @@ static SMetric3 gradationAlauzet2(double grad, const SMetric3 &mp, const SMetric
   // return intersection_reductionSimultanee(tmp, mp);
 }
 
-static void drawEllipse(SMetric3 &m, double xC, double yC, FILE* file, double color){
+static void drawEllipse(SMetric3 &m, double xC, double yC, FILE *file, double color) {
   int nt = 30;
   std::vector<double> x(nt, 0.);
   std::vector<double> y(nt, 0.);
@@ -673,11 +733,12 @@ static void drawEllipse(SMetric3 &m, double xC, double yC, FILE* file, double co
 }
 
 int mainGradation(int argc, char **argv) {
-
   double color = 10.0;
 
-  SVector3 v0( 1., 1., 0.); v0.normalize();
-  SVector3 v1(-1., 1., 0.); v1.normalize();
+  SVector3 v0(1., 1., 0.);
+  v0.normalize();
+  SVector3 v1(-1., 1., 0.);
+  v1.normalize();
   SVector3 v2 = E_Z;
   SMetric3 m = SMetric3(0.004, 1.0, 1., v0, v1, E_Z);
   // SMetric3 m = SMetric3(0.004, 1.0, 1., E_X, E_Y, E_Z);
@@ -685,10 +746,10 @@ int mainGradation(int argc, char **argv) {
   // Draw the initial metric
   FILE *myfile = fopen("gradationTest.pos", "w");
   fprintf(myfile, "View \"gradationTest\"{\n");
-  double factor = 10.0;
+  double factor = 50.0;
   double x1 = 0.0;
   double y1 = 0.0;
-  // drawEllipse(m, x1, y1, myfile, color);
+  drawEllipse(m, x1, y1, myfile, color);
 
   // int nPoints = 7;
   // double L = 10.0;
@@ -711,10 +772,12 @@ int mainGradation(int argc, char **argv) {
   //     getEllipsePoints(m2(0, 0), 2.0 * m2(0, 1), m2(1, 1), x2, y2, x, y);
   //     for(int i = 0; i < nt; ++i) {
   //       if(i != nt - 1) {
-  //         fprintf(myfile, "SL(%.16g,%.16g,%.16g,%.16g,%.16g,%.16g){%.16g, %.16g};\n", x[i], y[i], 0.,
+  //         fprintf(myfile, "SL(%.16g,%.16g,%.16g,%.16g,%.16g,%.16g){%.16g, %.16g};\n", x[i], y[i],
+  //         0.,
   //                 x[i + 1], y[i + 1], 0., color, color);
   //       } else {
-  //         fprintf(myfile, "SL(%.16g,%.16g,%.16g,%.16g,%.16g,%.16g){%.16g, %.16g};\n", x[i], y[i], 0.,
+  //         fprintf(myfile, "SL(%.16g,%.16g,%.16g,%.16g,%.16g,%.16g){%.16g, %.16g};\n", x[i], y[i],
+  //         0.,
   //                 x[0], y[0], 0., color, color);
   //       }
   //     }
@@ -727,11 +790,11 @@ int mainGradation(int argc, char **argv) {
 
   m.print("input");
   SMetric3 mFrom1At2 = gradationAlauzet(1.2, SMetric3(10000.0), m, x1, y1, x2, y2);
-  // drawEllipse(mFrom1At2, x2, y2, myfile, 2*color);
+  drawEllipse(mFrom1At2, x2, y2, myfile, 2 * color);
 
   m.print("input");
   SMetric3 mFrom1At2Sym = gradationAlauzetExplicite(1.2, SMetric3(10000.0), m, x1, y1, x2, y2);
-  // drawEllipse(mFrom1At2Sym, x2, y2, myfile, 3*color);
+  drawEllipse(mFrom1At2Sym, x2, y2, myfile, 3 * color);
 
   mFrom1At2.print("reg");
   mFrom1At2Sym.print("sym");

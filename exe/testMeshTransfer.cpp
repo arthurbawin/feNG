@@ -89,8 +89,8 @@ int main(int argc, char **argv) {
     std::vector<feBilinearForm *> formMatrices = {diffU, diffV};
     std::vector<feBilinearForm *> formResiduals = {diffU, diffV, sourceU, sourceV};
 
-    feNorm *normU = new feNorm(&U_surface, mesh, nQuad, funSol);
-    feNorm *normV = new feNorm(&V_surface, mesh, nQuad, funSol);
+    feNorm *normU = new feNorm({&U_surface}, mesh, nQuad, funSol);
+    feNorm *normV = new feNorm({&V_surface}, mesh, nQuad, funSol);
     std::vector<feNorm *> norms = {normU, normV};
 
     feLinearSystemPETSc *linearSystem =

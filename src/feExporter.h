@@ -41,7 +41,7 @@ private:
   void writeHeader(std::ostream &output);
   void writeNodes(std::ostream &output, feCncGeo *cnc);
   void writeElementsConnectivity(std::ostream &output, feCncGeo *cnc);
-  void writeField(std::ostream &output, feCncGeo *cnc, feSpace *intSpace, std::string fieldID);
+  void writeField(std::ostream &output, feCncGeo *cnc, feSpace *intSpace, std::string fieldID, bool LoopOverCnc = false);
 };
 
 typedef struct feExportData {

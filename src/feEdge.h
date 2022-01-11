@@ -10,10 +10,10 @@ protected:
   Vertex *_v0;
   Vertex *_v1;
   // The edge's unique number
-  int _tag; 
+  int _tag;
   // The physical tag of Line finite element associated to the edge
   // _pTag = -1 if the edge is not associated to any Line element
-  int _pTag; 
+  int _pTag;
 
 public:
   Edge() {}

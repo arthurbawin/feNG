@@ -82,10 +82,11 @@ void feExporterVTK::writeElementsConnectivity(std::ostream &output, feCncGeo *cn
   for(int iElm = 0; iElm < nElm; ++iElm) { output << vtkElem << std::endl; }
 }
 
-void feExporterVTK::writeField(std::ostream &output, feCncGeo *cnc, feSpace *intSpace, std::string fieldID) {
+void feExporterVTK::writeField(std::ostream &output, feCncGeo *cnc, feSpace *intSpace, std::string fieldID,
+                               bool LoopOverCnc) {
   std::vector<double> &sol = _sol->getSolutionReference();
   // int nNod = cnc->getNbNodes();
-  int nNod = _mesh->getNbNodes();
+  int nNod = LoopOverCnc ? cnc->getNbNodes() : _mesh->getNbNodes();
   feNumber *n = _metaNumber->getNumbering(fieldID);
   // int nNod = n->getNbNodes();
   output << "SCALARS " << fieldID << " double 1" << std::endl;
@@ -94,7 +95,7 @@ void feExporterVTK::writeField(std::ostream &output, feCncGeo *cnc, feSpace *int
   // Write field(s) to a text file
   std::string fileName = "solution" + fieldID + ".txt";
   FILE *f = fopen(fileName.c_str(), "w");
-
+  std::vector<double> V(_mesh->getNbNodes(), 0.);
   for(int iNode = 0; iNode < nNod; ++iNode) {
     int iDOF = n->getDOFNumberAtVertex(iNode);
     if(iDOF >= 0){
@@ -132,7 +133,6 @@ void feExporterVTK::writeField(std::ostream &output, feCncGeo *cnc, feSpace *int
     }
     fprintf(f, "%+-16.16e\n", sol[iDOF]);
   }
-
   fclose(f);
 }
 
@@ -164,7 +164,7 @@ feStatus feExporterVTK::writeStep(std::string fileName)
     feCncGeo *cnc;
     for(feSpace *fS : spacesToExport) {
       if(fS->getCncGeoID() == *cncToExport.begin()) {
-      // if(fS->getCncGeoID() == "first") {
+        // if(fS->getCncGeoID() == "first") {
         cnc = fS->getCncGeo();
         break;
       }
@@ -183,7 +183,7 @@ feStatus feExporterVTK::writeStep(std::string fileName)
     // Write the field associated to each fespace in spacesToExport
     for(feSpace *fS : spacesToExport) {
       if(cnc->getForme() == "TriP1" || cnc->getForme() == "TriP2") {
-        writeField(output, cnc, fS, fS->getFieldID());
+        writeField(output, cnc, fS, fS->getFieldID(), false);
       } else {
         return feErrorMsg(FE_STATUS_WRITE_ERROR, "So far only P1 and P2 triangles can be exported to a VTK file...");
       }

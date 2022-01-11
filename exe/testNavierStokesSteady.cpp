@@ -117,11 +117,8 @@ int main(int argc, char **argv) {
   std::string elemType = "P2P1";
 
   for(int iter = 0; iter < nIter; ++iter) {
-    // std::string meshName = "../../data/squareTaylorGreen" + std::to_string(iter + 1) + ".msh";
-    // std::string root = "../../data/squareTaylorGreen";
     // std::string meshName = "../../data/squareTaylorGreen2.msh";
-    // std::string meshName = "../../data/squareCoarse" + std::to_string(iter+1) + ".msh";
-    // std::string meshName = "../../data/square" + std::to_string(iter+1) + ".msh";
+    std::string meshName = "../../data/Square/squareNS" + std::to_string(iter + 1) + ".msh";
     // std::string meshName = "../../data/squarePression" + std::to_string(iter+1) + ".msh";
 
     // mesh = new feMesh2DP1(meshName, false);
@@ -230,8 +227,8 @@ int main(int argc, char **argv) {
     // std::string vtkFile = "../../data/taylorGreenUnsteady" + std::to_string(iter+1) + ".vtk";
     // feExporterVTK writer(vtkFile, mesh, sol, metaNumber, fespace);
 
-    metricMeshName = root + "sizeField" + std::to_string(iter + 1) + ".msh";
-    nextMeshName = root + "adapted" + std::to_string(iter + 1) + ".msh";
+    // metricMeshName = root + "sizeField" + std::to_string(iter + 1) + ".msh";
+    // nextMeshName = root + "adapted" + std::to_string(iter + 1) + ".msh";
 
     std::vector<double> estErreur(2, 0.);
     feRecovery *recU = new feRecovery(metaNumber, U_surface, mesh, sol, estErreur, funZero,
@@ -254,7 +251,8 @@ int main(int argc, char **argv) {
 
     std::vector<feRecovery *> rec = {recU};
     int useAnalytical = 0;
-    feCurvedAdapt foo(mesh, rec, metricOptions, meshName, metricMeshName, nextMeshName, useAnalytical);
+    feCurvedAdapt foo(mesh, rec, metricOptions, meshName, metricMeshName, nextMeshName,
+                      useAnalytical);
     std::string cmdGMSH = "gmsh " + nextMeshName + " &";
     system(cmdGMSH.c_str());
 

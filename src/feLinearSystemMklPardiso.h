@@ -55,6 +55,7 @@ public:
   virtual void assembleResiduals(feSolution *sol); // MATLAB : SOMME_LE RESIDU
   virtual void assemble(feSolution *sol); // MATLAB : SOMME MATRICE ET RESIDU
   virtual void assignResidualToDCResidual(feSolutionContainer *solContainer);
+  virtual void applyCorrectionToResidual(double coeff, std::vector<double> &d);
   virtual void correctSolution(feSolution *sol); // MATLAB : ------
   virtual void correctSolution(double *sol); // MATLAB : ------
 protected:

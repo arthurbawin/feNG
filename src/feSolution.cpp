@@ -84,11 +84,12 @@ void feSolution::initializeUnknowns(feMesh *mesh, feMetaNumber *metaNumber) {
 
         // If the function given to the feSpace is null, the solution is not changed,
         // i.e. we continue with the value from a previous computation.
-        if(fS->isFctDefined()){
+        if(fS->isFctDefined()) {
           double val = fS->evalFun(_tn, x);
           _sol[fS->getAddressingVectorAt(j)] = val;
-        } else{
-          // printf("Sol un changed in field %s - %s\n", fS->getFieldID().c_str(), fS->getCncGeoID().c_str());
+        } else {
+          // printf("Sol un changed in field %s - %s\n", fS->getFieldID().c_str(),
+          // fS->getCncGeoID().c_str());
         }
       }
     }
@@ -99,13 +100,14 @@ void feSolution::initializeEssentialBC(feMesh *mesh, feMetaNumber *metaNumber,
                                        feSolutionContainer *solContainer) {
   for(feSpace *const &fS : _essBC) {
     int nElm = mesh->getNbElm(fS->getCncGeoID());
-    // std::cout<<"Initializing essential BC on "<<nElm<<" elements on cnc "<<fS->getCncGeoID()<<std::endl;
+    // std::cout<<"Initializing essential BC on "<<nElm<<" elements on cnc
+    // "<<fS->getCncGeoID()<<std::endl;
     std::vector<double> coor = fS->getLcoor();
     feSpace *geoSpace = mesh->getGeometricSpace(fS->getCncGeoID());
     for(int iElm = 0; iElm < nElm; ++iElm) {
       fS->initializeAddressingVector(metaNumber->getNumbering(fS->getFieldID()), iElm);
       // std::cout<<"On elem "<<iElm<<std::endl;
-      for(int kk = 0; kk < fS->getNbFunctions(); ++kk){
+      for(int kk = 0; kk < fS->getNbFunctions(); ++kk) {
         // std::cout<<fS->getAddressingVectorAt(kk)<<std::endl;
       }
       std::vector<double> localCoord = mesh->getCoord(fS->getCncGeoID(), iElm);
@@ -113,19 +115,21 @@ void feSolution::initializeEssentialBC(feMesh *mesh, feMetaNumber *metaNumber,
         double r[3] = {coor[3 * j], coor[3 * j + 1], coor[3 * j + 2]};
         std::vector<double> x(3, 0.0);
         geoSpace->interpolateVectorField(localCoord, r, x);
-        if(fS->isFctDefined()){
+        if(fS->isFctDefined()) {
           _sol[fS->getAddressingVectorAt(j)] = fS->evalFun(_tn, x);
           // printf("Initializing _sol[%d] = %f en (%+-4.4e, %+-4.4e)\n", fS->getAddressingVectorAt(j), _sol[fS->getAddressingVectorAt(j)], x[0], x[1]);
         }else{
           printf("BC Sol un changed in field %s - %s\n", fS->getFieldID().c_str(), fS->getCncGeoID().c_str());
         }
-        // printf("_sol[%d] = %f\n", fS->getAddressingVectorAt(j), _sol[fS->getAddressingVectorAt(j)]);
+        // printf("_sol[%d] = %f\n", fS->getAddressingVectorAt(j),
+        // _sol[fS->getAddressingVectorAt(j)]);
         if(solContainer != nullptr) {
-          if(fS->isFctDefined()){
+          if(fS->isFctDefined()) {
             solContainer->_sol[0][fS->getAddressingVectorAt(j)] = fS->evalFun(_tn, x);
-          }else{
-          // printf("BC Sol un changed in field %s - %s\n", fS->getFieldID().c_str(), fS->getCncGeoID().c_str());
-        }
+          } else {
+            // printf("BC Sol un changed in field %s - %s\n", fS->getFieldID().c_str(),
+            // fS->getCncGeoID().c_str());
+          }
         };
       }
     }
@@ -134,7 +138,7 @@ void feSolution::initializeEssentialBC(feMesh *mesh, feMetaNumber *metaNumber,
 
 void feSolution::setSolFromContainer(feSolutionContainer *solContainer, int iSol) {
   std::vector<double> solFromContainer = solContainer->getSolution(iSol);
-  if(_sol.size() != solFromContainer.size()){
+  if(_sol.size() != solFromContainer.size()) {
     _sol.resize(solFromContainer.size());
     _dsoldt.resize(solFromContainer.size());
   }

@@ -22,8 +22,9 @@ private:
 
 public:
   feCurvedAdapt(feMesh *mesh, std::vector<feRecovery *> &recovery, feMetricOptions metricOptions,
-                std::string meshName = "", std::string metricMeshName = "", std::string nextMeshName = "",
-                int useAnalytical = 0, feFunction *solExact = nullptr);
+                std::string meshName = "", std::string metricMeshName = "",
+                std::string nextMeshName = "", int useAnalytical = 0,
+                feFunction *solExact = nullptr);
   ~feCurvedAdapt();
 };
 

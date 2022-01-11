@@ -73,6 +73,10 @@ void feLinearSystemMklPardiso::assignResidualToDCResidual(feSolutionContainer *s
   for(feInt i = 0; i < matrixOrder; ++i) solContainer->_fResidual[0][i] = residu[i];
 }
 
+void feLinearSystemMklPardiso::applyCorrectionToResidual(double coeff, std::vector<double> &d) {
+  for(int i = 0; i < matrixOrder; ++i) residu[i] += coeff * d[i];
+}
+
 void feLinearSystemMklPardiso::correctSolution(feSolution *sol) {
   // Est-ce efficace?
   // Pourquoi ne pas avoir un pointeur sur le vecteur solution;

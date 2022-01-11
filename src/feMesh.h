@@ -59,9 +59,11 @@ public:
   std::vector<double> getCoord(std::string cncGeoID, int numElm);
   std::vector<double> getCoord(int cncGeoTag, int numElm);
 
-  int getVertexSequentialTagFromGmshTag(int gmshNodeTag){ return _verticesMap[gmshNodeTag]; }
+  int getVertexSequentialTagFromGmshTag(int gmshNodeTag) { return _verticesMap[gmshNodeTag]; }
   Vertex *getVertex(int iVertex) { return &_vertices[iVertex]; }
-  Vertex *getVertexFromGmshNodeTag(int gmshNodeTag) { return &_vertices[_verticesMap[gmshNodeTag]]; }
+  Vertex *getVertexFromGmshNodeTag(int gmshNodeTag) {
+    return &_vertices[_verticesMap[gmshNodeTag]];
+  }
   std::vector<Vertex> &getVertices() { return _vertices; }
 
   std::set<Edge, EdgeLessThan> _edges;
@@ -214,7 +216,7 @@ public:
 
   mapType getPhysicalEntitiesDescription() { return _physicalEntitiesDescription; }
 
-  int getGmshNodeTag(int iVertex){ return _sequentialNodeToGmshNode[iVertex]; }
+  int getGmshNodeTag(int iVertex) { return _sequentialNodeToGmshNode[iVertex]; }
 
   bool locateVertex(std::vector<double> &x, int &iElm, std::vector<double> &u, double tol = 1e-5);
 

@@ -225,7 +225,8 @@ int main(int argc, char **argv) {
     case 3: {
       std::vector<feRecovery *> rec = {recU};
       int useAnalytical = 0;
-      feCurvedAdapt foo(mesh, rec, metricOptions, meshName, metricMeshName, nextMeshName, useAnalytical);
+      feCurvedAdapt foo(mesh, rec, metricOptions, meshName, metricMeshName, nextMeshName,
+                        useAnalytical);
       std::string cmdGMSH = "gmsh " + nextMeshName + " &";
       system(cmdGMSH.c_str());
     } break;

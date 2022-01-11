@@ -14,6 +14,8 @@ typedef struct feTol {
   double tolDx;
   double tolResidual;
   double maxIter;
+  // int maxIterWithoutRecompute = 5;
+  // double ratioUntilRecomputing= 1e-2;
 } feTolerances;
 
 /* Supported time integrators schemes */
@@ -31,34 +33,6 @@ void solveStationary(double *normL2, feTolerances tol, feMetaNumber *metaNumber,
                      feLinearSystem *linearSystem, std::vector<feBilinearForm *> &formMatrices,
                      std::vector<feBilinearForm *> &formResiduals, feSolution *sol,
                      std::vector<feNorm *> &norms, feMesh *mesh);
-
-void solveBDF2(std::vector<double> &normL2, feTolerances tol, feMetaNumber *metaNumber,
-               feLinearSystem *linearSystem, std::vector<feBilinearForm *> &formMatrices,
-               std::vector<feBilinearForm *> &formResiduals, feSolution *sol,
-               std::vector<feNorm *> &norms, feMesh *mesh, std::vector<feSpace *> &spaces);
-
-void solveDC3(std::vector<double> &normL2BDF2, std::vector<double> &normL2DC3, feTolerances tol,
-              feMetaNumber *metaNumber, feLinearSystem *linearSystem,
-              std::vector<feBilinearForm *> &formMatrices,
-              std::vector<feBilinearForm *> &formResiduals, feSolution *sol,
-              std::vector<feNorm *> &norms, feMesh *mesh, std::vector<feSpace *> &spaces);
-
-void solveBDF1(std::vector<double> &normL2, feTolerances tol, feMetaNumber *metaNumber,
-               feLinearSystem *linearSystem, std::vector<feBilinearForm *> &formMatrices,
-               std::vector<feBilinearForm *> &formResiduals, feSolution *sol,
-               std::vector<feNorm *> &norms, feMesh *mesh, std::vector<feSpace *> &spaces);
-
-void solveBDF2afterBDF1(std::vector<double> &normL2BDF1, std::vector<double> &normL2BDF2,
-                        feTolerances tol, feMetaNumber *metaNumber, feLinearSystem *linearSystem,
-                        std::vector<feBilinearForm *> &formMatrices,
-                        std::vector<feBilinearForm *> &formResiduals, feSolution *sol,
-                        std::vector<feNorm *> &norms, feMesh *mesh, std::vector<feSpace *> &spaces);
-
-void solveDC2F(std::vector<double> &normL2BDF1, std::vector<double> &normL2DC2F, feTolerances tol,
-               feMetaNumber *metaNumber, feLinearSystem *linearSystem,
-               std::vector<feBilinearForm *> &formMatrices,
-               std::vector<feBilinearForm *> &formResiduals, feSolution *sol,
-               std::vector<feNorm *> &norms, feMesh *mesh, std::vector<feSpace *> &spaces);
 
 class TimeIntegrator {
 protected:
@@ -82,6 +56,7 @@ protected:
   int _currentStep;
 
   std::vector<std::vector<double> > _normL2;
+  std::vector<std::vector<double> > _IntBoundary;
 
   std::string _CodeIni; // Code pour connaitre le mode d'initialisation    |"SolExacte"->avec la
                         // solution exacte|  |"BDF1/DCF"->en partant d'un BDF1 puis DCF|
@@ -181,6 +156,25 @@ public:
   virtual feStatus makeSteps(int nSteps);
 };
 
+class DC3FSolver_centered : public TimeIntegrator {
+protected:
+  feSolutionContainer *_solutionContainerBDF1;
+  feSolutionContainer *_solutionContainerDC2F;
+
+public:
+  DC3FSolver_centered(feTolerances tol, feMetaNumber *metaNumber, feLinearSystem *linearSystem,
+                      feSolution *sol, std::vector<feNorm *> &norms, feMesh *mesh, feExportData exportData, double t0,
+                      double tEnd, int nTimeSteps);
+  virtual ~DC3FSolver_centered() {
+    delete _solutionContainerBDF1;
+    delete _solutionContainerDC2F;
+  }
+
+  std::vector<double> &getNorm(int iNorm) { return _normL2[iNorm]; };
+
+  virtual feStatus makeSteps(int nSteps);
+};
+
 class DC3Solver : public TimeIntegrator {
 protected:
   feSolutionContainer *_solutionContainerBDF2;
@@ -196,6 +190,7 @@ public:
   }
 
   std::vector<double> &getNorm(int iNorm) { return _normL2[iNorm]; };
+  std::vector<double> &getInt(int iNorm) { return _normL2[iNorm]; };
 
   virtual feStatus makeSteps(int nSteps);
 };

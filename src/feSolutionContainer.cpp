@@ -16,9 +16,7 @@ void feSolutionContainer::initialize(feSolution *sol, feMesh *mesh, feMetaNumber
   sol->initializeUnknowns(mesh, metaNumber);
   sol->initializeEssentialBC(mesh, metaNumber);
   _sol[0] = sol->getSolutionCopy();
-  for(int i = 0; i < _nSol-1; ++i){
-    _sol[i].resize(_nDofs, 0.0);
-  }
+  for(int i = 0; i < _nSol - 1; ++i) { _sol[i].resize(_nDofs, 0.0); }
   _fResidual[0].resize(_nDofs);
 }
 
@@ -36,23 +34,24 @@ void feStationarySolution::computeSolTimeDerivative(feSolution *sol, feLinearSys
 }
 
 void feSolutionBDF2::computeSolTimeDerivative(feSolution *sol, feLinearSystem *linearSystem) {
-  // std::cout << "_sol[0][0]   " << _sol[0][0] << "    _sol[1][0]   " << _sol[1][0]
-            // << "    _sol[2][0]   " << _sol[2][0] << std::endl;
+  // std::cout << "_sol[0][0]   " << _sol[0][0] << "    _sol[1][0]   " << _sol[1][0]<<std::endl;
   for(int i = 0; i < _nDofs; ++i)
     sol->setSolDotAtDOF(i, _cn[0] * _sol[0][i] + _cn[1] * _sol[1][i] + _cn[2] * _sol[2][i]);
-  // std::cout<<"coeffs"<<_cn[0]<<","<<_cn[1]<<","<<_cn[2]<<"timestep"<<_t[0]<<_t[1]<<std::endl;
+  // std::cout<<"coeffs "<<_cn[0]<<","<<_cn[1]<<","<<_cn[2]<<"timestep"<<_t[0]<<_t[1]<<std::endl;
 }
 
 void feSolutionBDF1::computeSolTimeDerivative(feSolution *sol, feLinearSystem *linearSystem) {
   // std::cout << "_sol[0][0]   " << _sol[0][0] << "    _sol[1][0]   " << _sol[1][0] << std::endl;
+  // std::cout << "_sol[0][1]   " << _sol[0][1] << "    _sol[1][1]   " << _sol[1][1] << std::endl;
+  // std::cout<<"nb de sol" << _nDofs << std::endl;
   for(int i = 0; i < _nDofs; ++i) sol->setSolDotAtDOF(i, _cn[0] * _sol[0][i] + _cn[1] * _sol[1][i]);
 
   // std::cout<<"coeffs"<<_cn[0]<<","<<_cn[1]<<","<<_cn[2]<<"timestep"<<_t[0]<<_t[1]<<std::endl;
 }
 
 void feSolutionDCF::computeSolTimeDerivative(feSolution *sol, feLinearSystem *linearSystem) {
-  // std::cout << "_sol[0][0]   " << _sol[0][0] << "    _sol[1][0]   " << _sol[1][0]
-            // << "    _sol[2][0]   " << _sol[2][0] << std::endl;
+  // std::cout << "_sol[0][0]   " << _sol[0][0] << "    _sol[1][0]   " << _sol[1][0]<< " _sol[2][0]
+  // " << _sol[2][0]<<std::endl;
   for(int i = 0; i < _nDofs; ++i)
     sol->setSolDotAtDOF(i, _cn[0] * _sol[0][i] + _cn[1] * _sol[1][i] + _cn[2] * _sol[2][i]);
   linearSystem->applyCorrectionToResidual(-1.0, _d);
@@ -263,13 +262,14 @@ void initializeDC3(feSolution *sol, feMetaNumber *metaNumber, feMesh *mesh, feSo
     f[2] = solBDF2->_fResidual[2][k];
     // std::cout<<"les residus valent "<<f[0]<< " ,  "<< f[1]<< " et " << f[2] <<std::endl;
     tableDD(sub, f, table, delta);
-    std::cout << "delta11 = " << delta[0] << " delta21 = " << delta[1]
-              << " et delta12 = " << delta[n] << std::endl;
+    // std::cout << "delta11 = " << delta[0] << " delta21 = " << delta[1]
+    // << " et delta12 = " << delta[n] << std::endl;
     d3u =
       2.0 * delta[n]; // Indexé par delta[i][j] = delta[n*j+i] : delta(1,2) = delta[0][1] = delta[n]
-    std::cout << "le derivee trosieme vaut " << d3u << std::endl;
+    // std::cout << "le derivee trosieme vaut " << d3u << std::endl;
     solDC3->_d[k] = d3u / 6.0 * k1 * (k1 + k2);
-    std::cout << "la correction du DC3F vaut " << d3u / 6.0 * k1 * (k1 + k2) << std::endl;
+    // std::cout<<"les residus valent "<<f[0]<< " ,  "<< f[1]<< " et " << f[2] <<std::endl;
+    // std::cout << "la correction du DC3F vaut " << d3u / 6.0 * k1 * (k1 + k2) << std::endl;
   }
   // Init FESOL
   int nDOF = metaNumber->getNbDOFs();
@@ -286,8 +286,8 @@ void initializeDC3(feSolution *sol, feMetaNumber *metaNumber, feMesh *mesh, feSo
   sol->initializeEssentialBC(mesh, metaNumber, solDC3);
 }
 
-void initializeDC3FatT1(feSolution *sol, feMetaNumber *metaNumber, feMesh *mesh,
-                        feSolutionDC2F *solDC2F, feSolutionDC2F *solDC3) {
+void initializeDC3F_centered(feSolution *sol, feMetaNumber *metaNumber, feMesh *mesh,
+                             feSolutionDC2F *solDC2F, feSolutionDC2F *solDC3) {
   std::vector<double> t = solDC2F->getTime();
   int nLvl = 1;
   int orderBDF = 1, orderP1 = orderBDF + 1, nTMin = orderP1 + 1;
@@ -296,7 +296,7 @@ void initializeDC3FatT1(feSolution *sol, feMetaNumber *metaNumber, feMesh *mesh,
   std::vector<double> tt(nTMin, 0.);
   for(int i = 0; i < nTMin; ++i) {
     tt[i] = t[i];
-    std::cout << "tt = " << i << t[i] << std::endl;
+    // std::cout << "tt = " << i << t[i] << std::endl;
   }
   double tn = tt[1];
   double k1 = tt[0] - tt[1];
@@ -330,7 +330,7 @@ void initializeDC3FatT1(feSolution *sol, feMetaNumber *metaNumber, feMesh *mesh,
       2.0 * delta[n]; // Indexé par delta[i][j] = delta[n*j+i] : delta(1,2) = delta[0][1] = delta[n]
     d2u = delta[0] + delta[n] * (-k2); // l'intervalle vaut k2 pas k1
     // std::cout<< "le derivee deuxieme vaut " << d2u << std::endl;
-    // std::cout<< "le derivee trosieme vaut " << d3u << std::endl;
+    // std::cout<< "le derivee troisieme vaut " << d3u << std::endl;
     solDC3->_d[k] = d2u * k1 / 2.0 - d3u / 6.0 * k1 * k1;
     // std::cout<< "la correction du DC3F vaut " << d2u * k1 / 2.0 - d3u / 6.0 * k1*k1 << std::endl;
   }
@@ -381,11 +381,16 @@ void initializeDC3F(feSolution *sol, feMetaNumber *metaNumber, feMesh *mesh,
     f[0] = solDC2F->_fResidual[0][k];
     f[1] = solDC2F->_fResidual[1][k];
     f[2] = solDC2F->_fResidual[2][k];
+    solDC3->_fResidual[0][k] = solDC2F->_fResidual[0][k];
+    solDC3->_fResidual[1][k] = solDC2F->_fResidual[1][k];
+    solDC3->_fResidual[2][k] = solDC2F->_fResidual[2][k];
     // std::cout<<"les residus valent "<<f[0]<< "  et  "<< f[1]<< "  et  " << f[2] <<std::endl;
     tableDD(sub, f, table, delta);
+    // std::cout << "delta11 vaut "<< delta[0] << "et delta12 vaut quant a lui "<< delta[n] <<
+    // std::endl;
     d3u =
       2.0 * delta[n]; // Indexé par delta[i][j] = delta[n*j+i] : delta(1,2) = delta[0][1] = delta[n]
-    // d2u = delta[0] + delta[n] *(k1-k2);
+    d2u = delta[0] + delta[n] * (k1 - k2);
     d2u = delta[0] + delta[n] * k1;
     // std::cout<< "le derivee deuxieme vaut " << d2u << std::endl;
     // std::cout<< "le derivee trosieme vaut " << d3u << std::endl;

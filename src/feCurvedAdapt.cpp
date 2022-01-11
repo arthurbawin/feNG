@@ -1443,7 +1443,8 @@ double ERROR_SQUARED_P1(double *xa, double *xb, double *xc, feFunction *solExact
   return e2;
 }
 
-double ERROR_SQUARED_P2(double *xa, double *xb, double *xc, double *xab, double *xbc, double *xca) { //, feFunction *solExact) {
+double ERROR_SQUARED_P2(double *xa, double *xb, double *xc, double *xab, double *xbc,
+                        double *xca) { //, feFunction *solExact) {
   int triangleP2 = gmsh::model::mesh::getElementType("Triangle", 2);
   std::vector<double> localCoord;
   std::vector<double> weights;
@@ -1488,8 +1489,9 @@ double ERROR_SQUARED_P2(double *xa, double *xb, double *xc, double *xab, double 
 #endif
 
 feCurvedAdapt::feCurvedAdapt(feMesh *mesh, std::vector<feRecovery *> &recovery,
-                             feMetricOptions metricOptions, std::string meshName, std::string metricMeshName,
-                             std::string nextMeshName, int analytical, feFunction *solExact)
+                             feMetricOptions metricOptions, std::string meshName,
+                             std::string metricMeshName, std::string nextMeshName, int analytical,
+                             feFunction *solExact)
   : _rec(recovery) {
 #ifdef HAVE_GMSH
 
@@ -1500,12 +1502,12 @@ feCurvedAdapt::feCurvedAdapt(feMesh *mesh, std::vector<feRecovery *> &recovery,
 
   useAnalytical = analytical;
 
-  std::cout<<"metricMeshName = "<<metricMeshName<<std::endl;
+  std::cout << "metricMeshName = " << metricMeshName << std::endl;
 
   gmsh::initialize();
   gmsh::open(metricMeshName);
   gmsh::model::getCurrent(modelName);
-  std::cout<<"modelName is "<<modelName<<std::endl;
+  std::cout << "modelName is " << modelName << std::endl;
   gmsh::model::add("test");
   gmsh::model::setCurrent("test");
 
@@ -1562,8 +1564,8 @@ feCurvedAdapt::feCurvedAdapt(feMesh *mesh, std::vector<feRecovery *> &recovery,
   // gmsh::model::setPhysicalName(1, 4, "Cylindre");
   // gmsh::model::setPhysicalName(2, surface, "Surface");
 
-  gmsh::option::setNumber("Mesh.MeshSizeMin", modelSize/50);
-  gmsh::option::setNumber("Mesh.MeshSizeMax", modelSize/50);
+  gmsh::option::setNumber("Mesh.MeshSizeMin", modelSize / 50);
+  gmsh::option::setNumber("Mesh.MeshSizeMax", modelSize / 50);
   gmsh::model::mesh::generate();
   // gmsh::fltk::run();
 #endif
@@ -1685,11 +1687,11 @@ feCurvedAdapt::feCurvedAdapt(feMesh *mesh, std::vector<feRecovery *> &recovery,
       // const double dtt1_ = fabs(dtt(x, y, -S, C, _rec[0]));
       const double dtt1_ = fabs(dtt(x, y, -S, C));
 
-      std::cout<<fabs(dtt0_)<<std::endl;
-      std::cout<<fabs(dtt1_)<<std::endl;
-      std::cout<<pow(2. * eps / dtt0_, 0.5)<<std::endl;
-      std::cout<<pow(2. * eps / dtt1_, 0.5)<<std::endl;
-      std::cout<<std::endl;
+      std::cout << fabs(dtt0_) << std::endl;
+      std::cout << fabs(dtt1_) << std::endl;
+      std::cout << pow(2. * eps / dtt0_, 0.5) << std::endl;
+      std::cout << pow(2. * eps / dtt1_, 0.5) << std::endl;
+      std::cout << std::endl;
       l0 = fabs(dtt0_) > 1e-14 ? pow(2. * eps / dtt0_, 0.5) : lMax;
       l1 = fabs(dtt1_) > 1e-14 ? pow(2. * eps / dtt1_, 0.5) : lMax;
       break;
@@ -1723,8 +1725,8 @@ feCurvedAdapt::feCurvedAdapt(feMesh *mesh, std::vector<feRecovery *> &recovery,
     l1 = std::min(l1, lMax);
     l1 = std::max(l1, lMin);
 
-    fprintf(scaled, "VP(%g,%g,0){%g,%g,0};", x, y,  l0*C, l0*S);
-    fprintf(scaled, "VP(%g,%g,0){%g,%g,0};", x, y, -l1*S, l1*C);
+    fprintf(scaled, "VP(%g,%g,0){%g,%g,0};", x, y, l0 * C, l0 * S);
+    fprintf(scaled, "VP(%g,%g,0){%g,%g,0};", x, y, -l1 * S, l1 * C);
 
     double h0 = 1. / (l0 * l0);
     double h1 = 1. / (l1 * l1);
@@ -1793,7 +1795,8 @@ feCurvedAdapt::feCurvedAdapt(feMesh *mesh, std::vector<feRecovery *> &recovery,
               y, M(0, 0), M(0, 1), M(1, 1));
       // fprintf(ffff, "%d \t %+-4.4e \t %+-4.4e : %+-4.4e \t %+-4.4e \t %+-4.4e \n", nodeTags[i],
       // x, y, M(0, 0), M(0, 1), M(1, 1)); Write .sol size field
-      // fprintf(myfile, "%+-10.12f \t %+-10.12f \t %+-10.12f \t %+-10.12f \t %+-10.12f\n", x, y, M(0, 0), M(0, 1), M(1, 1));
+      // fprintf(myfile, "%+-10.12f \t %+-10.12f \t %+-10.12f \t %+-10.12f \t %+-10.12f\n", x, y,
+      // M(0, 0), M(0, 1), M(1, 1));
       fprintf(myfile, "%+-10.12f \t %+-10.12f \t %+-10.12f\n", M(0, 0), M(0, 1), M(1, 1));
     }
   }
@@ -2051,10 +2054,10 @@ feCurvedAdapt::feCurvedAdapt(feMesh *mesh, std::vector<feRecovery *> &recovery,
   // gmsh::model::setPhysicalName(1, cylindre, "Cylindre");
   // gmsh::model::setPhysicalName(2, surface, "Surface");
 
-  if (!vazy)gmsh::model::mesh::setOrder(2);
-  gmsh::model::mesh::getNodes(nodeTags,coord, parametricCoord,-1,-1,true);
-  
-  int viewTagF_adapt = gmsh::view::add ("F_adapt");
+  if(!vazy) gmsh::model::mesh::setOrder(2);
+  gmsh::model::mesh::getNodes(nodeTags, coord, parametricCoord, -1, -1, true);
+
+  int viewTagF_adapt = gmsh::view::add("F_adapt");
   std::vector<std::vector<double> > dataF_adapt;
 
   for (size_t i=0 ; i < nodeTags.size() ; i++){

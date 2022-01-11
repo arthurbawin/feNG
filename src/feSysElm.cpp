@@ -1,5 +1,288 @@
 #include <feSysElm.h>
 
+void feSysElm_0D_StiffSpring::createElementarySystem(std::vector<feSpace *> &space) {
+  _idX = 0;
+  _idV = 1;
+  _iVar.resize(space.size());
+  _jVar.resize(space.size());
+  for(int i = 0; i < space.size(); i++) {
+    _iVar[i] = i;
+    _jVar[i] = i;
+  }
+}
+
+void feSysElm_0D_StiffSpring::computeAe(std::vector<double> &J, int numElem,
+                                        std::vector<feSpace *> &intSpace, feSpace *geoSpace,
+                                        std::vector<double> &geoCoord, double c0, double tn,
+                                        double **Ae) {
+  double m = _par[0];
+  double c = _par[1];
+  double k = _par[2];
+  Ae[0][0] = c0;
+  Ae[0][1] = -1.;
+  Ae[1][0] = k;
+  Ae[1][1] = c0 * m + c;
+}
+
+void feSysElm_0D_StiffSpring::computeBe(std::vector<double> &J, int numElem,
+                                        std::vector<feSpace *> &intSpace, feSpace *geoSpace,
+                                        std::vector<double> &geoCoord, double c0, double tn,
+                                        double dt, double *Be) {
+  double m = _par[0];
+  double c = _par[1];
+  double k = _par[2];
+  double xDot = intSpace[_idX]->interpolateSolutionDotAtQuadNode(0);
+  double vDot = intSpace[_idV]->interpolateSolutionDotAtQuadNode(0);
+  double x = intSpace[_idX]->interpolateSolutionAtQuadNode(0);
+  double v = intSpace[_idV]->interpolateSolutionAtQuadNode(0);
+  Be[0] -= xDot - v;
+  Be[1] -= m * vDot + x * k + c * v;
+}
+
+void feSysElm_0D_Stiff2::createElementarySystem(std::vector<feSpace *> &space) {
+  _idX = 0;
+  _idY = 1;
+  _idZ = 2;
+  _iVar.resize(space.size());
+  _jVar.resize(space.size());
+  for(int i = 0; i < space.size(); i++) {
+    _iVar[i] = i;
+    _jVar[i] = i;
+  }
+}
+
+void feSysElm_0D_Stiff2::computeAe(std::vector<double> &J, int numElem,
+                                   std::vector<feSpace *> &intSpace, feSpace *geoSpace,
+                                   std::vector<double> &geoCoord, double c0, double tn,
+                                   double **Ae) {
+  double omega = _par;
+  Ae[0][0] = c0 + 1.;
+  Ae[0][1] = Ae[0][2] = Ae[0][2] = Ae[1][0] = Ae[2][0] = 0.;
+  Ae[1][1] = c0;
+  Ae[2][2] = c0;
+  Ae[2][1] = +omega;
+  Ae[1][2] = -omega;
+}
+
+void feSysElm_0D_Stiff2::computeBe(std::vector<double> &J, int numElem,
+                                   std::vector<feSpace *> &intSpace, feSpace *geoSpace,
+                                   std::vector<double> &geoCoord, double c0, double tn, double dt,
+                                   double *Be) {
+  double omega = _par;
+  double xDot = intSpace[_idX]->interpolateSolutionDotAtQuadNode(0);
+  double yDot = intSpace[_idY]->interpolateSolutionDotAtQuadNode(0);
+  double zDot = intSpace[_idZ]->interpolateSolutionDotAtQuadNode(0);
+  double x = intSpace[_idX]->interpolateSolutionAtQuadNode(0);
+  double y = intSpace[_idY]->interpolateSolutionAtQuadNode(0);
+  double z = intSpace[_idZ]->interpolateSolutionAtQuadNode(0);
+  Be[0] -= xDot + x;
+  Be[1] -= yDot - omega * z;
+  Be[2] -= zDot + omega * y;
+}
+
+void feSysElm_0D_Stiff3::createElementarySystem(std::vector<feSpace *> &space) {
+  _idX = 0;
+  _idY = 1;
+  _idZ = 2;
+  _iVar.resize(space.size());
+  _jVar.resize(space.size());
+  for(int i = 0; i < space.size(); i++) {
+    _iVar[i] = i;
+    _jVar[i] = i;
+  }
+}
+
+void feSysElm_0D_Stiff3::computeAe(std::vector<double> &J, int numElem,
+                                   std::vector<feSpace *> &intSpace, feSpace *geoSpace,
+                                   std::vector<double> &geoCoord, double c0, double tn,
+                                   double **Ae) {
+  double omega = _par;
+  Ae[0][0] = c0 + 1.;
+  Ae[1][0] = Ae[2][0] = 0.;
+  Ae[0][1] = -1.;
+  Ae[0][2] = -omega;
+  Ae[1][1] = c0;
+  Ae[2][2] = c0;
+  Ae[2][1] = +omega;
+  Ae[1][2] = -omega;
+}
+
+void feSysElm_0D_Stiff3::computeBe(std::vector<double> &J, int numElem,
+                                   std::vector<feSpace *> &intSpace, feSpace *geoSpace,
+                                   std::vector<double> &geoCoord, double c0, double tn, double dt,
+                                   double *Be) {
+  double omega = _par;
+  double xDot = intSpace[_idX]->interpolateSolutionDotAtQuadNode(0);
+  double yDot = intSpace[_idY]->interpolateSolutionDotAtQuadNode(0);
+  double zDot = intSpace[_idZ]->interpolateSolutionDotAtQuadNode(0);
+  double x = intSpace[_idX]->interpolateSolutionAtQuadNode(0);
+  double y = intSpace[_idY]->interpolateSolutionAtQuadNode(0);
+  double z = intSpace[_idZ]->interpolateSolutionAtQuadNode(0);
+  Be[0] -= xDot + x - y - omega * z;
+  Be[1] -= yDot - omega * z;
+  Be[2] -= zDot + omega * y;
+}
+
+void feSysElm_0D_weakBC::createElementarySystem(std::vector<feSpace *> &space) {
+  _idU = 0;
+  _idL = 1;
+  _iVar.resize(space.size());
+  _jVar.resize(space.size());
+  for(int i = 0; i < space.size(); i++) {
+    _iVar[i] = i;
+    _jVar[i] = i;
+  }
+}
+
+void feSysElm_0D_weakBC::computeAe(std::vector<double> &J, int numElem,
+                                   std::vector<feSpace *> &intSpace, feSpace *geoSpace,
+                                   std::vector<double> &geoCoord, double c0, double tn,
+                                   double **Ae) {
+  Ae[0][1] = Ae[1][0] = 1.;
+}
+
+void feSysElm_0D_weakBC::computeBe(std::vector<double> &J, int numElem,
+                                   std::vector<feSpace *> &intSpace, feSpace *geoSpace,
+                                   std::vector<double> &geoCoord, double c0, double tn, double dt,
+                                   double *Be) {
+  int nFunctionsU = intSpace[_idU]->getNbFunctions();
+  int nFunctionsL = intSpace[_idL]->getNbFunctions();
+  std::vector<double> x(3, 0.0);
+  geoSpace->interpolateVectorFieldAtQuadNode(geoCoord, 0, x);
+  double gamma = _fct->eval(tn, x);
+  double lambda = intSpace[_idL]->interpolateSolutionAtQuadNode(0);
+  double u = intSpace[_idU]->interpolateSolutionAtQuadNode(0);
+  // std::cout<<"gamma= "<<gamma<< " x= "<<x[0]<< "tn= " <<tn<<std::endl;
+  Be[0] -= lambda;
+  Be[1] -= (u - gamma);
+}
+
+void feSysElm_0D_weakBC_edo1::createElementarySystem(std::vector<feSpace *> &space) {
+  _idU = 0;
+  _idL = 1;
+  _idV = 2;
+  _iVar.resize(space.size());
+  _jVar.resize(space.size());
+  for(int i = 0; i < space.size(); i++) {
+    _iVar[i] = i;
+    _jVar[i] = i;
+  }
+}
+
+void feSysElm_0D_weakBC_edo1::computeAe(std::vector<double> &J, int numElem,
+                                        std::vector<feSpace *> &intSpace, feSpace *geoSpace,
+                                        std::vector<double> &geoCoord, double c0, double tn,
+                                        double **Ae) {
+  Ae[0][1] = Ae[1][0] = 1.;
+  Ae[1][2] = -1.;
+  Ae[2][2] = c0;
+}
+
+void feSysElm_0D_weakBC_edo1::computeBe(std::vector<double> &J, int numElem,
+                                        std::vector<feSpace *> &intSpace, feSpace *geoSpace,
+                                        std::vector<double> &geoCoord, double c0, double tn,
+                                        double dt, double *Be) {
+  int nFunctionsU = intSpace[_idU]->getNbFunctions();
+  int nFunctionsL = intSpace[_idL]->getNbFunctions();
+  std::vector<double> x(3, 0.0);
+  geoSpace->interpolateVectorFieldAtQuadNode(geoCoord, 0, x);
+  double gammaDot = _fct->eval(tn, x);
+  double lambda = intSpace[_idL]->interpolateSolutionAtQuadNode(0);
+  double u = intSpace[_idU]->interpolateSolutionAtQuadNode(0);
+  double v = intSpace[_idV]->interpolateSolutionAtQuadNode(0);
+  double vDot = intSpace[_idV]->interpolateSolutionDotAtQuadNode(0);
+  // std::cout<< "v vaut "<< v << std::endl;
+  // std::cout<<"gammaDot= "<<gammaDot<< " x= "<<x[0]<< "tn= " <<tn<<std::endl;
+  // printf("%16.6e \n" , v);
+  Be[0] -= lambda;
+  Be[1] -= (u - v);
+  Be[2] -= (vDot - gammaDot);
+}
+
+void feSysElm_0D_weakBC_edo1_V2::createElementarySystem(std::vector<feSpace *> &space) {
+  _idU = 0;
+  _idL = 1;
+  _idV = 2;
+  _iVar.resize(space.size());
+  _jVar.resize(space.size());
+  for(int i = 0; i < space.size(); i++) {
+    _iVar[i] = i;
+    _jVar[i] = i;
+  }
+}
+
+void feSysElm_0D_weakBC_edo1_V2::computeAe(std::vector<double> &J, int numElem,
+                                           std::vector<feSpace *> &intSpace, feSpace *geoSpace,
+                                           std::vector<double> &geoCoord, double c0, double tn,
+                                           double **Ae) {
+  Ae[0][1] = Ae[1][0] = 1.;
+  Ae[1][2] = -1.;
+  Ae[2][2] = c0;
+}
+
+void feSysElm_0D_weakBC_edo1_V2::computeBe(std::vector<double> &J, int numElem,
+                                           std::vector<feSpace *> &intSpace, feSpace *geoSpace,
+                                           std::vector<double> &geoCoord, double c0, double tn,
+                                           double dt, double *Be) {
+  int nFunctionsU = intSpace[_idU]->getNbFunctions();
+  int nFunctionsL = intSpace[_idL]->getNbFunctions();
+  std::vector<double> x(3, 0.0);
+  geoSpace->interpolateVectorFieldAtQuadNode(geoCoord, 0, x);
+  double gamma = _fct->eval(tn, x);
+  double lambda = intSpace[_idL]->interpolateSolutionAtQuadNode(0);
+  double u = intSpace[_idU]->interpolateSolutionAtQuadNode(0);
+  double v = intSpace[_idV]->interpolateSolutionAtQuadNode(0);
+  double vDot = intSpace[_idV]->interpolateSolutionDotAtQuadNode(0);
+  // std::cout<<"gamma= "<<gamma<< " x= "<<x[0]<< "tn= " <<tn<<std::endl;
+  printf("%16.6e \n", v);
+  Be[0] -= lambda;
+  Be[1] -= (u - v - gamma);
+  Be[2] -= (vDot);
+}
+
+void feSysElm_0D_weakBC_edo2::createElementarySystem(std::vector<feSpace *> &space) {
+  _idU = 0;
+  _idL = 1;
+  _idV = 2;
+  _idW = 3;
+  _iVar.resize(space.size());
+  _jVar.resize(space.size());
+  for(int i = 0; i < space.size(); i++) {
+    _iVar[i] = i;
+    _jVar[i] = i;
+  }
+}
+
+void feSysElm_0D_weakBC_edo2::computeAe(std::vector<double> &J, int numElem,
+                                        std::vector<feSpace *> &intSpace, feSpace *geoSpace,
+                                        std::vector<double> &geoCoord, double c0, double tn,
+                                        double **Ae) {
+  Ae[0][1] = Ae[1][0] = 1.;
+  Ae[1][2] = Ae[2][3] = -1.;
+  Ae[2][2] = Ae[3][3] = c0;
+}
+
+void feSysElm_0D_weakBC_edo2::computeBe(std::vector<double> &J, int numElem,
+                                        std::vector<feSpace *> &intSpace, feSpace *geoSpace,
+                                        std::vector<double> &geoCoord, double c0, double tn,
+                                        double dt, double *Be) {
+  int nFunctionsU = intSpace[_idU]->getNbFunctions();
+  int nFunctionsL = intSpace[_idL]->getNbFunctions();
+  std::vector<double> x(3, 0.0);
+  geoSpace->interpolateVectorFieldAtQuadNode(geoCoord, 0, x);
+  double gammaDotDot = _fct->eval(tn, x);
+  double lambda = intSpace[_idL]->interpolateSolutionAtQuadNode(0);
+  double u = intSpace[_idU]->interpolateSolutionAtQuadNode(0);
+  double v = intSpace[_idV]->interpolateSolutionAtQuadNode(0);
+  double vDot = intSpace[_idV]->interpolateSolutionDotAtQuadNode(0);
+  double w = intSpace[_idW]->interpolateSolutionAtQuadNode(0);
+  double wDot = intSpace[_idW]->interpolateSolutionDotAtQuadNode(0);
+  Be[0] -= lambda;
+  Be[1] -= (u - v);
+  Be[2] -= (vDot - w);
+  Be[3] -= (wDot - gammaDotDot);
+}
+
 void feSysElm_0D_Masse::createElementarySystem(std::vector<feSpace *> &space) {
   // _idU = 0;
   _iVar.resize(space.size());
@@ -24,7 +307,8 @@ void feSysElm_0D_Masse::computeAe(std::vector<double> &J, int numElem,
 
 void feSysElm_0D_Masse::computeBe(std::vector<double> &J, int numElem,
                                   std::vector<feSpace *> &intSpace, feSpace *geoSpace,
-                                  std::vector<double> &geoCoord, double c0, double tn, double dt, double *Be) {
+                                  std::vector<double> &geoCoord, double c0, double tn, double dt,
+                                  double *Be) {
   // int                nG = geoSpace->getNbQuadPoints();
   std::vector<double> w = geoSpace->getQuadratureWeights();
   double rho = _par;
@@ -45,8 +329,8 @@ void feSysElm_0D_Source::createElementarySystem(std::vector<feSpace *> &space) {
 
 void feSysElm_0D_Source::computeBe(std::vector<double> &J, int numElem,
                                    std::vector<feSpace *> &intSpace, feSpace *geoSpace,
-                                   std::vector<double> &geoCoord, double c0, double tn,
-                                   double dt, double *Be) {
+                                   std::vector<double> &geoCoord, double c0, double tn, double dt,
+                                   double *Be) {
   // int                nG = geoSpace->getNbQuadPoints();
   std::vector<double> w = geoSpace->getQuadratureWeights();
   int nFunctions = intSpace[_idU]->getNbFunctions();
@@ -66,8 +350,8 @@ void feSysElm_0D_Source_crossed::createElementarySystem(std::vector<feSpace *> &
 
 void feSysElm_0D_Source_crossed::computeBe(std::vector<double> &J, int numElem,
                                            std::vector<feSpace *> &intSpace, feSpace *geoSpace,
-                                           std::vector<double> &geoCoord, double c0, double tn, double dt,
-                                           double *Be) {
+                                           std::vector<double> &geoCoord, double c0, double tn,
+                                           double dt, double *Be) {
   // int                nG = geoSpace->getNbQuadPoints();
   std::vector<double> w = geoSpace->getQuadratureWeights();
   // int        nFunctions = intSpace[_idU]->getNbFunctions();
@@ -76,6 +360,369 @@ void feSysElm_0D_Source_crossed::computeBe(std::vector<double> &J, int numElem,
   if(_fct != nullptr) _fct->eval(tn, x, f);
   for(int i = 0; i < intSpace.size(); i++) { Be[i] = -f[i]; }
 }
+
+void feSysElm_1D_weakBC_edo1::createElementarySystem(std::vector<feSpace *> &space) {
+  _idU = 0;
+  _idL = 1;
+  _idV = 2;
+  _iVar.resize(space.size());
+  _jVar.resize(space.size());
+  _feU.resize(space[_idU]->getNbFunctions());
+  _feL.resize(space[_idL]->getNbFunctions());
+  _feV.resize(space[_idV]->getNbFunctions());
+  for(int i = 0; i < space.size(); i++) {
+    _iVar[i] = i;
+    _jVar[i] = i;
+  }
+}
+
+// void feSysElm_1D_weakBC_edo1::computeAe(std::vector<double> &J, int numElem,
+//                                         std::vector<feSpace *> &intSpace, feSpace *geoSpace,
+//                                         std::vector<double> &geoCoord, double c0, double tn,
+//                                         double **Ae) {
+//   int nG = geoSpace->getNbQuadPoints();
+//   std::vector<double> w = geoSpace->getQuadratureWeights();
+//   int nFunctions = intSpace[_idU]->getNbFunctions();
+//   double jac;
+
+//   for(int k = 0; k < nG; ++k) {
+//     std::vector<double> dxdr(3, 0.0); // [dx/dr, dy/dr, dz/dr]
+//     geoSpace->interpolateVectorFieldAtQuadNode_rDerivative(geoCoord, k, dxdr);
+//     jac = sqrt(dxdr[0] * dxdr[0]+dxdr[1] * dxdr[1]);
+//     // jac = J[nG * numElem + k];
+//     for(int i = 0; i < nFunctions; ++i){
+//           _feU[i] = intSpace[_idU]->getFunctionAtQuadNode(i, k);
+//           _feL[i] = intSpace[_idL]->getFunctionAtQuadNode(i, k);
+//           _feV[i] = intSpace[_idV]->getFunctionAtQuadNode(i, k);
+//     }
+//     for(int i = 0; i < nFunctions; ++i){
+//       for(int j = 0; j < nFunctions; ++j) {
+//         Ae[i][nFunctions +j] += _feU[i]*_feL[j]*jac *w[k];
+//       }
+//     }
+//     for(int i = 0; i < nFunctions; ++i){
+//       for(int j = 0; j < nFunctions; ++j) {
+//         Ae[nFunctions +i][j] += _feU[j]*_feL[i]*jac *w[k];
+//       }
+//     }
+//     for(int i = 0; i < nFunctions; ++i){
+//       for(int j = 0; j < nFunctions; ++j) {
+//         Ae[nFunctions +i][2*nFunctions +j] += -_feL[i]*_feV[j]*jac *w[k];
+//       }
+//     }
+
+//     for(int i = 0; i < nFunctions; ++i){
+//       for(int j = 0; j < nFunctions; ++j) {
+//         Ae[2*nFunctions +i][2*nFunctions +j]  += c0*_feV[i]*_feV[j] *jac *w[k];
+//       }
+//     }
+//   }
+// }
+
+void feSysElm_1D_weakBC_edo1::computeAe(std::vector<double> &J, int numElem,
+                                        std::vector<feSpace *> &intSpace, feSpace *geoSpace,
+                                        std::vector<double> &geoCoord, double c0, double tn,
+                                        double **Ae) {
+  int nG = geoSpace->getNbQuadPoints();
+  std::vector<double> w = geoSpace->getQuadratureWeights();
+  int nFunctionsU = intSpace[_idU]->getNbFunctions();
+  int nFunctionsL = intSpace[_idL]->getNbFunctions();
+  double jac;
+
+  for(int k = 0; k < nG; ++k) {
+    std::vector<double> dxdr(3, 0.0); // [dx/dr, dy/dr, dz/dr]
+    geoSpace->interpolateVectorFieldAtQuadNode_rDerivative(geoCoord, k, dxdr);
+    jac = sqrt(dxdr[0] * dxdr[0] + dxdr[1] * dxdr[1]);
+    // jac = J[nG * numElem + k];
+    for(int i = 0; i < nFunctionsU; ++i) {
+      _feU[i] = intSpace[_idU]->getFunctionAtQuadNode(i, k);
+      _feV[i] = intSpace[_idV]->getFunctionAtQuadNode(i, k);
+    }
+
+    for(int i = 0; i < nFunctionsL; ++i) { _feL[i] = intSpace[_idL]->getFunctionAtQuadNode(i, k); }
+    for(int i = 0; i < nFunctionsU; ++i) {
+      for(int j = 0; j < nFunctionsL; ++j) {
+        Ae[i][nFunctionsU + j] += _feU[i] * _feL[j] * jac * w[k];
+      }
+    }
+    for(int i = 0; i < nFunctionsL; ++i) {
+      for(int j = 0; j < nFunctionsU; ++j) {
+        Ae[nFunctionsU + i][j] += _feU[j] * _feL[i] * jac * w[k];
+      }
+    }
+    for(int i = 0; i < nFunctionsL; ++i) {
+      for(int j = 0; j < nFunctionsU; ++j) {
+        Ae[nFunctionsU + i][(nFunctionsU + nFunctionsL) + j] += -_feL[i] * _feV[j] * jac * w[k];
+      }
+    }
+
+    for(int i = 0; i < nFunctionsU; ++i) {
+      for(int j = 0; j < nFunctionsU; ++j) {
+        Ae[(nFunctionsU + nFunctionsL) + i][(nFunctionsU + nFunctionsL) + j] +=
+          c0 * _feV[i] * _feV[j] * jac * w[k];
+      }
+    }
+  }
+}
+
+// void feSysElm_1D_weakBC_edo1::computeBe(std::vector<double> &J, int numElem,
+//                                         std::vector<feSpace *> &intSpace, feSpace *geoSpace,
+//                                         std::vector<double> &geoCoord, double c0, double tn,
+//                                         double *Be) {
+//   int nG = geoSpace->getNbQuadPoints();
+//   std::vector<double> w = geoSpace->getQuadratureWeights();
+//   int nFunctions = intSpace[_idU]->getNbFunctions();
+
+//   std::vector<double> x(3, 0.0);
+//   double u, l, v, vDot, jac;
+//   // std::cout<<"gammaDot= "<<gammaDot<< " x= "<<x[0]<< "tn= " <<tn<<std::endl;
+//   // printf("%16.6e \n" , v);
+
+//   for(int k = 0; k < nG; ++k) {
+//     std::vector<double> dxdr(3, 0.0); // [dx/dr, dy/dr, dz/dr]
+//     geoSpace->interpolateVectorFieldAtQuadNode_rDerivative(geoCoord, k, dxdr);
+//     jac = sqrt(dxdr[0] * dxdr[0]+dxdr[1] * dxdr[1]);
+//     geoSpace->interpolateVectorFieldAtQuadNode(geoCoord, k, x);
+//     double gammaDot = _fct->eval(tn, x);
+//     for(int i = 0; i < nFunctions; ++i) {
+//       u = intSpace[_idU]->interpolateSolutionAtQuadNode(k);
+//       v = intSpace[_idV]->interpolateSolutionAtQuadNode(k);
+//       l = intSpace[_idL]->interpolateSolutionAtQuadNode(k);
+//       vDot = intSpace[_idV]->interpolateSolutionDotAtQuadNode(k);
+//       _feU[i] = intSpace[_idU]->getFunctionAtQuadNode(i, k);
+//       _feL[i] = intSpace[_idL]->getFunctionAtQuadNode(i, k);
+//       _feV[i] = intSpace[_idV]->getFunctionAtQuadNode(i, k);
+
+//       Be[i] -=_feU[i] * l * jac * w[k];
+//       Be[nFunctions +i] -= _feL[i] *(u - v) * jac* w[k] ;
+//       Be[2*nFunctions +i] -= _feV[i] *(vDot - gammaDot) * jac * w[k];
+//     }
+//   }
+
+// }
+
+void feSysElm_1D_weakBC_edo1::computeBe(std::vector<double> &J, int numElem,
+                                        std::vector<feSpace *> &intSpace, feSpace *geoSpace,
+                                        std::vector<double> &geoCoord, double c0, double tn,
+                                        double dt, double *Be) {
+  int nG = geoSpace->getNbQuadPoints();
+  std::vector<double> w = geoSpace->getQuadratureWeights();
+  // Make the difference between different type of space
+  int nFunctionsU = intSpace[_idU]->getNbFunctions();
+  int nFunctionsL = intSpace[_idL]->getNbFunctions();
+
+  std::vector<double> x(3, 0.0);
+  double u, l, v, vDot, jac;
+  // std::cout<<"gammaDot= "<<gammaDot<< " x= "<<x[0]<< "tn= " <<tn<<std::endl;
+  // printf("%16.6e \n" , v);
+  for(int k = 0; k < nG; ++k) {
+    std::vector<double> dxdr(3, 0.0); // [dx/dr, dy/dr, dz/dr]
+    geoSpace->interpolateVectorFieldAtQuadNode_rDerivative(geoCoord, k, dxdr);
+    jac = sqrt(dxdr[0] * dxdr[0] + dxdr[1] * dxdr[1]);
+    geoSpace->interpolateVectorFieldAtQuadNode(geoCoord, k, x);
+    double gammaDot = _fct->eval(tn, x);
+    u = intSpace[_idU]->interpolateSolutionAtQuadNode(k);
+    v = intSpace[_idV]->interpolateSolutionAtQuadNode(k);
+    l = intSpace[_idL]->interpolateSolutionAtQuadNode(k);
+    vDot = intSpace[_idV]->interpolateSolutionDotAtQuadNode(k);
+    for(int i = 0; i < nFunctionsU; ++i) {
+      _feU[i] = intSpace[_idU]->getFunctionAtQuadNode(i, k);
+      Be[i] -= _feU[i] * l * jac * w[k];
+    }
+    for(int i = 0; i < nFunctionsL; ++i) {
+      _feL[i] = intSpace[_idL]->getFunctionAtQuadNode(i, k);
+      Be[nFunctionsU + i] -= _feL[i] * (u - v) * jac * w[k];
+    }
+    for(int i = 0; i < nFunctionsU; ++i) {
+      _feV[i] = intSpace[_idV]->getFunctionAtQuadNode(i, k);
+      Be[(nFunctionsU + nFunctionsL) + i] -= _feV[i] * (vDot - gammaDot) * jac * w[k];
+    }
+  }
+}
+// void feSysElm_1D_weakBC_Vec::createElementarySystem(std::vector<feSpace *> &space) {
+//   _idU = 0;
+//   _idU = 1;
+//   _idL = 2;
+//   _idBu = 3;
+//   _idBv = 4 ;
+//   _iVar = {_idU, _idV, _idL , _idBu, _idBv};
+//   _jVar = {_idU, _idV, _idL , _idBu, _idBv};
+//   _feU.resize(space[_idU]->getNbFunctions());
+//   _feV.resize(space[_idV]->getNbFunctions());
+//   _feL.resize(space[_idL]->getNbFunctions());
+//   _feBu.resize(space[_idBv]->getNbFunctions());
+//   _feBv.resize(space[_idBu]->getNbFunctions());
+// }
+
+// void feSysElm_1D_weakBC_Vec::computeAe(std::vector<double> &J, int numElem,
+//                                         std::vector<feSpace *> &intSpace, feSpace *geoSpace,
+//                                         std::vector<double> &geoCoord, double c0, double tn,
+//                                         double **Ae) {
+//   int nG = geoSpace->getNbQuadPoints();
+//   std::vector<double> w = geoSpace->getQuadratureWeights();
+//   int nFunctionsU = intSpace[_idU]->getNbFunctions();
+//   int nFunctionsV = intSpace[_idV]->getNbFunctions();
+//   int nFunctionsL = intSpace[_idL]->getNbFunctions();
+//   int nFunctionsBv = intSpace[_idBu]->getNbFunctions();
+//   int nFunctionsBu = intSpace[_idBv]->getNbFunctions();
+//   double jac;
+
+//   for(int k = 0; k < nG; ++k) {
+//     std::vector<double> dxdr(3, 0.0); // [dx/dr, dy/dr, dz/dr]
+//     geoSpace->interpolateVectorFieldAtQuadNode_rDerivative(geoCoord, k, dxdr);
+//     jac = sqrt(dxdr[0] * dxdr[0] + dxdr[1] * dxdr[1]);
+//     // jac = J[nG * numElem + k];
+//     int I = 0, J;
+//     // // Set up interpolation functions
+//     for(int i = 0; i < nFunctionsU; ++i) {
+//       _feU[i] = intSpace[_idU]->getFunctionAtQuadNode(i, k);
+//       _feV[i] = intSpace[_idV]->getFunctionAtQuadNode(i, k);
+//       _feBv[i] = intSpace[_idBu]->getFunctionAtQuadNode(i, k);
+//       _feBu[i] = intSpace[_idBv]->getFunctionAtQuadNode(i, k);
+//     }
+//     for(int i = 0; i < nFunctionsL; ++i) { _feL[i] = intSpace[_idL]->getFunctionAtQuadNode(i, k);
+//     }
+
+//     for(int i = 0; i < nFunctionsU; ++i) {
+//       J=nFunctionsU + nFunctionsV;
+//       for(int j = 0; j < nFunctionsL; ++j) {
+//         Ae[I][J++] += _feU[i] * _feL[j] * jac * w[k];
+//       }
+//       I++;
+//     }
+//     for(int i = 0; i < nFunctionsU; ++i) {
+//       J=0;
+//       I=nFunctionsU + nFunctionsV ;
+//       for(int j = 0; j < nFunctionsL; ++j) {
+//         Ae[I][J++] += _feU[j] * _feL[i] * jac * w[k];
+//       }
+//       I++;
+//     }
+
+//     for(int i = 0; i < nFunctionsV; ++i) {
+//       J=nFunctionsU + nFunctionsV;
+//       I=nFunctionsU;
+//       for(int j = 0; j < nFunctionsL; ++j) {
+//         Ae[I][J++] += _feV[i] * _feL[j] * jac * w[k];
+//       }
+//       I++;
+//     }
+//     for(int i = 0; i < nFunctionsV; ++i) {
+//       J=nFunctionsU;
+//       I=nFunctionsU + nFunctionsV;
+//       for(int j = 0; j < nFunctionsL; ++j) {
+//         Ae[I][J++] += _feV[j] * _feL[i] * jac * w[k];
+//       }
+//       I++;
+//     }
+
+//     for(int i = 0; i < nFunctionsL; ++i) {
+//       J=nFunctionsU + nFunctionsV +nFunctionsL;
+//       I=nFunctionsU + nFunctionsV;
+//       for(int j = 0; j < nFunctionsU; ++j) {
+//         Ae[I][J++] += -_feL[i] * _feBu[j] * jac * w[k];
+//       }
+//       I++;
+//     }
+//     for(int i = 0; i < nFunctionsL; ++i) {
+//       J=nFunctionsU + nFunctionsV +nFunctionsL + nFunctionsBu;
+//       I=nFunctionsU + nFunctionsV;
+//       for(int j = 0; j < nFunctionsU; ++j) {
+//         Ae[I][J++] += -_feL[i] * _feBv[j] * jac * w[k];
+//       }
+//       I++;
+//     }
+
+//     for(int i = 0; i < nFunctionsU; ++i) {
+//       J=nFunctionsU + nFunctionsV +nFunctionsL;
+//       I=nFunctionsU + nFunctionsV +nFunctionsL;
+//       for(int j = 0; j < nFunctionsU; ++j) {
+//         Ae[I][J++] +=
+//           c0 * _feBu[i] * _feBv[j] * jac * w[k];
+//       }
+//       I++;
+//     }
+//     for(int i = 0; i < nFunctionsU; ++i) {
+//       J=nFunctionsU + nFunctionsV +nFunctionsL + nFunctionsBu;
+//       I=nFunctionsU + nFunctionsV +nFunctionsL + nFunctionsBu;
+//       for(int j = 0; j < nFunctionsU; ++j) {
+//         Ae[I][J++] +=
+//           c0 * _feBu[j] * _feBv[i] * jac * w[k];
+//       }
+//       I++;
+//     }
+//   }
+// }
+
+// void feSysElm_1D_weakBC_Vec::computeBe(std::vector<double> &J, int numElem,
+//                                         std::vector<feSpace *> &intSpace, feSpace *geoSpace,
+//                                         std::vector<double> &geoCoord, double c0, double tn,
+//                                         double dt, double *Be) {
+//   int nG = geoSpace->getNbQuadPoints();
+//   std::vector<double> w = geoSpace->getQuadratureWeights();
+//   // Make the difference between different type of space
+//   int nFunctionsU = intSpace[_idU]->getNbFunctions();
+//   int nFunctionsV = intSpace[_idV]->getNbFunctions();
+//   int nFunctionsL = intSpace[_idL]->getNbFunctions();
+//   int nFunctionsBv = intSpace[_idBu]->getNbFunctions();
+//   int nFunctionsBu = intSpace[_idBv]->getNbFunctions();
+
+//   std::vector<double> x(3, 0.);
+//   std::vector<double> gammaDot(2, 0.);
+//   double u, l, v, bu,bv, buDot,bvDot, jac;
+//   // std::cout<<"gammaDot= "<<gammaDot<< " x= "<<x[0]<< "tn= " <<tn<<std::endl;
+//   // printf("%16.6e \n" , v);
+//   for(int k = 0; k < nG; ++k) {
+//     std::vector<double> dxdr(3, 0.0); // [dx/dr, dy/dr, dz/dr]
+//     geoSpace->interpolateVectorFieldAtQuadNode_rDerivative(geoCoord, k, dxdr);
+//     jac = sqrt(dxdr[0] * dxdr[0] + dxdr[1] * dxdr[1]);
+//     geoSpace->interpolateVectorFieldAtQuadNode(geoCoord, k, x);
+//     if(_fct != nullptr) _fct->eval(tn, x, gammaDot);
+//     u = intSpace[_idU]->interpolateSolutionAtQuadNode(k);
+//     v = intSpace[_idV]->interpolateSolutionAtQuadNode(k);
+//     l = intSpace[_idL]->interpolateSolutionAtQuadNode(k);
+//     bv = intSpace[_idBu]->interpolateSolutionAtQuadNode(k);
+//     bu = intSpace[_idBv]->interpolateSolutionAtQuadNode(k);
+//     buDot = intSpace[_idBu]->interpolateSolutionDotAtQuadNode(k);
+//     bvDot = intSpace[_idBv]->interpolateSolutionDotAtQuadNode(k);
+
+//     int cnt = 0;
+//     // std::cout<<"Cnt vaut  "<<cnt<<std::endl;
+//     //Residu pour u
+//     for(int i = 0; i < nFunctionsU; ++i) {
+//       _feU[i] = intSpace[_idU]->getFunctionAtQuadNode(i, k);
+//       Be[cnt++] -= _feU[i] * l * jac * w[k];
+//     }
+//     // std::cout<<"Cnt vaut  "<<cnt<<std::endl;
+//     //Residu pour v
+//     for(int i = 0; i < nFunctionsV; ++i) {
+//       _feV[i] = intSpace[_idV]->getFunctionAtQuadNode(i, k);
+//       Be[cnt++] -= _feV[i] * l * jac * w[k];
+//     }
+//     // std::cout<<"Cnt vaut  "<<cnt<<std::endl;
+//     //Residu pour lambda
+//     for(int i = 0; i < nFunctionsL; ++i) {
+//       _feL[i] = intSpace[_idL]->getFunctionAtQuadNode(i, k);
+//       Be[cnt++] -= _feL[i] * (u - bu) * jac * w[k];
+//     }
+//     // std::cout<<"Cnt vaut  "<<cnt<<std::endl;
+//     for(int i = 0; i < nFunctionsL; ++i) {
+//       _feL[i] = intSpace[_idL]->getFunctionAtQuadNode(i, k);
+//       Be[cnt++] -= _feL[i] * (v - bv) * jac * w[k];
+//     }
+//     // std::cout<<"Cnt vaut  "<<cnt<<std::endl;
+//     //Residu du a l'edo 1
+//     for(int i = 0; i < nFunctionsBu; ++i) {
+//       _feBu[i] = intSpace[_idBu]->getFunctionAtQuadNode(i, k);
+//       Be[cnt++] -= _feBu[i] * (buDot - gammaDot[0]) * jac * w[k];
+//     }
+//     // std::cout<<"Cnt vaut  "<<cnt<<std::endl;
+//     for(int i = 0; i < nFunctionsBv; ++i) {
+//       _feBv[i] = intSpace[_idBv]->getFunctionAtQuadNode(i, k);
+//       Be[cnt++] -= _feBv[i] * (bvDot - gammaDot[1]) * jac * w[k];
+//     }
+//   }
+// }
 
 void feSysElm_1D_Source::createElementarySystem(std::vector<feSpace *> &space) {
   _idU = 0;
@@ -87,8 +734,8 @@ void feSysElm_1D_Source::createElementarySystem(std::vector<feSpace *> &space) {
 
 void feSysElm_1D_Source::computeBe(std::vector<double> &J, int numElem,
                                    std::vector<feSpace *> &intSpace, feSpace *geoSpace,
-                                   std::vector<double> &geoCoord, double c0, double tn,
-                                   double dt, double *Be) {
+                                   std::vector<double> &geoCoord, double c0, double tn, double dt,
+                                   double *Be) {
   int nG = geoSpace->getNbQuadPoints();
   std::vector<double> w = geoSpace->getQuadratureWeights();
   int nFunctions = intSpace[_idU]->getNbFunctions();
@@ -98,7 +745,6 @@ void feSysElm_1D_Source::computeBe(std::vector<double> &J, int numElem,
   for(int k = 0; k < nG; ++k) {
     geoSpace->interpolateVectorFieldAtQuadNode(geoCoord, k, x);
     double S = _fct->eval(tn, x);
-    // std::cout<< "-----S = "<<S<<"---------"<<std::endl;
     for(int i = 0; i < nFunctions; ++i) {
       _feU[i] = intSpace[_idU]->getFunctionAtQuadNode(i, k);
       Be[i] -= _feU[i] * S * J[nG * numElem + k] * w[k];
@@ -142,8 +788,8 @@ void feSysElm_1D_Diffusion::computeAe(std::vector<double> &J, int numElem,
 
 void feSysElm_1D_Diffusion::computeBe(std::vector<double> &J, int numElem,
                                       std::vector<feSpace *> &intSpace, feSpace *geoSpace,
-                                      std::vector<double> &geoCoord, double c0, double tn, double dt,
-                                      double *Be) {
+                                      std::vector<double> &geoCoord, double c0, double tn,
+                                      double dt, double *Be) {
   int nG = geoSpace->getNbQuadPoints();
   std::vector<double> w = geoSpace->getQuadratureWeights();
   double kD = _par;
@@ -186,21 +832,17 @@ void feSysElm_1D_Masse::computeAe(std::vector<double> &J, int numElem,
   for(int k = 0; k < nG; ++k) {
     jac = J[nG * numElem + k];
 
-    for(int i = 0; i < nFunctions; ++i){
-      _feU[i] = intSpace[_idU]->getFunctionAtQuadNode(i, k);
-    }
+    for(int i = 0; i < nFunctions; ++i) _feU[i] = intSpace[_idU]->getFunctionAtQuadNode(i, k);
 
-    for(int i = 0; i < nFunctions; ++i){
-      for(int j = 0; j < nFunctions; ++j){
-        Ae[i][j] += _feU[i] * rho * c0 * _feU[j] * jac * w[k];
-      }
-    }
+    for(int i = 0; i < nFunctions; ++i)
+      for(int j = 0; j < nFunctions; ++j) Ae[i][j] += _feU[i] * rho * c0 * _feU[j] * jac * w[k];
   }
 }
 
 void feSysElm_1D_Masse::computeBe(std::vector<double> &J, int numElem,
                                   std::vector<feSpace *> &intSpace, feSpace *geoSpace,
-                                  std::vector<double> &geoCoord, double c0, double tn, double dt, double *Be) {
+                                  std::vector<double> &geoCoord, double c0, double tn, double dt,
+                                  double *Be) {
   int nG = geoSpace->getNbQuadPoints();
   std::vector<double> w = geoSpace->getQuadratureWeights();
   double rho = _par;
@@ -231,8 +873,8 @@ void feSysElm_2D_Source::createElementarySystem(std::vector<feSpace *> &space) {
 
 void feSysElm_2D_Source::computeBe(std::vector<double> &J, int numElem,
                                    std::vector<feSpace *> &intSpace, feSpace *geoSpace,
-                                   std::vector<double> &geoCoord, double c0, double tn,
-                                   double dt, double *Be) {
+                                   std::vector<double> &geoCoord, double c0, double tn, double dt,
+                                   double *Be) {
   int nG = geoSpace->getNbQuadPoints();
   std::vector<double> w = geoSpace->getQuadratureWeights();
   int nFunctions = intSpace[_idU]->getNbFunctions();
@@ -623,7 +1265,7 @@ void feSysElm_2D_Diffusion::computeBe(std::vector<double> &Ja, int numElem,
   }
 }
 
-void feSysElm_2D_Advection::createElementarySystem(std::vector<feSpace *> &space) {
+void feSysElm_2D_Masse::createElementarySystem(std::vector<feSpace *> &space) {
   _idU = 0;
   _iVar[0] = _idU;
   _jVar[0] = _idU;
@@ -632,134 +1274,58 @@ void feSysElm_2D_Advection::createElementarySystem(std::vector<feSpace *> &space
   _feUdy.resize(space[_idU]->getNbFunctions());
 }
 
-void feSysElm_2D_Advection::computeAe(std::vector<double> &Ja, int numElem,
-                                      std::vector<feSpace *> &intSpace, feSpace *geoSpace,
-                                      std::vector<double> &geoCoord, double c0, double tn,
-                                      double **Ae) {
+void feSysElm_2D_Masse::computeAe(std::vector<double> &J, int numElem,
+                                  std::vector<feSpace *> &intSpace, feSpace *geoSpace,
+                                  std::vector<double> &geoCoord, double c0, double tn,
+                                  double **Ae) {
   int nG = geoSpace->getNbQuadPoints();
   std::vector<double> w = geoSpace->getQuadratureWeights();
-  double kD = _par;
-  int nFunctions = intSpace[_idU]->getNbFunctions();
+  double rho = _par;
+  int nFunctionsU = intSpace[_idU]->getNbFunctions();
 
-  double J;
+  double jac, u, dudt;
   for(int k = 0; k < nG; ++k) {
     std::vector<double> dxdr(3, 0.0); // [dx/dr, dy/dr, dz/dr]
     std::vector<double> dxds(3, 0.0); // [dx/ds, dy/ds, dz/ds]
     geoSpace->interpolateVectorFieldAtQuadNode_rDerivative(geoCoord, k, dxdr);
     geoSpace->interpolateVectorFieldAtQuadNode_sDerivative(geoCoord, k, dxds);
-    J = dxdr[0] * dxds[1] - dxdr[1] * dxds[0];
+    jac = dxdr[0] * dxds[1] - dxdr[1] * dxds[0];
 
-    double drdx = dxds[1] / J;
-    double drdy = -dxds[0] / J;
-    double dsdx = -dxdr[1] / J;
-    double dsdy = dxdr[0] / J;
+    u = intSpace[_idU]->interpolateSolutionAtQuadNode(k);
+    dudt = intSpace[_idU]->interpolateSolutionDotAtQuadNode(k);
 
-    for(int i = 0; i < nFunctions; ++i) {
-      _feUdx[i] = intSpace[_idU]->getdFunctiondrAtQuadNode(i, k) * drdx +
-                  intSpace[_idU]->getdFunctiondsAtQuadNode(i, k) * dsdx;
-      _feUdy[i] = intSpace[_idU]->getdFunctiondrAtQuadNode(i, k) * drdy +
-                  intSpace[_idU]->getdFunctiondsAtQuadNode(i, k) * dsdy;
-    }
+    for(int i = 0; i < nFunctionsU; ++i) _feU[i] = intSpace[_idU]->getFunctionAtQuadNode(i, k);
 
-    for(int i = 0; i < nFunctions; ++i) {
-      for(int j = 0; j < nFunctions; ++j) {
-        Ae[i][j] += (_feUdx[i] * _feUdx[j] + _feUdy[i] * _feUdy[j]) * kD * J * w[k];
+    for(int i = 0; i < nFunctionsU; ++i) {
+      for(int j = 0; j < nFunctionsU; ++j) {
+        Ae[i][j] += _feU[i] * rho * c0 * _feU[j] * jac * w[k];
       }
     }
   }
 }
 
-void feSysElm_2D_Advection::computeBe(std::vector<double> &Ja, int numElem,
-                                      std::vector<feSpace *> &intSpace, feSpace *geoSpace,
-                                      std::vector<double> &geoCoord, double c0, double tn,
-                                      double dt, double *Be) {
+void feSysElm_2D_Masse::computeBe(std::vector<double> &J, int numElem,
+                                  std::vector<feSpace *> &intSpace, feSpace *geoSpace,
+                                  std::vector<double> &geoCoord, double c0, double tn, double dt,
+                                  double *Be) {
   int nG = geoSpace->getNbQuadPoints();
   std::vector<double> w = geoSpace->getQuadratureWeights();
-  double kD = _par;
-  int nFunctions = intSpace[_idU]->getNbFunctions();
+  double rho = _par;
+  int nFunctionsU = intSpace[_idU]->getNbFunctions();
 
-  double J, u, dudt, dudx, dudy;
+  double jac, u, dudt;
   for(int k = 0; k < nG; ++k) {
-
-    // Evaluate the exterior velocity field
-    std::vector<double> v(2, 0.0);
-    std::vector<double> x(3, 0.0);
-    geoSpace->interpolateVectorFieldAtQuadNode(geoCoord, k, x);
-    _fct->eval(tn, x, v);
-
     std::vector<double> dxdr(3, 0.0); // [dx/dr, dy/dr, dz/dr]
     std::vector<double> dxds(3, 0.0); // [dx/ds, dy/ds, dz/ds]
     geoSpace->interpolateVectorFieldAtQuadNode_rDerivative(geoCoord, k, dxdr);
     geoSpace->interpolateVectorFieldAtQuadNode_sDerivative(geoCoord, k, dxds);
-    J = dxdr[0] * dxds[1] - dxdr[1] * dxds[0];
+    jac = dxdr[0] * dxds[1] - dxdr[1] * dxds[0];
 
-    double drdx = dxds[1] / J;
-    double drdy = -dxds[0] / J;
-    double dsdx = -dxdr[1] / J;
-    double dsdy = dxdr[0] / J;
+    dudt = intSpace[_idU]->interpolateSolutionDotAtQuadNode(k);
 
-    // Compute SUPG parameter
-    // double tau1 = 0.0, tau2 = 0.0, tau3 = 0.0, c = 0.0, cT = 0.0, kT = 0.0;
-    // for(int i = 0; i < nFunctions; ++i) {
-    //   dudt = intSpace[_idU]->interpolateSolutionDotAtQuadNode(k);
-    //   dudx = intSpace[_idU]->interpolateSolutionAtQuadNode_rDerivative(k) * drdx +
-    //          intSpace[_idU]->interpolateSolutionAtQuadNode_sDerivative(k) * dsdx;
-    //   dudy = intSpace[_idU]->interpolateSolutionAtQuadNode_rDerivative(k) * drdy +
-    //          intSpace[_idU]->interpolateSolutionAtQuadNode_sDerivative(k) * dsdy;
-
-    //   _feU[i] = intSpace[_idU]->getFunctionAtQuadNode(i, k);
-    //   _feUdx[i] = intSpace[_idU]->getdFunctiondrAtQuadNode(i, k) * drdx +
-    //               intSpace[_idU]->getdFunctiondsAtQuadNode(i, k) * dsdx;
-    //   _feUdy[i] = intSpace[_idU]->getdFunctiondrAtQuadNode(i, k) * drdy +
-    //               intSpace[_idU]->getdFunctiondsAtQuadNode(i, k) * dsdy;
-    //   c  += J * w[k] * _feU[i] * (v[0] * dudx + v[1] * dudy);
-    //   cT += J * w[k] * (v[0] * _feUdx[i] + v[1] * _feUdy[i]) * dudt;
-    //   kT += J * w[k] * (v[0] * _feUdx[i] + v[1] * _feUdy[i]) * (v[0] * dudx + v[1] * dudy);
-    // }
-    double dx01 = fabs(geoCoord[3]-geoCoord[0]);
-    double dx02 = fabs(geoCoord[6]-geoCoord[0]);
-    double dx12 = fabs(geoCoord[6]-geoCoord[3]);
-    double dy01 = fabs(geoCoord[4]-geoCoord[1]);
-    double dy02 = fabs(geoCoord[7]-geoCoord[1]);
-    double dy12 = fabs(geoCoord[7]-geoCoord[4]);
-    double h01 = sqrt(dx01*dx01 + dy01*dy01);
-    double h02 = sqrt(dx02*dx02 + dy02*dy02);
-    double h12 = sqrt(dx12*dx12 + dy12*dy12);
-    double h = fmax(h12,fmax(h01,h02));
-    double normeU = sqrt(v[0]*v[0]+v[1]*v[1]);
-    // double Peh = normeU * h / 2.0;
-
-    // double tau = 1.0/( sqrt( 4.0/(dt*dt) + 4.0*normeU*normeU/h/h + 9.0*16.0/(h*h*h*h)) );
-    double tau = 1.0/( sqrt( 4.0/(dt*dt) + 4.0*normeU*normeU/h/h ) );
-    // tau = 0.01;
-    // double tau = h/2.0/sqrt(v[0]*v[0]+v[1]*v[1]) * (cosh(Peh)/sinh(Peh) - 1.0/Peh);
-    // double tau = (cosh(Peh)/sinh(Peh) - 1.0/Peh);
-    // double tau = 0.01;
-    // std::cout<<tau<<std::endl;
-    // double deltaSUPG = c/kT;
-    // double Re = (v[0]*v[0]+v[1]*v[1]) * c/kT;
-    // printf("Re = %+-4.4e - c = %+-4.4e - cT = %+-4.4e - kT = %+-4.4e - delta = %+-4.4e\n", Re, c, cT, kT, deltaSUPG);
-
-    for(int i = 0; i < nFunctions; ++i) {
-      u = intSpace[_idU]->interpolateSolutionAtQuadNode(k);
-      dudt = intSpace[_idU]->interpolateSolutionDotAtQuadNode(k);
-      dudx = intSpace[_idU]->interpolateSolutionAtQuadNode_rDerivative(k) * drdx +
-             intSpace[_idU]->interpolateSolutionAtQuadNode_sDerivative(k) * dsdx;
-      dudy = intSpace[_idU]->interpolateSolutionAtQuadNode_rDerivative(k) * drdy +
-             intSpace[_idU]->interpolateSolutionAtQuadNode_sDerivative(k) * dsdy;
-
+    for(int i = 0; i < nFunctionsU; ++i) {
       _feU[i] = intSpace[_idU]->getFunctionAtQuadNode(i, k);
-      _feUdx[i] = intSpace[_idU]->getdFunctiondrAtQuadNode(i, k) * drdx +
-                  intSpace[_idU]->getdFunctiondsAtQuadNode(i, k) * dsdx;
-      _feUdy[i] = intSpace[_idU]->getdFunctiondrAtQuadNode(i, k) * drdy +
-                  intSpace[_idU]->getdFunctiondsAtQuadNode(i, k) * dsdy;
-      // Be[i] -= (v[0] * _feUdx[i] + v[1] * _feUdy[i]) * u * J * w[k];
-      // SUPG ?
-      // double delta = geoCoord[3]-geoCoord[0];
-      // double deltaSUPG = 0.01;
-      // Be[i] -= ((v[0] * dudx + v[1] * dudy) * _feU[i] + delta * (v[0] * dudx + v[1] * dudy) * (v[0] * _feUdx[i] + v[1] * _feUdy[i])) * J * w[k];
-      // Be[i] -= J * w[k] * ((v[0] * dudx + v[1] * dudy) * _feU[i] + deltaSUPG * (v[0] * _feUdx[i] + v[1] * _feUdy[i]) * (dudt + v[0] * dudx + v[1] * dudy));
-      Be[i] -= J * w[k] * ((v[0] * dudx + v[1] * dudy) * _feU[i] + tau * (v[0] * _feUdx[i] + v[1] * _feUdy[i]) * (dudt + v[0] * dudx + v[1] * dudy));
+      Be[i] -= _feU[i] * rho * dudt * jac * w[k];
     }
   }
 }
@@ -978,8 +1544,8 @@ void feSysElm_2D_NavierStokes::createElementarySystem(std::vector<feSpace *> &sp
 
 void feSysElm_2D_NavierStokes::computeBe(std::vector<double> &Ja, int numElem,
                                          std::vector<feSpace *> &intSpace, feSpace *geoSpace,
-                                         std::vector<double> &geoCoord, double c0, double tn, double dt,
-                                         double *Be) {
+                                         std::vector<double> &geoCoord, double c0, double tn,
+                                         double dt, double *Be) {
   // TODO : Verifier que les règles d'intégration soient identiques ou adapter
   // On prend les poids de geoSpace, ok pour le jacobien seulement ?
   int nG = geoSpace->getNbQuadPoints();
@@ -995,8 +1561,6 @@ void feSysElm_2D_NavierStokes::computeBe(std::vector<double> &Ja, int numElem,
   std::vector<double> f(2, 0.); // Forces volumiques
 
   for(int k = 0; k < nG; ++k) {
-    // Viscosité dynamique
-    // double mu = (_viscosityFct != nullptr) ? _viscosityFct->eval(tn, x) : _par[1];
     // Forces volumiques
     geoSpace->interpolateVectorFieldAtQuadNode(geoCoord, k, x);
     if(_fct != nullptr) _fct->eval(tn, x, f);
@@ -1033,9 +1597,6 @@ void feSysElm_2D_NavierStokes::computeBe(std::vector<double> &Ja, int numElem,
     Sxy = mu * (dudy + dvdx);
     Syx = mu * (dudy + dvdx);
     Syy = -p + 2. * mu * dvdy;
-
-    // Test : Directional Do-Nothing condition
-
 
     int cnt = 0;
     // Residu pour u
@@ -1087,8 +1648,6 @@ void feSysElm_2D_NavierStokes::computeAe(std::vector<double> &Ja, int numElem,
   std::vector<double> f(2, 0.); // Forces volumiques
 
   for(int k = 0; k < nG; ++k) {
-    // Viscosité dynamique
-    // double mu = (_viscosityFct != nullptr) ? _viscosityFct->eval(tn, x) : _par[1];
     // Forces volumiques
     geoSpace->interpolateVectorFieldAtQuadNode(geoCoord, k, x);
     if(_fct != nullptr) _fct->eval(tn, x, f);
@@ -1178,75 +1737,6 @@ void feSysElm_2D_NavierStokes::computeAe(std::vector<double> &Ja, int numElem,
       for(int j = 0; j < nFunctionsV; ++j) { Ae[I][J++] -= jac * w[k] * (_feP[i] * _feVdy[j]); }
       for(int j = 0; j < nFunctionsP; ++j) { Ae[I][J++] += 0.0; }
       ++I;
-    }
-  }
-}
-
-void feSysElm_1D_DirectionalDoNothing::createElementarySystem(std::vector<feSpace *> &space) {
-  _idU = 0;
-  _idV = 1;
-  _iVar = {_idU, _idV};
-  _jVar = {_idU, _idV};
-  _feU.resize(space[_idU]->getNbFunctions());
-  _feV.resize(space[_idV]->getNbFunctions());
-}
-
-// Using finite differences instead
-void feSysElm_1D_DirectionalDoNothing::computeAe(std::vector<double> &Ja, int numElem,
-                                         std::vector<feSpace *> &intSpace, feSpace *geoSpace,
-                                         std::vector<double> &geoCoord, double c0, double tn,
-                                         double **Ae) {
-}
-
-void feSysElm_1D_DirectionalDoNothing::computeBe(std::vector<double> &Ja, int numElem,
-                                         std::vector<feSpace *> &intSpace, feSpace *geoSpace,
-                                         std::vector<double> &geoCoord, double c0, double tn, double dt,
-                                         double *Be) {
-  int nG = geoSpace->getNbQuadPoints();
-  std::vector<double> w = geoSpace->getQuadratureWeights();
-  int nFunctionsU = intSpace[_idU]->getNbFunctions();
-  int nFunctionsV = intSpace[_idV]->getNbFunctions();
-
-  double J, u, v, nx, ny, dx, dy, norm, udotn, s;
-
-  for(int k = 0; k < nG; ++k) {
-    J = Ja[nG * numElem + k];
-
-    u = intSpace[_idU]->interpolateSolutionAtQuadNode(k);
-    v = intSpace[_idV]->interpolateSolutionAtQuadNode(k);
-
-    // Outward pointing normal vector to the boundary element
-    // geoCoord = [x0 y0 z0 x1 y1 z1 ...], 0 and 1 are the extremities even for higher order lines
-    dx = geoCoord[3] - geoCoord[0];
-    dy = geoCoord[4] - geoCoord[1];
-    nx = dy;
-    ny = -dx;
-    norm = sqrt(nx*nx + ny*ny);
-    nx /= norm;
-    ny /= norm;
-
-    udotn = u*nx + v*ny;
-
-    s = 0.5 * (1. - tanh(udotn/0.05));
-
-    double alpha = 1.;
-    double beta = 0.;
-    double K = (u*u+v*v)/2.;
-
-    int cnt = 0;
-    // Residu pour u
-    for(int i = 0; i < nFunctionsU; ++i) {
-      _feU[i] = intSpace[_idU]->getFunctionAtQuadNode(i, k);
-      // Be[cnt++] += 0.5 * s * _feU[i] * u * J * w[k];
-      // Be[cnt++] += 0.5 * s * nx * _feU[i] * K * J * w[k];
-      Be[cnt++] += 0.5 * (alpha * K * nx + beta * udotn * u) * _feU[i] * s * J * w[k];
-    }
-    // Residu pour v
-    for(int i = 0; i < nFunctionsV; ++i) {
-      _feV[i] = intSpace[_idV]->getFunctionAtQuadNode(i, k);
-      // Be[cnt++] += 0.5 * s * _feV[i] * v * J * w[k];
-      // Be[cnt++] += 0.5 * s * ny * _feV[i] * (u*u+v*v) * J * w[k];
-      Be[cnt++] += 0.5 * (alpha * K * ny + beta * udotn * v) * _feV[i] * s * J * w[k];
     }
   }
 }

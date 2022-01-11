@@ -310,7 +310,10 @@ double feSpace::interpolateSolution_yDerivative(int iElm, std::vector<double> &x
 
 double feSpace::interpolateSolutionAtQuadNode(int iNode) {
   double res = 0.0;
-  for(int i = 0; i < _nFunctions; ++i) res += _sol[i] * _L[_nFunctions * iNode + i];
+  for(int i = 0; i < _nFunctions; ++i) {
+    res += _sol[i] * _L[_nFunctions * iNode + i];
+    // std::cout<<"_sol [ "<< i<<"]="<<_sol[i] << "_L =" << _L[_nFunctions * iNode + i]<<std::endl;
+  }
   return res;
 }
 
@@ -387,7 +390,8 @@ double feSpace::interpolateFieldAtQuadNode_rDerivative(std::vector<double> field
   double res = 0.0;
   if(field.size() != (unsigned)_nFunctions) {
     printf(" In feSpace::interpolateFieldAtQuadNode : Erreur - Nombre de valeurs nodales (%d) non "
-           "compatible avec le nombre d'interpolants de l'espace (%d).\n", field.size(), (unsigned)_nFunctions);
+           "compatible avec le nombre d'interpolants de l'espace (%d).\n",
+           field.size(), (unsigned)_nFunctions);
     return res;
   }
   for(int i = 0; i < _nFunctions; ++i) res += field[i] * _dLdr[_nFunctions * iNode + i];
@@ -471,7 +475,8 @@ void feSpace::interpolateVectorFieldAtQuadNode_rDerivative(std::vector<double> f
   res[0] = res[1] = res[2] = 0.0;
   if(field.size() != 3 * (unsigned)_nFunctions) {
     printf(" In feSpace::interpolateVectorFieldAtQuadNode_rDerivative : Erreur - Nombre de valeurs "
-           "nodales (%d) non compatible avec le nombre d'interpolants de l'espace (%d).\n", field.size(), (unsigned)_nFunctions);
+           "nodales (%d) non compatible avec le nombre d'interpolants de l'espace (%d).\n",
+           field.size(), (unsigned)_nFunctions);
     return;
   }
   for(int i = 0; i < 3; ++i) {
@@ -489,7 +494,8 @@ void feSpace::interpolateVectorFieldAtQuadNode_sDerivative(std::vector<double> f
   res[0] = res[1] = res[2] = 0.0;
   if(field.size() != 3 * (unsigned)_nFunctions) {
     printf(" In feSpace::interpolateVectorFieldAtQuadNode_sDerivative : Erreur - Nombre de valeurs "
-           "nodales (%d) non compatible avec le nombre d'interpolants de l'espace (%d).\n", field.size(), (unsigned)_nFunctions);
+           "nodales (%d) non compatible avec le nombre d'interpolants de l'espace (%d).\n",
+           field.size(), (unsigned)_nFunctions);
     return;
   }
   for(int i = 0; i < 3; ++i) {
@@ -546,16 +552,37 @@ void feSpace1DP1::initializeAddressingVector(feNumber *number, int numElem) {
   _adr[1] = number->getDDLSommet(_mesh, _cncGeoID, numElem, 1);
 }
 
+void feSpace1DP1_nonConsistant::initializeNumberingUnknowns(feNumber *number) {
+  for(int i = 0; i < _mesh->getNbElm(_cncGeoID); ++i) {
+    number->defDDLElement(_mesh, _cncGeoID, i, 1);
+    // If the line is a boundary element, the edge should be set by the interior element
+    number->defDDLEdge(_mesh, _cncGeoID, i, 0, 1);
+  }
+}
+
+void feSpace1DP1_nonConsistant::initializeNumberingEssential(feNumber *number) {
+  for(int i = 0; i < _mesh->getNbElm(_cncGeoID); ++i) {
+    number->defDDLElement_essentialBC(_mesh, _cncGeoID, i);
+    // Set essential BC on the edge if the line is a boundary element
+    // If the line is an interior element, there is nothing in cncGeo->connecEdges
+    number->defDDLEdge_essentialBC(_mesh, _cncGeoID, i, 0);
+  }
+}
+
+void feSpace1DP1_nonConsistant::initializeAddressingVector(feNumber *number, int numElem) {
+  _adr[0] = number->getDDLElement(_mesh, _cncGeoID, numElem, 0);
+}
+
 void feSpace1DP2::initializeNumberingUnknowns(feNumber *number) {
   for(int i = 0; i < _mesh->getNbElm(_cncGeoID); ++i) {
     // Loop over the elements nodes on geometric interpolant (> 2 if curved)
-    for(int j = 0; j < this->getCncGeo()->getNbNodePerElem(); ++j){
+    for(int j = 0; j < this->getCncGeo()->getNbNodePerElem(); ++j) {
       number->defDDLSommet(_mesh, _cncGeoID, i, j);
     }
     // If the edge is curved (P2), the middle vertex is already numbered.
     // This is true for Pn geometries with n even, where the middle vertex matches
     // the middle node of the interpolant, but so far we will limit to P2 geometries.
-    if(this->getCncGeo()->getFeSpace()->getPolynomialDegree() != 2){
+    if(this->getCncGeo()->getFeSpace()->getPolynomialDegree() != 2) {
       number->defDDLElement(_mesh, _cncGeoID, i, 1);
       // If the line is a boundary element, the edge should be set by the interior element
 
@@ -567,15 +594,15 @@ void feSpace1DP2::initializeNumberingUnknowns(feNumber *number) {
 
 void feSpace1DP2::initializeNumberingEssential(feNumber *number) {
   for(int i = 0; i < _mesh->getNbElm(_cncGeoID); ++i) {
-    for(int j = 0; j < this->getCncGeo()->getNbNodePerElem(); ++j){
+    for(int j = 0; j < this->getCncGeo()->getNbNodePerElem(); ++j) {
       number->defDDLSommet_essentialBC(_mesh, _cncGeoID, i, j);
     }
-    if(this->getCncGeo()->getFeSpace()->getPolynomialDegree() != 2){
+    if(this->getCncGeo()->getFeSpace()->getPolynomialDegree() != 2) {
       number->defDDLElement_essentialBC(_mesh, _cncGeoID, i);
       // Set essential BC on the edge if the line is a boundary element
       // If the line is an interior element, there is nothing in cncGeo->connecEdges
       // This is only true is there is a surface feSpace associated with the current feSpace !
-      
+
       number->defDDLEdge_essentialBC(_mesh, _cncGeoID, i, 0);
     }
   }
@@ -584,9 +611,9 @@ void feSpace1DP2::initializeNumberingEssential(feNumber *number) {
 void feSpace1DP2::initializeAddressingVector(feNumber *number, int numElem) {
   _adr[0] = number->getDDLSommet(_mesh, _cncGeoID, numElem, 0);
   _adr[1] = number->getDDLSommet(_mesh, _cncGeoID, numElem, 1);
-  if(this->getCncGeo()->getFeSpace()->getPolynomialDegree() == 2){
+  if(this->getCncGeo()->getFeSpace()->getPolynomialDegree() == 2) {
     _adr[2] = number->getDDLSommet(_mesh, _cncGeoID, numElem, 2);
-  } else{
+  } else {
     _adr[2] = number->getDDLElement(_mesh, _cncGeoID, numElem, 0);
   }
 }
@@ -599,6 +626,7 @@ void feSpace1DP3::initializeNumberingUnknowns(feNumber *number) {
     /* The mid-edge vertex does not match any of the element dofs,
     so they must both be added. */
     number->defDDLElement(_mesh, _cncGeoID, i, 2);
+    // TODO : add a test to check if it is in the situation of Verwer
     number->defDDLEdge(_mesh, _cncGeoID, i, 0, 2);
   }
 }
@@ -615,22 +643,32 @@ void feSpace1DP3::initializeNumberingEssential(feNumber *number) {
 void feSpace1DP3::initializeAddressingVector(feNumber *number, int numElem) {
   _adr[0] = number->getDDLSommet(_mesh, _cncGeoID, numElem, 0);
   _adr[1] = number->getDDLSommet(_mesh, _cncGeoID, numElem, 1);
-  _adr[2] = number->getDDLElement(_mesh, _cncGeoID, numElem, 0);
-  _adr[3] = number->getDDLElement(_mesh, _cncGeoID, numElem, 1);
+  int e = _mesh->getEdge(_cncGeoID, numElem, 0);
+  if(e > 0) {
+    _adr[2] = number->getDDLElement(_mesh, _cncGeoID, numElem, 0);
+    _adr[3] = number->getDDLElement(_mesh, _cncGeoID, numElem, 1);
+  } else {
+    _adr[2] = number->getDDLElement(_mesh, _cncGeoID, numElem, 1);
+    _adr[3] = number->getDDLElement(_mesh, _cncGeoID, numElem, 0);
+  }
 }
 
 void feSpace1DP4::initializeNumberingUnknowns(feNumber *number) {
   for(int i = 0; i < _mesh->getNbElm(_cncGeoID); ++i) {
-    //TODO : Modifier pour elements courbes
+    // TODO : Modifier pour elements courbes
     number->defDDLSommet(_mesh, _cncGeoID, i, 0);
     number->defDDLSommet(_mesh, _cncGeoID, i, 1);
     number->defDDLElement(_mesh, _cncGeoID, i, 3);
+    // TODO : add a test to check if it is in the situation of Verwer
+    number->defDDLEdge(_mesh, _cncGeoID, i, 0, 1);
+    number->defDDLEdge(_mesh, _cncGeoID, i, 0, 2);
+    number->defDDLEdge(_mesh, _cncGeoID, i, 0, 3);
   }
 }
 
 void feSpace1DP4::initializeNumberingEssential(feNumber *number) {
   for(int i = 0; i < _mesh->getNbElm(_cncGeoID); ++i) {
-    //TODO : Modifier pour elements courbes
+    // TODO : Modifier pour elements courbes
     number->defDDLSommet_essentialBC(_mesh, _cncGeoID, i, 0);
     number->defDDLSommet_essentialBC(_mesh, _cncGeoID, i, 1);
     number->defDDLElement_essentialBC(_mesh, _cncGeoID, i);
@@ -641,7 +679,14 @@ void feSpace1DP4::initializeNumberingEssential(feNumber *number) {
 void feSpace1DP4::initializeAddressingVector(feNumber *number, int numElem) {
   _adr[0] = number->getDDLSommet(_mesh, _cncGeoID, numElem, 0);
   _adr[1] = number->getDDLSommet(_mesh, _cncGeoID, numElem, 1);
-  _adr[2] = number->getDDLElement(_mesh, _cncGeoID, numElem, 0);
-  _adr[3] = number->getDDLElement(_mesh, _cncGeoID, numElem, 1);
-  _adr[4] = number->getDDLElement(_mesh, _cncGeoID, numElem, 2);
+  int e = _mesh->getEdge(_cncGeoID, numElem, 0);
+  if(e > 0) {
+    _adr[2] = number->getDDLElement(_mesh, _cncGeoID, numElem, 0);
+    _adr[3] = number->getDDLElement(_mesh, _cncGeoID, numElem, 1);
+    _adr[4] = number->getDDLElement(_mesh, _cncGeoID, numElem, 2);
+  } else {
+    _adr[4] = number->getDDLElement(_mesh, _cncGeoID, numElem, 0);
+    _adr[3] = number->getDDLElement(_mesh, _cncGeoID, numElem, 1);
+    _adr[2] = number->getDDLElement(_mesh, _cncGeoID, numElem, 2);
+  }
 }

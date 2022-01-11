@@ -44,8 +44,7 @@ public:
 
     std::sort(connecNodes.begin(), connecNodes.end());
     _nNod = std::unique(connecNodes.begin(), connecNodes.end()) - connecNodes.begin();
-    // connecNodes.erase( std::unique(connecNodes.begin(), connecNodes.end()), connecNodes.end() );
-    // _nNod = connecNodes.size();
+
   };
   ~feCncGeo() {
     // if(_space != nullptr)
@@ -68,7 +67,7 @@ public:
   std::vector<int> &getEdgeConnectivityRef() { return _connecEdges; }
   std::vector<int> &getElemConnectivityRef() { return _connecElem; }
 
-  int getNodeConnectivity(int iNode){ return _connecNodes[iNode]; }
+  int getNodeConnectivity(int iNode) { return _connecNodes[iNode]; }
   int getNodeConnectivity(int numElem, int iNode) {
     return _connecNodes[_nNodPerElm * numElem + iNode];
   }

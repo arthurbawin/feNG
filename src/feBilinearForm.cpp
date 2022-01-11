@@ -41,9 +41,9 @@ static inline void freeResidual(double **b) { free(*b); }
 
 feBilinearForm::feBilinearForm(std::vector<feSpace *> space, feMesh *mesh, int degQuad,
                                feSysElm *sysElm)
-  : _sysElm(sysElm), _intSpace(space), _cnc(space[0]->getCncGeo()), _cncGeoID(space[0]->getCncGeoID()),
-    _cncGeoTag(space[0]->getCncGeoTag()), _geoSpace(_cnc->getFeSpace()), _nGeoElm(_cnc->getNbElm()),
-    _degQuad(degQuad)
+  : _sysElm(sysElm), _intSpace(space), _cnc(space[0]->getCncGeo()),
+    _cncGeoID(space[0]->getCncGeoID()), _cncGeoTag(space[0]->getCncGeoTag()),
+    _geoSpace(_cnc->getFeSpace()), _nGeoElm(_cnc->getNbElm()), _degQuad(degQuad)
 
 {
   _nCoord = mesh->getDim();
@@ -195,7 +195,8 @@ void feBilinearForm::computeMatrixFiniteDifference(feMetaNumber *metaNumber, feM
   // ==================================================================
   setResidualToZero(_niElm, &R0);
   std::vector<double> &J = _cnc->getJacobians();
-  _sysElm->computeBe(J, numElem, _intSpace, _geoSpace, _geoCoord, C0, sol->getCurrentTime(), sol->getTimeStep(), R0);
+  _sysElm->computeBe(J, numElem, _intSpace, _geoSpace, _geoCoord, C0, sol->getCurrentTime(),
+                     sol->getTimeStep(), R0);
   //_sysElm->computeAe(_intSpace, _geoSpace, _geoCoord, sol->getC0(), sol->getCurrentTime(), _Ae);
   // On boucle sur les fespace des inconnues
   // ==================================================================
@@ -217,7 +218,8 @@ void feBilinearForm::computeMatrixFiniteDifference(feMetaNumber *metaNumber, feM
       _soldot[j] = _soldot[j] + delta_h * C0;
 
       setResidualToZero(_niElm, &Rh);
-      _sysElm->computeBe(J, numElem, _intSpace, _geoSpace, _geoCoord, C0, sol->getCurrentTime(), sol->getTimeStep(), Rh);
+      _sysElm->computeBe(J, numElem, _intSpace, _geoSpace, _geoCoord, C0, sol->getCurrentTime(),
+                         sol->getTimeStep(), Rh);
 
       for(feInt i = 0; i < _niElm; i++) _Ae[i][numColumn] = (-Rh[i] + R0[i]) * invdelta_h;
 

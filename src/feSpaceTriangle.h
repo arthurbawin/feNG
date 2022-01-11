@@ -23,6 +23,26 @@ public:
   virtual void initializeAddressingVector(feNumber *number, int numElem);
 };
 
+class feSpaceTriP1_nonConsistant : public feSpace {
+protected:
+public:
+  feSpaceTriP1_nonConsistant(std::string cncGeoID);
+  feSpaceTriP1_nonConsistant(feMesh *mesh, std::string fieldID, std::string cncGeoID,
+                             feFunction *fct);
+  ~feSpaceTriP1_nonConsistant() {}
+
+  virtual int getNbFunctions() { return 3; }
+  virtual int getPolynomialDegree() { return 1; }
+  virtual std::vector<double> L(double r[3]);
+  virtual std::vector<double> dLdr(double r[3]);
+  virtual std::vector<double> dLds(double r[3]);
+  virtual std::vector<double> dLdt(double r[3]);
+
+  virtual void initializeNumberingUnknowns(feNumber *number);
+  virtual void initializeNumberingEssential(feNumber *number);
+  virtual void initializeAddressingVector(feNumber *number, int numElem);
+};
+
 class feSpaceTriP2 : public feSpace {
 protected:
 public:

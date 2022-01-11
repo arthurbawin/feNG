@@ -12,10 +12,12 @@
 #include "feSysElm.h"
 #include "feBilinearForm.h"
 #include "feSolver.h"
-// #include "feGetSolFromFile.h"
 #define USING_PETSC
 #ifdef HAVE_PETSC
 #include "feLinearSystemPETSc.h"
+#endif
+#ifdef HAVE_MKL
+#include "feLinearSystemMklPardiso.h"
 #endif
 
 // double fSol(const double t, const std::vector<double> &x, const std::vector<double> par) {
@@ -27,11 +29,11 @@
 // }
 
 double fSol(const double t, const std::vector<double> &x, const std::vector<double> par) {
-  return pow(t, 4.) + 1;
+  return pow(t, 1.) + 1;
 }
 
 double fSource(const double t, const std::vector<double> &x, const std::vector<double> par) {
-  return -4. * pow(t, 3.);
+  return -1. * pow(t, 0.);
 }
 
 int main(int argc, char **argv) {
@@ -63,11 +65,11 @@ int main(int argc, char **argv) {
     // Solution
     double t0 = 0.;
     double t1 = 1.;
-    int nTimeSteps = 20 * pow(2, iter);
+    int nTimeSteps = 5 * pow(2, iter);
     TT[iter] = nTimeSteps;
     feSolution *solDC3F = new feSolution(mesh, fespace, feEssBC, metaNumber);
     // Formes (bi)lineaires
-    int nQuad = 15; // TODO : change to deg
+    int nQuad = 6; // TODO : change to deg
     std::vector<feSpace *> spaceSource1D_U = {&U_M1D};
     std::vector<feSpace *> spaceMasse1D_U = {&U_M1D};
 
@@ -85,10 +87,13 @@ int main(int argc, char **argv) {
     feNorm *normDC3F = new feNorm(&U_M1D, mesh, nQuad, funSol);
     std::vector<feNorm *> norms = {normBDF1, normDC2F, normDC3F};
     // Systeme lineaire
-    feLinearSystemPETSc *linearSystem =
-      new feLinearSystemPETSc(argc, argv, formMatrices, formResiduals, metaNumber, mesh);
+    // feLinearSystemPETSc *linearSystem =
+    //   new feLinearSystemPETSc(argc, argv, formMatrices, formResiduals, metaNumber, mesh);
+#ifdef HAVE_MKL
+    feLinearSystemMklPardiso *linearSystem =
+      new feLinearSystemMklPardiso(formMatrices, formResiduals, metaNumber, mesh);
 #ifdef HAVE_PETSC
-    linearSystem->initialize();
+    // linearSystem->initialize();
     // Resolution
     feTolerances tol{1e-10, 1e-9, 10};
     DC3FSolver solver(tol, metaNumber, linearSystem, solDC3F, norms, mesh, t0, t1, nTimeSteps);
@@ -111,6 +116,7 @@ int main(int argc, char **argv) {
     delete solDC3F;
     delete metaNumber;
     delete mesh;
+#endif
   }
   delete funSource;
   delete funSol;

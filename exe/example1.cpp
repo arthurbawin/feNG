@@ -12,7 +12,7 @@ double fSource(const double t, const std::vector<double> x, const std::vector<do
 
 int main(int argc, char **argv) {
 
-  petscInitialize(argc, argv);
+  // petscInitialize(argc, argv);
 
   // Set the default parameters. 
   const char *meshFile = "square.msh";
@@ -25,7 +25,7 @@ int main(int argc, char **argv) {
   // Each "addOption" adds an optional field, although it can be made required by 
   // setting the 5th argument of addOption to "true".
   feOptionsParser options(argc, argv);
-  options.addOption(&meshFile, "-m", "--mesh", "Mesh file", true);
+  options.addOption(&meshFile, "-m", "--mesh", "Mesh file");
   options.addOption(&order, "-o", "--order", "Finite element space order");
   options.addOption(&degreeQuadrature, "-dquad", "--degreeQuadrature", "Degree of the quadrature");
   options.addOption(&verbosity, "-v", "--verbosity", "Verbosity level");
@@ -119,7 +119,7 @@ int main(int argc, char **argv) {
   delete funSol;
   delete funSource;
 
-  petscFinalize();
+  // petscFinalize();
 
   return 0;
 }
