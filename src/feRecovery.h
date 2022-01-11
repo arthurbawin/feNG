@@ -18,11 +18,12 @@
 #include <fstream>
 
 #if defined(HAVE_EIGEN)
- #include "../contrib/Eigen/Dense"
+#include "../contrib/Eigen/Dense"
 #endif
 
 // A structure for the patches of elements around vertices of a connectivity
-class fePatch {
+class fePatch
+{
 protected:
   int _nVertices; // Number of mesh vertices = number of patches
   std::vector<int> _vertices; // The indices in mesh->_vertices
@@ -42,7 +43,8 @@ public:
   std::set<int> &getEdgePatch(int iEdge) { return edgeToElems[iEdge]; }
 };
 
-class feRecovery {
+class feRecovery
+{
 protected:
   int _degSol; // The degree of the FE solution : degree of recovery = deg of the FE solution +1
 
@@ -74,19 +76,19 @@ protected:
 #endif
 
 #if defined(HAVE_EIGEN)
-  std::map<int, Eigen::Matrix<double, 3, 3>> lsInvAtVertices3;
-  std::map<int, Eigen::Matrix<double, 3, 3>> lsInvAtVertices3OnEdges;
-  std::map<int, Eigen::Matrix<double, 4, 4>> lsInvAtVertices4;
-  std::map<int, Eigen::Matrix<double, 4, 4>> lsInvAtVertices4OnEdges;
+  std::map<int, Eigen::Matrix<double, 3, 3> > lsInvAtVertices3;
+  std::map<int, Eigen::Matrix<double, 3, 3> > lsInvAtVertices3OnEdges;
+  std::map<int, Eigen::Matrix<double, 4, 4> > lsInvAtVertices4;
+  std::map<int, Eigen::Matrix<double, 4, 4> > lsInvAtVertices4OnEdges;
 
   // Constrained least squares (ls)
-  std::map<int, Eigen::Matrix<double, 5, 5>> lsInvAtVerticesCont;
-  std::map<int, Eigen::Matrix<double, 5, 5>> lsInvAtVerticesContOnEdges;
+  std::map<int, Eigen::Matrix<double, 5, 5> > lsInvAtVerticesCont;
+  std::map<int, Eigen::Matrix<double, 5, 5> > lsInvAtVerticesContOnEdges;
 
-  std::map<int, Eigen::Matrix<double, 6, 6>> lsInvAtVertices6;
-  std::map<int, Eigen::Matrix<double, 6, 6>> lsInvAtVertices6OnEdges;
-  std::map<int, Eigen::Matrix<double, 10, 10>> lsInvAtVertices10;
-  std::map<int, Eigen::Matrix<double, 10, 10>> lsInvAtVertices10OnEdges;
+  std::map<int, Eigen::Matrix<double, 6, 6> > lsInvAtVertices6;
+  std::map<int, Eigen::Matrix<double, 6, 6> > lsInvAtVertices6OnEdges;
+  std::map<int, Eigen::Matrix<double, 10, 10> > lsInvAtVertices10;
+  std::map<int, Eigen::Matrix<double, 10, 10> > lsInvAtVertices10OnEdges;
 #endif
 
 public:
@@ -108,23 +110,26 @@ public:
   feVectorFunction *_solRefHess;
 
   std::map<int, std::map<int, std::vector<double> > > recoveryCoeff; // #vert : {#rec , coeffs}
-  std::map<int, std::map<int, std::map<int, std::vector<double> > > > recoveryCoeffOnEdges; // #edge : {#dof : {#rec , coeffs}}
+  std::map<int, std::map<int, std::map<int, std::vector<double> > > >
+    recoveryCoeffOnEdges; // #edge : {#dof : {#rec , coeffs}}
   std::map<int, std::map<int, std::vector<double> > > derivativeCoeff; // #vert : {#der , coeffs}
-  std::map<int, std::map<int, std::map<int, std::vector<double> > > > derivativeCoeffOnEdges; // #edge : {#dof : {#rec , coeffs}}
+  std::map<int, std::map<int, std::map<int, std::vector<double> > > >
+    derivativeCoeffOnEdges; // #edge : {#dof : {#rec , coeffs}}
   std::map<int, std::vector<double> > errorCoeff; // #vert : coeffs
 
-  /* All recovered functions (solution and derivatives) evaluated at the vertices dof : #recovery : {#vertex : val}
-    They are pushed after they are created :
-      1D : u, dudx, d2udx2, d3udx3, ...
+  /* All recovered functions (solution and derivatives) evaluated at the vertices dof : #recovery :
+    {#vertex : val} They are pushed after they are created : 1D : u, dudx, d2udx2, d3udx3, ...
       2D : u, dudx, dudy, d2udx2, d2udxy, d2udyx, d2udy2, d3udx3, ...  */
-  std::vector< std::vector<double> > derivAtVertices;
+  std::vector<std::vector<double> > derivAtVertices;
   // All recovered functions evaluated at the edges dof : #derivative : {#edge-1 : val}
-  std::vector< std::vector<double> > derivAtEdges;
+  std::vector<std::vector<double> > derivAtEdges;
 
 public:
   feRecovery(feMetaNumber *metaNumber, feSpace *space, feMesh *mesh, feSolution *sol,
              std::vector<double> &norm, feFunction *solRef, std::string meshName = "",
-             std::string metricMeshName = "", feVectorFunction *solRefGrad = nullptr, feVectorFunction *solRefHess = nullptr, feFunction *fund3udx = nullptr, bool append = false);
+             std::string metricMeshName = "", feVectorFunction *solRefGrad = nullptr,
+             feVectorFunction *solRefHess = nullptr, feFunction *fund3udx = nullptr,
+             bool append = false);
   ~feRecovery() { delete _patch; }
 
   int getDim() { return _dim; }

@@ -11,9 +11,11 @@
 
 #if defined(HAVE_MKL)
 
-class feLinearSystemMklPardiso : public feLinearSystem {
+class feLinearSystemMklPardiso : public feLinearSystem
+{
 public:
-  feLinearSystemMklPardiso(std::vector<feBilinearForm*> bilinearForms, feMetaNumber *metaNumber, feMesh *mesh);
+  feLinearSystemMklPardiso(std::vector<feBilinearForm *> bilinearForms, feMetaNumber *metaNumber,
+                           feMesh *mesh);
   virtual ~feLinearSystemMklPardiso();
 
   // ====================================================================
@@ -26,11 +28,13 @@ public:
   void setPardisoMsglvlLow() { MSGLVL = 0; };
   void print_matrix();
   bool getSymbolicFactorizationStatus() { return symbolicFactorization; }
-  void setSymbolicFactorizationStatus(bool status) {
+  void setSymbolicFactorizationStatus(bool status)
+  {
     symbolicFactorization = status;
     if(symbolicFactorization) recomputeMatrix = true;
   }
-  void toggleSymbolicFactorizationStatus() {
+  void toggleSymbolicFactorizationStatus()
+  {
     symbolicFactorization = !symbolicFactorization;
     if(symbolicFactorization) recomputeMatrix = true;
   }

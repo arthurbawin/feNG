@@ -2,7 +2,7 @@
 #include "feMetricTools.h"
 
 #if defined(HAVE_GMSH)
-	#include "gmsh.h"
+#include "gmsh.h"
 #endif
 
 feRecovery *activeRecovery;
@@ -12,7 +12,9 @@ feSolution *activeSolution;
 feFunction *exactSolution;
 
 #if defined(HAVE_GMSH)
-double errorSquaredCallback(double *xa, double *xb, double *xc, double *xab, double *xbc, double *xca) {
+double errorSquaredCallback(double *xa, double *xb, double *xc, double *xab, double *xbc,
+                            double *xca)
+{
   int triangleP2 = gmsh::model::mesh::getElementType("Triangle", 2);
   std::vector<double> localCoord;
   std::vector<double> weights;
@@ -26,12 +28,9 @@ double errorSquaredCallback(double *xa, double *xb, double *xc, double *xab, dou
   gmsh::model::mesh::getBasisFunctions(triangleP2, localCoord, "GradLagrange", numComponents,
                                        gradBasisFunctions, numOrientations);
 
-  double F[6] = {f(activeRecovery, xa[0], xa[1]),
-  							 f(activeRecovery, xb[0], xb[1]),
-  							 f(activeRecovery, xc[0], xc[1]),
-                 f(activeRecovery, xab[0], xab[1]),
-                 f(activeRecovery, xbc[0], xbc[1]), 
-                 f(activeRecovery, xca[0], xca[1])};
+  double F[6] = {f(activeRecovery, xa[0], xa[1]),   f(activeRecovery, xb[0], xb[1]),
+                 f(activeRecovery, xc[0], xc[1]),   f(activeRecovery, xab[0], xab[1]),
+                 f(activeRecovery, xbc[0], xbc[1]), f(activeRecovery, xca[0], xca[1])};
   double X[6] = {xa[0], xb[0], xc[0], xab[0], xbc[0], xca[0]};
   double Y[6] = {xa[1], xb[1], xc[1], xab[1], xbc[1], xca[1]};
   double e2 = 0;
@@ -66,7 +65,9 @@ double errorSquaredCallback(double *xa, double *xb, double *xc, double *xab, dou
   return e2;
 }
 
-void gradErrorSquaredCallback(double *xa, double *xb, double *xc, double *xab, double *xbc, double *xca, std::vector<double> &grad) {
+void gradErrorSquaredCallback(double *xa, double *xb, double *xc, double *xab, double *xbc,
+                              double *xca, std::vector<double> &grad)
+{
   int triangleP2 = gmsh::model::mesh::getElementType("Triangle", 2);
   std::vector<double> localCoord;
   std::vector<double> weights;
@@ -80,12 +81,9 @@ void gradErrorSquaredCallback(double *xa, double *xb, double *xc, double *xab, d
   gmsh::model::mesh::getBasisFunctions(triangleP2, localCoord, "GradLagrange", numComponents,
                                        gradBasisFunctions, numOrientations);
 
-  double F[6] = {f(activeRecovery, xa[0], xa[1]),
-                 f(activeRecovery, xb[0], xb[1]),
-                 f(activeRecovery, xc[0], xc[1]),
-                 f(activeRecovery, xab[0], xab[1]),
-                 f(activeRecovery, xbc[0], xbc[1]), 
-                 f(activeRecovery, xca[0], xca[1])};
+  double F[6] = {f(activeRecovery, xa[0], xa[1]),   f(activeRecovery, xb[0], xb[1]),
+                 f(activeRecovery, xc[0], xc[1]),   f(activeRecovery, xab[0], xab[1]),
+                 f(activeRecovery, xbc[0], xbc[1]), f(activeRecovery, xca[0], xca[1])};
   double X[6] = {xa[0], xb[0], xc[0], xab[0], xbc[0], xca[0]};
   double Y[6] = {xa[1], xb[1], xc[1], xab[1], xbc[1], xca[1]};
 
@@ -123,7 +121,7 @@ void gradErrorSquaredCallback(double *xa, double *xb, double *xc, double *xab, d
 
     double uh = activeIntSpace->interpolateSolution(activeNumbering, activeSolution, pos);
     // The gradient of the finite element solution interpolated at x
-    std::vector<double> gradrs_uh(3,0.0);
+    std::vector<double> gradrs_uh(3, 0.0);
     activeIntSpace->interpolateSolution_gradrs(activeNumbering, activeSolution, pos, gradrs_uh);
     double duhdx = gradrs_uh[0] * drdx + gradrs_uh[1] * dsdx;
     double duhdy = gradrs_uh[0] * drdy + gradrs_uh[1] * dsdy;
@@ -134,41 +132,46 @@ void gradErrorSquaredCallback(double *xa, double *xb, double *xc, double *xab, d
 }
 #endif
 
-/* Creates a curved mesh based on 
-	- the geometry stored in the active Gmsh model with name metricOptions.gmshModel
-	- the metric field stored as a view in this model
-	- the "inside" callback metricOptions.inside, returning true if a point is inside the geometry
+/* Creates a curved mesh based on
+    - the geometry stored in the active Gmsh model with name metricOptions.gmshModel
+    - the metric field stored as a view in this model
+    - the "inside" callback metricOptions.inside, returning true if a point is inside the geometry
 */
-void createCurvedMesh(feFunction *solExact, feMetaNumber *metaNumber, feSolution *sol, feSpace *intSpace, feRecovery *recovery, feMetric *metric, feMetricOptions metricOptions){
+void createCurvedMesh(feFunction *solExact, feMetaNumber *metaNumber, feSolution *sol,
+                      feSpace *intSpace, feRecovery *recovery, feMetric *metric,
+                      feMetricOptions metricOptions)
+{
 #if defined(HAVE_GMSH)
-	// if(metricOptions.isGmshModelReady){
-		std::vector<double> pts;
-		std::string modelForMetric = metricOptions.gmshModel;
-		std::string modelForMesh = "adapt";
-		int faceTag = 0;
-		activeRecovery = recovery;
-		activeIntSpace = intSpace;
-		activeNumbering = metaNumber->getNumbering(intSpace->getFieldID());
-		activeSolution = sol;
-    exactSolution = solExact;
+  // if(metricOptions.isGmshModelReady){
+  std::vector<double> pts;
+  std::string modelForMetric = metricOptions.gmshModel;
+  std::string modelForMesh = "adapt";
+  int faceTag = 0;
+  activeRecovery = recovery;
+  activeIntSpace = intSpace;
+  activeNumbering = metaNumber->getNumbering(intSpace->getFieldID());
+  activeSolution = sol;
+  exactSolution = solExact;
 
-		gmsh::model::add(modelForMesh);
-  	gmsh::model::setCurrent(modelForMesh);
-  	system("mmg2d metric.msh -hgrad 3");
-  	gmsh::merge("metric.o.msh");
+  gmsh::model::add(modelForMesh);
+  gmsh::model::setCurrent(modelForMesh);
+  system("mmg2d metric.msh -hgrad 3");
+  gmsh::merge("metric.o.msh");
 
-  	gmsh::option::setNumber("Mesh.MshFileVersion", 4.1);
-		computePointsUsingScaledCrossFieldPlanarP2(modelForMetric.c_str(), modelForMesh.c_str(), metric->getMetricViewTag(), 
-      faceTag, pts, errorSquaredCallback, metricOptions.inside, gradErrorSquaredCallback);
+  gmsh::option::setNumber("Mesh.MshFileVersion", 4.1);
+  computePointsUsingScaledCrossFieldPlanarP2(
+    modelForMetric.c_str(), modelForMesh.c_str(), metric->getMetricViewTag(), faceTag, pts,
+    errorSquaredCallback, metricOptions.inside, gradErrorSquaredCallback);
 
-    // computePointsUsingScaledCrossFieldPlanarP2(modelForMetric.c_str(), modelForMesh.c_str(), metric->getMetricViewTag(), faceTag, pts, NULL, metricOptions.inside);
+  // computePointsUsingScaledCrossFieldPlanarP2(modelForMetric.c_str(), modelForMesh.c_str(),
+  // metric->getMetricViewTag(), faceTag, pts, NULL, metricOptions.inside);
 
-		gmsh::write("sol_adapt.msh");
-		system("gmsh sol_adapt.msh &");
-	// } else{
-	// 	printf("In feAdaptMesh : Error - Metric file is not ready to generate a curved mesh.\n");
-	// }
-#else 
-	printf("In feAdaptMesh : Error - Gmsh is required to generate curved meshes.\n");
+  gmsh::write("sol_adapt.msh");
+  system("gmsh sol_adapt.msh &");
+  // } else{
+  // 	printf("In feAdaptMesh : Error - Metric file is not ready to generate a curved mesh.\n");
+  // }
+#else
+  printf("In feAdaptMesh : Error - Gmsh is required to generate curved meshes.\n");
 #endif
 }

@@ -1,5 +1,5 @@
-/* 
-  Copied and adapted from the Hxt project 
+/*
+  Copied and adapted from the Hxt project
   See https://gitlab.onelab.info/gmsh/gmsh/-/blob/master/contrib/hxt/core/src
   Original author : Celestin Marot
 */
@@ -18,26 +18,27 @@
   - 2 : All information messages */
 int FE_VERBOSE = 1;
 
-void setVerbose(int level){ FE_VERBOSE = level; }
+void setVerbose(int level) { FE_VERBOSE = level; }
 
-feStatus defaultMessageCallback(feMessage* msg);
+feStatus defaultMessageCallback(feMessage *msg);
 
-static feStatus (*msgCallback)(feMessage* msg) = &defaultMessageCallback; // the message callback is declared as a global variable
-static const char* encodingIssue = "~~~~ (encoding issue) ~~~~";
+static feStatus (*msgCallback)(feMessage *msg) =
+  &defaultMessageCallback; // the message callback is declared as a global variable
+static const char *encodingIssue = "~~~~ (encoding issue) ~~~~";
 
-
-const char*  feGetStatusString(feStatus status){
-  switch(status){
-    case FE_STATUS_OK                   :
+const char *feGetStatusString(feStatus status)
+{
+  switch(status) {
+    case FE_STATUS_OK:
       return "no error";
       break;
-    case FE_STATUS_FAILED               :
+    case FE_STATUS_FAILED:
       return "function failed";
       break;
-    case FE_STATUS_OUT_OF_MEMORY        :
+    case FE_STATUS_OUT_OF_MEMORY:
       return "out of memory";
       break;
-    case FE_STATUS_ERROR                :
+    case FE_STATUS_ERROR:
       return "error";
       break;
     case FE_STATUS_FILE_CANNOT_BE_OPENED:
@@ -62,7 +63,7 @@ const char*  feGetStatusString(feStatus status){
       return "wrong format";
       break;
     default:
-      if(status<0)
+      if(status < 0)
         return "unknown error";
       else
         return "positive return value (no error)";
@@ -70,54 +71,55 @@ const char*  feGetStatusString(feStatus status){
   }
 }
 
-feStatus defaultMessageCallback(feMessage* msg){
-  if (msg->level == FE_MSGLEVEL_INFO)
-    fprintf(stdout,"Info : %s\n", msg->string);
-  else if (msg->level == FE_MSGLEVEL_ERROR)
-    fprintf(stderr,"= X = Error : %s   \n in %s -> %s:%s\n", msg->string, msg->func, msg->file, msg->line);
-  else if (msg->level == FE_MSGLEVEL_TRACE)
-    fprintf(stderr,"  - trace -   %s -> %s:%s  \t(%s)\n", msg->func, msg->file, msg->line, msg->string);
-  else if (msg->level == FE_MSGLEVEL_WARNING)
-    fprintf(stderr,"/!\\ Warning : %s\n", msg->string);
-  else if (msg->level == FE_MSGLEVEL_DEBUG)
-    fprintf(stderr,"Debug : %s   \t(in %s -> %s:%s)\n", msg->string, msg->func, msg->file, msg->line);
+feStatus defaultMessageCallback(feMessage *msg)
+{
+  if(msg->level == FE_MSGLEVEL_INFO)
+    fprintf(stdout, "Info : %s\n", msg->string);
+  else if(msg->level == FE_MSGLEVEL_ERROR)
+    fprintf(stderr, "= X = Error : %s   \n in %s -> %s:%s\n", msg->string, msg->func, msg->file,
+            msg->line);
+  else if(msg->level == FE_MSGLEVEL_TRACE)
+    fprintf(stderr, "  - trace -   %s -> %s:%s  \t(%s)\n", msg->func, msg->file, msg->line,
+            msg->string);
+  else if(msg->level == FE_MSGLEVEL_WARNING)
+    fprintf(stderr, "/!\\ Warning : %s\n", msg->string);
+  else if(msg->level == FE_MSGLEVEL_DEBUG)
+    fprintf(stderr, "Debug : %s   \t(in %s -> %s:%s)\n", msg->string, msg->func, msg->file,
+            msg->line);
   return FE_STATUS_OK;
 }
 
-feStatus  feSetMessageCallback(feStatus (*newMsgCallback)(feMessage* msg)){
-  if(newMsgCallback==NULL)
+feStatus feSetMessageCallback(feStatus (*newMsgCallback)(feMessage *msg))
+{
+  if(newMsgCallback == NULL)
     msgCallback = defaultMessageCallback;
   else
     msgCallback = newMsgCallback;
   return FE_STATUS_OK;
 }
 
-static void feMessageGeneral ( int messageLevel,
-                                  const char* func,
-                                  const char* file,
-                                  const char* line,
-                                  const char* encodingIssueString,
-                                  const char* alternativeString,
-                                  const char *fmt, va_list args){
+static void feMessageGeneral(int messageLevel, const char *func, const char *file, const char *line,
+                             const char *encodingIssueString, const char *alternativeString,
+                             const char *fmt, va_list args)
+{
   feMessage msg;
 
   char str[4096];
-  if(fmt!=NULL){
+  if(fmt != NULL) {
     int err = vsnprintf(str, sizeof(str), fmt, args);
 
-    if(err>=0)
+    if(err >= 0)
       msg.string = str;
     else
       msg.string = encodingIssueString;
-  }
-  else{
+  } else {
     msg.string = alternativeString;
   }
 
   msg.func = func;
   msg.file = file;
   msg.line = line;
-  msg.level = (feLevel) messageLevel;
+  msg.level = (feLevel)messageLevel;
 
 #if defined(HAVE_OMP)
   msg.threadId = omp_get_thread_num();
@@ -129,8 +131,8 @@ static void feMessageGeneral ( int messageLevel,
   }
 }
 
-
-feStatus  feMessageInfo        ( const char* func, const char* file, const char* line, const char *fmt, ...){
+feStatus feMessageInfo(const char *func, const char *file, const char *line, const char *fmt, ...)
+{
   va_list args;
   va_start(args, fmt);
   feMessageGeneral(FE_MSGLEVEL_INFO, func, file, line, encodingIssue, "", fmt, args);
@@ -138,30 +140,34 @@ feStatus  feMessageInfo        ( const char* func, const char* file, const char*
   return FE_STATUS_OK;
 }
 
-
-feStatus  feMessageWarning        ( const char* func, const char* file, const char* line, const char *fmt, ...){
+feStatus feMessageWarning(const char *func, const char *file, const char *line, const char *fmt,
+                          ...)
+{
   va_list args;
   va_start(args, fmt);
   feMessageGeneral(FE_MSGLEVEL_WARNING, func, file, line, encodingIssue, "", fmt, args);
   return FE_STATUS_OK;
 }
 
-
-feStatus  feMessageError       ( feStatus status, const char* func, const char* file, const char* line, const char *fmt, ...){
+feStatus feMessageError(feStatus status, const char *func, const char *file, const char *line,
+                        const char *fmt, ...)
+{
   va_list args;
   va_start(args, fmt);
-  feMessageGeneral(FE_MSGLEVEL_ERROR, func, file, line, feGetStatusString(status), feGetStatusString(status), fmt, args);
+  feMessageGeneral(FE_MSGLEVEL_ERROR, func, file, line, feGetStatusString(status),
+                   feGetStatusString(status), fmt, args);
   va_end(args);
   return status;
 }
 
-
-feStatus  feMessageTraceError( feStatus status, const char* func, const char* file, const char* line, const char *fmt, ...){
-  if(status==FE_STATUS_OK)
-    return FE_STATUS_OK;
+feStatus feMessageTraceError(feStatus status, const char *func, const char *file, const char *line,
+                             const char *fmt, ...)
+{
+  if(status == FE_STATUS_OK) return FE_STATUS_OK;
   va_list args;
   va_start(args, fmt);
-  feMessageGeneral(FE_MSGLEVEL_TRACE, func, file, line, encodingIssue, feGetStatusString(status), fmt, args);
+  feMessageGeneral(FE_MSGLEVEL_TRACE, func, file, line, encodingIssue, feGetStatusString(status),
+                   fmt, args);
   va_end(args);
   return status;
 }

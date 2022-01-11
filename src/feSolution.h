@@ -8,7 +8,8 @@
 
 class feSolutionContainer;
 
-class feSolution {
+class feSolution
+{
 protected:
   int _dim;
 
@@ -27,7 +28,8 @@ protected:
   double _dt;
 
 public:
-  feSolution(feMesh *mesh, const std::vector<feSpace *> &space, const std::vector<feSpace *> &essBC, feMetaNumber *metaNumber);
+  feSolution(feMesh *mesh, const std::vector<feSpace *> &space, const std::vector<feSpace *> &essBC,
+             feMetaNumber *metaNumber);
   feSolution(std::string solutionFile);
   ~feSolution() {}
 

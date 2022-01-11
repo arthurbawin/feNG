@@ -3,7 +3,8 @@
 #include <iostream>
 #include <fstream>
 
-feSolution::feSolution(feMesh *mesh, const std::vector<feSpace *> &space, const std::vector<feSpace *> &essBC, feMetaNumber *metaNumber)
+feSolution::feSolution(feMesh *mesh, const std::vector<feSpace *> &space,
+                       const std::vector<feSpace *> &essBC, feMetaNumber *metaNumber)
   : _dim(mesh->getDim()), _space(space), _essBC(essBC), _c0(0.), _tn(0.)
 {
   _sol.resize(metaNumber->getNbDOFs());
@@ -15,7 +16,8 @@ feSolution::feSolution(feMesh *mesh, const std::vector<feSpace *> &space, const 
 }
 
 /* Constructs an feSolution from a file created by feSolution::printSol. */
-feSolution::feSolution(std::string solutionFile) : _dim(0), _space(std::vector<feSpace*>()), _essBC(std::vector<feSpace*>()), _c0(0.)
+feSolution::feSolution(std::string solutionFile)
+  : _dim(0), _space(std::vector<feSpace *>()), _essBC(std::vector<feSpace *>()), _c0(0.)
 {
   printf("Info feSolution::feSolution : Reading solution file : %s\n", solutionFile.c_str());
   std::filebuf fb;
@@ -46,12 +48,13 @@ feSolution::feSolution(std::string solutionFile) : _dim(0), _space(std::vector<f
     }
 
     fb.close();
-  } else{
+  } else {
     printf("In feSolution::feSolution : Error - Solution could not be opened.\n");
   }
 }
 
-void feSolution::initializeTemporalSolution(double t0, double t1, int nTimeSteps) {
+void feSolution::initializeTemporalSolution(double t0, double t1, int nTimeSteps)
+{
   _t0 = t0;
   _t1 = t1;
   _nTimeSteps = nTimeSteps;
@@ -59,7 +62,8 @@ void feSolution::initializeTemporalSolution(double t0, double t1, int nTimeSteps
   _tn = t0;
 }
 
-void feSolution::initializeUnknowns(feMesh *mesh, feMetaNumber *metaNumber) {
+void feSolution::initializeUnknowns(feMesh *mesh, feMetaNumber *metaNumber)
+{
   for(feSpace *const &fS : _space) {
     // std::cout<<"Space "<<fS->getFieldID()<<" - "<<fS->getCncGeoID()<<std::endl;
     int nElm = mesh->getNbElm(fS->getCncGeoID()); // On pourrait donner un _nElm au feSpace
@@ -97,7 +101,8 @@ void feSolution::initializeUnknowns(feMesh *mesh, feMetaNumber *metaNumber) {
 }
 
 void feSolution::initializeEssentialBC(feMesh *mesh, feMetaNumber *metaNumber,
-                                       feSolutionContainer *solContainer) {
+                                       feSolutionContainer *solContainer)
+{
   for(feSpace *const &fS : _essBC) {
     int nElm = mesh->getNbElm(fS->getCncGeoID());
     // std::cout<<"Initializing essential BC on "<<nElm<<" elements on cnc
@@ -117,9 +122,11 @@ void feSolution::initializeEssentialBC(feMesh *mesh, feMetaNumber *metaNumber,
         geoSpace->interpolateVectorField(localCoord, r, x);
         if(fS->isFctDefined()) {
           _sol[fS->getAddressingVectorAt(j)] = fS->evalFun(_tn, x);
-          // printf("Initializing _sol[%d] = %f en (%+-4.4e, %+-4.4e)\n", fS->getAddressingVectorAt(j), _sol[fS->getAddressingVectorAt(j)], x[0], x[1]);
-        }else{
-          printf("BC Sol un changed in field %s - %s\n", fS->getFieldID().c_str(), fS->getCncGeoID().c_str());
+          // printf("Initializing _sol[%d] = %f en (%+-4.4e, %+-4.4e)\n",
+          // fS->getAddressingVectorAt(j), _sol[fS->getAddressingVectorAt(j)], x[0], x[1]);
+        } else {
+          printf("BC Sol un changed in field %s - %s\n", fS->getFieldID().c_str(),
+                 fS->getCncGeoID().c_str());
         }
         // printf("_sol[%d] = %f\n", fS->getAddressingVectorAt(j),
         // _sol[fS->getAddressingVectorAt(j)]);
@@ -136,7 +143,8 @@ void feSolution::initializeEssentialBC(feMesh *mesh, feMetaNumber *metaNumber,
   }
 }
 
-void feSolution::setSolFromContainer(feSolutionContainer *solContainer, int iSol) {
+void feSolution::setSolFromContainer(feSolutionContainer *solContainer, int iSol)
+{
   std::vector<double> solFromContainer = solContainer->getSolution(iSol);
   if(_sol.size() != solFromContainer.size()) {
     _sol.resize(solFromContainer.size());
@@ -146,29 +154,31 @@ void feSolution::setSolFromContainer(feSolutionContainer *solContainer, int iSol
   for(size_t i = 0; i < nDOFs; ++i) _sol[i] = solFromContainer[i];
 }
 
-void feSolution::setSolDotToZero() {
+void feSolution::setSolDotToZero()
+{
   size_t nDOFs = _dsoldt.size();
   for(size_t i = 0; i < nDOFs; ++i) _dsoldt[i] = 0.0;
 }
 
-void feSolution::printSol(std::string file) {
-  FILE* f;
-  if(file != ""){
-    f = fopen(file.c_str(),"w");
-    fprintf(f,"%12.16f\n", _tn); // Print the current time
-    fprintf(f,"%d\n", _sol.size()); // Print the number of DOFs
+void feSolution::printSol(std::string file)
+{
+  FILE *f;
+  if(file != "") {
+    f = fopen(file.c_str(), "w");
+    fprintf(f, "%12.16f\n", _tn); // Print the current time
+    fprintf(f, "%d\n", _sol.size()); // Print the number of DOFs
   }
-  for(auto const &val : _sol){
-    if(file != ""){
-      fprintf(f,"%12.16f\n", val);
-    } else{
+  for(auto const &val : _sol) {
+    if(file != "") {
+      fprintf(f, "%12.16f\n", val);
+    } else {
       printf("%12.16f\n", val);
     }
   }
-  if(file != ""){
+  if(file != "") {
     // Print soldot
-    for(auto const &val : _dsoldt){
-      fprintf(f,"%12.16f\n", val);
+    for(auto const &val : _dsoldt) {
+      fprintf(f, "%12.16f\n", val);
     }
     fclose(f);
   }

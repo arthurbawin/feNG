@@ -7,7 +7,8 @@
 #include "petscksp.h"
 #endif
 
-class feLinearSystemPETSc : public feLinearSystem {
+class feLinearSystemPETSc : public feLinearSystem
+{
 protected:
   int _argc;
   char **_argv;
@@ -24,7 +25,8 @@ protected:
 #endif
 
 public:
-  feLinearSystemPETSc(int argc, char **argv, std::vector<feBilinearForm*> bilinearForms, feMetaNumber *metaNumber, feMesh *mesh);
+  feLinearSystemPETSc(int argc, char **argv, std::vector<feBilinearForm *> bilinearForms,
+                      feMetaNumber *metaNumber, feMesh *mesh);
   virtual ~feLinearSystemPETSc();
 
   virtual void initialize();

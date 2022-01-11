@@ -10,7 +10,8 @@
 #define ESS -1
 #define INC -2
 
-class feNumber {
+class feNumber
+{
 protected:
   std::string _fieldID; // Le nom du champ dont c'est la numerotation
 
@@ -60,7 +61,8 @@ public:
 
   int getDOFNumberAtVertex(int iVertex) { return _numberingVertices[iVertex]; };
 
-  void printNumberingVertices() {
+  void printNumberingVertices()
+  {
     printf("nNod = %d\n", _nNod);
     for(size_t i = 0; i < _numberingVertices.size(); ++i) {
       if(_codeDOFVertices[i] == ESS)
@@ -72,7 +74,8 @@ public:
     }
   }
 
-  void printNumberingElements() {
+  void printNumberingElements()
+  {
     printf("nElm = %d\n", _nElm);
     printf("maxDOFPerElem = %d\n", _maxDOFperElem);
     for(int i = 0; i < _nElm; ++i) {
@@ -90,7 +93,8 @@ public:
     }
   }
 
-  void printNumberingEdges() {
+  void printNumberingEdges()
+  {
     printf("nEdg = %d\n", _nEdg);
     printf("maxDOFperEdge = %d\n", _maxDOFperEdge);
     for(int i = 0; i < _nEdg; ++i) {
@@ -105,20 +109,24 @@ public:
     }
   }
 
-  void printCodeVertices() {
+  void printCodeVertices()
+  {
     for(auto val : _codeDOFVertices) std::cout << val << std::endl;
   }
 
-  void printCodeElements() {
+  void printCodeElements()
+  {
     for(auto val : _codeDOFElements) std::cout << val << std::endl;
   }
 
-  void printCodeEdges() {
+  void printCodeEdges()
+  {
     for(auto val : _codeDOFEdges) std::cout << val << std::endl;
   }
 };
 
-class feMetaNumber {
+class feMetaNumber
+{
 protected:
   int _nInc;
   int _nDofs;
@@ -137,18 +145,22 @@ public:
   int getNbFields() { return _nFields; }
   std::string getFieldID(int iField) { return _fieldIDs[iField]; }
 
-  feNumber *getNumbering(std::string fieldID) {
+  feNumber *getNumbering(std::string fieldID)
+  {
     return _numberings[fieldID];
   } // TODO : check bounds (-:
-  feNumber *getNumbering(int fieldTag) {
+  feNumber *getNumbering(int fieldTag)
+  {
     return _numberings[_fieldIDs[fieldTag]];
   } // TODO : check bounds (-:
 
-  void printFields() {
+  void printFields()
+  {
     for(auto s : _fieldIDs) std::cout << s << std::endl;
   }
 
-  void printNumberings() {
+  void printNumberings()
+  {
     for(int i = 0; i < _nFields; ++i) {
       // for(auto const& secondIsNumber : _numberings){
       std::cout << "Field " << _fieldIDs[i] << " - vertices :" << std::endl;
@@ -160,7 +172,8 @@ public:
     }
   }
 
-  void printCodes() { // Attention : ordre dépend du nom des variables (ordre du map.first)
+  void printCodes()
+  { // Attention : ordre dépend du nom des variables (ordre du map.first)
     for(auto const &secondIsNumber : _numberings) {
       std::cout << "Field " << secondIsNumber.first << " - vertices :" << std::endl;
       secondIsNumber.second->printCodeVertices();

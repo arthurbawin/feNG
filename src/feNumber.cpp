@@ -1,6 +1,7 @@
 #include "feNumber.h"
 
-feNumber::feNumber(feMesh *mesh) : _nNod(mesh->getNbNodes()), _nEdg(mesh->getNbEdges()) {
+feNumber::feNumber(feMesh *mesh) : _nNod(mesh->getNbNodes()), _nEdg(mesh->getNbEdges())
+{
   _nElm = 0;
   for(size_t i = 0; i < mesh->getCncGeo().size(); ++i) _nElm += mesh->getCncGeo()[i]->getNbElm();
 
@@ -26,7 +27,8 @@ feNumber::feNumber(feMesh *mesh) : _nNod(mesh->getNbNodes()), _nEdg(mesh->getNbE
   // TODO : Ajouter une b-rep et verifier la compatibilite des feSpace frontieres
 }
 
-void feNumber::defDDLSommet(feMesh *mesh, std::string cncGeoID, int numElem, int numVertex) {
+void feNumber::defDDLSommet(feMesh *mesh, std::string cncGeoID, int numElem, int numVertex)
+{
   int vert = mesh->getVertex(cncGeoID, numElem, numVertex);
   // printf("Assigning INC and 1 dof at vertex %d on cnc %s on elem %d at vertex %d\n", vert,
   // cncGeoID.c_str(), numElem, numVertex);
@@ -34,7 +36,8 @@ void feNumber::defDDLSommet(feMesh *mesh, std::string cncGeoID, int numElem, int
   _codeDOFVertices[vert] = INC;
 }
 
-void feNumber::defDDLElement(feMesh *mesh, std::string cncGeoID, int numElem, int numDOF) {
+void feNumber::defDDLElement(feMesh *mesh, std::string cncGeoID, int numElem, int numDOF)
+{
   int elem = mesh->getElement(cncGeoID, numElem);
   // printf("Assigning INC and %d dof(s) at elem %d on cnc %s on elem %d\n", numDOF, elem,
   // cncGeoID.c_str(), numElem);
@@ -42,8 +45,8 @@ void feNumber::defDDLElement(feMesh *mesh, std::string cncGeoID, int numElem, in
   _codeDOFElements[elem] = INC;
 }
 
-void feNumber::defDDLEdge(feMesh *mesh, std::string cncGeoID, int numElem, int numEdge,
-                          int numDOF) {
+void feNumber::defDDLEdge(feMesh *mesh, std::string cncGeoID, int numElem, int numEdge, int numDOF)
+{
   int edge = fabs(mesh->getEdge(cncGeoID, numElem, numEdge)) - 1;
   // printf("Assigning INC and %d dof(s) at edge %d which is edge number %d of elem %d on cnc %s\n",
   // numDOF, edge, numEdge, numElem, cncGeoID.c_str());
@@ -52,48 +55,56 @@ void feNumber::defDDLEdge(feMesh *mesh, std::string cncGeoID, int numElem, int n
 }
 
 void feNumber::defDDLSommet_essentialBC(feMesh *mesh, std::string cncGeoID, int numElem,
-                                        int numVertex) {
+                                        int numVertex)
+{
   int vert = mesh->getVertex(cncGeoID, numElem, numVertex);
   // printf("Setting global vertex %d as ESS - on cnc %s on elem %d at vertex %d\n", vert,
   // cncGeoID.c_str(), numElem, numVertex);
   _codeDOFVertices[vert] = ESS;
 }
 
-void feNumber::defDDLElement_essentialBC(feMesh *mesh, std::string cncGeoID, int numElem) {
+void feNumber::defDDLElement_essentialBC(feMesh *mesh, std::string cncGeoID, int numElem)
+{
   int elem = mesh->getElement(cncGeoID, numElem);
   // printf("Setting global element %d as ESS - on cnc %s on elem %d\n", elem, cncGeoID.c_str(),
   // numElem);
   _codeDOFElements[elem] = ESS;
 }
 
-void feNumber::defDDLEdge_essentialBC(feMesh *mesh, std::string cncGeoID, int numElem,
-                                      int numEdge) {
+void feNumber::defDDLEdge_essentialBC(feMesh *mesh, std::string cncGeoID, int numElem, int numEdge)
+{
   int edge = fabs(mesh->getEdge(cncGeoID, numElem, numEdge)) - 1;
   // printf("Setting global edge %d as ESS which is edge number %d of elem %d on cnc %s\n", edge,
   // numEdge, numElem, cncGeoID.c_str());
   _codeDOFEdges[edge] = ESS;
 }
 
-int feNumber::getDDLSommet(feMesh *mesh, std::string cncGeoID, int numElem, int numVertex) {
+int feNumber::getDDLSommet(feMesh *mesh, std::string cncGeoID, int numElem, int numVertex)
+{
   int vert = mesh->getVertex(cncGeoID, numElem, numVertex);
   return _numberingVertices[vert];
 }
 
-int feNumber::getDDLElement(feMesh *mesh, std::string cncGeoID, int numElem, int numDOF) {
+int feNumber::getDDLElement(feMesh *mesh, std::string cncGeoID, int numElem, int numDOF)
+{
   int elem = mesh->getElement(cncGeoID, numElem);
   return _numberingElements[_maxDOFperElem * elem + numDOF];
 }
 
-int feNumber::getDDLEdge(feMesh *mesh, std::string cncGeoID, int numElem, int numEdge, int numDOF) {
+int feNumber::getDDLEdge(feMesh *mesh, std::string cncGeoID, int numElem, int numEdge, int numDOF)
+{
   // In connecEdges, edges are numbering starting from 1 and can be negative
   int edge = fabs(mesh->getEdge(cncGeoID, numElem, numEdge)) - 1;
   return _numberingEdges[_maxDOFperEdge * edge + numDOF];
 }
 
-void feNumber::prepareNumbering() {
+void feNumber::prepareNumbering()
+{
   _maxDOFperElem = *std::max_element(_nDOFElements.begin(), _nDOFElements.end());
   _maxDOFperEdge = 0;
-  if(_nEdg > 0) { _maxDOFperEdge = *std::max_element(_nDOFEdges.begin(), _nDOFEdges.end()); }
+  if(_nEdg > 0) {
+    _maxDOFperEdge = *std::max_element(_nDOFEdges.begin(), _nDOFEdges.end());
+  }
 
   _numberingVertices.resize(_nNod, -3);
   _numberingElements.resize(_nElm * _maxDOFperElem, -3);
@@ -128,7 +139,8 @@ void feNumber::prepareNumbering() {
   // }
 }
 
-int feNumber::numberUnknowns(int globalNum) {
+int feNumber::numberUnknowns(int globalNum)
+{
   _nInc = 0;
   for(int i = 0; i < _nNod; ++i) {
     if(_numberingVertices[i] == INC) {
@@ -170,7 +182,8 @@ int feNumber::numberUnknowns(int globalNum) {
   return globalNum;
 }
 
-int feNumber::numberEssential(int globalNum) {
+int feNumber::numberEssential(int globalNum)
+{
   _nDofs = _nInc;
   for(int i = 0; i < _nNod; ++i) {
     if(_numberingVertices[i] == ESS) {
@@ -207,7 +220,8 @@ int feNumber::numberEssential(int globalNum) {
 }
 
 feMetaNumber::feMetaNumber(feMesh *mesh, const std::vector<feSpace *> &space,
-                           const std::vector<feSpace *> &essBC) {
+                           const std::vector<feSpace *> &essBC)
+{
   // AJOUTECHAMP
   for(feSpace *fS : space) {
     if(std::find(_fieldIDs.begin(), _fieldIDs.end(), fS->getFieldID()) == _fieldIDs.end())
@@ -226,16 +240,22 @@ feMetaNumber::feMetaNumber(feMesh *mesh, const std::vector<feSpace *> &space,
                 << std::endl;
   }
   // Une numerotation pour chaque champ
-  for(int i = 0; i < _nFields; ++i) { _numberings[_fieldIDs[i]] = new feNumber(mesh); }
+  for(int i = 0; i < _nFields; ++i) {
+    _numberings[_fieldIDs[i]] = new feNumber(mesh);
+  }
 
   // INITIALISE_FENUMER
-  for(feSpace *fS : space) { fS->initializeNumberingUnknowns(_numberings[fS->getFieldID()]); }
+  for(feSpace *fS : space) {
+    fS->initializeNumberingUnknowns(_numberings[fS->getFieldID()]);
+  }
   // INITIALISE_FENUMER_CLMESS
   for(feSpace *fSBC : essBC) {
     fSBC->initializeNumberingEssential(_numberings[fSBC->getFieldID()]);
   }
   // PREPARER_NUMEROTATION
-  for(int i = 0; i < _nFields; ++i) { _numberings[_fieldIDs[i]]->prepareNumbering(); }
+  for(int i = 0; i < _nFields; ++i) {
+    _numberings[_fieldIDs[i]]->prepareNumbering();
+  }
   // NUMEROTER
   int globalNum = 0;
   for(int i = 0; i < _nFields; ++i) {
@@ -251,7 +271,8 @@ feMetaNumber::feMetaNumber(feMesh *mesh, const std::vector<feSpace *> &space,
   // printCodes();
 }
 
-feMetaNumber::~feMetaNumber() {
+feMetaNumber::~feMetaNumber()
+{
   // Delete all numberings
   for(std::map<std::string, feNumber *>::iterator it = _numberings.begin(); it != _numberings.end();
       ++it) {

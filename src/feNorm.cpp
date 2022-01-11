@@ -6,7 +6,8 @@ feNorm::feNorm(feSpace *intSpace, feMesh *mesh, int degQuad, feFunction *solRef,
   : _intSpace(intSpace), cncGeoTag(intSpace->getCncGeoTag()),
     geoSpace(mesh->getGeometricSpace(cncGeoTag)), nElmGeo(mesh->getNbElm(cncGeoTag)),
     dim(intSpace->getDim()), nNodePerElem(intSpace->getNbNodePerElem()), _solRef(solRef),
-    _degQuad(degQuad), _TypeNorm(TypeNorm) {
+    _degQuad(degQuad), _TypeNorm(TypeNorm)
+{
   feQuadrature *rule =
     new feQuadrature(_degQuad, intSpace->getDim(), intSpace->getCncGeo()->getForme());
   w = rule->getWeights();
@@ -16,7 +17,9 @@ feNorm::feNorm(feSpace *intSpace, feMesh *mesh, int degQuad, feFunction *solRef,
   z = rule->getZPoints();
   _VecfeSpace = {_intSpace};
   NbFields = _VecfeSpace.size();
-  if(VecSolRef != nullptr) { _VecSolRef = VecSolRef; }
+  if(VecSolRef != nullptr) {
+    _VecSolRef = VecSolRef;
+  }
   // Attention : ça changle la règle de quadrature pour les interpolants avant la résolution !
   // Il faudrait choisir idépendamment les deux sans conséquences
   geoSpace->setQuadratureRule(rule);
@@ -29,7 +32,8 @@ feNorm::feNorm(std::vector<feSpace *> &VecfeSpace, feMesh *mesh, int degQuad, fe
   : _VecfeSpace(VecfeSpace), cncGeoTag(VecfeSpace[0]->getCncGeoTag()),
     geoSpace(mesh->getGeometricSpace(cncGeoTag)), nElmGeo(mesh->getNbElm(cncGeoTag)),
     dim(VecfeSpace[0]->getDim()), nNodePerElem(VecfeSpace[0]->getNbNodePerElem()), _solRef(solRef),
-    _degQuad(degQuad), _TypeNorm(TypeNorm) {
+    _degQuad(degQuad), _TypeNorm(TypeNorm)
+{
   feQuadrature *rule =
     new feQuadrature(_degQuad, VecfeSpace[0]->getDim(), VecfeSpace[0]->getCncGeo()->getForme());
   w = rule->getWeights();
@@ -38,7 +42,9 @@ feNorm::feNorm(std::vector<feSpace *> &VecfeSpace, feMesh *mesh, int degQuad, fe
   y = rule->getYPoints();
   z = rule->getZPoints();
   NbFields = _VecfeSpace.size();
-  if(VecSolRef != nullptr) { _VecSolRef = VecSolRef; }
+  if(VecSolRef != nullptr) {
+    _VecSolRef = VecSolRef;
+  }
   // Attention : ça changle la règle de quadrature pour les interpolants avant la résolution !
   // Il faudrait choisir idépendamment les deux sans conséquences
   VecfeSpace[0]->setQuadratureRule(rule);
@@ -46,7 +52,8 @@ feNorm::feNorm(std::vector<feSpace *> &VecfeSpace, feMesh *mesh, int degQuad, fe
   delete rule;
 }
 
-void feNorm::computeL2Norm0D(feSolution *sol) {
+void feNorm::computeL2Norm0D(feSolution *sol)
+{
   double normL2 = 0.0, solInt, solRef, t = sol->getCurrentTime();
 
   // solRef = _intSpace[0]->evalFun(t, x);
@@ -102,7 +109,8 @@ void feNorm::computeL2Norm(feMetaNumber *metaNumber, feSolution *sol, feMesh *me
   norm = sqrt(normL2);
 }
 
-void feNorm::computeL2NormVec(feMetaNumber *metaNumber, feSolution *sol, feMesh *mesh) {
+void feNorm::computeL2NormVec(feMetaNumber *metaNumber, feSolution *sol, feMesh *mesh)
+{
   double normL2 = 0.0, solIntU, solIntV, J, t = sol->getCurrentTime();
   int nElm = _VecfeSpace[0]->getNbElm();
 
@@ -138,7 +146,9 @@ void feNorm::computeL2NormVec(feMetaNumber *metaNumber, feSolution *sol, feMesh 
 
       // solRef = (_solRef != nullptr) ? _solRef->eval(t, x) : 0.0;
       std::vector<double> solRef(6, 0);
-      if(_VecSolRef != nullptr) { _VecSolRef->eval(t, x, solRef); }
+      if(_VecSolRef != nullptr) {
+        _VecSolRef->eval(t, x, solRef);
+      }
       // std::cout<< "========"<<std::endl;
       // std::cout<<"    SolU   "<<solIntU<<std::endl;
       // std::cout<<"    SolRefU   "<<solRef[0]<<std::endl;
@@ -150,7 +160,8 @@ void feNorm::computeL2NormVec(feMetaNumber *metaNumber, feSolution *sol, feMesh 
   norm = sqrt(normL2);
 }
 
-void feNorm::computeH1NormVec(feMetaNumber *metaNumber, feSolution *sol, feMesh *mesh) {
+void feNorm::computeH1NormVec(feMetaNumber *metaNumber, feSolution *sol, feMesh *mesh)
+{
   double normH1 = 0.0, solIntU, solIntV, J, t = sol->getCurrentTime(), E11, E22, E12;
   int nElm = _VecfeSpace[0]->getNbElm();
 
@@ -190,7 +201,9 @@ void feNorm::computeH1NormVec(feMetaNumber *metaNumber, feSolution *sol, feMesh 
              _VecfeSpace[1]->interpolateSolutionAtQuadNode_sDerivative(k) * dsdy;
 
       std::vector<double> solRef(6, 0);
-      if(_VecSolRef != nullptr) { _VecSolRef->eval(t, x, solRef); }
+      if(_VecSolRef != nullptr) {
+        _VecSolRef->eval(t, x, solRef);
+      }
       E11 = 2 * dudx - 2 * solRef[2]; // solRef[2] = dUref/dx
       E22 = 2 * dvdy - 2 * solRef[5]; // solRef[2] = dVref/dy
       E12 = (dudy + dvdx) - (solRef[3] + solRef[4]);
@@ -204,7 +217,8 @@ void feNorm::computeH1NormVec(feMetaNumber *metaNumber, feSolution *sol, feMesh 
   norm = sqrt(normH1);
 }
 
-void feNorm::computeSemiH1NormVec(feMetaNumber *metaNumber, feSolution *sol, feMesh *mesh) {
+void feNorm::computeSemiH1NormVec(feMetaNumber *metaNumber, feSolution *sol, feMesh *mesh)
+{
   double SeminormH1 = 0.0, solIntU, solIntV, J, t = sol->getCurrentTime(), E11, E22, E12;
   int nElm = _VecfeSpace[0]->getNbElm();
 
@@ -244,7 +258,9 @@ void feNorm::computeSemiH1NormVec(feMetaNumber *metaNumber, feSolution *sol, feM
              _VecfeSpace[1]->interpolateSolutionAtQuadNode_sDerivative(k) * dsdy;
 
       std::vector<double> solRef(6, 0);
-      if(_VecSolRef != nullptr) { _VecSolRef->eval(t, x, solRef); }
+      if(_VecSolRef != nullptr) {
+        _VecSolRef->eval(t, x, solRef);
+      }
 
       E11 = 2 * dudx - 2 * solRef[2]; // solRef[2] = dUref/dx
       E22 = 2 * dvdy - 2 * solRef[5]; // solRef[2] = dVref/dy
@@ -256,7 +272,8 @@ void feNorm::computeSemiH1NormVec(feMetaNumber *metaNumber, feSolution *sol, feM
   norm = sqrt(SeminormH1);
 }
 
-void feNorm::computeNormLambda(feMetaNumber *metaNumber, feSolution *sol, feMesh *mesh) {
+void feNorm::computeNormLambda(feMetaNumber *metaNumber, feSolution *sol, feMesh *mesh)
+{
   double normL2 = 0.0, solInt, solRef, J, t = sol->getCurrentTime();
   int nElm = _VecfeSpace[0]->getNbElm();
 
@@ -311,7 +328,8 @@ void feNorm::computeNormLambda(feMetaNumber *metaNumber, feSolution *sol, feMesh
   }
 }
 
-void feNorm::computeNormLambdaNS(feMetaNumber *metaNumber, feSolution *sol, feMesh *mesh) {
+void feNorm::computeNormLambdaNS(feMetaNumber *metaNumber, feSolution *sol, feMesh *mesh)
+{
   double Integral = 0.0, solInt, p, J, t = sol->getCurrentTime(), T11, T12, T22;
   int nElm = _VecfeSpace[0]->getNbElm();
 
@@ -399,7 +417,8 @@ void feNorm::computeNormLambdaNS(feMetaNumber *metaNumber, feSolution *sol, feMe
 //   }
 //   norm = Integral;
 // }
-void feNorm::computeIntFluxNx(feMetaNumber *metaNumber, feSolution *sol, feMesh *mesh) {
+void feNorm::computeIntFluxNx(feMetaNumber *metaNumber, feSolution *sol, feMesh *mesh)
+{
   double Integral = 0.0, solInt, J;
   int nElm = _VecfeSpace[0]->getNbElm();
 
@@ -430,7 +449,8 @@ void feNorm::computeIntFluxNx(feMetaNumber *metaNumber, feSolution *sol, feMesh 
   }
   norm = Integral;
 }
-void feNorm::computeIntFluxNy(feMetaNumber *metaNumber, feSolution *sol, feMesh *mesh) {
+void feNorm::computeIntFluxNy(feMetaNumber *metaNumber, feSolution *sol, feMesh *mesh)
+{
   double Integral = 0.0, solInt, J;
   int nElm = _VecfeSpace[0]->getNbElm();
 
@@ -462,7 +482,8 @@ void feNorm::computeIntFluxNy(feMetaNumber *metaNumber, feSolution *sol, feMesh 
   norm = Integral;
 }
 
-void feNorm::computeIntegralNum(feMetaNumber *metaNumber, feSolution *sol, feMesh *mesh) {
+void feNorm::computeIntegralNum(feMetaNumber *metaNumber, feSolution *sol, feMesh *mesh)
+{
   double Integral = 0.0, solInt, p, J, t = sol->getCurrentTime(), T11, T12, T22;
   int nElm = _VecfeSpace[0]->getNbElm();
 
@@ -490,7 +511,8 @@ void feNorm::computeIntegralNum(feMetaNumber *metaNumber, feSolution *sol, feMes
   norm = Integral;
 }
 
-void feNorm::computeArea(feMetaNumber *metaNumber, feSolution *sol, feMesh *mesh) {
+void feNorm::computeArea(feMetaNumber *metaNumber, feSolution *sol, feMesh *mesh)
+{
   double area = 0.0, solInt, J;
   int nElm = _VecfeSpace[0]->getNbElm();
 
@@ -554,34 +576,44 @@ void feNorm::computeIntegral(feMetaNumber *metaNumber, feSolution *sol, feMesh *
 }
 
 /* Estimates the L2 norm of the error taking an external solution as the reference solution. */
-void feNorm::computeErrorNormFromExternalSolution(feMetaNumber *metaNumber, feSolution *sol, feMesh *mesh, 
-  feMetaNumber *refMN, feSolution *refSol, feMesh *refMesh, const std::vector<feSpace *> refSpaces)
+void feNorm::computeErrorNormFromExternalSolution(feMetaNumber *metaNumber, feSolution *sol,
+                                                  feMesh *mesh, feMetaNumber *refMN,
+                                                  feSolution *refSol, feMesh *refMesh,
+                                                  const std::vector<feSpace *> refSpaces)
 {
   double normL2 = 0.0, solInt, solRef;
   int nElm = _intSpace->getNbElm();
 
-  if(fabs(sol->getCurrentTime() - refSol->getCurrentTime()) > 1e-3){
-    printf("In feNorm::computeErrorNormFromExternalSolution : Warning - Solutions time differ by more than 1e-3 : tRef = %f - tSol = %f.\n", refSol->getCurrentTime(), sol->getCurrentTime());
-    printf("In feNorm::computeErrorNormFromExternalSolution : Warning - Maybe the solution file does not match the current solution.\n");
+  if(fabs(sol->getCurrentTime() - refSol->getCurrentTime()) > 1e-3) {
+    printf("In feNorm::computeErrorNormFromExternalSolution : Warning - Solutions time differ by "
+           "more than 1e-3 : tRef "
+           "= %f - tSol = %f.\n",
+           refSol->getCurrentTime(), sol->getCurrentTime());
+    printf("In feNorm::computeErrorNormFromExternalSolution : Warning - Maybe the solution file "
+           "does not match the "
+           "current solution.\n");
   }
 
   std::vector<double> x(3, 0.0);
   std::vector<double> r(3, 0.0);
   std::vector<double> J = mesh->getCncGeoByTag(cncGeoTag)->getJacobians();
 
-  // Identify the feSpace from among the set of spaces from the reference solution (we should use a map)
-  // Aussi : la numérotation doit être recréée pour assigner correctement les ddl aux espaces.
-  // Donc soit elle est la même que pour le problème courant, ce qui suppose que les fespaces sont les memes, ce qui a du sens, soit il faut redéfinir
-  // un nouveau set de feSpace à partir d'une autre simulation, ce qui semble hasardeux. 
+  // Identify the feSpace from among the set of spaces from the reference solution (we should use a
+  // map) Aussi : la numérotation doit être recréée pour assigner correctement les ddl aux espaces.
+  // Donc soit elle est la même que pour le problème courant, ce qui suppose que les fespaces sont
+  // les memes, ce qui a du sens, soit il faut redéfinir un nouveau set de feSpace à partir d'une
+  // autre simulation, ce qui semble hasardeux.
   bool matchingSpace = false;
-  for(feSpace *fS : refSpaces){
-    if(fS->getFieldID() == _intSpace->getFieldID() && fS->getCncGeoID() == _intSpace->getCncGeoID()){
+  for(feSpace *fS : refSpaces) {
+    if(fS->getFieldID() == _intSpace->getFieldID() &&
+       fS->getCncGeoID() == _intSpace->getCncGeoID()) {
       matchingSpace = true;
 
       feNumber *n = refMN->getNumbering(fS->getFieldID());
 
       for(int iElm = 0; iElm < nElm; ++iElm) {
-        _intSpace->initializeAddressingVector(metaNumber->getNumbering(_intSpace->getFieldID()), iElm);
+        _intSpace->initializeAddressingVector(metaNumber->getNumbering(_intSpace->getFieldID()),
+                                              iElm);
         _intSpace->initializeSolution(sol);
         geoCoord = mesh->getCoord(cncGeoTag, iElm);
         for(int k = 0; k < _nQuad; ++k) {
@@ -590,11 +622,14 @@ void feNorm::computeErrorNormFromExternalSolution(feMetaNumber *metaNumber, feSo
           solInt = _intSpace->interpolateSolutionAtQuadNode(k);
           // Reference solution evaluated at quad node
           int elm = -1;
-          bool isFound = static_cast<feMesh2DP1*>(refMesh)->locateVertex(x,elm,r);
-          if(!isFound){
-            printf("In feNorm::computeErrorNormFromExternalSolution : Warning - Point (%f, %f, %f) was not found in the mesh.\n", x[0], x[1], x[2]);
+          bool isFound = static_cast<feMesh2DP1 *>(refMesh)->locateVertex(x, elm, r);
+          if(!isFound) {
+            printf("In feNorm::computeErrorNormFromExternalSolution : Warning - Point (%f, %f, %f) "
+                   "was not found in "
+                   "the mesh.\n",
+                   x[0], x[1], x[2]);
             solRef = solInt; // Points outside the mesh do not contribute
-          } else{
+          } else {
             fS->initializeAddressingVector(n, elm);
             fS->initializeSolution(refSol);
             solRef = fS->interpolateSolution(r.data());
@@ -612,5 +647,7 @@ void feNorm::computeErrorNormFromExternalSolution(feMetaNumber *metaNumber, feSo
   }
 
   if(!matchingSpace)
-    printf("In feNorm::computeErrorNormFromExternalSolution : Error - No finite element space in the reference set matches the target space on this connectivity.\n");
+    printf("In feNorm::computeErrorNormFromExternalSolution : Error - No finite element space in "
+           "the reference set "
+           "matches the target space on this connectivity.\n");
 }

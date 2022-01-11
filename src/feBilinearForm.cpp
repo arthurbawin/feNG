@@ -1,7 +1,8 @@
 #include "feBilinearForm.h"
 #include "feQuadrature.h"
 
-static inline double **allocateMatrix(feInt m, feInt n) {
+static inline double **allocateMatrix(feInt m, feInt n)
+{
   double *p = new double[m * n];
   double **A = new double *[m];
   double *q = p;
@@ -9,31 +10,39 @@ static inline double **allocateMatrix(feInt m, feInt n) {
   return A;
 }
 
-static inline void setMatrixToZero(feInt m, feInt n, double **A) {
+static inline void setMatrixToZero(feInt m, feInt n, double **A)
+{
   for(feInt i = 0; i < m * n; ++i) (*A)[i] = 0.0;
 }
 
-static inline void freeMatrix(feInt m, double **A) {
+static inline void freeMatrix(feInt m, double **A)
+{
   delete[] A[0];
   delete[] A;
 }
 
-static inline void printMatrix(feInt m, feInt n, double ***A) {
+static inline void printMatrix(feInt m, feInt n, double ***A)
+{
   for(feInt i = 0; i < m; ++i)
     for(feInt j = 0; j < n; ++j) printf("A[%ld][%ld] = %+10.16e\n", i, j, (*A)[i][j]);
   // std::cout<<"A["<<i<<"]["<<j<<"] = "<<(*A)[i][j]<<std::endl;
 }
 
-static inline void allocateResidual(feInt m, double **b) {
+static inline void allocateResidual(feInt m, double **b)
+{
   *b = (double *)calloc(m, sizeof *b);
-  if(*b == nullptr) { printf("In feBilinearForm::allocateResidual : Error - NULL pointer.\n"); }
+  if(*b == nullptr) {
+    printf("In feBilinearForm::allocateResidual : Error - NULL pointer.\n");
+  }
 }
 
-static inline void setResidualToZero(feInt m, double **b) {
+static inline void setResidualToZero(feInt m, double **b)
+{
   for(feInt i = 0; i < m; ++i) (*b)[i] = 0.0;
 }
 
-static inline void printResidual(feInt m, double **b) {
+static inline void printResidual(feInt m, double **b)
+{
   for(feInt i = 0; i < m; ++i) printf("b[%ld] = %+10.16e\n", i, (*b)[i]);
 }
 
@@ -99,7 +108,8 @@ feBilinearForm::feBilinearForm(std::vector<feSpace *> space, feMesh *mesh, int d
     ptrComputeMatrix = &feBilinearForm::computeMatrixAnalytical;
 }
 
-feBilinearForm::~feBilinearForm() {
+feBilinearForm::~feBilinearForm()
+{
   // freeMatrix(_niElm, &_Ae);
   freeMatrix(_niElm, _Ae);
   freeResidual(&_Be);
@@ -108,7 +118,8 @@ feBilinearForm::~feBilinearForm() {
   delete _sysElm;
 }
 
-void feBilinearForm::initialize_vadij_only(feMetaNumber *metaNumber, int numElem) {
+void feBilinearForm::initialize_vadij_only(feMetaNumber *metaNumber, int numElem)
+{
   for(feSpace *fS : _intSpace) {
     fS->initializeAddressingVector(metaNumber->getNumbering(fS->getFieldID()), numElem);
   }
@@ -126,7 +137,8 @@ void feBilinearForm::initialize_vadij_only(feMetaNumber *metaNumber, int numElem
 }
 
 void feBilinearForm::initialize(feMetaNumber *metaNumber, feMesh *mesh, feSolution *sol,
-                                int numElem) {
+                                int numElem)
+{
   for(feSpace *fS : _intSpace) {
     fS->initializeAddressingVector(metaNumber->getNumbering(fS->getFieldID()), numElem);
     fS->initializeSolution(sol);
@@ -147,7 +159,8 @@ void feBilinearForm::initialize(feMetaNumber *metaNumber, feMesh *mesh, feSoluti
 }
 
 void feBilinearForm::computeMatrix(feMetaNumber *metaNumber, feMesh *mesh, feSolution *sol,
-                                   int numElem) {
+                                   int numElem)
+{
   // this->initialize(metaNumber, mesh, sol, numElem);
   // setMatrixToZero(_niElm, _njElm, &_Ae);
   // _sysElm->computeAe(_intSpace, _geoSpace, _geoCoord, sol->getC0(), sol->getCurrentTime(), _Ae);
@@ -156,7 +169,8 @@ void feBilinearForm::computeMatrix(feMetaNumber *metaNumber, feMesh *mesh, feSol
 }
 
 void feBilinearForm::computeMatrixAnalytical(feMetaNumber *metaNumber, feMesh *mesh,
-                                             feSolution *sol, int numElem) {
+                                             feSolution *sol, int numElem)
+{
   this->initialize(metaNumber, mesh, sol, numElem);
   // setMatrixToZero(_niElm, _njElm, &_Ae);
   setMatrixToZero(_niElm, _njElm, _Ae);
@@ -173,7 +187,8 @@ void feBilinearForm::computeMatrixAnalytical(feMetaNumber *metaNumber, feMesh *m
 // }
 
 void feBilinearForm::computeResidual(feMetaNumber *metaNumber, feMesh *mesh, feSolution *sol,
-                                     int numElem) {
+                                     int numElem)
+{
   this->initialize(metaNumber, mesh, sol, numElem);
   setResidualToZero(_niElm, &_Be);
   std::vector<double> &J = _cnc->getJacobians();
@@ -183,7 +198,8 @@ void feBilinearForm::computeResidual(feMetaNumber *metaNumber, feMesh *mesh, feS
 }
 
 void feBilinearForm::computeMatrixFiniteDifference(feMetaNumber *metaNumber, feMesh *mesh,
-                                                   feSolution *sol, int numElem) {
+                                                   feSolution *sol, int numElem)
+{
   // printf("feBilinearForm::computeMatrixFiniteDifference\n");
   this->initialize(metaNumber, mesh, sol, numElem);
   // setMatrixToZero(_niElm, _njElm, &_Ae);
@@ -236,7 +252,8 @@ void feBilinearForm::computeMatrixFiniteDifference(feMetaNumber *metaNumber, feM
   // printMatrix(_niElm, _njElm, &_Ae);
 }
 
-double feBilinearForm::getMatrixNorm() {
+double feBilinearForm::getMatrixNorm()
+{
   int res = 0.0;
   for(feInt i = 0; i < _niElm; ++i)
     for(feInt j = 0; j < _njElm; ++j) res += _Ae[i][j] * _Ae[i][j];
@@ -244,7 +261,8 @@ double feBilinearForm::getMatrixNorm() {
   return sqrt(res);
 }
 
-double feBilinearForm::getResidualNorm() {
+double feBilinearForm::getResidualNorm()
+{
   int res = 0.0;
   for(feInt i = 0; i < _niElm; ++i) res += _Be[i] * _Be[i];
 

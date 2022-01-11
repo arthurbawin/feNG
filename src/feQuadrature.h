@@ -7,7 +7,8 @@
 #include <cmath>
 #include <utility>
 
-class feQuadrature {
+class feQuadrature
+{
 protected:
   int _degQuad;
   int _dimQuad;

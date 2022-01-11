@@ -9,25 +9,26 @@
 #include "feSolutionContainer.h"
 
 /* Supported linear solvers */
-typedef enum {MKLPARDISO, PETSC} linearSolverType;
+typedef enum { MKLPARDISO, PETSC } linearSolverType;
 
-class feLinearSystem {
+class feLinearSystem
+{
 protected:
-  std::vector<feBilinearForm*> _formMatrices;
-  std::vector<feBilinearForm*> _formResiduals;
+  std::vector<feBilinearForm *> _formMatrices;
+  std::vector<feBilinearForm *> _formResiduals;
   feMetaNumber *_metaNumber;
   feMesh *_mesh;
 
   bool recomputeMatrix;
 
 public:
-  feLinearSystem(std::vector<feBilinearForm*> bilinearForms, feMetaNumber *metaNumber, feMesh *mesh)
+  feLinearSystem(std::vector<feBilinearForm *> bilinearForms, feMetaNumber *metaNumber,
+                 feMesh *mesh)
     : _metaNumber(metaNumber), _mesh(mesh), recomputeMatrix(false)
   {
-    for(feBilinearForm* f : bilinearForms){
+    for(feBilinearForm *f : bilinearForms) {
       _formResiduals.push_back(f);
-      if(f->hasMatrix())
-        _formMatrices.push_back(f);
+      if(f->hasMatrix()) _formMatrices.push_back(f);
     }
   };
   virtual ~feLinearSystem() {}
@@ -50,12 +51,8 @@ public:
   virtual void printResidual(){};
 };
 
-feStatus createLinearSystem(feLinearSystem *&system,
-                            linearSolverType type,
-                            std::vector<feBilinearForm*> bilinearForms,
-                            feMetaNumber *metaNumber,
-                            feMesh *mesh,
-                            int argc = 0,
-                            char **argv = nullptr);
+feStatus createLinearSystem(feLinearSystem *&system, linearSolverType type,
+                            std::vector<feBilinearForm *> bilinearForms, feMetaNumber *metaNumber,
+                            feMesh *mesh, int argc = 0, char **argv = nullptr);
 
 #endif

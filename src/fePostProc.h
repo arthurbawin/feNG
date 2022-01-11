@@ -6,7 +6,8 @@
 #include "feNumber.h"
 #include "feSolution.h"
 
-class fePostProc {
+class fePostProc
+{
 protected:
   feSpace *_intSpace;
   feSpace *_geoSpace;
@@ -16,16 +17,15 @@ protected:
 
   feMesh *_mesh;
   feMetaNumber *_metaNumber;
-  feCncGeo* _cnc;
+  feCncGeo *_cnc;
+
 public:
-  fePostProc(feSpace *intSpace,
-             feMesh *mesh,
-             feMetaNumber *metaNumber,
+  fePostProc(feSpace *intSpace, feMesh *mesh, feMetaNumber *metaNumber,
              feFunction *referenceSolution = nullptr,
              feVectorFunction *referenceVectorSolution = nullptr)
-    : _intSpace(intSpace), _geoSpace(intSpace->getCncGeo()->getFeSpace()), 
-    _referenceSolution(referenceSolution), _referenceVectorSolution(referenceVectorSolution),
-    _mesh(mesh), _metaNumber(metaNumber), _cnc(intSpace->getCncGeo()) {};
+    : _intSpace(intSpace), _geoSpace(intSpace->getCncGeo()->getFeSpace()),
+      _referenceSolution(referenceSolution), _referenceVectorSolution(referenceVectorSolution),
+      _mesh(mesh), _metaNumber(metaNumber), _cnc(intSpace->getCncGeo()){};
   ~fePostProc() {}
 
   double computeMeasure();
@@ -36,8 +36,10 @@ public:
 
   // void computeL2Norm0D(feSolution *sol);
   // void computeIntegral(feMetaNumber *metaNumber, feSolution *sol, feMesh *mesh, feFunction *fun);
-  // void computeErrorNormFromExternalSolution(feMetaNumber *metaNumber, feSolution *sol, feMesh *mesh, 
-  //   feMetaNumber *refMN, feSolution *refSol, feMesh *refMesh, const std::vector<feSpace *> refSpaces);
+  // void computeErrorNormFromExternalSolution(feMetaNumber *metaNumber, feSolution *sol, feMesh
+  // *mesh,
+  //   feMetaNumber *refMN, feSolution *refSol, feMesh *refMesh, const std::vector<feSpace *>
+  //   refSpaces);
 };
 
 #endif

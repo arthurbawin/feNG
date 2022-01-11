@@ -28,7 +28,8 @@ typedef struct feMetricOptions {
   bool (*inside)(double *);
 } feMetricOptions;
 
-class feMetric {
+class feMetric
+{
 protected:
   feRecovery *_recovery;
   feMetricOptions _options;
@@ -46,10 +47,11 @@ public:
   void computeMetricsHechtKuate();
   void computeMetricsWithDirectionField();
 
-  int getMetricViewTag(){ return _metricViewTag; }
+  int getMetricViewTag() { return _metricViewTag; }
 
   void metricScaling();
-  // void metriqueSimplexe2D(int nPhi, std::vector<double> phi, std::vector<double> erreur, double &A,
+  // void metriqueSimplexe2D(int nPhi, std::vector<double> phi, std::vector<double> erreur, double
+  // &A,
   //                         double &B, double &C, int max_iter);
 
   // Intersecter avec un autre feMetric

@@ -2,7 +2,7 @@
 #include "fullMatrix.h"
 
 #if defined(HAVE_GMSH)
-  #include "gmsh.h"
+#include "gmsh.h"
 #endif
 
 #include "ellipseToolbox.h"
@@ -16,10 +16,12 @@ void metricHechtKuate(int nbpoints, double *x, double *y, double &A, double &B, 
                       double epsilon, double *xNew, double *yNew);
 
 feMetric::feMetric(feRecovery *recovery, feMetricOptions metricOptions)
-  : _recovery(recovery), _options(metricOptions) {
+  : _recovery(recovery), _options(metricOptions)
+{
 }
 
-void feMetric::metricScaling() {
+void feMetric::metricScaling()
+{
   std::vector<double> &w = _recovery->_geoSpace->getQuadratureWeights();
   std::vector<double> &J = _recovery->_cnc->getJacobians();
 
@@ -68,7 +70,8 @@ void feMetric::metricScaling() {
   }
 }
 
-void feMetric::writeSizeFieldSol2D(std::string solFileName) {
+void feMetric::writeSizeFieldSol2D(std::string solFileName)
+{
   // Write the size field to a .sol file
   int dim = _recovery->getDim();
   std::vector<int> &vertices = _recovery->getVertices();
@@ -90,7 +93,8 @@ void feMetric::writeSizeFieldSol2D(std::string solFileName) {
   fclose(myfile);
 }
 
-void feMetric::writeSizeFieldSol3D(std::string solFileName) {
+void feMetric::writeSizeFieldSol3D(std::string solFileName)
+{
   // Write the size field to a .sol file
   int dim = _recovery->getDim();
   std::vector<int> &vertices = _recovery->getVertices();
@@ -114,7 +118,8 @@ void feMetric::writeSizeFieldSol3D(std::string solFileName) {
   fclose(myfile);
 }
 
-void feMetric::writeSizeFieldGmsh(std::string meshName, std::string metricMeshName) {
+void feMetric::writeSizeFieldGmsh(std::string meshName, std::string metricMeshName)
+{
   // Write the size field as NodeData in a copy of the .msh file.
   // For now, the mesh file is simply copied and the NodeData is written at the end.
   feMesh2DP1 *mesh = dynamic_cast<feMesh2DP1 *>(_recovery->_mesh);
@@ -124,7 +129,8 @@ void feMetric::writeSizeFieldGmsh(std::string meshName, std::string metricMeshNa
     return;
   }
   // if(mesh->getGmshVersion() != 2.2) {
-  //   printf("In readGmsh : Error - Anisotropic size field can only be written to a msh 2.2 file for "
+  //   printf("In readGmsh : Error - Anisotropic size field can only be written to a msh 2.2 file
+  //   for "
   //          "MMG compatibility.\n");
   //   return;
   // }
@@ -170,7 +176,8 @@ void feMetric::writeSizeFieldGmsh(std::string meshName, std::string metricMeshNa
   }
 }
 
-void feMetric::drawEllipsoids(std::string posFile) {
+void feMetric::drawEllipsoids(std::string posFile)
+{
   FILE *f = fopen(posFile.c_str(), "w");
 
   fprintf(f, "View \"ellipsesFromSimulation\"{\n");
@@ -201,8 +208,8 @@ void feMetric::drawEllipsoids(std::string posFile) {
   fclose(f);
 }
 
-void feMetric::computeMetricsHechtKuate(){
-
+void feMetric::computeMetricsHechtKuate()
+{
   int degSol = _recovery->getDegreeSolution();
   int dimRecovery = _recovery->getDimRecovery();
   std::vector<int> &expX = _recovery->getXExponentsRecovery();
@@ -212,7 +219,9 @@ void feMetric::computeMetricsHechtKuate(){
 
   int nPhi = _options.nPhi;
   std::vector<double> phi(nPhi, 0.); // Error curve discretization
-  for(int i = 0; i < nPhi; ++i) { phi[i] = i * 2. * M_PI / nPhi; }
+  for(int i = 0; i < nPhi; ++i) {
+    phi[i] = i * 2. * M_PI / nPhi;
+  }
 
   double *xC = (double *)malloc(sizeof(double) * nPhi);
   double *yC = (double *)malloc(sizeof(double) * nPhi);
@@ -264,11 +273,12 @@ void feMetric::computeMetricsHechtKuate(){
   free(yC);
 }
 
-// The metric field is stored in the view _metricViewTag in the 
+// The metric field is stored in the view _metricViewTag in the
 // gmsh model given in metricOptions.gmshModel
-void feMetric::computeMetricsWithDirectionField(){
+void feMetric::computeMetricsWithDirectionField()
+{
 #if defined(HAVE_GMSH)
-  if(!_options.isGmshModelReady){
+  if(!_options.isGmshModelReady) {
     printf("In feMetric : Error - No Gmsh model available to compute a metric field.\n"
            "In feMetric : Error - Create a Gmsh geometry and mesh it first.\n");
     return;
@@ -294,7 +304,7 @@ void feMetric::computeMetricsWithDirectionField(){
   double g00, g01, g11, C, S;
 
   FILE *debugFile1, *debugFile2;
-  if(_options.debug){
+  if(_options.debug) {
     debugFile1 = fopen("directionsBeforeSmoothing.pos", "w");
     debugFile2 = fopen("directionsAfterSmoothing.pos", "w");
     fprintf(debugFile1, "View \" \"{\n");
@@ -309,18 +319,19 @@ void feMetric::computeMetricsWithDirectionField(){
     const double x = coord[3 * i + 0];
     const double y = coord[3 * i + 1];
 
-    switch(_options.directionFieldFromDerivativesOfOrder){
-      case 1 :
+    switch(_options.directionFieldFromDerivativesOfOrder) {
+      case 1:
         computeDirectionFieldFromGradient(x, y, C, S, 1e-8, _recovery, debugFile1);
         break;
-      case 2 :
+      case 2:
         computeDirectionFieldFromHessian(x, y, C, S, 1e-8, _recovery, debugFile1);
         break;
-      case 3 :
+      case 3:
         // computeDirectionFieldFromThirdOrderDerivatives(x, y, C, S, _rec, debugFile1);
         break;
-      default :
-        printf("In feMetric : Error - Cannot compute direction field from derivatives of this order.\n");
+      default:
+        printf(
+          "In feMetric : Error - Cannot compute direction field from derivatives of this order.\n");
     }
 
     COS[nodeTags[i]] = C;
@@ -332,9 +343,11 @@ void feMetric::computeMetricsWithDirectionField(){
   smoothDirections(COS, SIN, debugFile2, smoothMaxIter, smoothTol);
 
   FILE *debugFile3, *debugFile4;
-  if(_options.debug){
-    fprintf(debugFile1, "};"); fclose(debugFile1);
-    fprintf(debugFile2, "};"); fclose(debugFile2);
+  if(_options.debug) {
+    fprintf(debugFile1, "};");
+    fclose(debugFile1);
+    fprintf(debugFile2, "};");
+    fclose(debugFile2);
     debugFile3 = fopen("ellipses.pos", "w");
     fprintf(debugFile3, "View \" ellipses \"{\n");
     debugFile4 = fopen("scaledDirections.pos", "w");
@@ -365,7 +378,7 @@ void feMetric::computeMetricsWithDirectionField(){
   const int deg = _options.polynomialDegree;
   const double lMin = _options.hMin;
   const double lMax = _options.hMax;
-  const double eps  = _options.eTargetError;
+  const double eps = _options.eTargetError;
 
   for(size_t i = 0; i < nodeTags.size(); i++) {
     const double x = coord[3 * i + 0];
@@ -377,21 +390,21 @@ void feMetric::computeMetricsWithDirectionField(){
     double l0, l1; // The sizes, not the eigenvalues
     switch(deg) {
       case 1: {
-        const double dtt0_ = fabs(dtt(x, y,  C, S, _recovery));
+        const double dtt0_ = fabs(dtt(x, y, C, S, _recovery));
         const double dtt1_ = fabs(dtt(x, y, -S, C, _recovery));
         l0 = fabs(dtt0_) > 1e-14 ? pow(2.0 * eps / dtt0_, 0.5) : lMax;
         l1 = fabs(dtt1_) > 1e-14 ? pow(2.0 * eps / dtt1_, 0.5) : lMax;
         break;
       }
       case 2: {
-        const double sizeAlongIsoline  = fabs(dttt(x, y,  C, S, _recovery, 0));
+        const double sizeAlongIsoline = fabs(dttt(x, y, C, S, _recovery, 0));
         // const double sizeAlongGradient = fabs(dttt(x, y, -S, C, _recovery, 1));
-        const double sizeAlongGradient = fabs(dttt(x, y,  C, S, _recovery, 1));
-        l0 = fabs(sizeAlongIsoline)  > 1e-14 ? pow(6.0 * eps / sizeAlongIsoline, 0.3333) : lMax;
+        const double sizeAlongGradient = fabs(dttt(x, y, C, S, _recovery, 1));
+        l0 = fabs(sizeAlongIsoline) > 1e-14 ? pow(6.0 * eps / sizeAlongIsoline, 0.3333) : lMax;
         l1 = fabs(sizeAlongGradient) > 1e-14 ? pow(6.0 * eps / sizeAlongGradient, 0.3333) : lMax;
         break;
       }
-      default:{
+      default: {
         printf("In feMetric : Error - No metric computation scheme for deg = 0 or deg > 2\n");
         l0 = lMax;
         l1 = lMax;
@@ -403,8 +416,8 @@ void feMetric::computeMetricsWithDirectionField(){
     l1 = std::min(l1, lMax);
     l1 = std::max(l1, lMin);
 
-    fprintf(debugFile4, "VP(%g,%g,0){%g,%g,0};", x, y,  l0*C, l0*S);
-    fprintf(debugFile4, "VP(%g,%g,0){%g,%g,0};", x, y, -l1*S, l1*C);
+    fprintf(debugFile4, "VP(%g,%g,0){%g,%g,0};", x, y, l0 * C, l0 * S);
+    fprintf(debugFile4, "VP(%g,%g,0){%g,%g,0};", x, y, -l1 * S, l1 * C);
 
     // Eigenvalues
     double h0 = 1. / (l0 * l0);
@@ -416,8 +429,10 @@ void feMetric::computeMetricsWithDirectionField(){
 
     // Check det(M) is positive
     if(g00 * g11 - g01 * g01 < 1e-10) {
-      printf("In feMetric : Error - Metric determinant d = %12.12e is negative at node (%4.4e, %4.4e)\n", g00 * g11 - g01 * g01, x, y);
-      g11 = g00 = 1./lMax/lMax;
+      printf(
+        "In feMetric : Error - Metric determinant d = %12.12e is negative at node (%4.4e, %4.4e)\n",
+        g00 * g11 - g01 * g01, x, y);
+      g11 = g00 = 1. / lMax / lMax;
       g01 = 0.0;
     }
 
@@ -446,35 +461,45 @@ void feMetric::computeMetricsWithDirectionField(){
     M.set_m22(g11);
     metrics[i] = M;
 
-    if(_options.debug){
+    if(_options.debug) {
       getEllipsePoints(factor * M(0, 0), factor * 2.0 * M(0, 1), factor * M(1, 1), x, y, xP, yP);
       for(int j = 0; j < nt; ++j) {
-        if(j != nt - 1) { fprintf(debugFile3, "SL(%.16g,%.16g,%.16g,%.16g,%.16g,%.16g){%u, %u};\n", xP[j], yP[j], 0., xP[j + 1], yP[j + 1], 0., 1, 1); }
-        else {            fprintf(debugFile3, "SL(%.16g,%.16g,%.16g,%.16g,%.16g,%.16g){%u, %u};\n", xP[j], yP[j], 0., xP[0]    , yP[0]    , 0., 1, 1); }
+        if(j != nt - 1) {
+          fprintf(debugFile3, "SL(%.16g,%.16g,%.16g,%.16g,%.16g,%.16g){%u, %u};\n", xP[j], yP[j],
+                  0., xP[j + 1], yP[j + 1], 0., 1, 1);
+        } else {
+          fprintf(debugFile3, "SL(%.16g,%.16g,%.16g,%.16g,%.16g,%.16g){%u, %u};\n", xP[j], yP[j],
+                  0., xP[0], yP[0], 0., 1, 1);
+        }
       }
     }
 
     // auto pp = alreadyWrittenTags.insert(nodeTags[i]);
 
     // if(pp.second) {
-    //   fprintf(ffff, "%d \t %+-4.4e \t %+-4.4e : %+-4.4e \t %+-4.4e \t %+-4.4e \n", nodeTags[i], x, y, M(0, 0), M(0, 1), M(1, 1));
-    //   // fprintf(ffff, "%d \t %+-4.4e \t %+-4.4e : %+-4.4e \t %+-4.4e \t %+-4.4e \n", nodeTags[i],
+    //   fprintf(ffff, "%d \t %+-4.4e \t %+-4.4e : %+-4.4e \t %+-4.4e \t %+-4.4e \n", nodeTags[i],
+    //   x, y, M(0, 0), M(0, 1), M(1, 1));
+    //   // fprintf(ffff, "%d \t %+-4.4e \t %+-4.4e : %+-4.4e \t %+-4.4e \t %+-4.4e \n",
+    //   nodeTags[i],
     //   // x, y, M(0, 0), M(0, 1), M(1, 1)); Write .sol size field
-    //   // fprintf(myfile, "%+-10.12f \t %+-10.12f \t %+-10.12f \t %+-10.12f \t %+-10.12f\n", x, y, M(0, 0), M(0, 1), M(1, 1));
-    //   fprintf(myfile, "%+-10.12f \t %+-10.12f \t %+-10.12f\n", M(0, 0), M(0, 1), M(1, 1));
+    //   // fprintf(myfile, "%+-10.12f \t %+-10.12f \t %+-10.12f \t %+-10.12f \t %+-10.12f\n", x, y,
+    //   M(0, 0), M(0, 1), M(1, 1)); fprintf(myfile, "%+-10.12f \t %+-10.12f \t %+-10.12f\n", M(0,
+    //   0), M(0, 1), M(1, 1));
     // }
   }
 
-  if(_options.debug){
-    fprintf(debugFile3, "};"); fclose(debugFile3);
-    fprintf(debugFile4, "};"); fclose(debugFile4);
+  if(_options.debug) {
+    fprintf(debugFile3, "};");
+    fclose(debugFile3);
+    fprintf(debugFile4, "};");
+    fclose(debugFile4);
   }
 
   gmsh::view::addModelData(_metricViewTag, 0, _options.gmshModel, "NodeData", nodeTags, metricData);
-  gmsh::view::addModelData(recoveryViewTag, 0, _options.gmshModel, "NodeData", nodeTags, recoveryData);
+  gmsh::view::addModelData(recoveryViewTag, 0, _options.gmshModel, "NodeData", nodeTags,
+                           recoveryData);
   // gmsh::fltk::run();
 
-  
   gmsh::option::setNumber("Mesh.MshFileVersion", 2.2);
   gmsh::view::write(_metricViewTag, "metric.msh");
   gmsh::view::write(recoveryViewTag, "recovery.msh");
@@ -485,7 +510,7 @@ void feMetric::computeMetricsWithDirectionField(){
   // gmsh::write("metric.msh");
   // gmsh::write(metricMeshName);
   // gmsh::view::write(viewTagF, "sol.msh");
-  
+
   // size_t lastindex = metricMeshName.find_last_of(".");
   // std::string metricMeshNameRoot = metricMeshName.substr(0, lastindex);
   // std::string toAdapt = metricMeshNameRoot + "_toAdapt.msh";
@@ -493,20 +518,22 @@ void feMetric::computeMetricsWithDirectionField(){
   //  gmsh::view::write(viewTagF,"metric.msh",true);
 
 #else
-  printf("In feMetric : Error - Gmsh is required to create a metric field based on a direction field.\n");
+  printf("In feMetric : Error - Gmsh is required to create a metric field based on a direction "
+         "field.\n");
   return;
 #endif
 }
 
-void feMetric::computeMetrics(){
-  switch(_options.computationMethod){
-    case 1 : 
+void feMetric::computeMetrics()
+{
+  switch(_options.computationMethod) {
+    case 1:
       computeMetricsHechtKuate();
       break;
-    case 2 :
+    case 2:
       computeMetricsWithDirectionField();
       break;
-    default :
+    default:
       printf("In feMetric : Error - Unknown metric computation method.\n");
   }
 }

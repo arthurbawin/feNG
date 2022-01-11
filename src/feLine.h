@@ -5,7 +5,8 @@
 
 // Inspired from MFEM
 
-class feLine : public feElement {
+class feLine : public feElement
+{
 protected:
   int nodes[2];
 

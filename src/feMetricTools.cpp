@@ -2,114 +2,112 @@
 #include "feSimplex.h"
 
 #if defined(HAVE_GMSH)
-  #include "gmsh.h"
+#include "gmsh.h"
 #endif
 #include "fullMatrix.h"
 #include "STensor3.h"
 
-double evaluateFieldFromRecovery(int indexDerivative, feRecovery *rec, double x, double y){
-  std::vector<double> pos = {x,y,0.0};
+double evaluateFieldFromRecovery(int indexDerivative, feRecovery *rec, double x, double y)
+{
+  std::vector<double> pos = {x, y, 0.0};
   return rec->evalDerivative(indexDerivative, pos);
 }
 
-double f(feRecovery *rec, double x, double y){ 
-	return evaluateFieldFromRecovery(0, rec, x, y);
-}
-double fx(feRecovery *rec, double x, double y){ 
-  return evaluateFieldFromRecovery(1, rec, x, y);
-}
-double fy(feRecovery *rec, double x, double y){ 
-  return evaluateFieldFromRecovery(2, rec, x, y);
-}
-double fxx(feRecovery *rec, double x, double y){ 
-  return evaluateFieldFromRecovery(3, rec, x, y);
-}
-double fxy(feRecovery *rec, double x, double y){ 
-  return evaluateFieldFromRecovery(4, rec, x, y);
-}
-double fyx(feRecovery *rec, double x, double y){ 
-  return evaluateFieldFromRecovery(5, rec, x, y);
-}
-double fyy(feRecovery *rec, double x, double y){ 
-  return evaluateFieldFromRecovery(6, rec, x, y);
-}
-double fxxx(feRecovery *rec, double x, double y){ 
-  return evaluateFieldFromRecovery(7, rec, x, y);
-}
-double fxxy(feRecovery *rec, double x, double y){ 
-  return evaluateFieldFromRecovery(8, rec, x, y);
-}
-double fxyx(feRecovery *rec, double x, double y){ 
-  return evaluateFieldFromRecovery(9, rec, x, y);
-}
-double fxyy(feRecovery *rec, double x, double y){ 
+double f(feRecovery *rec, double x, double y) { return evaluateFieldFromRecovery(0, rec, x, y); }
+double fx(feRecovery *rec, double x, double y) { return evaluateFieldFromRecovery(1, rec, x, y); }
+double fy(feRecovery *rec, double x, double y) { return evaluateFieldFromRecovery(2, rec, x, y); }
+double fxx(feRecovery *rec, double x, double y) { return evaluateFieldFromRecovery(3, rec, x, y); }
+double fxy(feRecovery *rec, double x, double y) { return evaluateFieldFromRecovery(4, rec, x, y); }
+double fyx(feRecovery *rec, double x, double y) { return evaluateFieldFromRecovery(5, rec, x, y); }
+double fyy(feRecovery *rec, double x, double y) { return evaluateFieldFromRecovery(6, rec, x, y); }
+double fxxx(feRecovery *rec, double x, double y) { return evaluateFieldFromRecovery(7, rec, x, y); }
+double fxxy(feRecovery *rec, double x, double y) { return evaluateFieldFromRecovery(8, rec, x, y); }
+double fxyx(feRecovery *rec, double x, double y) { return evaluateFieldFromRecovery(9, rec, x, y); }
+double fxyy(feRecovery *rec, double x, double y)
+{
   return evaluateFieldFromRecovery(10, rec, x, y);
 }
-double fyxx(feRecovery *rec, double x, double y){ 
+double fyxx(feRecovery *rec, double x, double y)
+{
   return evaluateFieldFromRecovery(11, rec, x, y);
 }
-double fyxy(feRecovery *rec, double x, double y){ 
+double fyxy(feRecovery *rec, double x, double y)
+{
   return evaluateFieldFromRecovery(12, rec, x, y);
 }
-double fyyx(feRecovery *rec, double x, double y){ 
+double fyyx(feRecovery *rec, double x, double y)
+{
   return evaluateFieldFromRecovery(13, rec, x, y);
 }
-double fyyy(feRecovery *rec, double x, double y){ 
-	return evaluateFieldFromRecovery(14, rec, x, y);
+double fyyy(feRecovery *rec, double x, double y)
+{
+  return evaluateFieldFromRecovery(14, rec, x, y);
 }
 
-double dtt(const double x, const double y, double C, double S, feRecovery *rec) {
-  const double c11 =  fxx(rec, x, y);
+double dtt(const double x, const double y, double C, double S, feRecovery *rec)
+{
+  const double c11 = fxx(rec, x, y);
   const double c12 = (fxy(rec, x, y) + fyx(rec, x, y)) / 2.;
-  const double c22 =  fyy(rec, x, y);
+  const double c22 = fyy(rec, x, y);
   return C * C * c11 + S * S * c22 + 2. * C * S * c12;
 }
 
-double dttt(const double x, const double y, double C, double S, feRecovery *rec, int direction) {
+double dttt(const double x, const double y, double C, double S, feRecovery *rec, int direction)
+{
   const double c111 = fxxx(rec, x, y);
   const double c222 = fyyy(rec, x, y);
   const double c112 = (fxxy(rec, x, y) + fxyx(rec, x, y) + fyxx(rec, x, y)) / 3.;
   const double c122 = (fxyy(rec, x, y) + fyyx(rec, x, y) + fyxy(rec, x, y)) / 3.;
 
-  const double c11 =  fxx(rec, x, y);
+  const double c11 = fxx(rec, x, y);
   const double c12 = (fxy(rec, x, y) + fyx(rec, x, y)) / 2.;
-  const double c22 =  fyy(rec, x, y);
+  const double c22 = fyy(rec, x, y);
 
   const double c1 = fx(rec, x, y);
   const double c2 = fy(rec, x, y);
 
-  double kappa1 = (-c2*c2*c11 + 2.0 * c1*c2*c12 - c1*c1*c22) / (pow(c1*c1 + c2*c2, 3.0/2.0));
-  double kappa2 = (c1*c2*(c22-c11) + (c1*c1-c2*c2)*c12) / (pow(c1*c1 + c2*c2, 3.0/2.0));
+  double kappa1 =
+    (-c2 * c2 * c11 + 2.0 * c1 * c2 * c12 - c1 * c1 * c22) / (pow(c1 * c1 + c2 * c2, 3.0 / 2.0));
+  double kappa2 =
+    (c1 * c2 * (c22 - c11) + (c1 * c1 - c2 * c2) * c12) / (pow(c1 * c1 + c2 * c2, 3.0 / 2.0));
 
   double g11 = C;
   double g12 = S;
   double g21 = -S;
   double g22 = C;
 
-  if(direction == 0){
-    // return C * C * C * c111 + S * S * S * c222 + 3. * C * C * S * c112 + 3. * C * S * S * c122 + 3.0 * kappa1 * (g11*g21*c11 + g11*g22*c12 + g12*g21*c12 + g12*g22*c22);
-    return g11 * g11 * g11 * c111 + g12 * g12 * g12 * c222 + 3. * g11 * g11 * g12 * c112 + 3. * g11 * g12 * g12 * c122 + 3.0 * kappa1 * (g11*g21*c11 + g11*g22*c12 + g12*g21*c12 + g12*g22*c22);
-  } else if(direction == 1){
-    // return C * C * C * c111 + S * S * S * c222 + 3. * C * C * S * c112 + 3. * C * S * S * c122 + 3.0 * kappa2 * (g11*g21*c11 + g21*g12*c12 + g22*g11*c12 + g12*g22*c22);
-    return g21 * g21 * g21 * c111 + g22 * g22 * g22 * c222 + 3. * g21 * g21 * g22 * c112 + 3. * g21 * g22 * g22 * c122 + 3.0 * kappa2 * (g11*g21*c11 + g21*g12*c12 + g22*g11*c12 + g12*g22*c22);
-  } else{
+  if(direction == 0) {
+    // return C * C * C * c111 + S * S * S * c222 + 3. * C * C * S * c112 + 3. * C * S * S * c122
+    // + 3.0 * kappa1 * (g11*g21*c11 + g11*g22*c12 + g12*g21*c12 + g12*g22*c22);
+    return g11 * g11 * g11 * c111 + g12 * g12 * g12 * c222 + 3. * g11 * g11 * g12 * c112 +
+           3. * g11 * g12 * g12 * c122 +
+           3.0 * kappa1 * (g11 * g21 * c11 + g11 * g22 * c12 + g12 * g21 * c12 + g12 * g22 * c22);
+  } else if(direction == 1) {
+    // return C * C * C * c111 + S * S * S * c222 + 3. * C * C * S * c112 + 3. * C * S * S * c122
+    // + 3.0 * kappa2 * (g11*g21*c11 + g21*g12*c12 + g22*g11*c12 + g12*g22*c22);
+    return g21 * g21 * g21 * c111 + g22 * g22 * g22 * c222 + 3. * g21 * g21 * g22 * c112 +
+           3. * g21 * g22 * g22 * c122 +
+           3.0 * kappa2 * (g11 * g21 * c11 + g21 * g12 * c12 + g22 * g11 * c12 + g12 * g22 * c22);
+  } else {
     // Compute size along a straight edge
     return C * C * C * c111 + S * S * S * c222 + 3. * C * C * S * c112 + 3. * C * S * S * c122;
   }
 }
 
-void computeDirectionFieldFromGradient(double x, double y, double &C, double &S, double tol, feRecovery *rec, FILE *F) {
+void computeDirectionFieldFromGradient(double x, double y, double &C, double &S, double tol,
+                                       feRecovery *rec, FILE *F)
+{
   double a, b;
   a = fx(rec, x, y);
   b = fy(rec, x, y);
-  
+
   double normGrad = sqrt(a * a + b * b);
 
   if(normGrad > tol) {
     double theta1 = atan2(b, a);
     C = cos(theta1);
     S = sin(theta1);
-    if(F != nullptr){
+    if(F != nullptr) {
       fprintf(F, "VP(%g,%g,%g){%g,%g,%g};\n", x, y, 0., C, S, 0.);
     }
   } else {
@@ -119,11 +117,13 @@ void computeDirectionFieldFromGradient(double x, double y, double &C, double &S,
   }
 }
 
-void computeDirectionFieldFromHessian(double x, double y, double &C, double &S, double tol, feRecovery *rec, FILE *F) {
+void computeDirectionFieldFromHessian(double x, double y, double &C, double &S, double tol,
+                                      feRecovery *rec, FILE *F)
+{
   double a, b, c;
-  a =  fxx(rec, x, y);
+  a = fxx(rec, x, y);
   b = (fxy(rec, x, y) + fyx(rec, x, y)) / 2.;
-  c =  fyy(rec, x, y);
+  c = fyy(rec, x, y);
 
   // Eigenvalues and spectral radius of the hessian
   double l1 = (a + c - sqrt(a * a - 2. * a * c + 4. * b * b + c * c)) / 2.;
@@ -140,7 +140,7 @@ void computeDirectionFieldFromHessian(double x, double y, double &C, double &S, 
     const double L = fmax(1e-10, sqrt(C * C + S * S));
     C /= L;
     S /= L;
-    if(F != nullptr){
+    if(F != nullptr) {
       fprintf(F, "VP(%g,%g,%g){%g,%g,%g};\n", x, y, 0., C, S, 0.);
     }
   } else {
@@ -151,7 +151,9 @@ void computeDirectionFieldFromHessian(double x, double y, double &C, double &S, 
 }
 
 #if defined(HAVE_GMSH)
-void smoothDirections(std::map<size_t, double> &C, std::map<size_t, double> &S, FILE *F, int nIter, double tol) {
+void smoothDirections(std::map<size_t, double> &C, std::map<size_t, double> &S, FILE *F, int nIter,
+                      double tol)
+{
   std::vector<int> elementTypes;
   std::vector<std::vector<std::size_t> > elementTags;
   std::vector<std::vector<std::size_t> > nodeTags;
@@ -220,8 +222,7 @@ void smoothDirections(std::map<size_t, double> &C, std::map<size_t, double> &S, 
     int entityDim, entityTag;
     gmsh::model::mesh::getNode(n, coord, par, entityDim, entityTag);
 
-    if(F != nullptr)
-      fprintf(F, "VP(%g,%g,0){%g,%g,0};", coord[0], coord[1], c, s);
+    if(F != nullptr) fprintf(F, "VP(%g,%g,0){%g,%g,0};", coord[0], coord[1], c, s);
   }
 
   // fprintf(f, "};\n");
@@ -232,7 +233,8 @@ void smoothDirections(std::map<size_t, double> &C, std::map<size_t, double> &S, 
 /* Compute metric using a brute-force method to solve optimization problem
    Original code from R. Kuate */
 void metricHechtKuate(int nbpoints, double *x, double *y, double &A, double &B, double &C,
-                      double epsilon, double *xNew, double *yNew) {
+                      double epsilon, double *xNew, double *yNew)
+{
   C = 0.0;
 
   int bool_assert = 1;
@@ -335,7 +337,9 @@ void metricHechtKuate(int nbpoints, double *x, double *y, double &A, double &B, 
     // for(int ee=0; ee<neps-1; ee++){ //boucle sur epsilon0---------------
     // epsilon0= Tabepsilon[ee];
     if(r0 <= epsilon0) epsilon0 = r0 * epsilon0;
-    if(bool_assert) { assert(r0 > epsilon0); }
+    if(bool_assert) {
+      assert(r0 > epsilon0);
+    }
     R0 = r0 / (r0 - epsilon0);
 
     for(int i = 1; i < nbpoints; i++) { // boucle sur chaque noeud
@@ -345,7 +349,9 @@ void metricHechtKuate(int nbpoints, double *x, double *y, double &A, double &B, 
 
       if(ri <= epsilon) epsilon = ri * epsilon;
 
-      if(bool_assert) { assert(ri > epsilon); }
+      if(bool_assert) {
+        assert(ri > epsilon);
+      }
 
       Ri = ri / (ri - epsilon);
 
@@ -372,13 +378,17 @@ void metricHechtKuate(int nbpoints, double *x, double *y, double &A, double &B, 
 
         std::cout << "xi =" << x[i] << " yi =" << y[i] << " ri = " << ri << " epsilon = " << epsilon
                   << std::endl;
-        if(bool_assert) { assert(ri > epsilon); }
+        if(bool_assert) {
+          assert(ri > epsilon);
+        }
         Ri = ri / (ri - epsilon);
       }
 
       detXY = Xi * Y0 - Yi * X0;
 
-      if(bool_assert) { assert(abs(detXY) >= precision); }
+      if(bool_assert) {
+        assert(abs(detXY) >= precision);
+      }
 
       //-----racines du polynome en b à minimiser----------------------------
       double bb1 =
@@ -495,7 +505,9 @@ void metricHechtKuate(int nbpoints, double *x, double *y, double &A, double &B, 
                 Xk * (Xi * R0 * R0 * (Yk * Xi - Yi * Xk) + X0 * Ri * Ri * (-Yk * X0 + Y0 * Xk))) /
                (Xi * X0 * detXY);
 
-          if(bool_assert) { assert(abs(Xi * X0 * Y0 * Yi * Xk * Yk) >= pow(precision, 5)); }
+          if(bool_assert) {
+            assert(abs(Xi * X0 * Y0 * Yi * Xk * Yk) >= pow(precision, 5));
+          }
           if(abs(Bk) > precision) { // non nul
 
             if(Bk <= 0)
@@ -554,8 +566,10 @@ void metricHechtKuate(int nbpoints, double *x, double *y, double &A, double &B, 
   }
 }
 
-void metriqueSimplexe2D(int nPhi, std::vector<double> phi, std::vector<double> erreur,
-                                  double &A, double &B, double &C, int max_iter, std::vector<int> &expX, std::vector<int> &expY, int dimRecovery, int degreeSolution) {
+void metriqueSimplexe2D(int nPhi, std::vector<double> phi, std::vector<double> erreur, double &A,
+                        double &B, double &C, int max_iter, std::vector<int> &expX,
+                        std::vector<int> &expY, int dimRecovery, int degreeSolution)
+{
   double xi, yi, xj, yj, Q11, Q12, Q21, Q22;
   double err, normeXj;
   double L1, L2, L3, expL11, expL12, expL21, expL22;

@@ -41,7 +41,8 @@ double fePostProc::computeSolutionIntegral(feSolution *sol)
   return integral;
 }
 
-/* Compute the integral at time t of a given function fun on the associated geometric connectivity */
+/* Compute the integral at time t of a given function fun on the associated geometric connectivity
+ */
 double fePostProc::computeFunctionIntegral(feFunction *fun, double t)
 {
   double integral = 0.0;
@@ -61,7 +62,7 @@ double fePostProc::computeFunctionIntegral(feFunction *fun, double t)
   return integral;
 }
 
-/* Compute the L2 norm of the error function e = uh - u at current solution time, 
+/* Compute the L2 norm of the error function e = uh - u at current solution time,
 where uh is the discrete solution stored in sol and u is the solution given in referenceSolution. */
 double fePostProc::computeL2ErrorNorm(feSolution *sol)
 {
@@ -71,8 +72,7 @@ double fePostProc::computeL2ErrorNorm(feSolution *sol)
   int nElm = _intSpace->getNbElm();
   int nQuad = _geoSpace->getNbQuadPoints();
 
-  if(_referenceSolution == nullptr)
-    feWarning("Reference solution is NULL.");
+  if(_referenceSolution == nullptr) feWarning("Reference solution is NULL.");
 
   for(int iElm = 0; iElm < nElm; ++iElm) {
     _intSpace->initializeAddressingVector(_metaNumber->getNumbering(_intSpace->getFieldID()), iElm);
@@ -83,7 +83,8 @@ double fePostProc::computeL2ErrorNorm(feSolution *sol)
       _geoSpace->interpolateVectorFieldAtQuadNode(geoCoord, k, x);
       solInt = _intSpace->interpolateSolutionAtQuadNode(k);
       solRef = (_referenceSolution != nullptr) ? _referenceSolution->eval(t, x) : 0.0;
-      L2Error += (solInt - solRef) * (solInt - solRef) * _cnc->getJacobians()[nQuad * iElm + k] * w[k];
+      L2Error +=
+        (solInt - solRef) * (solInt - solRef) * _cnc->getJacobians()[nQuad * iElm + k] * w[k];
     }
   }
   return sqrt(L2Error);
@@ -106,36 +107,42 @@ double fePostProc::computeL2ErrorNorm(feSolution *sol)
 // }
 
 // /* Estimates the L2 norm of the error taking an external solution as the reference solution. */
-// void feNorm::computeErrorNormFromExternalSolution(feMetaNumber *metaNumber, feSolution *sol, feMesh *mesh, 
-//   feMetaNumber *refMN, feSolution *refSol, feMesh *refMesh, const std::vector<feSpace *> refSpaces)
+// void feNorm::computeErrorNormFromExternalSolution(feMetaNumber *metaNumber, feSolution *sol,
+// feMesh *mesh,
+//   feMetaNumber *refMN, feSolution *refSol, feMesh *refMesh, const std::vector<feSpace *>
+//   refSpaces)
 // {
 //   double normL2 = 0.0, solInt, solRef;
 //   int nElm = _intSpace->getNbElm();
 
 //   if(fabs(sol->getCurrentTime() - refSol->getCurrentTime()) > 1e-3){
-//     printf("In feNorm::computeErrorNormFromExternalSolution : Warning - Solutions time differ by more than 1e-3 : tRef = %f - tSol = %f.\n", refSol->getCurrentTime(), sol->getCurrentTime());
-//     printf("In feNorm::computeErrorNormFromExternalSolution : Warning - Maybe the solution file does not match the current solution.\n");
+//     printf("In feNorm::computeErrorNormFromExternalSolution : Warning - Solutions time differ by
+//     more than 1e-3 : tRef = %f - tSol = %f.\n", refSol->getCurrentTime(), sol->getCurrentTime());
+//     printf("In feNorm::computeErrorNormFromExternalSolution : Warning - Maybe the solution file
+//     does not match the current solution.\n");
 //   }
 
 //   std::vector<double> x(3, 0.0);
 //   std::vector<double> r(3, 0.0);
 //   std::vector<double> J = mesh->getCncGeoByTag(cncGeoTag)->getJacobians();
 
-//   // Identify the feSpace from among the set of spaces from the reference solution (we should use a map)
+//   // Identify the feSpace from among the set of spaces from the reference solution (we should use
+//   a map)
 //   // Aussi : la numérotation doit être recréée pour assigner correctement les ddl aux espaces.
-//   // Donc soit elle est la même que pour le problème courant, ce qui suppose que les fespaces sont les memes, ce qui a du sens, soit il faut redéfinir
-//   // un nouveau set de feSpace à partir d'une autre simulation, ce qui semble hasardeux. 
+//   // Donc soit elle est la même que pour le problème courant, ce qui suppose que les fespaces
+//   sont les memes, ce qui a du sens, soit il faut redéfinir
+//   // un nouveau set de feSpace à partir d'une autre simulation, ce qui semble hasardeux.
 //   bool matchingSpace = false;
 //   for(feSpace *fS : refSpaces){
-//     if(fS->getFieldID() == _intSpace->getFieldID() && fS->getCncGeoID() == _intSpace->getCncGeoID()){
+//     if(fS->getFieldID() == _intSpace->getFieldID() && fS->getCncGeoID() ==
+//     _intSpace->getCncGeoID()){
 //       matchingSpace = true;
 
 //       feNumber *n = refMN->getNumbering(fS->getFieldID());
 
 //       for(int iElm = 0; iElm < nElm; ++iElm) {
-//         _intSpace->initializeAddressingVector(metaNumber->getNumbering(_intSpace->getFieldID()), iElm);
-//         _intSpace->initializeSolution(sol);
-//         geoCoord = mesh->getCoord(cncGeoTag, iElm);
+//         _intSpace->initializeAddressingVector(metaNumber->getNumbering(_intSpace->getFieldID()),
+//         iElm); _intSpace->initializeSolution(sol); geoCoord = mesh->getCoord(cncGeoTag, iElm);
 //         for(int k = 0; k < _nQuad; ++k) {
 //           geoSpace->interpolateVectorFieldAtQuadNode(geoCoord, k, x);
 //           // Current solution
@@ -144,8 +151,9 @@ double fePostProc::computeL2ErrorNorm(feSolution *sol)
 //           int elm = -1;
 //           bool isFound = static_cast<feMesh2DP1*>(refMesh)->locateVertex(x,elm,r);
 //           if(!isFound){
-//             printf("In feNorm::computeErrorNormFromExternalSolution : Warning - Point (%f, %f, %f) was not found in the mesh.\n", x[0], x[1], x[2]);
-//             solRef = solInt; // Points outside the mesh do not contribute
+//             printf("In feNorm::computeErrorNormFromExternalSolution : Warning - Point (%f, %f,
+//             %f) was not found in the mesh.\n", x[0], x[1], x[2]); solRef = solInt; // Points
+//             outside the mesh do not contribute
 //           } else{
 //             fS->initializeAddressingVector(n, elm);
 //             fS->initializeSolution(refSol);
@@ -164,5 +172,6 @@ double fePostProc::computeL2ErrorNorm(feSolution *sol)
 //   }
 
 //   if(!matchingSpace)
-//     printf("In feNorm::computeErrorNormFromExternalSolution : Error - No finite element space in the reference set matches the target space on this connectivity.\n");
+//     printf("In feNorm::computeErrorNormFromExternalSolution : Error - No finite element space in
+//     the reference set matches the target space on this connectivity.\n");
 // }

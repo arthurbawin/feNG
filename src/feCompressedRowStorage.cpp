@@ -5,7 +5,8 @@
 // ====================================================================
 
 feCompressedRowStorage::feCompressedRowStorage(feMetaNumber *metaNumber, feMesh *mesh,
-                                               std::vector<feBilinearForm *> &formMatrices) {
+                                               std::vector<feBilinearForm *> &formMatrices)
+{
   ordre = (feInt)metaNumber->getNbUnknowns();
   nnz = new feInt[ordre];
 
@@ -174,7 +175,8 @@ feCompressedRowStorage::feCompressedRowStorage(feMetaNumber *metaNumber, feMesh 
 // fonction pour comprarer deux entiers, pour le tri
 // d'une liste d'entiers par la fonction qsort
 //========================================================================================================
-int compint(const void *a, const void *b) {
+int compint(const void *a, const void *b)
+{
   const feInt *aa = (const feInt *)a;
   const feInt *bb = (const feInt *)b;
   int code = 0;
@@ -190,7 +192,8 @@ int compint(const void *a, const void *b) {
 
 feCompressedRowStorageMklPardiso::feCompressedRowStorageMklPardiso(
   feMetaNumber *metaNumber, feMesh *mesh, std::vector<feBilinearForm *> &formMatrices)
-  : feCompressedRowStorage(metaNumber, mesh, formMatrices) {
+  : feCompressedRowStorage(metaNumber, mesh, formMatrices)
+{
   // ================================================================
   // ALLOUER LA STRUCTURE CSR DE MKL PARDISO
   // ================================================================
@@ -285,7 +288,8 @@ feCompressedRowStorageMklPardiso::feCompressedRowStorageMklPardiso(
   for(feInt i = 0; i < ordre + 1; i++) Ap[i] += 1;
 }
 
-void feCompressedRowStorageMklPardiso::print_info() {
+void feCompressedRowStorageMklPardiso::print_info()
+{
   // for(feInt i=0;i<nz;i++) printf(" %ld \n", Aj[i]);
   for(feInt i = 0; i < ordre; i++) {
     printf("rangee (%ld) ", i + 1);
@@ -295,7 +299,8 @@ void feCompressedRowStorageMklPardiso::print_info() {
 }
 
 void feCompressedRowStorageMklPardiso::matrixAddValues(double *Matrix, feInt nRow, feInt *Row,
-                                                       feInt nColumn, feInt *Column, double **Aij) {
+                                                       feInt nColumn, feInt *Column, double **Aij)
+{
   for(feInt i = 0; i < nRow; i++) {
     feInt I = Row[i];
     if(I < ordre) {

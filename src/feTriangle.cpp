@@ -1,6 +1,7 @@
 #include "feTriangle.h"
 
-void Triangle::xyz2uvw(double xyz[3], double uvw[3]) {
+void Triangle::xyz2uvw(double xyz[3], double uvw[3])
+{
   const double O[3] = {_v[0]->x(), _v[0]->y(), _v[0]->z()};
 
   const double d[3] = {xyz[0] - O[0], xyz[1] - O[1], xyz[2] - O[2]};

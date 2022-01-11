@@ -6,7 +6,8 @@
 #include "feNumber.h"
 #include "feSolution.h"
 
-class feNorm {
+class feNorm
+{
 protected:
   std::vector<feSpace *> _VecfeSpace;
   feSpace *_intSpace; // assossiated with _VecfeSpace[0]
@@ -58,8 +59,10 @@ public:
   void computeL2Norm0D(feSolution *sol);
   void computeArea(feMetaNumber *metaNumber, feSolution *sol, feMesh *mesh);
   void computeIntegral(feMetaNumber *metaNumber, feSolution *sol, feMesh *mesh, feFunction *fun);
-  void computeErrorNormFromExternalSolution(feMetaNumber *metaNumber, feSolution *sol, feMesh *mesh, 
-    feMetaNumber *refMN, feSolution *refSol, feMesh *refMesh, const std::vector<feSpace *> refSpaces);
+  void computeErrorNormFromExternalSolution(feMetaNumber *metaNumber, feSolution *sol, feMesh *mesh,
+                                            feMetaNumber *refMN, feSolution *refSol,
+                                            feMesh *refMesh,
+                                            const std::vector<feSpace *> refSpaces);
 };
 
 #endif
