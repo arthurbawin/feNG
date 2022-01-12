@@ -7,18 +7,22 @@
 #include <iostream>
 #include <set>
 
+#include "feMessage.h"
 #include "feCncGeo.h"
 #include "feSpace.h"
 #include "feVertex.h"
 #include "feEdge.h"
 #include "feElement.h"
 #include "feTriangle.h"
+#include "rtree.h"
 
-class feMesh {
+class feMesh
+{
 protected:
   std::string _ID;
   int _dim;
   int _nNod;
+  int _nNodesWithNoPhysical;
   int _nEdg;
   int _nTotalElm;
   int _nInteriorElm;
@@ -42,6 +46,7 @@ public:
   std::string getID() { return _ID; }
   int getDim() { return _dim; }
   int getNbNodes() { return _nNod; }
+  int getNbNodesWithoutPhysical() { return _nNodesWithNoPhysical; }
   int getNbEdges() { return _nEdg; }
   int getNbElems() { return _nTotalElm; }
   int getNbInteriorElems() { return _nInteriorElm; }
@@ -57,7 +62,8 @@ public:
 
   int getVertexSequentialTagFromGmshTag(int gmshNodeTag) { return _verticesMap[gmshNodeTag]; }
   Vertex *getVertex(int iVertex) { return &_vertices[iVertex]; }
-  Vertex *getVertexFromGmshNodeTag(int gmshNodeTag) {
+  Vertex *getVertexFromGmshNodeTag(int gmshNodeTag)
+  {
     return &_vertices[_verticesMap[gmshNodeTag]];
   }
   std::vector<Vertex> &getVertices() { return _vertices; }
@@ -83,10 +89,14 @@ public:
   feSpace *getGeometricSpace(std::string cncGeoID);
   feSpace *getGeometricSpace(int cncGeoTag);
 
+  virtual bool locateVertex(std::vector<double> &x, int &iElm, std::vector<double> &u,
+                            double tol = 1e-5) = 0;
+
   void printInfo(bool printConnectivities = true);
 };
 
-class feMesh1DP1 : public feMesh {
+class feMesh1DP1 : public feMesh
+{
 protected:
   int _nElm;
   double _xA, _xB;
@@ -100,9 +110,13 @@ public:
   feMesh1DP1(double xA, double xB, int nElm, std::string bndA_ID, std::string bndB_ID,
              std::string domID);
   virtual ~feMesh1DP1();
+
+  virtual bool locateVertex(std::vector<double> &x, int &iElm, std::vector<double> &u,
+                            double tol = 1e-5){};
 };
 
-class feMesh0DP0 : public feMesh {
+class feMesh0DP0 : public feMesh
+{
 protected:
   int _nElm;
   double _xA;
@@ -115,12 +129,16 @@ protected:
 public:
   feMesh0DP0(double xA, int nElm, std::string domID);
   virtual ~feMesh0DP0();
+
+  virtual bool locateVertex(std::vector<double> &x, int &iElm, std::vector<double> &u,
+                            double tol = 1e-5){};
 };
 
 class feMetaNumber;
 class feSolutionContainer;
 
-class feMesh2DP1 : public feMesh {
+class feMesh2DP1 : public feMesh
+{
 private:
   // A physical entity (a domain)
   typedef struct physicalEntityStruct {
@@ -149,7 +167,7 @@ private:
     int gmshType; // Type d'élément dans gmsh
     std::string cncID;
     int nElm;
-    int nNodePerElem;
+    int nNodePerElem = 0;
     int nEdgePerElem;
     std::vector<int> connecElem;
     std::vector<int> connecNodes;
@@ -158,13 +176,15 @@ private:
     std::vector<int> isBoundaryOf;
   } entity;
 
+  RTree<int, double, 3> _rtree;
+
 public:
+  // FIXME : Choose more explicit name, for example "physicalEntitiesDescription"
   typedef std::map<std::pair<int, int>, std::string> mapType;
 
 protected:
   int _nPhysicalEntities;
   std::map<std::pair<int, int>, entity> _entities;
-  // std::vector<physicalEntity> _physicalEntities;
   std::map<std::pair<int, int>, physicalEntity> _physicalEntities;
 
   mapType _physicalEntitiesDescription;
@@ -189,14 +209,17 @@ protected:
   // std::vector<feElement*> _boundaryElements;
 
 public:
-  feMesh2DP1(std::string meshName, bool curved, mapType physicalEntitiesDescription = mapType(),
-             bool verbose = false);
+  // Empty constructor : the mesh must be created afterwards with feCheck(readGmsh(...))
+  feMesh2DP1(){};
+  // Constructor calling readGmsh : will probably be removed
+  feMesh2DP1(std::string meshName, bool curved = false,
+             mapType physicalEntitiesDescription = mapType());
   ~feMesh2DP1();
 
-  int readMsh2(std::istream &input, bool curved, mapType physicalEntitiesDescription);
-  int readMsh4(std::istream &input, bool curved, mapType physicalEntitiesDescription, bool verbose);
-  int readGmsh(std::string meshName, bool curved, mapType physicalEntitiesDescription = mapType(),
-               bool verbose = false);
+  feStatus readMsh2(std::istream &input, bool curved, mapType physicalEntitiesDescription);
+  feStatus readMsh4(std::istream &input, bool curved, mapType physicalEntitiesDescription);
+  feStatus readGmsh(std::string meshName, bool curved = false,
+                    mapType physicalEntitiesDescription = mapType());
 
   bool isMeshFileBinary() { return _isBinary; }
   double getGmshVersion() { return _gmshVersion; }
@@ -204,6 +227,8 @@ public:
   mapType getPhysicalEntitiesDescription() { return _physicalEntitiesDescription; }
 
   int getGmshNodeTag(int iVertex) { return _sequentialNodeToGmshNode[iVertex]; }
+
+  bool locateVertex(std::vector<double> &x, int &iElm, std::vector<double> &u, double tol = 1e-5);
 
   void transfer(feMesh2DP1 *otherMesh, feMetaNumber *myMN, feMetaNumber *otherMN,
                 feSolutionContainer *solutionContainer, const std::vector<feSpace *> &mySpaces,

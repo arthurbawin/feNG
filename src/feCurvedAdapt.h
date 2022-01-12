@@ -7,7 +7,8 @@
 
 #include "rtree.h"
 
-class feCurvedAdapt {
+class feCurvedAdapt
+{
 protected:
   std::vector<feRecovery *> &_rec;
   // std::vector<feGridFunction*> _derivatives;
@@ -28,7 +29,8 @@ public:
   ~feCurvedAdapt();
 };
 
-class feIsotropicAdapt {
+class feIsotropicAdapt
+{
 protected:
   std::vector<feRecovery *> &_rec;
 

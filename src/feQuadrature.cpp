@@ -3,7 +3,8 @@
 #include <cmath>
 
 feQuadrature::feQuadrature(int degQuad, int dimQuad, std::string formGeo)
-  : _degQuad(degQuad), _dimQuad(dimQuad) {
+  : _degQuad(degQuad), _dimQuad(dimQuad)
+{
   _nQuad1D = (_degQuad + 2) / 2;
   _w.resize(pow(_nQuad1D, _dimQuad));
   _xr.resize(pow(_nQuad1D, _dimQuad));
@@ -25,14 +26,17 @@ feQuadrature::feQuadrature(int degQuad, int dimQuad, std::string formGeo)
   } else if(_dimQuad == 3 && formGeo == "QuadP1") {
     calculateWeightAndRootCube();
   } else if(_dimQuad == 0 && formGeo == "Pt") {
+    _w.resize(1);
     _w[0] = 1.;
+    _xr.resize(1);
     _xr[0] = 0.;
   } else {
     calculateWeightAndRootTetra();
   }
 }
 
-void feQuadrature::calculateWeightAndRoot(int nQuadLocal) {
+void feQuadrature::calculateWeightAndRoot(int nQuadLocal)
+{
   _w1D.resize(nQuadLocal);
   _x1D.resize(nQuadLocal);
 
@@ -56,7 +60,8 @@ void feQuadrature::calculateWeightAndRoot(int nQuadLocal) {
   }
 }
 
-void feQuadrature::calculatePolynomialValueAndDerivative(double x, double *result) {
+void feQuadrature::calculatePolynomialValueAndDerivative(double x, double *result)
+{
   result[0] = x;
   result[1] = 0.0;
   double value_minus_1 = 1;
@@ -69,7 +74,8 @@ void feQuadrature::calculatePolynomialValueAndDerivative(double x, double *resul
   }
 }
 
-void feQuadrature::calculateWeightAndRootTri(int method) {
+void feQuadrature::calculateWeightAndRootTri(int method)
+{
   if(method == 1) {
     // La version classique du calcul des points et poids sur un triangle (n^2 points)
     _nQuad1D = (_degQuad + 2) / 2;
@@ -108,7 +114,8 @@ void feQuadrature::calculateWeightAndRootTri(int method) {
   }
 }
 
-void feQuadrature::calculateWeightAndRootTetra() {
+void feQuadrature::calculateWeightAndRootTetra()
+{
   calculateWeightAndRoot(_nQuad1D);
   int l = 0;
   for(int i = 0; i < _nQuad1D; ++i) {
@@ -124,7 +131,8 @@ void feQuadrature::calculateWeightAndRootTetra() {
   }
 }
 
-void feQuadrature::calculateWeightAndRootSquare() {
+void feQuadrature::calculateWeightAndRootSquare()
+{
   calculateWeightAndRoot(_nQuad1D);
   int l = 0;
   for(int i = 0; i < _nQuad1D; ++i) {
@@ -137,7 +145,8 @@ void feQuadrature::calculateWeightAndRootSquare() {
   }
 }
 
-void feQuadrature::calculateWeightAndRootCube() {
+void feQuadrature::calculateWeightAndRootCube()
+{
   calculateWeightAndRoot(_nQuad1D);
   int l = 0;
   for(int i = 0; i < _nQuad1D; ++i) {

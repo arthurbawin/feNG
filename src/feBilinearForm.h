@@ -10,7 +10,8 @@
 #include "feSolution.h"
 #include "feCncGeo.h"
 
-class feBilinearForm {
+class feBilinearForm
+{
 protected:
   feSysElm *_sysElm;
   std::vector<feSpace *> _intSpace;
@@ -60,10 +61,12 @@ protected:
                                            int numElem);
 
 public:
-  feBilinearForm(std::vector<feSpace *> &space, feMesh *mesh, int degQuad, feSysElm *sysElm);
+  feBilinearForm(std::vector<feSpace *> space, feMesh *mesh, int degQuad, feSysElm *sysElm);
   ~feBilinearForm();
 
   int getCncGeoTag() { return _cncGeoTag; }
+
+  bool hasMatrix() { return _sysElm->hasMatrix(); }
 
   int getNiElm() { return _niElm; }
   int getNjElm() { return _njElm; }
@@ -88,7 +91,8 @@ public:
   double getMatrixNorm();
   double getResidualNorm();
 
-  void printInfo() {
+  void printInfo()
+  {
     printf("============== Bilinear form ==============\n");
     printf("_cncGeoTag = %d\n", _cncGeoTag);
     printf("_nCoord = %d\n", _nCoord);

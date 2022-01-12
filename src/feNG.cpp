@@ -1,6 +1,7 @@
 #include "feNG.h"
 
-void tic(int mode) {
+void tic(int mode)
+{
   static std::chrono::_V2::system_clock::time_point t_start;
 
   if(mode == 0)

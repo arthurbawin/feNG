@@ -808,6 +808,72 @@ int mainGradation(int argc, char **argv) {
   // SMetric3 m1Inter = intersection_reductionSimultanee(m, mFrom2At1);
   // drawEllipse(m1Inter, x1, y1, myfile, color);
 
+
+  // SMetric3 M1(1.0);
+  // M1.set_m11(2.501000000000E+00);
+  // M1.set_m22(2.501000000000E+00);
+  // M1.set_m33(1.);
+  // M1.set_m21(-2.499000000000E+00);
+  // M1.set_m31(0.);
+  // M1.set_m32(0.);
+  // M1.print("M1");
+  // SMetric3 M1(1.0);
+  // M1.set_m11(1.464029283623E+00);
+  // M1.set_m22(1.496992768857E+00);
+  // M1.set_m33(1.);
+  // M1.set_m21(-1.449113059614E+00);
+  // M1.set_m31(0.);
+  // M1.set_m32(0.);
+  // M1.print("M1");
+  SMetric3 M1(1.0);
+  M1.set_m11(2);
+  M1.set_m22(2);
+  M1.set_m33(1.);
+  M1.set_m21(1);
+  M1.set_m31(0.);
+  M1.set_m32(0.);
+  M1.print("M1");
+
+  drawEllipse(M1, 50., 10., myfile, 2*color);
+
+  // SMetric3 M2(1.0);
+  // M2.set_m11(5.002000000000E+00);
+  // M2.set_m22(5.002000000000E+00);
+  // M2.set_m33(1.);
+  // M2.set_m21(-4.998000000000E+00);
+  // M2.set_m31(0.);
+  // M2.set_m32(0.);
+  // M2.print("M2");
+  // SMetric3 M2(1.0);
+  // M2.set_m11(2.458930005425E+00);
+  // M2.set_m22(2.523713604758E+00);
+  // M2.set_m33(1.);
+  // M2.set_m21(-2.455485150437E+00);
+  // M2.set_m31(0.);
+  // M2.set_m32(0.);
+  // M2.print("M2");
+  SMetric3 M2(1.0);
+  M2.set_m11(4);
+  M2.set_m22(4);
+  M2.set_m33(1.);
+  M2.set_m21(2);
+  M2.set_m31(0.);
+  M2.set_m32(0.);
+  M2.print("M2");
+
+  drawEllipse(M2, 50., 10., myfile, .5*color);
+
+  // SMetric3 M3(1.0);
+  // M3.set_m11(5.002000000000E+00);
+  // M3.set_m22(5.002000000000E+00);
+  // M3.set_m33(1.);
+  // M3.set_m21(0.);
+  // M3.set_m31(0.);
+  // M3.set_m32(0.);
+  // M3.print("M3");
+
+  // drawEllipse(M3, 50., 10., myfile, .5*color);
+
   fprintf(myfile, "};");
   fclose(myfile);
 }

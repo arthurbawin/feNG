@@ -6,11 +6,13 @@
 #include "feNumber.h"
 #include "feBilinearForm.h"
 
-class feCompressedRowStorage {
+class feCompressedRowStorage
+{
 public:
   feCompressedRowStorage(feMetaNumber *metaNumber, feMesh *mesh,
                          std::vector<feBilinearForm *> &formMatrices);
-  ~feCompressedRowStorage() {
+  ~feCompressedRowStorage()
+  {
     if(nnz != NULL) delete[] nnz;
     // ================================================================
     // Structure temporaire nécessaire à la construction CSR
@@ -59,11 +61,13 @@ protected:
 private:
 };
 
-class feCompressedRowStorageMklPardiso : public feCompressedRowStorage {
+class feCompressedRowStorageMklPardiso : public feCompressedRowStorage
+{
 public:
   feCompressedRowStorageMklPardiso(feMetaNumber *metaNumber, feMesh *mesh,
                                    std::vector<feBilinearForm *> &formMatrices);
-  ~feCompressedRowStorageMklPardiso() {
+  ~feCompressedRowStorageMklPardiso()
+  {
     if(rangee != NULL) delete[] rangee;
     if(irangee != NULL) delete[] irangee;
     if(Ap != NULL) delete[] Ap;
@@ -77,10 +81,12 @@ public:
   feInt *getAp() { return Ap; };
   feInt *getAj() { return Aj; };
   double *allocateMatrix() { return new double[nz]; };
-  void freeMatrix(double *Matrix) {
+  void freeMatrix(double *Matrix)
+  {
     if(Matrix != NULL) delete[] Matrix;
   };
-  void zeroMatrix(double *Matrix) {
+  void zeroMatrix(double *Matrix)
+  {
     for(feInt i = 0; i < nz; i++) Matrix[i] = 0;
   };
   // ================================================================

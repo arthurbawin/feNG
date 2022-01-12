@@ -5,7 +5,8 @@
 
 #include "feVertex.h"
 
-class Edge {
+class Edge
+{
 protected:
   Vertex *_v0;
   Vertex *_v1;
@@ -17,7 +18,8 @@ protected:
 
 public:
   Edge() {}
-  Edge(Vertex *v0, Vertex *v1, int tag = -1, int pTag = -1) {
+  Edge(Vertex *v0, Vertex *v1, int tag = -1, int pTag = -1)
+  {
     _v0 = v0;
     _v1 = v1;
     _tag = tag;
@@ -38,7 +40,8 @@ public:
 };
 
 struct EdgeLessThan {
-  bool operator()(const Edge e1, const Edge e2) const {
+  bool operator()(const Edge e1, const Edge e2) const
+  {
     int tag10 = e1.getTag(0), tag11 = e1.getTag(1);
     int tag20 = e2.getTag(0), tag21 = e2.getTag(1);
     int diffMin = fmin(tag10, tag11) - fmin(tag20, tag21);

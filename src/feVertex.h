@@ -3,23 +3,27 @@
 
 // Inspired by MFEM
 
-class Vertex {
+class Vertex
+{
 protected:
   double coord[3];
 
   int _tag; // The Gmsh numbering of the node, used to create edges
 public:
   Vertex() {}
-  Vertex(double x, int tag = -1) {
+  Vertex(double x, int tag = -1)
+  {
     _tag = tag;
     coord[0] = x;
   }
-  Vertex(double x, double y, int tag = -1) {
+  Vertex(double x, double y, int tag = -1)
+  {
     _tag = tag;
     coord[0] = x;
     coord[1] = y;
   }
-  Vertex(double x, double y, double z, int tag = -1) {
+  Vertex(double x, double y, double z, int tag = -1)
+  {
     _tag = tag;
     coord[0] = x;
     coord[1] = y;

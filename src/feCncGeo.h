@@ -9,7 +9,8 @@
 class feSpace;
 class feMesh;
 
-class feCncGeo {
+class feCncGeo
+{
 protected:
   std::string _ID;
   int _tag;
@@ -24,8 +25,6 @@ protected:
   std::vector<int> _connecEdges; // Connectivite des aretes
   std::vector<int> _connecFaces; // Connectivite des faces
 
-  // std::map <int, int> _globNodeToLocNode ;
-
   feSpace *_space;
   feMesh *_mesh; // Ou alors donner le vecteur de Vertex de la cnc
 
@@ -39,21 +38,16 @@ public:
            std::vector<int> connecFaces = std::vector<int>())
     : _ID(ID), _tag(tag), _dim(dim), _forme(forme), _nNodPerElm(nNod), _nElm(nElm), _nEdg(nEdg),
       _connecNodes(connecNodes), _connecElem(connecElem), _connecEdges(connecEdges),
-      _connecFaces(connecFaces), _space(space) {
+      _connecFaces(connecFaces), _space(space)
+  {
     if(connecElem.size() == 0) _connecElem.resize(nElm);
-    // std::cout<<"before "<<connecNodes.size()<<std::endl;
+    if(connecEdges.size() == 0) _connecEdges.resize(nElm * nEdg);
+
     std::sort(connecNodes.begin(), connecNodes.end());
     _nNod = std::unique(connecNodes.begin(), connecNodes.end()) - connecNodes.begin();
-    for(int k = 0; k < 90; k++) {}
-    // std::cout<<_nNod<<std::endl;
-    // connecNodes.erase( std::unique(connecNodes.begin(), connecNodes.end()), connecNodes.end() );
-    // _nNod = connecNodes.size();
-    // std::cout<<_nNod<<std::endl;
-    // int cnt = 0;
-    // for(int node : connecNodes)
-    //   _globNodeToLocNode[node] = cnt++ ;
   };
-  ~feCncGeo() {
+  ~feCncGeo()
+  {
     // if(_space != nullptr)
     //   delete _space;
   }
@@ -75,18 +69,20 @@ public:
   std::vector<int> &getElemConnectivityRef() { return _connecElem; }
 
   int getNodeConnectivity(int iNode) { return _connecNodes[iNode]; }
-  int getNodeConnectivity(int numElem, int iNode) {
+  int getNodeConnectivity(int numElem, int iNode)
+  {
     return _connecNodes[_nNodPerElm * numElem + iNode];
   }
-  // int getLocalNode(int mshNode){return _globNodeToLocNode[mshNode];}
   int getElementConnectivity(int numElem) { return _connecElem[numElem]; }
   int getEdgeConnectivity(int numElem, int iEdge) { return _connecEdges[_nEdg * numElem + iEdge]; }
 
-  void setNodeConnectivity(int numElem, int iNode, int val) {
+  void setNodeConnectivity(int numElem, int iNode, int val)
+  {
     _connecNodes[_nNodPerElm * numElem + iNode] = val;
   }
   void setElementConnectivity(int numElem, int val) { _connecElem[numElem] = val; }
-  void setEdgeConnectivity(int numElem, int iEdge, int val) {
+  void setEdgeConnectivity(int numElem, int iEdge, int val)
+  {
     _connecEdges[_nEdg * numElem + iEdge] = val;
   }
 

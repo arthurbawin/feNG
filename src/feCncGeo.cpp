@@ -2,7 +2,8 @@
 #include "feSpace.h"
 #include "feMesh.h"
 
-void feCncGeo::computeJacobians() {
+void feCncGeo::computeJacobians()
+{
   int nQuad = _space->getNbQuadPoints();
   _J.resize(_nElm * nQuad);
 
@@ -26,6 +27,11 @@ void feCncGeo::computeJacobians() {
         _space->interpolateVectorFieldAtQuadNode_rDerivative(geoCoord, k, dxdr);
         _space->interpolateVectorFieldAtQuadNode_sDerivative(geoCoord, k, dxds);
         _J[nQuad * iElm + k] = dxdr[0] * dxds[1] - dxdr[1] * dxds[0];
+        if(_J[nQuad * iElm + k] < 0) {
+          printf("In feCncGeo::computeJacobians : Error - Element jacobian = %+-12.12e\n",
+                 _J[nQuad * iElm + k]);
+          exit(-1);
+        }
       }
     }
   } else if(_space->getDim() == 0) {

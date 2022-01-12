@@ -7,7 +7,8 @@
 
 class feLinearSystem;
 
-class feSolutionContainer {
+class feSolutionContainer
+{
 protected:
   int _nDofs; // NDDL
   int _nSol;
@@ -39,7 +40,8 @@ public:
   virtual void computeSolTimeDerivative(feSolution *sol, feLinearSystem *linearSystem){};
 };
 
-class feStationarySolution : public feSolutionContainer {
+class feStationarySolution : public feSolutionContainer
+{
 protected:
 public:
   feStationarySolution(int nSol, double tn, feMetaNumber *metaNumber)
@@ -48,7 +50,8 @@ public:
   virtual void computeSolTimeDerivative(feSolution *sol, feLinearSystem *linearSystem);
 };
 
-class feSolutionBDF1 : public feSolutionContainer {
+class feSolutionBDF1 : public feSolutionContainer
+{
 protected:
 public:
   feSolutionBDF1(int nSol, double tn, feMetaNumber *metaNumber)
@@ -57,7 +60,8 @@ public:
   virtual void computeSolTimeDerivative(feSolution *sol, feLinearSystem *linearSystem);
 };
 
-class feSolutionBDF2 : public feSolutionContainer {
+class feSolutionBDF2 : public feSolutionContainer
+{
 protected:
 public:
   feSolutionBDF2(int nSol, double tn, feMetaNumber *metaNumber)
@@ -66,7 +70,8 @@ public:
   virtual void computeSolTimeDerivative(feSolution *sol, feLinearSystem *linearSystem);
 };
 
-class feSolutionDCF : public feSolutionContainer {
+class feSolutionDCF : public feSolutionContainer
+{
 protected:
 public:
   feSolutionDCF(int nSol, double tn, feMetaNumber *metaNumber)
@@ -75,7 +80,8 @@ public:
   virtual void computeSolTimeDerivative(feSolution *sol, feLinearSystem *linearSystem);
 };
 
-class feSolutionDC2F : public feSolutionContainer {
+class feSolutionDC2F : public feSolutionContainer
+{
 protected:
 public:
   feSolutionDC2F(int nSol, double tn, feMetaNumber *metaNumber)
