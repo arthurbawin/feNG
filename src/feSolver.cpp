@@ -23,7 +23,7 @@ void solveQNBDF(feSolutionContainer *solDot, feTolerances tol, feMetaNumber *met
     solDot->computeSolTimeDerivative(sol, linearSystem);
     linearSystem->assemble(sol);
     linearSystem->solve(&normDx, &normResidual, &normAxb, &linearSystemIter);
-    if(iter == 0 && status == 1) _normR0 = normResidual;
+    if(iter == 0 && status == 1) _normR0 = normResidual; 
     if(iter == 0 && status == 0)
       _normFirstR0 = normResidual; // in case we have to recalculate the matrix and update the R0
     // FECORRECTIONSOLUTION
@@ -33,13 +33,11 @@ void solveQNBDF(feSolutionContainer *solDot, feTolerances tol, feMetaNumber *met
     printf(
       "iter %2d : ||A*dx-res|| = %10.10e (%4d iter.) \t ||dx|| = %10.10e \t ||res|| = %10.10e\n",
       ++iter, normAxb, linearSystemIter, normDx, normResidual);
-
     newton = !((normDx <= tol.tolDx && normResidual <= tol.tolResidual) || iter > tol.maxIter);
 
     // linearSystem->setRecomputeStatus(true);
     // std::cout<<"R0 == "<<_normR0<<std::endl;
     // std::cout<<"normResidual / _normR0 == "<<normResidual / _normR0<<std::endl;
-    // std::cout<<"cnt == "<<cnt<<std::endl;
     if((iter > 2 || prev_status == 0) && ((normResidual / _normR0) < 0.001) && cnt < 8) {
       linearSystem->setRecomputeStatus(false);
 
