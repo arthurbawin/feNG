@@ -33,13 +33,11 @@ protected:
   std::string _TypeNorm;
 
 public:
-  feNorm(std::vector<feSpace *> &VecfeSpace, feMesh *mesh, int degQuad,
-         feFunction *solRef = nullptr, feVectorFunction *VecSolRef = nullptr,
-         std::string TypeNorm = "");
-  feNorm(feSpace *intSpace, feMesh *mesh, int degQuad, feFunction *solRef = nullptr,
-         feVectorFunction *VecSolRef = nullptr, std::string TypeNorm = "");
+  feNorm(std::vector<feSpace *> &VecfeSpace, feMesh *mesh, int degQuad, std::string TypeNorm = "",
+         feFunction *solRef = nullptr, feVectorFunction *VecSolRef = nullptr);
+  feNorm(feSpace *intSpace, feMesh *mesh, int degQuad, std::string TypeNorm = "",
+         feFunction *solRef = nullptr, feVectorFunction *VecSolRef = nullptr);
   ~feNorm() {}
-  // ~feNormVec() {}
 
   double getNorm() { return norm; }
   int getNbFields() { return NbFields; }

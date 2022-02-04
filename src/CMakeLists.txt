@@ -98,7 +98,8 @@ set(feNG_SRC
     feSpace.cpp
     feSpaceTriangle.cpp
     feSysElm.cpp
-    feTriangle.cpp)
+    feTriangle.cpp
+    feComputer.cpp)
 
 # Add Gmsh files for STensor3
 list(
@@ -143,7 +144,8 @@ set(feNG_API
     feSpace.h
     feSysElm.h
     feTriangle.h
-    feVertex.h)
+    feVertex.h
+    feComputer.h)
 
 feng_add_library(feNG "${feNG_SRC}" "${feNG_API}")
 

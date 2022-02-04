@@ -41,6 +41,15 @@ feStatus createFiniteElementSpace(feSpace *&space, feMesh *mesh, int dim, elemTy
             return feErrorMsg(FE_STATUS_ERROR,
                               "No LINE finite element space implemented for deg > 4.");
         }
+      } else if(type == LINE_CR) {
+        switch(deg) {
+          case 1:
+            space = new feSpace1DP1_nonConsistant(mesh, fieldID, cncGeoID, fct);
+            break;
+          default:
+            return feErrorMsg(FE_STATUS_ERROR,
+                              "No LINE finite element space implemented for deg > 4.");
+        }
       } else {
         return feErrorMsg(FE_STATUS_ERROR, "Unsupported geometry.");
       }
@@ -67,6 +76,15 @@ feStatus createFiniteElementSpace(feSpace *&space, feMesh *mesh, int dim, elemTy
             return feErrorMsg(FE_STATUS_ERROR,
                               "No LINE finite element space implemented for deg > 4.");
         }
+      }
+      if(type == TRI_CR) {
+        switch(deg) {
+          case 0:
+            return feErrorMsg(FE_STATUS_ERROR,
+                              "No TRI finite element space implemented for deg > 4.");
+          case 1:
+            space = new feSpaceTriP1_nonConsistant(mesh, fieldID, cncGeoID, fct);
+        }
       } else {
         return feErrorMsg(FE_STATUS_ERROR, "Unsupported geometry.");
       }
@@ -77,7 +95,6 @@ feStatus createFiniteElementSpace(feSpace *&space, feMesh *mesh, int dim, elemTy
       return feErrorMsg(FE_STATUS_ERROR,
                         "Cannot create a finite element space for dimension > 3 or < 0.");
   }
-
   // Set the quadrature rule on this space and the corresponding geometric interpolation space
   feQuadrature rule(dQuad, dim, mesh->getCncGeoByName(cncGeoID)->getForme());
   space->setQuadratureRule(&rule);

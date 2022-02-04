@@ -16,21 +16,25 @@
 #include "feSolver.h"
 #include "feLinearSystemPETSc.h"
 
-double fSol(const double t, const std::vector<double> x, const std::vector<double> par) {
+double fSol(const double t, const std::vector<double> x, const std::vector<double> par)
+{
   return exp(x[0]) + 1;
 }
 
-double f0(const double t, const std::vector<double> x, const std::vector<double> par) {
+double f0(const double t, const std::vector<double> x, const std::vector<double> par)
+{
   return 0.0;
 }
 
-double fSource(const double t, const std::vector<double> x, const std::vector<double> par) {
+double fSource(const double t, const std::vector<double> x, const std::vector<double> par)
+{
   double kd = par[0];
   return exp(x[0]);
   // return kd * 2. * pow(x[0], 0)*0.;
 }
 
-int main(int argc, char **argv) {
+int main(int argc, char **argv)
+{
 #ifdef HAVE_PETSC
   petscInitialize(argc, argv);
 #endif
@@ -84,7 +88,8 @@ int main(int argc, char **argv) {
     feLinearSystemPETSc *linearSystem =
       new feLinearSystemPETSc(argc, argv, formMatrices, formResiduals, metaNumber, mesh);
     linearSystem->initialize();
-    feTolerances tol{1e-9, 1e-8, 20};
+    // feTolerance {tolDx,tolResidual, maxIter}
+    feTolerances tol{1e-5, 1e-5, 20};
     StationarySolver solver(tol, metaNumber, linearSystem, sol, norms, mesh);
     solver.makeSteps(0, fespace);
     normL2[2 * iter] = solver.getNorm(0);

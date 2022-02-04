@@ -104,5 +104,9 @@ void initializeDC4F(feSolution *sol, feMetaNumber *metaNumber, feMesh *mesh,
                     feSolutionBDF2 *solBDF2, feSolutionDCF *solDC3, feSolutionDCF *solDC4);
 void initializeDC3F_centered(feSolution *sol, feMetaNumber *metaNumber, feMesh *mesh,
                              feSolutionDC2F *solDC2F, feSolutionDC2F *solDC3);
+void initializeDC4(feSolution *sol, feMetaNumber *metaNumber, feMesh *mesh, feSolutionBDF2 *solBDF2,
+                   feSolutionDCF *solDC3, feSolutionDCF *solDC4);
+void initializeDC5(feSolution *sol, feMetaNumber *metaNumber, feMesh *mesh, feSolutionBDF2 *solBDF2,
+                   feSolutionDCF *solDC3, feSolutionDCF *solDC4, feSolutionDCF *solDC5);
 
 #endif

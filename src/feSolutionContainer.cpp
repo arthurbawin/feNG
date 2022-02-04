@@ -59,11 +59,13 @@ void feSolutionBDF1::computeSolTimeDerivative(feSolution *sol, feLinearSystem *l
 
 void feSolutionDCF::computeSolTimeDerivative(feSolution *sol, feLinearSystem *linearSystem)
 {
-  // std::cout << "_sol[0][0]   " << _sol[0][0] << "    _sol[1][0]   " << _sol[1][0]<< " _sol[2][0]
-  // " << _sol[2][0]<<std::endl;
+  // std::cout << "_sol[0][0]   " << _sol[0][0] << "    _sol[1][0]   " << _sol[1][0]<< " _sol[2][0]"
+  // << _sol[2][0]<<std::endl;
   for(int i = 0; i < _nDofs; ++i)
     sol->setSolDotAtDOF(i, _cn[0] * _sol[0][i] + _cn[1] * _sol[1][i] + _cn[2] * _sol[2][i]);
   linearSystem->applyCorrectionToResidual(-1.0, _d);
+  // std::cout<<"coeffs  "<<_cn[0]<<"  ,  "<<_cn[1]<<" , "<<_cn[2]<<"  timestep
+  // "<<_t[0]<<_t[1]<<std::endl;
 }
 
 void feSolutionDC2F::computeSolTimeDerivative(feSolution *sol, feLinearSystem *linearSystem)
@@ -276,7 +278,6 @@ void initializeDC3(feSolution *sol, feMetaNumber *metaNumber, feMesh *mesh, feSo
     }
   }
   std::vector<double> sub(tt.begin(), tt.begin() + 3);
-  // std::cout<<"sub.size() = "<<sub.size()<<std::endl;
   std::vector<double> f(nLvl, 0.0);
   size_t n = sub.size();
   std::vector<double> table(n * (n + 1), 0.0);
@@ -296,7 +297,7 @@ void initializeDC3(feSolution *sol, feMetaNumber *metaNumber, feMesh *mesh, feSo
     // std::cout << "le derivee trosieme vaut " << d3u << std::endl;
     solDC3->_d[k] = d3u / 6.0 * k1 * (k1 + k2);
     // std::cout<<"les residus valent "<<f[0]<< " ,  "<< f[1]<< " et " << f[2] <<std::endl;
-    // std::cout << "la correction du DC3F vaut " << d3u / 6.0 * k1 * (k1 + k2) << std::endl;
+    // std::cout << "la correction du DC3 vaut " << d3u / 6.0 * k1 * (k1 + k2) << std::endl;
   }
   // Init FESOL
   int nDOF = metaNumber->getNbDOFs();
@@ -447,7 +448,137 @@ void initializeDC3F(feSolution *sol, feMetaNumber *metaNumber, feMesh *mesh,
   sol->initializeEssentialBC(mesh, metaNumber, solDC3);
 }
 
-void initializeDC4F(feSolution *sol, feMetaNumber *metaNumber, feMesh *mesh,
-                    feSolutionBDF2 *solBDF2, feSolutionDCF *solDC3, feSolutionDCF *solDC4)
+void initializeDC4(feSolution *sol, feMetaNumber *metaNumber, feMesh *mesh, feSolutionBDF2 *solBDF2,
+                   feSolutionDCF *solDC3, feSolutionDCF *solDC4)
 {
+  std::vector<double> t = solDC3->getTime();
+  int nLvl = 4;
+  int orderBDF = 2, orderP1 = orderBDF + 1, nTMin = orderP1 + 2;
+  std::vector<double> cn(nLvl * 3);
+  if((int)t.size() < nTMin) printf("In feSolutionContainer::initializeDC3F : t.size < nTMin\n");
+  std::vector<double> tt(nTMin, 0.);
+  for(int i = 0; i < nTMin; ++i) tt[i] = t[i];
+  double tn = tt[0];
+  double k1 = tt[0] - tt[1];
+  double k2 = tt[1] - tt[2];
+  // Coeffs BDF
+  for(int k = 0; k < nLvl; ++k) {
+    std::vector<double> sub(tt.begin() + (1 + k - 1), tt.begin() + (orderP1 + k - 1) + 1);
+    std::vector<double> coeff(sub.size(), 0.);
+    tableToCoeffBDF(sub, coeff);
+    for(int i = 0; i < orderP1; ++i) {
+      cn[nLvl * k + i] = coeff[i];
+    }
+  }
+  std::vector<double> sub(tt.begin(), tt.begin() + 4);
+  std::vector<double> f(nLvl, 0.0);
+  size_t n = sub.size();
+  std::vector<double> table(n * (n + 1), 0.0);
+  std::vector<double> delta(n * (n - 1), 0.0);
+  double d3u, d4u;
+  int nInc = metaNumber->getNbUnknowns();
+  for(int k = 0; k < nInc; ++k) {
+    f[0] = solDC3->_fResidual[0][k];
+    f[1] = solDC3->_fResidual[1][k];
+    f[2] = solDC3->_fResidual[2][k];
+    f[3] = solDC3->_fResidual[3][k];
+    // std::cout<<"les residus valent "<<f[0]<< " ,  "<< f[1]<<" ,  "<< f[2]<< " et " << f[3]
+    // <<std::endl;
+    tableDD(sub, f, table, delta);
+    // std::cout << "delta12 = " << delta[n] << " delta13 = " << delta[2*n] << std::endl;
+    d3u = 2.0 * delta[n] + 2 * delta[2 * n] * (2 * k1 + k2);
+    d4u = 6.0 * delta[2 * n];
+    // std::cout << "le derivee trosieme vaut " << d3u << std::endl;
+    // std::cout << "le derivee qutrieme vaut " << d4u << std::endl;
+    solDC4->_d[k] =
+      d3u / 6.0 * k1 * (k1 + k2) - d4u / 24.0 * k1 * (2 * k1 * k1 + 3 * k1 * k2 + k2 * k2);
+    // std::cout << "la correction du DC4 vaut " << d3u / 6.0 * k1 * (k1 + k2) - d4u/ 24.0 * k1 *
+    // (2*k1*k1 + 3*k1*k2 + k2*k2) << std::endl;
+  }
+  // Init FESOL
+  int nDOF = metaNumber->getNbDOFs();
+  for(int i = 0; i < nDOF; ++i) {
+    sol->setSolAtDOF(i, solDC4->_sol[0][i]);
+    sol->setSolDotAtDOF(i, 0.);
+  }
+  sol->setC0(cn[0]);
+  sol->setCurrentTime(tn);
+
+  solDC4->_cn[0] = cn[0];
+  solDC4->_cn[1] = cn[1];
+  solDC4->_cn[2] = cn[2];
+  sol->initializeEssentialBC(mesh, metaNumber);
+  sol->initializeEssentialBC(mesh, metaNumber, solDC4);
+}
+
+void initializeDC5(feSolution *sol, feMetaNumber *metaNumber, feMesh *mesh, feSolutionBDF2 *solBDF2,
+                   feSolutionDCF *solDC3, feSolutionDCF *solDC4, feSolutionDCF *solDC5)
+{
+  std::vector<double> t = solDC4->getTime();
+  int nLvl = 5;
+  int orderBDF = 2, orderP1 = orderBDF + 1, nTMin = orderP1 + 2;
+  std::vector<double> cn(nLvl * 3);
+  if((int)t.size() < nTMin) printf("In feSolutionContainer::initializeDC3F : t.size < nTMin\n");
+  std::vector<double> tt(nTMin, 0.);
+  for(int i = 0; i < nTMin; ++i) tt[i] = t[i];
+  double tn = tt[0];
+  double k1 = tt[0] - tt[1];
+  double k2 = tt[1] - tt[2];
+  double k3 = tt[0] - tt[1]; // alternate timestep 2 by 2 => k1 = k3
+  // Coeffs BDF
+  for(int k = 0; k < nLvl; ++k) {
+    std::vector<double> sub(tt.begin() + (1 + k - 1), tt.begin() + (orderP1 + k - 1) + 1);
+    std::vector<double> coeff(sub.size(), 0.);
+    tableToCoeffBDF(sub, coeff);
+    for(int i = 0; i < orderP1; ++i) {
+      cn[nLvl * k + i] = coeff[i];
+    }
+  }
+  std::vector<double> sub(tt.begin(), tt.begin() + 5);
+  std::vector<double> f(nLvl, 0.0);
+  size_t n = sub.size();
+  std::vector<double> table(n * (n + 1), 0.0);
+  std::vector<double> delta(n * (n - 1), 0.0);
+  double d3u, d4u, d5u;
+  int nInc = metaNumber->getNbUnknowns();
+  for(int k = 0; k < nInc; ++k) {
+    f[0] = solDC4->_fResidual[0][k];
+    f[1] = solDC4->_fResidual[1][k];
+    f[2] = solDC4->_fResidual[2][k];
+    f[3] = solDC4->_fResidual[3][k];
+    f[4] = solDC4->_fResidual[4][k];
+    // std::cout<<"les residus valent "<<f[0]<< " ,  "<< f[1]<<" ,  "<< f[2]<<" ,  "<< f[3]<< " et "
+    // << f[4] <<std::endl;
+    tableDD(sub, f, table, delta);
+    // std::cout << "delta12 = " << delta[n] << " delta13 = " << delta[2*n] << " delta14 = " <<
+    // delta[3*n]<< std::endl;
+    d3u = 2.0 * delta[n] + 2.0 * delta[2 * n] * (2.0 * k1 + k2) +
+          2.0 * delta[3 * n] * (3.0 * k1 * k1 + 4.0 * k1 * k2 + 2.0 * k3 * k1 + k2 * k2 + k3 * k2);
+    d4u = 6.0 * delta[2 * n] + 6.0 * delta[3 * n] * (3.0 * k1 + 2.0 * k2 + k3);
+    d5u = 24.0 * delta[3 * n];
+    // std::cout << "le derivee trosieme vaut " << d3u << std::endl;
+    // std::cout << "le derivee qutrieme vaut " << d4u << std::endl;
+    // std::cout << "le derivee cinqueme vaut " << d5u << std::endl;
+    // std::cout<<" pas de temps k1 = "<<k1<<" k2 = "<<k1<< " k3 = "<<k3 << std::endl;
+    solDC5->_d[k] = d3u / 6.0 * k1 * (k1 + k2) -
+                    d4u / 24.0 * k1 * (2 * k1 * k1 + 3 * k1 * k2 + k2 * k2) +
+                    d5u / 120. * (-pow(k1, 4.0) - pow(k1, 5.0) / k2 + (k1 / k2) * pow(k1 + k2, 4.));
+    // std::cout << "la correction du DC5 vaut " << d3u / 6.0 * k1 * (k1 + k2) - d4u/ 24.0 * k1 *
+    // (2*k1*k1 + 3*k1*k2 + k2*k2) + d5u/120. * (-pow(k1,4.0)-pow(k1,5.0)/k2 +
+    // (k1/k2)*pow(k1+k2,4.)) << std::endl;
+  }
+  // Init FESOL
+  int nDOF = metaNumber->getNbDOFs();
+  for(int i = 0; i < nDOF; ++i) {
+    sol->setSolAtDOF(i, solDC5->_sol[0][i]);
+    sol->setSolDotAtDOF(i, 0.);
+  }
+  sol->setC0(cn[0]);
+  sol->setCurrentTime(tn);
+
+  solDC5->_cn[0] = cn[0];
+  solDC5->_cn[1] = cn[1];
+  solDC5->_cn[2] = cn[2];
+  sol->initializeEssentialBC(mesh, metaNumber);
+  sol->initializeEssentialBC(mesh, metaNumber, solDC5);
 }
