@@ -1,6 +1,10 @@
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 feNG_add_executable(example1 example1.cpp "")
+feNG_add_executable(example2 example2.cpp "")
+feNG_add_executable(example3 example3.cpp "")
+feNG_add_executable(example4 example4.cpp "")
+feNG_add_executable(example5 example5.cpp "")
 
 # feNG_add_executable(testStationnaire testStationnaire.cpp "")
 # feNG_add_executable(testBDF2 testBDF2.cpp "")

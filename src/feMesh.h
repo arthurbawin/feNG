@@ -212,13 +212,13 @@ public:
   // Empty constructor : the mesh must be created afterwards with feCheck(readGmsh(...))
   feMesh2DP1(){};
   // Constructor calling readGmsh : will probably be removed
-  feMesh2DP1(std::string meshName, bool curved = false,
+  feMesh2DP1(std::string meshName, bool curved = false, bool reversed = false,
              mapType physicalEntitiesDescription = mapType());
   ~feMesh2DP1();
 
-  feStatus readMsh2(std::istream &input, bool curved, mapType physicalEntitiesDescription);
-  feStatus readMsh4(std::istream &input, bool curved, mapType physicalEntitiesDescription);
-  feStatus readGmsh(std::string meshName, bool curved = false,
+  feStatus readMsh2(std::istream &input, bool curved, bool reversed, mapType physicalEntitiesDescription);
+  feStatus readMsh4(std::istream &input, bool curved, bool reversed, mapType physicalEntitiesDescription);
+  feStatus readGmsh(std::string meshName, bool curved = false, bool reversed = false,
                     mapType physicalEntitiesDescription = mapType());
 
   bool isMeshFileBinary() { return _isBinary; }

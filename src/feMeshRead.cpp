@@ -265,13 +265,14 @@ int dim_of_gmsh_element[] = {
   // TODO : Complete the table (-:
 };
 
-feStatus feMesh2DP1::readMsh2(std::istream &input, bool curved, mapType physicalEntitiesDescription)
+feStatus feMesh2DP1::readMsh2(std::istream &input, bool curved, bool reversed, mapType physicalEntitiesDescription)
 {
   std::string buffer;
   int ph1; // Placeholder
   // std::map<int, int> _verticesMap; // Gmsh tag (which may include gaps) to sequential tag. Just
   // in case : not sure there are gaps in msh2...
   std::vector<int> numNodesInBlock;
+  _nPhysicalEntities = 0;
 
   if(physicalEntitiesDescription.size() > 0) {
     for(auto pair : physicalEntitiesDescription) {
@@ -308,14 +309,9 @@ feStatus feMesh2DP1::readMsh2(std::istream &input, bool curved, mapType physical
         _physicalEntities[{pE.dim, pE.tag}] = pE;
       }
 
-      // Save the description of the physical entities : this is used when looping and adapting the
-      // mesh. Since mmg does not keep track of the name of the physical entities, they have to be
-      // saved and loaded during the following adaptation cycles.
-      // for(int i = 0; i < _nPhysicalEntities; ++i) {
-      //   physicalEntity pE = _physicalEntities[i];
-      //   std::pair<int, int> p = {pE.dim, pE.tag};
-      //   _physicalEntitiesDescription[p] = pE.name;
-      // }
+      /* Save the description of the physical entities : this is used when looping and adapting the
+      mesh. Since mmg does not keep track of the name of the physical entities, they have to be
+      saved and loaded during the following adaptation cycles. */
       for(auto pair : _physicalEntities) {
         _physicalEntitiesDescription[pair.first] = _physicalEntities[pair.first].name;
       }
@@ -324,6 +320,11 @@ feStatus feMesh2DP1::readMsh2(std::istream &input, bool curved, mapType physical
     // There is no Entities block in msh2 : entities information is in the elements
 
     else if(buffer == "$Nodes") { // Read nodes
+
+      if(_nPhysicalEntities == 0){
+        return feErrorMsg(FE_STATUS_ERROR, "No physical entities defined on the mesh.");
+      }
+
       int gmshNumber, countVertex = 0;
       double x, y, z;
       input >> _nNod;
@@ -350,41 +351,46 @@ feStatus feMesh2DP1::readMsh2(std::istream &input, bool curved, mapType physical
       int tagCount = 1, nEdges = 1; // To number the geometric entities
       int gmshElemTag, elemType, numEntities, physicalTag, geometricTag;
       getline(input, buffer);
-      // number-of-elements
+      /* number-of-elements */
       input >> _nElm;
       _nTotalElm = _nElm;
 
       int serialNumberElm = 0; // To number the elements when skipping the Points
       for(int iElm = 0; iElm < _nElm; ++iElm) {
         getline(input, buffer);
-        // elm-number elm-type number-of-tags < tag > … node-number-list
+        /* elm-number elm-type number-of-tags < tag > … node-number-list */
         input >> gmshElemTag >> elemType >> numEntities >> physicalTag;
-        // printf("Read %d %d %d %d\n", gmshElemTag, elemType, numEntities, physicalTag);
-        // Physical and geometric entities are not separated, and physical seem to be given first.
-        // Since we only accept non-overlapping physical domains (i.e. each element belongs to a
-        // single physical entity), let's just assume the first number is the physical domain and
-        // the following are the geometric entities.
+        /* Physical and geometric entities are not separated, and physical seem to be given first.
+        Since we only accept non-overlapping physical domains (i.e. each element belongs to a
+        single physical entity), let's just assume the first number is the physical domain and
+        the following are the geometric entities. */
+        if(numEntities != 2){
+          if(numEntities < 2)
+            return feErrorMsg(FE_STATUS_ERROR, "Element with Gmsh tag %d is not part of a physical entity.", gmshElemTag);
+          else
+            return feErrorMsg(FE_STATUS_ERROR, "Element with Gmsh tag %d is part of more than one physical entity.", gmshElemTag);
+        }
 
         int entityDim = dim_of_gmsh_element[elemType - 1];
 
-        // Physical tag (number of the physical entity) should be strictly positive.
-        // Meshes produced by mmg2d include points with physicalTag = 0, which we skip.
+        /* Physical tag (number of the physical entity) should be strictly positive.
+        Meshes produced by mmg2d include points with physicalTag = 0, which we skip. */
         if(physicalTag <= 0) continue;
 
-        // numEntities should be 2 since an element belongs to max 1 physical entity
-        // and should belong to a single geometric entity (?) : no need to loop
+        /* numEntities should be 2 since an element belongs to max 1 physical entity
+        and should belong to a single geometric entity (?) : no need to loop */
         // for(int i = 1; i < numEntities; ++i){
         input >> geometricTag;
 
         std::pair<int, int> p = {entityDim, geometricTag};
 
-        // Meshes produced by mmg2d seem to include unwanted 0D physical entities (?).
-        // If a description of the original physical entities is provided, we make sure
-        // the read physical entities is indeed part of these entities.
+        /* Meshes produced by mmg2d seem to include unwanted 0D physical entities (?).
+        If a description of the original physical entities is provided, we make sure
+        the read physical entities is indeed part of these entities. */
         if(physicalEntitiesDescription.size() > 0) {
           bool isPartOfTheOriginalEntities = false;
           for(auto pair : physicalEntitiesDescription) {
-            // pair = { {dim,tag}, name }
+            /* pair = { {dim,tag}, name } */
             // printf("Comparing entity dim = %d - tag = %d with stored entity %s - dim = %d - tag =
             // %d\n", entityDim, physicalTag, pair.second.c_str(), pair.first.first,
             // pair.first.second);
@@ -396,7 +402,7 @@ feStatus feMesh2DP1::readMsh2(std::istream &input, bool curved, mapType physical
           }
         }
 
-        // If geometric entity doesn't exist, create it :
+        /* If geometric entity doesn't exist, create it : */
         if(_entities.find(p) == _entities.end()) {
           entity e;
           e.dim = entityDim;
@@ -405,9 +411,8 @@ feStatus feMesh2DP1::readMsh2(std::istream &input, bool curved, mapType physical
           e.numPhysicalTags = 1;
           e.physicalTags.push_back(physicalTag);
           e.nElm = 0;
-          // _physicalEntities[physicalTag - 1].listEntities.push_back(e.tag);
-          std::pair<int, int> p = {e.dim, physicalTag};
-          _physicalEntities[p].listEntities.push_back(e.tag);
+          std::pair<int, int> pPhys = {e.dim, physicalTag};
+          _physicalEntities[pPhys].listEntities.push_back(e.tag);
           _entities[p] = e;
         }
 
@@ -630,7 +635,7 @@ feStatus feMesh2DP1::readMsh2(std::istream &input, bool curved, mapType physical
   return FE_STATUS_OK;
 }
 
-feStatus feMesh2DP1::readMsh4(std::istream &input, bool curved, mapType physicalEntitiesDescription)
+feStatus feMesh2DP1::readMsh4(std::istream &input, bool curved, bool reversed, mapType physicalEntitiesDescription)
 {
   std::string buffer;
   // Placeholders
@@ -695,6 +700,11 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, bool curved, mapType physical
     }
 
     else if(buffer == "$Entities") { // Read geometric entities
+
+      if(_nPhysicalEntities == 0){
+        return feErrorMsg(FE_STATUS_ERROR, "No physical entities defined on the mesh.");
+      }
+
       // numPoints(size_t) numCurves(size_t) numSurfaces(size_t) numVolumes(size_t)
       input >> _nPoints >> _nCurves >> _nSurfaces >> _nVolumes;
 
@@ -1194,23 +1204,37 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, bool curved, mapType physical
             case 46: // 66-node triangle (10th order)
             {
               if(curved) {
-                _entities[p].connecNodes[nElemNodes * iElm + 0] = elemNodes[0];
-                _entities[p].connecNodes[nElemNodes * iElm + 1] = elemNodes[2];
-                _entities[p].connecNodes[nElemNodes * iElm + 2] = elemNodes[1];
-                _entities[p].connecNodes[nElemNodes * iElm + 3] = elemNodes[5];
-                _entities[p].connecNodes[nElemNodes * iElm + 4] = elemNodes[4];
-                _entities[p].connecNodes[nElemNodes * iElm + 5] = elemNodes[3];
-              } else { // Curved are inverted at the moment
-                for(int j = 0; j < nElemNodes; ++j) {
-                  _entities[p].connecNodes[nElemNodes * iElm + j] = elemNodes[j];
-                  // _entities[p].connecNodes[nElemNodes * iElm + j] = elemNodesGmsh[j];
+                if(reversed){
+                  _entities[p].connecNodes[nElemNodes * iElm + 0] = elemNodes[0];
+                  _entities[p].connecNodes[nElemNodes * iElm + 1] = elemNodes[2];
+                  _entities[p].connecNodes[nElemNodes * iElm + 2] = elemNodes[1];
+                  _entities[p].connecNodes[nElemNodes * iElm + 3] = elemNodes[5];
+                  _entities[p].connecNodes[nElemNodes * iElm + 4] = elemNodes[4];
+                  _entities[p].connecNodes[nElemNodes * iElm + 5] = elemNodes[3];
+                } else{
+                  _entities[p].connecNodes[nElemNodes * iElm + 0] = elemNodes[0];
+                  _entities[p].connecNodes[nElemNodes * iElm + 1] = elemNodes[1];
+                  _entities[p].connecNodes[nElemNodes * iElm + 2] = elemNodes[2];
+                  _entities[p].connecNodes[nElemNodes * iElm + 3] = elemNodes[3];
+                  _entities[p].connecNodes[nElemNodes * iElm + 4] = elemNodes[4];
+                  _entities[p].connecNodes[nElemNodes * iElm + 5] = elemNodes[5];
+                }
+              } else {
+                if(reversed){
+                  _entities[p].connecNodes[nElemNodes * iElm + 0] = elemNodes[0];
+                  _entities[p].connecNodes[nElemNodes * iElm + 1] = elemNodes[2];
+                  _entities[p].connecNodes[nElemNodes * iElm + 2] = elemNodes[1];
+                } else{
+                  for(int j = 0; j < nElemNodes; ++j) {
+                    _entities[p].connecNodes[nElemNodes * iElm + j] = elemNodes[j];
+                  }
                 }
               }
 
               // Construct the triangle edges :
               Vertex *v0, *v1;
               for(int k = 0; k < 3; ++k) {
-                if(!curved) {
+                if(!reversed) {
                   if(k == 2) {
                     v0 = &_vertices[_verticesMap[elemNodesGmsh[2]]];
                     v1 = &_vertices[_verticesMap[elemNodesGmsh[0]]];
@@ -1218,7 +1242,7 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, bool curved, mapType physical
                     v0 = &_vertices[_verticesMap[elemNodesGmsh[k]]];
                     v1 = &_vertices[_verticesMap[elemNodesGmsh[k + 1]]];
                   }
-                } else { // Curved are inverted at the moment
+                } else {
                   if(k == 0) {
                     v0 = &_vertices[_verticesMap[elemNodesGmsh[0]]];
                     v1 = &_vertices[_verticesMap[elemNodesGmsh[2]]];
@@ -1340,14 +1364,14 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, bool curved, mapType physical
     } // if buffer = "Elements"
   } // while input
 
-  if(_physicalEntities.size() == 0) {
-    return feErrorMsg(FE_STATUS_ERROR, "No physical entities defined on the mesh.\n");
-  }
+  // if(_physicalEntities.size() == 0) {
+  //   return feErrorMsg(FE_STATUS_ERROR, "No physical entities defined on the mesh.\n");
+  // }
 
   return FE_STATUS_OK;
 }
 
-feStatus feMesh2DP1::readGmsh(std::string meshName, bool curved,
+feStatus feMesh2DP1::readGmsh(std::string meshName, bool curved, bool reversed,
                               mapType physicalEntitiesDescription)
 {
   _gmshVersion = 0;
@@ -1376,9 +1400,9 @@ feStatus feMesh2DP1::readGmsh(std::string meshName, bool curved,
     }
 
     if(_gmshVersion == 2.2) {
-      feCheck(readMsh2(input, curved, physicalEntitiesDescription));
+      feCheck(readMsh2(input, curved, reversed, physicalEntitiesDescription));
     } else if(_gmshVersion >= 4) {
-      feCheck(readMsh4(input, curved, physicalEntitiesDescription));
+      feCheck(readMsh4(input, curved, reversed, physicalEntitiesDescription));
     } else {
       return feErrorMsg(FE_STATUS_ERROR, "Mesh version should be 2.2 or 4.1 or higher.");
     }
@@ -1463,10 +1487,10 @@ feStatus feMesh2DP1::readGmsh(std::string meshName, bool curved,
     for(auto &p : _physicalEntities) {
       physicalEntity &pE = p.second;
       feInfo("Physical %15s : dim = %1d - nEntities = %2d - nElm = %9d - nNodePerElem = %2d - "
-             "nEdgePerElem = %1d - "
-             "geometric interpolant : %10s",
-             pE.name.c_str(), pE.dim, pE.listEntities.size(), pE.nElm, pE.nNodePerElem,
-             pE.nEdgePerElem, pE.cncID.c_str());
+        "nEdgePerElem = %1d - "
+        "geometric interpolant : %10s",
+        pE.name.c_str(), pE.dim, pE.listEntities.size(), pE.nElm, pE.nNodePerElem,
+        pE.nEdgePerElem, pE.cncID.c_str());
     }
   }
 

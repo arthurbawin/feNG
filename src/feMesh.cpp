@@ -279,10 +279,10 @@ static bool rtreeCallback(int id, void *ctx)
   return true;
 }
 
-feMesh2DP1::feMesh2DP1(std::string meshName, bool curved, mapType physicalEntitiesDescription)
+feMesh2DP1::feMesh2DP1(std::string meshName, bool curved, bool reversed, mapType physicalEntitiesDescription)
   : feMesh()
 {
-  feStatus s = readGmsh(meshName, curved, physicalEntitiesDescription);
+  feStatus s = readGmsh(meshName, curved, reversed, physicalEntitiesDescription);
   if(s != FE_STATUS_OK) {
     feInfo("Error in readGmsh - mesh not finalized.\n");
     std::exit(1);

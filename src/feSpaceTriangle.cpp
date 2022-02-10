@@ -133,7 +133,19 @@ std::vector<double> feSpaceTriP2::L(double r[3])
           4. * r[1] * (1. - r[0] - r[1])};
 }
 
-void feSpaceTriP2::Lphys(int iElm, std::vector<double> &x, std::vector<double> &L,
+/* 
+  Shape functions in the physical space (x,y). Does not require the reference element.
+  The degrees of freedom (functionals of p_i(x,y)) are defined based on the actual vertices
+  present in the mesh, i.e. P2 global functions require 6-node triangles. To bypass this,
+  one could add 3 fictitious mid-nodes in the geoCoord vector, to define global functions
+  on a mesh of 3-node triangles. 
+
+  For a better matrix conditioning, the functions are expressed in the local frame centered
+  at the element's barycenter (x-xc, y-yc). 
+
+  The shape functions and its derivatives are stored in L, dLdx and dLdy.
+*/
+feStatus feSpaceTriP2::Lphys(int iElm, std::vector<double> &x, std::vector<double> &L,
                          std::vector<double> &dLdx, std::vector<double> &dLdy)
 {
   int nNodePerElem = this->getNbNodePerElem();
@@ -147,57 +159,83 @@ void feSpaceTriP2::Lphys(int iElm, std::vector<double> &x, std::vector<double> &
   int dyx[6] = {0, 0, 0, 0, 1, 0}; // Coefficients des derivees en y des monomes
   int dyy[6] = {0, 0, 0, 0, 0, 1};
 
+  // Coordinates of the barycenter
   std::vector<double> xc(3, 0.0);
   double rc[3] = {1. / 3., 1. / 3., 1. / 3.};
   this->getCncGeo()->getFeSpace()->interpolateVectorField(geoCoord, rc, xc);
 
+  // Polynomial coefficients in the frame centered at the barycenter
   for(int i = 0; i < 6; ++i) {
     for(int j = 0; j < 6; ++j) {
       m(i, j) = pow(geoCoord[i * 3 + 0] - xc[0], ex[j]) * pow(geoCoord[i * 3 + 1] - xc[1], ey[j]);
       // m(i,j) = pow( geoCoord[i*3+0], ex[j]) * pow( geoCoord[i*3+1], ey[j]);
     }
   }
+  /* Complete geoCoord if not a 6-node triangle.
+  Mid-edge nodes are the average of the P1 nodes. */
+  // for(int j = 0; j < 6; ++j) {
+  //   m(3,j) = pow( (geoCoord[3*0+0] + geoCoord[3*1+0])/2.0, ex[j]) * pow( (geoCoord[3*0+1] + geoCoord[3*1+1])/2.0, ey[j]);
+  //   m(4,j) = pow( (geoCoord[3*1+0] + geoCoord[3*2+0])/2.0, ex[j]) * pow( (geoCoord[3*1+1] + geoCoord[3*2+1])/2.0, ey[j]);
+  //   m(5,j) = pow( (geoCoord[3*2+0] + geoCoord[3*0+0])/2.0, ex[j]) * pow( (geoCoord[3*2+1] + geoCoord[3*0+1])/2.0, ey[j]);
+  // }
 
   m = m.inverse() * I6;
 
-  // std::cout<<std::setprecision(16)<<m<<std::endl;
+  for(int i = 0; i < 6; ++i) {
+    for(int j = 0; j < 6; ++j) {
+      if(isnan(m(i, j))) {
+        return feErrorMsg(FE_STATUS_ERROR, "NAN");
+      }
+    }
+  }
 
-  // std::vector<double> L(6,0.0);
-  // std::vector<double> dLdx(6,0.0);
-  // std::vector<double> dLdy(6,0.0);
   for(int i = 0; i < 6; ++i) {
     L[i] = 0.0;
     dLdx[i] = 0.0;
     dLdy[i] = 0.0;
   }
 
+  // x is expressed in the frame centered at the barycenter
   for(int i = 0; i < 6; ++i) {
     for(int j = 0; j < 6; ++j) {
-      L[i] += m(j, i) * pow(x[0], ex[j]) * pow(x[1], ey[j]);
-      dLdx[i] += ex[j] * m(j, i) * pow(x[0], dxx[j]) * pow(x[1], dxy[j]);
-      dLdy[i] += ey[j] * m(j, i) * pow(x[0], dyx[j]) * pow(x[1], dyy[j]);
+         L[i] +=         m(j, i) * pow(x[0]-xc[0], ex[j])  * pow(x[1]-xc[1], ey[j]);
+      dLdx[i] += ex[j] * m(j, i) * pow(x[0]-xc[0], dxx[j]) * pow(x[1]-xc[1], dxy[j]);
+      dLdy[i] += ey[j] * m(j, i) * pow(x[0]-xc[0], dyx[j]) * pow(x[1]-xc[1], dyy[j]);
+      //    L[i] +=         m(j, i) * pow(x[0], ex[j])  * pow(x[1], ey[j]);
+      // dLdx[i] += ex[j] * m(j, i) * pow(x[0], dxx[j]) * pow(x[1], dxy[j]);
+      // dLdy[i] += ey[j] * m(j, i) * pow(x[0], dyx[j]) * pow(x[1], dyy[j]);
     }
   }
+
+  // for(int i = 0; i < 6; ++i) {
+  //   std::cout<<L[i]<<std::endl;
+  //   if(isnan(L[i]))
+  //     feErrorMsg(FE_STATUS_ERROR, "NAN");
+  // }
 
   // std::cout<<"Evaluating at "<<x[0]<<" - "<<x[1]<<" on elem "<<iElm<<std::endl;
   // printf("Barycentre en %f - %f\n", xc[0], xc[1]);
   // double sum = 0.0;
+  // double sumx = 0.0;
+  // double sumy = 0.0;
   // for(int ii = 0; ii < L.size(); ++ii){
   //   sum += L[ii];
   //   printf("%+-12.12e\n", L[ii]);
   // }
   // std::cout<<std::endl;
   // for(int ii = 0; ii < dLdx.size(); ++ii){
-  //   // sum += L[ii];
+  //   sumx += dLdx[ii];
   //   printf("%+-12.12e\n", dLdx[ii]);
   // }
   // std::cout<<std::endl;
   // for(int ii = 0; ii < dLdy.size(); ++ii){
-  //   // sum += L[ii];
+  //   sumy += dLdy[ii];
   //   printf("%+-12.12e\n", dLdy[ii]);
   // }
   // std::cout<<"Done sum = "<<sum<<std::endl;
-  return;
+  // std::cout<<"Done sum = "<<sumx<<std::endl;
+  // std::cout<<"Done sum = "<<sumy<<std::endl;
+  return FE_STATUS_OK;
 
   // Orthogonalisation des monomes d'apres la these/papier de Tesini
 
@@ -261,7 +299,7 @@ void feSpaceTriP2::Lphys(int iElm, std::vector<double> &x, std::vector<double> &
 
   exit(-1);
 
-  return;
+  return FE_STATUS_OK;
 
   // return {p[0].eval(x), p[1].eval(x), p[2].eval(x), p[3].eval(x), p[4].eval(x), p[5].eval(x)};
 }

@@ -81,7 +81,13 @@ double fePostProc::computeL2ErrorNorm(feSolution *sol)
     for(int k = 0; k < nQuad; ++k) {
       std::vector<double> x(3, 0.0);
       _geoSpace->interpolateVectorFieldAtQuadNode(geoCoord, k, x);
-      solInt = _intSpace->interpolateSolutionAtQuadNode(k);
+
+      if(_intSpace->useGlobalFunctions()){
+        solInt = _intSpace->interpolateSolutionAtQuadNode(iElm, k);
+      } else{
+        solInt = _intSpace->interpolateSolutionAtQuadNode(k);
+      }
+
       solRef = (_referenceSolution != nullptr) ? _referenceSolution->eval(t, x) : 0.0;
       L2Error +=
         (solInt - solRef) * (solInt - solRef) * _cnc->getJacobians()[nQuad * iElm + k] * w[k];

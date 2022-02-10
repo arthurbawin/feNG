@@ -1,15 +1,27 @@
+/*
+
+  Solving the steady-state heat equation on a triangle mesh.
+
+*/
 
 #include "feAPI.h"
 
-double fSol(const double t, const std::vector<double> x, const std::vector<double> par)
-{
-  return pow(x[0], 6);
+double fSol(const double t, const std::vector<double> &pos, const std::vector<double> &par)
+{ 
+  double x = pos[0];
+  double y = pos[1];
+  return pow(x,6) + pow(y,6);
 }
 
-double fSource(const double t, const std::vector<double> x, const std::vector<double> par)
+double fSource(const double t, const std::vector<double> &pos, const std::vector<double> &par)
 {
   double k = par[0];
-  return k * 30. * pow(x[0], 4);
+  return k * 30. * (pow(pos[0], 4) + pow(pos[1], 4));
+}
+
+double fZero(const double t, const std::vector<double> &pos, const std::vector<double> &par)
+{
+  return 0.0;
 }
 
 int main(int argc, char **argv)
@@ -48,6 +60,7 @@ int main(int argc, char **argv)
   double k = 1.0;
   feFunction *funSol = new feFunction(fSol, {});
   feFunction *funSource = new feFunction(fSource, {k});
+  feFunction *funZero = new feFunction(fZero, {});
 
   // Define a finite element space on each subdomain of the computational domain.
   // Here the mesh contains only a 2D subdomain ("Domaine") and a 1D boundary ("Bord"),
@@ -55,17 +68,21 @@ int main(int argc, char **argv)
   // element space, with parameter "degreeQuadrature" governing the number of quad nodes.
   // The function provided is used to initialize the degrees of freedom on the feSpace.
   int dim;
-  feSpace *uBord, *uDomaine;
+  feSpace *uBord, *uDomaine, *vBord, *vDomaine;
   feCheck(createFiniteElementSpace(uBord, &mesh, dim = 1, LINE, order, "U", "Bord",
                                    degreeQuadrature, funSol));
   feCheck(createFiniteElementSpace(uDomaine, &mesh, dim = 2, TRI, order, "U", "Domaine",
+                                   degreeQuadrature, funZero));
+  feCheck(createFiniteElementSpace(vBord, &mesh, dim = 1, LINE, order, "V", "Bord",
                                    degreeQuadrature, funSol));
+  feCheck(createFiniteElementSpace(vDomaine, &mesh, dim = 2, TRI, order, "V", "Domaine",
+                                   degreeQuadrature, funZero));
 
   // Define the set of all finite elements spaces and the set of feSpaces
   // forming the essential boundary conditions. The second set must always be
   // a subset of the first.
-  std::vector<feSpace *> spaces = {uBord, uDomaine};
-  std::vector<feSpace *> essentialSpaces = {uBord};
+  std::vector<feSpace *> spaces = {uBord, uDomaine, vBord, vDomaine};
+  std::vector<feSpace *> essentialSpaces = {uBord, vBord};
 
   // Create a "meta" structure containing the numbering of each unknown field.
   feMetaNumber metaNumber(&mesh, spaces, essentialSpaces);
@@ -79,13 +96,16 @@ int main(int argc, char **argv)
   feBilinearForm diffU({uDomaine}, &mesh, degreeQuadrature, new feSysElm_2D_Diffusion(k, nullptr));
   feBilinearForm sourceU({uDomaine}, &mesh, degreeQuadrature,
                          new feSysElm_2D_Source(1.0, funSource));
+  feBilinearForm diffV({vDomaine}, &mesh, degreeQuadrature, new feSysElm_2D_Diffusion(k, nullptr));
+  feBilinearForm sourceV({vDomaine}, &mesh, degreeQuadrature,
+                         new feSysElm_2D_Source(1.0, funSource));
 
   // Initialize the linear system. Assembly of the elementary matrices and RHS is
   // performed in the solve step. Two linear solvers are available :
   // MKL Pardiso (direct solver) and PETSc (collection of iterative solvers).
   feLinearSystem *system;
   feCheck(
-    createLinearSystem(system, MKLPARDISO, {&diffU, &sourceU}, &metaNumber, &mesh, argc, argv));
+    createLinearSystem(system, MKLPARDISO, {&diffU, &sourceU, &diffV, &sourceV}, &metaNumber, &mesh));
 
   // Define post-processing tools to compute norms and whatnot (norms will be replaced by
   // fePostProc)

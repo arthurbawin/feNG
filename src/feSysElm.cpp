@@ -922,7 +922,7 @@ void feSysElm_2D_Source::computeBe(std::vector<double> &J, int numElem,
   int nG = geoSpace->getNbQuadPoints();
   std::vector<double> w = geoSpace->getQuadratureWeights();
   int nFunctions = intSpace[_idU]->getNbFunctions();
-  bool globalFunctions = false; // intSpace[_idU]->useGlobalFunctions();
+  bool globalFunctions = intSpace[_idU]->useGlobalFunctions();
 
   double jac;
   for(int k = 0; k < nG; ++k) {
@@ -934,10 +934,10 @@ void feSysElm_2D_Source::computeBe(std::vector<double> &J, int numElem,
     double S = _fct->eval(tn, x);
 
     for(int i = 0; i < nFunctions; ++i) {
-      if(!globalFunctions) {
-        _feU[i] = intSpace[_idU]->getFunctionAtQuadNode(i, k);
-      } else {
+      if(globalFunctions) {
         _feU[i] = intSpace[_idU]->getGlobalFunctionAtQuadNode(numElem, i, k);
+      } else {
+        _feU[i] = intSpace[_idU]->getFunctionAtQuadNode(i, k);
       }
       Be[i] -= _feU[i] * S * jac * w[k];
     }
@@ -963,7 +963,8 @@ void feSysElm_2D_Diffusion::computeAe(std::vector<double> &Ja, int numElem,
   std::vector<double> w = geoSpace->getQuadratureWeights();
   double kD = _par;
   int nFunctions = intSpace[_idU]->getNbFunctions();
-  bool globalFunctions = true; //= intSpace[_idU]->useGlobalFunctions();
+  bool globalFunctions = intSpace[_idU]->useGlobalFunctions();
+  feInfo("Computing with %d", globalFunctions);
 
   double J;
   // Integral over the elements
@@ -1007,15 +1008,9 @@ void feSysElm_2D_Diffusion::computeAe(std::vector<double> &Ja, int numElem,
         }
       }
     }
-
-    // for(int i = 0; i < nFunctions; ++i) {
-    //   for(int j = 0; j < nFunctions; ++j) {
-    //     Ae[i][j] += (_feUdx[i] * _feUdx[j] + _feUdy[i] * _feUdy[j]) * kD * J * w[k];
-    //   }
-    // }
   }
 
-  if(true) {
+  if(false) {
     // 1D quadrature rule to integrate over edges
     feQuadrature rule(20, 1, "");
     std::vector<double> x1D = rule.getXPoints();
@@ -1154,7 +1149,7 @@ void feSysElm_2D_Diffusion::computeBe(std::vector<double> &Ja, int numElem,
   std::vector<double> w = geoSpace->getQuadratureWeights();
   double kD = _par;
   int nFunctions = intSpace[_idU]->getNbFunctions();
-  bool globalFunctions = false; // intSpace[_idU]->useGlobalFunctions();
+  bool globalFunctions = intSpace[_idU]->useGlobalFunctions();
 
   double J, dudx, dudy;
   for(int k = 0; k < nG; ++k) {
@@ -1209,9 +1204,9 @@ void feSysElm_2D_Diffusion::computeBe(std::vector<double> &Ja, int numElem,
     double drdt[3] = {1.0, -1.0, 0.0};
     double dsdt[3] = {0.0, 1.0, -1.0};
 
-    std::string name = "elem" + std::to_string(numElem) + ".pos";
-    FILE *f = fopen(name.c_str(), "w");
-    fprintf(f, "View \"elem\" {\n");
+    // std::string name = "elem" + std::to_string(numElem) + ".pos";
+    // FILE *f = fopen(name.c_str(), "w");
+    // fprintf(f, "View \"elem\" {\n");
 
     // Il faut recalculer les fonctions globales aux noeuds de quadrature 1D
     // Pas tres efficace : elles ont ete precalculees mais seulement aux noeuds 2D
@@ -1220,9 +1215,9 @@ void feSysElm_2D_Diffusion::computeBe(std::vector<double> &Ja, int numElem,
     std::vector<double> dldx(nFunctions, 0.0);
     std::vector<double> dldy(nFunctions, 0.0);
 
-    std::vector<double> xc(3, 0.0);
-    double rc[3] = {1. / 3., 1. / 3., 1. / 3.};
-    geoSpace->interpolateVectorField(geoCoord, rc, xc);
+    // std::vector<double> xc(3, 0.0);
+    // double rc[3] = {1. / 3., 1. / 3., 1. / 3.};
+    // geoSpace->interpolateVectorField(geoCoord, rc, xc);
 
     // Integrale sur les bords (devra devenir une autre forme faible si ça fonctionne)
     for(int iEdge = 0; iEdge < 3; ++iEdge) {
@@ -1279,12 +1274,12 @@ void feSysElm_2D_Diffusion::computeBe(std::vector<double> &Ja, int numElem,
         double N = sqrt(dxdt * dxdt + dydt * dydt);
         nx /= N;
         ny /= N;
-        fprintf(f, "VP(%.16g,%.16g,%.16g){%.16g,%.16g,%.16g};\n", x[0], x[1], 0., -ny, nx, 0.0);
-        fprintf(f, "VP(%.16g,%.16g,%.16g){%.16g,%.16g,%.16g};\n", x[0], x[1], 0., nx, ny, 0.0);
+        // fprintf(f, "VP(%.16g,%.16g,%.16g){%.16g,%.16g,%.16g};\n", x[0], x[1], 0., -ny, nx, 0.0);
+        // fprintf(f, "VP(%.16g,%.16g,%.16g){%.16g,%.16g,%.16g};\n", x[0], x[1], 0., nx, ny, 0.0);
 
-        x[0] -= xc[0];
-        x[1] -= xc[1];
-        x[2] -= xc[2];
+        // x[0] -= xc[0];
+        // x[1] -= xc[1];
+        // x[2] -= xc[2];
 
         intSpace[_idU]->Lphys(numElem, x, l, dldx, dldy);
 
@@ -1304,11 +1299,11 @@ void feSysElm_2D_Diffusion::computeBe(std::vector<double> &Ja, int numElem,
         }
         // printf("Sumphi = %+-10.10e\n", sumPhi);
       }
-      printf("Integrale sur l'arete %d de l'elm %d = %+-10.10e\n", iEdge, numElem, intEdge);
-      printf("Longueur = %10.16e\n", longueur);
+      // printf("Integrale sur l'arete %d de l'elm %d = %+-10.10e\n", iEdge, numElem, intEdge);
+      // printf("Longueur = %10.16e\n", longueur);
     }
-    fprintf(f, "};");
-    fclose(f);
+    // fprintf(f, "};");
+    // fclose(f);
   }
 }
 

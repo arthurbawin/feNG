@@ -1,6 +1,15 @@
-lc = 1;
+
 //p = 2*Pi;
 p = 1;
+lc = p;
+
+//Point(1) = {0, 0, 0, lc};
+//Point(2) = {p, 0, 0, lc};
+//Point(3) = {p, p, 0, lc};
+//Point(4) = {0, p, 0, lc};
+
+p = 1000;
+lc = p;
 
 Point(1) = {0, 0, 0, lc};
 Point(2) = {p, 0, 0, lc};

@@ -55,7 +55,7 @@ feStatus createFiniteElementSpace(feSpace *&space, feMesh *mesh, int dim, elemTy
             space = new feSpaceTriP1(mesh, fieldID, cncGeoID, fct);
             break;
           case 2:
-            space = new feSpaceTriP2(mesh, fieldID, cncGeoID, fct);
+            space = new feSpaceTriP2(mesh, fieldID, cncGeoID, fct, useGlobalShapeFunctions);
             break;
           case 3:
             space = new feSpaceTriP3(mesh, fieldID, cncGeoID, fct);
@@ -78,10 +78,12 @@ feStatus createFiniteElementSpace(feSpace *&space, feMesh *mesh, int dim, elemTy
                         "Cannot create a finite element space for dimension > 3 or < 0.");
   }
 
+  // space->useGlobalFunctions(useGlobalShapeFunctions);
+
   // Set the quadrature rule on this space and the corresponding geometric interpolation space
   feQuadrature rule(dQuad, dim, mesh->getCncGeoByName(cncGeoID)->getForme());
-  space->setQuadratureRule(&rule);
-  space->getCncGeo()->getFeSpace()->setQuadratureRule(&rule);
+  feCheck(space->getCncGeo()->getFeSpace()->setQuadratureRule(&rule));
+  feCheck(space->setQuadratureRule(&rule));
 
   return FE_STATUS_OK;
 }
@@ -107,7 +109,7 @@ int feSpace::getDim() { return this->getCncGeo()->getDim(); }
 int feSpace::getNbElm() { return _mesh->getNbElm(_cncGeoTag); }
 int feSpace::getNbNodePerElem() { return _mesh->getNbNodePerElem(_cncGeoTag); }
 
-void feSpace::setQuadratureRule(feQuadrature *rule)
+feStatus feSpace::setQuadratureRule(feQuadrature *rule)
 {
   _nQuad = rule->getNQuad();
   _wQuad = rule->getWeights();
@@ -135,12 +137,12 @@ void feSpace::setQuadratureRule(feQuadrature *rule)
   }
 
   if(_fieldID != "GEO" && _useGlobalShapeFunctions) {
-    feInfo("USING GLOBAL FUNCTIONS\n");
-    feInfo("USING GLOBAL FUNCTIONS\n");
-    feInfo("USING GLOBAL FUNCTIONS\n");
-    feInfo("USING GLOBAL FUNCTIONS\n");
-    feInfo("USING GLOBAL FUNCTIONS\n");
-    feInfo("USING GLOBAL FUNCTIONS\n");
+    feInfo("USING GLOBAL FUNCTIONS on space %s - %s", this->_fieldID.c_str(), this->_cncGeoID.c_str());
+    feInfo("USING GLOBAL FUNCTIONS");
+    feInfo("USING GLOBAL FUNCTIONS");
+    feInfo("USING GLOBAL FUNCTIONS");
+    feInfo("USING GLOBAL FUNCTIONS");
+    feInfo("USING GLOBAL FUNCTIONS");
     /* Physical frame discretization : shape functions are computed on the physical element. */
     feCncGeo *cnc = this->getCncGeo();
     int nElm = cnc->getNbElm();
@@ -148,14 +150,11 @@ void feSpace::setQuadratureRule(feQuadrature *rule)
     _dLdxglob.resize(nElm);
     _dLdyglob.resize(nElm);
     std::vector<double> geoCoord;
-    std::vector<double> xc(3, 0.0);
     std::vector<double> xq(3, 0.0);
     double rc[3] = {1. / 3., 1. / 3., 1. / 3.};
 
     for(int iElm = 0; iElm < nElm; ++iElm) {
-      // Coordinates of the barycenter
       geoCoord = _mesh->getCoord(_cncGeoTag, iElm);
-      cnc->getFeSpace()->interpolateVectorField(geoCoord, rc, xc);
 
       std::vector<double> LAtQuadNodes(_nFunctions * _nQuad);
       std::vector<double> dLdxAtQuadNodes(_nFunctions * _nQuad);
@@ -164,16 +163,12 @@ void feSpace::setQuadratureRule(feQuadrature *rule)
       for(size_t i = 0; i < _xQuad.size(); ++i) {
         double r[3] = {_xQuad[i], _yQuad[i], _zQuad[i]};
         cnc->getFeSpace()->interpolateVectorField(geoCoord, r, xq);
-        // Coordinates of the quad node in the frame centered at the barycenter
-        xq[0] -= xc[0];
-        xq[1] -= xc[1];
-        xq[2] -= xc[2];
 
         std::vector<double> l(_nFunctions, 0.0);
         std::vector<double> dldx(_nFunctions, 0.0);
         std::vector<double> dldy(_nFunctions, 0.0);
 
-        Lphys(iElm, xq, l, dldx, dldy);
+        feCheck(Lphys(iElm, xq, l, dldx, dldy));
 
         for(int j = 0; j < _nFunctions; ++j) LAtQuadNodes[_nFunctions * i + j] = l[j];
         for(int j = 0; j < _nFunctions; ++j) dLdxAtQuadNodes[_nFunctions * i + j] = dldx[j];
@@ -190,6 +185,8 @@ void feSpace::setQuadratureRule(feQuadrature *rule)
   if(_fieldID == "GEO") {
     this->getCncGeo()->computeJacobians();
   }
+
+  return FE_STATUS_OK;
 }
 
 /* Computes the inner product of basis functions phi_i, phi_j on element iElm defined by

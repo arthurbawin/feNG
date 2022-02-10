@@ -18,6 +18,11 @@ protected:
   feMetaNumber *_metaNumber;
   const std::vector<feSpace *> &_spaces;
 
+  bool _addP2Nodes;
+  int _writtenNodes;
+
+  std::map<int,int> edgeToMid;
+
 public:
   feExporter(feMesh *mesh, feSolution *sol, feMetaNumber *metaNumber,
              const std::vector<feSpace *> &feSpaces)
