@@ -283,8 +283,8 @@ feMesh2DP1::feMesh2DP1(std::string meshName, bool curved, mapType physicalEntiti
   : feMesh()
 {
   feStatus s = readGmsh(meshName, curved, physicalEntitiesDescription);
-  if(s != FE_STATUS_OK) {
-    feInfo("Error in readGmsh - mesh not finalized.\n");
+  if(s != FE_STATUS_OK) { 
+    feInfo("Error in readGmsh - mesh not finalized.\n");             
     std::exit(1);
   }
 }

@@ -38,9 +38,7 @@ protected:
 
 public:
   feMesh(int nNod = 0, int dim = 0, int nCncGeo = 0, std::string ID = "")
-    : _ID(ID), _dim(dim), _nNod(nNod), _nEdg(0), _nCncGeo(nCncGeo){
-
-                                                 };
+    : _ID(ID), _dim(dim), _nNod(nNod), _nEdg(0), _nCncGeo(nCncGeo){};
   virtual ~feMesh() {}
 
   std::string getID() { return _ID; }

@@ -6,7 +6,7 @@
 
 feStatus createFiniteElementSpace(feSpace *&space, feMesh *mesh, int dim, elemType type, int deg,
                                   std::string fieldID, std::string cncGeoID, int dQuad,
-                                  feFunction *fct, bool useGlobalShapeFunctions)
+                                  feFunction *fct, bool useGlobalShapeFunctions) //où est définit le P1 non conforme ? => non consistant ?
 {
   if(mesh == nullptr) return feErrorMsg(FE_STATUS_ERROR, "Null mesh pointer.");
   if(fct == nullptr) return feErrorMsg(FE_STATUS_ERROR, "Null function pointer.");
