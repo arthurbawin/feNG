@@ -22,8 +22,8 @@ feNorm::feNorm(feSpace *intSpace, feMesh *mesh, int degQuad, feFunction *solRef,
   }
   // Attention : ça changle la règle de quadrature pour les interpolants avant la résolution !
   // Il faudrait choisir idépendamment les deux sans conséquences
-  geoSpace->setQuadratureRule(rule);
-  intSpace->setQuadratureRule(rule);
+  // geoSpace->setQuadratureRule(rule);
+  // intSpace->setQuadratureRule(rule);
   delete rule;
 }
 

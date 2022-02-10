@@ -1,3 +1,8 @@
+/*
+
+  Solving the steady-state heat equation on a triangle mesh.
+
+*/
 
 #include "feAPI.h"   //bibliotheque avec tous les references des fonctions
 
@@ -11,7 +16,12 @@ double fSol(const double t, const std::vector<double> x, const std::vector<doubl
 double fSource(const double t, const std::vector<double> x, const std::vector<double> par)  //terme source  //par: parametre
 {
   double k = par[0];
-  return k * 30. * pow(x[0], 4);
+  return k * 30. * (pow(pos[0], 4) + pow(pos[1], 4));
+}
+
+double fZero(const double t, const std::vector<double> &pos, const std::vector<double> &par)
+{
+  return 0.0;
 }
 
 int main(int argc, char **argv)
@@ -50,6 +60,7 @@ int main(int argc, char **argv)
   double k = 1.0;
   feFunction *funSol = new feFunction(fSol, {});                                           //solution exacte ? Comment est defini funsol alors que l'espace non def
   feFunction *funSource = new feFunction(fSource, {k});
+  feFunction *funZero = new feFunction(fZero, {});
 
   // Define a finite element space on each subdomain of the computational domain.
   // Here the mesh contains only a 2D subdomain ("Domaine") and a 1D boundary ("Bord"),
@@ -57,7 +68,7 @@ int main(int argc, char **argv)
   // element space, with parameter "degreeQuadrature" governing the number of quad nodes.
   // The function provided is used to initialize the degrees of freedom on the feSpace.
   int dim;
-  feSpace *uBord, *uDomaine;
+  feSpace *uBord, *uDomaine, *vBord, *vDomaine;
   feCheck(createFiniteElementSpace(uBord, &mesh, dim = 1, LINE, order, "U", "Bord",
                                    degreeQuadrature, funSol));                                  //degreeQuadrature=10 => 10 noeuds de calcul ? 
   feCheck(createFiniteElementSpace(uDomaine, &mesh, dim = 2, TRI, order, "U", "Domaine",
@@ -80,8 +91,7 @@ int main(int argc, char **argv)
   // is the integral of k*(grad phi)_i*(grad phi)_j and a linear form which is the integral
   // of f*phi.
   feBilinearForm diffU({uDomaine}, &mesh, degreeQuadrature, new feSysElm_2D_Diffusion(k, nullptr));  //diffU est une forme billinaire mais comment marche la fonction ? Qu'est-ce qu'elle retourne  exactement? 
-  feBilinearForm sourceU({uDomaine}, &mesh, degreeQuadrature,
-                         new feSysElm_2D_Source(1.0, funSource));                
+  feBilinearForm sourceU({uDomaine}, &mesh, degreeQuadrature, new feSysElm_2D_Source(1.0, funSource));                
 
   // Initialize the linear system. Assembly of the elementary matrices and RHS is
   // performed in the solve step. Two linear solvers are available :
@@ -89,8 +99,7 @@ int main(int argc, char **argv)
   feLinearSystem *system;
   //feCheck(
   //  createLinearSystem(system, MKLPARDISO, {&diffU, &sourceU}, &metaNumber, &mesh, argc, argv));
-  feCheck(
-    createLinearSystem(system, PETSC, {&diffU, &sourceU}, &metaNumber, &mesh, argc, argv));
+  feCheck(createLinearSystem(system, PETSC, {&diffU, &sourceU}, &metaNumber, &mesh, argc, argv));
 
   // Define post-processing tools to compute norms and whatnot (norms will be replaced by
   // fePostProc)

@@ -99,6 +99,8 @@ public:
   bool isFctDefined() { return !(_fct == nullptr); }
 
   bool useGlobalFunctions() { return _useGlobalShapeFunctions; }
+  void useGlobalFunctions(bool flag) { _useGlobalShapeFunctions = flag; }
+
   // The number of degrees of freedom on an element
   virtual int getNbFunctions() = 0;
   // The highest degree of the polynomial basis
@@ -110,7 +112,7 @@ public:
   const std::vector<double> &getLcoor() { return _Lcoor; }
 
   virtual std::vector<double> L(double r[3]) = 0;
-  virtual void Lphys(int iElm, std::vector<double> &x, std::vector<double> &L,
+  virtual feStatus Lphys(int iElm, std::vector<double> &x, std::vector<double> &L,
                      std::vector<double> &dLdx, std::vector<double> &dLdy) = 0;
   virtual std::vector<double> dLdr(double r[3]) = 0;
   virtual std::vector<double> dLds(double r[3]) = 0;
@@ -141,7 +143,7 @@ public:
     return _dLdyglob[iElm][_nFunctions * iQuadNode + iFun];
   }
 
-  void setQuadratureRule(feQuadrature *quad);
+  feStatus setQuadratureRule(feQuadrature *quad);
   int getNbQuadPoints() { return _nQuad; }
   std::vector<double> &getQuadratureWeights() { return _wQuad; }
   std::vector<double> &getRQuadraturePoints() { return _xQuad; }
@@ -229,7 +231,7 @@ public:
   virtual int getNbFunctions() { return 1; }
   virtual int getPolynomialDegree() { return 0; }
   virtual std::vector<double> L(double r[3]) { return {1.}; };
-  virtual void Lphys(int iElm, std::vector<double> &x, std::vector<double> &L,
+  virtual feStatus Lphys(int iElm, std::vector<double> &x, std::vector<double> &L,
                      std::vector<double> &dLdx, std::vector<double> &dLdy)
   {
     printf("Not implemented\n");
@@ -266,7 +268,7 @@ public:
   virtual int getNbFunctions() { return 2; }
   virtual int getPolynomialDegree() { return 1; }
   virtual std::vector<double> L(double r[3]) { return {(1. - r[0]) / 2., (1. + r[0]) / 2.}; };
-  virtual void Lphys(int iElm, std::vector<double> &x, std::vector<double> &L,
+  virtual feStatus Lphys(int iElm, std::vector<double> &x, std::vector<double> &L,
                      std::vector<double> &dLdx, std::vector<double> &dLdy)
   {
     printf("Not implemented\n");
@@ -338,7 +340,7 @@ public:
   {
     return {-r[0] * (1. - r[0]) / 2., r[0] * (1. + r[0]) / 2., -(r[0] + 1.) * (r[0] - 1.)};
   };
-  virtual void Lphys(int iElm, std::vector<double> &x, std::vector<double> &L,
+  virtual feStatus Lphys(int iElm, std::vector<double> &x, std::vector<double> &L,
                      std::vector<double> &dLdx, std::vector<double> &dLdy)
   {
     printf("Not implemented\n");
@@ -385,7 +387,7 @@ public:
             27. / 16. * (r[0] + 1.) * (r[0] - 1. / 3.) * (r[0] - 1.),
             -27. / 16. * (r[0] + 1.) * (r[0] + 1. / 3.) * (r[0] - 1.)};
   };
-  virtual void Lphys(int iElm, std::vector<double> &x, std::vector<double> &L,
+  virtual feStatus Lphys(int iElm, std::vector<double> &x, std::vector<double> &L,
                      std::vector<double> &dLdx, std::vector<double> &dLdy)
   {
     printf("Not implemented\n");
@@ -435,7 +437,7 @@ public:
             (r[0] - 1.0) * (r[0] + 1.0) * (r[0] - 1.0 / 2.0) * (r[0] + 1.0 / 2.0) * 4.0,
             r[0] * (r[0] - 1.0) * (r[0] + 1.0) * (r[0] + 1.0 / 2.0) * (-8.0 / 3.0)};
   };
-  virtual void Lphys(int iElm, std::vector<double> &x, std::vector<double> &L,
+  virtual feStatus Lphys(int iElm, std::vector<double> &x, std::vector<double> &L,
                      std::vector<double> &dLdx, std::vector<double> &dLdy)
   {
     printf("Not implemented\n");
