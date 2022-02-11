@@ -34,6 +34,7 @@ protected:
 
   int _nCncGeo;
   std::vector<feCncGeo *> _cncGeo;
+
   std::map<std::string, int> _cncGeoMap;
 
 public:
@@ -189,6 +190,8 @@ protected:
 
   mapType _physicalEntitiesDescription;
 
+  std::vector<int> _globalCurvesNodeConnectivity;
+  std::vector<int> _globalSurfacesNodeConnectivity;
   std::vector<int> _sequentialNodeToGmshNode;
 
   int _nPoints;

@@ -1153,6 +1153,15 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, bool curved, bool reversed, m
             elemNodesGmsh[j] = ph1; // The Gmsh number stored in ph1 is used to create the edges
             elemNodes[j] =
               it->second; // The node number (0...nNode) is used to create the connectivity
+              /* Add the raw node number to the global connectivity table */
+              if(entityDim == 1){
+                _globalCurvesNodeConnectivity.push_back(ph1);
+              } else if(entityDim == 2){
+                _globalSurfacesNodeConnectivity.push_back(ph1);
+              } else{
+                feErrorMsg(FE_STATUS_ERROR, "Cannot create global connectivity table for entity with dim > 2.");
+              }
+
           }
 
           switch(elemType) {
