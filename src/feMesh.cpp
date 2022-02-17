@@ -143,6 +143,75 @@ void feMesh::printInfo(bool printConnectivities)
   }
 }
 
+
+std::vector<int> feMesh::meshColoring(int i=1)
+{
+  feCncGeo *cnc = _cncGeo[i];
+  int nElm= cnc->getNbElm();
+  int nbNodePerElm = cnc ->getNbNodePerElem();
+  std::vector<int> cncNodes = cnc ->getNodeConnectivityRef();
+
+  std::vector<int> nbOccurence (_nNod);
+  for (int j=0;j<_nNod;++j){     
+      nbOccurence[j]=std::count(cncNodes.begin(),cncNodes.end(),j); 
+  }
+
+  std::vector<std::vector<int>> listElmPerNode(_nNod, std::vector<int> (0,0));    //utiliser fonction patch dans feRecovery
+  for (int i=0;i<nElm;++i){
+    for(int j=0;j<nbNodePerElm;++j){
+      int nds=cncNodes[i*nbNodePerElm+j];    
+      listElmPerNode[nds].push_back(i);
+    }
+  }
+
+  std::vector<int> colorElm(nElm);  
+  for (int i=0;i<nElm;++i){  
+    colorElm[i]=-1;
+  }
+
+  int nbColor=0;
+  bool noColor=false;
+  while (noColor==false){
+
+    for (int k=0;k<nElm;++k){
+      if (colorElm[k]==-1){
+
+          for(int i=0;i<nbNodePerElm;++i){
+            int s=cncNodes[k*nbNodePerElm+i];
+            for (int j=0;j<nbOccurence[s];++j){
+              int numElm=listElmPerNode[s][j];
+              if(numElm !=k){
+                if(colorElm[numElm]<0){
+                  colorElm[numElm]=-2;
+                }
+              }
+            }
+          }
+
+      }
+    }
+
+    nbColor=nbColor+1;
+    noColor=true;
+    for (int k=0;k<nElm;++k){
+      if(colorElm[k]==-1){
+        colorElm[k]=nbColor;
+      }
+      if(colorElm[k]==-2){
+        colorElm[k]=-1;
+        noColor=false;
+      }
+    }
+
+  } //while
+
+  return  colorElm;
+}
+
+
+
+
+
 feMesh1DP1::feMesh1DP1(double xA, double xB, int nElm, std::string bndA_ID, std::string bndB_ID,
                        std::string domID)
   : feMesh(nElm + 1, 1, 3, "1D"), _nElm(nElm), _xA(xA), _xB(xB), _bndA_ID(bndA_ID),
@@ -460,3 +529,25 @@ void feMesh2DP1::transfer(feMesh2DP1 *otherMesh, feMetaNumber *myMN, feMetaNumbe
 
   delete scTmp;
 }
+
+
+// std::vector<vector<int>> feMesh2DP1::getListeElmPerNode()
+// {
+//   std::vector<vector<int>> ListeElmPerNode(_nNod,vector<int> (max(NbElmPerNode),0));
+
+//   for 
+
+
+
+
+//   return(ListeElmPerNode);
+// }
+
+
+
+
+
+
+
+
+

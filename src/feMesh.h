@@ -92,6 +92,8 @@ public:
                             double tol = 1e-5) = 0;
 
   void printInfo(bool printConnectivities = true);
+
+  std::vector<int> meshColoring(int i); //i=0 => borders; i=1 =>element
 };
 
 class feMesh1DP1 : public feMesh
@@ -235,6 +237,9 @@ public:
                 feSolutionContainer *solutionContainer, const std::vector<feSpace *> &mySpaces,
                 const std::vector<feSpace *> &mySpacesEssBC,
                 const std::vector<feSpace *> &otherSpaces);
+
+
+ 
 };
 
 #endif
