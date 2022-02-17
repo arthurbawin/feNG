@@ -93,7 +93,7 @@ public:
 
   void printInfo(bool printConnectivities = true);
 
-  std::vector<int> meshColoring(int i); //i=0 => borders; i=1 =>element
+  std::vector<int> color(int cncGeoTag = 0); //i=0 => borders; i=1 =>element
 };
 
 class feMesh1DP1 : public feMesh

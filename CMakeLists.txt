@@ -9,6 +9,7 @@ option(ENABLE_MPI           "Enable MPI"                  ON )
 option(ENABLE_PETSC         "Enable PETSc"                ON )
 option(ENABLE_GMSH          "Enable Gmsh"                 OFF)
 option(ENABLE_MKL           "Enable MKL"                  OFF)
+option(ENABLE_METIS         "Enable Metis"                OFF)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src)
@@ -137,6 +138,19 @@ if(ENABLE_PETSC)
   list(APPEND feNG_EXTERNAL_LIBS ${PETSC_LINK_LIBRARIES} ${PETSC_LDFLAGS})
   add_definitions("-DHAVE_PETSC")
   MESSAGE(STATUS "PETSc found (-:")
+endif()
+
+#  Metis
+if(ENABLE_METIS)
+  find_package(METIS)
+  MESSAGE(STATUS "METIS_FOUND          : ${METIS_FOUND}")
+  MESSAGE(STATUS "METIS_INCLUDE_DIRS   : ${METIS_INCLUDE_DIRS}")
+  MESSAGE(STATUS "METIS_LIBRARY_DIRS   : ${METIS_LIBRARY_DIRS}")
+  MESSAGE(STATUS "METIS_LIBRARIES      : ${METIS_LIBRARIES}")
+  include_directories(${METIS_INCLUDE_DIRS})
+  list(APPEND feNG_EXTERNAL_LIBS ${METIS_LIBRARIES})
+  add_definitions("-DHAVE_METIS")
+  MESSAGE(STATUS "METIS found (-:")
 endif()
 
 #  Eigen

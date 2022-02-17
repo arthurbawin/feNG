@@ -1,5 +1,9 @@
 #include "feAPI.h"   //bibliotheque avec tous les references des fonctions
 
+#if defined(HAVE_METIS)
+  #include "metis.h"
+#endif
+
 //dans cet exemple, on connait déjà la forme de la solution (u(x,y)=x⁶), on calcule alors le terme source avec l'équation de la diffusion(f=k*u''=30*k*x⁴)
 
 double fSol(const double t, const std::vector<double> x, const std::vector<double> par)  //solution exacte  
@@ -13,7 +17,49 @@ double fSource(const double t, const std::vector<double> x, const std::vector<do
   return k * 30. * pow(x[0], 4);
 }
 
-int main(int argc, char **argv)
+int main(){
+#if defined(HAVE_METIS)
+
+    idx_t nVertices = 6;
+    idx_t nEdges    = 7;
+    idx_t nWeights  = 1;
+    idx_t nParts    = 2;
+
+    idx_t objval;
+
+    idx_t part[6];
+
+
+    // Indexes of starting points in adjacent array
+    idx_t xadj[7] = {0,2,5,7,9,12,14};
+
+    // Adjacent vertices in consecutive index order
+    idx_t adjncy[14] = {1,3,0,4,2,1,5,0,4,3,1,5,4,2};
+
+    // Weights of vertices
+    // if all weights are equal then can be set to NULL
+    idx_t vwgt[6];
+    
+
+    // int ret = METIS_PartGraphRecursive(&nVertices,& nWeights, xadj, adjncy,
+    //               NULL, NULL, NULL, &nParts, NULL,
+    //               NULL, NULL, &objval, part);
+
+    int ret = METIS_PartGraphKway(&nVertices,& nWeights, xadj, adjncy,
+               NULL, NULL, NULL, &nParts, NULL,
+               NULL, NULL, &objval, part);
+
+    feInfo("Return value = %d", ret);
+    
+    for(unsigned part_i = 0; part_i < nVertices; part_i++){
+  std::cout << part_i << " " << part[part_i] << std::endl;
+    }
+
+#endif
+    return 0;
+}
+
+int main2(int argc, char **argv)
 {
   //petscInitialize(argc, argv);
 
@@ -42,80 +88,29 @@ int main(int argc, char **argv)
 
   // Create a mesh structure from a Gmsh mesh file (version 2.2, 4.1+)
   feMesh2DP1 mesh(meshFile);    //P1 car order=1 ? //on peut inclure d'autres pararametre (exemple bool curved), si pas inclut prend valeurs par defaut definies dans .h                                                                                          //que contient mesh ?    
-  
-  std::vector<feCncGeo *> CncGeo=mesh.getCncGeo(); 
-  
-  feCncGeo *ConnecElmInt=CncGeo[1]; //CncGeoElmInt=connect des elements
 
-  int nElm=ConnecElmInt->getNbElm();  //dejà dans feMesh (_nInteriorElm)
-  int nNode=ConnecElmInt->getNbNodes();  //dejà dans feMesh (_nNod)
-  int nNodePerElm =ConnecElmInt->getNbNodePerElem();
-  
-  std::vector<int> connecNodes =ConnecElmInt->getNodeConnectivityRef();     
-  std::vector<int> nbOccurence (nNode);                                        
+  std::vector<int> colorElm = mesh.color(1);
 
-  
-  for (int j=0;j<nNode;++j){     //checked
-      nbOccurence[j]=std::count(connecNodes.begin(),connecNodes.end(),j); 
-  }
+  FILE *f = fopen("myBeautifulColors.pos", "w");
+  fprintf(f, "View \"coucou\" {\n");
 
+  feCncGeo *cnc = mesh.getCncGeoByTag(1);
 
-
-  std::vector<std::vector<int>> ListeElmParNode(nNode, std::vector<int> (0,0));   //utiliser fonction patch dans feRecovery
-  for (int i=0;i<nElm;++i){
-    for(int j=0;j<nNodePerElm;j++){
-      int nds=connecNodes[i*nNodePerElm+j];    
-      ListeElmParNode[nds].push_back(i);
+  int nElm = cnc->getNbElm();
+  for(int i = 0; i < nElm; ++i){
+    fprintf(f, "ST(");
+    for(int j = 0; j < 3; ++j){
+      int iVert = cnc->getNodeConnectivity(i, j);
+      Vertex *v = mesh.getVertex(iVert);
+      fprintf(f, "%4.4f, %4.4f, %4.4f", v->x(), v->y(), v->z());
+      if(j < 2)
+        fprintf(f, ",");
     }
-  }
- 
-  std::vector<int> colorElm1(nElm);  
-
-  for (int i=0;i<nElm;++i){  //checked
-    colorElm1[i]=-1;
+    fprintf(f, "){%d, %d, %d};\n", colorElm[i], colorElm[i], colorElm[i]);
   }
 
-  int nbColor=0;
-  bool noColor=false;
-
-  while (noColor==false){
-
-    for (int k=0;k<nElm;++k){
-      if (colorElm1[k]==-1){
-
-        for(int i=0;i<nNodePerElm;++i){
-          int s=connecNodes[k*nNodePerElm+i];
-          for (int j=0;j<nbOccurence[s];++j){
-            int NumElm=ListeElmParNode[s][j];
-            if(NumElm !=k){
-              if(colorElm1[NumElm]<0){
-                colorElm1[NumElm]=-2;
-              }
-            }
-          }
-        }
-
-      }
-    }
-
-    nbColor=nbColor+1;
-    noColor=true;
-    for (int k=0;k<nElm;++k){
-      if(colorElm1[k]==-1){
-        colorElm1[k]=nbColor;
-      }
-      if(colorElm1[k]==-2){
-        colorElm1[k]=-1;
-        noColor=false;
-      }
-    }
-  }
-
-  for (int k=0;k<nElm;++k){
-    feInfo("%d-%d",k,colorElm1[k]);
-  }
-
-  std::vector<int> colorElm=mesh.meshColoring(1);  
+  fprintf(f, "};");
+  fclose(f);
 
   for (int k=0;k<colorElm.size();++k){
     feInfo("%d-%d",k,colorElm[k]);
