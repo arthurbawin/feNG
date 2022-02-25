@@ -53,6 +53,10 @@ void feSpaceTriP1::initializeAddressingVector(feNumber *number, int numElem)
   _adr[2] = number->getDDLSommet(_mesh, _cncGeoID, numElem, 2);
 }
 
+void feSpaceTriP1::initializeAddressingVector(feNumber *number, int numElem, std::vector<int> &adr)
+{
+}
+
 // feSpace used to interpolate on a geometric connectivity
 feSpaceTriP1_nonConsistant::feSpaceTriP1_nonConsistant(std::string cncGeoID)
   : feSpace(nullptr, "GEO", cncGeoID, nullptr)
@@ -104,6 +108,10 @@ void feSpaceTriP1_nonConsistant::initializeAddressingVector(feNumber *number, in
   _adr[0] = number->getDDLEdge(_mesh, _cncGeoID, numElem, 0, 0);
   _adr[1] = number->getDDLEdge(_mesh, _cncGeoID, numElem, 1, 0);
   _adr[2] = number->getDDLEdge(_mesh, _cncGeoID, numElem, 2, 0);
+}
+
+void feSpaceTriP1_nonConsistant::initializeAddressingVector(feNumber *number, int numElem, std::vector<int> &adr)
+{
 }
 
 // feSpace used to interpolate on a geometric connectivity
@@ -363,12 +371,29 @@ void feSpaceTriP2::initializeAddressingVector(feNumber *number, int numElem)
     _adr[4] = number->getDDLEdge(_mesh, _cncGeoID, numElem, 1, 0);
     _adr[5] = number->getDDLEdge(_mesh, _cncGeoID, numElem, 2, 0);
   }
-  // printf("Vecteur d'adressage elm %d : [%3d %3d %3d %3d %3d %3d]\n", numElem,
+  // feInfo("From thread %d/%d : Vecteur d'adressage elm %d : [%3d %3d %3d %3d %3d %3d]", omp_get_thread_num(),
+  //   omp_get_num_threads(), numElem,
   // _adr[0],_adr[1],_adr[2],_adr[3],_adr[4],_adr[5]);
 }
 
-
-
+void feSpaceTriP2::initializeAddressingVector(feNumber *number, int numElem, std::vector<int> &adr)
+{
+  adr[0] = number->getDDLSommet(_mesh, _cncGeoID, numElem, 0);
+  adr[1] = number->getDDLSommet(_mesh, _cncGeoID, numElem, 1);
+  adr[2] = number->getDDLSommet(_mesh, _cncGeoID, numElem, 2);
+  if(this->getCncGeo()->getFeSpace()->getPolynomialDegree() == 2) {
+    adr[3] = number->getDDLSommet(_mesh, _cncGeoID, numElem, 3);
+    adr[4] = number->getDDLSommet(_mesh, _cncGeoID, numElem, 4);
+    adr[5] = number->getDDLSommet(_mesh, _cncGeoID, numElem, 5);
+  } else {
+    adr[3] = number->getDDLEdge(_mesh, _cncGeoID, numElem, 0, 0);
+    adr[4] = number->getDDLEdge(_mesh, _cncGeoID, numElem, 1, 0);
+    adr[5] = number->getDDLEdge(_mesh, _cncGeoID, numElem, 2, 0);
+  }
+  feInfo("From thread %d/%d : Ecriture elm %d : [%3d %3d %3d %3d %3d %3d]", omp_get_thread_num(),
+    omp_get_num_threads(), numElem,
+  adr[0],adr[1],adr[2],adr[3],adr[4],adr[5]);
+}
 
 // // feSpace used to interpolate on a geometric connectivity
 // feSpaceTriP2_nonConsistant::feSpaceTriP2_nonConsistant(std::string cncGeoID)
@@ -639,6 +664,10 @@ void feSpaceTriP3::initializeAddressingVector(feNumber *number, int numElem)
   _adr[9] = number->getDDLElement(_mesh, _cncGeoID, numElem, 0);
 }
 
+void feSpaceTriP3::initializeAddressingVector(feNumber *number, int numElem, std::vector<int> &adr)
+{
+}
+
 /* P4 Lagrange interpolant on triangle :
 
    2
@@ -830,4 +859,8 @@ void feSpaceTriP4::initializeAddressingVector(feNumber *number, int numElem)
   _adr[12] = number->getDDLElement(_mesh, _cncGeoID, numElem, 0);
   _adr[13] = number->getDDLElement(_mesh, _cncGeoID, numElem, 1);
   _adr[14] = number->getDDLElement(_mesh, _cncGeoID, numElem, 2);
+}
+
+void feSpaceTriP4::initializeAddressingVector(feNumber *number, int numElem, std::vector<int> &adr)
+{
 }

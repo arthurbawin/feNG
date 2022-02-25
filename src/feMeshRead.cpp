@@ -1161,7 +1161,6 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, bool curved, bool reversed, m
               } else{
                 feErrorMsg(FE_STATUS_ERROR, "Cannot create global connectivity table for entity with dim > 2.");
               }
-
           }
 
           switch(elemType) {
@@ -1228,6 +1227,33 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, bool curved, bool reversed, m
                   _entities[p].connecNodes[nElemNodes * iElm + 4] = elemNodes[4];
                   _entities[p].connecNodes[nElemNodes * iElm + 5] = elemNodes[5];
                 }
+
+                /* Add a perturbation on the high-order nodes */
+                bool addPerturbation = true;
+                if(addPerturbation){
+                  for(int j = 0; j < 3; ++j){
+                    Vertex *v0 = &_vertices[_entities[p].connecNodes[nElemNodes * iElm + j]];
+                    Vertex *vMid = &_vertices[_entities[p].connecNodes[nElemNodes * iElm + j + 3]];
+                    // Normal vector
+                    std::vector<double> n(3, 0.);
+                    n[0] = vMid->y() - v0->y();
+                    n[1] = -(vMid->x() - v0->x());
+                    n[2] = 0.0;
+                    double N = sqrt(n[0]*n[0] + n[1]*n[1] + n[2]*n[2]);
+                    n[0] /= N;
+                    n[1] /= N;
+                    n[2] /= N;
+                    if(fabs(n[0] - 1./sqrt(2.)) < 1e-5 && fabs(n[1] - 1./sqrt(2.)) < 1e-5){
+                      double *coord = (*vMid)();
+                      double alpha = 0.2;
+                      std::vector<double> gamma = {2.0 * (vMid->x() - v0->x()), 2.0 * (vMid->y() - v0->y())}; // vMid - v0 = gamma/2
+                      std::vector<double> gammaOrth = {gamma[1], -gamma[0]};
+                      coord[0] = v0->x() + 0.5 * gamma[0] + alpha * gammaOrth[0]; 
+                      coord[1] = v0->y() + 0.5 * gamma[1] + alpha * gammaOrth[1];
+                    }
+                  }
+                }
+
               } else {
                 if(reversed){
                   _entities[p].connecNodes[nElemNodes * iElm + 0] = elemNodes[0];
