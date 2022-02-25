@@ -55,6 +55,8 @@ feBilinearForm::feBilinearForm(std::vector<feSpace *> space, feMesh *mesh, int d
     _geoSpace(_cnc->getFeSpace()), _nGeoElm(_cnc->getNbElm()), _degQuad(degQuad)
 
 {
+  feInfo("Creating a coucou depuis thread %d/%d", omp_get_thread_num(),
+    omp_get_num_threads());
   _nCoord = mesh->getDim();
   _nGeoNodes = _cnc->getNbNodePerElem();
 
@@ -139,7 +141,9 @@ void feBilinearForm::initialize_vadij_only(feMetaNumber *metaNumber, int numElem
 void feBilinearForm::initialize(feMetaNumber *metaNumber, feMesh *mesh, feSolution *sol,
                                 int numElem)
 {
+  _adr.resize(_intSpace[0]->getNbFunctions());
   for(feSpace *fS : _intSpace) {
+    fS->initializeAddressingVector(metaNumber->getNumbering(fS->getFieldID()), numElem, _adr);
     fS->initializeAddressingVector(metaNumber->getNumbering(fS->getFieldID()), numElem);
     fS->initializeSolution(sol);
     fS->initializeSolutionDot(sol);
@@ -172,7 +176,6 @@ void feBilinearForm::computeMatrixAnalytical(feMetaNumber *metaNumber, feMesh *m
                                              feSolution *sol, int numElem)
 {
   this->initialize(metaNumber, mesh, sol, numElem);
-  // setMatrixToZero(_niElm, _njElm, &_Ae);
   setMatrixToZero(_niElm, _njElm, _Ae);
   std::vector<double> &J = _cnc->getJacobians();
   _sysElm->computeAe(J, numElem, _intSpace, _geoSpace, _geoCoord, sol->getC0(),

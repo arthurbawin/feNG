@@ -140,9 +140,6 @@ feStatus feSpace::setQuadratureRule(feQuadrature *rule)
     feInfo("USING GLOBAL FUNCTIONS on space %s - %s", this->_fieldID.c_str(), this->_cncGeoID.c_str());
     feInfo("USING GLOBAL FUNCTIONS");
     feInfo("USING GLOBAL FUNCTIONS");
-    feInfo("USING GLOBAL FUNCTIONS");
-    feInfo("USING GLOBAL FUNCTIONS");
-    feInfo("USING GLOBAL FUNCTIONS");
     /* Physical frame discretization : shape functions are computed on the physical element. */
     feCncGeo *cnc = this->getCncGeo();
     int nElm = cnc->getNbElm();
@@ -602,6 +599,10 @@ void feSpace1DP0::initializeAddressingVector(feNumber *number, int numElem)
   _adr[0] = number->getDDLSommet(_mesh, _cncGeoID, numElem, 0);
 }
 
+void feSpace1DP0::initializeAddressingVector(feNumber *number, int numElem, std::vector<int> &adr)
+{
+}
+
 void feSpace1DP1::initializeNumberingUnknowns(feNumber *number)
 {
   for(int i = 0; i < _mesh->getNbElm(_cncGeoID); ++i) {
@@ -622,6 +623,10 @@ void feSpace1DP1::initializeAddressingVector(feNumber *number, int numElem)
 {
   _adr[0] = number->getDDLSommet(_mesh, _cncGeoID, numElem, 0);
   _adr[1] = number->getDDLSommet(_mesh, _cncGeoID, numElem, 1);
+}
+
+void feSpace1DP1::initializeAddressingVector(feNumber *number, int numElem, std::vector<int> &adr)
+{
 }
 
 void feSpace1DP1_nonConsistant::initializeNumberingUnknowns(feNumber *number)
@@ -646,6 +651,10 @@ void feSpace1DP1_nonConsistant::initializeNumberingEssential(feNumber *number)
 void feSpace1DP1_nonConsistant::initializeAddressingVector(feNumber *number, int numElem)
 {
   _adr[0] = number->getDDLElement(_mesh, _cncGeoID, numElem, 0);
+}
+
+void feSpace1DP1_nonConsistant::initializeAddressingVector(feNumber *number, int numElem, std::vector<int> &adr)
+{
 }
 
 void feSpace1DP2::initializeNumberingUnknowns(feNumber *number)
@@ -696,6 +705,10 @@ void feSpace1DP2::initializeAddressingVector(feNumber *number, int numElem)
   }
 }
 
+void feSpace1DP2::initializeAddressingVector(feNumber *number, int numElem, std::vector<int> &adr)
+{
+}
+
 void feSpace1DP3::initializeNumberingUnknowns(feNumber *number)
 {
   for(int i = 0; i < _mesh->getNbElm(_cncGeoID); ++i) {
@@ -732,6 +745,10 @@ void feSpace1DP3::initializeAddressingVector(feNumber *number, int numElem)
     _adr[2] = number->getDDLElement(_mesh, _cncGeoID, numElem, 1);
     _adr[3] = number->getDDLElement(_mesh, _cncGeoID, numElem, 0);
   }
+}
+
+void feSpace1DP3::initializeAddressingVector(feNumber *number, int numElem, std::vector<int> &adr)
+{
 }
 
 void feSpace1DP4::initializeNumberingUnknowns(feNumber *number)
@@ -773,4 +790,8 @@ void feSpace1DP4::initializeAddressingVector(feNumber *number, int numElem)
     _adr[3] = number->getDDLElement(_mesh, _cncGeoID, numElem, 1);
     _adr[2] = number->getDDLElement(_mesh, _cncGeoID, numElem, 2);
   }
+}
+
+void feSpace1DP4::initializeAddressingVector(feNumber *number, int numElem, std::vector<int> &adr)
+{
 }

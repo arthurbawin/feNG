@@ -27,6 +27,7 @@ public:
   virtual void initializeNumberingUnknowns(feNumber *number);
   virtual void initializeNumberingEssential(feNumber *number);
   virtual void initializeAddressingVector(feNumber *number, int numElem);
+  virtual void initializeAddressingVector(feNumber *number, int numElem, std::vector<int> &adr);
 };
 
 class feSpaceTriP1_nonConsistant : public feSpace
@@ -48,6 +49,7 @@ public:
   virtual void initializeNumberingUnknowns(feNumber *number);
   virtual void initializeNumberingEssential(feNumber *number);
   virtual void initializeAddressingVector(feNumber *number, int numElem);
+  virtual void initializeAddressingVector(feNumber *number, int numElem, std::vector<int> &adr);
 };
 
 class feSpaceTriP2 : public feSpace
@@ -71,6 +73,7 @@ public:
   virtual void initializeNumberingUnknowns(feNumber *number);
   virtual void initializeNumberingEssential(feNumber *number);
   virtual void initializeAddressingVector(feNumber *number, int numElem);
+  virtual void initializeAddressingVector(feNumber *number, int numElem, std::vector<int> &adr);
 };
 
 class feSpaceTriP3 : public feSpace
@@ -98,6 +101,7 @@ public:
   virtual void initializeNumberingUnknowns(feNumber *number);
   virtual void initializeNumberingEssential(feNumber *number);
   virtual void initializeAddressingVector(feNumber *number, int numElem);
+  virtual void initializeAddressingVector(feNumber *number, int numElem, std::vector<int> &adr);
 };
 
 class feSpaceTriP4 : public feSpace
@@ -125,6 +129,7 @@ public:
   virtual void initializeNumberingUnknowns(feNumber *number);
   virtual void initializeNumberingEssential(feNumber *number);
   virtual void initializeAddressingVector(feNumber *number, int numElem);
+  virtual void initializeAddressingVector(feNumber *number, int numElem, std::vector<int> &adr);
 };
 
 #endif

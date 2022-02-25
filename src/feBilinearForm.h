@@ -43,6 +43,11 @@ protected:
   double **_Ae;
   double *_Be;
 
+public:
+  // Test : local attributes
+  std::vector<int> _adr;
+  std::vector<double> _sol;
+
   // ==================================================================
   // Pointeur sur la méthode de construction de la matrice élémentaire
   // (1) Utilisation d'une construction analytique

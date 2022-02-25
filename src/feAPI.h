@@ -25,6 +25,10 @@
 #include "fePostProc.h"
 #include "feNorm.h"
 
+#if defined(HAVE_OMP)
+#include "omp.h"
+#endif
+
 #if defined(HAVE_GMSH)
 #include "gmsh.h"
 #endif

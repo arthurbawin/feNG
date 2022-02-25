@@ -157,6 +157,7 @@ public:
   virtual void initializeNumberingUnknowns(feNumber *number) = 0;
   virtual void initializeNumberingEssential(feNumber *number) = 0;
   virtual void initializeAddressingVector(feNumber *number, int numElem) = 0;
+  virtual void initializeAddressingVector(feNumber *number, int numElem, std::vector<int> &adr) = 0;
 
   int getAddressingVectorAt(int node) { return _adr[node]; }
 
@@ -244,6 +245,7 @@ public:
   virtual void initializeNumberingUnknowns(feNumber *number);
   virtual void initializeNumberingEssential(feNumber *number);
   virtual void initializeAddressingVector(feNumber *number, int numElem);
+  virtual void initializeAddressingVector(feNumber *number, int numElem, std::vector<int> &adr);
 };
 
 // FESpace pour interpolant de Lagrange 1D de degre 1
@@ -281,6 +283,7 @@ public:
   virtual void initializeNumberingUnknowns(feNumber *number);
   virtual void initializeNumberingEssential(feNumber *number);
   virtual void initializeAddressingVector(feNumber *number, int numElem);
+  virtual void initializeAddressingVector(feNumber *number, int numElem, std::vector<int> &adr);
 };
 
 // FESpace pour interpolant de Lagrange 1D de degre 1
@@ -313,6 +316,7 @@ public:
   virtual void initializeNumberingUnknowns(feNumber *number);
   virtual void initializeNumberingEssential(feNumber *number);
   virtual void initializeAddressingVector(feNumber *number, int numElem);
+  virtual void initializeAddressingVector(feNumber *number, int numElem, std::vector<int> &adr);
 };
 
 // FESpace pour interpolant de Lagrange 1D de degre 2
@@ -356,6 +360,7 @@ public:
   virtual void initializeNumberingUnknowns(feNumber *number);
   virtual void initializeNumberingEssential(feNumber *number);
   virtual void initializeAddressingVector(feNumber *number, int numElem);
+  virtual void initializeAddressingVector(feNumber *number, int numElem, std::vector<int> &adr);
 };
 
 // FESpace pour interpolant de Lagrange 1D de degre 3
@@ -406,6 +411,7 @@ public:
   virtual void initializeNumberingUnknowns(feNumber *number);
   virtual void initializeNumberingEssential(feNumber *number);
   virtual void initializeAddressingVector(feNumber *number, int numElem);
+  virtual void initializeAddressingVector(feNumber *number, int numElem, std::vector<int> &adr);
 };
 
 // FESpace pour interpolant de Lagrange 1D de degre 4
@@ -472,6 +478,7 @@ public:
   virtual void initializeNumberingUnknowns(feNumber *number);
   virtual void initializeNumberingEssential(feNumber *number);
   virtual void initializeAddressingVector(feNumber *number, int numElem);
+  virtual void initializeAddressingVector(feNumber *number, int numElem, std::vector<int> &adr);
 };
 
 #endif
