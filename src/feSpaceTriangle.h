@@ -35,13 +35,18 @@ class feSpaceTriP1_nonConsistant : public feSpace
 protected:
 public:
   feSpaceTriP1_nonConsistant(std::string cncGeoID);
-  feSpaceTriP1_nonConsistant(feMesh *mesh, std::string fieldID, std::string cncGeoID,
-                             feFunction *fct);
+  feSpaceTriP1_nonConsistant(feMesh *mesh, std::string fieldID, std::string cncGeoID,feFunction *fct);
   ~feSpaceTriP1_nonConsistant() {}
 
   virtual int getNbFunctions() { return 3; }
   virtual int getPolynomialDegree() { return 1; }
   virtual std::vector<double> L(double r[3]);
+
+  virtual feStatus Lphys(int iElm, std::vector<double> &x, std::vector<double> &L, std::vector<double> &dLdx, std::vector<double> &dLdy)
+  {
+    printf("Not implemented\n");
+  };
+
   virtual std::vector<double> dLdr(double r[3]);
   virtual std::vector<double> dLds(double r[3]);
   virtual std::vector<double> dLdt(double r[3]);
@@ -51,6 +56,7 @@ public:
   virtual void initializeAddressingVector(feNumber *number, int numElem);
   virtual void initializeAddressingVector(feNumber *number, int numElem, std::vector<int> &adr);
 };
+
 
 class feSpaceTriP2 : public feSpace
 {
@@ -75,6 +81,35 @@ public:
   virtual void initializeAddressingVector(feNumber *number, int numElem);
   virtual void initializeAddressingVector(feNumber *number, int numElem, std::vector<int> &adr);
 };
+
+
+class feSpaceTriP2_nonConsistant : public feSpace
+{
+protected:
+public:
+  feSpaceTriP2_nonConsistant(std::string cncGeoID);
+  feSpaceTriP2_nonConsistant(feMesh *mesh, std::string fieldID, std::string cncGeoID, feFunction *fct);
+  ~feSpaceTriP2_nonConsistant() {}
+
+  virtual int getNbFunctions() { return 7; }
+  virtual int getPolynomialDegree() { return 2; }
+
+  virtual std::vector<double> L(double r[3]);
+  virtual std::vector<double> dLdr(double r[3]);
+  virtual std::vector<double> dLds(double r[3]);
+  virtual std::vector<double> dLdt(double r[3]);
+
+  virtual feStatus Lphys(int iElm, std::vector<double> &x, std::vector<double> &L,std::vector<double> &dLdx, std::vector<double> &dLdy)
+  {
+    printf("Not implemented\n");
+  };
+
+  virtual void initializeNumberingUnknowns(feNumber *number);
+  virtual void initializeNumberingEssential(feNumber *number);
+  virtual void initializeAddressingVector(feNumber *number, int numElem);
+  virtual void initializeAddressingVector(feNumber *number, int numElem, std::vector<int> &adr){};
+};
+
 
 class feSpaceTriP3 : public feSpace
 {

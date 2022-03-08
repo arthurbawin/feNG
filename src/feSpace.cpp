@@ -41,7 +41,17 @@ feStatus createFiniteElementSpace(feSpace *&space, feMesh *mesh, int dim, elemTy
             return feErrorMsg(FE_STATUS_ERROR,
                               "No LINE finite element space implemented for deg > 4.");
         }
-      } else {
+      }
+      else if(type == LINE_CR) {
+        switch(deg) {
+          case 1:
+            space = new feSpace1DP1_nonConsistant(mesh, fieldID, cncGeoID, fct);
+            break;
+          default:
+            return feErrorMsg(FE_STATUS_ERROR,
+                              "No LINE finite element space implemented for deg > 4.");
+        }
+      }else {
         return feErrorMsg(FE_STATUS_ERROR, "Unsupported geometry.");
       }
       break;
@@ -67,10 +77,25 @@ feStatus createFiniteElementSpace(feSpace *&space, feMesh *mesh, int dim, elemTy
             return feErrorMsg(FE_STATUS_ERROR,
                               "No LINE finite element space implemented for deg > 4.");
         }
-      } else {
+      }else if(type == TRI_CR){
+        switch(deg){
+          case 0:
+            return feErrorMsg(FE_STATUS_ERROR,"No TRI_CR finite element space implemented for deg >2.");
+          case 1:
+            space = new feSpaceTriP1_nonConsistant(mesh, fieldID, cncGeoID, fct);
+            break;
+          case 2:
+            space = new feSpaceTriP2_nonConsistant(mesh, fieldID, cncGeoID, fct);
+            break;
+          default:
+            return feErrorMsg(FE_STATUS_ERROR,
+                              "No LINE finite element space implemented for deg > 4.");
+        }
+      }else {
         return feErrorMsg(FE_STATUS_ERROR, "Unsupported geometry.");
       }
       break;
+
     case 3:
       return feErrorMsg(FE_STATUS_ERROR, "Finite element space in dim = 3 not implemented yet.");
     default:

@@ -13,7 +13,7 @@ double fSol(const double t, const std::vector<double> x, const std::vector<doubl
   return pow(x[0], 6);
 }
 
-double fSource(const double t, const std::vector<double> x, const std::vector<double> par)  //terme source  //par: parametre
+double fSource(const double t, const std::vector<double> pos, const std::vector<double> par)  //terme source  //par: parametre
 {
   double k = par[0];
   return k * 30. * (pow(pos[0], 4) + pow(pos[1], 4));
@@ -24,6 +24,8 @@ double fZero(const double t, const std::vector<double> &pos, const std::vector<d
   return 0.0;
 }
 
+
+
 int main(int argc, char **argv)
 {
   petscInitialize(argc, argv);
@@ -31,7 +33,7 @@ int main(int argc, char **argv)
   // Set the default parameters.
   const char *meshFile = "square.msh";
   int verbosity = 2;
-  int order = 1;                   //par defaut 1 sinon lors de la compilation -o --order XX  ? 
+  int order = 2;                   //par defaut 1 sinon lors de la compilation -o --order XX  ? 
   int degreeQuadrature = 10;       //par defaut 10 sinon lors de la compilation -dquad --degreeQuadrature XX  ?
 
   // Create an option parser and parse the command line arguments.
@@ -70,8 +72,9 @@ int main(int argc, char **argv)
   int dim;
   feSpace *uBord, *uDomaine, *vBord, *vDomaine;
   feCheck(createFiniteElementSpace(uBord, &mesh, dim = 1, LINE, order, "U", "Bord",
-                                   degreeQuadrature, funSol));                                  //degreeQuadrature=10 => 10 noeuds de calcul ? 
-  feCheck(createFiniteElementSpace(uDomaine, &mesh, dim = 2, TRI, order, "U", "Domaine",
+                                   degreeQuadrature, funSol));  
+  feInfo("Bord ok");                                
+  feCheck(createFiniteElementSpace(uDomaine, &mesh, dim = 2, TRI_CR, order, "U", "Domaine",
                                    degreeQuadrature, funSol));                                  //où est defini le mesh ? car ligne 45 pas evident à comprendre, pourquoi pas defini comme mesh=feMesh2DP1(meshfile) 
                                                                                                 //qu'est ce que creatFiniteElementSpace retourne ? la fonction semble modifier uBord et uDomain (space) ? 
   

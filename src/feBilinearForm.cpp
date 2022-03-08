@@ -123,18 +123,21 @@ feBilinearForm::~feBilinearForm()
 void feBilinearForm::initialize_vadij_only(feMetaNumber *metaNumber, int numElem)
 {
   for(feSpace *fS : _intSpace) {
+    fS->initializeAddressingVector(metaNumber->getNumbering(fS->getFieldID()), numElem, _adr);
     fS->initializeAddressingVector(metaNumber->getNumbering(fS->getFieldID()), numElem);
   }
 
   // INITIALISERVADIJ
   for(size_t i = 0, count = 0; i < _iVar.size(); ++i) {
     int nielm = _intSpace[_iVar[i]]->getNbFunctions();
-    for(int k = 0; k < nielm; ++k) _adrI[count++] = _intSpace[_iVar[i]]->getAddressingVectorAt(k);
+    for(int k = 0; k < nielm; ++k) _adrI[count++] = _adr[k];
+    //for(int k = 0; k < nielm; ++k) _adrI[count++] = _intSpace[_iVar[i]]->getAddressingVectorAt(k); 
   }
 
   for(size_t i = 0, count = 0; i < _jVar.size(); ++i) {
     int nielm = _intSpace[_jVar[i]]->getNbFunctions();
-    for(int k = 0; k < nielm; ++k) _adrJ[count++] = _intSpace[_jVar[i]]->getAddressingVectorAt(k);
+    for(int k = 0; k < nielm; ++k) _adrJ[count++] = _adr[k]; 
+    //for(int k = 0; k < nielm; ++k) _adrJ[count++] = _intSpace[_jVar[i]]->getAddressingVectorAt(k);
   }
 }
 
@@ -154,11 +157,17 @@ void feBilinearForm::initialize(feMetaNumber *metaNumber, feMesh *mesh, feSoluti
   // INITIALISERVADIJ
   for(size_t i = 0, count = 0; i < _iVar.size(); ++i) {
     int nielm = _intSpace[_iVar[i]]->getNbFunctions();
-    for(int k = 0; k < nielm; ++k) _adrI[count++] = _intSpace[_iVar[i]]->getAddressingVectorAt(k);
+    for(int k = 0; k < nielm; ++k) {
+      //_adrI[count++] = _intSpace[_iVar[i]]->getAddressingVectorAt(k);
+      _adrI[count++] = _adr[k];  
+    };
   }
   for(size_t i = 0, count = 0; i < _jVar.size(); ++i) {
     int nielm = _intSpace[_jVar[i]]->getNbFunctions();
-    for(int k = 0; k < nielm; ++k) _adrJ[count++] = _intSpace[_jVar[i]]->getAddressingVectorAt(k);
+    for(int k = 0; k < nielm; ++k) {
+      //_adrJ[count++] = _intSpace[_jVar[i]]->getAddressingVectorAt(k);  
+      _adrJ[count++] = _adr[k];  
+    };
   }
 }
 

@@ -15,7 +15,7 @@
 typedef Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> EigenMat;
 
 /* Supported geometries to define finite element spaces */
-typedef enum { POINT, LINE, TRI } elemType;
+typedef enum { POINT, LINE, LINE_CR, TRI, TRI_CR } elemType;
 
 class feMesh;
 class feNumber;
@@ -312,6 +312,12 @@ public:
   virtual std::vector<double> dLdr(double r[3]) { return {0.}; };
   virtual std::vector<double> dLds(double r[3]) { return {0.}; };
   virtual std::vector<double> dLdt(double r[3]) { return {0.}; };
+
+  virtual feStatus Lphys(int iElm, std::vector<double> &x, std::vector<double> &L, std::vector<double> &dLdx, std::vector<double> &dLdy)
+  {
+    printf("Not implemented\n");
+    exit(-1);
+  };
 
   virtual void initializeNumberingUnknowns(feNumber *number);
   virtual void initializeNumberingEssential(feNumber *number);

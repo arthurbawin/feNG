@@ -71,6 +71,7 @@ if(ENABLE_OPENMP)
     # target_link_libraries(feNG PUBLIC OpenMP::OpenMP_CXX)
     list(APPEND feNG_EXTERNAL_LIBS OpenMP::OpenMP_CXX)
     add_definitions("-DHAVE_OMP")
+    add_compile_options(-fopenmp)
   endif()
 endif()
 
