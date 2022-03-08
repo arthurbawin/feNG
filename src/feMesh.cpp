@@ -143,12 +143,14 @@ void feMesh::printInfo(bool printConnectivities)
   }
 }
 
-std::vector<int> feMesh::color(int cncGeoTag)
+void feMesh::color(int cncGeoTag)
 {
+  int index=0;
   feCncGeo *cnc = _cncGeo[cncGeoTag];
   int nElm = cnc->getNbElm();
   int nbNodePerElm = cnc->getNbNodePerElem();
   std::vector<int> &cncNodes = cnc->getNodeConnectivityRef();
+  _list.resize(nElm);
 
   std::vector<int> nbOccurence(_nNod);
   for(int j = 0; j < _nNod; ++j) {
@@ -157,6 +159,7 @@ std::vector<int> feMesh::color(int cncGeoTag)
 
   std::vector<std::vector<int> > listElmPerNode(
     _nNod, std::vector<int>(0, 0)); // utiliser fonction patch dans feRecovery
+  
   for(int i = 0; i < nElm; ++i) {
     for(int j = 0; j < nbNodePerElm; ++j) {
       int nds = cncNodes[i * nbNodePerElm + j];
@@ -187,9 +190,12 @@ std::vector<int> feMesh::color(int cncGeoTag)
 
     nbColor = nbColor + 1;
     noColor = true;
+    _indexStartColorInList.push_back(index);
     for(int k = 0; k < nElm; ++k) {
       if(colorElm[k] == -1) {
         colorElm[k] = nbColor;
+        _list[index]=k;
+        index=index+1;               //list of element's index ordered by color     
       }
       if(colorElm[k] == -2) {
         colorElm[k] = -1;
@@ -199,8 +205,16 @@ std::vector<int> feMesh::color(int cncGeoTag)
 
   } // while
 
-  return colorElm;
+  _nbColor=nbColor;
+  _colorElm=colorElm;
+
+
+  _nbElmPerColor.resize(nbColor);
+  for (int iColor=0;iColor<nbColor;++iColor){
+    _nbElmPerColor[iColor]=std::count(colorElm.begin(), colorElm.end(), iColor+1);
+  }
 }
+
 
 feMesh1DP1::feMesh1DP1(double xA, double xB, int nElm, std::string bndA_ID, std::string bndB_ID,
                        std::string domID)
@@ -347,6 +361,9 @@ feMesh2DP1::feMesh2DP1(std::string meshName, bool curved, bool reversed,
     feInfo("Error in readGmsh - mesh not finalized.\n");
     std::exit(1);
   }
+  #if defined(HAVE_OMP)
+    color(1); //1 for interior Element coloring
+  #endif
 }
 
 feMesh2DP1::~feMesh2DP1()
