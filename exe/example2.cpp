@@ -38,6 +38,7 @@ int main(int argc, char **argv)
 
   for(int i = 0; i < nMesh; ++i){
     std::string meshFile = "squareIso" + std::to_string(i+1) + ".msh";
+    // std::string meshFile = "transfinite" + std::to_string(i+1) + "_P2.msh";
 
     feMesh2DP1 mesh(meshFile);
     nElm[i] = mesh.getNbInteriorElems();

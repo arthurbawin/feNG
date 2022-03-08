@@ -2149,7 +2149,8 @@ feCurvedAdapt::feCurvedAdapt(feMesh *mesh, std::vector<feRecovery *> &recovery,
     std::vector<double> &pts, double er(double *, double *, double *, double *, double *, double *),
     bool inside(double *),
     void grad_er(double *, double *, double *, double *, double *, double *,
-                 std::vector<double> &) = nullptr);
+                 std::vector<double> &) = nullptr,
+    double pointwiseError(double *) = nullptr);
 
   bool vazy = true; // false;
 

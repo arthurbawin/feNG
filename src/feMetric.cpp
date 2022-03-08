@@ -400,6 +400,36 @@ void feMetric::computeMetricsWithDirectionField()
         const double sizeAlongIsoline = fabs(dttt(x, y, C, S, _recovery, 0));
         // const double sizeAlongGradient = fabs(dttt(x, y, -S, C, _recovery, 1));
         const double sizeAlongGradient = fabs(dttt(x, y, C, S, _recovery, 1));
+
+        // const double sizeAlongIsoline = fabs(dtttAnalytical(x, y, C, S, _recovery, 0));
+        // const double sizeAlongGradient = fabs(dtttAnalytical(x, y, C, S, _recovery, 1));
+
+        // {
+        //   feInfo("En 0.25, 0.25 : ");
+        //   double foo1 = fabs(dtttAnalytical(0.25, 0.25, C, S, _recovery, 0));
+        //   double foo2 = fabs(dtttAnalytical(0.25, 0.25, C, S, _recovery, 1));
+        //   double l0 = pow(6.0 * eps / foo1, 0.3333);
+        //   double l1 = pow(6.0 * eps / foo2, 0.3333);
+        //   feInfo("Size from %4.8e - %4.8e is %4.8f - %4.4f", foo1, foo2, l0, l1);
+
+        //   l0 = std::min(l0, lMax);
+        //   l0 = std::max(l0, lMin);
+        //   l1 = std::min(l1, lMax);
+        //   l1 = std::max(l1, lMin);
+
+        //   // Eigenvalues
+        //   double h0 = 1. / (l0 * l0);
+        //   double h1 = 1. / (l1 * l1);
+
+        //   feInfo("yoooooo h0 = %8.8e - h1 = %8.8e", h0, h1);
+
+        //   double g00 = C * C * h0 + S * S * h1;
+        //   double g11 = S * S * h0 + C * C * h1;
+        //   double g01 = S * C * (h1 - h0);
+
+        //   feInfo("yoooooo g11 = %4.4f - g11 = %4.4f - g21 = %4.4f", g00, g11, g01);
+        // }
+
         l0 = fabs(sizeAlongIsoline) > 1e-14 ? pow(6.0 * eps / sizeAlongIsoline, 0.3333) : lMax;
         l1 = fabs(sizeAlongGradient) > 1e-14 ? pow(6.0 * eps / sizeAlongGradient, 0.3333) : lMax;
         break;

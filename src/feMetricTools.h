@@ -31,6 +31,7 @@ void smoothDirections(std::map<size_t, double> &C, std::map<size_t, double> &S, 
 
 double dtt(const double x, const double y, double C, double S, feRecovery *rec);
 double dttt(const double x, const double y, double C, double S, feRecovery *rec, int direction);
+double dtttAnalytical(const double x, const double y, double C, double S, feRecovery *rec, int direction);
 
 void metricHechtKuate(int nbpoints, double *x, double *y, double &A, double &B, double &C,
                       double epsilon, double *xNew, double *yNew, int dimRecovery,
@@ -40,6 +41,7 @@ int computePointsUsingScaledCrossFieldPlanarP2(
   const char *modelForMetric, const char *modelForMesh, int VIEW_TAG, int faceTag,
   std::vector<double> &pts, double er(double *, double *, double *, double *, double *, double *),
   bool inside(double *),
-  void grad_er(double *, double *, double *, double *, double *, double *, std::vector<double> &));
+  void grad_er(double *, double *, double *, double *, double *, double *, std::vector<double> &),
+  double pointwiseError(double *));
 
 #endif

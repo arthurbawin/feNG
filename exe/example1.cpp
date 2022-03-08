@@ -13,7 +13,7 @@ double fSol(const double t, const std::vector<double> x, const std::vector<doubl
   return pow(x[0], 6);
 }
 
-double fSource(const double t, const std::vector<double> x, const std::vector<double> par)  //terme source  //par: parametre
+double fSource(const double t, const std::vector<double> pos, const std::vector<double> par)  //terme source  //par: parametre
 {
   double k = par[0];
   return k * 30. * (pow(pos[0], 4) + pow(pos[1], 4));
@@ -53,6 +53,28 @@ int main(int argc, char **argv)
 
   // Create a mesh structure from a Gmsh mesh file (version 2.2, 4.1+)
   feMesh2DP1 mesh(meshFile);                                                               //P1 car order=1 ? //on peut inclure d'autres pararametre (exemple bool curved), si pas inclut prend valeurs par defaut definies dans .h
+
+  // std::vector<feCncGeo *> cncVec = mesh.getCncGeo();
+
+  // feInfo("Mesh has %d connectivities", cncVec.size());
+
+  // for(feCncGeo *cnc : cncVec){
+  //   feInfo("Nom = %s", cnc->getID().c_str());
+  //   feInfo("Interpolants geo = %s", cnc->getForme().c_str());
+  //   feInfo("Nb noeuds = %d", cnc->getNbNodes());
+  //   feInfo("Nb noeuds par element = %d", cnc->getNbNodePerElem());
+  // }
+
+  // feCncGeo *cnc = cncVec[0];
+  // fePatch myPatch(cnc, &mesh);
+
+  // std::set<int> elementConnectes = myPatch.getPatch(0);
+
+  // for(auto e : elementConnectes)
+  //   feInfo("%d", e);
+
+
+  // return 0;
 
   // Create function structures for the analytic solution and the source term
   // Here the model PDE is the stationary heat equation div(k grad u) + f = 0,

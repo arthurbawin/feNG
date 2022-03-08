@@ -94,6 +94,92 @@ double dttt(const double x, const double y, double C, double S, feRecovery *rec,
   }
 }
 
+double sech(double x){
+  return 1./cosh(x);
+}
+
+// For the solution u = (1. + tanh(a*(r-r0)))/2.
+double dtttAnalytical(const double x, const double y, double C, double S, feRecovery *rec, int direction)
+{
+  double a = 10.0;
+  double x0 = 0.2;
+  double y0 = 0.4;
+  double r0 = 0.2;
+
+  double r = sqrt((x-x0)*(x-x0) + (y-y0)*(y-y0));
+  double drdx = (x-x0)/r;
+  double drdy = (y-y0)/r;
+
+  double dudr = a/2. * sech(a*(r-r0)) * sech(a*(r-r0));
+  double d2udr2 = -a*a * tanh(a*(r-r0)) * sech(a*(r-r0)) * sech(a*(r-r0));
+  double d3udr3 = -a*a*a * sech(a*(r-r0)) * sech(a*(r-r0)) * (sech(a*(r-r0)) * sech(a*(r-r0)) - 2. * tanh(a*(r-r0)) * tanh(a*(r-r0)));
+
+  const double c1 = dudr*drdx;
+  const double c2 = dudr*drdy;
+
+  const double c11 = d2udr2*drdx*drdx;
+  const double c12 = d2udr2*drdx*drdy;
+  const double c22 = d2udr2*drdy*drdy;
+
+  const double c111 = d3udr3*drdx*drdx*drdx;
+  const double c222 = d3udr3*drdy*drdy*drdy;
+  const double c112 = d3udr3*drdx*drdx*drdy;
+  const double c122 = d3udr3*drdx*drdy*drdy;
+
+  double kappa1 =
+    (-c2 * c2 * c11 + 2.0 * c1 * c2 * c12 - c1 * c1 * c22) / (pow(c1 * c1 + c2 * c2, 3.0 / 2.0));
+  double kappa2 =
+    (c1 * c2 * (c22 - c11) + (c1 * c1 - c2 * c2) * c12) / (pow(c1 * c1 + c2 * c2, 3.0 / 2.0));
+
+  // double A, b;
+  // A = c1;
+  // b = c2;
+
+  // double normGrad = sqrt(A * A + b * b);
+
+  // if(normGrad > 1e-5) {
+  //   double theta1 = atan2(b, A);
+  //   C = cos(theta1);
+  //   S = sin(theta1);
+  // } else {
+  //   // Gradient norm is too small : directions will be smoothed
+  //   C = 0.;
+  //   S = 0.;
+  // }
+
+  double g11 = C;
+  double g12 = S;
+  double g21 = -S;
+  double g22 = C;
+
+
+  // if(x == 0.25 && y == 0.25){
+  //   feInfo("g11 = %4.4f - g11 = %4.4f - g21 = %4.4f - g22 = %4.4f", g11, g12, g21, g22);
+  //   feInfo("k1 = %8.8e - k2 = %8.8e", kappa1, kappa2);
+  //   feInfo("C1 = %8.8e - H1 = %8.8e", g11 * g11 * g11 * c111 + g12 * g12 * g12 * c222 + 3. * g11 * g11 * g12 * c112 +
+  //          3. * g11 * g12 * g12 * c122, g11 * g21 * c11 + g11 * g22 * c12 + g12 * g21 * c12 + g12 * g22 * c22);
+  //   feInfo("C2 = %8.8e - H2 = %8.8e", g21 * g21 * g21 * c111 + g22 * g22 * g22 * c222 + 3. * g21 * g21 * g22 * c112 +
+  //          3. * g21 * g22 * g22 * c122, g11 * g21 * c11 + g21 * g12 * c12 + g22 * g11 * c12 + g12 * g22 * c22);
+  // }
+
+  if(direction == 0) {
+    // return C * C * C * c111 + S * S * S * c222 + 3. * C * C * S * c112 + 3. * C * S * S * c122
+    // + 3.0 * kappa1 * (g11*g21*c11 + g11*g22*c12 + g12*g21*c12 + g12*g22*c22);
+    return g11 * g11 * g11 * c111 + g12 * g12 * g12 * c222 + 3. * g11 * g11 * g12 * c112 +
+           3. * g11 * g12 * g12 * c122 +
+           3.0 * kappa1 * (g11 * g21 * c11 + g11 * g22 * c12 + g12 * g21 * c12 + g12 * g22 * c22);
+  } else if(direction == 1) {
+    // return C * C * C * c111 + S * S * S * c222 + 3. * C * C * S * c112 + 3. * C * S * S * c122
+    // + 3.0 * kappa2 * (g11*g21*c11 + g21*g12*c12 + g22*g11*c12 + g12*g22*c22);
+    return g21 * g21 * g21 * c111 + g22 * g22 * g22 * c222 + 3. * g21 * g21 * g22 * c112 +
+           3. * g21 * g22 * g22 * c122 +
+           3.0 * kappa2 * (g11 * g21 * c11 + g21 * g12 * c12 + g22 * g11 * c12 + g12 * g22 * c22);
+  } else {
+    // Compute size along a straight edge
+    return C * C * C * c111 + S * S * S * c222 + 3. * C * C * S * c112 + 3. * C * S * S * c122;
+  }
+}
+
 void computeDirectionFieldFromGradient(double x, double y, double &C, double &S, double tol,
                                        feRecovery *rec, FILE *F)
 {

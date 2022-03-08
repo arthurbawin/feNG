@@ -5,6 +5,7 @@
 #include "feSpace.h"
 #include "feNumber.h"
 #include "feSolutionContainer.h"
+#include "omp.h"
 
 class feSolutionContainer;
 
@@ -59,5 +60,7 @@ public:
 
   void printSol(std::string file = "");
 };
+
+void myFun();
 
 #endif

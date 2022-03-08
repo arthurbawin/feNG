@@ -24,8 +24,16 @@ bool inside(double* x){
 double fSol(const double t, const std::vector<double> &pos, const std::vector<double> &par) {
   double x = pos[0];
   double y = pos[1];
+
+  double x0 = 0.2;
+  double y0 = 0.4;
+  double r0 = 0.2;
+  double a = 10.0;
+  double r = sqrt((x-x0)*(x-x0) + (y-y0)*(y-y0));
+  return (1. + tanh(a*(r-r0)))/2.;
+
   // return atan(20.0*x - 10.0*sin((3.0*M_PI*y)/2.0));
-  return exp(-10.*((x-0.5)*(x-0.5) + (y-0.5)*(y-0.5)));
+  // return exp(-10.*((x-0.5)*(x-0.5) + (y-0.5)*(y-0.5)));
 }
 
 double fSource(const double t, const std::vector<double> &pos, const std::vector<double> &par)

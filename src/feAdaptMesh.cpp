@@ -12,6 +12,20 @@ feSolution *activeSolution;
 feFunction *exactSolution;
 
 #if defined(HAVE_GMSH)
+double pointwiseErrorCallback(double *x)
+{
+  std::vector<double> pos(3, 0.);
+  pos[0] = x[0];
+  pos[1] = x[1];
+
+  // double recovery = activeRecovery->evalDerivative(0, pos);
+  double recovery = exactSolution->eval(0, pos);
+  // The finite element solution interpolated at x
+  double uh = activeIntSpace->interpolateSolution(activeNumbering, activeSolution, pos);
+
+  return recovery - uh;
+}
+
 double errorSquaredCallback(double *xa, double *xb, double *xc, double *xab, double *xbc,
                             double *xca)
 {
@@ -159,9 +173,10 @@ void createCurvedMesh(feFunction *solExact, feMetaNumber *metaNumber, feSolution
   gmsh::merge("metric.o.msh");
 
   gmsh::option::setNumber("Mesh.MshFileVersion", 4.1);
+  
   computePointsUsingScaledCrossFieldPlanarP2(
     modelForMetric.c_str(), modelForMesh.c_str(), metric->getMetricViewTag(), faceTag, pts,
-    errorSquaredCallback, metricOptions.inside, gradErrorSquaredCallback);
+    errorSquaredCallback, metricOptions.inside, gradErrorSquaredCallback, pointwiseErrorCallback);
 
   // computePointsUsingScaledCrossFieldPlanarP2(modelForMetric.c_str(), modelForMesh.c_str(),
   // metric->getMetricViewTag(), faceTag, pts, NULL, metricOptions.inside);
