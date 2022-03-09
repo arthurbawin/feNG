@@ -389,9 +389,9 @@ void feSpaceTriP2::initializeAddressingVector(feNumber *number, int numElem, std
     adr[4] = number->getDDLEdge(_mesh, _cncGeoID, numElem, 1, 0);
     adr[5] = number->getDDLEdge(_mesh, _cncGeoID, numElem, 2, 0);
   }
-  //feInfo("From thread %d/%d : Ecriture elm %d : [%3d %3d %3d %3d %3d %3d]", omp_get_thread_num(),
+  // feInfo("From thread %d/%d : Ecriture elm %d : [%3d %3d %3d %3d %3d %3d]", omp_get_thread_num(),
   //  omp_get_num_threads(), numElem,
-  //adr[0],adr[1],adr[2],adr[3],adr[4],adr[5]);
+  // adr[0],adr[1],adr[2],adr[3],adr[4],adr[5]);
 }
 
 // feSpace used to interpolate on a geometric connectivity

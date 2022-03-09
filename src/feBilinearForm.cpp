@@ -55,8 +55,10 @@ feBilinearForm::feBilinearForm(std::vector<feSpace *> space, feMesh *mesh, int d
     _geoSpace(_cnc->getFeSpace()), _nGeoElm(_cnc->getNbElm()), _degQuad(degQuad)
 
 {
-  feInfo("Creating a coucou depuis thread %d/%d", omp_get_thread_num(),
+#if defined(HAVE_OMP)
+  feInfo("Creating a feBilinearForm on thread %d/%d", omp_get_thread_num(),
     omp_get_num_threads());
+#endif
   _nCoord = mesh->getDim();
   _nGeoNodes = _cnc->getNbNodePerElem();
 
@@ -110,6 +112,14 @@ feBilinearForm::feBilinearForm(std::vector<feSpace *> space, feMesh *mesh, int d
     ptrComputeMatrix = &feBilinearForm::computeMatrixAnalytical;
 }
 
+// feBilinearForm::feBilinearForm(const feBilinearForm &f)
+// {
+//   // #if defined(HAVE_OMP)
+//     feInfo("Creating a copy of a feBilinearForm on thread %d/%d", omp_get_thread_num(),
+//       omp_get_num_threads());
+//   // #endif
+// }
+
 feBilinearForm::~feBilinearForm()
 {
   // freeMatrix(_niElm, &_Ae);
@@ -122,6 +132,7 @@ feBilinearForm::~feBilinearForm()
 
 void feBilinearForm::initialize_vadij_only(feMetaNumber *metaNumber, int numElem)
 {
+  _adr.resize(_intSpace[0]->getNbFunctions());
   for(feSpace *fS : _intSpace) {
     fS->initializeAddressingVector(metaNumber->getNumbering(fS->getFieldID()), numElem, _adr);
     fS->initializeAddressingVector(metaNumber->getNumbering(fS->getFieldID()), numElem);

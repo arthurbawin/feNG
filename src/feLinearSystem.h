@@ -38,8 +38,11 @@ public:
     _formMatrices.resize(_nbThreads);
     for (int i=0; i<_nbThreads;++i){
       for(feBilinearForm *f : bilinearForms) {
-        _formResiduals[i].push_back(f);
-        if(f->hasMatrix()) _formMatrices[i].push_back(f);
+        feBilinearForm *fCpy = new feBilinearForm(*f);
+        feInfo("Copie #%d est a l'adresse", i);
+        std::cout<<fCpy<<std::endl;
+        _formResiduals[i].push_back(fCpy);
+        if(f->hasMatrix()) _formMatrices[i].push_back(fCpy);
       }
     }
   };

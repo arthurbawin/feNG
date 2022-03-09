@@ -919,28 +919,33 @@ void feSysElm_2D_Source::computeBe(std::vector<double> &J, int numElem,
                                    std::vector<double> &geoCoord, double c0, double tn, double dt,
                                    double *Be)
 {
-  int nG = geoSpace->getNbQuadPoints();
-  std::vector<double> w = geoSpace->getQuadratureWeights();
+  // int nG = geoSpace->getNbQuadPoints();
+  // std::vector<double> w = geoSpace->getQuadratureWeights();
   int nFunctions = intSpace[_idU]->getNbFunctions();
-  bool globalFunctions = intSpace[_idU]->useGlobalFunctions();
+  feInfo("Taille = %d", nFunctions);
+  // bool globalFunctions = intSpace[_idU]->useGlobalFunctions();
 
-  double jac;
-  for(int k = 0; k < nG; ++k) {
-    jac = J[nG * numElem + k];
+  // double jac;
+  // for(int k = 0; k < nG; ++k) {
+  //   jac = J[nG * numElem + k];
 
-    std::vector<double> x(3, 0.0);
-    geoSpace->interpolateVectorFieldAtQuadNode(geoCoord, k, x);
+  //   std::vector<double> x(3, 0.0);
+  //   geoSpace->interpolateVectorFieldAtQuadNode(geoCoord, k, x);
 
-    double S = _fct->eval(tn, x);
+  //   double S = _fct->eval(tn, x);
 
-    for(int i = 0; i < nFunctions; ++i) {
-      if(globalFunctions) {
-        _feU[i] = intSpace[_idU]->getGlobalFunctionAtQuadNode(numElem, i, k);
-      } else {
-        _feU[i] = intSpace[_idU]->getFunctionAtQuadNode(i, k);
-      }
-      Be[i] -= _feU[i] * S * jac * w[k];
-    }
+  //   for(int i = 0; i < nFunctions; ++i) {
+  //     if(globalFunctions) {
+  //       _feU[i] = intSpace[_idU]->getGlobalFunctionAtQuadNode(numElem, i, k);
+  //     } else {
+  //       _feU[i] = intSpace[_idU]->getFunctionAtQuadNode(i, k);
+  //     }
+  //     Be[i] -= _feU[i] * S * jac * w[k];
+  //   }
+  // }
+
+  for(int i = 0; i < nFunctions; ++i){
+    Be[i] = 1.0;
   }
 }
 
@@ -964,7 +969,7 @@ void feSysElm_2D_Diffusion::computeAe(std::vector<double> &Ja, int numElem,
   double kD = _par;
   int nFunctions = intSpace[_idU]->getNbFunctions();
   bool globalFunctions = intSpace[_idU]->useGlobalFunctions();
-  feInfo("Computing with %d", globalFunctions);
+  // feInfo("Computing with %d", globalFunctions);
 
   double J;
   // Integral over the elements
@@ -1165,6 +1170,7 @@ void feSysElm_2D_Diffusion::computeBe(std::vector<double> &Ja, int numElem,
       double dsdx = -dxdr[1] / J;
       double dsdy = dxdr[0] / J;
 
+      // A changer en OpenMP
       dudx = intSpace[_idU]->interpolateSolutionAtQuadNode_rDerivative(k) * drdx +
              intSpace[_idU]->interpolateSolutionAtQuadNode_sDerivative(k) * dsdx;
       dudy = intSpace[_idU]->interpolateSolutionAtQuadNode_rDerivative(k) * drdy +

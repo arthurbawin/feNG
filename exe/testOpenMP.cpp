@@ -69,12 +69,26 @@ int main(int argc, char **argv) {
     
   // }
 
+  std::vector<std::vector<int>> myVec = {{1, 2, 3, 4}, {5, 6, 7, 8}, {9,10,11,12},{13,14,15,16}};
+
   // int cnt = 0;
-  // #pragma omp parallel for private(cnt)
-  // for(int i = 0; i < 100; ++i){
-  //   // printf("Printing %3d from thread %d\n", i, omp_get_thread_num());
-  //   printf("Thread %d has printed %2d times\n", omp_get_thread_num(), cnt++);
-  // }
+  #pragma omp parallel
+  {
+    int cnt = 0;
+    #pragma omp for schedule(static)
+    for(int i = 0; i < 100; ++i){
+    // printf("Printing %3d from thread %d\n", i, omp_get_thread_num());
+    printf("Outer loop : Thread %d has printed %d times\n", omp_get_thread_num(), cnt++);
+
+    for(int j = 0; j < 4; ++j){
+      printf("Inner loop : myVec[%d][%d] = %d\n", omp_get_thread_num(), j, myVec[omp_get_thread_num()][j]);
+    }
+
+  }
+  }
+  
+
+  return 0;
 
   double k = 1.0;
   feFunction *funSol = new feFunction(fSol, {});

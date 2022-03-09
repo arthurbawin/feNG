@@ -3,23 +3,23 @@
 p = 1;
 lc = p;
 
+Point(1) = {0, 0, 0, lc};
+Point(2) = {p, 0, 0, lc};
+Point(3) = {p, p, 0, lc};
+Point(4) = {0, p, 0, lc};
+
+//p = 4;
+//lc = 2;
+
 //Point(1) = {0, 0, 0, lc};
 //Point(2) = {p, 0, 0, lc};
 //Point(3) = {p, p, 0, lc};
 //Point(4) = {0, p, 0, lc};
 
-p = 4;
-lc = 2;
-
-//Point(1) = {0, 0, 0, lc};
-//Point(2) = {p, 0, 0, lc};
-//Point(3) = {p, p, 0, lc};
-//Point(4) = {0, p, 0, lc};
-
-Point(1) = {-p, -p, 0, lc};
-Point(2) = { p, -p, 0, lc};
-Point(3) = { p,  p, 0, lc};
-Point(4) = {-p,  p, 0, lc};
+//Point(1) = {-p, -p, 0, lc};
+//Point(2) = { p, -p, 0, lc};
+//Point(3) = { p,  p, 0, lc};
+//Point(4) = {-p,  p, 0, lc};
 
 Line(1) = {1, 2};
 Line(2) = {2, 3};

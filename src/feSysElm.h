@@ -480,7 +480,7 @@ public:
   feSysElm_2D_Diffusion(double par, feFunction *fct) : feSysElm(true), _fct(fct), _par(par)
   {
     _ID = "diff2D";
-    matrixAnalyticalStatus = false;
+    matrixAnalyticalStatus = true;
   };
   virtual ~feSysElm_2D_Diffusion() {}
 

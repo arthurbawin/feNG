@@ -16,7 +16,7 @@ double fSol(const double t, const std::vector<double> x, const std::vector<doubl
 double fSource(const double t, const std::vector<double> pos, const std::vector<double> par)  //terme source  //par: parametre
 {
   double k = par[0];
-  return k * 30. * (pow(pos[0], 4) + pow(pos[1], 4));
+  return k * 30. * pos[0]*pos[0]*pos[0]*pos[0];
 }
 
 double fZero(const double t, const std::vector<double> &pos, const std::vector<double> &par)
@@ -74,8 +74,8 @@ int main(int argc, char **argv)
   feCheck(createFiniteElementSpace(uBord, &mesh, dim = 1, LINE, order, "U", "Bord",
                                    degreeQuadrature, funSol));  
   feInfo("Bord ok");                                
-  feCheck(createFiniteElementSpace(uDomaine, &mesh, dim = 2, TRI_CR, order, "U", "Domaine",
-                                   degreeQuadrature, funSol));                                  //où est defini le mesh ? car ligne 45 pas evident à comprendre, pourquoi pas defini comme mesh=feMesh2DP1(meshfile) 
+  feCheck(createFiniteElementSpace(uDomaine, &mesh, dim = 2, TRI, order, "U", "Domaine",
+                                   degreeQuadrature, funZero));                                  //où est defini le mesh ? car ligne 45 pas evident à comprendre, pourquoi pas defini comme mesh=feMesh2DP1(meshfile) 
                                                                                                 //qu'est ce que creatFiniteElementSpace retourne ? la fonction semble modifier uBord et uDomain (space) ? 
   
   // Define the set of all finite elements spaces and the set of feSpaces
@@ -95,6 +95,9 @@ int main(int argc, char **argv)
   // of f*phi.
   feBilinearForm diffU({uDomaine}, &mesh, degreeQuadrature, new feSysElm_2D_Diffusion(k, nullptr));  //diffU est une forme billinaire mais comment marche la fonction ? Qu'est-ce qu'elle retourne  exactement? 
   feBilinearForm sourceU({uDomaine}, &mesh, degreeQuadrature, new feSysElm_2D_Source(1.0, funSource));                
+
+  std::cout<<"Diff : "<<&diffU<<std::endl;
+  std::cout<<"Source : "<<&sourceU<<std::endl;
 
   // Initialize the linear system. Assembly of the elementary matrices and RHS is
   // performed in the solve step. Two linear solvers are available :
@@ -125,7 +128,7 @@ int main(int argc, char **argv)
   // according to the exportData structure. The linear system is assembled and solved in the
   // "makeSteps()" call.
   TimeIntegrator *solver;
-  feTolerances tol{1e-9, 1e-8, 3};
+  feTolerances tol{1e-9, 1e-8, 0};
   feCheck(createTimeIntegrator(solver, STATIONARY, tol, system, &metaNumber, &sol, &mesh, norms,
                                exportData));                                                           //BFD1, BFD2, etc ???
   feCheck(solver->makeSteps(0));

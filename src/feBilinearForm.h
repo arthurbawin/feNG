@@ -67,6 +67,7 @@ public:
 
 public:
   feBilinearForm(std::vector<feSpace *> space, feMesh *mesh, int degQuad, feSysElm *sysElm);
+  // feBilinearForm(const feBilinearForm &f);
   ~feBilinearForm();
 
   int getCncGeoTag() { return _cncGeoTag; }

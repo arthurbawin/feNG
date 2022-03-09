@@ -1,3 +1,4 @@
+#include "feNG.h"
 #include "feMesh.h"
 #include "feNumber.h"
 #include "feTriangle.h"
@@ -362,7 +363,11 @@ feMesh2DP1::feMesh2DP1(std::string meshName, bool curved, bool reversed,
     std::exit(1);
   }
   #if defined(HAVE_OMP)
+    tic();
+    feInfo("Coloring the mesh...");
     color(1); //1 for interior Element coloring
+    feInfo("Done");
+    toc();
   #endif
 }
 
