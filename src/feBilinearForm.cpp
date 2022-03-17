@@ -55,10 +55,6 @@ feBilinearForm::feBilinearForm(std::vector<feSpace *> space, feMesh *mesh, int d
     _geoSpace(_cnc->getFeSpace()), _nGeoElm(_cnc->getNbElm()), _degQuad(degQuad)
 
 {
-#if defined(HAVE_OMP)
-  feInfo("Creating a feBilinearForm on thread %d/%d", omp_get_thread_num(),
-    omp_get_num_threads());
-#endif
   _nCoord = mesh->getDim();
   _nGeoNodes = _cnc->getNbNodePerElem();
 
@@ -112,13 +108,17 @@ feBilinearForm::feBilinearForm(std::vector<feSpace *> space, feMesh *mesh, int d
     ptrComputeMatrix = &feBilinearForm::computeMatrixAnalytical;
 }
 
-// feBilinearForm::feBilinearForm(const feBilinearForm &f)
-// {
-//   // #if defined(HAVE_OMP)
-//     feInfo("Creating a copy of a feBilinearForm on thread %d/%d", omp_get_thread_num(),
-//       omp_get_num_threads());
-//   // #endif
-// }
+feBilinearForm::feBilinearForm(const feBilinearForm &f): _sysElm(f._sysElm)
+,_intSpace(f._intSpace), _cnc(f._cnc),
+    _cncGeoID(f._cncGeoID), _cncGeoTag(f._cncGeoTag),
+    _geoSpace(f._geoSpace), _nGeoElm(f._nGeoElm), _degQuad(f._degQuad),_nCoord(f._nCoord),_nGeoNodes(f._nGeoNodes)
+    ,_iVar(f._iVar),_jVar(f._jVar),_niElm(f._niElm),_njElm(f._njElm),_adrI(f._adrI),_adrJ(f._adrJ),
+    R0(f.R0),Rh(f.Rh),h0(f.h0),ptrComputeMatrix(f.ptrComputeMatrix)
+{
+
+  _Ae = allocateMatrix(_niElm, _njElm);
+  allocateResidual(_niElm, &_Be);
+}
 
 feBilinearForm::~feBilinearForm()
 {
@@ -161,6 +161,12 @@ void feBilinearForm::initialize(feMetaNumber *metaNumber, feMesh *mesh, feSoluti
     fS->initializeAddressingVector(metaNumber->getNumbering(fS->getFieldID()), numElem);
     fS->initializeSolution(sol);
     fS->initializeSolutionDot(sol);
+  }
+
+  _sol.resize(_adr.size());
+  std::vector<double> &solVec=sol->getSolutionReference();
+  for(size_t i = 0; i < _adr.size(); ++i) {
+    _sol[i] = solVec[_adr[i]];
   }
 
   _geoCoord = mesh->getCoord(_cncGeoTag, numElem);
@@ -214,9 +220,14 @@ void feBilinearForm::computeResidual(feMetaNumber *metaNumber, feMesh *mesh, feS
 {
   this->initialize(metaNumber, mesh, sol, numElem);
   setResidualToZero(_niElm, &_Be);
+
   std::vector<double> &J = _cnc->getJacobians();
   _sysElm->computeBe(J, numElem, _intSpace, _geoSpace, _geoCoord, sol->getC0(),
-                     sol->getCurrentTime(), sol->getTimeStep(), _Be);
+                     sol->getCurrentTime(), sol->getTimeStep(), _Be,_sol,_idU,_feU,_feUdx,_feUdy);
+  // #pragma omp critical
+  // {
+  // printf("%d;",numElem);for(int jj = 0; jj < 6; ++jj)std::cout<<_Be[jj]<<" "; std::cout<<std::endl;
+  // }
   // printResidual(_niElm, &_Be);
 }
 
@@ -235,7 +246,7 @@ void feBilinearForm::computeMatrixFiniteDifference(feMetaNumber *metaNumber, feM
   setResidualToZero(_niElm, &R0);
   std::vector<double> &J = _cnc->getJacobians();
   _sysElm->computeBe(J, numElem, _intSpace, _geoSpace, _geoCoord, C0, sol->getCurrentTime(),
-                     sol->getTimeStep(), R0);
+                     sol->getTimeStep(), R0, _sol,_idU,_feU,_feUdx,_feUdy);
   //_sysElm->computeAe(_intSpace, _geoSpace, _geoCoord, sol->getC0(), sol->getCurrentTime(), _Ae);
   // On boucle sur les fespace des inconnues
   // ==================================================================
@@ -244,26 +255,26 @@ void feBilinearForm::computeMatrixFiniteDifference(feMetaNumber *metaNumber, feM
   feInt numColumn = 0;
   for(size_t k = 0; k < _jVar.size(); k++) {
     feSpace *Unknowns = _intSpace[_jVar[k]];
-    std::vector<double> &_sol = Unknowns->getSolutionReference();
-    std::vector<double> &_soldot = Unknowns->getSolutionReferenceDot();
+    std::vector<double> &solVec = Unknowns->getSolutionReference();
+    std::vector<double> &soldotVec = Unknowns->getSolutionReferenceDot();
     // On boucle sur les coefficients de la fonction d'interpolation
     for(feInt j = 0; j < Unknowns->getNbFunctions(); j++, numColumn++) {
-      double temp_sol = _sol[j];
-      double temp_soldot = _soldot[j];
+      double temp_sol = solVec[j];
+      double temp_soldot = soldotVec[j];
       double delta_h = h0 * std::max(fabs(temp_sol), 1.0);
       double invdelta_h = 1.0 / delta_h;
 
-      _sol[j] = _sol[j] + delta_h;
-      _soldot[j] = _soldot[j] + delta_h * C0;
+      solVec[j] = solVec[j] + delta_h;
+      soldotVec[j] = soldotVec[j] + delta_h * C0;
 
       setResidualToZero(_niElm, &Rh);
       _sysElm->computeBe(J, numElem, _intSpace, _geoSpace, _geoCoord, C0, sol->getCurrentTime(),
-                         sol->getTimeStep(), Rh);
+                         sol->getTimeStep(), Rh, _sol,_idU,_feU,_feUdx,_feUdy);
 
       for(feInt i = 0; i < _niElm; i++) _Ae[i][numColumn] = (-Rh[i] + R0[i]) * invdelta_h;
 
-      _sol[j] = temp_sol;
-      _soldot[j] = temp_soldot;
+      solVec[j] = temp_sol;
+      soldotVec[j] = temp_soldot;
     }
   }
   // for(auto val : _adrI)

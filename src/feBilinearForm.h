@@ -48,6 +48,12 @@ public:
   std::vector<int> _adr;
   std::vector<double> _sol;
 
+  int _idU; 
+  std::vector<double> _feU;
+  std::vector<double> _feUdx;
+  std::vector<double> _feUdy;
+
+
   // ==================================================================
   // Pointeur sur la méthode de construction de la matrice élémentaire
   // (1) Utilisation d'une construction analytique
@@ -67,7 +73,7 @@ public:
 
 public:
   feBilinearForm(std::vector<feSpace *> space, feMesh *mesh, int degQuad, feSysElm *sysElm);
-  // feBilinearForm(const feBilinearForm &f);
+  feBilinearForm(const feBilinearForm &f);
   ~feBilinearForm();
 
   int getCncGeoTag() { return _cncGeoTag; }
@@ -100,27 +106,32 @@ public:
   void printInfo()
   {
     printf("============== Bilinear form ==============\n");
-    printf("_cncGeoTag = %d\n", _cncGeoTag);
-    printf("_nCoord = %d\n", _nCoord);
-    printf("_nGeoNodes = %d\n", _nGeoNodes);
-    printf("_nGeoElm = %d\n", _nGeoElm);
-    printf("_geoCoord :");
-    for(auto val : _geoCoord) std::cout << val << " ";
-    std::cout << std::endl;
-    printf("_iVar :");
-    for(auto val : _iVar) std::cout << val << " ";
-    std::cout << std::endl;
-    printf("_jVar :");
-    for(auto val : _jVar) std::cout << val << " ";
-    std::cout << std::endl;
-    printf("_adrI :");
-    for(auto val : _adrI) std::cout << val << " ";
-    std::cout << std::endl;
-    printf("_adrJ :");
-    for(auto val : _adrJ) std::cout << val << " ";
-    std::cout << std::endl;
-    // printf("_Ae :"); for(auto val : _Ae) std::cout<<val<<" "; std::cout<<std::endl;
-    // printf("_Be :"); for(auto val : _Be) std::cout<<val<<" "; std::cout<<std::endl;
+    //printf("_cncGeoTag = %d\n", _cncGeoTag);
+    //printf("_nCoord = %d\n", _nCoord);
+    //printf("_nGeoNodes = %d\n", _nGeoNodes);
+    //printf("_nGeoElm = %d\n", _nGeoElm);
+    printf("feBili ID : %s \n",getID().c_str());
+    std::cout<<"Adresse feBili : "<<this<<std::endl;
+    //printf("_geoCoord :");
+    //for(auto val : _geoCoord) std::cout << val << " ";
+    //std::cout << std::endl;
+    //printf("_iVar :");
+    //for(auto val : _iVar) std::cout << val << " ";
+    //std::cout << std::endl;
+    //printf("_jVar :");
+    //for(auto val : _jVar) std::cout << val << " ";
+    //std::cout << std::endl;
+    // printf("_adrI :");
+    // for(auto val : _adrI) std::cout << val << " ";
+    // std::cout << std::endl;
+    // printf("_adrJ :");
+    // for(auto val : _adrJ) std::cout << val << " ";
+    // std::cout << std::endl;
+    //printf("_Ae :"); for(auto val : _Ae) std::cout<<val<<" "; std::cout<<std::endl;
+    //printf("_Be :"); for(auto val : _Be) 
+    //printf("Adresse Be :");std::cout<<_Be<<std::endl;
+    //printf("_Be :"); for(int jj = 0; jj < 6; ++jj)std::cout<<_Be[jj]<<" "; std::cout<<std::endl;
+        
   }
 };
 

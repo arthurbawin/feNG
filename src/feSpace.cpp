@@ -280,6 +280,7 @@ void feSpace::initializeSolution(std::vector<double> &sol)
   }
 }
 
+
 void feSpace::initializeSolutionDot(feSolution *sol)
 {
   _soldot.resize(_adr.size());
@@ -476,6 +477,20 @@ double feSpace::interpolateFieldAtQuadNode_rDerivative(std::vector<double> field
     return res;
   }
   for(int i = 0; i < _nFunctions; ++i) res += field[i] * _dLdr[_nFunctions * iNode + i];
+  return res;
+}
+
+
+double feSpace::interpolateFieldAtQuadNode_sDerivative(std::vector<double> field, int iNode)
+{
+  double res = 0.0;
+  if(field.size() != (unsigned)_nFunctions) {
+    printf(" In feSpace::interpolateFieldAtQuadNode : Erreur - Nombre de valeurs nodales (%d) non "
+           "compatible avec le nombre d'interpolants de l'espace (%d).\n",
+           field.size(), (unsigned)_nFunctions);
+    return res;
+  }
+  for(int i = 0; i < _nFunctions; ++i) res += field[i] * _dLds[_nFunctions * iNode + i];
   return res;
 }
 

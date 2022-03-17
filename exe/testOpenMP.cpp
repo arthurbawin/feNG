@@ -20,7 +20,7 @@ int main(int argc, char **argv) {
   petscInitialize(argc, argv);
 
   // Set the default parameters.
-  const char *meshFile = "squareTest4.msh";
+  const char *meshFile = "squareTest6.msh";
   int verbosity = 2;
   int order = 2;                   //par defaut 1 sinon lors de la compilation -o --order XX  ? 
   int degreeQuadrature = 10;       //par defaut 10 sinon lors de la compilation -dquad --degreeQuadrature XX  ?
@@ -69,27 +69,26 @@ int main(int argc, char **argv) {
     
   // }
 
-  std::vector<std::vector<int>> myVec = {{1, 2, 3, 4}, {5, 6, 7, 8}, {9,10,11,12},{13,14,15,16}};
+  // std::vector<std::vector<int>> myVec = {{1, 2, 3, 4}, {5, 6, 7, 8}, {9,10,11,12},{13,14,15,16}};
 
-  // int cnt = 0;
-  #pragma omp parallel
-  {
-    int cnt = 0;
-    #pragma omp for schedule(static)
-    for(int i = 0; i < 100; ++i){
-    // printf("Printing %3d from thread %d\n", i, omp_get_thread_num());
-    printf("Outer loop : Thread %d has printed %d times\n", omp_get_thread_num(), cnt++);
+  // // int cnt = 0;
+  // #pragma omp parallel
+  // {
+  //   int cnt = 0;
+  //   #pragma omp for schedule(static)
+  //   for(int i = 0; i < 100; ++i){
+  //   // printf("Printing %3d from thread %d\n", i, omp_get_thread_num());
+  //   printf("Outer loop : Thread %d has printed %d times\n", omp_get_thread_num(), cnt++);
 
-    for(int j = 0; j < 4; ++j){
-      printf("Inner loop : myVec[%d][%d] = %d\n", omp_get_thread_num(), j, myVec[omp_get_thread_num()][j]);
-    }
+  //   for(int j = 0; j < 4; ++j){
+  //     printf("Inner loop : myVec[%d][%d] = %d\n", omp_get_thread_num(), j, myVec[omp_get_thread_num()][j]);
+  //   }
 
-  }
-  }
+  // }
+  // }
   
 
-  return 0;
-
+  
   double k = 1.0;
   feFunction *funSol = new feFunction(fSol, {});
   feFunction *funSource = new feFunction(fSource, {k});
@@ -118,6 +117,7 @@ int main(int argc, char **argv) {
   //  createLinearSystem(system, MKLPARDISO, {&diffU, &sourceU}, &metaNumber, &mesh, argc, argv));
   feCheck(createLinearSystem(system, PETSC, {&diffU, &sourceU}, &metaNumber, &mesh, argc, argv));
   
+
   // Define post-processing tools to compute norms and whatnot (norms will be replaced by
   // fePostProc)
   feNorm normU(uDomaine, &mesh, degreeQuadrature, funSol);
@@ -131,6 +131,7 @@ int main(int argc, char **argv) {
   std::string vtkFileRoot = "root";
   feExportData exportData = {exporter, exportEveryNSteps, vtkFileRoot};
 
+  feInfo("test");
   // Solve the discrete problem. Initialize a TimeIntegrator object and tolerances on the
   // Newton-Raphson nonlinear solver (tolerance on the solution correction dx, tolerance on the
   // residual, max number of iterations). Here the PDE is linear : the nonlinear solver should
@@ -138,6 +139,7 @@ int main(int argc, char **argv) {
   // deferred-correction method (DC2F, DC3, DC3F). The solution will be exported for visualization
   // according to the exportData structure. The linear system is assembled and solved in the
   // "makeSteps()" call.
+
   TimeIntegrator *solver;
   feTolerances tol{1e-9, 1e-8, 3};
   feCheck(createTimeIntegrator(solver, STATIONARY, tol, system, &metaNumber, &sol, &mesh, norms,

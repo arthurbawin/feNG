@@ -167,6 +167,7 @@ public:
   double interpolateFieldAtQuadNode(std::vector<double> field, int iNode);
   double interpolateField_rDerivative(std::vector<double> field, double r[3]);
   double interpolateFieldAtQuadNode_rDerivative(std::vector<double> field, int iNode);
+  double interpolateFieldAtQuadNode_sDerivative(std::vector<double> field, int iNode);
 
   double interpolateSolution(double r[3]);
   double interpolateSolution_rDerivative(double r[3]);
