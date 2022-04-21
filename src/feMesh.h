@@ -37,6 +37,13 @@ protected:
 
   std::map<std::string, int> _cncGeoMap;
 
+  std::vector <int> _colorElm;
+  int _nbColor;
+  std::vector <int> _nbElmPerColor;
+  std::vector <int> _list;
+  std::vector<int> _indexStartColorInList;
+
+
 public:
   feMesh(int nNod = 0, int dim = 0, int nCncGeo = 0, std::string ID = "")
     : _ID(ID), _dim(dim), _nNod(nNod), _nEdg(0), _nCncGeo(nCncGeo){};
@@ -93,7 +100,13 @@ public:
 
   void printInfo(bool printConnectivities = true);
 
-  std::vector<int> color(int cncGeoTag = 0); //i=0 => borders; i=1 =>element
+  void color(int cncGeoTag = 0); //i=0 => borders; i=1 =>element
+  std::vector<int> getColorElm(){return _colorElm;};
+  int getNbColor(){return _nbColor;};
+  std::vector<int> getNbElmPerColor(){return _nbElmPerColor;};
+  std::vector<int> getList(){return _list;};
+  std::vector<int> getIndexStartColorInList(){return _indexStartColorInList;};
+  
 };
 
 class feMesh1DP1 : public feMesh

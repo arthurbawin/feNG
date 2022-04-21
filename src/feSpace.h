@@ -15,7 +15,7 @@
 typedef Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> EigenMat;
 
 /* Supported geometries to define finite element spaces */
-typedef enum { POINT, LINE, TRI } elemType;
+typedef enum { POINT, LINE, LINE_CR, TRI, TRI_CR } elemType;
 
 class feMesh;
 class feNumber;
@@ -167,6 +167,7 @@ public:
   double interpolateFieldAtQuadNode(std::vector<double> field, int iNode);
   double interpolateField_rDerivative(std::vector<double> field, double r[3]);
   double interpolateFieldAtQuadNode_rDerivative(std::vector<double> field, int iNode);
+  double interpolateFieldAtQuadNode_sDerivative(std::vector<double> field, int iNode);
 
   double interpolateSolution(double r[3]);
   double interpolateSolution_rDerivative(double r[3]);
@@ -312,6 +313,12 @@ public:
   virtual std::vector<double> dLdr(double r[3]) { return {0.}; };
   virtual std::vector<double> dLds(double r[3]) { return {0.}; };
   virtual std::vector<double> dLdt(double r[3]) { return {0.}; };
+
+  virtual feStatus Lphys(int iElm, std::vector<double> &x, std::vector<double> &L, std::vector<double> &dLdx, std::vector<double> &dLdy)
+  {
+    printf("Not implemented\n");
+    exit(-1);
+  };
 
   virtual void initializeNumberingUnknowns(feNumber *number);
   virtual void initializeNumberingEssential(feNumber *number);

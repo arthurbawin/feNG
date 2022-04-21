@@ -26,6 +26,12 @@ typedef struct feMetricOptions {
   int directionFieldFromDerivativesOfOrder;
 
   bool (*inside)(double *);
+
+  // MMG parameters
+  std::string meshName;
+  std::string adaptedMeshName;
+  double gradation;
+
 } feMetricOptions;
 
 class feMetric

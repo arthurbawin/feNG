@@ -14,10 +14,12 @@ typedef enum { MKLPARDISO, PETSC } linearSolverType;
 class feLinearSystem
 {
 protected:
-  std::vector<feBilinearForm *> _formMatrices;
-  std::vector<feBilinearForm *> _formResiduals;
+  std::vector<std::vector <feBilinearForm *>> _formMatrices;
+  std::vector<std::vector <feBilinearForm *>> _formResiduals;
   feMetaNumber *_metaNumber;
   feMesh *_mesh;
+
+  int _nbThreads;
 
   bool recomputeMatrix;
 
@@ -26,9 +28,20 @@ public:
                  feMesh *mesh)
     : _metaNumber(metaNumber), _mesh(mesh), recomputeMatrix(false)
   {
-    for(feBilinearForm *f : bilinearForms) {
-      _formResiduals.push_back(f);
-      if(f->hasMatrix()) _formMatrices.push_back(f);
+    
+    _nbThreads=1;
+    #if defined(HAVE_OMP)
+     _nbThreads=omp_get_max_threads();
+    #endif
+
+    _formResiduals.resize(_nbThreads);
+    _formMatrices.resize(_nbThreads);
+    for (int i=0; i<_nbThreads;++i){
+      for(feBilinearForm *f : bilinearForms) {
+        feBilinearForm *fCpy = new feBilinearForm(*f);
+        _formResiduals[i].push_back(fCpy);
+        if(f->hasMatrix()) _formMatrices[i].push_back(fCpy);
+      }
     }
   };
   virtual ~feLinearSystem() {}
@@ -49,6 +62,9 @@ public:
   virtual void applyCorrectionToResidual(double coeff, std::vector<double> &d){};
   virtual void viewMatrix(){};
   virtual void printResidual(){};
+  virtual int getNbThreads(){return _nbThreads;};
+  virtual std::vector<std::vector <feBilinearForm *>> getformMatrices(){return _formMatrices;};
+  virtual std::vector<std::vector <feBilinearForm *>> getformResiduals(){return _formResiduals;};
 };
 
 feStatus createLinearSystem(feLinearSystem *&system, linearSolverType type,

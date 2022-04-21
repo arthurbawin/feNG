@@ -17,49 +17,49 @@ double fSource(const double t, const std::vector<double> x, const std::vector<do
   return k * 30. * pow(x[0], 4);
 }
 
-int main(){
-#if defined(HAVE_METIS)
+// int main(){
+// #if defined(HAVE_METIS)
 
-    idx_t nVertices = 6;
-    idx_t nEdges    = 7;
-    idx_t nWeights  = 1;
-    idx_t nParts    = 2;
+//     idx_t nVertices = 6;
+//     idx_t nEdges    = 7;
+//     idx_t nWeights  = 1;
+//     idx_t nParts    = 2;
 
-    idx_t objval;
+//     idx_t objval;
 
-    idx_t part[6];
+//     idx_t part[6];
 
 
-    // Indexes of starting points in adjacent array
-    idx_t xadj[7] = {0,2,5,7,9,12,14};
+//     // Indexes of starting points in adjacent array
+//     idx_t xadj[7] = {0,2,5,7,9,12,14};
 
-    // Adjacent vertices in consecutive index order
-    idx_t adjncy[14] = {1,3,0,4,2,1,5,0,4,3,1,5,4,2};
+//     // Adjacent vertices in consecutive index order
+//     idx_t adjncy[14] = {1,3,0,4,2,1,5,0,4,3,1,5,4,2};
 
-    // Weights of vertices
-    // if all weights are equal then can be set to NULL
-    idx_t vwgt[6];
+//     // Weights of vertices
+//     // if all weights are equal then can be set to NULL
+//     idx_t vwgt[6];
     
 
-    // int ret = METIS_PartGraphRecursive(&nVertices,& nWeights, xadj, adjncy,
-    //               NULL, NULL, NULL, &nParts, NULL,
-    //               NULL, NULL, &objval, part);
+//     // int ret = METIS_PartGraphRecursive(&nVertices,& nWeights, xadj, adjncy,
+//     //               NULL, NULL, NULL, &nParts, NULL,
+//     //               NULL, NULL, &objval, part);
 
-    int ret = METIS_PartGraphKway(&nVertices,& nWeights, xadj, adjncy,
-               NULL, NULL, NULL, &nParts, NULL,
-               NULL, NULL, &objval, part);
+//     int ret = METIS_PartGraphKway(&nVertices,& nWeights, xadj, adjncy,
+//                NULL, NULL, NULL, &nParts, NULL,
+//                NULL, NULL, &objval, part);
 
-    feInfo("Return value = %d", ret);
+//     feInfo("Return value = %d", ret);
     
-    for(unsigned part_i = 0; part_i < nVertices; part_i++){
-  std::cout << part_i << " " << part[part_i] << std::endl;
-    }
+//     for(unsigned part_i = 0; part_i < nVertices; part_i++){
+//   std::cout << part_i << " " << part[part_i] << std::endl;
+//     }
 
-#endif
-    return 0;
-}
+// #endif
+//     return 0;
+// }
 
-int main2(int argc, char **argv)
+int main(int argc, char **argv)
 {
   //petscInitialize(argc, argv);
 
@@ -87,57 +87,57 @@ int main2(int argc, char **argv)
   setVerbose(verbosity);
 
   // Create a mesh structure from a Gmsh mesh file (version 2.2, 4.1+)
-  feMesh2DP1 mesh(meshFile);    //P1 car order=1 ? //on peut inclure d'autres pararametre (exemple bool curved), si pas inclut prend valeurs par defaut definies dans .h                                                                                          //que contient mesh ?    
+  feMesh2DP1 mesh(meshFile);   
+  
+  // std::vector <int> list=mesh.getList();  
+  // for (int i=0;i<list.size();++i){
+  //   feInfo("%d - %d",i,list[i]);
+  // }
+  // feInfo("%d",mesh.getNbInteriorElems());
 
-  std::vector<int> colorElm = mesh.color(1);
+  // std::vector <int> nbElmPerColor=mesh.getNbElmPerColor();  
+  // std::vector<int> index=mesh.getIndexStartColorInList();
 
-  FILE *f = fopen("myBeautifulColors.pos", "w");
-  fprintf(f, "View \"coucou\" {\n");
+  // for (int i=0;i<nbElmPerColor.size();++i){
+  //   feInfo("%d = %d - %d",i,nbElmPerColor[i],index[i]);
+  // }
+  // feInfo("%d",mesh.getNbColor());
 
-  feCncGeo *cnc = mesh.getCncGeoByTag(1);
+  // int nbColor=mesh.getNbColor();
+  // std::vector <int> colorElm=mesh.getColorElm();
+  // for (int i=0;i<colorElm.size();++i){
+  //   feInfo("%d = %d",i,colorElm[i]);
+  // }
+  // feInfo("%d",mesh.getNbInteriorElems());
+  
+  // int nbColor=mesh.getNbColor();
+  // feInfo("%d",nbColor);
+  
 
-  int nElm = cnc->getNbElm();
-  for(int i = 0; i < nElm; ++i){
-    fprintf(f, "ST(");
-    for(int j = 0; j < 3; ++j){
-      int iVert = cnc->getNodeConnectivity(i, j);
-      Vertex *v = mesh.getVertex(iVert);
-      fprintf(f, "%4.4f, %4.4f, %4.4f", v->x(), v->y(), v->z());
-      if(j < 2)
-        fprintf(f, ",");
-    }
-    fprintf(f, "){%d, %d, %d};\n", colorElm[i], colorElm[i], colorElm[i]);
-  }
+  // FILE *f = fopen("myBeautifulColors.pos", "w");
+  // fprintf(f, "View \"coucou\" {\n");
 
-  fprintf(f, "};");
-  fclose(f);
+  // feCncGeo *cnc = mesh.getCncGeoByTag(1);
 
-  for (int k=0;k<colorElm.size();++k){
-    feInfo("%d-%d",k,colorElm[k]);
-  }
+  // int nElm = cnc->getNbElm();
+  // for(int i = 0; i < nElm; ++i){
+  //   fprintf(f, "ST(");
+  //   for(int j = 0; j < 3; ++j){
+  //     int iVert = cnc->getNodeConnectivity(i, j);
+  //     Vertex *v = mesh.getVertex(iVert);
+  //     fprintf(f, "%4.4f, %4.4f, %4.4f", v->x(), v->y(), v->z());
+  //     if(j < 2)
+  //       fprintf(f, ",");
+  //   }
+  //   fprintf(f, "){%d, %d, %d};\n", colorElm[i], colorElm[i], colorElm[i]);
+  // }
 
-  // Free the used memory
-  // delete solver;
-  // delete exporter;
-  // delete uBord;
-  // delete uDomaine;
-  // delete funSol;
-  // delete funSource;
-
-  // petscFinalize();
-
+  // fprintf(f, "};");
+  // fclose(f);
 
   return 0;
 }
 
-
-
-//recuperer le nombre d'element de la conncetivté
-//recuperer le nombre de noeuds de la conncectivité
-
-//parcourir les elements de la connectivité
-//recuperer le nombre de noeuds par element
-//recuperer le ni
 
 
 

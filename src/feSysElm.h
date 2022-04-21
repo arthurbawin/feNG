@@ -40,7 +40,7 @@ public:
                          double **Ae) = 0;
   virtual void computeBe(std::vector<double> &J, int numElem, std::vector<feSpace *> &intSpace,
                          feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn,
-                         double dt, double *Be) = 0;
+                         double dt, double *Be, std::vector<double> &sol,int &idU, std::vector<double> &feU,std::vector<double> &feUdx,std::vector<double> &feUdy) = 0;
 };
 
 class feSysElm_0D_StiffSpring : public feSysElm
@@ -64,7 +64,7 @@ public:
                          double **Ae);
   virtual void computeBe(std::vector<double> &J, int numElem, std::vector<feSpace *> &intSpace,
                          feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn,
-                         double dt, double *Be);
+                         double dt, double *Be, std::vector<double> &sol,int &idU, std::vector<double> &feU,std::vector<double> &feUdx,std::vector<double> &feUdy);
 };
 
 class feSysElm_0D_Stiff2 : public feSysElm
@@ -89,7 +89,7 @@ public:
                          double **Ae);
   virtual void computeBe(std::vector<double> &J, int numElem, std::vector<feSpace *> &intSpace,
                          feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn,
-                         double dt, double *Be);
+                         double dt, double *Be, std::vector<double> &sol,int &idU, std::vector<double> &feU,std::vector<double> &feUdx,std::vector<double> &feUdy);
 };
 
 class feSysElm_0D_Stiff3 : public feSysElm
@@ -114,7 +114,7 @@ public:
                          double **Ae);
   virtual void computeBe(std::vector<double> &J, int numElem, std::vector<feSpace *> &intSpace,
                          feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn,
-                         double dt, double *Be);
+                         double dt, double *Be, std::vector<double> &sol,int &idU, std::vector<double> &feU,std::vector<double> &feUdx,std::vector<double> &feUdy);
 };
 
 class feSysElm_0D_weakBC : public feSysElm
@@ -137,7 +137,7 @@ public:
                          double **Ae);
   virtual void computeBe(std::vector<double> &J, int numElem, std::vector<feSpace *> &intSpace,
                          feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn,
-                         double dt, double *Be);
+                         double dt, double *Be, std::vector<double> &sol,int &idU, std::vector<double> &feU,std::vector<double> &feUdx,std::vector<double> &feUdy);
 };
 
 class feSysElm_0D_weakBC_edo1 : public feSysElm
@@ -161,7 +161,7 @@ public:
                          double **Ae);
   virtual void computeBe(std::vector<double> &J, int numElem, std::vector<feSpace *> &intSpace,
                          feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn,
-                         double dt, double *Be);
+                         double dt, double *Be, std::vector<double> &sol,int &idU, std::vector<double> &feU,std::vector<double> &feUdx,std::vector<double> &feUdy);
 };
 
 class feSysElm_0D_weakBC_edo1_V2 : public feSysElm
@@ -185,7 +185,7 @@ public:
                          double **Ae);
   virtual void computeBe(std::vector<double> &J, int numElem, std::vector<feSpace *> &intSpace,
                          feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn,
-                         double dt, double *Be);
+                         double dt, double *Be, std::vector<double> &sol,int &idU, std::vector<double> &feU,std::vector<double> &feUdx,std::vector<double> &feUdy);
 };
 
 class feSysElm_0D_weakBC_edo2 : public feSysElm
@@ -210,7 +210,7 @@ public:
                          double **Ae);
   virtual void computeBe(std::vector<double> &J, int numElem, std::vector<feSpace *> &intSpace,
                          feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn,
-                         double dt, double *Be);
+                         double dt, double *Be, std::vector<double> &sol,int &idU, std::vector<double> &feU,std::vector<double> &feUdx,std::vector<double> &feUdy);
 };
 
 class feSysElm_0D_Masse : public feSysElm
@@ -231,7 +231,7 @@ public:
                          double **Ae);
   virtual void computeBe(std::vector<double> &J, int numElem, std::vector<feSpace *> &intSpace,
                          feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn,
-                         double dt, double *Be);
+                         double dt, double *Be, std::vector<double> &sol,int &idU, std::vector<double> &feU,std::vector<double> &feUdx,std::vector<double> &feUdy);
 };
 
 class feSysElm_0D_Source : public feSysElm
@@ -252,7 +252,7 @@ public:
                          double **Ae){};
   virtual void computeBe(std::vector<double> &J, int numElem, std::vector<feSpace *> &intSpace,
                          feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn,
-                         double dt, double *Be);
+                         double dt, double *Be, std::vector<double> &sol,int &idU, std::vector<double> &feU,std::vector<double> &feUdx,std::vector<double> &feUdy);
 };
 
 class feSysElm_0D_Source_crossed : public feSysElm
@@ -274,7 +274,7 @@ public:
                          double **Ae){};
   virtual void computeBe(std::vector<double> &J, int numElem, std::vector<feSpace *> &intSpace,
                          feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn,
-                         double dt, double *Be);
+                         double dt, double *Be, std::vector<double> &sol,int &idU, std::vector<double> &feU,std::vector<double> &feUdx,std::vector<double> &feUdy);
 };
 
 // class feSysElm_1D_weakBC_Vec : public feSysElm {
@@ -302,7 +302,7 @@ public:
 //                          double **Ae);
 //   virtual void computeBe(std::vector<double> &J, int numElem, std::vector<feSpace *> &intSpace,
 //                          feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn,
-//                          double dt, double *Be);
+//                          double dt, double *Be, std::vector<double> &sol,int &idU, std::vector<double> &feU,std::vector<double> &feUdx,std::vector<double> &feUdy);
 // };
 
 class feSysElm_1D_weakBC_edo1 : public feSysElm
@@ -327,7 +327,7 @@ public:
                          double **Ae);
   virtual void computeBe(std::vector<double> &J, int numElem, std::vector<feSpace *> &intSpace,
                          feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn,
-                         double dt, double *Be);
+                         double dt, double *Be, std::vector<double> &sol,int &idU, std::vector<double> &feU,std::vector<double> &feUdx,std::vector<double> &feUdy);
 };
 
 class feSysElm_1D_Source : public feSysElm
@@ -349,7 +349,7 @@ public:
                          double **Ae){};
   virtual void computeBe(std::vector<double> &J, int numElem, std::vector<feSpace *> &intSpace,
                          feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn,
-                         double dt, double *Be);
+                         double dt, double *Be, std::vector<double> &sol,int &idU, std::vector<double> &feU,std::vector<double> &feUdx,std::vector<double> &feUdy);
 };
 
 class feSysElm_1D_Diffusion : public feSysElm
@@ -371,7 +371,7 @@ public:
                          double **Ae);
   virtual void computeBe(std::vector<double> &J, int numElem, std::vector<feSpace *> &intSpace,
                          feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn,
-                         double dt, double *Be);
+                         double dt, double *Be, std::vector<double> &sol,int &idU, std::vector<double> &feU,std::vector<double> &feUdx,std::vector<double> &feUdy);
 };
 
 class feSysElm_1D_Masse : public feSysElm
@@ -393,7 +393,7 @@ public:
                          double **Ae);
   virtual void computeBe(std::vector<double> &J, int numElem, std::vector<feSpace *> &intSpace,
                          feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn,
-                         double dt, double *Be);
+                         double dt, double *Be, std::vector<double> &sol,int &idU, std::vector<double> &feU,std::vector<double> &feUdx,std::vector<double> &feUdy);
 };
 
 // class feSysElm_1D_NeumannBC : public feSysElm {
@@ -414,7 +414,7 @@ public:
 //                          double **Ae);
 //   virtual void computeBe(std::vector<double> &J, int numElem, std::vector<feSpace *> &intSpace,
 //                          feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn,
-//                          double dt, double *Be);
+//                          double dt, double *Be, std::vector<double> &sol,int &idU, std::vector<double> &feU,std::vector<double> &feUdx,std::vector<double> &feUdy);
 // };
 
 class feSysElm_2D_Masse : public feSysElm
@@ -437,7 +437,7 @@ public:
                          double **Ae);
   virtual void computeBe(std::vector<double> &J, int numElem, std::vector<feSpace *> &intSpace,
                          feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn,
-                         double dt, double *Be);
+                         double dt, double *Be, std::vector<double> &sol,int &idU, std::vector<double> &feU,std::vector<double> &feUdx,std::vector<double> &feUdy);
 };
 
 class feSysElm_2D_Source : public feSysElm
@@ -463,7 +463,7 @@ public:
                          double **Ae){};
   virtual void computeBe(std::vector<double> &J, int numElem, std::vector<feSpace *> &intSpace,
                          feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn,
-                         double dt, double *Be);
+                         double dt, double *Be, std::vector<double> &sol,int &idU, std::vector<double> &feU,std::vector<double> &feUdx,std::vector<double> &feUdy);
 };
 
 class feSysElm_2D_Diffusion : public feSysElm
@@ -471,7 +471,7 @@ class feSysElm_2D_Diffusion : public feSysElm
 protected:
   feFunction *_fct;
   double _par; // Parametre
-  int _idU;
+  int _idU; 
   std::vector<double> _feU;
   std::vector<double> _feUdx;
   std::vector<double> _feUdy;
@@ -480,7 +480,7 @@ public:
   feSysElm_2D_Diffusion(double par, feFunction *fct) : feSysElm(true), _fct(fct), _par(par)
   {
     _ID = "diff2D";
-    matrixAnalyticalStatus = false;
+    matrixAnalyticalStatus = true;
   };
   virtual ~feSysElm_2D_Diffusion() {}
 
@@ -490,7 +490,7 @@ public:
                          double **Ae);
   virtual void computeBe(std::vector<double> &J, int numElem, std::vector<feSpace *> &intSpace,
                          feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn,
-                         double dt, double *Be);
+                         double dt, double *Be, std::vector<double> &sol, int &idU, std::vector<double> &feU, std::vector<double> &feUdx,std::vector<double> &feUdy);
 };
 
 class feSysElm_2D_Advection : public feSysElm
@@ -517,7 +517,7 @@ public:
                          double **Ae);
   virtual void computeBe(std::vector<double> &J, int numElem, std::vector<feSpace *> &intSpace,
                          feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn,
-                         double dt, double *Be);
+                         double dt, double *Be, std::vector<double> &sol,int &idU, std::vector<double> &feU,std::vector<double> &feUdx,std::vector<double> &feUdy);
 };
 
 class feSysElm_2D_Stokes : public feSysElm
@@ -551,7 +551,7 @@ public:
                          double **Ae);
   virtual void computeBe(std::vector<double> &J, int numElem, std::vector<feSpace *> &intSpace,
                          feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn,
-                         double dt, double *Be);
+                         double dt, double *Be, std::vector<double> &sol,int &idU, std::vector<double> &feU,std::vector<double> &feUdx,std::vector<double> &feUdy);
 };
 
 class feSysElm_2D_NavierStokes : public feSysElm
@@ -587,7 +587,7 @@ public:
                          double **Ae);
   virtual void computeBe(std::vector<double> &J, int numElem, std::vector<feSpace *> &intSpace,
                          feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn,
-                         double dt, double *Be);
+                         double dt, double *Be, std::vector<double> &sol,int &idU, std::vector<double> &feU,std::vector<double> &feUdx,std::vector<double> &feUdy);
 };
 
 // Outflow boundary condition
@@ -623,7 +623,7 @@ public:
                          double **Ae);
   virtual void computeBe(std::vector<double> &J, int numElem, std::vector<feSpace *> &intSpace,
                          feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn,
-                         double dt, double *Be);
+                         double dt, double *Be, std::vector<double> &sol,int &idU, std::vector<double> &feU,std::vector<double> &feUdx,std::vector<double> &feUdy);
 };
 
 #endif

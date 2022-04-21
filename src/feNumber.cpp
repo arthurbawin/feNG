@@ -47,7 +47,7 @@ void feNumber::defDDLElement(feMesh *mesh, std::string cncGeoID, int numElem, in
 
 void feNumber::defDDLEdge(feMesh *mesh, std::string cncGeoID, int numElem, int numEdge, int numDOF)
 {
-  int edge = fabs(mesh->getEdge(cncGeoID, numElem, numEdge)) - 1;
+  int edge = fabs(mesh->getEdge(cncGeoID, numElem, numEdge)) - 1;   //fabs ? 
   // printf("Assigning INC and %d dof(s) at edge %d which is edge number %d of elem %d on cnc %s\n",
   // numDOF, edge, numEdge, numElem, cncGeoID.c_str());
   _nDOFEdges[edge] = numDOF;
@@ -94,7 +94,7 @@ int feNumber::getDDLElement(feMesh *mesh, std::string cncGeoID, int numElem, int
 int feNumber::getDDLEdge(feMesh *mesh, std::string cncGeoID, int numElem, int numEdge, int numDOF)
 {
   // In connecEdges, edges are numbering starting from 1 and can be negative
-  int edge = fabs(mesh->getEdge(cncGeoID, numElem, numEdge)) - 1;
+  int edge = fabs(mesh->getEdge(cncGeoID, numElem, numEdge)) - 1;             //qu'est ce que fabs ? 
   return _numberingEdges[_maxDOFperEdge * edge + numDOF];
 }
 

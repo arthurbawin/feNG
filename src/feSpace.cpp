@@ -50,7 +50,17 @@ feStatus createFiniteElementSpace(feSpace *&space, feMesh *mesh, int dim, elemTy
             return feErrorMsg(FE_STATUS_ERROR,
                               "No LINE finite element space implemented for deg > 4.");
         }
-      } else {
+      }
+      else if(type == LINE_CR) {
+        switch(deg) {
+          case 1:
+            space = new feSpace1DP1_nonConsistant(mesh, fieldID, cncGeoID, fct);
+            break;
+          default:
+            return feErrorMsg(FE_STATUS_ERROR,
+                              "No LINE finite element space implemented for deg > 4.");
+        }
+      }else {
         return feErrorMsg(FE_STATUS_ERROR, "Unsupported geometry.");
       }
       break;
@@ -76,10 +86,25 @@ feStatus createFiniteElementSpace(feSpace *&space, feMesh *mesh, int dim, elemTy
             return feErrorMsg(FE_STATUS_ERROR,
                               "No LINE finite element space implemented for deg > 4.");
         }
-      } else {
+      }else if(type == TRI_CR){
+        switch(deg){
+          case 0:
+            return feErrorMsg(FE_STATUS_ERROR,"No TRI_CR finite element space implemented for deg >2.");
+          case 1:
+            space = new feSpaceTriP1_nonConsistant(mesh, fieldID, cncGeoID, fct);
+            break;
+          case 2:
+            space = new feSpaceTriP2_nonConsistant(mesh, fieldID, cncGeoID, fct);
+            break;
+          default:
+            return feErrorMsg(FE_STATUS_ERROR,
+                              "No LINE finite element space implemented for deg > 4.");
+        }
+      }else {
         return feErrorMsg(FE_STATUS_ERROR, "Unsupported geometry.");
       }
       break;
+
     case 3:
       return feErrorMsg(FE_STATUS_ERROR, "Finite element space in dim = 3 not implemented yet.");
     default:
@@ -263,6 +288,7 @@ void feSpace::initializeSolution(std::vector<double> &sol)
     _sol[i] = sol[_adr[i]];
   }
 }
+
 
 void feSpace::initializeSolutionDot(feSolution *sol)
 {
@@ -460,6 +486,20 @@ double feSpace::interpolateFieldAtQuadNode_rDerivative(std::vector<double> field
     return res;
   }
   for(int i = 0; i < _nFunctions; ++i) res += field[i] * _dLdr[_nFunctions * iNode + i];
+  return res;
+}
+
+
+double feSpace::interpolateFieldAtQuadNode_sDerivative(std::vector<double> field, int iNode)
+{
+  double res = 0.0;
+  if(field.size() != (unsigned)_nFunctions) {
+    printf(" In feSpace::interpolateFieldAtQuadNode : Erreur - Nombre de valeurs nodales (%d) non "
+           "compatible avec le nombre d'interpolants de l'espace (%d).\n",
+           field.size(), (unsigned)_nFunctions);
+    return res;
+  }
+  for(int i = 0; i < _nFunctions; ++i) res += field[i] * _dLds[_nFunctions * iNode + i];
   return res;
 }
 
