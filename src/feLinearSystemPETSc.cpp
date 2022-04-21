@@ -320,8 +320,8 @@ void feLinearSystemPETSc::assembleMatrices(feSolution *sol)
 void feLinearSystemPETSc::assembleResiduals(feSolution *sol)
 {
 #if defined(HAVE_PETSC)
-  // feInfo("Assembling the residual...");
-  // tic();
+  feInfo("Assembling the residual...");
+  tic();
 
   int nbColor=_mesh->getNbColor();
   std::vector<int> colorElm=_mesh->getColorElm();
@@ -329,6 +329,7 @@ void feLinearSystemPETSc::assembleResiduals(feSolution *sol)
   std::vector<int> list=_mesh->getList();
   std::vector<int> startIndex=_mesh->getIndexStartColorInList();
   
+
   std::vector<feBilinearForm *> formResidualsTest;
   int nbThreadsMax=omp_get_max_threads(); 
 
@@ -419,8 +420,8 @@ void feLinearSystemPETSc::assembleResiduals(feSolution *sol)
     } //for nbColor
   }// for formBili
 
-  // feInfo("done");
-  // toc();
+  feInfo("done");
+  toc();
   // VecView(_res,PETSC_VIEWER_STDOUT_WORLD);
   // double normResidual = 0.0;
   // VecNorm(_res, NORM_2, &normResidual);
