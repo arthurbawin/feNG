@@ -37,12 +37,15 @@ protected:
 
   std::map<std::string, int> _cncGeoMap;
 
-  std::vector <int> _colorElm;
-  int _nbColor;
-  std::vector <int> _nbElmPerColor;
-  std::vector <int> _list;
-  std::vector<int> _indexStartColorInList;
+  std::vector<int> _nbElmPerNode;
+  std::vector<int> _nbElmPerElm;
+  std::vector<std::vector<int> > _listElmPerNode;
+  std::vector<std::vector<int> > _listElmPerElm;
 
+  int _nbColor;
+  std::vector<int> _colorElm;
+  std::vector<int> _nbElmPerColor;
+  std::vector<std::vector<int> > _listElmPerColor;
 
 public:
   feMesh(int nNod = 0, int dim = 0, int nCncGeo = 0, std::string ID = "")
@@ -100,13 +103,20 @@ public:
 
   void printInfo(bool printConnectivities = true);
 
-  void color(int cncGeoTag = 0); //i=0 => borders; i=1 =>element
-  std::vector<int> getColorElm(){return _colorElm;};
-  int getNbColor(){return _nbColor;};
-  std::vector<int> getNbElmPerColor(){return _nbElmPerColor;};
-  std::vector<int> getList(){return _list;};
-  std::vector<int> getIndexStartColorInList(){return _indexStartColorInList;};
-  
+  void patchNode(int nbElm, int nbNodePerElm, std::vector<int> &cncNodes);
+  void patchElm(int nbElm, int nbNodePerElm, std::vector<int> &cncNodes);
+
+  void color(int cncGeoTag = 0); // i=0 => borders; i=1 =>element
+  void color2(int cncGeoTag = 0);
+  void color3(int cncGeoTag = 0);
+  void color4(int cncGeoTag = 0);
+  void color5(int cncGeoTag = 0);
+  int colorChoice(std::vector<bool> availableColor, std::vector<int> nbElmPerColor, int nbColor);
+
+  int getNbColor() { return _nbColor; };
+  std::vector<int> getColorElm() { return _colorElm; };
+  std::vector<int> getNbElmPerColor() { return _nbElmPerColor; };
+  std::vector<std::vector<int> > getListElmPerColor() { return _listElmPerColor; };
 };
 
 class feMesh1DP1 : public feMesh
@@ -232,8 +242,10 @@ public:
              mapType physicalEntitiesDescription = mapType());
   ~feMesh2DP1();
 
-  feStatus readMsh2(std::istream &input, bool curved, bool reversed, mapType physicalEntitiesDescription);
-  feStatus readMsh4(std::istream &input, bool curved, bool reversed, mapType physicalEntitiesDescription);
+  feStatus readMsh2(std::istream &input, bool curved, bool reversed,
+                    mapType physicalEntitiesDescription);
+  feStatus readMsh4(std::istream &input, bool curved, bool reversed,
+                    mapType physicalEntitiesDescription);
   feStatus readGmsh(std::string meshName, bool curved = false, bool reversed = false,
                     mapType physicalEntitiesDescription = mapType());
 
@@ -250,9 +262,6 @@ public:
                 feSolutionContainer *solutionContainer, const std::vector<feSpace *> &mySpaces,
                 const std::vector<feSpace *> &mySpacesEssBC,
                 const std::vector<feSpace *> &otherSpaces);
-
-
- 
 };
 
 #endif

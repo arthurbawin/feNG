@@ -80,6 +80,8 @@ public:
   // ================================================================
   feInt *getAp() { return Ap; };
   feInt *getAj() { return Aj; };
+  double *getRangee() { return rangee; };
+  feInt *getIrangee() { return irangee; };
   double *allocateMatrix() { return new double[nz]; };
   void freeMatrix(double *Matrix)
   {

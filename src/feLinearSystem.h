@@ -14,12 +14,14 @@ typedef enum { MKLPARDISO, PETSC } linearSolverType;
 class feLinearSystem
 {
 protected:
-  std::vector<std::vector <feBilinearForm *>> _formMatrices;
-  std::vector<std::vector <feBilinearForm *>> _formResiduals;
+  std::vector<feBilinearForm *> _formMatrices;
+  std::vector<feBilinearForm *> _formResiduals;
   feMetaNumber *_metaNumber;
   feMesh *_mesh;
 
   int _nbThreads;
+  std::vector<feBilinearForm *> _formMatricesOMP;
+  std::vector<feBilinearForm *> _formResidualsOMP;
 
   bool recomputeMatrix;
 
@@ -28,32 +30,39 @@ public:
                  feMesh *mesh)
     : _metaNumber(metaNumber), _mesh(mesh), recomputeMatrix(false)
   {
-    #if defined(HAVE_OMP)
-   _nbThreads = omp_get_max_threads();
-   #else
-   _nbThreads = 1;
-   #endif
-    _formResiduals.resize(_nbThreads);
-    _formMatrices.resize(_nbThreads);
-    for(int i=0; i<_nbThreads;++i){
+// <<<<<<< HEAD
+//     #if defined(HAVE_OMP)
+//    _nbThreads = omp_get_max_threads();
+//    #else
+//    _nbThreads = 1;
+//    #endif
+//     _formResiduals.resize(_nbThreads);
+//     _formMatrices.resize(_nbThreads);
+//     for(int i=0; i<_nbThreads;++i){
+// =======
+    for(feBilinearForm *f : bilinearForms) {
+      feBilinearForm *fCpy = new feBilinearForm(*f);
+      _formResiduals.push_back(fCpy);
+      if(f->hasMatrix()) _formMatrices.push_back(fCpy);
+    }
+
+    _nbThreads = 1;
+#if defined(HAVE_OMP)
+    _nbThreads = omp_get_max_threads();
+    feInfo("Nombre Max Threads : %d", _nbThreads);
+
+    for(int i = 0; i < _nbThreads; ++i) {
+// >>>>>>> origin/baptiste
       for(feBilinearForm *f : bilinearForms) {
         feBilinearForm *fCpy = new feBilinearForm(*f);
-        _formResiduals[i].push_back(fCpy);
-        if(f->hasMatrix()) _formMatrices[i].push_back(fCpy);
+        _formResidualsOMP.push_back(fCpy);
+        if(f->hasMatrix()) _formMatricesOMP.push_back(fCpy);
       }
     }
-    // #else
-    // // No need to copy the linear forms ?
-    // _nbThreads = 1;
-    // _formResiduals.resize(1);
-    // _formMatrices.resize(1);
-    // for(feBilinearForm *f : bilinearForms) {
-    //   feInfo("Looping on %s", f->getID().c_str());
-    //   _formResiduals[0].push_back(f);
-    //   if(f->hasMatrix()) _formMatrices[0].push_back(f);
-    // }
-    // #endif
+#endif
+
   };
+
   virtual ~feLinearSystem() {}
 
   bool getRecomputeStatus() { return recomputeMatrix; }
@@ -72,9 +81,9 @@ public:
   virtual void applyCorrectionToResidual(double coeff, std::vector<double> &d){};
   virtual void viewMatrix(){};
   virtual void printResidual(){};
-  virtual int getNbThreads(){return _nbThreads;};
-  virtual std::vector<std::vector <feBilinearForm *>> getformMatrices(){return _formMatrices;};
-  virtual std::vector<std::vector <feBilinearForm *>> getformResiduals(){return _formResiduals;};
+  virtual int getNbThreads() { return _nbThreads; };
+  virtual std::vector<feBilinearForm *> getformMatrices() { return _formMatrices; };
+  virtual std::vector<feBilinearForm *> getformResiduals() { return _formResiduals; };
 };
 
 feStatus createLinearSystem(feLinearSystem *&system, linearSolverType type,

@@ -21,7 +21,7 @@ protected:
   bool _addP2Nodes;
   int _writtenNodes;
 
-  std::map<int,int> edgeToMid;
+  std::map<int, int> edgeToMid;
 
 public:
   feExporter(feMesh *mesh, feSolution *sol, feMetaNumber *metaNumber,

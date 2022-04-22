@@ -21,7 +21,7 @@ protected:
   int _nElm; // Nombre d'elements dans cette connectivite
   int _nEdg;
   std::vector<int> _connecNodes; // Connectivite des noeuds
-  std::vector<int> _connecElem;  // Connectivite des elements
+  std::vector<int> _connecElem; // Connectivite des elements
   std::vector<int> _connecEdges; // Connectivite des aretes
   std::vector<int> _connecFaces; // Connectivite des faces
 

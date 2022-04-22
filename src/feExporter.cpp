@@ -53,9 +53,9 @@ void feExporterVTK::writeNodes(std::ostream &output, feCncGeo *cnc)
   int nNod = _mesh->getNbNodes();
   output << "DATASET UNSTRUCTURED_GRID\n";
 
-  if(_addP2Nodes){
+  if(_addP2Nodes) {
     output << "POINTS " << nNod + _mesh->getNbEdges() << " double\n";
-  } else{
+  } else {
     output << "POINTS " << nNod << " double\n";
   }
 
@@ -67,13 +67,14 @@ void feExporterVTK::writeNodes(std::ostream &output, feCncGeo *cnc)
   }
 
   int cnt = nNod;
-  if(_addP2Nodes){
+  if(_addP2Nodes) {
     /* Additional nodes are added in the order of the edges,
     like in feExporterVTK::writeFields. Both must be modified together. */
-    for(auto e : _mesh->_edges){
+    for(auto e : _mesh->_edges) {
       Vertex *v0 = e.getVertex(0);
       Vertex *v1 = e.getVertex(1);
-      output << (v0->x()+v1->x())/2. << " " << (v0->y()+v1->y())/2. << " " << (v0->z()+v1->z())/2. << std::endl;
+      output << (v0->x() + v1->x()) / 2. << " " << (v0->y() + v1->y()) / 2. << " "
+             << (v0->z() + v1->z()) / 2. << std::endl;
       edgeToMid[e.getTag()] = cnt++;
     }
   }
@@ -88,7 +89,7 @@ void feExporterVTK::writeElementsConnectivity(std::ostream &output, feCncGeo *cn
   for(int iElm = 0; iElm < nElm; ++iElm) {
     output << nNodePerElem << " ";
 
-    if(_addP2Nodes){
+    if(_addP2Nodes) {
       // Mid-points were added and do not exist in the mesh
       // Vertices
       for(int j = 0; j < 3; ++j) {
@@ -101,14 +102,14 @@ void feExporterVTK::writeElementsConnectivity(std::ostream &output, feCncGeo *cn
         int node = edgeToMid[iEdge];
         output << node << " ";
       }
-    } else{
+    } else {
       // Regular case : all nodes exist in the mesh
       for(int j = 0; j < nNodePerElem; ++j) {
         int node = cnc->getNodeConnectivity(iElm, j);
         output << node << " ";
       }
     }
-    
+
     output << std::endl;
   }
   output << "CELL_TYPES " << nElm << std::endl;
@@ -139,7 +140,6 @@ void feExporterVTK::writeField(std::ostream &output, feCncGeo *cnc, feSpace *int
   FILE *f = fopen(fileName.c_str(), "w");
 
   for(int iVertex = 0; iVertex < nVertices; ++iVertex) {
-
     int iDOF = n->getDOFNumberAtVertex(iVertex);
 
     if(iDOF >= 0) {
@@ -169,15 +169,16 @@ void feExporterVTK::writeField(std::ostream &output, feCncGeo *cnc, feSpace *int
   }
   fclose(f);
 
-  /* Write the additional P2 nodes. Interpolation is not required if the 
+  /* Write the additional P2 nodes. Interpolation is not required if the
   field is quadratic , but it's easier to just interpolate for all fields. */
-  if(_addP2Nodes){
+  if(_addP2Nodes) {
     /* Additional nodes are added in the order of the edges,
     like in feExporterVTK::writeNodes. Both must be modified together. */
-    for(auto e : _mesh->_edges){
+    for(auto e : _mesh->_edges) {
       Vertex *v0 = e.getVertex(0);
       Vertex *v1 = e.getVertex(1);
-      std::vector<double> x = {(v0->x()+v1->x())/2., (v0->y()+v1->y())/2., (v0->z()+v1->z())/2.};
+      std::vector<double> x = {(v0->x() + v1->x()) / 2., (v0->y() + v1->y()) / 2.,
+                               (v0->z() + v1->z()) / 2.};
       std::vector<double> r(3, 0.0);
       int elm;
       _mesh->locateVertex(x, elm, r);
@@ -233,19 +234,20 @@ feStatus feExporterVTK::writeStep(std::string fileName)
 
     /* Although VTK_HIGHER_ORDER_TRIANGLE and VTK_LAGRANGE_TRIANGLE
     exist in the VTK documentation, I can't find tutorials on how to use them...
-    So for now the highest order triangle is the VTK_QUADRATIC_TRIANGLE. 
+    So for now the highest order triangle is the VTK_QUADRATIC_TRIANGLE.
     Quadratic triangles are exported if :
       - the geometry is P2 (curved elements)
       - any field has a P2 or greater interpolant
     In the second case, the mesh is not made of 6-node triangles, so we need to create them
     and evaluate the fields at those mid-edge nodes. */
     int geometryPolynomialDegree;
-    if(cnc->getForme() == "TriP1"){
+    if(cnc->getForme() == "TriP1") {
       geometryPolynomialDegree = 1;
     } else if(cnc->getForme() == "TriP2") {
       geometryPolynomialDegree = 2;
     } else {
-      return feErrorMsg(FE_STATUS_WRITE_ERROR, "Only P1 and P2 triangles can be exported to a VTK file...");
+      return feErrorMsg(FE_STATUS_WRITE_ERROR,
+                        "Only P1 and P2 triangles can be exported to a VTK file...");
     }
 
     int highestFieldPolynomialDegree = 0;
@@ -260,7 +262,7 @@ feStatus feExporterVTK::writeStep(std::string fileName)
 
     // Write the field associated to each fespace in spacesToExport
     for(feSpace *fS : spacesToExport) {
-        writeField(output, cnc, fS, fS->getFieldID(), false);
+      writeField(output, cnc, fS, fS->getFieldID(), false);
     }
 
     fb.close();
