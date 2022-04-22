@@ -10,7 +10,7 @@ double fSol(const double t, const std::vector<double> pos, const std::vector<dou
 {
   double x = pos[0];
   double y = pos[1];
-  // return pow(x, 6);
+  return pow(x, 6);
 
   // Solution for the Neumann problem
   double u0 = 1.0;
@@ -93,7 +93,7 @@ int main(int argc, char **argv)
     nElm[i] = mesh.getNbInteriorElems();
 
     // feSpace *uBord, *uDomaine;
-    int degreeQuadrature = 10;
+    int degreeQuadrature = 30;
     int dim;
     // feCheck(createFiniteElementSpace(uBord, &mesh, 1, LINE, order, "U", "Bord", degreeQuadrature, funSol));
     // feCheck(createFiniteElementSpace(uDomaine, &mesh, 2, TRI, order, "U", "Domaine", degreeQuadrature, funZero));
@@ -116,11 +116,11 @@ int main(int argc, char **argv)
     // feBilinearForm sourceU({uDomaine}, &mesh, degreeQuadrature, new feSysElm_2D_Source(1.0, funSource));
 
     feBilinearForm diffU({uDomaine}, &mesh, degreeQuadrature, new feSysElm_2D_Diffusion(k, nullptr));
-    // feBilinearForm sourceU({uDomaine}, &mesh, degreeQuadrature, new feSysElm_2D_Source(1.0, funSource));
-    feBilinearForm n1({uDroite}, &mesh, degreeQuadrature, new feSysElm_1D_NeumannBC(1.0, funNeumannY));
-    feBilinearForm n2({uGauche}, &mesh, degreeQuadrature, new feSysElm_1D_NeumannBC(1.0, funZero));
-    feBilinearForm n3({uHaut},   &mesh, degreeQuadrature, new feSysElm_1D_NeumannBC(1.0, funNeumann));
-    feBilinearForm n4({uBas},    &mesh, degreeQuadrature, new feSysElm_1D_NeumannBC(1.0, funZero));
+    feBilinearForm sourceU({uDomaine}, &mesh, degreeQuadrature, new feSysElm_2D_Source(1.0, funSource));
+    // feBilinearForm n1({uDroite}, &mesh, degreeQuadrature, new feSysElm_1D_NeumannBC(1.0, funNeumannY));
+    // feBilinearForm n2({uGauche}, &mesh, degreeQuadrature, new feSysElm_1D_NeumannBC(1.0, funZero));
+    // feBilinearForm n3({uHaut},   &mesh, degreeQuadrature, new feSysElm_1D_NeumannBC(1.0, funNeumann));
+    // feBilinearForm n4({uBas},    &mesh, degreeQuadrature, new feSysElm_1D_NeumannBC(1.0, funZero));
     feBilinearForm n5({uSaut},   &mesh, degreeQuadrature, new feSysElm_1D_NeumannBC(1.0, funOne));
     // feBilinearForm sautU({uSaut}, &mesh, degreeQuadrature, new feSysElm_1D_NeumannBC(1.0, funOne));
 

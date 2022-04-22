@@ -154,8 +154,6 @@ int main(int argc, char **argv)
   feInfo("Integral of fun = %f", post.computeFunctionIntegral(funSol, 0.0));
   feInfo("L2 Error = %10.10f", post.computeL2ErrorNorm(&sol));
 
-  a = b;
-
   // Free the used memory
   delete solver;
   delete exporter;

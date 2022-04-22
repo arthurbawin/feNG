@@ -916,7 +916,7 @@ void feSysElm_1D_NeumannBC::createElementarySystem(std::vector<feSpace *> &space
 void feSysElm_1D_NeumannBC::computeBe(std::vector<double> &J, int numElem,
                                   std::vector<feSpace *> &intSpace, feSpace *geoSpace,
                                   std::vector<double> &geoCoord, double c0, double tn, double dt,
-                                  double *Be, std::vector<double> &sol,int &idU, std::vector<double> &feU,std::vector<double> &feUdx,std::vector<double> &feUdy)
+                                  double *Be, std::vector<double> &sol)
 {
   int nG = geoSpace->getNbQuadPoints();
   std::vector<double> w = geoSpace->getQuadratureWeights();
@@ -930,7 +930,7 @@ void feSysElm_1D_NeumannBC::computeBe(std::vector<double> &J, int numElem,
     double h = _fct->eval(tn, x);
     for(int i = 0; i < nFunctions; ++i) {
       _feU[i] = intSpace[_idU]->getFunctionAtQuadNode(i, k);
-      Be[i] -= _feU[i] * h * jac * w[k];
+      Be[i] += _feU[i] * h * jac * w[k];
     }
   }
 }

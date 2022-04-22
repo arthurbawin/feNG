@@ -70,6 +70,7 @@ public:
   feBilinearForm(const feBilinearForm &f);
   ~feBilinearForm();
 
+  feCncGeo *getCncGeo() { return _cnc; }
   int getCncGeoTag() { return _cncGeoTag; }
 
   bool hasMatrix() { return _sysElm->hasMatrix(); }

@@ -170,6 +170,9 @@ feBilinearForm::feBilinearForm(const feBilinearForm &f)
     case DIFFUSION_2D:
       _sysElm = new feSysElm_2D_Diffusion(static_cast<feSysElm_2D_Diffusion &>(*f._sysElm));
       break;
+    case NEUMANN_1D:
+      _sysElm = new feSysElm_1D_NeumannBC(static_cast<feSysElm_1D_NeumannBC &>(*f._sysElm));
+      break;
     // case ADVECTION_2D :
     //   _sysElm=new feSysElm_2D_Advection();
     //   break;
@@ -186,6 +189,7 @@ feBilinearForm::feBilinearForm(const feBilinearForm &f)
       feInfo("No elementary system => default nullptr");
       // _sysElm=new feSysElm_2D_Diffusion(static_cast<feSysElm_2D_Diffusion&>(*f._sysElm));
       _sysElm = nullptr;
+      exit(-1);
       break;
   }
 }

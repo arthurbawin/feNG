@@ -34,14 +34,17 @@ void feLinearSystemMklPardiso::assembleMatrices(feSolution *sol)
   feInfo("Assembling the Matrix...");
   tic();
 
-  int nbColor = _mesh->getNbColor();
-  std::vector<int> colorElm = _mesh->getColorElm();
-  std::vector<int> nbElmPerColor = _mesh->getNbElmPerColor();
-  std::vector<std::vector<int> > listElmPerColor = _mesh->getListElmPerColor();
+  // feInt NumberOfBilinearForms = _formMatrices.size();
 
-  feInt NumberOfBilinearForms = _formMatrices.size();
+  for(feInt eq = 0; eq < _numMatrixForms; eq++) {
 
-  for(feInt eq = 0; eq < NumberOfBilinearForms; eq++) {
+    feBilinearForm *f = _formMatrices[eq];
+    feCncGeo *cnc = f->getCncGeo();
+    int nbColor = cnc->getNbColor();
+    std::vector<int> colorElm = cnc->getColorElm();
+    std::vector<int> nbElmPerColor = cnc->getNbElmPerColor();
+    std::vector<std::vector<int> > listElmPerColor = cnc->getListElmPerColor();
+
     for(int iColor = 0; iColor < nbColor; iColor++) {
       int nbElmC = nbElmPerColor[iColor]; // nbElmC : nombre d'elm de meme couleur
       std::vector<int> listElmC = listElmPerColor[iColor];
@@ -49,34 +52,30 @@ void feLinearSystemMklPardiso::assembleMatrices(feSolution *sol)
       feInt numThread = 0;
       int elm;
       int eqt;
-      feBilinearForm *f_t;
+      // feBilinearForm *f_t;
 
       feInt debut;
       feInt fin;
       feInt ncf;
 
-#if defined(HAVE_OMP)
-#pragma omp parallel for private(numThread, elm, eqt, f_t, debut, fin, ncf) schedule(static)
-#endif
+      #if defined(HAVE_OMP)
+      #pragma omp parallel for private(numThread, elm, eqt, f, debut, fin, ncf)
+      #endif
       for(int iElm = 0; iElm < nbElmC; ++iElm) {
 #if defined(HAVE_OMP)
         numThread = omp_get_thread_num();
-// feInfo("numThread : %d",numThread);
+        eqt = eq + numThread * _numMatrixForms;
+        f = _formMatrices[eqt];
 #endif
-
         elm = listElmC[iElm];
-        eqt = eq + numThread * NumberOfBilinearForms;
-        f_t = _formMatricesOMP[eqt];
+        f->initialize(_metaNumber, _mesh, sol, elm);
+        f->computeMatrix(_metaNumber, _mesh, sol, elm);
 
-        f_t->initialize(_metaNumber, _mesh, sol, elm);
-
-        f_t->computeMatrix(_metaNumber, _mesh, sol, elm);
-
-        feInt nRow = f_t->getNiElm();
-        std::vector<feInt> Row(f_t->getAdrI().begin(), f_t->getAdrI().end());
-        feInt nColumn = f_t->getNjElm();
-        std::vector<feInt> Column(f_t->getAdrJ().begin(), f_t->getAdrJ().end());
-        double **Ae = f_t->getAe();
+        feInt nRow = f->getNiElm();
+        std::vector<feInt> Row(f->getAdrI().begin(), f->getAdrI().end());
+        feInt nColumn = f->getNjElm();
+        std::vector<feInt> Column(f->getAdrJ().begin(), f->getAdrJ().end());
+        double **Ae = f->getAe();
 
         for(feInt i = 0; i < nRow; i++) {
           std::vector<feInt> irangee(matrixOrder);
@@ -122,6 +121,9 @@ void feLinearSystemMklPardiso::assembleMatrices(feSolution *sol)
     // }
   }
   // print_matrix();
+  // double res = 0.0;
+  // for(feInt i = 0; i < nz; i++) res += fabs(Ax[i]);
+  // feInfo("sumMatrix = %f", res);
   feInfo("Done...");
   toc();
 }
@@ -131,14 +133,17 @@ void feLinearSystemMklPardiso::assembleResiduals(feSolution *sol)
   feInfo("Assembling the residual...");
   tic();
 
-  int nbColor = _mesh->getNbColor();
-  std::vector<int> colorElm = _mesh->getColorElm();
-  std::vector<int> nbElmPerColor = _mesh->getNbElmPerColor();
-  std::vector<std::vector<int> > listElmPerColor = _mesh->getListElmPerColor();
+  for(feInt eq = 0; eq < _numResidualForms; eq++) {
 
-  feInt NumberOfBilinearForms = _formResiduals.size();
+    feBilinearForm *f = _formResiduals[eq];
+    std::cout<<f<<std::endl;
+    feCncGeo *cnc = f->getCncGeo();
+    int nbColor = cnc->getNbColor();
+    std::vector<int> colorElm = cnc->getColorElm();
+    std::vector<int> nbElmPerColor = cnc->getNbElmPerColor();
+    std::vector<std::vector<int> > listElmPerColor = cnc->getListElmPerColor();
+    // feInfo("Looping over %d colors", nbColor);
 
-  for(feInt eq = 0; eq < NumberOfBilinearForms; eq++) {
     for(int iColor = 0; iColor < nbColor; ++iColor) {
       int nbElmC = nbElmPerColor[iColor]; // nbElmC : nombre d'elm de meme couleur
       std::vector<int> listElmC = listElmPerColor[iColor];
@@ -146,36 +151,33 @@ void feLinearSystemMklPardiso::assembleResiduals(feSolution *sol)
       feInt numThread = 0;
       int elm;
       int eqt;
-      feBilinearForm *f_t;
+      // feBilinearForm *f_t;
 
       feInt nRow;
       double *Be;
 
-#if defined(HAVE_OMP)
-#pragma omp parallel for private(numThread, elm, eqt, nRow, Be, f_t) schedule(dynamic)
-#endif
+      #if defined(HAVE_OMP)
+      #pragma omp parallel for private(numThread, elm, eqt, nRow, Be, f)
+      #endif
       for(int iElm = 0; iElm < nbElmC; ++iElm) {
 #if defined(HAVE_OMP)
         numThread = omp_get_thread_num();
-// feInfo("numThread : %d",numThread);
+        eqt = eq + numThread * _numResidualForms;
+        f = _formResiduals[eqt];
 #endif
-
         elm = listElmC[iElm];
-        eqt = eq + numThread * NumberOfBilinearForms;
-        f_t = _formResidualsOMP[eqt];
+        f->initialize(_metaNumber, _mesh, sol, elm);
+        f->computeResidual(_metaNumber, _mesh, sol, elm);
 
-        f_t->initialize(_metaNumber, _mesh, sol, elm);
+        nRow = f->getNiElm();
 
-        f_t->computeResidual(_metaNumber, _mesh, sol, elm);
+        std::vector<feInt> row(f->getAdrI().begin(), f->getAdrI().end());
 
-        nRow = f_t->getNiElm();
+        Be = f->getBe();
 
-        std::vector<feInt> Row(f_t->getAdrI().begin(), f_t->getAdrI().end());
-
-        Be = f_t->getBe();
-
-        for(feInt i = 0; i < nRow; i++)
-          if(Row[i] < matrixOrder) residu[Row[i]] += Be[i];
+        for(feInt i = 0; i < nRow; i++){
+          if(row[i] < matrixOrder) residu[row[i]] += Be[i];
+        }
       }
     }
   }
@@ -184,6 +186,15 @@ void feLinearSystemMklPardiso::assembleResiduals(feSolution *sol)
   // for(int i=0;i<matrixOrder;i++){
   //   printf("%g \n",residu[i]);
   // }
+  // double res = 0.0;
+  // for(feInt i = 0; i < matrixOrder; i++){
+  //   res += fabs(residu[i]);
+  // }
+  // feInfo("sumResidu = %f", res);
+  // feInfo("nz = %d", nz);
+  // feInfo("matrixOrder = %d", matrixOrder);
+  // feInfo("max threads = %d", omp_get_max_threads());
+  // feInfo("num threads = %d", omp_get_num_threads());
 }
 
 void feLinearSystemMklPardiso::assignResidualToDCResidual(feSolutionContainer *solContainer)
@@ -327,7 +338,7 @@ feLinearSystemMklPardiso::feLinearSystemMklPardiso(std::vector<feBilinearForm *>
   // Structure Creuse CSR de MKL
   //=================================================================
   // tic();
-  crsMklPardiso = new feCompressedRowStorageMklPardiso(metaNumber, mesh, _formMatricesOMP);
+  crsMklPardiso = new feCompressedRowStorageMklPardiso(metaNumber, mesh, _formMatrices);
   // toc();
   nz = crsMklPardiso->getNz();
   Ap = (feMKLPardisoInt *)crsMklPardiso->getAp();
@@ -382,7 +393,7 @@ feLinearSystemMklPardiso::feLinearSystemMklPardiso(std::vector<feBilinearForm *>
   // IPARM[2]= num_procs; // nombre de processeurs
   MAXFCT = 1;
   MNUM = 1;
-  MSGLVL = 1; // ou 0
+  MSGLVL = 0; // ou 0
   ERROR = 0;
   //=================================================================
   // 	Factorisation symbolique

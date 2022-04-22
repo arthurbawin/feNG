@@ -53,7 +53,7 @@ void feLinearSystemPETSc::initialize()
   ierr = VecSet(_dx, 1.0);
 
   // Determine the nonzero structure
-  feCompressedRowStorage CRS(_metaNumber, _mesh, _formMatricesOMP);
+  feCompressedRowStorage CRS(_metaNumber, _mesh, _formMatrices);
   feInt *NNZ = CRS.getNnz();
   std::vector<PetscInt> nnz(_nInc, 0);
   for(int i = 0; i < _nInc; ++i) {
@@ -200,13 +200,17 @@ void feLinearSystemPETSc::assembleMatrices(feSolution *sol)
 
     PetscErrorCode ierr = 0;
 
-    int nbColor = _mesh->getNbColor();
-    std::vector<int> colorElm = _mesh->getColorElm();
-    std::vector<int> nbElmPerColor = _mesh->getNbElmPerColor();
-    std::vector<std::vector<int> > listElmPerColor = _mesh->getListElmPerColor();
-
     feInt NumberOfBilinearForms = _formMatrices.size();
+
     for(feInt eq = 0; eq < NumberOfBilinearForms; ++eq) {
+
+      feBilinearForm *f = _formMatrices[eq];
+      feCncGeo *cnc = f->getCncGeo();
+      int nbColor = cnc->getNbColor();
+      std::vector<int> colorElm = cnc->getColorElm();
+      std::vector<int> nbElmPerColor = cnc->getNbElmPerColor();
+      std::vector<std::vector<int> > listElmPerColor = cnc->getListElmPerColor();
+
       for(int iColor = 0; iColor < nbColor; ++iColor) {
         int nbElmC = nbElmPerColor[iColor]; // nbElm : nombre d'elm de meme couleur
         std::vector<int> listElmC = listElmPerColor[iColor];
@@ -214,7 +218,7 @@ void feLinearSystemPETSc::assembleMatrices(feSolution *sol)
         int numThread = 0;
         int elm = 0;
         int eqt = 0;
-        feBilinearForm *f_t = NULL;
+        // feBilinearForm *f_t = NULL;
 
         std::vector<PetscScalar> values(0);
         int sizeI = 0;
@@ -224,30 +228,24 @@ void feLinearSystemPETSc::assembleMatrices(feSolution *sol)
         std::vector<int> adrI(0);
         std::vector<int> adrJ(0);
 
-#if defined(HAVE_OMP)
-#pragma omp parallel for private(numThread, elm, eqt, f_t, ierr, values, sizeI, sizeJ, niElm,      \
-                                 njElm, adrI, adrJ) schedule(static)
-#endif
+        #if defined(HAVE_OMP)
+        #pragma omp parallel for private(numThread, elm, eqt, f, ierr, values, sizeI, sizeJ, niElm,      \
+                                         njElm, adrI, adrJ) schedule(static)
+        #endif
         for(int iElm = 0; iElm < nbElmC; ++iElm) {
 #if defined(HAVE_OMP)
           numThread = omp_get_thread_num();
-// feInfo("numThread : %d",numThread);
-#endif
-
-          elm = listElmC[iElm];
           eqt = eq + numThread * NumberOfBilinearForms;
-          f_t = _formMatricesOMP[eqt];
-
-          // PetscInt I, J;
-
-          f_t->initialize(_metaNumber, _mesh, sol, elm);
-
-          f_t->computeMatrix(_metaNumber, _mesh, sol, elm); // Matrice elementaire
-          double **Ae = f_t->getAe();
+          f = _formMatrices[eqt];
+#endif
+          elm = listElmC[iElm];
+          f->initialize(_metaNumber, _mesh, sol, elm);
+          f->computeMatrix(_metaNumber, _mesh, sol, elm); // Matrice elementaire
+          double **Ae = f->getAe();
 
           // Determine assignment indices
-          adrI = f_t->getAdrI();
-          adrJ = f_t->getAdrJ();
+          adrI = f->getAdrI();
+          adrJ = f->getAdrJ();
           sizeI = adrI.size();
           niElm.reserve(sizeI);
           for(int i = 0; i < sizeI; ++i) {
@@ -307,14 +305,17 @@ void feLinearSystemPETSc::assembleResiduals(feSolution *sol)
 
   PetscErrorCode ierr = 0;
 
-  int nbColor = _mesh->getNbColor();
-  std::vector<int> colorElm = _mesh->getColorElm();
-  std::vector<int> nbElmPerColor = _mesh->getNbElmPerColor();
-  std::vector<std::vector<int> > listElmPerColor = _mesh->getListElmPerColor();
-
   feInt NumberOfBilinearForms = _formResiduals.size();
 
   for(feInt eq = 0; eq < NumberOfBilinearForms; ++eq) {
+
+    feBilinearForm *f = _formMatrices[eq];
+    feCncGeo *cnc = f->getCncGeo();
+    int nbColor = cnc->getNbColor();
+    std::vector<int> colorElm = cnc->getColorElm();
+    std::vector<int> nbElmPerColor = cnc->getNbElmPerColor();
+    std::vector<std::vector<int> > listElmPerColor = cnc->getListElmPerColor();
+
     for(int iColor = 0; iColor < nbColor; ++iColor) {
       int nbElmC = nbElmPerColor[iColor]; // nbElm : nombre d'elm de meme couleur
       std::vector<int> listElmC = listElmPerColor[iColor];
@@ -322,8 +323,7 @@ void feLinearSystemPETSc::assembleResiduals(feSolution *sol)
       int numThread = 0;
       int elm = 0;
       int eqt = 0;
-      feBilinearForm *f_t = NULL;
-
+      // feBilinearForm *f_t = NULL;
 
       std::vector<PetscScalar> values(0);
       double *dataValues = NULL;
@@ -331,14 +331,15 @@ void feLinearSystemPETSc::assembleResiduals(feSolution *sol)
       std::vector<int> niElm(0);
       std::vector<int> adrI(0);
 
-#if defined(HAVE_OMP)
-#pragma omp parallel for private(numThread, elm, eqt, f_t, ierr, values, dataValues, sizeI, niElm, \
-                                 adrI) schedule(static)
-#endif
+      #if defined(HAVE_OMP)
+      #pragma omp parallel for private(numThread, elm, eqt, f, ierr, values, dataValues, sizeI, niElm, \
+                                       adrI) schedule(static)
+      #endif
       for(int iElm = 0; iElm < nbElmC; ++iElm) {
 #if defined(HAVE_OMP)
         numThread = omp_get_thread_num();
-// feInfo("numThread : %d",numThread);
+        eqt = eq + numThread * NumberOfBilinearForms;
+        f = _formResiduals[eqt];
 #endif
 
         // double normResidual = 0.0;
@@ -346,15 +347,12 @@ void feLinearSystemPETSc::assembleResiduals(feSolution *sol)
         // CHKERRABORT(PETSC_COMM_WORLD, ierr);
 
         elm = listElmC[iElm];
-        eqt = eq + numThread * NumberOfBilinearForms;
-        f_t = _formResidualsOMP[eqt];
+        f->initialize(_metaNumber, _mesh, sol, elm);
+        f->computeResidual(_metaNumber, _mesh, sol, elm); // Matrice elementaire
 
-        f_t->initialize(_metaNumber, _mesh, sol, elm);
-        f_t->computeResidual(_metaNumber, _mesh, sol, elm); // Matrice elementaire
+        double *Be = f->getBe();
 
-        double *Be = f_t->getBe();
-
-        adrI = f_t->getAdrI();
+        adrI = f->getAdrI();
         sizeI = adrI.size();
         niElm.reserve(sizeI);
         for(int i = 0; i < sizeI; ++i) {

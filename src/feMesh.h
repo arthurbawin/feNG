@@ -37,16 +37,6 @@ protected:
 
   std::map<std::string, int> _cncGeoMap;
 
-  std::vector<int> _nbElmPerNode;
-  std::vector<int> _nbElmPerElm;
-  std::vector<std::vector<int> > _listElmPerNode;
-  std::vector<std::vector<int> > _listElmPerElm;
-
-  int _nbColor;
-  std::vector<int> _colorElm;
-  std::vector<int> _nbElmPerColor;
-  std::vector<std::vector<int> > _listElmPerColor;
-
 public:
   feMesh(int nNod = 0, int dim = 0, int nCncGeo = 0, std::string ID = "")
     : _ID(ID), _dim(dim), _nNod(nNod), _nEdg(0), _nCncGeo(nCncGeo){};
@@ -102,21 +92,6 @@ public:
                             double tol = 1e-5) = 0;
 
   void printInfo(bool printConnectivities = true);
-
-  void patchNode(int nbElm, int nbNodePerElm, std::vector<int> &cncNodes);
-  void patchElm(int nbElm, int nbNodePerElm, std::vector<int> &cncNodes);
-
-  void color(int cncGeoTag = 0); // i=0 => borders; i=1 =>element
-  void color2(int cncGeoTag = 0);
-  void color3(int cncGeoTag = 0);
-  void color4(int cncGeoTag = 0);
-  void color5(int cncGeoTag = 0);
-  int colorChoice(std::vector<bool> availableColor, std::vector<int> nbElmPerColor, int nbColor);
-
-  int getNbColor() { return _nbColor; };
-  std::vector<int> getColorElm() { return _colorElm; };
-  std::vector<int> getNbElmPerColor() { return _nbElmPerColor; };
-  std::vector<std::vector<int> > getListElmPerColor() { return _listElmPerColor; };
 };
 
 class feMesh1DP1 : public feMesh

@@ -1421,7 +1421,7 @@ feStatus feMesh2DP1::readGmsh(std::string meshName, bool curved, bool reversed,
   _gmshVersion = 0;
   std::filebuf fb;
 
-  feInfoCond(FE_VERBOSE > 0, "Reading mesh file : %s", meshName.c_str());
+  feInfo("Reading mesh file : %s", meshName.c_str());
 
   std::ifstream f(meshName.c_str());
   if(!f.good()) {

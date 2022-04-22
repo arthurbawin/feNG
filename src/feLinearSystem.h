@@ -14,14 +14,12 @@ typedef enum { MKLPARDISO, PETSC } linearSolverType;
 class feLinearSystem
 {
 protected:
+  size_t _numMatrixForms;
+  size_t _numResidualForms;
   std::vector<feBilinearForm *> _formMatrices;
   std::vector<feBilinearForm *> _formResiduals;
   feMetaNumber *_metaNumber;
   feMesh *_mesh;
-
-  int _nbThreads;
-  std::vector<feBilinearForm *> _formMatricesOMP;
-  std::vector<feBilinearForm *> _formResidualsOMP;
 
   bool recomputeMatrix;
 
@@ -30,37 +28,27 @@ public:
                  feMesh *mesh)
     : _metaNumber(metaNumber), _mesh(mesh), recomputeMatrix(false)
   {
-// <<<<<<< HEAD
-//     #if defined(HAVE_OMP)
-//    _nbThreads = omp_get_max_threads();
-//    #else
-//    _nbThreads = 1;
-//    #endif
-//     _formResiduals.resize(_nbThreads);
-//     _formMatrices.resize(_nbThreads);
-//     for(int i=0; i<_nbThreads;++i){
-// =======
-    for(feBilinearForm *f : bilinearForms) {
-      feBilinearForm *fCpy = new feBilinearForm(*f);
-      _formResiduals.push_back(fCpy);
-      if(f->hasMatrix()) _formMatrices.push_back(fCpy);
-    }
-
-    _nbThreads = 1;
+    _numMatrixForms = 0;
+    _numResidualForms = bilinearForms.size();
 #if defined(HAVE_OMP)
-    _nbThreads = omp_get_max_threads();
-    feInfo("Nombre Max Threads : %d", _nbThreads);
-
-    for(int i = 0; i < _nbThreads; ++i) {
-// >>>>>>> origin/baptiste
+    int nThreads = omp_get_max_threads();
+#else
+    int nThreads = 1;
+#endif
+    for(int i = 0; i < nThreads; ++i) {
       for(feBilinearForm *f : bilinearForms) {
+#if defined(HAVE_OMP)
         feBilinearForm *fCpy = new feBilinearForm(*f);
-        _formResidualsOMP.push_back(fCpy);
-        if(f->hasMatrix()) _formMatricesOMP.push_back(fCpy);
+        _formResiduals.push_back(fCpy);
+        if(f->hasMatrix()) _formMatrices.push_back(fCpy);
+#else
+        _formResiduals.push_back(f);
+        if(f->hasMatrix()) _formMatrices.push_back(f);
+#endif
+        if(f->hasMatrix() && i == 0)
+          _numMatrixForms++;
       }
     }
-#endif
-
   };
 
   virtual ~feLinearSystem() {}
@@ -81,7 +69,6 @@ public:
   virtual void applyCorrectionToResidual(double coeff, std::vector<double> &d){};
   virtual void viewMatrix(){};
   virtual void printResidual(){};
-  virtual int getNbThreads() { return _nbThreads; };
   virtual std::vector<feBilinearForm *> getformMatrices() { return _formMatrices; };
   virtual std::vector<feBilinearForm *> getformResiduals() { return _formResiduals; };
 };

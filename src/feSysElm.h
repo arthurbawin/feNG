@@ -19,6 +19,7 @@ typedef enum {
   SOURCE_1D,
   DIFF_1D,
   MASSE_1D,
+  NEUMANN_1D,
   MASSE_2D,
   SOURCE_2D,
   DIFFUSION_2D,
@@ -471,7 +472,10 @@ protected:
   std::vector<double> _feUdx;
 
 public:
-  feSysElm_1D_NeumannBC(double par, feFunction *fct) : feSysElm(false), _fct(fct), _par(par){};
+  feSysElm_1D_NeumannBC(double par, feFunction *fct) : feSysElm(false), _fct(fct), _par(par)
+  {
+    _ID = NEUMANN_1D;
+  };
   virtual ~feSysElm_1D_NeumannBC() {}
 
   virtual void createElementarySystem(std::vector<feSpace *> &space);
@@ -480,7 +484,7 @@ public:
                          double **Ae){};
   virtual void computeBe(std::vector<double> &J, int numElem, std::vector<feSpace *> &intSpace,
                          feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn,
-                         double dt, double *Be, std::vector<double> &sol,int &idU, std::vector<double> &feU,std::vector<double> &feUdx,std::vector<double> &feUdy);
+                         double dt, double *Be, std::vector<double> &sol);
 };
 
 class feSysElm_2D_Masse : public feSysElm
