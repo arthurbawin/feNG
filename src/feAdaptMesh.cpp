@@ -132,6 +132,28 @@ void gradErrorSquaredCallback(double *xa, double *xb, double *xc, double *xab, d
 }
 #endif
 
+/* Creates an adapted straight-sided anisotropic mesh based on the computed metric field
+*/
+void createAnisoMesh(feMetric *metric, feMetricOptions metricOptions)
+{
+  // Write size map
+  metric->writeSizeFieldSol2D("sizeMapAniso.sol");
+  // Get input and output mesh names
+  size_t lastindex = metricOptions.meshName.find_last_of(".");
+  std::string root = metricOptions.meshName.substr(0, lastindex);
+  std::string meshToAdapt3D = root + ".mesh";
+  std::string meshToAdapt2D = root + "2D.mesh";
+  // Convert input 3D .mesh to 2D .mesh
+  std::string cmd = "mmg3Dto2D " + meshToAdapt3D;
+  system(cmd.c_str());
+  // Adapt mesh
+  cmd = "mmg2d " + meshToAdapt2D + " -sol sizeMapAniso.sol -hgrad 3 -o " + metricOptions.adaptedMeshName;
+  system(cmd.c_str());
+  // Open mesh
+  cmd = "gmsh " + metricOptions.adaptedMeshName + " &";
+  system(cmd.c_str());
+}
+
 /* Creates a curved mesh based on
     - the geometry stored in the active Gmsh model with name metricOptions.gmshModel
     - the metric field stored as a view in this model
@@ -159,9 +181,9 @@ void createCurvedMesh(feFunction *solExact, feMetaNumber *metaNumber, feSolution
   gmsh::merge("metric.o.msh");
 
   gmsh::option::setNumber("Mesh.MshFileVersion", 4.1);
-  computePointsUsingScaledCrossFieldPlanarP2(
-    modelForMetric.c_str(), modelForMesh.c_str(), metric->getMetricViewTag(), faceTag, pts,
-    errorSquaredCallback, metricOptions.inside, gradErrorSquaredCallback);
+  // computePointsUsingScaledCrossFieldPlanarP2(
+    // modelForMetric.c_str(), modelForMesh.c_str(), metric->getMetricViewTag(), faceTag, pts,
+    // errorSquaredCallback, metricOptions.inside, gradErrorSquaredCallback);
 
   // computePointsUsingScaledCrossFieldPlanarP2(modelForMetric.c_str(), modelForMesh.c_str(),
   // metric->getMetricViewTag(), faceTag, pts, NULL, metricOptions.inside);

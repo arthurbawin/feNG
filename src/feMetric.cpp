@@ -182,7 +182,7 @@ void feMetric::drawEllipsoids(std::string posFile)
 
   fprintf(f, "View \"ellipsesFromSimulation\"{\n");
 
-  double factor = 10.;
+  double factor = 1.;
   int nt = 30;
   std::vector<double> xP(nt, 0.);
   std::vector<double> yP(nt, 0.);
@@ -266,6 +266,35 @@ void feMetric::computeMetricsHechtKuate()
 
   // Scale the metric field to obtain the required mesh complexity
   metricScaling();
+
+  FILE *debugFile;
+  if(_options.debug) {
+    debugFile = fopen("ellipses.pos", "w");
+    fprintf(debugFile, "View \" ellipses \"{\n");
+
+    double factor = 1.;
+    int nt = 30;
+    std::vector<double> xP(nt, 0.);
+    std::vector<double> yP(nt, 0.);
+
+    for(auto v : vertices){
+      Vertex *vv = _recovery->_mesh->getVertex(v);
+      SMetric3 M = _metrics[v];
+      getEllipsePoints(factor * M(0, 0), factor * 2.0 * M(0, 1), factor * M(1, 1), vv->x(), vv->y(), xP, yP);
+      for(int j = 0; j < nt; ++j) {
+        if(j != nt - 1) {
+          fprintf(debugFile, "SL(%.16g,%.16g,%.16g,%.16g,%.16g,%.16g){%u, %u};\n", xP[j], yP[j],
+                  0., xP[j + 1], yP[j + 1], 0., 1, 1);
+        } else {
+          fprintf(debugFile, "SL(%.16g,%.16g,%.16g,%.16g,%.16g,%.16g){%u, %u};\n", xP[j], yP[j],
+                  0., xP[0], yP[0], 0., 1, 1);
+        }
+      }
+    }
+
+    fprintf(debugFile, "};");
+    fclose(debugFile);
+  }
 
   free(xNew);
   free(yNew);
@@ -460,6 +489,15 @@ void feMetric::computeMetricsWithDirectionField()
     M.set_m21(-g01);
     M.set_m22(g11);
     metrics[i] = M;
+
+    double tol = 1e-5;
+    std::vector<int> &vertices = _recovery->getVertices();
+    for(auto v : vertices){
+      Vertex *vv = _recovery->_mesh->getVertex(v);
+      if(fabs(vv->x() - x) < tol && fabs(vv->y() - y) < tol){
+        _metrics[v] = M;
+      }
+    }   
 
     if(_options.debug) {
       getEllipsePoints(factor * M(0, 0), factor * 2.0 * M(0, 1), factor * M(1, 1), x, y, xP, yP);

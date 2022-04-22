@@ -128,7 +128,7 @@ int main(int argc, char **argv)
   // according to the exportData structure. The linear system is assembled and solved in the
   // "makeSteps()" call.
   TimeIntegrator *solver;
-  feTolerances tol{1e-9, 1e-8, 0};
+  feTolerances tol{1e-9, 1e-8, 3};
   feCheck(createTimeIntegrator(solver, STATIONARY, tol, system, &metaNumber, &sol, &mesh, norms,
                                exportData));                                                           //BFD1, BFD2, etc ???
   feCheck(solver->makeSteps(0));
