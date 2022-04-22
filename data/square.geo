@@ -38,7 +38,9 @@ Plane Surface(1) = {1};
 //Physical Surface("Surface") = {1};
 
 
-Physical Curve("Bord")  = {1,2,3,4};
+Physical Curve("Dirichlet")  = {2,4};
+Physical Curve("NeumannHaut") = {3};
+Physical Curve("NeumannBas") = {1};
 Physical Surface("Domaine") = {1};
 
 //Mesh.ElementOrder = 2;

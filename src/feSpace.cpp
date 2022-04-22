@@ -7,16 +7,8 @@
 
 feStatus createFiniteElementSpace(feSpace *&space, feMesh *mesh, int dim, elemType type, int deg,
                                   std::string fieldID, std::string cncGeoID, int dQuad,
-                                  feFunction *fct, bool useGlobalShapeFunctions) //où est définit le P1 non conforme ? => non consistant ?
+                                  feFunction *fct, bool useGlobalShapeFunctions)
 {
-  int nbThreads = omp_get_num_threads();
-  #pragma omp parallel num_threads(4)
-  {
-    int ID = omp_get_thread_num();
-    printf("from createFE  : hello(%d/%d)\n", ID, omp_get_num_threads());
-    printf("world(%d/%d)\n", ID, omp_get_num_threads());
-  }
-
   if(mesh == nullptr) return feErrorMsg(FE_STATUS_ERROR, "Null mesh pointer.");
   if(fct == nullptr) return feErrorMsg(FE_STATUS_ERROR, "Null function pointer.");
 
@@ -756,6 +748,13 @@ void feSpace1DP2::initializeAddressingVector(feNumber *number, int numElem)
 
 void feSpace1DP2::initializeAddressingVector(feNumber *number, int numElem, std::vector<int> &adr)
 {
+  adr[0] = number->getDDLSommet(_mesh, _cncGeoID, numElem, 0);
+  adr[1] = number->getDDLSommet(_mesh, _cncGeoID, numElem, 1);
+  if(this->getCncGeo()->getFeSpace()->getPolynomialDegree() == 2) {
+    adr[2] = number->getDDLSommet(_mesh, _cncGeoID, numElem, 2);
+  } else {
+    adr[2] = number->getDDLElement(_mesh, _cncGeoID, numElem, 0);
+  }
 }
 
 void feSpace1DP3::initializeNumberingUnknowns(feNumber *number)

@@ -29,10 +29,10 @@ void feLinearSystemMklPardiso::print_matrix()
 
 void feLinearSystemMklPardiso::assembleMatrices(feSolution *sol)
 {
-  feInt NumberOfBilinearForms = _formMatrices.size();
+  feInt NumberOfBilinearForms = _formMatrices[0].size();
   // printf("ICI feLinearSystemMklPardiso::assembleMatrices  %ld\n", NumberOfBilinearForms);
   for(feInt eq = 0; eq < NumberOfBilinearForms; eq++) {
-    feBilinearForm *equelm = _formMatrices[eq];
+    feBilinearForm *equelm = _formMatrices[0][eq];
     feInt cncGeoTag = equelm->getCncGeoTag();
     feInt nbElems = _mesh->getNbElm(cncGeoTag);
     for(feInt e = 0; e < nbElems; e++) {
@@ -53,10 +53,10 @@ void feLinearSystemMklPardiso::assembleMatrices(feSolution *sol)
 
 void feLinearSystemMklPardiso::assembleResiduals(feSolution *sol)
 {
-  feInt NumberOfBilinearForms = _formResiduals.size();
-
+  feInt NumberOfBilinearForms = _formResiduals[0].size();
+  // printf("ICI feLinearSystemMklPardiso::assembleMatrices  %ld\n", NumberOfBilinearForms);
   for(feInt eq = 0; eq < NumberOfBilinearForms; eq++) {
-    feBilinearForm *equelm = _formResiduals[eq];
+    feBilinearForm *equelm = _formResiduals[0][eq];
     feInt cncGeoTag = equelm->getCncGeoTag();
     feInt nbElems = _mesh->getNbElm(cncGeoTag);
     for(feInt e = 0; e < nbElems; e++) {
@@ -210,7 +210,7 @@ feLinearSystemMklPardiso::feLinearSystemMklPardiso(std::vector<feBilinearForm *>
   // Structure Creuse CSR de MKL
   //=================================================================
   // tic();
-  crsMklPardiso = new feCompressedRowStorageMklPardiso(metaNumber, mesh, _formMatrices);
+  crsMklPardiso = new feCompressedRowStorageMklPardiso(metaNumber, mesh, _formMatrices[0]);
   // toc();
   nz = crsMklPardiso->getNz();
   Ap = (feMKLPardisoInt *)crsMklPardiso->getAp();

@@ -331,7 +331,11 @@ void feLinearSystemPETSc::assembleResiduals(feSolution *sol)
   
 
   std::vector<feBilinearForm *> formResidualsTest;
-  int nbThreadsMax=omp_get_max_threads(); 
+  #if defined(HAVE_OMP)
+  int nbThreadsMax=omp_get_max_threads();
+  #else
+  int nbThreadsMax = 1;
+  #endif
 
   for(int i=0;i<nbThreadsMax;++i){
     for(feBilinearForm *f : _formResiduals[0]){
@@ -354,7 +358,6 @@ void feLinearSystemPETSc::assembleResiduals(feSolution *sol)
       int eqt;
       feBilinearForm* f_t;
 
-      
       std::vector<int> niElm;
       int sizeI;
       std::vector<int> adrI;
@@ -370,12 +373,13 @@ void feLinearSystemPETSc::assembleResiduals(feSolution *sol)
       #pragma omp parallel for private(numThread,elm,eqt,adrI,sizeI,values,niElm,Be,f_t) schedule(dynamic)
       for(int iElm = 0; iElm < nbElmC; ++iElm){
 
+        #if defined(HAVE_OMP)
         numThread = omp_get_thread_num();
-        elm = listElmC[iElm]; 
         eqt=eq+numThread*nombreEq;
-
         f_t = formResidualsTest[eqt];
-        //std::cout<<"Adresse f_t : "<<f_t<<std::endl;
+        #endif
+
+        elm = listElmC[iElm]; 
         
         f_t->computeResidual(_metaNumber, _mesh, sol, elm); // Matrice elementaire 
 
@@ -388,27 +392,16 @@ void feLinearSystemPETSc::assembleResiduals(feSolution *sol)
         for(int i = 0; i < sizeI; ++i) {
           if(adrI[i] < _nInc) niElm.push_back(i);
         }
-    
-        // #pragma omp critical
-        // {
-        // printf("%d;",elm);for(auto val : niElm)std::cout<<val<<" "; std::cout<<std::endl;
-        // }
 
         adrI.erase(
           std::remove_if(adrI.begin(), adrI.end(),[this](const int &x) { return x >= this->_nInc; }),
           adrI.end());
-
-        // #pragma omp critical
-        // {
-        // printf("%d;",elm);for(auto val : adrI)std::cout<<val<<" "; std::cout<<std::endl;
-        // }
       
         sizeI = adrI.size();
         values.resize(sizeI);
 
         for(int i = 0; i < sizeI; ++i) {
           values[i] = Be[niElm[i]];
-          //std::cout<<"les valeurs de Be sont"<<values[i]<<std::endl;
         }
 
         ierr=VecSetValues(_res,adrI.size(),adrI.data(),values.data(),ADD_VALUES);

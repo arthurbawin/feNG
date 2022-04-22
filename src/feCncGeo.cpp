@@ -15,7 +15,7 @@ void feCncGeo::computeJacobians()
       geoCoord = _mesh->getCoord(_tag, iElm);
       for(int k = 0; k < nQuad; ++k) {
         _space->interpolateVectorFieldAtQuadNode_rDerivative(geoCoord, k, j);
-        _J[nQuad * iElm + k] = j[0];
+        _J[nQuad * iElm + k] = sqrt(j[0]*j[0] + j[1]*j[1]);
       }
     }
   } else if(_space->getDim() == 2) {

@@ -28,21 +28,31 @@ public:
                  feMesh *mesh)
     : _metaNumber(metaNumber), _mesh(mesh), recomputeMatrix(false)
   {
-    
-    _nbThreads=1;
     #if defined(HAVE_OMP)
-     _nbThreads=omp_get_max_threads();
-    #endif
-
+   _nbThreads = omp_get_max_threads();
+   #else
+   _nbThreads = 1;
+   #endif
     _formResiduals.resize(_nbThreads);
     _formMatrices.resize(_nbThreads);
-    for (int i=0; i<_nbThreads;++i){
+    for(int i=0; i<_nbThreads;++i){
       for(feBilinearForm *f : bilinearForms) {
         feBilinearForm *fCpy = new feBilinearForm(*f);
         _formResiduals[i].push_back(fCpy);
         if(f->hasMatrix()) _formMatrices[i].push_back(fCpy);
       }
     }
+    // #else
+    // // No need to copy the linear forms ?
+    // _nbThreads = 1;
+    // _formResiduals.resize(1);
+    // _formMatrices.resize(1);
+    // for(feBilinearForm *f : bilinearForms) {
+    //   feInfo("Looping on %s", f->getID().c_str());
+    //   _formResiduals[0].push_back(f);
+    //   if(f->hasMatrix()) _formMatrices[0].push_back(f);
+    // }
+    // #endif
   };
   virtual ~feLinearSystem() {}
 

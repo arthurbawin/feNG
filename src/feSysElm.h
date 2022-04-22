@@ -396,26 +396,26 @@ public:
                          double dt, double *Be, std::vector<double> &sol,int &idU, std::vector<double> &feU,std::vector<double> &feUdx,std::vector<double> &feUdy);
 };
 
-// class feSysElm_1D_NeumannBC : public feSysElm {
-// protected:
-//   feFunction *_fct;
-//   double _par; // Parametres
-//   int _idU;
-//   std::vector<double> _feU;
-//   std::vector<double> _feUdx;
+class feSysElm_1D_NeumannBC : public feSysElm {
+protected:
+  feFunction *_fct;
+  double _par; // Parametres
+  int _idU;
+  std::vector<double> _feU;
+  std::vector<double> _feUdx;
 
-// public:
-//   feSysElm_1D_Masse(double par, feFunction *fct) : _fct(fct), _par(par){};
-//   virtual ~feSysElm_1D_Masse() {}
+public:
+  feSysElm_1D_NeumannBC(double par, feFunction *fct) : feSysElm(false), _fct(fct), _par(par){};
+  virtual ~feSysElm_1D_NeumannBC() {}
 
-//   virtual void createElementarySystem(std::vector<feSpace *> &space);
-//   virtual void computeAe(std::vector<double> &J, int numElem, std::vector<feSpace *> &intSpace,
-//                          feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn,
-//                          double **Ae);
-//   virtual void computeBe(std::vector<double> &J, int numElem, std::vector<feSpace *> &intSpace,
-//                          feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn,
-//                          double dt, double *Be, std::vector<double> &sol,int &idU, std::vector<double> &feU,std::vector<double> &feUdx,std::vector<double> &feUdy);
-// };
+  virtual void createElementarySystem(std::vector<feSpace *> &space);
+  virtual void computeAe(std::vector<double> &J, int numElem, std::vector<feSpace *> &intSpace,
+                         feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn,
+                         double **Ae){};
+  virtual void computeBe(std::vector<double> &J, int numElem, std::vector<feSpace *> &intSpace,
+                         feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn,
+                         double dt, double *Be, std::vector<double> &sol,int &idU, std::vector<double> &feU,std::vector<double> &feUdx,std::vector<double> &feUdy);
+};
 
 class feSysElm_2D_Masse : public feSysElm
 {
