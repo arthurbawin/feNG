@@ -4,9 +4,10 @@
 #include "feNumber.h"
 #include "feSolution.h"
 
-feStatus createFiniteElementSpace(feSpace *&space, feMesh *mesh, int dim, elemType type, int deg,
-                                  std::string fieldID, std::string cncGeoID, int dQuad,
-                                  feFunction *fct, bool useGlobalShapeFunctions) //où est définit le P1 non conforme ? => non consistant ?
+feStatus createFiniteElementSpace(
+  feSpace *&space, feMesh *mesh, int dim, elemType type, int deg, std::string fieldID,
+  std::string cncGeoID, int dQuad, feFunction *fct,
+  bool useGlobalShapeFunctions) // où est définit le P1 non conforme ? => non consistant ?
 {
   if(mesh == nullptr) return feErrorMsg(FE_STATUS_ERROR, "Null mesh pointer.");
   if(fct == nullptr) return feErrorMsg(FE_STATUS_ERROR, "Null function pointer.");
@@ -41,8 +42,7 @@ feStatus createFiniteElementSpace(feSpace *&space, feMesh *mesh, int dim, elemTy
             return feErrorMsg(FE_STATUS_ERROR,
                               "No LINE finite element space implemented for deg > 4.");
         }
-      }
-      else if(type == LINE_CR) {
+      } else if(type == LINE_CR) {
         switch(deg) {
           case 1:
             space = new feSpace1DP1_nonConsistant(mesh, fieldID, cncGeoID, fct);
@@ -51,7 +51,7 @@ feStatus createFiniteElementSpace(feSpace *&space, feMesh *mesh, int dim, elemTy
             return feErrorMsg(FE_STATUS_ERROR,
                               "No LINE finite element space implemented for deg > 4.");
         }
-      }else {
+      } else {
         return feErrorMsg(FE_STATUS_ERROR, "Unsupported geometry.");
       }
       break;
@@ -77,10 +77,11 @@ feStatus createFiniteElementSpace(feSpace *&space, feMesh *mesh, int dim, elemTy
             return feErrorMsg(FE_STATUS_ERROR,
                               "No LINE finite element space implemented for deg > 4.");
         }
-      }else if(type == TRI_CR){
-        switch(deg){
+      } else if(type == TRI_CR) {
+        switch(deg) {
           case 0:
-            return feErrorMsg(FE_STATUS_ERROR,"No TRI_CR finite element space implemented for deg >2.");
+            return feErrorMsg(FE_STATUS_ERROR,
+                              "No TRI_CR finite element space implemented for deg >2.");
           case 1:
             space = new feSpaceTriP1_nonConsistant(mesh, fieldID, cncGeoID, fct);
             break;
@@ -91,7 +92,7 @@ feStatus createFiniteElementSpace(feSpace *&space, feMesh *mesh, int dim, elemTy
             return feErrorMsg(FE_STATUS_ERROR,
                               "No LINE finite element space implemented for deg > 4.");
         }
-      }else {
+      } else {
         return feErrorMsg(FE_STATUS_ERROR, "Unsupported geometry.");
       }
       break;
@@ -162,7 +163,8 @@ feStatus feSpace::setQuadratureRule(feQuadrature *rule)
   }
 
   if(_fieldID != "GEO" && _useGlobalShapeFunctions) {
-    feInfo("USING GLOBAL FUNCTIONS on space %s - %s", this->_fieldID.c_str(), this->_cncGeoID.c_str());
+    feInfo("USING GLOBAL FUNCTIONS on space %s - %s", this->_fieldID.c_str(),
+           this->_cncGeoID.c_str());
     feInfo("USING GLOBAL FUNCTIONS");
     feInfo("USING GLOBAL FUNCTIONS");
     /* Physical frame discretization : shape functions are computed on the physical element. */
@@ -279,7 +281,6 @@ void feSpace::initializeSolution(std::vector<double> &sol)
     _sol[i] = sol[_adr[i]];
   }
 }
-
 
 void feSpace::initializeSolutionDot(feSolution *sol)
 {
@@ -480,7 +481,6 @@ double feSpace::interpolateFieldAtQuadNode_rDerivative(std::vector<double> field
   return res;
 }
 
-
 double feSpace::interpolateFieldAtQuadNode_sDerivative(std::vector<double> field, int iNode)
 {
   double res = 0.0;
@@ -641,6 +641,8 @@ void feSpace1DP0::initializeAddressingVector(feNumber *number, int numElem)
 
 void feSpace1DP0::initializeAddressingVector(feNumber *number, int numElem, std::vector<int> &adr)
 {
+  // for(int i = 0; i < _mesh->getNbElm(_cncGeoID); ++i)
+  adr[0] = number->getDDLSommet(_mesh, _cncGeoID, numElem, 0);
 }
 
 void feSpace1DP1::initializeNumberingUnknowns(feNumber *number)
@@ -667,6 +669,8 @@ void feSpace1DP1::initializeAddressingVector(feNumber *number, int numElem)
 
 void feSpace1DP1::initializeAddressingVector(feNumber *number, int numElem, std::vector<int> &adr)
 {
+  adr[0] = number->getDDLSommet(_mesh, _cncGeoID, numElem, 0);
+  adr[1] = number->getDDLSommet(_mesh, _cncGeoID, numElem, 1);
 }
 
 void feSpace1DP1_nonConsistant::initializeNumberingUnknowns(feNumber *number)
@@ -693,8 +697,10 @@ void feSpace1DP1_nonConsistant::initializeAddressingVector(feNumber *number, int
   _adr[0] = number->getDDLElement(_mesh, _cncGeoID, numElem, 0);
 }
 
-void feSpace1DP1_nonConsistant::initializeAddressingVector(feNumber *number, int numElem, std::vector<int> &adr)
+void feSpace1DP1_nonConsistant::initializeAddressingVector(feNumber *number, int numElem,
+                                                           std::vector<int> &adr)
 {
+  adr[0] = number->getDDLElement(_mesh, _cncGeoID, numElem, 0);
 }
 
 void feSpace1DP2::initializeNumberingUnknowns(feNumber *number)
@@ -747,6 +753,13 @@ void feSpace1DP2::initializeAddressingVector(feNumber *number, int numElem)
 
 void feSpace1DP2::initializeAddressingVector(feNumber *number, int numElem, std::vector<int> &adr)
 {
+  adr[0] = number->getDDLSommet(_mesh, _cncGeoID, numElem, 0);
+  adr[1] = number->getDDLSommet(_mesh, _cncGeoID, numElem, 1);
+  if(this->getCncGeo()->getFeSpace()->getPolynomialDegree() == 2) {
+    adr[2] = number->getDDLSommet(_mesh, _cncGeoID, numElem, 2);
+  } else {
+    adr[2] = number->getDDLElement(_mesh, _cncGeoID, numElem, 0);
+  }
 }
 
 void feSpace1DP3::initializeNumberingUnknowns(feNumber *number)
@@ -789,6 +802,16 @@ void feSpace1DP3::initializeAddressingVector(feNumber *number, int numElem)
 
 void feSpace1DP3::initializeAddressingVector(feNumber *number, int numElem, std::vector<int> &adr)
 {
+  adr[0] = number->getDDLSommet(_mesh, _cncGeoID, numElem, 0);
+  adr[1] = number->getDDLSommet(_mesh, _cncGeoID, numElem, 1);
+  int e = _mesh->getEdge(_cncGeoID, numElem, 0);
+  if(e > 0) {
+    adr[2] = number->getDDLElement(_mesh, _cncGeoID, numElem, 0);
+    adr[3] = number->getDDLElement(_mesh, _cncGeoID, numElem, 1);
+  } else {
+    adr[2] = number->getDDLElement(_mesh, _cncGeoID, numElem, 1);
+    adr[3] = number->getDDLElement(_mesh, _cncGeoID, numElem, 0);
+  }
 }
 
 void feSpace1DP4::initializeNumberingUnknowns(feNumber *number)
@@ -834,4 +857,16 @@ void feSpace1DP4::initializeAddressingVector(feNumber *number, int numElem)
 
 void feSpace1DP4::initializeAddressingVector(feNumber *number, int numElem, std::vector<int> &adr)
 {
+  adr[0] = number->getDDLSommet(_mesh, _cncGeoID, numElem, 0);
+  adr[1] = number->getDDLSommet(_mesh, _cncGeoID, numElem, 1);
+  int e = _mesh->getEdge(_cncGeoID, numElem, 0);
+  if(e > 0) {
+    adr[2] = number->getDDLElement(_mesh, _cncGeoID, numElem, 0);
+    adr[3] = number->getDDLElement(_mesh, _cncGeoID, numElem, 1);
+    adr[4] = number->getDDLElement(_mesh, _cncGeoID, numElem, 2);
+  } else {
+    adr[4] = number->getDDLElement(_mesh, _cncGeoID, numElem, 0);
+    adr[3] = number->getDDLElement(_mesh, _cncGeoID, numElem, 1);
+    adr[2] = number->getDDLElement(_mesh, _cncGeoID, numElem, 2);
+  }
 }

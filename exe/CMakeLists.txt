@@ -6,6 +6,7 @@ feNG_add_executable(testOpenMP testOpenMP.cpp "")
 #feNG_add_executable(example3 example3.cpp "")
 #feNG_add_executable(example4 example4.cpp "")
 #feNG_add_executable(example5 example5.cpp "")
+#feNG_add_executable(testColor testColor.cpp "")
 
 # feNG_add_executable(testStationnaire testStationnaire.cpp "")
 # feNG_add_executable(testBDF2 testBDF2.cpp "")

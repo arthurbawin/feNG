@@ -265,7 +265,8 @@ int dim_of_gmsh_element[] = {
   // TODO : Complete the table (-:
 };
 
-feStatus feMesh2DP1::readMsh2(std::istream &input, bool curved, bool reversed, mapType physicalEntitiesDescription)
+feStatus feMesh2DP1::readMsh2(std::istream &input, bool curved, bool reversed,
+                              mapType physicalEntitiesDescription)
 {
   std::string buffer;
   int ph1; // Placeholder
@@ -321,7 +322,7 @@ feStatus feMesh2DP1::readMsh2(std::istream &input, bool curved, bool reversed, m
 
     else if(buffer == "$Nodes") { // Read nodes
 
-      if(_nPhysicalEntities == 0){
+      if(_nPhysicalEntities == 0) {
         return feErrorMsg(FE_STATUS_ERROR, "No physical entities defined on the mesh.");
       }
 
@@ -364,11 +365,15 @@ feStatus feMesh2DP1::readMsh2(std::istream &input, bool curved, bool reversed, m
         Since we only accept non-overlapping physical domains (i.e. each element belongs to a
         single physical entity), let's just assume the first number is the physical domain and
         the following are the geometric entities. */
-        if(numEntities != 2){
+        if(numEntities != 2) {
           if(numEntities < 2)
-            return feErrorMsg(FE_STATUS_ERROR, "Element with Gmsh tag %d is not part of a physical entity.", gmshElemTag);
+            return feErrorMsg(FE_STATUS_ERROR,
+                              "Element with Gmsh tag %d is not part of a physical entity.",
+                              gmshElemTag);
           else
-            return feErrorMsg(FE_STATUS_ERROR, "Element with Gmsh tag %d is part of more than one physical entity.", gmshElemTag);
+            return feErrorMsg(FE_STATUS_ERROR,
+                              "Element with Gmsh tag %d is part of more than one physical entity.",
+                              gmshElemTag);
         }
 
         int entityDim = dim_of_gmsh_element[elemType - 1];
@@ -635,7 +640,8 @@ feStatus feMesh2DP1::readMsh2(std::istream &input, bool curved, bool reversed, m
   return FE_STATUS_OK;
 }
 
-feStatus feMesh2DP1::readMsh4(std::istream &input, bool curved, bool reversed, mapType physicalEntitiesDescription)
+feStatus feMesh2DP1::readMsh4(std::istream &input, bool curved, bool reversed,
+                              mapType physicalEntitiesDescription)
 {
   std::string buffer;
   // Placeholders
@@ -701,7 +707,7 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, bool curved, bool reversed, m
 
     else if(buffer == "$Entities") { // Read geometric entities
 
-      if(_nPhysicalEntities == 0){
+      if(_nPhysicalEntities == 0) {
         return feErrorMsg(FE_STATUS_ERROR, "No physical entities defined on the mesh.");
       }
 
@@ -1153,14 +1159,15 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, bool curved, bool reversed, m
             elemNodesGmsh[j] = ph1; // The Gmsh number stored in ph1 is used to create the edges
             elemNodes[j] =
               it->second; // The node number (0...nNode) is used to create the connectivity
-              /* Add the raw node number to the global connectivity table */
-              if(entityDim == 1){
-                _globalCurvesNodeConnectivity.push_back(ph1);
-              } else if(entityDim == 2){
-                _globalSurfacesNodeConnectivity.push_back(ph1);
-              } else{
-                feErrorMsg(FE_STATUS_ERROR, "Cannot create global connectivity table for entity with dim > 2.");
-              }
+            /* Add the raw node number to the global connectivity table */
+            if(entityDim == 1) {
+              _globalCurvesNodeConnectivity.push_back(ph1);
+            } else if(entityDim == 2) {
+              _globalSurfacesNodeConnectivity.push_back(ph1);
+            } else {
+              feErrorMsg(FE_STATUS_ERROR,
+                         "Cannot create global connectivity table for entity with dim > 2.");
+            }
           }
 
           switch(elemType) {
@@ -1212,14 +1219,14 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, bool curved, bool reversed, m
             case 46: // 66-node triangle (10th order)
             {
               if(curved) {
-                if(reversed){
+                if(reversed) {
                   _entities[p].connecNodes[nElemNodes * iElm + 0] = elemNodes[0];
                   _entities[p].connecNodes[nElemNodes * iElm + 1] = elemNodes[2];
                   _entities[p].connecNodes[nElemNodes * iElm + 2] = elemNodes[1];
                   _entities[p].connecNodes[nElemNodes * iElm + 3] = elemNodes[5];
                   _entities[p].connecNodes[nElemNodes * iElm + 4] = elemNodes[4];
                   _entities[p].connecNodes[nElemNodes * iElm + 5] = elemNodes[3];
-                } else{
+                } else {
                   _entities[p].connecNodes[nElemNodes * iElm + 0] = elemNodes[0];
                   _entities[p].connecNodes[nElemNodes * iElm + 1] = elemNodes[1];
                   _entities[p].connecNodes[nElemNodes * iElm + 2] = elemNodes[2];
@@ -1230,8 +1237,8 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, bool curved, bool reversed, m
 
                 /* Add a perturbation on the high-order nodes */
                 bool addPerturbation = true;
-                if(addPerturbation){
-                  for(int j = 0; j < 3; ++j){
+                if(addPerturbation) {
+                  for(int j = 0; j < 3; ++j) {
                     Vertex *v0 = &_vertices[_entities[p].connecNodes[nElemNodes * iElm + j]];
                     Vertex *vMid = &_vertices[_entities[p].connecNodes[nElemNodes * iElm + j + 3]];
                     // Normal vector
@@ -1239,27 +1246,29 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, bool curved, bool reversed, m
                     n[0] = vMid->y() - v0->y();
                     n[1] = -(vMid->x() - v0->x());
                     n[2] = 0.0;
-                    double N = sqrt(n[0]*n[0] + n[1]*n[1] + n[2]*n[2]);
+                    double N = sqrt(n[0] * n[0] + n[1] * n[1] + n[2] * n[2]);
                     n[0] /= N;
                     n[1] /= N;
                     n[2] /= N;
-                    if(fabs(n[0] - 1./sqrt(2.)) < 1e-5 && fabs(n[1] - 1./sqrt(2.)) < 1e-5){
+                    if(fabs(n[0] - 1. / sqrt(2.)) < 1e-5 && fabs(n[1] - 1. / sqrt(2.)) < 1e-5) {
                       double *coord = (*vMid)();
                       double alpha = 0.2;
-                      std::vector<double> gamma = {2.0 * (vMid->x() - v0->x()), 2.0 * (vMid->y() - v0->y())}; // vMid - v0 = gamma/2
+                      std::vector<double> gamma = {2.0 * (vMid->x() - v0->x()),
+                                                   2.0 *
+                                                     (vMid->y() - v0->y())}; // vMid - v0 = gamma/2
                       std::vector<double> gammaOrth = {gamma[1], -gamma[0]};
-                      coord[0] = v0->x() + 0.5 * gamma[0] + alpha * gammaOrth[0]; 
+                      coord[0] = v0->x() + 0.5 * gamma[0] + alpha * gammaOrth[0];
                       coord[1] = v0->y() + 0.5 * gamma[1] + alpha * gammaOrth[1];
                     }
                   }
                 }
 
               } else {
-                if(reversed){
+                if(reversed) {
                   _entities[p].connecNodes[nElemNodes * iElm + 0] = elemNodes[0];
                   _entities[p].connecNodes[nElemNodes * iElm + 1] = elemNodes[2];
                   _entities[p].connecNodes[nElemNodes * iElm + 2] = elemNodes[1];
-                } else{
+                } else {
                   for(int j = 0; j < nElemNodes; ++j) {
                     _entities[p].connecNodes[nElemNodes * iElm + j] = elemNodes[j];
                   }
@@ -1522,10 +1531,10 @@ feStatus feMesh2DP1::readGmsh(std::string meshName, bool curved, bool reversed,
     for(auto &p : _physicalEntities) {
       physicalEntity &pE = p.second;
       feInfo("Physical %15s : dim = %1d - nEntities = %2d - nElm = %9d - nNodePerElem = %2d - "
-        "nEdgePerElem = %1d - "
-        "geometric interpolant : %10s",
-        pE.name.c_str(), pE.dim, pE.listEntities.size(), pE.nElm, pE.nNodePerElem,
-        pE.nEdgePerElem, pE.cncID.c_str());
+             "nEdgePerElem = %1d - "
+             "geometric interpolant : %10s",
+             pE.name.c_str(), pE.dim, pE.listEntities.size(), pE.nElm, pE.nNodePerElem,
+             pE.nEdgePerElem, pE.cncID.c_str());
     }
   }
 

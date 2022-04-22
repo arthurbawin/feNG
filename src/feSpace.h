@@ -113,7 +113,7 @@ public:
 
   virtual std::vector<double> L(double r[3]) = 0;
   virtual feStatus Lphys(int iElm, std::vector<double> &x, std::vector<double> &L,
-                     std::vector<double> &dLdx, std::vector<double> &dLdy) = 0;
+                         std::vector<double> &dLdx, std::vector<double> &dLdy) = 0;
   virtual std::vector<double> dLdr(double r[3]) = 0;
   virtual std::vector<double> dLds(double r[3]) = 0;
   virtual std::vector<double> dLdt(double r[3]) = 0;
@@ -234,7 +234,7 @@ public:
   virtual int getPolynomialDegree() { return 0; }
   virtual std::vector<double> L(double r[3]) { return {1.}; };
   virtual feStatus Lphys(int iElm, std::vector<double> &x, std::vector<double> &L,
-                     std::vector<double> &dLdx, std::vector<double> &dLdy)
+                         std::vector<double> &dLdx, std::vector<double> &dLdy)
   {
     printf("Not implemented\n");
     exit(-1);
@@ -272,7 +272,7 @@ public:
   virtual int getPolynomialDegree() { return 1; }
   virtual std::vector<double> L(double r[3]) { return {(1. - r[0]) / 2., (1. + r[0]) / 2.}; };
   virtual feStatus Lphys(int iElm, std::vector<double> &x, std::vector<double> &L,
-                     std::vector<double> &dLdx, std::vector<double> &dLdy)
+                         std::vector<double> &dLdx, std::vector<double> &dLdy)
   {
     printf("Not implemented\n");
     exit(-1);
@@ -314,7 +314,8 @@ public:
   virtual std::vector<double> dLds(double r[3]) { return {0.}; };
   virtual std::vector<double> dLdt(double r[3]) { return {0.}; };
 
-  virtual feStatus Lphys(int iElm, std::vector<double> &x, std::vector<double> &L, std::vector<double> &dLdx, std::vector<double> &dLdy)
+  virtual feStatus Lphys(int iElm, std::vector<double> &x, std::vector<double> &L,
+                         std::vector<double> &dLdx, std::vector<double> &dLdy)
   {
     printf("Not implemented\n");
     exit(-1);
@@ -352,7 +353,7 @@ public:
     return {-r[0] * (1. - r[0]) / 2., r[0] * (1. + r[0]) / 2., -(r[0] + 1.) * (r[0] - 1.)};
   };
   virtual feStatus Lphys(int iElm, std::vector<double> &x, std::vector<double> &L,
-                     std::vector<double> &dLdx, std::vector<double> &dLdy)
+                         std::vector<double> &dLdx, std::vector<double> &dLdy)
   {
     printf("Not implemented\n");
     exit(-1);
@@ -400,7 +401,7 @@ public:
             -27. / 16. * (r[0] + 1.) * (r[0] + 1. / 3.) * (r[0] - 1.)};
   };
   virtual feStatus Lphys(int iElm, std::vector<double> &x, std::vector<double> &L,
-                     std::vector<double> &dLdx, std::vector<double> &dLdy)
+                         std::vector<double> &dLdx, std::vector<double> &dLdy)
   {
     printf("Not implemented\n");
     exit(-1);
@@ -451,7 +452,7 @@ public:
             r[0] * (r[0] - 1.0) * (r[0] + 1.0) * (r[0] + 1.0 / 2.0) * (-8.0 / 3.0)};
   };
   virtual feStatus Lphys(int iElm, std::vector<double> &x, std::vector<double> &L,
-                     std::vector<double> &dLdx, std::vector<double> &dLdy)
+                         std::vector<double> &dLdx, std::vector<double> &dLdy)
   {
     printf("Not implemented\n");
     exit(-1);

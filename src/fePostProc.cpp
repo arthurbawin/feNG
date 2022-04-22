@@ -82,9 +82,9 @@ double fePostProc::computeL2ErrorNorm(feSolution *sol)
       std::vector<double> x(3, 0.0);
       _geoSpace->interpolateVectorFieldAtQuadNode(geoCoord, k, x);
 
-      if(_intSpace->useGlobalFunctions()){
+      if(_intSpace->useGlobalFunctions()) {
         solInt = _intSpace->interpolateSolutionAtQuadNode(iElm, k);
-      } else{
+      } else {
         solInt = _intSpace->interpolateSolutionAtQuadNode(k);
       }
 

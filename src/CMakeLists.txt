@@ -91,7 +91,7 @@ set(feNG_SRC
     fePostProc.cpp
     feRecovery.cpp
     feQuadrature.cpp
-    feSimplex.cpp
+    #feSimplex.cpp
     feSolution.cpp
     feSolutionContainer.cpp
     feSolver.cpp
@@ -136,7 +136,7 @@ set(feNG_API
     fePostProc.h
     feQuadrature.h
     feRecovery.h
-    feSimplex.h
+    #feSimplex.h
     feSolution.h
     feSolutionContainer.h
     feSolver.h

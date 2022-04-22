@@ -8,7 +8,9 @@ double vectorMaxNorm(feInt N, double *V)
 {
   double t = 0.0;
 
-  for(feInt i = 0; i < N; i++) t = fmax(t, abs(V[i]));
+  for(feInt i = 0; i < N; i++) {
+    t = fmax(t, fabs(V[i]));
+  }
 
   return t;
 }
@@ -29,49 +31,159 @@ void feLinearSystemMklPardiso::print_matrix()
 
 void feLinearSystemMklPardiso::assembleMatrices(feSolution *sol)
 {
+  feInfo("Assembling the Matrix...");
+  tic();
+
+  int nbColor = _mesh->getNbColor();
+  std::vector<int> colorElm = _mesh->getColorElm();
+  std::vector<int> nbElmPerColor = _mesh->getNbElmPerColor();
+  std::vector<std::vector<int> > listElmPerColor = _mesh->getListElmPerColor();
+
   feInt NumberOfBilinearForms = _formMatrices.size();
-  // printf("ICI feLinearSystemMklPardiso::assembleMatrices  %ld\n", NumberOfBilinearForms);
+
   for(feInt eq = 0; eq < NumberOfBilinearForms; eq++) {
-    feBilinearForm *equelm = _formMatrices[eq];
-    feInt cncGeoTag = equelm->getCncGeoTag();
-    feInt nbElems = _mesh->getNbElm(cncGeoTag);
-    for(feInt e = 0; e < nbElems; e++) {
-      equelm->initialize(_metaNumber, _mesh, sol, e);
+    for(int iColor = 0; iColor < nbColor; iColor++) {
+      int nbElmC = nbElmPerColor[iColor]; // nbElmC : nombre d'elm de meme couleur
+      std::vector<int> listElmC = listElmPerColor[iColor];
 
-      equelm->computeMatrix(_metaNumber, _mesh, sol, e);
+      feInt numThread = 0;
+      int elm;
+      int eqt;
+      feBilinearForm *f_t;
 
-      feInt nRow = equelm->getNiElm();
-      std::vector<feInt> Row(equelm->getAdrI().begin(), equelm->getAdrI().end());
-      feInt nColumn = equelm->getNjElm();
-      std::vector<feInt> Column(equelm->getAdrJ().begin(), equelm->getAdrJ().end());
-      double **Ae = equelm->getAe();
+      feInt debut;
+      feInt fin;
+      feInt ncf;
 
-      crsMklPardiso->matrixAddValues(Ax, nRow, Row.data(), nColumn, Column.data(), Ae);
+#if defined(HAVE_OMP)
+#pragma omp parallel for private(numThread, elm, eqt, f_t, debut, fin, ncf) schedule(static)
+#endif
+      for(int iElm = 0; iElm < nbElmC; ++iElm) {
+#if defined(HAVE_OMP)
+        numThread = omp_get_thread_num();
+// feInfo("numThread : %d",numThread);
+#endif
+
+        elm = listElmC[iElm];
+        eqt = eq + numThread * NumberOfBilinearForms;
+        f_t = _formMatricesOMP[eqt];
+
+        f_t->initialize(_metaNumber, _mesh, sol, elm);
+
+        f_t->computeMatrix(_metaNumber, _mesh, sol, elm);
+
+        feInt nRow = f_t->getNiElm();
+        std::vector<feInt> Row(f_t->getAdrI().begin(), f_t->getAdrI().end());
+        feInt nColumn = f_t->getNjElm();
+        std::vector<feInt> Column(f_t->getAdrJ().begin(), f_t->getAdrJ().end());
+        double **Ae = f_t->getAe();
+
+        for(feInt i = 0; i < nRow; i++) {
+          std::vector<feInt> irangee(matrixOrder);
+          feInt I = Row[i];
+          debut = 0;
+          fin = 0;
+          ncf = 0;
+          if(I < matrixOrder) {
+            debut = Ap[I] - 1;
+            fin = Ap[I + 1] - 1;
+            ncf = fin - debut;
+
+            for(feInt j = 0; j < ncf; j++) {
+              irangee[Aj[debut + j] - 1] = debut + j;
+            }
+
+            for(feInt j = 0; j < nColumn; j++) {
+              feInt J = Column[j];
+              if(J < matrixOrder) {
+                Ax[irangee[J]] += Ae[i][j];
+              }
+            }
+          }
+        }
+      }
     }
+
+    // feBilinearForm *equelm = _formMatrices[eq];
+    // feInt cncGeoTag = equelm->getCncGeoTag();
+    // feInt nbElems = _mesh->getNbElm(cncGeoTag);
+    // for(feInt e = 0; e < nbElems; e++) {
+    //   equelm->initialize(_metaNumber, _mesh, sol, e);
+
+    //   equelm->computeMatrix(_metaNumber, _mesh, sol, e);
+
+    //   feInt nRow = equelm->getNiElm();
+    //   std::vector<feInt> Row(equelm->getAdrI().begin(), equelm->getAdrI().end());
+    //   feInt nColumn = equelm->getNjElm();
+    //   std::vector<feInt> Column(equelm->getAdrJ().begin(), equelm->getAdrJ().end());
+    //   double **Ae = equelm->getAe();
+
+    //   crsMklPardiso->matrixAddValues(Ax, nRow, Row.data(), nColumn, Column.data(), Ae);
+    // }
   }
+  // print_matrix();
+  feInfo("Done...");
+  toc();
 }
 
 void feLinearSystemMklPardiso::assembleResiduals(feSolution *sol)
 {
+  feInfo("Assembling the residual...");
+  tic();
+
+  int nbColor = _mesh->getNbColor();
+  std::vector<int> colorElm = _mesh->getColorElm();
+  std::vector<int> nbElmPerColor = _mesh->getNbElmPerColor();
+  std::vector<std::vector<int> > listElmPerColor = _mesh->getListElmPerColor();
+
   feInt NumberOfBilinearForms = _formResiduals.size();
 
   for(feInt eq = 0; eq < NumberOfBilinearForms; eq++) {
-    feBilinearForm *equelm = _formResiduals[eq];
-    feInt cncGeoTag = equelm->getCncGeoTag();
-    feInt nbElems = _mesh->getNbElm(cncGeoTag);
-    for(feInt e = 0; e < nbElems; e++) {
-      equelm->initialize(_metaNumber, _mesh, sol, e);
+    for(int iColor = 0; iColor < nbColor; ++iColor) {
+      int nbElmC = nbElmPerColor[iColor]; // nbElmC : nombre d'elm de meme couleur
+      std::vector<int> listElmC = listElmPerColor[iColor];
 
-      equelm->computeResidual(_metaNumber, _mesh, sol, e);
+      feInt numThread = 0;
+      int elm;
+      int eqt;
+      feBilinearForm *f_t;
 
-      feInt nRow = equelm->getNiElm();
-      std::vector<feInt> Row(equelm->getAdrI().begin(), equelm->getAdrI().end());
-      double *Be = equelm->getBe();
+      feInt nRow;
+      double *Be;
 
-      for(feInt i = 0; i < nRow; i++)
-        if(Row[i] < matrixOrder) residu[Row[i]] += Be[i];
+#if defined(HAVE_OMP)
+#pragma omp parallel for private(numThread, elm, eqt, nRow, Be, f_t) schedule(dynamic)
+#endif
+      for(int iElm = 0; iElm < nbElmC; ++iElm) {
+#if defined(HAVE_OMP)
+        numThread = omp_get_thread_num();
+// feInfo("numThread : %d",numThread);
+#endif
+
+        elm = listElmC[iElm];
+        eqt = eq + numThread * NumberOfBilinearForms;
+        f_t = _formResidualsOMP[eqt];
+
+        f_t->initialize(_metaNumber, _mesh, sol, elm);
+
+        f_t->computeResidual(_metaNumber, _mesh, sol, elm);
+
+        nRow = f_t->getNiElm();
+
+        std::vector<feInt> Row(f_t->getAdrI().begin(), f_t->getAdrI().end());
+
+        Be = f_t->getBe();
+
+        for(feInt i = 0; i < nRow; i++)
+          if(Row[i] < matrixOrder) residu[Row[i]] += Be[i];
+      }
     }
   }
+  feInfo("Done...");
+  toc();
+  // for(int i=0;i<matrixOrder;i++){
+  //   printf("%g \n",residu[i]);
+  // }
 }
 
 void feLinearSystemMklPardiso::assignResidualToDCResidual(feSolutionContainer *solContainer)
@@ -109,6 +221,11 @@ void feLinearSystemMklPardiso::solve(double *normDx, double *normResidual, doubl
   mklSolve();
 
   symbolicFactorization = false;
+
+  // feInfo("matrixOrder : %d",matrixOrder);
+
+  // for (int i=0;i<matrixOrder;i++)
+  //   feInfo("%g",du[i]);
 
   *normDx = vectorMaxNorm(matrixOrder, du);
   *normResidual = vectorMaxNorm(matrixOrder, residu);
@@ -210,7 +327,7 @@ feLinearSystemMklPardiso::feLinearSystemMklPardiso(std::vector<feBilinearForm *>
   // Structure Creuse CSR de MKL
   //=================================================================
   // tic();
-  crsMklPardiso = new feCompressedRowStorageMklPardiso(metaNumber, mesh, _formMatrices);
+  crsMklPardiso = new feCompressedRowStorageMklPardiso(metaNumber, mesh, _formMatricesOMP);
   // toc();
   nz = crsMklPardiso->getNz();
   Ap = (feMKLPardisoInt *)crsMklPardiso->getAp();
@@ -265,7 +382,7 @@ feLinearSystemMklPardiso::feLinearSystemMklPardiso(std::vector<feBilinearForm *>
   // IPARM[2]= num_procs; // nombre de processeurs
   MAXFCT = 1;
   MNUM = 1;
-  MSGLVL = 0; // ou 1
+  MSGLVL = 1; // ou 0
   ERROR = 0;
   //=================================================================
   // 	Factorisation symbolique

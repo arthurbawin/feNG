@@ -53,12 +53,12 @@ void feLinearSystemPETSc::initialize()
   ierr = VecSet(_dx, 1.0);
 
   // Determine the nonzero structure
-  feCompressedRowStorage CRS(_metaNumber, _mesh, _formMatrices[0]);
+  feCompressedRowStorage CRS(_metaNumber, _mesh, _formMatricesOMP);
   feInt *NNZ = CRS.getNnz();
   std::vector<PetscInt> nnz(_nInc, 0);
   for(int i = 0; i < _nInc; ++i) {
     nnz[i] = NNZ[i];
-    //feInfo("NNZ  %d : %d",i,NNZ[i]);
+    // feInfo("NNZ  %d : %d",i,NNZ[i]);
   }
 
   bool withPrealloc = true;
@@ -194,94 +194,77 @@ void feLinearSystemPETSc::setResidualToZero()
 void feLinearSystemPETSc::assembleMatrices(feSolution *sol)
 {
 #if defined(HAVE_PETSC)
-  PetscErrorCode ierr = 0;
   if(recomputeMatrix) {
-    //feInfo("Assembling the matrix...");
-    //tic();
-    
-    int nbColor=_mesh->getNbColor();
-    std::vector<int> colorElm=_mesh->getColorElm();
-    std::vector<int> nbElmPerColor=_mesh->getNbElmPerColor();
-    std::vector<int> list=_mesh->getList();
-    std::vector<int> startIndex=_mesh->getIndexStartColorInList();
+    feInfo("Assembling the matrix ...");
+    tic();
 
-    #if defined(HAVE_OMP)    
-    //feInfo("Nombre de threads max : %d", omp_get_max_threads());
-    #endif
+    PetscErrorCode ierr = 0;
 
-    for(int iColor=0;iColor<nbColor;++iColor){
+    int nbColor = _mesh->getNbColor();
+    std::vector<int> colorElm = _mesh->getColorElm();
+    std::vector<int> nbElmPerColor = _mesh->getNbElmPerColor();
+    std::vector<std::vector<int> > listElmPerColor = _mesh->getListElmPerColor();
 
-      int nbElmC=nbElmPerColor[iColor]; //nbElm : nombre d'elm de meme couleur
-      std::vector<int> listElmC(list.begin()+startIndex[iColor],list.begin()+startIndex[iColor]+nbElmC);
+    feInt NumberOfBilinearForms = _formMatrices.size();
+    for(feInt eq = 0; eq < NumberOfBilinearForms; ++eq) {
+      for(int iColor = 0; iColor < nbColor; ++iColor) {
+        int nbElmC = nbElmPerColor[iColor]; // nbElm : nombre d'elm de meme couleur
+        std::vector<int> listElmC = listElmPerColor[iColor];
 
-      int numThread=0;
-      int elm=0;
+        int numThread = 0;
+        int elm = 0;
+        int eqt = 0;
+        feBilinearForm *f_t = NULL;
 
-      PetscInt I, J;
-      std::vector<PetscScalar> values;
-      int sizeI, sizeJ;
-      std::vector<int> niElm;
-      std::vector<int> njElm;
-      std::vector<int> adrI;
-      std::vector<int> adrJ;
+        std::vector<PetscScalar> values(0);
+        int sizeI = 0;
+        int sizeJ = 0;
+        std::vector<int> niElm(0);
+        std::vector<int> njElm(0);
+        std::vector<int> adrI(0);
+        std::vector<int> adrJ(0);
 
-      double **Ae;
-      std::vector<feBilinearForm*> formMatricesTh;
+#if defined(HAVE_OMP)
+#pragma omp parallel for private(numThread, elm, eqt, f_t, ierr, values, sizeI, sizeJ, niElm,      \
+                                 njElm, adrI, adrJ) schedule(static)
+#endif
+        for(int iElm = 0; iElm < nbElmC; ++iElm) {
+#if defined(HAVE_OMP)
+          numThread = omp_get_thread_num();
+// feInfo("numThread : %d",numThread);
+#endif
 
-      #if defined(HAVE_OMP) 
-      #pragma omp parallel for private(numThread,elm,values,niElm,njElm, adrI, adrJ, Ae, formMatricesTh) schedule(dynamic)
-      #endif
-      for(int iElm=0;iElm<nbElmC;++iElm){
+          elm = listElmC[iElm];
+          eqt = eq + numThread * NumberOfBilinearForms;
+          f_t = _formMatricesOMP[eqt];
 
-        #if defined(HAVE_OMP)
-        numThread=omp_get_thread_num();
-        #endif
-        
-        // feInfo("Numéro du thread utlisé : %d",numThread);
-        elm=listElmC[iElm];
-        formMatricesTh=_formMatrices[numThread]; 
-        
-        #if defined(HAVE_OMP)
-        #pragma omp critical
-        #endif
-        {
-        for(feBilinearForm *f : formMatricesTh) {
-          // feInfo("feBilinearForm %s :", f->getID().c_str());
+          // PetscInt I, J;
 
-          f->computeMatrix(_metaNumber, _mesh, sol, elm); // Matrice elementaire 
-          Ae = f->getAe();
+          f_t->initialize(_metaNumber, _mesh, sol, elm);
+
+          f_t->computeMatrix(_metaNumber, _mesh, sol, elm); // Matrice elementaire
+          double **Ae = f_t->getAe();
 
           // Determine assignment indices
-          adrI = f->getAdrI();
-          // for (auto val : adrI){feInfo("adrI de %d : %d",elm,val);}
-          adrJ = f->getAdrJ();
-          // for (auto val : adrJ){feInfo("adrJ de %d : %d",elm,val);}
-          
+          adrI = f_t->getAdrI();
+          adrJ = f_t->getAdrJ();
           sizeI = adrI.size();
           niElm.reserve(sizeI);
           for(int i = 0; i < sizeI; ++i) {
             if(adrI[i] < _nInc) niElm.push_back(i);
           }
-          
           sizeJ = adrJ.size();
           njElm.reserve(sizeJ);
           for(int i = 0; i < sizeJ; ++i) {
             if(adrJ[i] < _nInc) njElm.push_back(i);
           }
-          
-          adrI.erase(std::remove_if(adrI.begin(), adrI.end(),
-                                  [this](const int &x) { return x >= this->_nInc; }),
-                   adrI.end());
-          adrJ.erase(std::remove_if(adrJ.begin(), adrJ.end(),
-                                  [this](const int &x) { return x >= this->_nInc; }),
-                   adrJ.end());
 
-          // for(auto val : adrI){
-          //   std::cout<<val<<std::endl;
-          // }
-          // for(auto val : adrJ){
-          //   std::cout<<val<<std::endl;
-          // }
+          adrI.erase(std::remove_if(adrI.begin(), adrI.end(),
+                                    [this](const int &x) { return x >= this->_nInc; }),
+                     adrI.end());
+          adrJ.erase(std::remove_if(adrJ.begin(), adrJ.end(),
+                                    [this](const int &x) { return x >= this->_nInc; }),
+                     adrJ.end());
 
           // Flatten Ae at relevant indices
           sizeI = adrI.size();
@@ -292,16 +275,15 @@ void feLinearSystemPETSc::assembleMatrices(feSolution *sol)
               values[sizeI * i + j] = Ae[niElm[i]][njElm[j]];
             }
           }
-
           ierr = MatSetValues(_A, adrI.size(), adrI.data(), adrJ.size(), adrJ.data(), values.data(),
-                            ADD_VALUES);
+                              ADD_VALUES);
           niElm.clear();
-          njElm.clear(); 
+          njElm.clear();
         }
-        }//omp critical
+      } // nbColor
 
-      }
-    }
+    } // NumberOfBilinearForms
+
     ierr = MatAssemblyBegin(_A, MAT_FINAL_ASSEMBLY);
     CHKERRABORT(PETSC_COMM_WORLD, ierr);
     ierr = MatAssemblyEnd(_A, MAT_FINAL_ASSEMBLY);
@@ -309,126 +291,110 @@ void feLinearSystemPETSc::assembleMatrices(feSolution *sol)
     // double normMat = 0.0;
     // ierr = MatNorm(_A, NORM_FROBENIUS, &normMat); CHKERRABORT(PETSC_COMM_WORLD, ierr);
     // printf("Norme de la matrice : %10.10e\n", normMat);
-    //feInfo("Done");
-    //toc();
 
+    feInfo("Done");
+    toc();
+    // viewMatrix();
   } // if(recomputeMatrix)
-  // viewMatrix();
 #endif
 }
 
 void feLinearSystemPETSc::assembleResiduals(feSolution *sol)
 {
 #if defined(HAVE_PETSC)
-  // feInfo("Assembling the residual...");
-  // tic();
+  feInfo("Assembling the residual...");
+  tic();
 
-  int nbColor=_mesh->getNbColor();
-  std::vector<int> colorElm=_mesh->getColorElm();
-  std::vector<int> nbElmPerColor=_mesh->getNbElmPerColor();
-  std::vector<int> list=_mesh->getList();
-  std::vector<int> startIndex=_mesh->getIndexStartColorInList();
-  
-  std::vector<feBilinearForm *> formResidualsTest;
-  int nbThreadsMax=omp_get_max_threads(); 
+  PetscErrorCode ierr = 0;
 
-  for(int i=0;i<nbThreadsMax;++i){
-    for(feBilinearForm *f : _formResiduals[0]){
-      feBilinearForm *fCpy = new feBilinearForm(*f);
-      formResidualsTest.push_back(fCpy);
-    }
-  }
+  int nbColor = _mesh->getNbColor();
+  std::vector<int> colorElm = _mesh->getColorElm();
+  std::vector<int> nbElmPerColor = _mesh->getNbElmPerColor();
+  std::vector<std::vector<int> > listElmPerColor = _mesh->getListElmPerColor();
 
-  int nombreEq=_formResiduals[0].size();
+  feInt NumberOfBilinearForms = _formResiduals.size();
 
-  for(int eq=0; eq<nombreEq;++eq){
-    
-    for(int iColor=0;iColor<nbColor;++iColor){
+  for(feInt eq = 0; eq < NumberOfBilinearForms; ++eq) {
+    for(int iColor = 0; iColor < nbColor; ++iColor) {
+      int nbElmC = nbElmPerColor[iColor]; // nbElm : nombre d'elm de meme couleur
+      std::vector<int> listElmC = listElmPerColor[iColor];
 
-      int nbElmC=nbElmPerColor[iColor]; //nbElm : nombre d'elm de meme couleur
-      std::vector<int> listElmC(list.begin()+startIndex[iColor],list.begin()+startIndex[iColor]+nbElmC);
+      int numThread = 0;
+      int elm = 0;
+      int eqt = 0;
+      feBilinearForm *f_t = NULL;
 
-      int numThread;
-      int elm;
-      int eqt;
-      feBilinearForm* f_t;
+      std::vector<PetscScalar> values(0);
+      double *dataValues = NULL;
+      int sizeI = 0;
+      std::vector<int> niElm(0);
+      std::vector<int> adrI(0);
 
-      
-      std::vector<int> niElm;
-      int sizeI;
-      std::vector<int> adrI;
-
-      double normResidual=0.0;
-      PetscErrorCode ierr;
-      std::vector<PetscScalar> values;
-      ierr = VecNorm(_res, NORM_2, &normResidual);
-      CHKERRABORT(PETSC_COMM_WORLD, ierr);
-
-      const double* Be;
-
-      #pragma omp parallel for private(numThread,elm,eqt,adrI,sizeI,values,niElm,Be,f_t) schedule(dynamic)
-      for(int iElm = 0; iElm < nbElmC; ++iElm){
-
+#if defined(HAVE_OMP)
+#pragma omp parallel for private(numThread, elm, eqt, f_t, ierr, values, dataValues, sizeI, niElm, \
+                                 adrI) schedule(static)
+#endif
+      for(int iElm = 0; iElm < nbElmC; ++iElm) {
+#if defined(HAVE_OMP)
         numThread = omp_get_thread_num();
-        elm = listElmC[iElm]; 
-        eqt=eq+numThread*nombreEq;
+// feInfo("numThread : %d",numThread);
+#endif
 
-        f_t = formResidualsTest[eqt];
-        //std::cout<<"Adresse f_t : "<<f_t<<std::endl;
-        
-        f_t->computeResidual(_metaNumber, _mesh, sol, elm); // Matrice elementaire 
+        // double normResidual = 0.0;
+        // ierr = VecNorm(_res, NORM_2, &normResidual);
+        // CHKERRABORT(PETSC_COMM_WORLD, ierr);
 
-        Be=f_t->getBe();
+        elm = listElmC[iElm];
+        eqt = eq + numThread * NumberOfBilinearForms;
+        f_t = _formResidualsOMP[eqt];
 
-        // Determine assignment indices
+        f_t->initialize(_metaNumber, _mesh, sol, elm);
+
+        f_t->computeResidual(_metaNumber, _mesh, sol, elm); // Matrice elementaire
+
+        double *Be = f_t->getBe();
+
         adrI = f_t->getAdrI();
         sizeI = adrI.size();
-        // niElm.reserve(sizeI);
+        niElm.reserve(sizeI);
         for(int i = 0; i < sizeI; ++i) {
           if(adrI[i] < _nInc) niElm.push_back(i);
         }
-    
-        // #pragma omp critical
-        // {
-        // printf("%d;",elm);for(auto val : niElm)std::cout<<val<<" "; std::cout<<std::endl;
-        // }
 
-        adrI.erase(
-          std::remove_if(adrI.begin(), adrI.end(),[this](const int &x) { return x >= this->_nInc; }),
-          adrI.end());
+        adrI.erase(std::remove_if(adrI.begin(), adrI.end(),
+                                  [this](const int &x) { return x >= this->_nInc; }),
+                   adrI.end());
 
-        // #pragma omp critical
-        // {
-        // printf("%d;",elm);for(auto val : adrI)std::cout<<val<<" "; std::cout<<std::endl;
-        // }
-      
+        // Copy Be into vector
         sizeI = adrI.size();
         values.resize(sizeI);
-
         for(int i = 0; i < sizeI; ++i) {
           values[i] = Be[niElm[i]];
-          //std::cout<<"les valeurs de Be sont"<<values[i]<<std::endl;
+          // std::cout<< "les valeurs dans Be sont "<< values[i] << std::endl;
         }
 
-        ierr=VecSetValues(_res,adrI.size(),adrI.data(),values.data(),ADD_VALUES);
+        // sizeAdrI=adrI.size();
+        // dataAdrI=adrI.data();
+        // dataValues=values.data();
+
+        ierr = VecSetValues(_res, adrI.size(), adrI.data(), values.data(), ADD_VALUES);
         niElm.clear();
 
-      } //for elm mm couleur
-    
+      } // for elm mm couleur
 
-    } //for nbColor
-  }// for formBili
+    } // for nbColor
+  } // for formBili
 
-  // feInfo("done");
-  // toc();
+  feInfo("done");
+  toc();
   // VecView(_res,PETSC_VIEWER_STDOUT_WORLD);
   // double normResidual = 0.0;
   // VecNorm(_res, NORM_2, &normResidual);
   // CHKERRABORT(PETSC_COMM_WORLD, ierr);
   // printf("Norme du résidu : %10.10e\n", normResidual);
+
 #endif
 }
-
 
 void feLinearSystemPETSc::assemble(feSolution *sol)
 {
@@ -440,6 +406,7 @@ void feLinearSystemPETSc::assemble(feSolution *sol)
 void feLinearSystemPETSc::solve(double *normDx, double *normResidual, double *normAxb, int *nIter)
 {
 #if defined(HAVE_PETSC)
+  // KSPView(ksp,PETSC_VIEWER_STDOUT_WORLD);
   PetscErrorCode ierr = KSPSolve(ksp, _res, _dx);
   CHKERRABORT(PETSC_COMM_WORLD, ierr);
   // KSPView(ksp,PETSC_VIEWER_STDOUT_WORLD);
