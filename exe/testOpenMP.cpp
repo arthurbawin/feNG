@@ -115,7 +115,7 @@ int main(int argc, char **argv) {
   
   //feCheck(
   //  createLinearSystem(system, MKLPARDISO, {&diffU, &sourceU}, &metaNumber, &mesh, argc, argv));
-  feCheck(createLinearSystem(system, PETSC, {&diffU, &sourceU}, &metaNumber, &mesh, argc, argv));
+  feCheck(createLinearSystem(system, PETSC, spaces, {&diffU, &sourceU}, &metaNumber, &mesh, argc, argv));
   
 
   // Define post-processing tools to compute norms and whatnot (norms will be replaced by

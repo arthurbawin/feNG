@@ -84,6 +84,7 @@ public:
   double *getBe() { return _Be; }
 
   elementSystemType getID() { return _sysElm->getID(); }
+  std::string getIDName() { return _sysElm->getIDName(); }
 
   void initialize_vadij_only(feMetaNumber *metaNumber, int numElem);
   void initialize(feMetaNumber *metaNumber, feMesh *mesh, feSolution *sol, int numElem);

@@ -62,20 +62,11 @@ feBilinearForm::feBilinearForm(std::vector<feSpace *> space, feMesh *mesh, int d
     printf("In feBilinearForm::feBilinearForm : Erreur - Connectivité géométrique ne correspond "
            "pas à la connectivité de l'espace d'interpolation.\n");
 
-  for(size_t i = 1; i < _intSpace.size(); ++i) {
+  for(size_t i = 0; i < _intSpace.size(); ++i) {
     if(_intSpace[i]->getCncGeoTag() != _cncGeoTag)
       printf("In feBilinearForm::feBilinearForm : Erreur - Forme définie sur plus d'une "
              "connectivité.\n");
   }
-
-  // CHANGED : The quadrature rules are set when each fespace is created
-  // (Re-)initialize the interpolation functions at quadrature nodes
-  // feQuadrature *rule =
-  //   new feQuadrature(_degQuad, space[0]->getDim(), space[0]->getCncGeo()->getForme());
-
-  // for(feSpace *fS : _intSpace) fS->setQuadratureRule(rule);
-  // _geoSpace->setQuadratureRule(rule);
-  // delete rule;
 
   _sysElm->createElementarySystem(_intSpace);
   _iVar = _sysElm->getIVar();
@@ -92,20 +83,18 @@ feBilinearForm::feBilinearForm(std::vector<feSpace *> space, feMesh *mesh, int d
   _Ae = allocateMatrix(_niElm, _njElm);
   allocateResidual(_niElm, &_Be);
 
-  // ==================================================================
-  // Pour le calcul par différences finies de la matrice
-  // ==================================================================
   R0 = NULL;
   Rh = NULL;
   allocateResidual(_niElm, &Rh);
   allocateResidual(_niElm, &R0);
   h0 = pow(DBL_EPSILON, 1.0 / 2.0);
-  // ==================================================================
-  // Pour choisir la méthode de calcul de la matrice
-  // ==================================================================
-  ptrComputeMatrix = &feBilinearForm::computeMatrixFiniteDifference;
-  if(sysElm->getMatrixAnalyticalStatus())
+
+  // Set the computation method for the element matrix
+  if(sysElm->getMatrixAnalyticalStatus()){
     ptrComputeMatrix = &feBilinearForm::computeMatrixAnalytical;
+  } else{
+    ptrComputeMatrix = &feBilinearForm::computeMatrixFiniteDifference;
+  }
 }
 
 feBilinearForm::feBilinearForm(const feBilinearForm &f)
@@ -235,8 +224,8 @@ void feBilinearForm::initialize(feMetaNumber *metaNumber, feMesh *mesh, feSoluti
   for(feSpace *fS : _intSpace) {
     fS->initializeAddressingVector(metaNumber->getNumbering(fS->getFieldID()), numElem, _adr);
     fS->initializeAddressingVector(metaNumber->getNumbering(fS->getFieldID()), numElem);
-    fS->initializeSolution(sol);
-    fS->initializeSolutionDot(sol);
+    // fS->initializeSolution(sol);
+    // fS->initializeSolutionDot(sol);
   }
 
   _sol.resize(_adr.size());

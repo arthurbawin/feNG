@@ -29,6 +29,18 @@ typedef enum {
   DIRECTIONALDONOTHING_1D
 } elementSystemType;
 
+inline const std::string toString(elementSystemType t)
+{
+  switch (t){
+    case DIFF_1D:   return "DIFF_1D";
+    case MASSE_1D:   return "MASSE_1D";
+    case NEUMANN_1D: return "NEUMANN_1D";
+    case SOURCE_2D: return "SOURCE_2D";
+    case DIFFUSION_2D: return "DIFFUSION_2D";
+    default:      return "[Unknown elementSystemType]";
+  }
+}
+
 class feSysElm
 {
 protected:
@@ -54,6 +66,7 @@ public:
   std::vector<int> &getJVar() { return _jVar; }
 
   elementSystemType getID() { return _ID; }
+  std::string getIDName() { return toString(_ID); }
 
   bool getMatrixAnalyticalStatus() { return matrixAnalyticalStatus; };
 

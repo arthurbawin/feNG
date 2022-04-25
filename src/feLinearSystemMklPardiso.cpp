@@ -136,7 +136,6 @@ void feLinearSystemMklPardiso::assembleResiduals(feSolution *sol)
   for(feInt eq = 0; eq < _numResidualForms; eq++) {
 
     feBilinearForm *f = _formResiduals[eq];
-    std::cout<<f<<std::endl;
     feCncGeo *cnc = f->getCncGeo();
     int nbColor = cnc->getNbColor();
     std::vector<int> colorElm = cnc->getColorElm();

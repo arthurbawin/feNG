@@ -198,6 +198,12 @@ void feLinearSystemPETSc::assembleMatrices(feSolution *sol)
     feInfo("Assembling the matrix ...");
     tic();
 
+    feWarning("Le code doit être remanié pour OpenMP, voir le code pour Pardiso.");
+    feWarning("Le code doit être remanié pour OpenMP, voir le code pour Pardiso.");
+    feWarning("Le code doit être remanié pour OpenMP, voir le code pour Pardiso.");
+    feWarning("Le code doit être remanié pour OpenMP, voir le code pour Pardiso.");
+    feWarning("Le code doit être remanié pour OpenMP, voir le code pour Pardiso.");
+
     PetscErrorCode ierr = 0;
 
     feInt NumberOfBilinearForms = _formMatrices.size();

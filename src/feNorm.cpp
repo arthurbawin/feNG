@@ -576,7 +576,7 @@ void feNorm::computeIntegral(feMetaNumber *metaNumber, feSolution *sol, feMesh *
 }
 
 /* Estimates the L2 norm of the error taking an external solution as the reference solution. */
-void feNorm::computeErrorNormFromExternalSolution(feMetaNumber *metaNumber, feSolution *sol,
+feStatus feNorm::computeErrorNormFromExternalSolution(feMetaNumber *metaNumber, feSolution *sol,
                                                   feMesh *mesh, feMetaNumber *refMN,
                                                   feSolution *refSol, feMesh *refMesh,
                                                   const std::vector<feSpace *> refSpaces)
@@ -585,13 +585,10 @@ void feNorm::computeErrorNormFromExternalSolution(feMetaNumber *metaNumber, feSo
   int nElm = _intSpace->getNbElm();
 
   if(fabs(sol->getCurrentTime() - refSol->getCurrentTime()) > 1e-3) {
-    printf("In feNorm::computeErrorNormFromExternalSolution : Warning - Solutions time differ by "
-           "more than 1e-3 : tRef "
+    feWarning("Solutions time differ by  more than 1e-3 : tRef "
            "= %f - tSol = %f.\n",
            refSol->getCurrentTime(), sol->getCurrentTime());
-    printf("In feNorm::computeErrorNormFromExternalSolution : Warning - Maybe the solution file "
-           "does not match the "
-           "current solution.\n");
+    feWarning("Maybe the solution file does not match the current solution.\n");
   }
 
   std::vector<double> x(3, 0.0);
@@ -624,9 +621,7 @@ void feNorm::computeErrorNormFromExternalSolution(feMetaNumber *metaNumber, feSo
           int elm = -1;
           bool isFound = static_cast<feMesh2DP1 *>(refMesh)->locateVertex(x, elm, r);
           if(!isFound) {
-            printf("In feNorm::computeErrorNormFromExternalSolution : Warning - Point (%f, %f, %f) "
-                   "was not found in "
-                   "the mesh.\n",
+            feWarning("Point (%f, %f, %f) was not found in the mesh.\n",
                    x[0], x[1], x[2]);
             solRef = solInt; // Points outside the mesh do not contribute
           } else {
@@ -647,7 +642,8 @@ void feNorm::computeErrorNormFromExternalSolution(feMetaNumber *metaNumber, feSo
   }
 
   if(!matchingSpace)
-    printf("In feNorm::computeErrorNormFromExternalSolution : Error - No finite element space in "
-           "the reference set "
+    return feErrorMsg(FE_STATUS_ERROR, "No finite element space in the reference set "
            "matches the target space on this connectivity.\n");
+
+  return FE_STATUS_OK;
 }

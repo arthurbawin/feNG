@@ -287,7 +287,6 @@ public:
   virtual void initializeAddressingVector(feNumber *number, int numElem, std::vector<int> &adr);
 };
 
-// FESpace pour interpolant de Lagrange 1D de degre 1
 class feSpace1DP1_nonConsistant : public feSpace
 {
 protected:

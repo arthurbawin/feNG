@@ -116,7 +116,7 @@ int main(int argc, char **argv)
   feLinearSystem *system;
   // feCheck(createLinearSystem(system, MKLPARDISO, {&diffU, &neumannHaut, &neumannBas},
   // &metaNumber, &mesh, argc, argv));
-  feCheck(createLinearSystem(system, MKLPARDISO, {&diffU, &neumannHaut, &neumannBas}, &metaNumber,
+  feCheck(createLinearSystem(system, MKLPARDISO, spaces, {&diffU, &neumannHaut, &neumannBas}, &metaNumber,
                              &mesh, argc, argv));
   // feCheck(createLinearSystem(system, MKLPARDISO, {&diffU, &sourceU}, &metaNumber, &mesh, argc,
   // argv));
