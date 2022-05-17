@@ -94,6 +94,8 @@ protected:
 public:
   int _nElm;
   int _nNodePerElm;
+  std::vector<int> _adr;
+  std::vector<double> _solution;
 
   feMetaNumber *_metaNumber;
   feMesh *_mesh;

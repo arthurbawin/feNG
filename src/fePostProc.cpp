@@ -28,13 +28,18 @@ double fePostProc::computeSolutionIntegral(feSolution *sol)
   std::vector<double> &w = _intSpace->getQuadratureWeights();
   int nElm = _intSpace->getNbElm();
   int nQuad = _geoSpace->getNbQuadPoints();
+  std::vector<double> &solVec = sol->getSolutionReference();
 
   for(int iElm = 0; iElm < nElm; ++iElm) {
-    _intSpace->initializeAddressingVector(_metaNumber->getNumbering(_intSpace->getFieldID()), iElm);
-    _intSpace->initializeSolution(sol);
+    _intSpace->initializeAddressingVector(_metaNumber->getNumbering(_intSpace->getFieldID()), iElm,
+                                          _adr);
+    for(size_t i = 0; i < _adr.size(); ++i) {
+      _sol[i] = solVec[_adr[i]];
+    }
+
     geoCoord = _mesh->getCoord(_intSpace->getCncGeoTag(), iElm);
     for(int k = 0; k < nQuad; ++k) {
-      solInt = _intSpace->interpolateSolutionAtQuadNode(k);
+      solInt = _intSpace->interpolateFieldAtQuadNode(_sol, k);
       integral += solInt * _cnc->getJacobians()[nQuad * iElm + k] * w[k];
     }
   }
@@ -71,21 +76,26 @@ double fePostProc::computeL2ErrorNorm(feSolution *sol)
   std::vector<double> &w = _intSpace->getQuadratureWeights();
   int nElm = _intSpace->getNbElm();
   int nQuad = _geoSpace->getNbQuadPoints();
+  std::vector<double> &solVec = sol->getSolutionReference();
 
   if(_referenceSolution == nullptr) feWarning("Reference solution is NULL.");
 
   for(int iElm = 0; iElm < nElm; ++iElm) {
-    _intSpace->initializeAddressingVector(_metaNumber->getNumbering(_intSpace->getFieldID()), iElm);
-    _intSpace->initializeSolution(sol);
+    _intSpace->initializeAddressingVector(_metaNumber->getNumbering(_intSpace->getFieldID()), iElm,
+                                          _adr);
+    for(size_t i = 0; i < _adr.size(); ++i) {
+      _sol[i] = solVec[_adr[i]];
+    }
+
     geoCoord = _mesh->getCoord(_intSpace->getCncGeoTag(), iElm);
     for(int k = 0; k < nQuad; ++k) {
       std::vector<double> x(3, 0.0);
       _geoSpace->interpolateVectorFieldAtQuadNode(geoCoord, k, x);
 
       if(_intSpace->useGlobalFunctions()) {
-        solInt = _intSpace->interpolateSolutionAtQuadNode(iElm, k);
+        solInt = _intSpace->interpolateFieldAtQuadNode(_sol, iElm, k);
       } else {
-        solInt = _intSpace->interpolateSolutionAtQuadNode(k);
+        solInt = _intSpace->interpolateFieldAtQuadNode(_sol, k);
       }
 
       solRef = (_referenceSolution != nullptr) ? _referenceSolution->eval(t, x) : 0.0;

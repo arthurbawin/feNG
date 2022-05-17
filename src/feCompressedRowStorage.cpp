@@ -5,7 +5,8 @@
 // ====================================================================
 
 feCompressedRowStorage::feCompressedRowStorage(feMetaNumber *metaNumber, feMesh *mesh,
-                                               std::vector<feBilinearForm *> &formMatrices)
+                                               std::vector<feBilinearForm *> &formMatrices,
+                                               int numMatrixForms)
 {
   ordre = (feInt)metaNumber->getNbUnknowns();
   nnz = new feInt[ordre];
@@ -17,7 +18,7 @@ feCompressedRowStorage::feCompressedRowStorage(feMetaNumber *metaNumber, feMesh 
   // COMPTER LES ELEMENTS D'UN DEGRE DE LIBERTE
   // POUR CONSTRUIRE L'ESPACE TEMPORAIRE
   // ================================================================
-  feInt NumberOfBilinearForms = formMatrices.size();
+  // int NumberOfBilinearForms = numMatrixForms;
 
   // int cnt = 0;
   // #pragma omp parallel for private(cnt)
@@ -26,7 +27,7 @@ feCompressedRowStorage::feCompressedRowStorage(feMetaNumber *metaNumber, feMesh 
   //   printf("Thread %d has printed %2d times\n", omp_get_thread_num(), cnt++);
   // }
 
-  for(feInt eq = 0; eq < NumberOfBilinearForms; eq++) {
+  for(int eq = 0; eq < numMatrixForms; eq++) {
     feBilinearForm *equelm = formMatrices[eq];
     feInt cncGeoTag = equelm->getCncGeoTag();
     feInt nbElems = mesh->getNbElm(cncGeoTag);
@@ -69,7 +70,7 @@ feCompressedRowStorage::feCompressedRowStorage(feMetaNumber *metaNumber, feMesh 
   // RECUPERER LES NUMEROS DES FORMES BIULINEAIRES ET DES ELEMENTS
   // ================================================================
   for(feInt i = 0; i < ordre; i++) ddlNumberOfElements[i] = 0;
-  for(feInt eq = 0; eq < NumberOfBilinearForms; eq++) {
+  for(int eq = 0; eq < numMatrixForms; eq++) {
     feBilinearForm *equelm = formMatrices[eq];
     feInt cncGeoTag = equelm->getCncGeoTag();
     feInt nbElems = mesh->getNbElm(cncGeoTag);
@@ -191,8 +192,9 @@ int compint(const void *a, const void *b)
 }
 
 feCompressedRowStorageMklPardiso::feCompressedRowStorageMklPardiso(
-  feMetaNumber *metaNumber, feMesh *mesh, std::vector<feBilinearForm *> &formMatrices)
-  : feCompressedRowStorage(metaNumber, mesh, formMatrices)
+  feMetaNumber *metaNumber, feMesh *mesh, std::vector<feBilinearForm *> &formMatrices,
+  int numMatrixForms)
+  : feCompressedRowStorage(metaNumber, mesh, formMatrices, numMatrixForms)
 {
   // ================================================================
   // ALLOUER LA STRUCTURE CSR DE MKL PARDISO

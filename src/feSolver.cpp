@@ -834,6 +834,7 @@ feStatus DC3FSolver::makeSteps(int nSteps)
     // std::string vtkFile = "../../data/cylindreAdapt" + std::to_string(_currentStep) + ".vtk";
     // feExporterVTK writer(vtkFile, _mesh, _sol, _metaNumber, spaces);
   }
+  return FE_STATUS_OK;
 }
 
 DC3FSolver_centered::DC3FSolver_centered(feTolerances tol, feMetaNumber *metaNumber,

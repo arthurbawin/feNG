@@ -53,7 +53,7 @@ void feLinearSystemPETSc::initialize()
   ierr = VecSet(_dx, 1.0);
 
   // Determine the nonzero structure
-  feCompressedRowStorage CRS(_metaNumber, _mesh, _formMatrices);
+  feCompressedRowStorage CRS(_metaNumber, _mesh, _formMatrices, _numMatrixForms);
   feInt *NNZ = CRS.getNnz();
   std::vector<PetscInt> nnz(_nInc, 0);
   for(int i = 0; i < _nInc; ++i) {
@@ -198,18 +198,9 @@ void feLinearSystemPETSc::assembleMatrices(feSolution *sol)
     feInfo("Assembling the matrix ...");
     tic();
 
-    feWarning("Le code doit être remanié pour OpenMP, voir le code pour Pardiso.");
-    feWarning("Le code doit être remanié pour OpenMP, voir le code pour Pardiso.");
-    feWarning("Le code doit être remanié pour OpenMP, voir le code pour Pardiso.");
-    feWarning("Le code doit être remanié pour OpenMP, voir le code pour Pardiso.");
-    feWarning("Le code doit être remanié pour OpenMP, voir le code pour Pardiso.");
-
     PetscErrorCode ierr = 0;
 
-    feInt NumberOfBilinearForms = _formMatrices.size();
-
-    for(feInt eq = 0; eq < NumberOfBilinearForms; ++eq) {
-
+    for(feInt eq = 0; eq < _numMatrixForms; ++eq) {
       feBilinearForm *f = _formMatrices[eq];
       feCncGeo *cnc = f->getCncGeo();
       int nbColor = cnc->getNbColor();
@@ -222,32 +213,32 @@ void feLinearSystemPETSc::assembleMatrices(feSolution *sol)
         std::vector<int> listElmC = listElmPerColor[iColor];
 
         int numThread = 0;
-        int elm = 0;
-        int eqt = 0;
-        // feBilinearForm *f_t = NULL;
+        int elm;
+        int eqt;
 
-        std::vector<PetscScalar> values(0);
-        int sizeI = 0;
-        int sizeJ = 0;
-        std::vector<int> niElm(0);
-        std::vector<int> njElm(0);
-        std::vector<int> adrI(0);
-        std::vector<int> adrJ(0);
+        double **Ae;
+        int sizeI;
+        int sizeJ;
+        std::vector<int> niElm;
+        std::vector<int> njElm;
+        std::vector<int> adrI;
+        std::vector<int> adrJ;
+        std::vector<PetscScalar> values;
 
-        #if defined(HAVE_OMP)
-        #pragma omp parallel for private(numThread, elm, eqt, f, ierr, values, sizeI, sizeJ, niElm,      \
-                                         njElm, adrI, adrJ) schedule(static)
-        #endif
+#if defined(HAVE_OMP)
+#pragma omp parallel for private(numThread, elm, eqt, f, niElm, njElm, sizeI, sizeJ, adrI, adrJ,   \
+                                 Ae, ierr, values)
+#endif
         for(int iElm = 0; iElm < nbElmC; ++iElm) {
 #if defined(HAVE_OMP)
           numThread = omp_get_thread_num();
-          eqt = eq + numThread * NumberOfBilinearForms;
+          eqt = eq + numThread * _numMatrixForms;
           f = _formMatrices[eqt];
 #endif
           elm = listElmC[iElm];
-          f->initialize(_metaNumber, _mesh, sol, elm);
           f->computeMatrix(_metaNumber, _mesh, sol, elm); // Matrice elementaire
-          double **Ae = f->getAe();
+
+          Ae = f->getAe();
 
           // Determine assignment indices
           adrI = f->getAdrI();
@@ -311,11 +302,8 @@ void feLinearSystemPETSc::assembleResiduals(feSolution *sol)
 
   PetscErrorCode ierr = 0;
 
-  feInt NumberOfBilinearForms = _formResiduals.size();
-
-  for(feInt eq = 0; eq < NumberOfBilinearForms; ++eq) {
-
-    feBilinearForm *f = _formMatrices[eq];
+  for(feInt eq = 0; eq < _numResidualForms; ++eq) {
+    feBilinearForm *f = _formResiduals[eq];
     feCncGeo *cnc = f->getCncGeo();
     int nbColor = cnc->getNbColor();
     std::vector<int> colorElm = cnc->getColorElm();
@@ -327,36 +315,29 @@ void feLinearSystemPETSc::assembleResiduals(feSolution *sol)
       std::vector<int> listElmC = listElmPerColor[iColor];
 
       int numThread = 0;
-      int elm = 0;
-      int eqt = 0;
-      // feBilinearForm *f_t = NULL;
+      int elm;
+      int eqt;
 
-      std::vector<PetscScalar> values(0);
-      double *dataValues = NULL;
-      int sizeI = 0;
-      std::vector<int> niElm(0);
-      std::vector<int> adrI(0);
+      double *Be;
+      int sizeI;
+      std::vector<int> niElm;
+      std::vector<int> adrI;
+      std::vector<PetscScalar> values;
 
-      #if defined(HAVE_OMP)
-      #pragma omp parallel for private(numThread, elm, eqt, f, ierr, values, dataValues, sizeI, niElm, \
-                                       adrI) schedule(static)
-      #endif
+#if defined(HAVE_OMP)
+#pragma omp parallel for private(numThread, elm, eqt, niElm, Be, f, adrI, ierr, values, sizeI)
+#endif
       for(int iElm = 0; iElm < nbElmC; ++iElm) {
 #if defined(HAVE_OMP)
         numThread = omp_get_thread_num();
-        eqt = eq + numThread * NumberOfBilinearForms;
+        eqt = eq + numThread * _numResidualForms;
         f = _formResiduals[eqt];
 #endif
 
-        // double normResidual = 0.0;
-        // ierr = VecNorm(_res, NORM_2, &normResidual);
-        // CHKERRABORT(PETSC_COMM_WORLD, ierr);
-
         elm = listElmC[iElm];
-        f->initialize(_metaNumber, _mesh, sol, elm);
         f->computeResidual(_metaNumber, _mesh, sol, elm); // Matrice elementaire
 
-        double *Be = f->getBe();
+        Be = f->getBe();
 
         adrI = f->getAdrI();
         sizeI = adrI.size();
@@ -375,10 +356,6 @@ void feLinearSystemPETSc::assembleResiduals(feSolution *sol)
           values[i] = Be[niElm[i]];
         }
 
-        // sizeAdrI=adrI.size();
-        // dataAdrI=adrI.data();
-        // dataValues=values.data();
-
         ierr = VecSetValues(_res, adrI.size(), adrI.data(), values.data(), ADD_VALUES);
         niElm.clear();
 
@@ -386,6 +363,11 @@ void feLinearSystemPETSc::assembleResiduals(feSolution *sol)
 
     } // for nbColor
   } // for formBili
+
+  ierr = VecAssemblyBegin(_res);
+  CHKERRABORT(PETSC_COMM_WORLD, ierr);
+  ierr = VecAssemblyEnd(_res);
+  CHKERRABORT(PETSC_COMM_WORLD, ierr);
 
   feInfo("done");
   toc();
@@ -409,6 +391,7 @@ void feLinearSystemPETSc::solve(double *normDx, double *normResidual, double *no
 {
 #if defined(HAVE_PETSC)
   // KSPView(ksp,PETSC_VIEWER_STDOUT_WORLD);
+  // feInfo("th used : %d",omp_get_thread_num());
   PetscErrorCode ierr = KSPSolve(ksp, _res, _dx);
   CHKERRABORT(PETSC_COMM_WORLD, ierr);
   // KSPView(ksp,PETSC_VIEWER_STDOUT_WORLD);

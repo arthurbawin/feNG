@@ -50,6 +50,7 @@ public:
 
   std::vector<double> getSolutionCopy() { return _sol; }
   std::vector<double> &getSolutionReference() { return _sol; }
+  std::vector<double> &getSolutionReferenceDot() { return _dsoldt; }
   double getSolAtDOF(int iDOF) { return _sol[iDOF]; }
   void setSolAtDOF(int iDOF, double val) { _sol[iDOF] = val; }
   void incrementSolAtDOF(int iDOF, double val) { _sol[iDOF] += val; }

@@ -19,6 +19,7 @@ public:
                          std::vector<double> &dLdx, std::vector<double> &dLdy)
   {
     printf("Not implemented\n");
+    exit(-1);
   };
   virtual std::vector<double> dLdr(double r[3]);
   virtual std::vector<double> dLds(double r[3]);
@@ -26,7 +27,7 @@ public:
 
   virtual void initializeNumberingUnknowns(feNumber *number);
   virtual void initializeNumberingEssential(feNumber *number);
-  virtual void initializeAddressingVector(feNumber *number, int numElem);
+  // virtual void initializeAddressingVector(feNumber *number, int numElem);
   virtual void initializeAddressingVector(feNumber *number, int numElem, std::vector<int> &adr);
 };
 
@@ -47,6 +48,7 @@ public:
                          std::vector<double> &dLdx, std::vector<double> &dLdy)
   {
     printf("Not implemented\n");
+    exit(-1);
   };
 
   virtual std::vector<double> dLdr(double r[3]);
@@ -55,7 +57,7 @@ public:
 
   virtual void initializeNumberingUnknowns(feNumber *number);
   virtual void initializeNumberingEssential(feNumber *number);
-  virtual void initializeAddressingVector(feNumber *number, int numElem);
+  // virtual void initializeAddressingVector(feNumber *number, int numElem);
   virtual void initializeAddressingVector(feNumber *number, int numElem, std::vector<int> &adr);
 };
 
@@ -79,7 +81,7 @@ public:
 
   virtual void initializeNumberingUnknowns(feNumber *number);
   virtual void initializeNumberingEssential(feNumber *number);
-  virtual void initializeAddressingVector(feNumber *number, int numElem);
+  // virtual void initializeAddressingVector(feNumber *number, int numElem);
   virtual void initializeAddressingVector(feNumber *number, int numElem, std::vector<int> &adr);
 };
 
@@ -104,11 +106,12 @@ public:
                          std::vector<double> &dLdx, std::vector<double> &dLdy)
   {
     printf("Not implemented\n");
+    exit(-1);
   };
 
   virtual void initializeNumberingUnknowns(feNumber *number);
   virtual void initializeNumberingEssential(feNumber *number);
-  virtual void initializeAddressingVector(feNumber *number, int numElem);
+  // virtual void initializeAddressingVector(feNumber *number, int numElem);
   virtual void initializeAddressingVector(feNumber *number, int numElem, std::vector<int> &adr);
 };
 
@@ -136,7 +139,7 @@ public:
 
   virtual void initializeNumberingUnknowns(feNumber *number);
   virtual void initializeNumberingEssential(feNumber *number);
-  virtual void initializeAddressingVector(feNumber *number, int numElem);
+  // virtual void initializeAddressingVector(feNumber *number, int numElem);
   virtual void initializeAddressingVector(feNumber *number, int numElem, std::vector<int> &adr);
 };
 
@@ -164,7 +167,7 @@ public:
 
   virtual void initializeNumberingUnknowns(feNumber *number);
   virtual void initializeNumberingEssential(feNumber *number);
-  virtual void initializeAddressingVector(feNumber *number, int numElem);
+  // virtual void initializeAddressingVector(feNumber *number, int numElem);
   virtual void initializeAddressingVector(feNumber *number, int numElem, std::vector<int> &adr);
 };
 

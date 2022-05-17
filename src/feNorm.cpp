@@ -72,15 +72,22 @@ void feNorm::computeL2Norm(feMetaNumber *metaNumber, feSolution *sol, feMesh *me
 {
   double normL2 = 0.0, solInt, solRef, J, t = sol->getCurrentTime();
   int nElm = _VecfeSpace[0]->getNbElm();
+  std::vector<int> adr0(_VecfeSpace[0]->getNbFunctions());
+  std::vector<double> sol0(adr0.size());
+  std::vector<double> &solVec = sol->getSolutionReference();
 
   for(int iElm = 0; iElm < nElm; ++iElm) {
     _VecfeSpace[0]->initializeAddressingVector(
-      metaNumber->getNumbering(_VecfeSpace[0]->getFieldID()), iElm);
-    _VecfeSpace[0]->initializeSolution(sol);
+      metaNumber->getNumbering(_VecfeSpace[0]->getFieldID()), iElm, adr0);
+
+    for(size_t i = 0; i < adr0.size(); ++i) {
+      sol0[i] = solVec[adr0[i]];
+    }
+
     geoCoord = mesh->getCoord(cncGeoTag, iElm);
 
     for(int k = 0; k < _nQuad; ++k) {
-      solInt = _VecfeSpace[0]->interpolateSolutionAtQuadNode(k);
+      solInt = _VecfeSpace[0]->interpolateFieldAtQuadNode(sol0, k);
 
       std::vector<double> x(3, 0.0);
       geoSpace->interpolateVectorFieldAtQuadNode(geoCoord, k, x);
@@ -113,18 +120,29 @@ void feNorm::computeL2NormVec(feMetaNumber *metaNumber, feSolution *sol, feMesh 
 {
   double normL2 = 0.0, solIntU, solIntV, J, t = sol->getCurrentTime();
   int nElm = _VecfeSpace[0]->getNbElm();
+  std::vector<int> adr0(_VecfeSpace[0]->getNbFunctions());
+  std::vector<int> adr1(_VecfeSpace[1]->getNbFunctions());
+  std::vector<double> sol0(adr0.size());
+  std::vector<double> sol1(adr1.size());
+  std::vector<double> &solVec = sol->getSolutionReference();
 
   for(int iElm = 0; iElm < nElm; ++iElm) {
     _VecfeSpace[0]->initializeAddressingVector(
-      metaNumber->getNumbering(_VecfeSpace[0]->getFieldID()), iElm);
-    _VecfeSpace[0]->initializeSolution(sol);
+      metaNumber->getNumbering(_VecfeSpace[0]->getFieldID()), iElm, adr0);
+    for(size_t i = 0; i < adr0.size(); ++i) {
+      sol0[i] = solVec[adr0[i]];
+    }
+
     _VecfeSpace[1]->initializeAddressingVector(
-      metaNumber->getNumbering(_VecfeSpace[1]->getFieldID()), iElm);
-    _VecfeSpace[1]->initializeSolution(sol);
+      metaNumber->getNumbering(_VecfeSpace[1]->getFieldID()), iElm, adr1);
+    for(size_t i = 0; i < adr1.size(); ++i) {
+      sol1[i] = solVec[adr1[i]];
+    }
+
     geoCoord = mesh->getCoord(cncGeoTag, iElm);
     for(int k = 0; k < _nQuad; ++k) {
-      solIntU = _VecfeSpace[0]->interpolateSolutionAtQuadNode(k);
-      solIntV = _VecfeSpace[1]->interpolateSolutionAtQuadNode(k);
+      solIntU = _VecfeSpace[0]->interpolateFieldAtQuadNode(sol0, k);
+      solIntV = _VecfeSpace[1]->interpolateFieldAtQuadNode(sol1, k);
 
       std::vector<double> x(3, 0.0);
       geoSpace->interpolateVectorFieldAtQuadNode(geoCoord, k, x);
@@ -164,18 +182,29 @@ void feNorm::computeH1NormVec(feMetaNumber *metaNumber, feSolution *sol, feMesh 
 {
   double normH1 = 0.0, solIntU, solIntV, J, t = sol->getCurrentTime(), E11, E22, E12;
   int nElm = _VecfeSpace[0]->getNbElm();
+  std::vector<int> adr0(_VecfeSpace[0]->getNbFunctions());
+  std::vector<int> adr1(_VecfeSpace[1]->getNbFunctions());
+  std::vector<double> sol0(adr0.size());
+  std::vector<double> sol1(adr1.size());
+  std::vector<double> &solVec = sol->getSolutionReference();
 
   for(int iElm = 0; iElm < nElm; ++iElm) {
     _VecfeSpace[0]->initializeAddressingVector(
-      metaNumber->getNumbering(_VecfeSpace[0]->getFieldID()), iElm);
-    _VecfeSpace[0]->initializeSolution(sol);
+      metaNumber->getNumbering(_VecfeSpace[0]->getFieldID()), iElm, adr0);
+    for(size_t i = 0; i < adr0.size(); ++i) {
+      sol0[i] = solVec[adr0[i]];
+    }
+
     _VecfeSpace[1]->initializeAddressingVector(
-      metaNumber->getNumbering(_VecfeSpace[1]->getFieldID()), iElm);
-    _VecfeSpace[1]->initializeSolution(sol);
+      metaNumber->getNumbering(_VecfeSpace[1]->getFieldID()), iElm, adr1);
+    for(size_t i = 0; i < adr1.size(); ++i) {
+      sol1[i] = solVec[adr1[i]];
+    }
+
     geoCoord = mesh->getCoord(cncGeoTag, iElm);
     for(int k = 0; k < _nQuad; ++k) {
-      solIntU = _VecfeSpace[0]->interpolateSolutionAtQuadNode(k);
-      solIntV = _VecfeSpace[1]->interpolateSolutionAtQuadNode(k);
+      solIntU = _VecfeSpace[0]->interpolateFieldAtQuadNode(sol0, k);
+      solIntV = _VecfeSpace[1]->interpolateFieldAtQuadNode(sol1, k);
 
       std::vector<double> x(3, 0.0);
       geoSpace->interpolateVectorFieldAtQuadNode(geoCoord, k, x);
@@ -191,14 +220,14 @@ void feNorm::computeH1NormVec(feMetaNumber *metaNumber, feSolution *sol, feMesh 
       double dsdy = dxdr[0] / J;
 
       double dudx, dudy, dvdx, dvdy;
-      dudx = _VecfeSpace[0]->interpolateSolutionAtQuadNode_rDerivative(k) * drdx +
-             _VecfeSpace[0]->interpolateSolutionAtQuadNode_sDerivative(k) * dsdx;
-      dudy = _VecfeSpace[0]->interpolateSolutionAtQuadNode_rDerivative(k) * drdy +
-             _VecfeSpace[0]->interpolateSolutionAtQuadNode_sDerivative(k) * dsdy;
-      dvdx = _VecfeSpace[1]->interpolateSolutionAtQuadNode_rDerivative(k) * drdx +
-             _VecfeSpace[1]->interpolateSolutionAtQuadNode_sDerivative(k) * dsdx;
-      dvdy = _VecfeSpace[1]->interpolateSolutionAtQuadNode_rDerivative(k) * drdy +
-             _VecfeSpace[1]->interpolateSolutionAtQuadNode_sDerivative(k) * dsdy;
+      dudx = _VecfeSpace[0]->interpolateFieldAtQuadNode_rDerivative(sol0, k) * drdx +
+             _VecfeSpace[0]->interpolateFieldAtQuadNode_sDerivative(sol0, k) * dsdx;
+      dudy = _VecfeSpace[0]->interpolateFieldAtQuadNode_rDerivative(sol0, k) * drdy +
+             _VecfeSpace[0]->interpolateFieldAtQuadNode_sDerivative(sol0, k) * dsdy;
+      dvdx = _VecfeSpace[1]->interpolateFieldAtQuadNode_rDerivative(sol1, k) * drdx +
+             _VecfeSpace[1]->interpolateFieldAtQuadNode_sDerivative(sol1, k) * dsdx;
+      dvdy = _VecfeSpace[1]->interpolateFieldAtQuadNode_rDerivative(sol1, k) * drdy +
+             _VecfeSpace[1]->interpolateFieldAtQuadNode_sDerivative(sol1, k) * dsdy;
 
       std::vector<double> solRef(6, 0);
       if(_VecSolRef != nullptr) {
@@ -221,18 +250,29 @@ void feNorm::computeSemiH1NormVec(feMetaNumber *metaNumber, feSolution *sol, feM
 {
   double SeminormH1 = 0.0, solIntU, solIntV, J, t = sol->getCurrentTime(), E11, E22, E12;
   int nElm = _VecfeSpace[0]->getNbElm();
+  std::vector<int> adr0(_VecfeSpace[0]->getNbFunctions());
+  std::vector<int> adr1(_VecfeSpace[1]->getNbFunctions());
+  std::vector<double> sol0(adr0.size());
+  std::vector<double> sol1(adr1.size());
+  std::vector<double> &solVec = sol->getSolutionReference();
 
   for(int iElm = 0; iElm < nElm; ++iElm) {
     _VecfeSpace[0]->initializeAddressingVector(
-      metaNumber->getNumbering(_VecfeSpace[0]->getFieldID()), iElm);
-    _VecfeSpace[0]->initializeSolution(sol);
+      metaNumber->getNumbering(_VecfeSpace[0]->getFieldID()), iElm, adr0);
+    for(size_t i = 0; i < adr0.size(); ++i) {
+      sol0[i] = solVec[adr0[i]];
+    }
+
     _VecfeSpace[1]->initializeAddressingVector(
-      metaNumber->getNumbering(_VecfeSpace[1]->getFieldID()), iElm);
-    _VecfeSpace[1]->initializeSolution(sol);
+      metaNumber->getNumbering(_VecfeSpace[1]->getFieldID()), iElm, adr1);
+    for(size_t i = 0; i < adr1.size(); ++i) {
+      sol1[i] = solVec[adr1[i]];
+    }
+
     geoCoord = mesh->getCoord(cncGeoTag, iElm);
     for(int k = 0; k < _nQuad; ++k) {
-      solIntU = _VecfeSpace[0]->interpolateSolutionAtQuadNode(k);
-      solIntV = _VecfeSpace[1]->interpolateSolutionAtQuadNode(k);
+      solIntU = _VecfeSpace[0]->interpolateFieldAtQuadNode(sol0, k);
+      solIntV = _VecfeSpace[1]->interpolateFieldAtQuadNode(sol1, k);
 
       std::vector<double> x(3, 0.0);
       geoSpace->interpolateVectorFieldAtQuadNode(geoCoord, k, x);
@@ -248,14 +288,14 @@ void feNorm::computeSemiH1NormVec(feMetaNumber *metaNumber, feSolution *sol, feM
       double dsdy = dxdr[0] / J;
 
       double dudx, dudy, dvdx, dvdy;
-      dudx = _VecfeSpace[0]->interpolateSolutionAtQuadNode_rDerivative(k) * drdx +
-             _VecfeSpace[0]->interpolateSolutionAtQuadNode_sDerivative(k) * dsdx;
-      dudy = _VecfeSpace[0]->interpolateSolutionAtQuadNode_rDerivative(k) * drdy +
-             _VecfeSpace[0]->interpolateSolutionAtQuadNode_sDerivative(k) * dsdy;
-      dvdx = _VecfeSpace[1]->interpolateSolutionAtQuadNode_rDerivative(k) * drdx +
-             _VecfeSpace[1]->interpolateSolutionAtQuadNode_sDerivative(k) * dsdx;
-      dvdy = _VecfeSpace[1]->interpolateSolutionAtQuadNode_rDerivative(k) * drdy +
-             _VecfeSpace[1]->interpolateSolutionAtQuadNode_sDerivative(k) * dsdy;
+      dudx = _VecfeSpace[0]->interpolateFieldAtQuadNode_rDerivative(sol0, k) * drdx +
+             _VecfeSpace[0]->interpolateFieldAtQuadNode_sDerivative(sol0, k) * dsdx;
+      dudy = _VecfeSpace[0]->interpolateFieldAtQuadNode_rDerivative(sol0, k) * drdy +
+             _VecfeSpace[0]->interpolateFieldAtQuadNode_sDerivative(sol0, k) * dsdy;
+      dvdx = _VecfeSpace[1]->interpolateFieldAtQuadNode_rDerivative(sol1, k) * drdx +
+             _VecfeSpace[1]->interpolateFieldAtQuadNode_sDerivative(sol1, k) * dsdx;
+      dvdy = _VecfeSpace[1]->interpolateFieldAtQuadNode_rDerivative(sol1, k) * drdy +
+             _VecfeSpace[1]->interpolateFieldAtQuadNode_sDerivative(sol1, k) * dsdy;
 
       std::vector<double> solRef(6, 0);
       if(_VecSolRef != nullptr) {
@@ -276,14 +316,20 @@ void feNorm::computeNormLambda(feMetaNumber *metaNumber, feSolution *sol, feMesh
 {
   double normL2 = 0.0, solInt, solRef, J, t = sol->getCurrentTime();
   int nElm = _VecfeSpace[0]->getNbElm();
+  std::vector<int> adr0(_VecfeSpace[0]->getNbFunctions());
+  std::vector<double> sol0(adr0.size());
+  std::vector<double> &solVec = sol->getSolutionReference();
 
   for(int iElm = 0; iElm < nElm; ++iElm) {
     _VecfeSpace[0]->initializeAddressingVector(
-      metaNumber->getNumbering(_VecfeSpace[0]->getFieldID()), iElm);
-    _VecfeSpace[0]->initializeSolution(sol);
+      metaNumber->getNumbering(_VecfeSpace[0]->getFieldID()), iElm, adr0);
+    for(size_t i = 0; i < adr0.size(); ++i) {
+      sol0[i] = solVec[adr0[i]];
+    }
+
     geoCoord = mesh->getCoord(cncGeoTag, iElm);
     for(int k = 0; k < _nQuad; ++k) {
-      solInt = _VecfeSpace[0]->interpolateSolutionAtQuadNode(k);
+      solInt = _VecfeSpace[0]->interpolateFieldAtQuadNode(sol0, k);
 
       std::vector<double> x(3, 0.0);
       geoSpace->interpolateVectorFieldAtQuadNode(geoCoord, k, x);
@@ -332,14 +378,20 @@ void feNorm::computeNormLambdaNS(feMetaNumber *metaNumber, feSolution *sol, feMe
 {
   double Integral = 0.0, solInt, p, J, t = sol->getCurrentTime(), T11, T12, T22;
   int nElm = _VecfeSpace[0]->getNbElm();
+  std::vector<int> adr0(_VecfeSpace[0]->getNbFunctions());
+  std::vector<double> sol0(adr0.size());
+  std::vector<double> &solVec = sol->getSolutionReference();
 
   for(int iElm = 0; iElm < nElm; ++iElm) {
     _VecfeSpace[0]->initializeAddressingVector(
-      metaNumber->getNumbering(_VecfeSpace[0]->getFieldID()), iElm);
-    _VecfeSpace[0]->initializeSolution(sol);
+      metaNumber->getNumbering(_VecfeSpace[0]->getFieldID()), iElm, adr0);
+    for(size_t i = 0; i < adr0.size(); ++i) {
+      sol0[i] = solVec[adr0[i]];
+    }
+
     geoCoord = mesh->getCoord(cncGeoTag, iElm);
     for(int k = 0; k < _nQuad; ++k) {
-      solInt = _VecfeSpace[0]->interpolateSolutionAtQuadNode(k);
+      solInt = _VecfeSpace[0]->interpolateFieldAtQuadNode(sol0, k);
 
       std::vector<double> x(3, 0.0);
       geoSpace->interpolateVectorFieldAtQuadNode(geoCoord, k, x);
@@ -421,14 +473,20 @@ void feNorm::computeIntFluxNx(feMetaNumber *metaNumber, feSolution *sol, feMesh 
 {
   double Integral = 0.0, solInt, J;
   int nElm = _VecfeSpace[0]->getNbElm();
+  std::vector<int> adr0(_VecfeSpace[0]->getNbFunctions());
+  std::vector<double> sol0(adr0.size());
+  std::vector<double> &solVec = sol->getSolutionReference();
 
   for(int iElm = 0; iElm < nElm; ++iElm) {
     _VecfeSpace[0]->initializeAddressingVector(
-      metaNumber->getNumbering(_VecfeSpace[0]->getFieldID()), iElm);
-    _VecfeSpace[0]->initializeSolution(sol);
+      metaNumber->getNumbering(_VecfeSpace[0]->getFieldID()), iElm, adr0);
+    for(size_t i = 0; i < adr0.size(); ++i) {
+      sol0[i] = solVec[adr0[i]];
+    }
+
     geoCoord = mesh->getCoord(cncGeoTag, iElm);
     for(int k = 0; k < _nQuad; ++k) {
-      solInt = _VecfeSpace[0]->interpolateSolutionAtQuadNode(k);
+      solInt = _VecfeSpace[0]->interpolateFieldAtQuadNode(sol0, k);
 
       std::vector<double> x(3, 0.0);
       geoSpace->interpolateVectorFieldAtQuadNode(geoCoord, k, x);
@@ -453,14 +511,20 @@ void feNorm::computeIntFluxNy(feMetaNumber *metaNumber, feSolution *sol, feMesh 
 {
   double Integral = 0.0, solInt, J;
   int nElm = _VecfeSpace[0]->getNbElm();
+  std::vector<int> adr0(_VecfeSpace[0]->getNbFunctions());
+  std::vector<double> sol0(adr0.size());
+  std::vector<double> &solVec = sol->getSolutionReference();
 
   for(int iElm = 0; iElm < nElm; ++iElm) {
     _VecfeSpace[0]->initializeAddressingVector(
-      metaNumber->getNumbering(_VecfeSpace[0]->getFieldID()), iElm);
-    _VecfeSpace[0]->initializeSolution(sol);
+      metaNumber->getNumbering(_VecfeSpace[0]->getFieldID()), iElm, adr0);
+    for(size_t i = 0; i < adr0.size(); ++i) {
+      sol0[i] = solVec[adr0[i]];
+    }
+
     geoCoord = mesh->getCoord(cncGeoTag, iElm);
     for(int k = 0; k < _nQuad; ++k) {
-      solInt = _VecfeSpace[0]->interpolateSolutionAtQuadNode(k);
+      solInt = _VecfeSpace[0]->interpolateFieldAtQuadNode(sol0, k);
 
       std::vector<double> x(3, 0.0);
       geoSpace->interpolateVectorFieldAtQuadNode(geoCoord, k, x);
@@ -486,14 +550,19 @@ void feNorm::computeIntegralNum(feMetaNumber *metaNumber, feSolution *sol, feMes
 {
   double Integral = 0.0, solInt, p, J, t = sol->getCurrentTime(), T11, T12, T22;
   int nElm = _VecfeSpace[0]->getNbElm();
+  std::vector<int> adr0(_VecfeSpace[0]->getNbFunctions());
+  std::vector<double> sol0(adr0.size());
+  std::vector<double> &solVec = sol->getSolutionReference();
 
   for(int iElm = 0; iElm < nElm; ++iElm) {
     _VecfeSpace[0]->initializeAddressingVector(
-      metaNumber->getNumbering(_VecfeSpace[0]->getFieldID()), iElm);
-    _VecfeSpace[0]->initializeSolution(sol);
+      metaNumber->getNumbering(_VecfeSpace[0]->getFieldID()), iElm, adr0);
+    for(size_t i = 0; i < adr0.size(); ++i) {
+      sol0[i] = solVec[adr0[i]];
+    }
     geoCoord = mesh->getCoord(cncGeoTag, iElm);
     for(int k = 0; k < _nQuad; ++k) {
-      solInt = _VecfeSpace[0]->interpolateSolutionAtQuadNode(k);
+      solInt = _VecfeSpace[0]->interpolateFieldAtQuadNode(sol0, k);
 
       std::vector<double> x(3, 0.0);
       geoSpace->interpolateVectorFieldAtQuadNode(geoCoord, k, x);
@@ -515,14 +584,20 @@ void feNorm::computeArea(feMetaNumber *metaNumber, feSolution *sol, feMesh *mesh
 {
   double area = 0.0, solInt, J;
   int nElm = _VecfeSpace[0]->getNbElm();
+  std::vector<int> adr0(_VecfeSpace[0]->getNbFunctions());
+  std::vector<double> sol0(adr0.size());
+  std::vector<double> &solVec = sol->getSolutionReference();
 
   for(int iElm = 0; iElm < nElm; ++iElm) {
     _VecfeSpace[0]->initializeAddressingVector(
-      metaNumber->getNumbering(_VecfeSpace[0]->getFieldID()), iElm);
-    _VecfeSpace[0]->initializeSolution(sol);
+      metaNumber->getNumbering(_VecfeSpace[0]->getFieldID()), iElm, adr0);
+    for(size_t i = 0; i < adr0.size(); ++i) {
+      sol0[i] = solVec[adr0[i]];
+    }
+
     geoCoord = mesh->getCoord(cncGeoTag, iElm);
     for(int k = 0; k < _nQuad; ++k) {
-      solInt = _VecfeSpace[0]->interpolateSolutionAtQuadNode(k);
+      solInt = _VecfeSpace[0]->interpolateFieldAtQuadNode(sol0, k);
 
       std::vector<double> x(3, 0.0);
       geoSpace->interpolateVectorFieldAtQuadNode(geoCoord, k, x);
@@ -547,15 +622,20 @@ void feNorm::computeIntegral(feMetaNumber *metaNumber, feSolution *sol, feMesh *
 {
   double area = 0.0, solInt, J, t = sol->getCurrentTime();
   int nElm = _VecfeSpace[0]->getNbElm();
+  std::vector<int> adr0(_VecfeSpace[0]->getNbFunctions());
+  std::vector<double> sol0(adr0.size());
+  std::vector<double> &solVec = sol->getSolutionReference();
 
   for(int iElm = 0; iElm < nElm; ++iElm) {
     _VecfeSpace[0]->initializeAddressingVector(
-      metaNumber->getNumbering(_VecfeSpace[0]->getFieldID()), iElm);
-    _VecfeSpace[0]->initializeSolution(sol);
+      metaNumber->getNumbering(_VecfeSpace[0]->getFieldID()), iElm, adr0);
+    for(size_t i = 0; i < adr0.size(); ++i) {
+      sol0[i] = solVec[adr0[i]];
+    }
+
     geoCoord = mesh->getCoord(cncGeoTag, iElm);
     for(int k = 0; k < _nQuad; ++k) {
-      solInt = _VecfeSpace[0]->interpolateSolutionAtQuadNode(k);
-
+      solInt = _VecfeSpace[0]->interpolateFieldAtQuadNode(sol0, k);
       std::vector<double> x(3, 0.0);
       geoSpace->interpolateVectorFieldAtQuadNode(geoCoord, k, x);
       // J = geoSpace->interpolateFieldAtQuadNode_rDerivative(xGeoCoord, k);
@@ -577,17 +657,21 @@ void feNorm::computeIntegral(feMetaNumber *metaNumber, feSolution *sol, feMesh *
 
 /* Estimates the L2 norm of the error taking an external solution as the reference solution. */
 feStatus feNorm::computeErrorNormFromExternalSolution(feMetaNumber *metaNumber, feSolution *sol,
-                                                  feMesh *mesh, feMetaNumber *refMN,
-                                                  feSolution *refSol, feMesh *refMesh,
-                                                  const std::vector<feSpace *> refSpaces)
+                                                      feMesh *mesh, feMetaNumber *refMN,
+                                                      feSolution *refSol, feMesh *refMesh,
+                                                      const std::vector<feSpace *> refSpaces)
 {
   double normL2 = 0.0, solInt, solRef;
   int nElm = _intSpace->getNbElm();
+  std::vector<int> adr(_intSpace->getNbFunctions());
+  std::vector<double> sol0(adr.size());
+  std::vector<double> &solVec = sol->getSolutionReference();
+  std::vector<double> &solVecS = refSol->getSolutionReference();
 
   if(fabs(sol->getCurrentTime() - refSol->getCurrentTime()) > 1e-3) {
     feWarning("Solutions time differ by  more than 1e-3 : tRef "
-           "= %f - tSol = %f.\n",
-           refSol->getCurrentTime(), sol->getCurrentTime());
+              "= %f - tSol = %f.\n",
+              refSol->getCurrentTime(), sol->getCurrentTime());
     feWarning("Maybe the solution file does not match the current solution.\n");
   }
 
@@ -602,6 +686,8 @@ feStatus feNorm::computeErrorNormFromExternalSolution(feMetaNumber *metaNumber, 
   // autre simulation, ce qui semble hasardeux.
   bool matchingSpace = false;
   for(feSpace *fS : refSpaces) {
+    std::vector<int> adrS(fS->getNbFunctions());
+    std::vector<double> solS(adrS.size());
     if(fS->getFieldID() == _intSpace->getFieldID() &&
        fS->getCncGeoID() == _intSpace->getCncGeoID()) {
       matchingSpace = true;
@@ -610,24 +696,28 @@ feStatus feNorm::computeErrorNormFromExternalSolution(feMetaNumber *metaNumber, 
 
       for(int iElm = 0; iElm < nElm; ++iElm) {
         _intSpace->initializeAddressingVector(metaNumber->getNumbering(_intSpace->getFieldID()),
-                                              iElm);
-        _intSpace->initializeSolution(sol);
+                                              iElm, adr);
+        for(size_t i = 0; i < adr.size(); ++i) {
+          sol0[i] = solVec[adr[i]];
+        }
+
         geoCoord = mesh->getCoord(cncGeoTag, iElm);
         for(int k = 0; k < _nQuad; ++k) {
           geoSpace->interpolateVectorFieldAtQuadNode(geoCoord, k, x);
           // Current solution
-          solInt = _intSpace->interpolateSolutionAtQuadNode(k);
+          solInt = _VecfeSpace[0]->interpolateFieldAtQuadNode(sol0, k);
           // Reference solution evaluated at quad node
           int elm = -1;
           bool isFound = static_cast<feMesh2DP1 *>(refMesh)->locateVertex(x, elm, r);
           if(!isFound) {
-            feWarning("Point (%f, %f, %f) was not found in the mesh.\n",
-                   x[0], x[1], x[2]);
+            feWarning("Point (%f, %f, %f) was not found in the mesh.\n", x[0], x[1], x[2]);
             solRef = solInt; // Points outside the mesh do not contribute
           } else {
-            fS->initializeAddressingVector(n, elm);
-            fS->initializeSolution(refSol);
-            solRef = fS->interpolateSolution(r.data());
+            fS->initializeAddressingVector(n, elm, adrS);
+            for(size_t i = 0; i < adr.size(); ++i) {
+              solS[i] = solVecS[adrS[i]];
+            }
+            solRef = fS->interpolateField(solS, r.data());
             normL2 += (solInt - solRef) * (solInt - solRef) * J[_nQuad * iElm + k] * w[k];
           }
 
@@ -643,7 +733,7 @@ feStatus feNorm::computeErrorNormFromExternalSolution(feMetaNumber *metaNumber, 
 
   if(!matchingSpace)
     return feErrorMsg(FE_STATUS_ERROR, "No finite element space in the reference set "
-           "matches the target space on this connectivity.\n");
+                                       "matches the target space on this connectivity.\n");
 
   return FE_STATUS_OK;
 }

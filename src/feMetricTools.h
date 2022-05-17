@@ -31,7 +31,8 @@ void smoothDirections(std::map<size_t, double> &C, std::map<size_t, double> &S, 
 
 double dtt(const double x, const double y, double C, double S, feRecovery *rec);
 double dttt(const double x, const double y, double C, double S, feRecovery *rec, int direction);
-double dtttAnalytical(const double x, const double y, double C, double S, feRecovery *rec, int direction);
+double dtttAnalytical(const double x, const double y, double C, double S, feRecovery *rec,
+                      int direction);
 
 void metricHechtKuate(int nbpoints, double *x, double *y, double &A, double &B, double &C,
                       double epsilon, double *xNew, double *yNew, int dimRecovery,

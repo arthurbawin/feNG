@@ -10,7 +10,7 @@ class feCompressedRowStorage
 {
 public:
   feCompressedRowStorage(feMetaNumber *metaNumber, feMesh *mesh,
-                         std::vector<feBilinearForm *> &formMatrices);
+                         std::vector<feBilinearForm *> &formMatrices, int numMatrixForms);
   ~feCompressedRowStorage()
   {
     if(nnz != NULL) delete[] nnz;
@@ -65,7 +65,7 @@ class feCompressedRowStorageMklPardiso : public feCompressedRowStorage
 {
 public:
   feCompressedRowStorageMklPardiso(feMetaNumber *metaNumber, feMesh *mesh,
-                                   std::vector<feBilinearForm *> &formMatrices);
+                                   std::vector<feBilinearForm *> &formMatrices, int numMatrixForms);
   ~feCompressedRowStorageMklPardiso()
   {
     if(rangee != NULL) delete[] rangee;

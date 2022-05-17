@@ -47,6 +47,7 @@ public:
   // Test : local attributes
   std::vector<int> _adr;
   std::vector<double> _sol;
+  std::vector<double> _solDot;
 
   // ==================================================================
   // Pointeur sur la méthode de construction de la matrice élémentaire
@@ -75,8 +76,8 @@ public:
 
   bool hasMatrix() { return _sysElm->hasMatrix(); }
 
-  int getNiElm() { return _niElm; }
-  int getNjElm() { return _njElm; }
+  feInt getNiElm() { return _niElm; }
+  feInt getNjElm() { return _njElm; }
   std::vector<int> &getAdrI() { return _adrI; }
   std::vector<int> &getAdrJ() { return _adrJ; }
 

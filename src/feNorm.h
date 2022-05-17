@@ -59,9 +59,9 @@ public:
   void computeL2Norm0D(feSolution *sol);
   void computeArea(feMetaNumber *metaNumber, feSolution *sol, feMesh *mesh);
   void computeIntegral(feMetaNumber *metaNumber, feSolution *sol, feMesh *mesh, feFunction *fun);
-  feStatus computeErrorNormFromExternalSolution(feMetaNumber *metaNumber, feSolution *sol, feMesh *mesh,
-                                                feMetaNumber *refMN, feSolution *refSol,
-                                                feMesh *refMesh,
+  feStatus computeErrorNormFromExternalSolution(feMetaNumber *metaNumber, feSolution *sol,
+                                                feMesh *mesh, feMetaNumber *refMN,
+                                                feSolution *refSol, feMesh *refMesh,
                                                 const std::vector<feSpace *> refSpaces);
 };
 

@@ -36,8 +36,8 @@ protected:
   // For elements coloring
   std::map<int, int> _nbElmPerNode;
   std::map<int, int> _nbElmPerElm;
-  std::map<int, std::vector<int>> _listElmPerNode;
-  std::map<int, std::vector<int>> _listElmPerElm;
+  std::map<int, std::vector<int> > _listElmPerNode;
+  std::map<int, std::vector<int> > _listElmPerElm;
 
   int _nbColor;
   std::vector<int> _elmToColor;
@@ -61,6 +61,7 @@ public:
     _nNod = std::unique(connecNodes.begin(), connecNodes.end()) - connecNodes.begin();
 
     int coloringAlgorithm = 1;
+    feInfo("Methode de Coloriage : %d", coloringAlgorithm);
     colorElements(coloringAlgorithm);
   };
   ~feCncGeo()

@@ -56,7 +56,7 @@ public:
   double getXCoord(int i) { return _coord[i * _dim]; }
   double getYCoord(int i) { return _coord[i * _dim + 1]; }
   double getZCoord(int i) { return _coord[i * _dim + 2]; }
-  std::vector<double> getCoord(std::string cncGeoID, int numElm);
+  std::vector<double> getCoord(std::string const &cncGeoID, int numElm);
   std::vector<double> getCoord(int cncGeoTag, int numElm);
 
   int getVertexSequentialTagFromGmshTag(int gmshNodeTag) { return _verticesMap[gmshNodeTag]; }
@@ -72,20 +72,20 @@ public:
 
   int getNbCncGeo() { return _nCncGeo; }
   std::vector<feCncGeo *> &getCncGeo() { return _cncGeo; }
-  int getCncGeoTag(std::string cncGeoID);
-  feCncGeo *getCncGeoByName(std::string cncGeoID);
+  int getCncGeoTag(std::string const &cncGeoID);
+  feCncGeo *getCncGeoByName(std::string const &cncGeoID);
   feCncGeo *getCncGeoByTag(int cncGeoTag);
-  int getNbElm(std::string cncGeoID);
+  int getNbElm(std::string const &cncGeoID);
   int getNbElm(int cncGeoTag);
-  int getNbNodePerElem(std::string cncGeoID);
+  int getNbNodePerElem(std::string const &cncGeoID);
   int getNbNodePerElem(int cncGeoTag);
-  int getVertex(std::string cncGeoID, int numElem, int numVertex);
+  int getVertex(std::string const &cncGeoID, int numElem, int numVertex);
   int getVertex(int cncGeoTag, int numElem, int numVertex);
-  int getElement(std::string cncGeoID, int numElem);
+  int getElement(std::string const &cncGeoID, int numElem);
   int getElement(int cncGeoTag, int numElem);
-  int getEdge(std::string cncGeoID, int numElem, int numEdge);
+  int getEdge(std::string const &cncGeoID, int numElem, int numEdge);
   int getEdge(int cncGeoTag, int numElem, int numEdge);
-  feSpace *getGeometricSpace(std::string cncGeoID);
+  feSpace *getGeometricSpace(std::string const &cncGeoID);
   feSpace *getGeometricSpace(int cncGeoTag);
 
   virtual bool locateVertex(std::vector<double> &x, int &iElm, std::vector<double> &u,
@@ -111,7 +111,11 @@ public:
   virtual ~feMesh1DP1();
 
   virtual bool locateVertex(std::vector<double> &x, int &iElm, std::vector<double> &u,
-                            double tol = 1e-5){};
+                            double tol = 1e-5)
+  {
+    feInfo("function locateVertex not implemented for 1DP1 Mesh");
+    return 0;
+  };
 };
 
 class feMesh0DP0 : public feMesh
@@ -130,7 +134,11 @@ public:
   virtual ~feMesh0DP0();
 
   virtual bool locateVertex(std::vector<double> &x, int &iElm, std::vector<double> &u,
-                            double tol = 1e-5){};
+                            double tol = 1e-5)
+  {
+    feInfo("function locateVertex not implemented for 1DP1 Mesh");
+    return 0;
+  };
 };
 
 class feMetaNumber;

@@ -4,7 +4,8 @@
 
 extern bool petscWasInitialized;
 
-feStatus createLinearSystem(feLinearSystem *&system, linearSolverType type, std::vector<feSpace *> allFESpaces,
+feStatus createLinearSystem(feLinearSystem *&system, linearSolverType type,
+                            std::vector<feSpace *> allFESpaces,
                             std::vector<feBilinearForm *> bilinearForms, feMetaNumber *metaNumber,
                             feMesh *mesh, int argc, char **argv)
 {
@@ -13,14 +14,16 @@ feStatus createLinearSystem(feLinearSystem *&system, linearSolverType type, std:
 
   // Check that all (bi-)linear forms are defined on existing connectivities.
   // The finite element spaces of a single form must be defined on the same geometric connectivity.
-  for(feBilinearForm *form : bilinearForms){
+  for(feBilinearForm *form : bilinearForms) {
     bool OK = false;
-    for(feSpace *space : allFESpaces){
-      if(space->getCncGeoTag() == form->getCncGeoTag())
-        OK = true;
+    for(feSpace *space : allFESpaces) {
+      if(space->getCncGeoTag() == form->getCncGeoTag()) OK = true;
     }
-    if(!OK){
-      return feErrorMsg(FE_STATUS_ERROR, "(Bi-)linear form %s is not defined on any known geometric connectivity (named subdomain).", form->getIDName().c_str());
+    if(!OK) {
+      return feErrorMsg(
+        FE_STATUS_ERROR,
+        "(Bi-)linear form %s is not defined on any known geometric connectivity (named subdomain).",
+        form->getIDName().c_str());
     }
   }
 

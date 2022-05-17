@@ -1,3 +1,4 @@
+#include "feNG.h"
 #include "feCncGeo.h"
 #include "feSpace.h"
 #include "feMesh.h"
@@ -15,7 +16,7 @@ void feCncGeo::computeJacobians()
       geoCoord = _mesh->getCoord(_tag, iElm);
       for(int k = 0; k < nQuad; ++k) {
         _space->interpolateVectorFieldAtQuadNode_rDerivative(geoCoord, k, j);
-        _J[nQuad * iElm + k] = sqrt(j[0]*j[0] + j[1]*j[1]);
+        _J[nQuad * iElm + k] = sqrt(j[0] * j[0] + j[1] * j[1]);
       }
     }
   } else if(_space->getDim() == 2) {
@@ -43,33 +44,43 @@ void feCncGeo::computeJacobians()
   }
 }
 
-static int colorChoice(std::vector<bool> availableColor, std::vector<int> nbElmPerColor,
-                        int nbColor)
+static int colorChoice(std::vector<bool> availableColor, std::vector<int> &nbElmPerColor,
+                       int &nbColor, std::vector<std::vector<int> > &listElmPerColor)
 {
   int minColor = *max_element(nbElmPerColor.begin(), nbElmPerColor.end());
   for(int i = 0; i < nbColor; i++) {
     if(availableColor[i] == true) {
-      if(minColor >= nbElmPerColor[i]) {
+      if(minColor > nbElmPerColor[i]) {
         minColor = nbElmPerColor[i];
       }
     }
   }
 
+  int activColor = -1;
   for(int i = 0; i < nbColor; i++) {
     if(availableColor[i] == true && nbElmPerColor[i] == minColor) {
-      return i;
+      activColor = i;
     }
   }
+
+  if(activColor == -1) {
+    activColor = nbColor;
+    nbColor = nbColor + 1;
+    nbElmPerColor.push_back(0);
+    listElmPerColor.push_back(std::vector<int>(0, 0));
+  }
+  return activColor;
 }
 
-void feCncGeo::colorElements(int coloringAlgorithm){
-
-  // feInfo("Coloring connectivity %s", _ID.c_str());
+void feCncGeo::colorElements(int coloringAlgorithm)
+{
+  feInfo("Coloring connectivity %s ...", _ID.c_str());
+  tic();
   // feInfo("Coloring connectivity with %d elm", _nElm);
   // feInfo("Coloring connectivity with %d node per elm", _nNodPerElm);
   // feInfo("Coloring connectivity with %d sommets", _nNod);
 
-  std::map<int, std::set<int>> listElmPerElm;
+  std::map<int, std::set<int> > listElmPerElm;
 
   // Create the node and element patches :
   // Nodes
@@ -85,70 +96,28 @@ void feCncGeo::colorElements(int coloringAlgorithm){
   }
 
   // Elements
-  for(int i = 0; i < _nElm; ++i) {
-    for(int j = 0; j < _nNodPerElm; ++j) {
-      int nds = _connecNodes[i * _nNodPerElm + j];
-      for(int elm : _listElmPerNode[nds]){
-        if(elm != i)
-          listElmPerElm[i].insert(elm);
-      }
-    }
-  }
-
-  // _nbElmPerElm.resize(_nElm);
-  // for(int i = 0; i < _nElm; ++i) {
-  //   _nbElmPerElm[i] = _listElmPerElm[i].size();
-  // }
-  for(auto pair : listElmPerElm) {
-    _nbElmPerElm[pair.first] = pair.second.size();
-  }
-
-  // Convert sets to vectors
-  for(int i = 0; i < _nElm; ++i) {
-    std::vector<int> v(listElmPerElm[i].begin(), listElmPerElm[i].end());
-    _listElmPerElm[i] = v;
-  }
-
   // for(int i = 0; i < _nElm; ++i) {
   //   for(int j = 0; j < _nNodPerElm; ++j) {
   //     int nds = _connecNodes[i * _nNodPerElm + j];
-  //     for(int k = 0; k < _nbElmPerNode[nds]; ++k) {
-  //       if(_listElmPerNode[nds][k] != i) {
-  //         int check = 0;
-  //         for(int iElm = 0; iElm < _nbElmPerElm[i]; ++iElm) {
-  //           if(_listElmPerNode[nds][elm] == _listElmPerElm[i][iElm]) {
-  //             check++;
-  //             break;
-  //           }
-  //         }
-  //         if(check == 0) {
-  //           _nbElmPerElm[i]++;
-  //           _listElmPerElm[i].push_back(_listElmPerNode[nds][elm]);
-  //         }
-  //       }
+  //     for(int elm : _listElmPerNode[nds]){
+  //       if(elm != i)
+  //         listElmPerElm[i].insert(elm);
   //     }
   //   }
   // }
 
-  // feInfo("LIST ELM PER NODE");
-  // for(auto p : _listElmPerNode) {
-  //   feInfo("Vector of size %d", p.second.size());
-  //   feInfo("Il y a %d elements associes au noeud", _nbElmPerNode[p.first]);
-  //   for(auto val : p.second){
-  //     feInfo("val = %d", val);
-  //   }
-  // }
-  // feInfo("LIST ELM PER ELM");
-  // for(auto p : _listElmPerElm) {
-  //   feInfo("Vector of size %d", p.second.size());
-  //   feInfo("Il y a %d elements associes à l'elm", _nbElmPerElm[p.first]);
-  //   for(auto val : p.second){
-  //     feInfo("val = %d", val);
-  //   }
+  // for(auto pair : listElmPerElm) {
+  //   _nbElmPerElm[pair.first] = pair.second.size();
   // }
 
-  switch(coloringAlgorithm){
-    case 1 :
+  // // Convert sets to vectors
+  // for(int i = 0; i < _nElm; ++i) {
+  //   std::vector<int> v(listElmPerElm[i].begin(), listElmPerElm[i].end());
+  //   _listElmPerElm[i] = v;
+  // }
+
+  switch(coloringAlgorithm) {
+    case 1: // Returning a non homogeneous distribution of elements per color
     {
       _nbColor = 0;
       _elmToColor.resize(_nElm, -1);
@@ -188,336 +157,108 @@ void feCncGeo::colorElements(int coloringAlgorithm){
         _nbColor = _nbColor + 1;
 
       } // while
+      feInfo("nbColor : %d", _nbColor);
+      for(int i = 0; i < _nbColor; i++) {
+        feInfo("%d Elm for color %d", _nbElmPerColor[i], i);
+      }
       break;
     }
-    // case 2 :
-    // {
-    //   _nbColor = *max_element(_nbElmPerElm.begin(), _nbElmPerElm.end()) + 1;
-    //   _colorElm.resize(_nElm, -1);
-    //   _nbElmPerColor.resize(_nbColor);
-    //   _listElmPerColor.resize(_nbColor, std::vector<int>(0, 0));
-    //   std::vector<int> color(_nbColor);
-    //   for(int i = 0; i < _nbColor; ++i) {
-    //     color[i] = i;
-    //   }
 
-    //   for(int iElm = 0; iElm < _nElm; iElm++) {
-    //     if(_colorElm[iElm] == -1) {
-    //       std::vector<int> iElmPatch = _listElmPerElm[iElm];
-    //       std::vector<bool> availableColor(_nbColor, true);
-    //       for(int i = 0; i < _nbElmPerElm[iElm]; i++) {
-    //         if(_colorElm[iElmPatch[i]] != -1 && availableColor[_colorElm[iElmPatch[i]]] == true) {
-    //           availableColor[_colorElm[iElmPatch[i]]] = false;
-    //         }
-    //       }
+      // case 2:  //Returning a homogeneous distribution of elements per color
+      // {
+      //   //Finding the Elm with the most neighbours to asign nb Colors
+      //   _nbColor=0;
+      //   for(auto pair : _nbElmPerElm){
+      //     if(pair.second>_nbColor){
+      //       _nbColor=pair.second;
+      //     }
+      //   }
 
-    //       for(int iC = 0; iC < _nbColor; iC++) {
-    //         if(availableColor[iC] == true) {
-    //           _colorElm[iElm] = iC;
-    //           _nbElmPerColor[iC] = _nbElmPerColor[iC] + 1;
-    //           _listElmPerColor[iC].push_back(iElm);
-    //           break;
-    //         }
-    //       }
-    //     }
-    //   }
-    //   break;
-    // }
-    // case 3:
-    // {
-    //   _nbColor = *max_element(_nbElmPerElm.begin(), _nbElmPerElm.end()) + 1;
-    //   _colorElm.resize(_nElm, -1);
-    //   _nbElmPerColor.resize(_nbColor);
-    //   _listElmPerColor.resize(_nbColor, std::vector<int>(0, 0));
+      //   _elmToColor.resize(_nElm, -1);
+      //   _nbElmPerColor.resize(_nbColor);
+      //   _listElmPerColor.resize(_nbColor, std::vector<int>(0, 0));
 
-    //   for(int iElm = 0; iElm < _nElm; iElm++) {
-    //     if(_colorElm[iElm] == -1) {
-    //       std::vector<int> iPatchElm = _listElmPerElm[iElm];
-    //       std::vector<bool> availableColor(_nbColor, true);
-    //       for(int i = 0; i < _nbElmPerElm[iElm]; i++) {
-    //         if(_colorElm[iPatchElm[i]] != -1 && availableColor[_colorElm[iPatchElm[i]]] == true) {
-    //           availableColor[_colorElm[iPatchElm[i]]] = false;
-    //         }
-    //       }
+      //   for(int iElm = 0; iElm < _nElm; iElm++) {
+      //     if(_elmToColor[iElm] == -1) {
+      //       std::vector<int> iPatchElm = _listElmPerElm[iElm];
+      //       std::vector<bool> availableColor(_nbColor, true);
+      //       for(int i = 0; i < _nbElmPerElm[iElm]; i++) {
+      //         if(_elmToColor[iPatchElm[i]] != -1 && availableColor[_elmToColor[iPatchElm[i]]] ==
+      //         true) {
+      //           availableColor[_elmToColor[iPatchElm[i]]] = false;
+      //         }
+      //       }
 
-    //       int activColor = colorChoice(availableColor, _nbElmPerColor, _nbColor);
-    //       _colorElm[iElm] = activColor;
-    //       _nbElmPerColor[activColor] = _nbElmPerColor[activColor] + 1;
-    //       _listElmPerColor[activColor].push_back(iElm);
-    //     }
-    //   }
-    //   break;
-    // }
-    // case 4:
-    // {
-    //   _nbColor = *max_element(_nbElmPerElm.begin(), _nbElmPerElm.end()) + 1;
-    //   _colorElm.resize(_nElm, -1);
-    //   _nbElmPerColor.resize(_nbColor);
-    //   _listElmPerColor.resize(_nbColor, std::vector<int>(0, 0));
+      //       int activColor = colorChoice(availableColor, _nbElmPerColor, _nbColor,
+      //       _listElmPerColor); _elmToColor[iElm] = activColor; _nbElmPerColor[activColor] =
+      //       _nbElmPerColor[activColor] + 1; _listcdElmPerColor[activColor].push_back(iElm);
+      //     }
+      //   }
+      //   feInfo("nbColor : %d", _nbColor);
+      //   for (int i=0;i<_nbColor;i++){
+      //     feInfo("%d Elm for color %d",_nbElmPerColor[i],i);
+      //   }
+      //   break;
+      // }
 
-    //   bool noColor = false;
-    //   while(noColor == false) {
-    //     for(int iElm = 0; iElm < _nElm; iElm++) {
-    //       if(_colorElm[iElm] == -1) {
-    //         std::vector<int> iPatchElm = _listElmPerElm[iElm];
-    //         std::vector<bool> availableColor(_nbColor, true);
-    //         for(int i = 0; i < _nbElmPerElm[iElm]; i++) {
-    //           if(_colorElm[iPatchElm[i]] < 0) {
-    //             _colorElm[iPatchElm[i]] = -2;
-    //           } else if(availableColor[_colorElm[iPatchElm[i]]] == true) {
-    //             availableColor[_colorElm[iPatchElm[i]]] = false;
-    //           }
-    //         }
+    case 3: // Idem 2 but not using Patch Elm
+    {
+      // Finding the Node with the most neighbours to asign initial nb Colors
+      _nbColor = 0;
+      for(auto pair : _nbElmPerNode) {
+        if(pair.second > _nbColor) {
+          _nbColor = pair.second;
+        }
+      }
 
-    //         int activColor = colorChoice(availableColor, _nbElmPerColor, _nbColor);
-    //         _colorElm[iElm] = activColor;
-    //         _nbElmPerColor[activColor] = _nbElmPerColor[activColor] + 1;
-    //         _listElmPerColor[activColor].push_back(iElm);
-    //       }
-    //     }
+      _elmToColor.resize(_nElm, -1);
+      _nbElmPerColor.resize(_nbColor);
+      _listElmPerColor.resize(_nbColor, std::vector<int>(0, 0));
 
-    //     noColor = true;
-    //     for(int iElm = 0; iElm < _nElm; iElm++) {
-    //       if(_colorElm[iElm] == -2) {
-    //         _colorElm[iElm] = -1;
-    //         noColor = false;
-    //       }
-    //     }
-    //     // feInfo("%d",_nbColor);
-    //   }
-    //   break;
-    // }
-    // case 5:
-    // {
-    //   _nbColor = 16;
-    //   _colorElm.resize(_nElm, -1);
-    //   _nbElmPerColor.resize(_nbColor);
-    //   _listElmPerColor.resize(_nbColor, std::vector<int>(0, 0));
+      bool noColor = false;
+      while(noColor == false) {
+        for(int k = 0; k < _nElm; ++k) {
+          if(_elmToColor[k] == -1) {
+            std::vector<bool> availableColor(_nbColor, true);
+            for(int i = 0; i < _nNodPerElm; ++i) {
+              int s = _connecNodes[k * _nNodPerElm + i];
+              for(int j = 0; j < _nbElmPerNode[s]; ++j) {
+                int numElm = _listElmPerNode[s][j];
+                if(numElm != k) {
+                  if(_elmToColor[numElm] < 0) {
+                    _elmToColor[numElm] = -2;
+                  } else if(availableColor[_elmToColor[numElm]] == true) {
+                    availableColor[_elmToColor[numElm]] = false;
+                  }
+                }
+              }
+            }
+            int activColor =
+              colorChoice(availableColor, _nbElmPerColor, _nbColor, _listElmPerColor);
+            _elmToColor[k] = activColor;
+            // feInfo("%d couleur pour elm %d",activColor,k);
+            _nbElmPerColor[activColor] = _nbElmPerColor[activColor] + 1;
+            _listElmPerColor[activColor].push_back(k);
+          }
+        }
 
-    //   bool noColor = false;
-    //   while(noColor == false) {
-    //     for(int k = 0; k < _nElm; ++k) {
-    //       if(_colorElm[k] == -1) {
-    //         std::vector<bool> availableColor(_nbColor, true);
-    //         for(int i = 0; i < _nNodPerElm; ++i) {
-    //           int s = _connecNodes[k * _nNodPerElm + i];
-    //           for(int j = 0; j < _nbElmPerNode[s]; ++j) {
-    //             int numElm = _listElmPerNode[s][j];
-    //             if(numElm != k) {
-    //               if(_colorElm[numElm] < 0) {
-    //                 _colorElm[numElm] = -2;
-    //               } else if(availableColor[_colorElm[numElm]] == true) {
-    //                 availableColor[_colorElm[numElm]] = false;
-    //               }
-    //             }
-    //           }
-    //         }
-    //         int activColor = colorChoice(availableColor, _nbElmPerColor, _nbColor);
-    //         _colorElm[k] = activColor;
-    //         _nbElmPerColor[activColor] = _nbElmPerColor[activColor] + 1;
-    //         _listElmPerColor[activColor].push_back(k);
-    //       }
-    //     }
+        noColor = true;
+        for(int k = 0; k < _nElm; ++k) {
+          if(_elmToColor[k] == -2) {
+            _elmToColor[k] = -1;
+            noColor = false;
+          }
+        }
 
-    //     noColor = true;
-    //     for(int k = 0; k < _nElm; ++k) {
-    //       if(_colorElm[k] == -2) {
-    //         _colorElm[k] = -1;
-    //         noColor = false;
-    //       }
-    //     }
+      } // while
 
-    //   } // while
-    //   break;
-    // }
+      feInfo("nbColor : %d", _nbColor);
+      for(int i = 0; i < _nbColor; i++) {
+        feInfo("%d Elm for color %d", _nbElmPerColor[i], i);
+      }
+      break;
+    }
   }
+  toc();
+  feInfo("Done");
 }
-
-// void feCncGeo::color2(int cncGeoTag)
-// {
-//   // feCncGeo *cnc = _cncGeo[cncGeoTag];
-//   // int nbElm = cnc->getNbElm();
-//   // int _nNodPerElm = cnc->getNbNodePerElem();
-//   // std::vector<int> &cncNodes = cnc->getNodeConnectivityRef();
-
-//   // patchNode(nbElm, _nNodPerElm, cncNodes);
-//   // patchElm(nbElm, _nNodPerElm, cncNodes);
-
-//   // _nbColor = *max_element(_nbElmPerElm.begin(), _nbElmPerElm.end()) + 1;
-//   // _colorElm.resize(nbElm, -1);
-//   // _nbElmPerColor.resize(_nbColor);
-//   // _listElmPerColor.resize(_nbColor, std::vector<int>(0, 0));
-//   // std::vector<int> color(_nbColor);
-//   // for(int i = 0; i < _nbColor; ++i) {
-//   //   color[i] = i;
-//   // }
-
-//   // for(int iElm = 0; iElm < nbElm; iElm++) {
-//   //   if(_colorElm[iElm] == -1) {
-//   //     std::vector<int> iElmPatch = _listElmPerElm[iElm];
-//   //     std::vector<bool> availableColor(_nbColor, true);
-//   //     for(int i = 0; i < _nbElmPerElm[iElm]; i++) {
-//   //       if(_colorElm[iElmPatch[i]] != -1 && availableColor[_colorElm[iElmPatch[i]]] == true) {
-//   //         availableColor[_colorElm[iElmPatch[i]]] = false;
-//   //       }
-//   //     }
-
-//   //     for(int iC = 0; iC < _nbColor; iC++) {
-//   //       if(availableColor[iC] == true) {
-//   //         _colorElm[iElm] = iC;
-//   //         _nbElmPerColor[iC] = _nbElmPerColor[iC] + 1;
-//   //         _listElmPerColor[iC].push_back(iElm);
-//   //         break;
-//   //       }
-//   //     }
-//   //   }
-//   // }
-
-//   // for(int i=0;i<_nbColor;i++){
-//   //   feInfo("%d Elm pour couleur %d",_nbElmPerColor[i],i);
-//   // }
-
-//   // feInfo("%d",_nbColor);
-// }
-
-// void feCncGeo::color3(int cncGeoTag)
-// {
-//   feCncGeo *cnc = _cncGeo[cncGeoTag];
-//   int nbElm = cnc->getNbElm();
-//   int _nNodPerElm = cnc->getNbNodePerElem();
-//   std::vector<int> &cncNodes = cnc->getNodeConnectivityRef();
-
-//   patchNode(nbElm, _nNodPerElm, cncNodes);
-//   patchElm(nbElm, _nNodPerElm, cncNodes);
-
-//   _nbColor = *max_element(_nbElmPerElm.begin(), _nbElmPerElm.end()) + 1;
-//   _colorElm.resize(nbElm, -1);
-//   _nbElmPerColor.resize(_nbColor);
-//   _listElmPerColor.resize(_nbColor, std::vector<int>(0, 0));
-
-//   for(int iElm = 0; iElm < nbElm; iElm++) {
-//     if(_colorElm[iElm] == -1) {
-//       std::vector<int> iPatchElm = _listElmPerElm[iElm];
-//       std::vector<bool> availableColor(_nbColor, true);
-//       for(int i = 0; i < _nbElmPerElm[iElm]; i++) {
-//         if(_colorElm[iPatchElm[i]] != -1 && availableColor[_colorElm[iPatchElm[i]]] == true) {
-//           availableColor[_colorElm[iPatchElm[i]]] = false;
-//         }
-//       }
-
-//       int activColor = colorChoice(availableColor, _nbElmPerColor, _nbColor);
-//       _colorElm[iElm] = activColor;
-//       _nbElmPerColor[activColor] = _nbElmPerColor[activColor] + 1;
-//       _listElmPerColor[activColor].push_back(iElm);
-//     }
-//   }
-
-//   // for(int i=0;i<_nbColor;i++){
-//   //   feInfo("%d Elm pour couleur %d",_nbElmPerColor[i],i);
-//   // }
-
-//   // feInfo("%d",_nbColor);
-// }
-
-// void feCncGeo::color4(int cncGeoTag)
-// {
-//   feCncGeo *cnc = _cncGeo[cncGeoTag];
-//   int nbElm = cnc->getNbElm();
-//   int _nNodPerElm = cnc->getNbNodePerElem();
-//   std::vector<int> &cncNodes = cnc->getNodeConnectivityRef();
-
-//   patchNode(nbElm, _nNodPerElm, cncNodes);
-//   patchElm(nbElm, _nNodPerElm, cncNodes);
-
-//   _nbColor = *max_element(_nbElmPerElm.begin(), _nbElmPerElm.end()) + 1;
-//   _colorElm.resize(nbElm, -1);
-//   _nbElmPerColor.resize(_nbColor);
-//   _listElmPerColor.resize(_nbColor, std::vector<int>(0, 0));
-
-//   bool noColor = false;
-//   while(noColor == false) {
-//     for(int iElm = 0; iElm < nbElm; iElm++) {
-//       if(_colorElm[iElm] == -1) {
-//         std::vector<int> iPatchElm = _listElmPerElm[iElm];
-//         std::vector<bool> availableColor(_nbColor, true);
-//         for(int i = 0; i < _nbElmPerElm[iElm]; i++) {
-//           if(_colorElm[iPatchElm[i]] < 0) {
-//             _colorElm[iPatchElm[i]] = -2;
-//           } else if(availableColor[_colorElm[iPatchElm[i]]] == true) {
-//             availableColor[_colorElm[iPatchElm[i]]] = false;
-//           }
-//         }
-
-//         int activColor = colorChoice(availableColor, _nbElmPerColor, _nbColor);
-//         _colorElm[iElm] = activColor;
-//         _nbElmPerColor[activColor] = _nbElmPerColor[activColor] + 1;
-//         _listElmPerColor[activColor].push_back(iElm);
-//       }
-//     }
-
-//     noColor = true;
-//     for(int iElm = 0; iElm < nbElm; iElm++) {
-//       if(_colorElm[iElm] == -2) {
-//         _colorElm[iElm] = -1;
-//         noColor = false;
-//       }
-//     }
-//     // feInfo("%d",_nbColor);
-//   }
-//   // for(int i=0;i<_nbColor;i++){
-//   //   feInfo("%d Elm pour couleur %d",_nbElmPerColor[i],i);
-//   // }
-// }
-
-// void feCncGeo::color5(int cncGeoTag)
-// {
-//   feCncGeo *cnc = _cncGeo[cncGeoTag];
-//   int nbElm = cnc->getNbElm();
-//   int _nNodPerElm = cnc->getNbNodePerElem();
-//   std::vector<int> &cncNodes = cnc->getNodeConnectivityRef();
-
-//   patchNode(nbElm, _nNodPerElm, cncNodes);
-
-//   _nbColor = 16;
-//   _colorElm.resize(nbElm, -1);
-//   _nbElmPerColor.resize(_nbColor);
-//   _listElmPerColor.resize(_nbColor, std::vector<int>(0, 0));
-
-//   bool noColor = false;
-//   while(noColor == false) {
-//     for(int k = 0; k < nbElm; ++k) {
-//       if(_colorElm[k] == -1) {
-//         std::vector<bool> availableColor(_nbColor, true);
-//         for(int i = 0; i < _nNodPerElm; ++i) {
-//           int s = cncNodes[k * _nNodPerElm + i];
-//           for(int j = 0; j < _nbElmPerNode[s]; ++j) {
-//             int numElm = _listElmPerNode[s][j];
-//             if(numElm != k) {
-//               if(_colorElm[numElm] < 0) {
-//                 _colorElm[numElm] = -2;
-//               } else if(availableColor[_colorElm[numElm]] == true) {
-//                 availableColor[_colorElm[numElm]] = false;
-//               }
-//             }
-//           }
-//         }
-//         int activColor = colorChoice(availableColor, _nbElmPerColor, _nbColor);
-//         _colorElm[k] = activColor;
-//         _nbElmPerColor[activColor] = _nbElmPerColor[activColor] + 1;
-//         _listElmPerColor[activColor].push_back(k);
-//       }
-//     }
-
-//     noColor = true;
-//     for(int k = 0; k < nbElm; ++k) {
-//       if(_colorElm[k] == -2) {
-//         _colorElm[k] = -1;
-//         noColor = false;
-//       }
-//     }
-
-//   } // while
-//   // for(int i=0;i<_nbColor;i++){
-//   //   feInfo("%d Elm pour couleur %d",_nbElmPerColor[i],i);
-//   // }
-// }

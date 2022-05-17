@@ -125,7 +125,9 @@ void feExporterVTK::writeElementsConnectivity(std::ostream &output, feCncGeo *cn
 void feExporterVTK::writeField(std::ostream &output, feCncGeo *cnc, feSpace *intSpace,
                                std::string fieldID, bool loopOverCnc)
 {
-  std::vector<double> &sol = _sol->getSolutionReference();
+  std::vector<double> &solVec = _sol->getSolutionReference();
+  std::vector<int> adr(intSpace->getNbFunctions());
+  std::vector<double> sol(adr.size());
   // int nVertices = cnc->getNbNodes();
   int nVertices = loopOverCnc ? cnc->getNbNodes() : _mesh->getNbNodes();
   feNumber *n = _metaNumber->getNumbering(fieldID);
@@ -144,7 +146,7 @@ void feExporterVTK::writeField(std::ostream &output, feCncGeo *cnc, feSpace *int
 
     if(iDOF >= 0) {
       // There is a degree of freedom at this mesh vertex
-      output << sol[iDOF] << std::endl;
+      output << solVec[iDOF] << std::endl;
     } else {
       /* No dof associated to the mesh vertex.
       Interpolate solution at vertex. */
@@ -153,19 +155,23 @@ void feExporterVTK::writeField(std::ostream &output, feCncGeo *cnc, feSpace *int
       std::vector<double> r(3, 0.0);
       int elm;
       _mesh->locateVertex(x, elm, r);
-      intSpace->initializeAddressingVector(n, elm);
-      intSpace->initializeSolution(sol);
+      intSpace->initializeAddressingVector(n, elm, adr);
+
+      // initialise Solution
+      for(size_t i = 0; i < adr.size(); ++i) {
+        sol[i] = solVec[adr[i]];
+      }
 
       double val;
       if(intSpace->useGlobalFunctions()) {
-        val = intSpace->interpolateSolution(elm, x);
+        val = intSpace->interpolateField(sol, elm, x);
       } else {
-        val = intSpace->interpolateSolution(r.data());
+        val = intSpace->interpolateField(sol, r.data());
       }
 
       output << val << std::endl;
     }
-    fprintf(f, "%+-16.16e\n", sol[iDOF]);
+    fprintf(f, "%+-16.16e\n", solVec[iDOF]);
   }
   fclose(f);
 
@@ -182,13 +188,13 @@ void feExporterVTK::writeField(std::ostream &output, feCncGeo *cnc, feSpace *int
       std::vector<double> r(3, 0.0);
       int elm;
       _mesh->locateVertex(x, elm, r);
-      intSpace->initializeAddressingVector(n, elm);
-      intSpace->initializeSolution(sol);
+      intSpace->initializeAddressingVector(n, elm, adr);
+      for(size_t i = 0; i < adr.size(); ++i) sol[i] = solVec[adr[i]];
       double val;
       if(intSpace->useGlobalFunctions()) {
-        val = intSpace->interpolateSolution(elm, x);
+        val = intSpace->interpolateField(sol, elm, x);
       } else {
-        val = intSpace->interpolateSolution(r.data());
+        val = intSpace->interpolateField(sol, r.data());
       }
       output << val << std::endl;
     }
