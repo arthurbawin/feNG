@@ -500,7 +500,7 @@ void feRecovery::matrixInverseEigen1D()
         _solution[i] = solVec[_adr[i]];
       }
 
-      geoCoord = _mesh->getCoord(_intSpace->getCncGeoTag(), elem);
+      _mesh->getCoord(_intSpace->getCncGeoTag(), elem, geoCoord);
 
       // Loop over quad points and increment least square matrix
       for(int k = 0; k < nQuad; ++k) {
@@ -581,7 +581,7 @@ void feRecovery::matrixInverseEigen1D()
       for(size_t i = 0; i < _adr.size(); ++i) {
         _solution[i] = solVec[_adr[i]];
       }
-      geoCoord = _mesh->getCoord(_intSpace->getCncGeoTag(), elem);
+      _mesh->getCoord(_intSpace->getCncGeoTag(), elem, geoCoord);
 
       // Loop over quad points and increment least square matrix
       for(int k = 0; k < nQuad; ++k) {
@@ -670,7 +670,7 @@ void feRecovery::matrixInverseEigen2D()
         _solution[i] = solVec[_adr[i]];
       }
 
-      geoCoord = _mesh->getCoord(_intSpace->getCncGeoTag(), elem);
+      _mesh->getCoord(_intSpace->getCncGeoTag(), elem, geoCoord);
 
       // // Sommets de l'element
       // double r1[3] = {0., 0., 0.};
@@ -744,7 +744,7 @@ void feRecovery::matrixInverseEigen2D()
       for(size_t i = 0; i < _adr.size(); ++i) {
         _solution[i] = solVec[_adr[i]];
       }
-      geoCoord = _mesh->getCoord(_intSpace->getCncGeoTag(), elem);
+      _mesh->getCoord(_intSpace->getCncGeoTag(), elem, geoCoord);
 
       // Loop over quad points and increment least square matrix
       for(int k = 0; k < nQuad; ++k) {
@@ -831,7 +831,7 @@ void feRecovery::solveLeastSquareEigen1D(int indRecovery, int iDerivative)
         _solution[i] = solVec[_adr[i]];
       }
 
-      geoCoord = _mesh->getCoord(_intSpace->getCncGeoTag(), elem);
+      _mesh->getCoord(_intSpace->getCncGeoTag(), elem, geoCoord);
 
       // Loop over quad points and increment right hand side
       for(int k = 0; k < nQuad; ++k) {
@@ -974,7 +974,7 @@ void feRecovery::solveLeastSquareEigen1D(int indRecovery, int iDerivative)
         _solution[i] = solVec[_adr[i]];
       }
 
-      geoCoord = _mesh->getCoord(_intSpace->getCncGeoTag(), elem);
+      _mesh->getCoord(_intSpace->getCncGeoTag(), elem, geoCoord);
 
       // Loop over quad points and increment right hand side
       for(int k = 0; k < nQuad; ++k) {
@@ -1121,7 +1121,7 @@ void feRecovery::solveLeastSquareEigen2D(int indRecovery, int iDerivative)
       for(size_t i = 0; i < _adr.size(); ++i) {
         _solution[i] = solVec[_adr[i]];
       }
-      geoCoord = _mesh->getCoord(_intSpace->getCncGeoTag(), elem);
+      _mesh->getCoord(_intSpace->getCncGeoTag(), elem, geoCoord);
 
       // // Sommets de l'element
       // double r1[3] = {0., 0., 0.};
@@ -1286,7 +1286,7 @@ void feRecovery::solveLeastSquareEigen2D(int indRecovery, int iDerivative)
       for(size_t i = 0; i < _adr.size(); ++i) {
         _solution[i] = solVec[_adr[i]];
       }
-      geoCoord = _mesh->getCoord(_intSpace->getCncGeoTag(), elem);
+      _mesh->getCoord(_intSpace->getCncGeoTag(), elem, geoCoord);
 
       // // Sommets de l'element
       // double r1[3] = {0., 0., 0.};
@@ -1485,7 +1485,7 @@ void feRecovery::solveLeastSquareEigen2D(int indRecovery, int iDerivative)
 //       _intSpace->initializeAddressingVector(_metaNumber->getNumbering(_intSpace->getFieldID()),
 //                                             elem,  _adr);
 //       _intSpace->initializeSolution(_sol, _adr);
-//       geoCoord = _mesh->getCoord(_intSpace->getCncGeoTag(), elem);
+//       _mesh->getCoord(_intSpace->getCncGeoTag(), elem, geoCoord);
 
 //       // Sommets de l'element
 //       double r1[3] = {0., 0., 0.};
@@ -1879,7 +1879,7 @@ void feRecovery::estimateError(std::vector<double> &norm, feFunction *solRef)
       _solution[i] = solVec[_adr[i]];
     }
 
-    geoCoord = _mesh->getCoord(_intSpace->getCncGeoTag(), iElm);
+    _mesh->getCoord(_intSpace->getCncGeoTag(), iElm, geoCoord);
 
     for(int k = 0; k < nQuad; ++k) {
       // Coordonnées des points d'intégration
@@ -2028,7 +2028,7 @@ void feRecovery::estimateDudxError(std::vector<double> &norm, feVectorFunction *
       _solution[i] = solVec[_adr[i]];
     }
 
-    geoCoord = _mesh->getCoord(_intSpace->getCncGeoTag(), iElm);
+    _mesh->getCoord(_intSpace->getCncGeoTag(), iElm, geoCoord);
 
     for(int k = 0; k < nQuad; ++k) {
       // Coordonnées des points d'intégration
@@ -2159,7 +2159,7 @@ void feRecovery::estimateH1Error(std::vector<double> &norm, feVectorFunction *so
       _solution[i] = solVec[_adr[i]];
     }
 
-    geoCoord = _mesh->getCoord(_intSpace->getCncGeoTag(), iElm);
+    _mesh->getCoord(_intSpace->getCncGeoTag(), iElm, geoCoord);
 
     for(int k = 0; k < nQuad; ++k) {
       // Coordonnées des points d'intégration
@@ -2347,7 +2347,7 @@ void feRecovery::estimateHessError(std::vector<double> &norm, feVectorFunction *
     for(size_t i = 0; i < _adr.size(); ++i) {
       _solution[i] = solVec[_adr[i]];
     }
-    geoCoord = _mesh->getCoord(_intSpace->getCncGeoTag(), iElm);
+    _mesh->getCoord(_intSpace->getCncGeoTag(), iElm, geoCoord);
 
     for(int k = 0; k < nQuad; ++k) {
       // Coordonnées des points d'intégration
@@ -2532,7 +2532,7 @@ void feRecovery::estimated3Error(std::vector<double> &norm, feFunction *fund3udx
       _solution[i] = solVec[_adr[i]];
     }
 
-    geoCoord = _mesh->getCoord(_intSpace->getCncGeoTag(), iElm);
+    _mesh->getCoord(_intSpace->getCncGeoTag(), iElm, geoCoord);
 
     for(int k = 0; k < nQuad; ++k) {
       // Coordonnées des points d'intégration
@@ -2574,7 +2574,7 @@ void feRecovery::estimated3Error(std::vector<double> &norm, feFunction *fund3udx
       _solution[i] = solVec[_adr[i]];
     }
 
-    geoCoord = _mesh->getCoord(_intSpace->getCncGeoTag(), iElm);
+    _mesh->getCoord(_intSpace->getCncGeoTag(), iElm, geoCoord);
 
     for(int k = 0; k < nQuad; ++k) {
       // Coordonnées des points d'intégration

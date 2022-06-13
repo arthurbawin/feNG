@@ -8,11 +8,18 @@ feCompressedRowStorage::feCompressedRowStorage(feMetaNumber *metaNumber, feMesh 
                                                std::vector<feBilinearForm *> &formMatrices,
                                                int numMatrixForms)
 {
-  ordre = (feInt)metaNumber->getNbUnknowns();
+  feInfo("feCompressedRowStorage");
+  tic();
+  ordre = metaNumber->getNbUnknowns();
   nnz = new feInt[ordre];
 
   ddlNumberOfElements = new feInt[ordre]; // à initialiser à zéro
-  for(feInt i = 0; i < ordre; i++) ddlNumberOfElements[i] = 0;
+#if defined(HAVE_OMP)
+#pragma omp parallel for 
+#endif
+  for(feInt i = 0; i < ordre; i++) {
+    ddlNumberOfElements[i] = 0;
+  }
 
   // ================================================================
   // COMPTER LES ELEMENTS D'UN DEGRE DE LIBERTE
@@ -20,26 +27,26 @@ feCompressedRowStorage::feCompressedRowStorage(feMetaNumber *metaNumber, feMesh 
   // ================================================================
   // int NumberOfBilinearForms = numMatrixForms;
 
-  // int cnt = 0;
-  // #pragma omp parallel for private(cnt)
-  // for(int i = 0; i < 100; ++i){
-  //   // printf("Printing %3d from thread %d\n", i, omp_get_thread_num());
-  //   printf("Thread %d has printed %2d times\n", omp_get_thread_num(), cnt++);
-  // }
-
+  feInt cncGeoTag;
+  feInt nbElems;
+  feBilinearForm *equelm;
+  feInt NBRI;
+  std::vector<feInt> VADI;
+  feInt I;
   for(int eq = 0; eq < numMatrixForms; eq++) {
-    feBilinearForm *equelm = formMatrices[eq];
-    feInt cncGeoTag = equelm->getCncGeoTag();
-    feInt nbElems = mesh->getNbElm(cncGeoTag);
+    equelm = formMatrices[eq];
+    cncGeoTag = equelm->getCncGeoTag();
+    nbElems = mesh->getNbElm(cncGeoTag);
     // #pragma omp parallel for
     for(feInt e = 0; e < nbElems; e++) {
       // printf("Assembling element %8d on thread %d/%d\n", e, omp_get_thread_num(),
       // omp_get_num_threads());
       equelm->initialize_vadij_only(metaNumber, e);
-      feInt NBRI = equelm->getNiElm();
-      std::vector<int> VADI = equelm->getAdrI(); // &VADI ????
+      NBRI = equelm->getNiElm();
+      VADI = equelm->getAdrI(); // &VADI ????
       for(feInt i = 0; i < NBRI; i++) {
-        feInt I = (feInt)VADI[i];
+        I = VADI[i];
+        // feInfo("I = %ld",I);
         if(I < ordre) ddlNumberOfElements[I]++;
       }
     }
@@ -48,7 +55,7 @@ feCompressedRowStorage::feCompressedRowStorage(feMetaNumber *metaNumber, feMesh 
   feInt totalNumberOfElements = 0;
   for(feInt i = 0; i < ordre; i++) totalNumberOfElements += ddlNumberOfElements[i];
   // ================================================================
-  // IDENTIFIER LES ELEMENTS ET LES FORMES BILINEAIES D'UN
+  // IDENTIFIER LES ELEMENTS ET LES FORMES BILINEAIRES D'UN
   // DEGRE DE LIBERTE -- PREPARARION DE L'ESPACE DE TRAVAIL
   // ================================================================
   ddlBiLinearForms = new feInt *[ordre];
@@ -67,21 +74,22 @@ feCompressedRowStorage::feCompressedRowStorage(feMetaNumber *metaNumber, feMesh 
   }
 
   // ================================================================
-  // RECUPERER LES NUMEROS DES FORMES BIULINEAIRES ET DES ELEMENTS
+  // RECUPERER LES NUMEROS DES FORMES BILINEAIRES ET DES ELEMENTS
   // ================================================================
   for(feInt i = 0; i < ordre; i++) ddlNumberOfElements[i] = 0;
+  
   for(int eq = 0; eq < numMatrixForms; eq++) {
-    feBilinearForm *equelm = formMatrices[eq];
-    feInt cncGeoTag = equelm->getCncGeoTag();
-    feInt nbElems = mesh->getNbElm(cncGeoTag);
+    equelm = formMatrices[eq];
+    cncGeoTag = equelm->getCncGeoTag();
+    nbElems = mesh->getNbElm(cncGeoTag);
 
     for(feInt el = 0; el < nbElems; el++) {
       equelm->initialize_vadij_only(metaNumber, el);
-      feInt NBRI = equelm->getNiElm();
-      std::vector<int> VADI = equelm->getAdrI();
+      NBRI = equelm->getNiElm();
+      VADI = equelm->getAdrI();
 
       for(feInt i = 0; i < NBRI; i++) {
-        feInt I = VADI[i];
+        I = VADI[i];
         if(I < ordre) {
           feInt k = ddlNumberOfElements[I];
           ddlBiLinearForms[I][k] = eq;
@@ -123,11 +131,11 @@ feCompressedRowStorage::feCompressedRowStorage(feMetaNumber *metaNumber, feMesh 
       eq = ddlBiLinearForms[I][k];
       el = ddlElms[I][k];
 
-      feBilinearForm *equelm = formMatrices[eq];
+      equelm = formMatrices[eq];
       // feInt cncGeoTag = equelm->getCncGeoTag();
       equelm->initialize_vadij_only(metaNumber, el);
       feInt NBRJ = equelm->getNiElm();
-      std::vector<int> VADJ = equelm->getAdrJ();
+      std::vector<feInt> VADJ = equelm->getAdrJ();
 
       for(feInt j = 0; j < NBRJ; j++) {
         feInt J = VADJ[j];
@@ -166,6 +174,9 @@ feCompressedRowStorage::feCompressedRowStorage(feMetaNumber *metaNumber, feMesh 
   // delete [] liste;
   // delete [] ddl_rngcof;
   delete[] ddl_nbrcof;
+  toc();
+  feInfo("done");
+  // exit(-1);
 }
 
 // ====================================================================
@@ -254,7 +265,7 @@ feCompressedRowStorageMklPardiso::feCompressedRowStorageMklPardiso(
       // feInt cncGeoTag = equelm->getCncGeoTag();
       equelm->initialize_vadij_only(metaNumber, el);
       feInt NBRJ = equelm->getNiElm();
-      std::vector<int> VADJ = equelm->getAdrJ();
+      std::vector<feInt> VADJ = equelm->getAdrJ();
 
       for(feInt j = 0; j < NBRJ; j++) {
         feInt J = VADJ[j];

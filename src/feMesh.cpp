@@ -11,53 +11,57 @@
 
 int feMesh::getCncGeoTag(std::string const &cncGeoID)
 {
-  if(_cncGeoMap.find(cncGeoID) != _cncGeoMap.end()) return _cncGeoMap[cncGeoID];
-  return -1;
+#ifdef DEBUG
+  if(_cncGeoMap.find(cncGeoID) == _cncGeoMap.end()) return -1;
+#endif
+return _cncGeoMap[cncGeoID];
 }
 
 feCncGeo *feMesh::getCncGeoByName(std::string const &cncGeoID)
 {
-  if(_cncGeoMap.find(cncGeoID) != _cncGeoMap.end()) return _cncGeo[_cncGeoMap[cncGeoID]];
-  return nullptr;
+#ifdef DEBUG
+  if(_cncGeoMap.find(cncGeoID) == _cncGeoMap.end()) return nullptr;
+#endif
+return _cncGeo[_cncGeoMap[cncGeoID]];
 }
 
 feCncGeo *feMesh::getCncGeoByTag(int cncGeoTag)
 {
-  if(cncGeoTag >= 0)
-    if((unsigned)cncGeoTag < _cncGeo.size()) return _cncGeo[cncGeoTag];
-  return nullptr;
+#ifdef DEBUG
+  if(cncGeoTag < 0)
+    if((unsigned)cncGeoTag > _cncGeo.size()) return nullptr;
+#endif  
+return _cncGeo[cncGeoTag];
 }
 
 // Returns a vector containing the physical coordinates of the nodes on the
 // element with LOCAL number "numElem" on the connectivity named "cncGeoID" :
 // coord = [x1 y1 z1 x2 y2 z2 ... xn yn zn]
-std::vector<double> feMesh::getCoord(std::string const &cncGeoID, int numElem)
+void feMesh::getCoord(std::string const &cncGeoID, int numElem, std::vector<double> &geoCoord)
 {
   feCncGeo *cnc = getCncGeoByName(cncGeoID);
   int nNodePerElem = cnc->getNbNodePerElem();
-  std::vector<double> coord(nNodePerElem * 3); // _dim = 3 pour les coordonnees
+  geoCoord.resize(nNodePerElem * 3); // _dim = 3 pour les coordonnees
   for(int i = 0; i < nNodePerElem; ++i) {
-    coord[3 * i + 0] = _vertices[cnc->getNodeConnectivity(numElem, i)].x();
-    coord[3 * i + 1] = _vertices[cnc->getNodeConnectivity(numElem, i)].y();
-    coord[3 * i + 2] = _vertices[cnc->getNodeConnectivity(numElem, i)].z();
+    geoCoord[3 * i + 0] = _vertices[cnc->getNodeConnectivity(numElem, i)].x();
+    geoCoord[3 * i + 1] = _vertices[cnc->getNodeConnectivity(numElem, i)].y();
+    geoCoord[3 * i + 2] = _vertices[cnc->getNodeConnectivity(numElem, i)].z();
   }
-  return coord;
 }
 
 // Returns a vector containing the physical coordinates of the nodes on the
 // element with LOCAL number "numElem" on the connectivity numbered "cncGeoTag" :
 // coord = [x1 y1 z1 x2 y2 z2 ... xn yn zn]
-std::vector<double> feMesh::getCoord(int cncGeoTag, int numElem)
+void feMesh::getCoord(int cncGeoTag, int numElem, std::vector<double> &geoCoord)
 {
   feCncGeo *cnc = getCncGeoByTag(cncGeoTag);
   int nNodePerElem = cnc->getNbNodePerElem();
-  std::vector<double> coord(nNodePerElem * 3);
+  geoCoord.resize(nNodePerElem * 3);
   for(int i = 0; i < nNodePerElem; ++i) {
-    coord[3 * i + 0] = _vertices[cnc->getNodeConnectivity(numElem, i)].x();
-    coord[3 * i + 1] = _vertices[cnc->getNodeConnectivity(numElem, i)].y();
-    coord[3 * i + 2] = _vertices[cnc->getNodeConnectivity(numElem, i)].z();
+    geoCoord[3 * i + 0] = _vertices[cnc->getNodeConnectivity(numElem, i)].x();
+    geoCoord[3 * i + 1] = _vertices[cnc->getNodeConnectivity(numElem, i)].y();
+    geoCoord[3 * i + 2] = _vertices[cnc->getNodeConnectivity(numElem, i)].z();
   }
-  return coord;
 }
 
 int feMesh::getNbNodePerElem(std::string const &cncGeoID)
@@ -395,11 +399,12 @@ void feMesh2DP1::transfer(feMesh2DP1 *otherMesh, feMetaNumber *myMN, feMetaNumbe
           feNumber *number2 = otherMN->getNumbering(fS2->getFieldID());
           feSpace *geoSpace2 = fS2->getCncGeo()->getFeSpace();
 
-          std::vector<int> adr1(fS1->getNbFunctions());
-          std::vector<int> adr2(fS2->getNbFunctions());
+          std::vector<feInt> adr1(fS1->getNbFunctions());
+          std::vector<feInt> adr2(fS2->getNbFunctions());
+          std::vector<double> geoCoord;
           for(int iElm = 0; iElm < nElm; ++iElm) {
             fS2->initializeAddressingVector(number2, iElm, adr2);
-            std::vector<double> geoCoord = otherMesh->getCoord(cncGeoTag, iElm);
+            otherMesh->getCoord(cncGeoTag, iElm, geoCoord);
             // Loop over the DOFs of the element of the new mesh
             for(int j = 0; j < nDOFPerElem; ++j) {
               // Get coordinates

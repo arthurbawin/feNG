@@ -37,17 +37,22 @@ protected:
   std::vector<int> _jVar;
   feInt _niElm;
   feInt _njElm;
-  std::vector<int> _adrI;
-  std::vector<int> _adrJ;
+  std::vector<feInt> _adrI;
+  std::vector<feInt> _adrJ;
 
   double **_Ae;
   double *_Be;
 
 public:
   // Test : local attributes
-  std::vector<int> _adr;
-  std::vector<double> _sol;
-  std::vector<double> _solDot;
+  // std::vector<feInt> _adr;
+  // std::vector<double> _sol;
+  // std::vector<double> _solDot;
+
+
+  std::vector<std::vector<feInt>> _adr;
+  std::vector<std::vector<double>> _sol;
+  std::vector<std::vector<double>> _solDot;
 
   // ==================================================================
   // Pointeur sur la méthode de construction de la matrice élémentaire
@@ -78,8 +83,8 @@ public:
 
   feInt getNiElm() { return _niElm; }
   feInt getNjElm() { return _njElm; }
-  std::vector<int> &getAdrI() { return _adrI; }
-  std::vector<int> &getAdrJ() { return _adrJ; }
+  std::vector<feInt> &getAdrI() { return _adrI; }
+  std::vector<feInt> &getAdrJ() { return _adrJ; }
 
   double **getAe() { return _Ae; }
   double *getBe() { return _Be; }

@@ -1,21 +1,7 @@
 #include <iostream>
 #include <fstream>
 
-#include "feNG.h"
-#include "feFunction.h"
-#include "feMesh.h"
-#include "feQuadrature.h"
-#include "feSpace.h"
-#include "feSpaceTriangle.h"
-#include "feCncGeo.h"
-#include "feNumber.h"
-#include "feSolution.h"
-#include "feSysElm.h"
-#include "feBilinearForm.h"
-#include "feSolver.h"
-#include "feLinearSystemPETSc.h"
-#include "feExporter.h"
-#include "feCurvedAdapt.h"
+#include "feAPI.h"
 
 double fSolU(const double t, const std::vector<double> &pos, const std::vector<double> &par) {
   double x = pos[0];
@@ -53,7 +39,7 @@ double fZero(const double t, const std::vector<double> &pos, const std::vector<d
 void fSource(const double t, const std::vector<double> &pos, const std::vector<double> &par,
              std::vector<double> &res) {
   // double rho = par[0];
-  // double mu = par[1];
+  double mu = par[1];
   // double nu = mu/rho;
   double x = pos[0];
   double y = pos[1];
@@ -73,257 +59,132 @@ void fSource(const double t, const std::vector<double> &pos, const std::vector<d
 }
 
 int main(int argc, char **argv) {
-#ifdef HAVE_PETSC
+
   petscInitialize(argc, argv);
-#endif
+  int orderUA=2;
+  int orderUH=2;
+  int orderUG=2;
+  int orderUS=2;
+  int orderVA=2;
+  int orderVH=2;
+  int orderVG=2;
+  int orderVS=2;
+  int orderPH=1;
+  int orderPS=1;
+
+  int nIter=1;
+
+  feOptionsParser options(argc, argv);
+  options.addOption(&nIter, "-n", "--nMeshes", "Number of meshes for the convergence study");
+  feCheck(options.parse());
+  setVerbose(2);
+
   double rho = 1.0;
   double mu = 1.0;
   std::vector<double> stokesParam = {rho, mu};
-
   feFunction *funSolU = new feFunction(fSolU, {});
   feFunction *funSolV = new feFunction(fSolV, {});
   feFunction *funSolP = new feFunction(fSolP, stokesParam);
   feFunction *funZero = new feFunction(fZero, {});
-  feFunction *funOne = new feFunction(fOne, {});
+  // feFunction *funOne = new feFunction(fOne, {});
   feVectorFunction *funSource = new feVectorFunction(fSource, stokesParam);
 
-  int nIter = 2;
   std::vector<double> normL2_U(2 * nIter, 0.0);
   std::vector<double> normL2_V(2 * nIter, 0.0);
   std::vector<double> normL2_P(2 * nIter, 0.0);
   std::vector<int> nElm(nIter, 0);
 
-  std::string meshName = "../../data/squareTaylorGreen2.msh";
-  std::string root = "../../data/squareTaylorGreen";
-  std::string metricMeshName, nextMeshName;
-
-  feMesh2DP1 *mesh = new feMesh2DP1(meshName, false);
-  feMesh2DP1 *otherMesh;
-  feMesh2DP1::mapType physicalEntities = mesh->getPhysicalEntitiesDescription();
-
   feSpace *U_angle, *U_haut, *U_gauche, *U_surface;
   feSpace *V_angle, *V_haut, *V_gauche, *V_surface;
-  feSpace *P_point, *P_surface;
-
-  feSpace *U_angle2, *U_haut2, *U_gauche2, *U_surface2;
-  feSpace *V_angle2, *V_haut2, *V_gauche2, *V_surface2;
-  feSpace *P_point2, *P_surface2;
-
-  feMetaNumber *metaNumber, *otherMetaNumber;
-  feSolution *sol, *otherSol;
-
-  // BDF2Solver *solver;
-
-  std::string elemType = "P2P1";
+  feSpace *P_haut, *P_surface;
+  // feSpace *P_point, *P_surface;
 
   for(int iter = 0; iter < nIter; ++iter) {
     // std::string meshName = "../../data/squareTaylorGreen2.msh";
-    std::string meshName = "../../data/Square/squareNS" + std::to_string(iter + 1) + ".msh";
-    // std::string meshName = "../../data/squarePression" + std::to_string(iter+1) + ".msh";
+    std::string meshName = "../data/Convergence/squareNS" + std::to_string(iter + 1) + ".msh";
+    // std::string meshName = "../data/Convergence/squarePression" + std::to_string(iter+1) + ".msh";
 
-    // mesh = new feMesh2DP1(meshName, false);
-    nElm[iter] = mesh->getNbInteriorElems();
+    feMesh2DP1 mesh(meshName);
+    nElm[iter] = mesh.getNbInteriorElems();
 
-    if(elemType == "P2P1") {
-      U_angle = new feSpace1DP2(mesh, "U", "Angle", funSolU);
-      U_haut = new feSpace1DP2(mesh, "U", "Haut", funSolU);
-      U_gauche = new feSpace1DP2(mesh, "U", "Gauche", funSolU);
-      U_surface = new feSpaceTriP2(mesh, "U", "Surface", funSolU);
+    int degreeQuadrature = 5;
+    feSpace *U_angle, *U_haut, *U_gauche, *U_surface;
+    feSpace *V_angle, *V_haut, *V_gauche, *V_surface;
+    feSpace *P_haut, *P_surface;
+    // feSpace *P_point, *P_surface;
 
-      V_angle = new feSpace1DP2(mesh, "V", "Angle", funSolV);
-      V_haut = new feSpace1DP2(mesh, "V", "Haut", funSolV);
-      V_gauche = new feSpace1DP2(mesh, "V", "Gauche", funSolV);
-      V_surface = new feSpaceTriP2(mesh, "V", "Surface", funSolV);
+    feCheck(createFiniteElementSpace(U_angle, &mesh, 1, LINE, orderUA, "U", "Angle", degreeQuadrature, funSolU));
+    feCheck(createFiniteElementSpace(U_haut, &mesh, 1, LINE, orderUH, "U", "Haut", degreeQuadrature, funSolU));
+    feCheck(createFiniteElementSpace(U_gauche, &mesh, 1, LINE, orderUG, "U", "Gauche", degreeQuadrature, funSolU));
+    feCheck(createFiniteElementSpace(U_surface, &mesh, 2, TRI, orderUS, "U", "Surface", degreeQuadrature, funZero));
+    
+    feCheck(createFiniteElementSpace(V_angle, &mesh, 1, LINE, orderVA, "V", "Angle", degreeQuadrature, funSolV));
+    feCheck(createFiniteElementSpace(V_haut, &mesh, 1, LINE, orderVH, "V", "Haut", degreeQuadrature, funSolV));
+    feCheck(createFiniteElementSpace(V_gauche, &mesh, 1, LINE, orderVG, "V", "Gauche", degreeQuadrature, funSolV));
+    feCheck(createFiniteElementSpace(V_surface, &mesh, 2, TRI, orderVS, "V", "Surface", degreeQuadrature, funZero));
 
-      P_point = new feSpace1DP0(mesh, "P", "PointPression", funSolP);
-      P_surface = new feSpaceTriP1(mesh, "P", "Surface", funZero);
-    } else if(elemType == "P3P2") {
-      U_angle = new feSpace1DP3(mesh, "U", "Angle", funSolU);
-      U_haut = new feSpace1DP3(mesh, "U", "Haut", funSolU);
-      U_gauche = new feSpace1DP3(mesh, "U", "Gauche", funSolU);
-      U_surface = new feSpaceTriP3(mesh, "U", "Surface", funSolU);
+    feCheck(createFiniteElementSpace(P_haut, &mesh, 1, LINE, orderPH, "P", "Haut", degreeQuadrature, funSolP));
+    // feCheck(createFiniteElementSpace(P_point, &mesh, 0, POINT, orderPH, "P", "PointPression", degreeQuadrature, funSolP));
+    feCheck(createFiniteElementSpace(P_surface, &mesh, 2, TRI, orderPS, "P", "Surface", degreeQuadrature, funZero));
 
-      V_angle = new feSpace1DP3(mesh, "V", "Angle", funSolV);
-      V_haut = new feSpace1DP3(mesh, "V", "Haut", funSolV);
-      V_gauche = new feSpace1DP3(mesh, "V", "Gauche", funSolV);
-      V_surface = new feSpaceTriP3(mesh, "V", "Surface", funSolV);
+    std::vector<feSpace *> spaces = {U_angle, U_haut, U_gauche, U_surface, V_angle, V_haut, V_gauche, V_surface, P_haut, P_surface};
+    // std::vector<feSpace *> spaces = {U_angle, U_haut, U_gauche, U_surface, V_angle, V_haut, V_gauche, V_surface, P_point, P_surface};
+    std::vector<feSpace *> feEssBC = {U_angle, U_haut, U_gauche, V_angle, V_haut, V_gauche, P_haut};
+    // std::vector<feSpace *> feEssBC = {U_angle, U_haut, U_gauche, V_angle, V_haut, V_gauche, P_point};
 
-      P_point = new feSpace1DP0(mesh, "P", "PointPression", funSolP);
-      P_surface = new feSpaceTriP2(mesh, "P", "Surface", funZero);
-    } else {
-      printf("Error - Unknown finite element type.\n");
-    }
+    feMetaNumber metaNumber(&mesh, spaces, feEssBC);
 
-    std::vector<feSpace *> fespace = {U_angle, U_haut,   U_gauche,  U_surface, V_angle,
-                                      V_haut,  V_gauche, V_surface, P_point,   P_surface};
-
-    std::vector<feSpace *> feEssBC = {
-      U_angle, U_haut, U_gauche, V_angle, V_haut, V_gauche, P_point,
-      // P_surface
-    };
-
-    metaNumber = new feMetaNumber(mesh, fespace, feEssBC);
-
-    sol = new feSolution(mesh, fespace, feEssBC, metaNumber);
+    feSolution sol(&mesh, spaces, feEssBC, &metaNumber);
 
     // Formes (bi)lineaires
-    int dQuad = 15;
     std::vector<feSpace *> spacesNS2D = {U_surface, V_surface, P_surface};
+    feBilinearForm NS2D(spacesNS2D, &mesh, degreeQuadrature, new feSysElm_2D_NavierStokes(stokesParam, funSource));
+  
+    //System
+    feLinearSystem *system;
+    feCheck(createLinearSystem(system, PETSC, spaces, {&NS2D}, &metaNumber, &mesh, argc, argv));
 
-    feBilinearForm *NS2D = new feBilinearForm(spacesNS2D, mesh, dQuad,
-                                              new feSysElm_2D_NavierStokes(stokesParam, funSource));
-    // feBilinearForm *NS2D = new feBilinearForm(spacesNS2D, mesh, dQuad, new
-    // feSysElm_2D_NavierStokes(stokesParam, nullptr));
+    //Norm
+    feNorm normU(U_surface, &mesh, degreeQuadrature, funSolU);
+    feNorm normV(V_surface, &mesh, degreeQuadrature, funSolV);
+    feNorm normP(P_surface, &mesh, degreeQuadrature, funSolP);
+    std::vector<feNorm *> norms = {&normU, &normV, &normP};
 
-    std::vector<feBilinearForm *> formMatrices = {NS2D};
-    std::vector<feBilinearForm *> formResiduals = {NS2D};
+    //Exporter
+    feExporter *exporter;
+    feCheck(createVisualizationExporter(exporter, VTK, &metaNumber, &sol, &mesh, spaces));
+    int exportEveryNSteps = 1;
+    std::string vtkFileRoot = "outNS" + std::to_string(iter);
+    feExportData exportData = {exporter, exportEveryNSteps, vtkFileRoot};
 
-    feNorm *normU = new feNorm(U_surface, mesh, dQuad, funSolU);
-    feNorm *normV = new feNorm(V_surface, mesh, dQuad, funSolV);
-    feNorm *normP = new feNorm(P_surface, mesh, dQuad, funSolP);
-    std::vector<feNorm *> norms = {normU, normV, normP};
-
-    feLinearSystemPETSc *linearSystem =
-      new feLinearSystemPETSc(argc, argv, formMatrices, formResiduals, metaNumber, mesh);
-
+    //Resolution
+    TimeIntegrator *solver;
     feTolerances tol{1e-9, 1e-8, 10};
+    feCheck(createTimeIntegrator(solver, STATIONARY, tol, system, &metaNumber, &sol, &mesh, norms, exportData));
+    feCheck(solver->makeSteps(0));
 
-    double t0 = 0.;
-    double t1 = 1.;
-    int nTimeSteps = 10 * pow(2, iter);
+    fePostProc postU(U_surface, &mesh, &metaNumber, funSolU);
+    fePostProc postV(V_surface, &mesh, &metaNumber, funSolV);
+    fePostProc postP(P_surface, &mesh, &metaNumber, funSolP);
+    normL2_U[2 * iter] = postU.computeL2ErrorNorm(&sol);
+    normL2_V[2 * iter] = postV.computeL2ErrorNorm(&sol);
+    normL2_P[2 * iter] = postP.computeL2ErrorNorm(&sol);
 
-    // BDF2Solver *solver = new BDF2Solver(tol, metaNumber, linearSystem, sol, norms, mesh, t0, t1,
-    // nTimeSteps);
-    StationarySolver *solver =
-      new StationarySolver(tol, metaNumber, linearSystem, sol, norms, mesh);
-    solver->makeSteps(nTimeSteps, fespace);
-
-    // std::vector<double> normL2BDF(3 * nTimeSteps, 0.0);
-    // std::vector<double> normL2DC3(3 * nTimeSteps, 0.0);
-    // solveBDF2(normL2BDF, tol, metaNumber, linearSystem, formMatrices, formResiduals, sol, norms,
-    // mesh, fespace);
-    // sol->initializeTemporalSolution(t0, t1, nTimeSteps);
-    // solveBDF2(normL2BDF, tol, metaNumber, linearSystem, formMatrices, formResiduals, sol,
-    //          norms, mesh, fespace);
-
-    // normL2_U[2*iter] = *std::max_element(solver->getNorm(0).begin(), solver->getNorm(0).end());
-    // normL2_V[2*iter] = *std::max_element(solver->getNorm(1).begin(), solver->getNorm(1).end());
-    // normL2_P[2*iter] = *std::max_element(solver->getNorm(2).begin(), solver->getNorm(2).end());
-    // normL2_U[2*iter] = solver->getNorm(0)[nTimeSteps-1];
-    // normL2_V[2*iter] = solver->getNorm(1)[nTimeSteps-1];
-    // normL2_P[2*iter] = solver->getNorm(2)[nTimeSteps-1];
-    normL2_U[2 * iter] = solver->getNorm(0);
-    normL2_V[2 * iter] = solver->getNorm(1);
-    normL2_P[2 * iter] = solver->getNorm(2);
-
-    // normU->computeL2Norm(metaNumber, sol, mesh);
-    // normV->computeL2Norm(metaNumber, sol, mesh);
-    // normP->computeL2Norm(metaNumber, sol, mesh);
-    // normL2_U[2 * iter] = normU->getNorm();
-    // normL2_V[2 * iter] = normV->getNorm();
-    // normL2_P[2 * iter] = normP->getNorm();
-
-    // std::string vtkFile = "../../data/solutionManufacturee" + std::to_string(iter+1) + ".vtk";
-    // std::string vtkFile = "../../data/taylorGreenUnsteady" + std::to_string(iter+1) + ".vtk";
-    // feExporterVTK writer(vtkFile, mesh, sol, metaNumber, fespace);
-
-    // metricMeshName = root + "sizeField" + std::to_string(iter + 1) + ".msh";
-    // nextMeshName = root + "adapted" + std::to_string(iter + 1) + ".msh";
-
-    std::vector<double> estErreur(2, 0.);
-    feRecovery *recU = new feRecovery(metaNumber, U_surface, mesh, sol, estErreur, funZero,
-                                      meshName, metricMeshName);
-    // feRecovery *recV = new feRecovery(metaNumber, V_surface, mesh, sol, estErreur, funZero,
-    // meshName, metricMeshName); feRecovery *recP = new feRecovery(metaNumber, P_surface, mesh,
-    // sol, estErreur, funZero);
-
-    double modelSize = 2. * M_PI;
-
-    feMetricOptions metricOptions;
-    metricOptions.computationMethod = 3;
-    metricOptions.polynomialDegree = 2;
-    metricOptions.nTargetVertices = 2500;
-    metricOptions.eTargetError = 5e-4;
-    metricOptions.hMin = modelSize / 1000000.;
-    metricOptions.hMax = modelSize / 6.;
-    metricOptions.LpNorm = 2.0;
-    metricOptions.nPhi = 801;
-
-    std::vector<feRecovery *> rec = {recU};
-    int useAnalytical = 0;
-    feCurvedAdapt foo(mesh, rec, metricOptions, meshName, metricMeshName, nextMeshName,
-                      useAnalytical);
-    std::string cmdGMSH = "gmsh " + nextMeshName + " &";
-    system(cmdGMSH.c_str());
-
-    std::cout << "Reading " << nextMeshName << std::endl;
-    otherMesh = new feMesh2DP1(nextMeshName, false, physicalEntities);
-
-    if(elemType == "P2P1") {
-      U_angle2 = new feSpace1DP2(otherMesh, "U", "Angle", funSolU);
-      U_haut2 = new feSpace1DP2(otherMesh, "U", "Haut", funSolU);
-      U_gauche2 = new feSpace1DP2(otherMesh, "U", "Gauche", funSolU);
-      U_surface2 = new feSpaceTriP2(otherMesh, "U", "Surface", funSolU);
-
-      V_angle2 = new feSpace1DP2(otherMesh, "V", "Angle", funSolV);
-      V_haut2 = new feSpace1DP2(otherMesh, "V", "Haut", funSolV);
-      V_gauche2 = new feSpace1DP2(otherMesh, "V", "Gauche", funSolV);
-      V_surface2 = new feSpaceTriP2(otherMesh, "V", "Surface", funSolV);
-
-      P_point2 = new feSpace1DP0(otherMesh, "P", "PointPression", funSolP);
-      P_surface2 = new feSpaceTriP1(otherMesh, "P", "Surface", funZero);
-    } else if(elemType == "P3P2") {
-      U_angle2 = new feSpace1DP3(otherMesh, "U", "Angle", funSolU);
-      U_haut2 = new feSpace1DP3(otherMesh, "U", "Haut", funSolU);
-      U_gauche2 = new feSpace1DP3(otherMesh, "U", "Gauche", funSolU);
-      U_surface2 = new feSpaceTriP3(otherMesh, "U", "Surface", funSolU);
-
-      V_angle2 = new feSpace1DP3(otherMesh, "V", "Angle", funSolV);
-      V_haut2 = new feSpace1DP3(otherMesh, "V", "Haut", funSolV);
-      V_gauche2 = new feSpace1DP3(otherMesh, "V", "Gauche", funSolV);
-      V_surface2 = new feSpaceTriP3(otherMesh, "V", "Surface", funSolV);
-
-      P_point2 = new feSpace1DP0(otherMesh, "P", "PointPression", funSolP);
-      P_surface2 = new feSpaceTriP2(otherMesh, "P", "Surface", funZero);
-    } else {
-      printf("Error - Unknown finite element type.\n");
-    }
-
-    std::vector<feSpace *> otherSpaces = {U_angle2, U_haut2,   U_gauche2,  U_surface2, V_angle2,
-                                          V_haut2,  V_gauche2, V_surface2, P_point2,   P_surface2};
-
-    std::vector<feSpace *> otherSpacesEss = {
-      U_angle2, U_haut2, U_gauche2, V_angle2, V_haut2, V_gauche2, P_point2,
-      // P_surface
-    };
-
-    otherMetaNumber = new feMetaNumber(otherMesh, otherSpaces, otherSpacesEss);
-    otherSol = new feSolution(otherMesh, otherSpaces, otherSpacesEss, otherMetaNumber);
-
-    mesh->transfer(otherMesh, metaNumber, otherMetaNumber, solver->getSolutionContainer(), fespace,
-                   feEssBC, otherSpaces);
-
-    otherSol->setSolFromContainer(solver->getSolutionContainer(), 0);
-
-    mesh = otherMesh;
-    meshName = nextMeshName;
-
-    delete normU;
-    delete normV;
-    delete normP;
-    delete linearSystem;
-    delete NS2D;
+    delete solver;
+    delete exporter;
+    delete U_surface;
+    delete U_haut;
+    delete U_angle;
+    delete U_gauche;
+    delete V_surface;
+    delete V_haut;
+    delete V_angle;
+    delete V_gauche;
+    delete P_surface;
+    delete P_haut;
+    // delete P_point;
+    // delete system;
   }
-  delete sol;
-  delete metaNumber;
-  delete mesh;
-  delete funSource;
-  delete funSolU;
-  delete funSolV;
-  delete funSolP;
-  delete funZero;
-  delete funOne;
-
   // Calcul du taux de convergence
   for(int i = 1; i < nIter; ++i) {
     normL2_U[2 * i + 1] =
@@ -333,27 +194,22 @@ int main(int argc, char **argv) {
     normL2_P[2 * i + 1] =
       -log(normL2_P[2 * i] / normL2_P[2 * (i - 1)]) / log(sqrt(nElm[i]) / sqrt(nElm[i - 1]));
   }
-  // for(int i = 1; i < nIter; ++i) {
-  //   maxNormL2DC3_U[2 * i + 1] = log(maxNormL2DC3_U[2 * (i - 1)] / maxNormL2DC3_U[2 * i]) /
-  //   log(2.); maxNormL2DC3_V[2 * i + 1] = log(maxNormL2DC3_V[2 * (i - 1)] / maxNormL2DC3_V[2 * i])
-  //   / log(2.); maxNormL2DC3_P[2 * i + 1] = log(maxNormL2DC3_P[2 * (i - 1)] / maxNormL2DC3_P[2 *
-  //   i]) / log(2.);
-  // }
-  printf("%12s \t %12s \t %12s \t %12s \t %12s \t %12s \t %12s\n", "nElm", "||u-uh||", "tauxU",
-         "||v-vh||", "tauxV", "||p-ph||", "tauxP");
-  for(int i = 0; i < nIter; ++i)
-    printf("%12d \t %12.6e \t %12.6e \t %12.6e \t %12.6e \t %12.6e \t %12.6e\n", nElm[i],
-           normL2_U[2 * i], normL2_U[2 * i + 1], normL2_V[2 * i], normL2_V[2 * i + 1],
-           normL2_P[2 * i], normL2_P[2 * i + 1]);
 
-    // printf("%12s \t %12s \t %12s\t %12s \t %12s\t %12s \t %12s\n", "nElm", "||E-DC3_U||",
-    //        "Taux DC3_U", "||E-DC3_V||", "Taux DC3_V", "||E-DC3_P||", "Taux DC3_P");
-    // for(int i = 0; i < nIter; ++i)
-    //   printf("%12d \t %12.6e \t %12.6e\t %12.6e \t %12.6e\t %12.6e \t %12.6e\n", nElm[i],
-    //          maxNormL2DC3_U[2 * i], maxNormL2DC3_U[2 * i + 1], maxNormL2DC3_V[2 * i],
-    //          maxNormL2DC3_V[2 * i + 1], maxNormL2DC3_P[2 * i], maxNormL2DC3_P[2 * i + 1]);
-#ifdef HAVE_PETSC
+  printf("%12s \t %12s \t %12s \t %12s \t %12s \t %12s \t %12s\n", "nElm",
+         "||u-uh||", "tauxU", "||v-vh||", "tauxV", "||p-ph||", "tauxP");
+  
+  for(int i = 0; i < nIter; ++i)
+    printf("%12d \t %12.6e \t %12.6e \t %12.6e \t %12.6e \t %12.6e \t %12.6e\n", nElm[i], 
+          normL2_U[2 * i], normL2_U[2 * i + 1], normL2_V[2 * i], normL2_V[2 * i + 1],
+          normL2_P[2 * i], normL2_P[2 * i + 1]);
+
+  delete funSource;
+  delete funSolU;
+  delete funSolV;
+  delete funSolP;
+  delete funZero;
+
   petscFinalize();
-#endif
+
   return 0;
 }

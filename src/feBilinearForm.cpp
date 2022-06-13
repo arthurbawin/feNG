@@ -77,12 +77,19 @@ feBilinearForm::feBilinearForm(std::vector<feSpace *> space, feMesh *mesh, int d
   for(size_t k = 0; k < _iVar.size(); ++k) _niElm += _intSpace[_iVar[k]]->getNbFunctions();
   for(size_t k = 0; k < _jVar.size(); ++k) _njElm += _intSpace[_jVar[k]]->getNbFunctions();
 
-  _adr.resize(_intSpace[0]->getNbFunctions());
+  // _adr.resize(_intSpace[0]->getNbFunctions());
+  // _sol.resize(_intSpace[0]->getNbFunctions());
+  // _solDot.resize(_intSpace[0]->getNbFunctions());
+
+  _adr.resize(_intSpace.size());
+  _sol.resize(_intSpace.size());
+  _solDot.resize(_intSpace.size());
+  for(size_t k = 0; k < _intSpace.size(); ++k) _adr[k].resize(_intSpace[k]->getNbFunctions());
+  for(size_t k = 0; k < _intSpace.size(); ++k) _sol[k].resize(_intSpace[k]->getNbFunctions());
+  for(size_t k = 0; k < _intSpace.size(); ++k) _solDot[k].resize(_intSpace[k]->getNbFunctions());
+  
   _adrI.resize(_niElm);
   _adrJ.resize(_njElm);
-
-  _sol.resize(_adr.size());
-  _solDot.resize(_adr.size());
 
   _Ae = allocateMatrix(_niElm, _njElm);
   allocateResidual(_niElm, &_Be);
@@ -169,9 +176,9 @@ feBilinearForm::feBilinearForm(const feBilinearForm &f)
     // case ADVECTION_2D :
     //   _sysElm=new feSysElm_2D_Advection();
     //   break;
-    // case STOKES_2D :
-    //   _sysElm=new feSysElm_2D_Stokes();
-    //   break;
+    case STOKES_2D :
+      _sysElm=new feSysElm_2D_Stokes(static_cast<feSysElm_2D_Stokes &>(*f._sysElm));
+      break;
     case NAVIERSTOKES_2D:
       _sysElm = new feSysElm_2D_NavierStokes(static_cast<feSysElm_2D_NavierStokes &>(*f._sysElm));
       break;
@@ -199,64 +206,56 @@ feBilinearForm::~feBilinearForm()
 
 void feBilinearForm::initialize_vadij_only(feMetaNumber *metaNumber, int numElem)
 {
-  // _adr.resize(_intSpace[0]->getNbFunctions());
-  for(feSpace *fS : _intSpace) {
-    fS->initializeAddressingVector(metaNumber->getNumbering(fS->getFieldID()), numElem, _adr);
-    // fS->initializeAddressingVector(metaNumber->getNumbering(fS->getFieldID()), numElem);
+  for(int i=0; i<_intSpace.size(); i++) {
+    feSpace *fS = _intSpace[i];
+    fS->initializeAddressingVector(metaNumber->getNumbering(fS->getFieldID()), numElem, _adr[i]);
   }
 
   // INITIALISERVADIJ
   for(size_t i = 0, count = 0; i < _iVar.size(); ++i) {
     int nielm = _intSpace[_iVar[i]]->getNbFunctions();
-    for(int k = 0; k < nielm; ++k) _adrI[count++] = _adr[k];
-    // for(int k = 0; k < nielm; ++k) _adrI[count++] =
-    // _intSpace[_iVar[i]]->getAddressingVectorAt(k);
+    for(int k = 0; k < nielm; ++k) {
+      _adrI[count++] = _adr[i][k];
+    };
   }
-
   for(size_t i = 0, count = 0; i < _jVar.size(); ++i) {
     int nielm = _intSpace[_jVar[i]]->getNbFunctions();
-    for(int k = 0; k < nielm; ++k) _adrJ[count++] = _adr[k];
-    // for(int k = 0; k < nielm; ++k) _adrJ[count++] =
-    // _intSpace[_jVar[i]]->getAddressingVectorAt(k);
+    for(int k = 0; k < nielm; ++k) {
+      _adrJ[count++] = _adr[i][k];
+    };
   }
 }
 
 void feBilinearForm::initialize(feMetaNumber *metaNumber, feMesh *mesh, feSolution *sol,
                                 int numElem)
 {
-  for(feSpace *fS : _intSpace) {
-    fS->initializeAddressingVector(metaNumber->getNumbering(fS->getFieldID()), numElem, _adr);
-    // fS->initializeAddressingVector(metaNumber->getNumbering(fS->getFieldID()), numElem);
-    // fS->initializeSolution(sol,_adr);
-    // fS->initializeSolutionDot(sol,_adr);
+  for(int i=0; i<_intSpace.size(); i++) {
+    feSpace *fS = _intSpace[i];
+    fS->initializeAddressingVector(metaNumber->getNumbering(fS->getFieldID()), numElem, _adr[i]);
+
+    std::vector<double> &solVec = sol->getSolutionReference();
+    for(size_t k = 0; k < _adr[i].size(); ++k) {
+      _sol[i][k] = solVec[_adr[i][k]];
+      _solDot[i][k] = sol->getSolDotAtDOF(_adr[i][k]);
+    }
   }
 
-  std::vector<double> &solVec = sol->getSolutionReference();
-  for(size_t i = 0; i < _adr.size(); ++i) {
-    _sol[i] = solVec[_adr[i]];
-  }
-
-  for(size_t i = 0; i < _adr.size(); ++i) {
-    _solDot[i] = sol->getSolDotAtDOF(_adr[i]);
-  }
-
-  _geoCoord = mesh->getCoord(_cncGeoTag, numElem);
+  mesh->getCoord(_cncGeoTag, numElem, _geoCoord);
 
   // INITIALISERVADIJ
   for(size_t i = 0, count = 0; i < _iVar.size(); ++i) {
     int nielm = _intSpace[_iVar[i]]->getNbFunctions();
     for(int k = 0; k < nielm; ++k) {
-      //_adrI[count++] = _intSpace[_iVar[i]]->getAddressingVectorAt(k);
-      _adrI[count++] = _adr[k];
+      _adrI[count++] = _adr[_iVar[i]][k];
     };
   }
   for(size_t i = 0, count = 0; i < _jVar.size(); ++i) {
     int nielm = _intSpace[_jVar[i]]->getNbFunctions();
     for(int k = 0; k < nielm; ++k) {
-      //_adrJ[count++] = _intSpace[_jVar[i]]->getAddressingVectorAt(k);
-      _adrJ[count++] = _adr[k];
+      _adrJ[count++] = _adr[_jVar[i]][k];
     };
   }
+
 }
 
 void feBilinearForm::computeMatrix(feMetaNumber *metaNumber, feMesh *mesh, feSolution *sol,
@@ -295,11 +294,6 @@ void feBilinearForm::computeResidual(feMetaNumber *metaNumber, feMesh *mesh, feS
   std::vector<double> &J = _cnc->getJacobians();
   _sysElm->computeBe(J, numElem, _intSpace, _geoSpace, _geoCoord, sol->getC0(),
                      sol->getCurrentTime(), sol->getTimeStep(), _Be, _sol, _solDot);
-  // #pragma omp critical
-  // {
-  // printf("%d;",numElem);for(int jj = 0; jj < 6; ++jj)std::cout<<_Be[jj]<<" ";
-  // std::cout<<std::endl;
-  // }
   // printResidual(_niElm, &_Be);
 }
 

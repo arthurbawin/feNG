@@ -53,7 +53,11 @@ void feLinearSystemPETSc::initialize()
   ierr = VecSet(_dx, 1.0);
 
   // Determine the nonzero structure
+  // feInfo("feCompressedRowStorage ....");
+  // tic();
   feCompressedRowStorage CRS(_metaNumber, _mesh, _formMatrices, _numMatrixForms);
+  // toc();
+  // feInfo("done.");
   feInt *NNZ = CRS.getNnz();
   std::vector<PetscInt> nnz(_nInc, 0);
   for(int i = 0; i < _nInc; ++i) {
@@ -196,7 +200,7 @@ void feLinearSystemPETSc::assembleMatrices(feSolution *sol)
 #if defined(HAVE_PETSC)
   if(recomputeMatrix) {
     feInfo("Assembling the matrix ...");
-    tic();
+    // tic();
 
     PetscErrorCode ierr = 0;
 
@@ -204,25 +208,28 @@ void feLinearSystemPETSc::assembleMatrices(feSolution *sol)
       feBilinearForm *f = _formMatrices[eq];
       feCncGeo *cnc = f->getCncGeo();
       int nbColor = cnc->getNbColor();
-      std::vector<int> colorElm = cnc->getColorElm();
       std::vector<int> nbElmPerColor = cnc->getNbElmPerColor();
       std::vector<std::vector<int> > listElmPerColor = cnc->getListElmPerColor();
+      int nbElmC;
+      std::vector<int> listElmC;
 
       for(int iColor = 0; iColor < nbColor; ++iColor) {
-        int nbElmC = nbElmPerColor[iColor]; // nbElm : nombre d'elm de meme couleur
-        std::vector<int> listElmC = listElmPerColor[iColor];
+        nbElmC = nbElmPerColor[iColor]; // nbElm : nombre d'elm de meme couleur
+        listElmC = listElmPerColor[iColor];
+        // nbElmC = cnc->getNbElmPerColorI(iColor);
+        // listElmC = cnc -> getListElmPerColorI(iColor);
 
         int numThread = 0;
         int elm;
         int eqt;
 
         double **Ae;
-        int sizeI;
-        int sizeJ;
-        std::vector<int> niElm;
-        std::vector<int> njElm;
-        std::vector<int> adrI;
-        std::vector<int> adrJ;
+        feInt sizeI;
+        feInt sizeJ;
+        std::vector<feInt> niElm;
+        std::vector<feInt> njElm;
+        std::vector<feInt> adrI;
+        std::vector<feInt> adrJ;
         std::vector<PetscScalar> values;
 
 #if defined(HAVE_OMP)
@@ -245,12 +252,12 @@ void feLinearSystemPETSc::assembleMatrices(feSolution *sol)
           adrJ = f->getAdrJ();
           sizeI = adrI.size();
           niElm.reserve(sizeI);
-          for(int i = 0; i < sizeI; ++i) {
+          for(feInt i = 0; i < sizeI; ++i) {
             if(adrI[i] < _nInc) niElm.push_back(i);
           }
           sizeJ = adrJ.size();
           njElm.reserve(sizeJ);
-          for(int i = 0; i < sizeJ; ++i) {
+          for(feInt i = 0; i < sizeJ; ++i) {
             if(adrJ[i] < _nInc) njElm.push_back(i);
           }
 
@@ -265,8 +272,8 @@ void feLinearSystemPETSc::assembleMatrices(feSolution *sol)
           sizeI = adrI.size();
           sizeJ = adrJ.size();
           values.resize(sizeI * sizeJ);
-          for(int i = 0; i < sizeI; ++i) {
-            for(int j = 0; j < sizeJ; ++j) {
+          for(feInt i = 0; i < sizeI; ++i) {
+            for(feInt j = 0; j < sizeJ; ++j) {
               values[sizeI * i + j] = Ae[niElm[i]][njElm[j]];
             }
           }
@@ -288,7 +295,7 @@ void feLinearSystemPETSc::assembleMatrices(feSolution *sol)
     // printf("Norme de la matrice : %10.10e\n", normMat);
 
     feInfo("Done");
-    toc();
+    // toc();
     // viewMatrix();
   } // if(recomputeMatrix)
 #endif
@@ -298,7 +305,7 @@ void feLinearSystemPETSc::assembleResiduals(feSolution *sol)
 {
 #if defined(HAVE_PETSC)
   feInfo("Assembling the residual...");
-  tic();
+  // tic();
 
   PetscErrorCode ierr = 0;
 
@@ -306,22 +313,25 @@ void feLinearSystemPETSc::assembleResiduals(feSolution *sol)
     feBilinearForm *f = _formResiduals[eq];
     feCncGeo *cnc = f->getCncGeo();
     int nbColor = cnc->getNbColor();
-    std::vector<int> colorElm = cnc->getColorElm();
     std::vector<int> nbElmPerColor = cnc->getNbElmPerColor();
     std::vector<std::vector<int> > listElmPerColor = cnc->getListElmPerColor();
+    int nbElmC;
+    std::vector<int> listElmC;
 
     for(int iColor = 0; iColor < nbColor; ++iColor) {
-      int nbElmC = nbElmPerColor[iColor]; // nbElm : nombre d'elm de meme couleur
-      std::vector<int> listElmC = listElmPerColor[iColor];
+      nbElmC = nbElmPerColor[iColor]; // nbElm : nombre d'elm de meme couleur
+      listElmC = listElmPerColor[iColor];
+      // nbElmC = cnc->getNbElmPerColorI(iColor);
+      // listElmC = cnc -> getListElmPerColorI(iColor);
 
       int numThread = 0;
       int elm;
       int eqt;
 
       double *Be;
-      int sizeI;
-      std::vector<int> niElm;
-      std::vector<int> adrI;
+      feInt sizeI;
+      std::vector<feInt> niElm;
+      std::vector<feInt> adrI;
       std::vector<PetscScalar> values;
 
 #if defined(HAVE_OMP)
@@ -342,7 +352,7 @@ void feLinearSystemPETSc::assembleResiduals(feSolution *sol)
         adrI = f->getAdrI();
         sizeI = adrI.size();
         niElm.reserve(sizeI);
-        for(int i = 0; i < sizeI; ++i) {
+        for(feInt i = 0; i < sizeI; ++i) {
           if(adrI[i] < _nInc) niElm.push_back(i);
         }
 
@@ -352,7 +362,7 @@ void feLinearSystemPETSc::assembleResiduals(feSolution *sol)
 
         sizeI = adrI.size();
         values.resize(sizeI);
-        for(int i = 0; i < sizeI; ++i) {
+        for(feInt i = 0; i < sizeI; ++i) {
           values[i] = Be[niElm[i]];
         }
 
@@ -370,7 +380,7 @@ void feLinearSystemPETSc::assembleResiduals(feSolution *sol)
   CHKERRABORT(PETSC_COMM_WORLD, ierr);
 
   feInfo("done");
-  toc();
+  // toc();
   // VecView(_res,PETSC_VIEWER_STDOUT_WORLD);
   // double normResidual = 0.0;
   // VecNorm(_res, NORM_2, &normResidual);

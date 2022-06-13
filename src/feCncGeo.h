@@ -34,9 +34,9 @@ protected:
   std::vector<double> _J; // Jacobiens
 
   // For elements coloring
-  std::map<int, int> _nbElmPerNode;
+  std::vector<int> _nbElmPerNode;
   std::map<int, int> _nbElmPerElm;
-  std::map<int, std::vector<int> > _listElmPerNode;
+  std::vector<std::vector<int> > _listElmPerNode;
   std::map<int, std::vector<int> > _listElmPerElm;
 
   int _nbColor;
@@ -70,14 +70,14 @@ public:
     //   delete _space;
   }
 
-  std::string getID() { return _ID; }
-  int getTag() { return _tag; }
-  int getDim() { return _dim; }
-  std::string getForme() { return _forme; }
-  int getNbNodes() { return _nNod; }
-  int getNbNodePerElem() { return _nNodPerElm; }
-  int getNbElm() { return _nElm; }
-  int getNbEdgePerElem() { return _nEdg; }
+  std::string &getID() { return _ID; }
+  int &getTag() { return _tag; }
+  int &getDim() { return _dim; }
+  std::string &getForme() {return _forme;}
+  int &getNbNodes() { return _nNod; }
+  int &getNbNodePerElem() { return _nNodPerElm; }
+  int &getNbElm() { return _nElm; }
+  int &getNbEdgePerElem() { return _nEdg; }
   feSpace *getFeSpace() { return _space; } // Interpolant geometrique
 
   void setMeshPtr(feMesh *mesh) { _mesh = mesh; }
@@ -87,13 +87,13 @@ public:
   std::vector<int> &getEdgeConnectivityRef() { return _connecEdges; }
   std::vector<int> &getElemConnectivityRef() { return _connecElem; }
 
-  int getNodeConnectivity(int iNode) { return _connecNodes[iNode]; }
-  int getNodeConnectivity(int numElem, int iNode)
+  int &getNodeConnectivity(int iNode) { return _connecNodes[iNode]; }
+  int &getNodeConnectivity(int numElem, int iNode)
   {
     return _connecNodes[_nNodPerElm * numElem + iNode];
   }
-  int getElementConnectivity(int numElem) { return _connecElem[numElem]; }
-  int getEdgeConnectivity(int numElem, int iEdge) { return _connecEdges[_nEdg * numElem + iEdge]; }
+  int &getElementConnectivity(int numElem) { return _connecElem[numElem]; }
+  int &getEdgeConnectivity(int numElem, int iEdge) { return _connecEdges[_nEdg * numElem + iEdge]; }
 
   void setNodeConnectivity(int numElem, int iNode, int val)
   {
@@ -119,9 +119,11 @@ public:
   // void color5(int cncGeoTag = 0);
 
   int getNbColor() { return _nbColor; };
-  std::vector<int> getColorElm() { return _elmToColor; };
-  std::vector<int> getNbElmPerColor() { return _nbElmPerColor; };
-  std::vector<std::vector<int> > getListElmPerColor() { return _listElmPerColor; };
+  std::vector<int> &getColorElm() { return _elmToColor; };
+  std::vector<int> &getNbElmPerColor() { return _nbElmPerColor; };
+  std::vector<std::vector<int> > &getListElmPerColor() { return _listElmPerColor; };
+  int getNbElmPerColorI(int i) { return _nbElmPerColor[i]; };
+  std::vector<int> &getListElmPerColorI(int i) { return _listElmPerColor[i]; };
 };
 
 #endif

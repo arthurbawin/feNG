@@ -56,8 +56,8 @@ public:
   double getXCoord(int i) { return _coord[i * _dim]; }
   double getYCoord(int i) { return _coord[i * _dim + 1]; }
   double getZCoord(int i) { return _coord[i * _dim + 2]; }
-  std::vector<double> getCoord(std::string const &cncGeoID, int numElm);
-  std::vector<double> getCoord(int cncGeoTag, int numElm);
+  void getCoord(std::string const &cncGeoID, int numElm, std::vector<double> &geoCoord);
+  void getCoord(int cncGeoTag, int numElm, std::vector<double> &geoCoord);
 
   int getVertexSequentialTagFromGmshTag(int gmshNodeTag) { return _verticesMap[gmshNodeTag]; }
   Vertex *getVertex(int iVertex) { return &_vertices[iVertex]; }

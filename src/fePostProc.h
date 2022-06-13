@@ -18,8 +18,6 @@ protected:
   feMesh *_mesh;
   feMetaNumber *_metaNumber;
   feCncGeo *_cnc;
-  std::vector<int> _adr;
-  std::vector<double> _sol;
 
 public:
   fePostProc(feSpace *intSpace, feMesh *mesh, feMetaNumber *metaNumber,
@@ -27,11 +25,7 @@ public:
              feVectorFunction *referenceVectorSolution = nullptr)
     : _intSpace(intSpace), _geoSpace(intSpace->getCncGeo()->getFeSpace()),
       _referenceSolution(referenceSolution), _referenceVectorSolution(referenceVectorSolution),
-      _mesh(mesh), _metaNumber(metaNumber), _cnc(intSpace->getCncGeo())
-  {
-    _adr.resize(_intSpace->getNbFunctions());
-    _sol.resize(_adr.size());
-  };
+      _mesh(mesh), _metaNumber(metaNumber), _cnc(intSpace->getCncGeo()) {};
 
   ~fePostProc() {}
 

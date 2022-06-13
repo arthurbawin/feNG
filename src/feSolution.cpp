@@ -65,25 +65,19 @@ void feSolution::initializeTemporalSolution(double t0, double t1, int nTimeSteps
 void feSolution::initializeUnknowns(feMesh *mesh, feMetaNumber *metaNumber)
 {
   for(feSpace *const &fS : _space) {
-    std::vector<int> adrS(fS->getNbFunctions());
-    // std::cout<<"Space "<<fS->getFieldID()<<" - "<<fS->getCncGeoID()<<std::endl;
     int nElm = mesh->getNbElm(fS->getCncGeoID()); // On pourrait donner un _nElm au feSpace
+    std::vector<feInt> adrS(fS->getNbFunctions());
     std::vector<double> coor = fS->getLcoor();
-    // std::cout<<"coor"<<std::endl;
-    // for(auto const &val : coor)
-    // 	std::cout<<val<<std::endl;
+    std::vector<double> localCoord;
+    std::vector<double> x(3);
     feSpace *geoSpace = mesh->getGeometricSpace(fS->getCncGeoID());
-    // std::cout<<geoSpace->getNbFunctions()<<"?"<<std::endl;
+    
     for(int iElm = 0; iElm < nElm; ++iElm) {
-      // Call initializeAddressingVector() on each element of each feSpace
       fS->initializeAddressingVector(metaNumber->getNumbering(fS->getFieldID()), iElm, adrS);
-
-      std::vector<double> localCoord = mesh->getCoord(fS->getCncGeoID(), iElm);
-      // std::cout<<"size"<<localCoord.size()<<std::endl;
-
+      mesh->getCoord(fS->getCncGeoID(), iElm, localCoord);
+      
       for(int j = 0; j < fS->getNbFunctions(); ++j) {
         double r[3] = {coor[3 * j], coor[3 * j + 1], coor[3 * j + 2]};
-        std::vector<double> x(3, 0.0);
         // x[0] = geoSpace->interpolateField(localCoord, r);
         geoSpace->interpolateVectorField(localCoord, r, x);
 
@@ -105,26 +99,22 @@ void feSolution::initializeEssentialBC(feMesh *mesh, feMetaNumber *metaNumber,
                                        feSolutionContainer *solContainer)
 {
   for(feSpace *const &fS : _essBC) {
-    std::vector<int> adrS(fS->getNbFunctions());
+    std::vector<feInt> adrS(fS->getNbFunctions());
     int nElm = mesh->getNbElm(fS->getCncGeoID());
-    // std::cout<<"Initializing essential BC on "<<nElm<<" elements on cnc
-    // "<<fS->getCncGeoID()<<std::endl;
     std::vector<double> coor = fS->getLcoor();
+    std::vector<double> localCoord; 
+    std::vector<double> x(3);
     feSpace *geoSpace = mesh->getGeometricSpace(fS->getCncGeoID());
+    
     for(int iElm = 0; iElm < nElm; ++iElm) {
       fS->initializeAddressingVector(metaNumber->getNumbering(fS->getFieldID()), iElm, adrS);
-      // std::cout<<"On elem "<<iElm<<std::endl;
-      for(int kk = 0; kk < fS->getNbFunctions(); ++kk) {
-        // std::cout<<fS->getAddressingVectorAt(kk)<<std::endl;
-      }
-      std::vector<double> localCoord = mesh->getCoord(fS->getCncGeoID(), iElm);
+      mesh->getCoord(fS->getCncGeoID(), iElm, localCoord);
       for(int j = 0; j < fS->getNbFunctions(); ++j) {
         double r[3] = {coor[3 * j], coor[3 * j + 1], coor[3 * j + 2]};
-        std::vector<double> x(3, 0.0);
         geoSpace->interpolateVectorField(localCoord, r, x);
+        
         if(fS->isFctDefined()) {
           _sol[adrS[j]] = fS->evalFun(_tn, x);
-          // printf("Initializing _sol[%d] = %f en (%+-4.4e, %+-4.4e)\n",
           // fS->getAddressingVectorAt(j), _sol[fS->getAddressingVectorAt(j)], x[0], x[1]);
         } else {
           printf("BC Sol un changed in field %s - %s\n", fS->getFieldID().c_str(),

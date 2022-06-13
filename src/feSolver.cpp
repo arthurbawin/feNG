@@ -154,8 +154,8 @@ feStatus StationarySolver::makeSteps(int nSteps)
   feInfoCond(FE_VERBOSE > 0, "Solving for steady state solution - recomputeMatrix = %s",
              _linearSystem->getRecomputeStatus() ? "true" : "false");
   _linearSystem->setRecomputeStatus(true);
-  _sol->initializeUnknowns(_mesh, _metaNumber);
-  _sol->initializeEssentialBC(_mesh, _metaNumber);
+  // _sol->initializeUnknowns(_mesh, _metaNumber);
+  // _sol->initializeEssentialBC(_mesh, _metaNumber);
   // Solve
   solveQNBDF(_solutionContainer, _tol, _metaNumber, _linearSystem, _sol, _mesh);
   // Compute L2 norm of solution(s)
@@ -182,7 +182,7 @@ feStatus StationarySolver::makeSteps(int nSteps)
         _norms[k]->computeIntFluxNy(_metaNumber, _sol, _mesh);
         _normL2[k][0] = _norms[k]->getNorm();
       } else {
-        _norms[k]->computeL2Norm(_metaNumber, _sol, _mesh);
+        _norms[k]->computeL2Norm(_metaNumber, _sol, _mesh); 
         _normL2[k][0] = _norms[k]->getNorm();
       }
     }

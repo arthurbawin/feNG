@@ -75,7 +75,7 @@ void feNumber::defDDLElement_essentialBC(feMesh *mesh, std::string const &cncGeo
 void feNumber::defDDLEdge_essentialBC(feMesh *mesh, std::string const &cncGeoID, int numElem,
                                       int numEdge)
 {
-  int edge = fabs(mesh->getEdge(cncGeoID, numElem, numEdge)) - 1;
+  int edge = mesh->getEdge(cncGeoID, numElem, numEdge) - 1;
   // printf("Setting global edge %d as ESS which is edge number %d of elem %d on cnc %s\n", edge,
   // numEdge, numElem, cncGeoID.c_str());
   _codeDOFEdges[edge] = ESS;
@@ -97,7 +97,7 @@ int feNumber::getDDLEdge(feMesh *mesh, std::string const &cncGeoID, int numElem,
                          int numDOF)
 {
   // In connecEdges, edges are numbering starting from 1 and can be negative
-  int edge = fabs(mesh->getEdge(cncGeoID, numElem, numEdge)) - 1; // qu'est ce que fabs ?
+  int edge = abs(mesh->getEdge(cncGeoID, numElem, numEdge)) - 1;
   return _numberingEdges[_maxDOFperEdge * edge + numDOF];
 }
 

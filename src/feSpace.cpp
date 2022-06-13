@@ -129,7 +129,7 @@ feSpace::feSpace(feMesh *mesh, std::string fieldID, std::string cncGeoID, feFunc
   }
 }
 
-feCncGeo *feSpace::getCncGeo() { return _mesh->getCncGeoByTag(_cncGeoTag); }
+feCncGeo *feSpace::getCncGeo() {return _mesh->getCncGeoByTag(_cncGeoTag); }
 
 int feSpace::getDim() { return this->getCncGeo()->getDim(); }
 int feSpace::getNbElm() { return _mesh->getNbElm(_cncGeoTag); }
@@ -178,7 +178,7 @@ feStatus feSpace::setQuadratureRule(feQuadrature *rule)
     double rc[3] = {1. / 3., 1. / 3., 1. / 3.};
 
     for(int iElm = 0; iElm < nElm; ++iElm) {
-      geoCoord = _mesh->getCoord(_cncGeoTag, iElm);
+      _mesh->getCoord(_cncGeoTag, iElm, geoCoord);
 
       std::vector<double> LAtQuadNodes(_nFunctions * _nQuad);
       std::vector<double> dLdxAtQuadNodes(_nFunctions * _nQuad);
@@ -264,7 +264,7 @@ double feSpace::innerProductBasisFunctions(int iElm, int ex, int ey)
   return res;
 }
 
-double feSpace::interpolateField(std::vector<double> &field, double r[3]) // match
+double feSpace::interpolateField(std::vector<double> &field, double *r) // match
 {
   double res = 0.0;
 #ifdef DEBUG
@@ -309,7 +309,7 @@ double feSpace::interpolateField(feNumber *number, feSolution *sol, std::vector<
     return 0.0;
   }
 #endif
-  std::vector<int> adr(this->getNbFunctions());
+  std::vector<feInt> adr(this->getNbFunctions());
   std::vector<double> solution(adr.size());
   std::vector<double> &solVec = sol->getSolutionReference();
   this->initializeAddressingVector(number, elm, adr);
@@ -319,7 +319,7 @@ double feSpace::interpolateField(feNumber *number, feSolution *sol, std::vector<
   return this->interpolateField(solution, u.data()); // Attention : fonctions de forme locales
 }
 
-double feSpace::interpolateField_rDerivative(std::vector<double> &field, double r[3]) // match
+double feSpace::interpolateField_rDerivative(std::vector<double> &field, double *r) // match
 {
   double res = 0.0;
 #ifdef DEBUG
@@ -333,7 +333,7 @@ double feSpace::interpolateField_rDerivative(std::vector<double> &field, double 
   return res;
 }
 
-double feSpace::interpolateField_sDerivative(std::vector<double> &field, double r[3]) // match
+double feSpace::interpolateField_sDerivative(std::vector<double> &field, double *r) // match
 {
   double res = 0.0;
 #ifdef DEBUG
@@ -397,7 +397,7 @@ void feSpace::interpolateField_gradrs(feNumber *number, feSolution *sol, std::ve
            x[0], x[1], x[2]);
     return;
   } else {
-    std::vector<int> adr(this->getNbFunctions());
+    std::vector<feInt> adr(this->getNbFunctions());
     std::vector<double> solution(adr.size());
     std::vector<double> &solVec = sol->getSolutionReference();
     this->initializeAddressingVector(number, elm, adr);
@@ -440,7 +440,7 @@ double feSpace::interpolateFieldAtQuadNode(std::vector<double> &field, int iElm,
 }
 
 double feSpace::interpolateFieldAtQuadNode_rDerivative(std::vector<double> &field,
-                                                       int iNode) // match
+                                                       int iNode) 
 {
   double res = 0.0;
 #ifdef DEBUG
@@ -456,7 +456,7 @@ double feSpace::interpolateFieldAtQuadNode_rDerivative(std::vector<double> &fiel
 }
 
 double feSpace::interpolateFieldAtQuadNode_sDerivative(std::vector<double> &field,
-                                                       int iNode) // match
+                                                       int iNode) 
 {
   double res = 0.0;
 #ifdef DEBUG
@@ -503,7 +503,7 @@ double feSpace::interpolateFieldAtQuadNode_yDerivative(std::vector<double> &fiel
   return res;
 }
 
-void feSpace::interpolateVectorField(std::vector<double> &field, double r[3],
+void feSpace::interpolateVectorField(std::vector<double> &field, double *r,
                                      std::vector<double> &res)
 {
   // Field structure :
@@ -516,15 +516,16 @@ void feSpace::interpolateVectorField(std::vector<double> &field, double r[3],
     return;
   }
 #endif
+  std::vector<double> l=L(r);
   for(int i = 0; i < 3; ++i) {
     for(int j = 0; j < _nFunctions; ++j) {
       // res[i] += field[3*i+j]*L(r)[j];
-      res[i] += field[3 * j + i] * L(r)[j];
+      res[i] += field[3 * j + i] * l[j];
     }
   }
 }
 
-void feSpace::interpolateVectorField_rDerivative(std::vector<double> &field, double r[3],
+void feSpace::interpolateVectorField_rDerivative(std::vector<double> &field, double *r,
                                                  std::vector<double> &res)
 {
   // Field structure :
@@ -537,14 +538,15 @@ void feSpace::interpolateVectorField_rDerivative(std::vector<double> &field, dou
     return;
   }
 #endif
+  std::vector<double> dldr=dLdr(r);
   for(int i = 0; i < 3; ++i) {
     for(int j = 0; j < _nFunctions; ++j) {
-      res[i] += field[3 * j + i] * dLdr(r)[j];
+      res[i] += field[3 * j + i] * dldr[j];
     }
   }
 }
 
-void feSpace::interpolateVectorField_sDerivative(std::vector<double> &field, double r[3],
+void feSpace::interpolateVectorField_sDerivative(std::vector<double> &field, double *r,
                                                  std::vector<double> &res)
 {
   // Field structure :
@@ -557,9 +559,10 @@ void feSpace::interpolateVectorField_sDerivative(std::vector<double> &field, dou
     return;
   }
 #endif
+  std::vector<double> dlds=dLds(r);
   for(int i = 0; i < 3; ++i) {
     for(int j = 0; j < _nFunctions; ++j) {
-      res[i] += field[3 * j + i] * dLds(r)[j];
+      res[i] += field[3 * j + i] * dlds[j];
     }
   }
 }
@@ -660,7 +663,7 @@ void feSpace1DP0::initializeNumberingEssential(feNumber *number)
 //   _adr[0] = number->getDDLSommet(_mesh, _cncGeoID, numElem, 0);
 // }
 
-void feSpace1DP0::initializeAddressingVector(feNumber *number, int numElem, std::vector<int> &adr)
+void feSpace1DP0::initializeAddressingVector(feNumber *number, int numElem, std::vector<feInt> &adr)
 {
   // for(int i = 0; i < _mesh->getNbElm(_cncGeoID); ++i)
   adr[0] = number->getDDLSommet(_mesh, _cncGeoID, numElem, 0);
@@ -688,7 +691,7 @@ void feSpace1DP1::initializeNumberingEssential(feNumber *number)
 //   _adr[1] = number->getDDLSommet(_mesh, _cncGeoID, numElem, 1);
 // }
 
-void feSpace1DP1::initializeAddressingVector(feNumber *number, int numElem, std::vector<int> &adr)
+void feSpace1DP1::initializeAddressingVector(feNumber *number, int numElem, std::vector<feInt> &adr)
 {
   adr[0] = number->getDDLSommet(_mesh, _cncGeoID, numElem, 0);
   adr[1] = number->getDDLSommet(_mesh, _cncGeoID, numElem, 1);
@@ -719,7 +722,7 @@ void feSpace1DP1_nonConsistant::initializeNumberingEssential(feNumber *number)
 // }
 
 void feSpace1DP1_nonConsistant::initializeAddressingVector(feNumber *number, int numElem,
-                                                           std::vector<int> &adr)
+                                                           std::vector<feInt> &adr)
 {
   adr[0] = number->getDDLElement(_mesh, _cncGeoID, numElem, 0);
 }
@@ -772,7 +775,7 @@ void feSpace1DP2::initializeNumberingEssential(feNumber *number)
 //   }
 // }
 
-void feSpace1DP2::initializeAddressingVector(feNumber *number, int numElem, std::vector<int> &adr)
+void feSpace1DP2::initializeAddressingVector(feNumber *number, int numElem, std::vector<feInt> &adr)
 {
   adr[0] = number->getDDLSommet(_mesh, _cncGeoID, numElem, 0);
   adr[1] = number->getDDLSommet(_mesh, _cncGeoID, numElem, 1);
@@ -821,7 +824,7 @@ void feSpace1DP3::initializeNumberingEssential(feNumber *number)
 //   }
 // }
 
-void feSpace1DP3::initializeAddressingVector(feNumber *number, int numElem, std::vector<int> &adr)
+void feSpace1DP3::initializeAddressingVector(feNumber *number, int numElem, std::vector<feInt> &adr)
 {
   adr[0] = number->getDDLSommet(_mesh, _cncGeoID, numElem, 0);
   adr[1] = number->getDDLSommet(_mesh, _cncGeoID, numElem, 1);
@@ -876,7 +879,7 @@ void feSpace1DP4::initializeNumberingEssential(feNumber *number)
 //   }
 // }
 
-void feSpace1DP4::initializeAddressingVector(feNumber *number, int numElem, std::vector<int> &adr)
+void feSpace1DP4::initializeAddressingVector(feNumber *number, int numElem, std::vector<feInt> &adr)
 {
   adr[0] = number->getDDLSommet(_mesh, _cncGeoID, numElem, 0);
   adr[1] = number->getDDLSommet(_mesh, _cncGeoID, numElem, 1);

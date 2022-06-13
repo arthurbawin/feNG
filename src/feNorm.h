@@ -17,7 +17,7 @@ protected:
   int nElmGeo;
   int dim;
   int nNodePerElem;
-  std::vector<double> geoCoord;
+  std::vector<double> _geoCoord;
 
   int _nQuad;
   int _degQuad;

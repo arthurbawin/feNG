@@ -24,6 +24,8 @@ double fZero(const double t, const std::vector<double> &pos, const std::vector<d
 
 int main(int argc, char **argv)
 {
+  // tic();
+
   petscInitialize(argc, argv);
 
   // Set the default parameters.
@@ -98,11 +100,10 @@ int main(int argc, char **argv)
   feLinearSystem *system;
   feCheck(createLinearSystem(system, PETSC, spaces, {&diffU, &sourceU}, &metaNumber, &mesh, argc, argv));
 
-  // Define post-processing tools to compute norms and whatnot (norms will be replaced by
+  // Define post-processin tools to compute norms and whatnot (norms will be replaced by
   // fePostProc)
   feNorm normU(uDomaine, &mesh, degreeQuadrature, funSol);
   std::vector<feNorm *> norms = {&normU};
-
   // Create an exporter structure to write the solution for visualization. Currently the only
   // supported format for visualization is VTK.
   feExporter *exporter;
@@ -127,8 +128,8 @@ int main(int argc, char **argv)
   // Post-process the solution
   fePostProc post(uDomaine, &mesh, &metaNumber, funSol);
   feInfo("Measure = %f", post.computeMeasure());
-  feInfo("Integral of sol = %f", post.computeSolutionIntegral(&sol));
-  feInfo("Integral of fun = %f", post.computeFunctionIntegral(funSol, 0.0));
+  feInfo("Integral of sol = %10.10f", post.computeSolutionIntegral(&sol));
+  feInfo("Integral of fun = %10.10f", post.computeFunctionIntegral(funSol, 0.0));
   feInfo("L2 Error = %10.10f", post.computeL2ErrorNorm(&sol));
 
   // Free the used memory
@@ -140,6 +141,6 @@ int main(int argc, char **argv)
   delete funSource;
 
   petscFinalize();
-
+  // toc();
   return 0;
 }
