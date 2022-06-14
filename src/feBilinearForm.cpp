@@ -300,9 +300,9 @@ void feBilinearForm::computeResidual(feMetaNumber *metaNumber, feMesh *mesh, feS
 void feBilinearForm::computeMatrixFiniteDifference(feMetaNumber *metaNumber, feMesh *mesh,
                                                    feSolution *sol, int numElem)
 {
-  // printf("feBilinearForm::computeMatrixFiniteDifference\n");
+  // feInfo("feBilinearForm::computeMatrixFiniteDifference");
+  
   this->initialize(metaNumber, mesh, sol, numElem);
-  // setMatrixToZero(_niElm, _njElm, &_Ae);
   setMatrixToZero(_niElm, _njElm, _Ae);
 
   double C0 = sol->getC0();
@@ -314,6 +314,7 @@ void feBilinearForm::computeMatrixFiniteDifference(feMetaNumber *metaNumber, feM
   _sysElm->computeBe(J, numElem, _intSpace, _geoSpace, _geoCoord, C0, sol->getCurrentTime(),
                      sol->getTimeStep(), R0, _sol, _solDot);
   //_sysElm->computeAe(_intSpace, _geoSpace, _geoCoord, sol->getC0(), sol->getCurrentTime(), _Ae);
+  
   // On boucle sur les fespace des inconnues
   // ==================================================================
   // Caclul des résidus perturbés
@@ -321,17 +322,17 @@ void feBilinearForm::computeMatrixFiniteDifference(feMetaNumber *metaNumber, feM
   feInt numColumn = 0;
   for(size_t k = 0; k < _jVar.size(); k++) {
     feSpace *Unknowns = _intSpace[_jVar[k]];
-    std::vector<double> &solVec = sol->getSolutionReference();
-    std::vector<double> &soldotVec = sol->getSolutionReferenceDot();
+    // std::vector<double> &solVec = sol->getSolutionReference();
+    // std::vector<double> &soldotVec = sol->getSolutionReferenceDot();
     // On boucle sur les coefficients de la fonction d'interpolation
     for(feInt j = 0; j < Unknowns->getNbFunctions(); j++, numColumn++) {
-      double temp_sol = solVec[j];
-      double temp_soldot = soldotVec[j];
+      double temp_sol = _sol[k][j];
+      double temp_soldot = _solDot[k][j];
       double delta_h = h0 * std::max(fabs(temp_sol), 1.0);
       double invdelta_h = 1.0 / delta_h;
 
-      solVec[j] = solVec[j] + delta_h;
-      soldotVec[j] = soldotVec[j] + delta_h * C0;
+      _sol[k][j]    = _sol[k][j] + delta_h;
+      _solDot[k][j] = _solDot[k][j] + delta_h * C0;
 
       setResidualToZero(_niElm, &Rh);
       _sysElm->computeBe(J, numElem, _intSpace, _geoSpace, _geoCoord, C0, sol->getCurrentTime(),
@@ -339,8 +340,8 @@ void feBilinearForm::computeMatrixFiniteDifference(feMetaNumber *metaNumber, feM
 
       for(feInt i = 0; i < _niElm; i++) _Ae[i][numColumn] = (-Rh[i] + R0[i]) * invdelta_h;
 
-      solVec[j] = temp_sol;
-      soldotVec[j] = temp_soldot;
+      _sol[k][j]    = temp_sol;
+      _solDot[k][j] = temp_soldot;
     }
   }
   // for(auto val : _adrI)

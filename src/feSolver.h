@@ -77,6 +77,7 @@ public:
   void setLinearSystem(feLinearSystem *linearSystem) { _linearSystem = linearSystem; }
   void setSolution(feSolution *sol) { _sol = sol; }
   void setMesh(feMesh *mesh) { _mesh = mesh; }
+  std::vector<double> &getNorm(int iNorm) { return _normL2[iNorm]; };
 
   virtual feStatus makeSteps(int nSteps) = 0;
 };

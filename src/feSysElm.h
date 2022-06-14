@@ -597,7 +597,7 @@ public:
   feSysElm_2D_Diffusion(double par, feFunction *fct) : feSysElm(true), _fct(fct), _par(par)
   {
     _ID = DIFFUSION_2D;
-    matrixAnalyticalStatus = true;
+    matrixAnalyticalStatus = false;
   };
 
   virtual ~feSysElm_2D_Diffusion() {}

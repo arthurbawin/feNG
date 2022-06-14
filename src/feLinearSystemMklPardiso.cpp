@@ -145,8 +145,6 @@ void feLinearSystemMklPardiso::assembleResiduals(feSolution *sol)
     for(int iColor = 0; iColor < nbColor; ++iColor) {
       nbElmC = nbElmPerColor[iColor]; // nbElmC : nombre d'elm de meme couleur
       listElmC = listElmPerColor[iColor];
-      // nbElmC = cnc->getNbElmPerColorI(iColor);
-      // listElmC = cnc -> getListElmPerColorI(iColor); 
 
       feInt numThread = 0;
       int elm;
