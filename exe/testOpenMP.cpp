@@ -20,7 +20,7 @@ int main(int argc, char **argv) {
   petscInitialize(argc, argv);
 
   // Set the default parameters.
-  const char *meshFile = "squareTest6.msh";
+  const char *meshFile = "square2.msh";
   int verbosity = 2;
   int order = 2;                   //par defaut 1 sinon lors de la compilation -o --order XX  ? 
   int degreeQuadrature = 10;       //par defaut 10 sinon lors de la compilation -dquad --degreeQuadrature XX  ?
@@ -131,7 +131,7 @@ int main(int argc, char **argv) {
   std::string vtkFileRoot = "root";
   feExportData exportData = {exporter, exportEveryNSteps, vtkFileRoot};
 
-  feInfo("test");
+  // feInfo("test");
   // Solve the discrete problem. Initialize a TimeIntegrator object and tolerances on the
   // Newton-Raphson nonlinear solver (tolerance on the solution correction dx, tolerance on the
   // residual, max number of iterations). Here the PDE is linear : the nonlinear solver should
