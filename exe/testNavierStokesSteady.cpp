@@ -94,11 +94,6 @@ int main(int argc, char **argv) {
   std::vector<double> normL2_P(2 * nIter, 0.0);
   std::vector<int> nElm(nIter, 0);
 
-  feSpace *U_angle, *U_haut, *U_gauche, *U_surface;
-  feSpace *V_angle, *V_haut, *V_gauche, *V_surface;
-  feSpace *P_haut, *P_surface;
-  // feSpace *P_point, *P_surface;
-
   for(int iter = 0; iter < nIter; ++iter) {
     // std::string meshName = "../../data/squareTaylorGreen2.msh";
     std::string meshName = "../data/Convergence/squareNS" + std::to_string(iter + 1) + ".msh";

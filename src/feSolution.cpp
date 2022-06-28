@@ -68,7 +68,8 @@ void feSolution::initializeUnknowns(feMesh *mesh, feMetaNumber *metaNumber)
     int nElm = mesh->getNbElm(fS->getCncGeoID()); // On pourrait donner un _nElm au feSpace
     std::vector<feInt> adrS(fS->getNbFunctions());
     std::vector<double> coor = fS->getLcoor();
-    std::vector<double> localCoord;
+    int nbNodePerElem = mesh->getCncGeoByName(fS->getCncGeoID())->getNbNodePerElem();
+    std::vector<double> localCoord(3*nbNodePerElem);
     std::vector<double> x(3);
     feSpace *geoSpace = mesh->getGeometricSpace(fS->getCncGeoID());
     
@@ -102,7 +103,8 @@ void feSolution::initializeEssentialBC(feMesh *mesh, feMetaNumber *metaNumber,
     std::vector<feInt> adrS(fS->getNbFunctions());
     int nElm = mesh->getNbElm(fS->getCncGeoID());
     std::vector<double> coor = fS->getLcoor();
-    std::vector<double> localCoord; 
+    int nbNodePerElem = mesh->getCncGeoByName(fS->getCncGeoID())->getNbNodePerElem();
+    std::vector<double> localCoord(3*nbNodePerElem); 
     std::vector<double> x(3);
     feSpace *geoSpace = mesh->getGeometricSpace(fS->getCncGeoID());
     
@@ -137,7 +139,7 @@ void feSolution::initializeEssentialBC(feMesh *mesh, feMetaNumber *metaNumber,
 
 void feSolution::setSolFromContainer(feSolutionContainer *solContainer, int iSol)
 {
-  std::vector<double> solFromContainer = solContainer->getSolution(iSol);
+  std::vector<double> &solFromContainer = solContainer->getSolution(iSol);
   if(_sol.size() != solFromContainer.size()) {
     _sol.resize(solFromContainer.size());
     _dsoldt.resize(solFromContainer.size());

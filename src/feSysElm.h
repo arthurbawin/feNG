@@ -38,6 +38,8 @@ inline const std::string toString(elementSystemType t)
       return "MASSE_1D";
     case NEUMANN_1D:
       return "NEUMANN_1D";
+    case MASSE_2D:
+      return "MASSE_2D";
     case SOURCE_2D:
       return "SOURCE_2D";
     case DIFFUSION_2D:
@@ -535,6 +537,8 @@ protected:
   std::vector<double> _feU;
   std::vector<double> _feUdx;
   std::vector<double> _feUdy;
+  std::vector<double> _dxdr; // [dx/dr, dy/dr, dz/dr]
+  std::vector<double> _dxds; // [dx/ds, dy/ds, dz/ds]
 
 public:
   feSysElm_2D_Masse(double par, feFunction *fct) : feSysElm(true), _fct(fct), _par(par)
@@ -562,6 +566,7 @@ protected:
   std::vector<double> _feU;
   std::vector<double> _feUdx;
   std::vector<double> _feUdy;
+  std::vector<double> _x;
 
 public:
   feSysElm_2D_Source(double par, feFunction *fct) : feSysElm(false), _fct(fct), _par(par)
@@ -597,7 +602,7 @@ public:
   feSysElm_2D_Diffusion(double par, feFunction *fct) : feSysElm(true), _fct(fct), _par(par)
   {
     _ID = DIFFUSION_2D;
-    matrixAnalyticalStatus = false;
+    matrixAnalyticalStatus = true;
   };
 
   virtual ~feSysElm_2D_Diffusion() {}
@@ -655,6 +660,8 @@ protected:
   std::vector<double> _feVdx;
   std::vector<double> _feVdy;
   std::vector<double> _feP;
+  std::vector<double> _dxdr; 
+  std::vector<double> _dxds; 
 
 public:
   feSysElm_2D_Stokes(std::vector<double> &par, feVectorFunction *fct)
@@ -691,6 +698,8 @@ protected:
   std::vector<double> _feVdx;
   std::vector<double> _feVdy;
   std::vector<double> _feP;
+  std::vector<double> _dxdr;
+  std::vector<double> _dxds;
 
 public:
   feSysElm_2D_NavierStokes(std::vector<double> &par, feVectorFunction *fct,

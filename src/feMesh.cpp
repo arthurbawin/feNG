@@ -41,11 +41,16 @@ void feMesh::getCoord(std::string const &cncGeoID, int numElem, std::vector<doub
 {
   feCncGeo *cnc = getCncGeoByName(cncGeoID);
   int nNodePerElem = cnc->getNbNodePerElem();
-  geoCoord.resize(nNodePerElem * 3); // _dim = 3 pour les coordonnees
+#ifdef DEBUG
+  if(geoCoord.size() != 3 * nNodePerElem) {
+    printf(" In feMesh::getCoord : Erreur - Wrong Size for vector geoCoord\n");
+  }
+#endif
   for(int i = 0; i < nNodePerElem; ++i) {
-    geoCoord[3 * i + 0] = _vertices[cnc->getNodeConnectivity(numElem, i)].x();
-    geoCoord[3 * i + 1] = _vertices[cnc->getNodeConnectivity(numElem, i)].y();
-    geoCoord[3 * i + 2] = _vertices[cnc->getNodeConnectivity(numElem, i)].z();
+    Vertex V = _vertices[cnc->getNodeConnectivity(numElem, i)];
+    geoCoord[3 * i + 0] = V.x();
+    geoCoord[3 * i + 1] = V.y();
+    geoCoord[3 * i + 2] = V.z();
   }
 }
 
@@ -56,11 +61,16 @@ void feMesh::getCoord(int cncGeoTag, int numElem, std::vector<double> &geoCoord)
 {
   feCncGeo *cnc = getCncGeoByTag(cncGeoTag);
   int nNodePerElem = cnc->getNbNodePerElem();
-  geoCoord.resize(nNodePerElem * 3);
+#ifdef DEBUG
+  if(geoCoord.size() != 3 * nNodePerElem) {
+    printf(" In feMesh::getCoord : Erreur - Wrong Size for vector geoCoord\n");
+  }
+#endif
   for(int i = 0; i < nNodePerElem; ++i) {
-    geoCoord[3 * i + 0] = _vertices[cnc->getNodeConnectivity(numElem, i)].x();
-    geoCoord[3 * i + 1] = _vertices[cnc->getNodeConnectivity(numElem, i)].y();
-    geoCoord[3 * i + 2] = _vertices[cnc->getNodeConnectivity(numElem, i)].z();
+    Vertex V = _vertices[cnc->getNodeConnectivity(numElem, i)];
+    geoCoord[3 * i + 0] = V.x();
+    geoCoord[3 * i + 1] = V.y();
+    geoCoord[3 * i + 2] = V.z();
   }
 }
 

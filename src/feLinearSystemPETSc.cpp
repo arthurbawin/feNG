@@ -208,8 +208,8 @@ void feLinearSystemPETSc::assembleMatrices(feSolution *sol)
       feBilinearForm *f = _formMatrices[eq];
       feCncGeo *cnc = f->getCncGeo();
       int nbColor = cnc->getNbColor();
-      std::vector<int> nbElmPerColor = cnc->getNbElmPerColor();
-      std::vector<std::vector<int> > listElmPerColor = cnc->getListElmPerColor();
+      std::vector<int> &nbElmPerColor = cnc->getNbElmPerColor();
+      std::vector<std::vector<int> > &listElmPerColor = cnc->getListElmPerColor();
       int nbElmC;
       std::vector<int> listElmC;
 
@@ -294,7 +294,7 @@ void feLinearSystemPETSc::assembleMatrices(feSolution *sol)
     // ierr = MatNorm(_A, NORM_FROBENIUS, &normMat); CHKERRABORT(PETSC_COMM_WORLD, ierr);
     // printf("Norme de la matrice : %10.10e\n", normMat);
 
-    feInfo("Done");
+    // feInfo("Done");
     // toc();
     // viewMatrix();
   } // if(recomputeMatrix)
@@ -313,8 +313,8 @@ void feLinearSystemPETSc::assembleResiduals(feSolution *sol)
     feBilinearForm *f = _formResiduals[eq];
     feCncGeo *cnc = f->getCncGeo();
     int nbColor = cnc->getNbColor();
-    std::vector<int> nbElmPerColor = cnc->getNbElmPerColor();
-    std::vector<std::vector<int> > listElmPerColor = cnc->getListElmPerColor();
+    std::vector<int> &nbElmPerColor = cnc->getNbElmPerColor();
+    std::vector<std::vector<int> > &listElmPerColor = cnc->getListElmPerColor();
     int nbElmC;
     std::vector<int> listElmC;
 
@@ -379,7 +379,7 @@ void feLinearSystemPETSc::assembleResiduals(feSolution *sol)
   ierr = VecAssemblyEnd(_res);
   CHKERRABORT(PETSC_COMM_WORLD, ierr);
 
-  feInfo("done");
+  // feInfo("Done");
   // toc();
   // VecView(_res,PETSC_VIEWER_STDOUT_WORLD);
   // double normResidual = 0.0;

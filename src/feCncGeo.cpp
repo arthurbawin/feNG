@@ -8,7 +8,7 @@ void feCncGeo::computeJacobians()
   int nQuad = _space->getNbQuadPoints();
   _J.resize(_nElm * nQuad);
 
-  std::vector<double> geoCoord;
+  std::vector<double> geoCoord(_nNodPerElm*3);
 
   if(_space->getDim() == 1) {
     std::vector<double> j(3, 0.0);
@@ -76,11 +76,6 @@ void feCncGeo::colorElements(int coloringAlgorithm)
 {
   feInfo("Coloring connectivity %s ...", _ID.c_str());
   // tic();
-  // feInfo("Coloring connectivity with %d elm", _nElm);
-  // feInfo("Coloring connectivity with %d node per elm", _nNodPerElm);
-  // feInfo("Coloring connectivity with %d sommets", _nNod);
-
-  
   // Create the node patch :
   // tic();
   int size= *std::max_element(_connecNodes.begin(), _connecNodes.end())+1;
@@ -94,9 +89,6 @@ void feCncGeo::colorElements(int coloringAlgorithm)
     }
   }
 
-  // for(auto pair : _listElmPerNode) {
-  //   _nbElmPerNode[pair.first] = pair.second.size();
-  // }
   // toc();
 
   switch(coloringAlgorithm) {
@@ -151,47 +143,44 @@ void feCncGeo::colorElements(int coloringAlgorithm)
       {
 
         // Create the Elements patch : 
-        std::map<int, std::set<int> > listElmPerElm;
+        int sizeElm = *std::max_element(_connecElem.begin(), _connecElem.end())+1;
+        _nbElmPerElm.resize(sizeElm);
+        _listElmPerElm.resize(sizeElm);
+        std::vector< std::set<int> > listElmPerElm(sizeElm);
         for(int i = 0; i < _nElm; ++i) {
+          int elm = _connecElem[i];
           for(int j = 0; j < _nNodPerElm; ++j) {
             int nds = _connecNodes[i * _nNodPerElm + j];
-            for(int elm : _listElmPerNode[nds]){
-              if(elm != i)
-                listElmPerElm[i].insert(elm);
+            for(int ngb : _listElmPerNode[nds]){
+              if(ngb != i){
+                listElmPerElm[elm].insert(ngb);
+              }
             }
           }
         }
-
-        for(auto pair : listElmPerElm) {
-          _nbElmPerElm[pair.first] = pair.second.size();
-        }
-
         // Convert sets to vectors
         for(int i = 0; i < _nElm; ++i) {
-          std::vector<int> v(listElmPerElm[i].begin(), listElmPerElm[i].end());
-          _listElmPerElm[i] = v;
+          int elm = _connecElem[i];
+          std::vector<int> v(listElmPerElm[elm].begin(), listElmPerElm[elm].end());
+          _nbElmPerElm[elm] = v.size();
+          _listElmPerElm[elm] = v;
         }
 
 
         //Finding the Elm with the most neighbours to asign nb Colors
-        _nbColor=0;
-        for(auto pair : _nbElmPerElm){
-          if(pair.second>_nbColor){
-            _nbColor=pair.second;
-          }
-        }
-
+        _nbColor=*std::max_element(_nbElmPerElm.begin(), _nbElmPerElm.end())+1;
+  
         _elmToColor.resize(_nElm, -1);
         _nbElmPerColor.resize(_nbColor);
         _listElmPerColor.resize(_nbColor, std::vector<int>(0, 0));
-
         for(int iElm = 0; iElm < _nElm; iElm++) {
           if(_elmToColor[iElm] == -1) {
-            std::vector<int> iPatchElm = _listElmPerElm[iElm];
+            int elm = _connecElem[iElm];
+            // feInfo("%d",elm);
+            std::vector<int> iPatchElm = _listElmPerElm[elm];
             std::vector<bool> availableColor(_nbColor, true);
-            for(int i = 0; i < _nbElmPerElm[iElm]; i++) {
-              if(_elmToColor[iPatchElm[i]] != -1 && availableColor[_elmToColor[iPatchElm[i]]] ==
-              true) {
+            for(int i = 0; i < _nbElmPerElm[elm]; i++) {
+              if(_elmToColor[iPatchElm[i]] != -1 && availableColor[_elmToColor[iPatchElm[i]]] == true) {
                 availableColor[_elmToColor[iPatchElm[i]]] = false;
               }
             }

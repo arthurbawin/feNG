@@ -128,6 +128,7 @@ class DC2FSolver : public TimeIntegrator
 {
 protected:
   feSolutionContainer *_solutionContainerBDF1;
+  std::vector<std::vector<double> > _normL2BDF1;
 
 public:
   DC2FSolver(feTolerances tol, feMetaNumber *metaNumber, feLinearSystem *linearSystem,

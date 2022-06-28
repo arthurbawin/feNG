@@ -43,8 +43,8 @@ void feLinearSystemMklPardiso::assembleMatrices(feSolution *sol)
     feBilinearForm *f = _formMatrices[eq];
     feCncGeo *cnc = f->getCncGeo();
     int nbColor = cnc->getNbColor();
-    std::vector<int> nbElmPerColor = cnc->getNbElmPerColor();
-    std::vector<std::vector<int> > listElmPerColor = cnc->getListElmPerColor();
+    std::vector<int> &nbElmPerColor = cnc->getNbElmPerColor();
+    std::vector<std::vector<int> > &listElmPerColor = cnc->getListElmPerColor();
 
     int nbElmC; // nb elm of the same color
     std::vector<int> listElmC; // list elm of the same color;
@@ -134,9 +134,8 @@ void feLinearSystemMklPardiso::assembleResiduals(feSolution *sol)
     feBilinearForm *f = _formResiduals[eq];
     feCncGeo *cnc = f->getCncGeo();
     int nbColor = cnc->getNbColor();
-    std::vector<int> colorElm = cnc->getColorElm();
-    std::vector<int> nbElmPerColor = cnc->getNbElmPerColor();
-    std::vector<std::vector<int> > listElmPerColor = cnc->getListElmPerColor();
+    std::vector<int> &nbElmPerColor = cnc->getNbElmPerColor();
+    std::vector<std::vector<int> > &listElmPerColor = cnc->getListElmPerColor();
     // feInfo("Looping over %d colors", nbColor);
 
     int nbElmC;

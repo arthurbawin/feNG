@@ -29,6 +29,11 @@ public:
       delete[] ddlElms;
     }
 
+    if(ddlColor != NULL) {
+      if(ddlColor[0] != NULL) delete[] ddlColor[0];
+      delete[] ddlColor;
+    }
+
     if(liste != NULL) delete[] liste;
     if(ddl_rngcof != NULL) delete[] ddl_rngcof;
   };
@@ -55,6 +60,7 @@ protected:
   feInt *ddlNumberOfElements = NULL;
   feInt **ddlBiLinearForms = NULL;
   feInt **ddlElms = NULL;
+  feInt **ddlColor = NULL;
   feInt *liste = NULL;
   bool *ddl_rngcof = NULL;
 

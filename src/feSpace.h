@@ -81,9 +81,9 @@ public:
   int getNbElm();
   int getNbNodePerElem();
 
-  std::string getFieldID() { return _fieldID; }
+  const std::string &getFieldID() { return _fieldID; }
   int getFieldTag() { return _fieldTag; }
-  std::string getCncGeoID() { return _cncGeoID; }
+  const std::string &getCncGeoID() { return _cncGeoID; }
   int getCncGeoTag() { return _cncGeoTag; }
   void setCncGeoTag(int tag)
   {

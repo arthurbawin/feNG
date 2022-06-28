@@ -15,6 +15,7 @@ double fePostProc::computeMeasure()
 #pragma omp parallel for private(geoCoord) reduction(+ : meas) schedule(dynamic)
 #endif
   for(int iElm = 0; iElm < nElm; ++iElm) {
+    geoCoord.resize(_cnc->getNbNodePerElem()*3);
     _mesh->getCoord(_intSpace->getCncGeoTag(), iElm, geoCoord);
     for(int k = 0; k < nQuad; ++k) {
       meas += _cnc->getJacobians()[nQuad * iElm + k] * w[k];
@@ -49,6 +50,7 @@ double fePostProc::computeSolutionIntegral(feSolution *sol)
       solution[i] = solVec[adr[i]];
     }
 
+    geoCoord.resize(_cnc->getNbNodePerElem()*3);
     _mesh->getCoord(_intSpace->getCncGeoTag(), iElm, geoCoord);
     for(int k = 0; k < nQuad; ++k) {
       solInt = _intSpace->interpolateFieldAtQuadNode(solution, k);
@@ -73,6 +75,7 @@ double fePostProc::computeFunctionIntegral(feFunction *fun, double t)
 #pragma omp parallel for private(geoCoord, x) reduction(+ : integral) schedule(dynamic)
 #endif
   for(int iElm = 0; iElm < nElm; ++iElm) {
+    geoCoord.resize(_cnc->getNbNodePerElem()*3);
     _mesh->getCoord(_intSpace->getCncGeoTag(), iElm, geoCoord);
     x.resize(3);
     for(int k = 0; k < nQuad; ++k) {
@@ -111,6 +114,7 @@ double fePostProc::computeL2ErrorNorm(feSolution *sol)
       solution[i] = solVec[adr[i]];
     }
 
+    geoCoord.resize(_cnc->getNbNodePerElem()*3);
     _mesh->getCoord(_intSpace->getCncGeoTag(), iElm, geoCoord);
     x.resize(3);
     for(int k = 0; k < nQuad; ++k) {

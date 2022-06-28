@@ -64,9 +64,9 @@ public:
   //                  Rh le résidu perturbé
   //                  h0 la perturbation de la solution
   // ==================================================================
-  double *R0;
-  double *Rh;
-  double h0;
+  double *_R0;
+  double *_Rh;
+  double _h0;
 
   void (feBilinearForm::*ptrComputeMatrix)(feMetaNumber *metaNumber, feMesh *mesh, feSolution *sol,
                                            int numElem);
