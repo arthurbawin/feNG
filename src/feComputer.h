@@ -52,6 +52,8 @@ public:
   double computeH1ErrorNormVec(feSolution *sol);
   double computeSemiH1ErrorNormVec(feSolution *sol);
   double computeNormL2Lambda(feSolution *sol);
+  double computeIntLagrangeMultiplier(feSolution *sol);
+  double computeIntMultiplierNS(feSolution *sol);
 };
 
 #endif
