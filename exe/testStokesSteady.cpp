@@ -16,21 +16,24 @@
 #include "feLinearSystemPETSc.h"
 #include "feExporter.h"
 
-double fSolU(const double t, const std::vector<double> &pos, const std::vector<double> &par) {
+double fSolU(const double t, const std::vector<double> &pos, const std::vector<double> &par)
+{
   double x = pos[0];
   double y = pos[1];
   return 2. * exp(x) * (x - 1.) * (x - 1.) * x * x * (y * y - y) * (2. * y - 1.);
   // return x * x * x * x * y * y * y * y;
 }
 
-double fSolV(const double t, const std::vector<double> &pos, const std::vector<double> &par) {
+double fSolV(const double t, const std::vector<double> &pos, const std::vector<double> &par)
+{
   double x = pos[0];
   double y = pos[1];
   return exp(x) * (x - 1.) * x * (x * x + 3. * x - 2.) * (y * y - 1.) * y * y;
   // return -4. / 5. * x * x * x * y * y * y * y * y;
 }
 
-double fSolP(const double t, const std::vector<double> &pos, const std::vector<double> &par) {
+double fSolP(const double t, const std::vector<double> &pos, const std::vector<double> &par)
+{
   double x = pos[0];
   double y = pos[1];
   return -424. + 156. * exp(1) +
@@ -41,12 +44,14 @@ double fSolP(const double t, const std::vector<double> &pos, const std::vector<d
   // return x * x * y * y;
 }
 
-double fZero(const double t, const std::vector<double> &pos, const std::vector<double> &par) {
+double fZero(const double t, const std::vector<double> &pos, const std::vector<double> &par)
+{
   return 0.0;
 }
 
 void fSource(const double t, const std::vector<double> &pos, const std::vector<double> &par,
-             std::vector<double> &res) {
+             std::vector<double> &res)
+{
   // double rho = par[0];
   double mu = par[1];
   // double nu = mu/rho;
@@ -83,7 +88,8 @@ void fSource(const double t, const std::vector<double> &pos, const std::vector<d
   res[1] = -mu * (-8. / 5. * x * y * y * y * (10 * x * x + 3 * y * y)) + 2 * y * x * x;
 }
 
-int main(int argc, char **argv) {
+int main(int argc, char **argv)
+{
 #ifdef HAVE_PETSC
   petscInitialize(argc, argv);
 #endif
@@ -163,7 +169,8 @@ int main(int argc, char **argv) {
     linearSystem->initialize();
     linearSystem->assembleResiduals(sol);
     linearSystem->assembleMatrices(sol);
-    feTolerances tol{1e-9, 1e-8, 10};
+    // feTolerance {tolDx,tolResidual, maxIter}
+    feTolerances tol{1e-5, 1e-5, 20};
     solveStationary(&normL2_U[2 * iter], tol, metaNumber, linearSystem, formMatrices, formResiduals,
                     sol, norms, mesh);
     linearSystem->finalize();

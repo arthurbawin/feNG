@@ -20,18 +20,21 @@
 #include "feLinearSystemMklPardiso.h"
 #include "feExporter.h"
 
-double fSol(const double t, const std::vector<double> x, const std::vector<double> par) {
+double fSol(const double t, const std::vector<double> x, const std::vector<double> par)
+{
   // return pow(x[0],6);
   return pow(x[0], 3);
 }
 
-double fSource(const double t, const std::vector<double> x, const std::vector<double> par) {
+double fSource(const double t, const std::vector<double> x, const std::vector<double> par)
+{
   double kd = par[0];
   // return kd*30.*pow(x[0],)4;
   return kd * 6 * x[0];
 }
 
-int main(int argc, char **argv) {
+int main(int argc, char **argv)
+{
 #ifdef USING_PETSC
   petscInitialize(argc, argv);
 #endif
@@ -84,7 +87,8 @@ int main(int argc, char **argv) {
       new feLinearSystemPETSc(argc, argv, formMatrices, formResiduals, metaNumber, mesh);
     // feLinearSystemMklPardiso *linearSystem = new feLinearSystemMklPardiso(formMatrices,
     // formResiduals, metaNumber, mesh); linearSystem->initialize();
-    feTolerances tol{1e-9, 1e-8, 20};
+    // feTolerance {tolDx,tolResidual, maxIter}
+    feTolerances tol{1e-5, 1e-5, 20};
     StationarySolver solver(tol, metaNumber, linearSystem, sol, norms, mesh);
     solver.makeSteps(0, fespace);
     normL2[2 * iter] = solver.getNorm(0);

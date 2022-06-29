@@ -37,15 +37,12 @@ void feLinearSystemMklPardiso::assembleMatrices(feSolution *sol)
     feInt nbElems = _mesh->getNbElm(cncGeoTag);
     for(feInt e = 0; e < nbElems; e++) {
       equelm->initialize(_metaNumber, _mesh, sol, e);
-
       equelm->computeMatrix(_metaNumber, _mesh, sol, e);
-
       feInt nRow = equelm->getNiElm();
       std::vector<feInt> Row(equelm->getAdrI().begin(), equelm->getAdrI().end());
       feInt nColumn = equelm->getNjElm();
       std::vector<feInt> Column(equelm->getAdrJ().begin(), equelm->getAdrJ().end());
       double **Ae = equelm->getAe();
-
       crsMklPardiso->matrixAddValues(Ax, nRow, Row.data(), nColumn, Column.data(), Ae);
     }
   }

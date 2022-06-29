@@ -4,7 +4,8 @@
 #include <cmath>
 
 // Get discriminant of the conic
-double discriminant(std::vector<double> &p) {
+double discriminant(std::vector<double> &p)
+{
   double a = p[0];
   double b = p[1] / 2.0;
   double c = p[2];
@@ -12,18 +13,22 @@ double discriminant(std::vector<double> &p) {
 }
 
 // Get radius for an implicit circle
-double imCircle(std::vector<double> &p) {
+double imCircle(std::vector<double> &p)
+{
   double a = p[0];
   double d = p[3];
   double e = p[4];
   double f = p[5];
   double val = (d * d + e * e) / (4.0 * a * a) - f / a;
-  if(val < 0) { printf("In imCircle : Warning : circle radius is imaginary.\n"); }
+  if(val < 0) {
+    printf("In imCircle : Warning : circle radius is imaginary.\n");
+  }
   return sqrt(val);
 }
 
 // Get semi-axes for an implicit ellipse
-void imEllipse(std::vector<double> &p, double *semiA, double *semiB) {
+void imEllipse(std::vector<double> &p, double *semiA, double *semiB)
+{
   double a = p[0];
   double b = p[1] / 2.0;
   double c = p[2];
@@ -33,12 +38,18 @@ void imEllipse(std::vector<double> &p, double *semiA, double *semiB) {
   double q =
     2.0 * (a * f * f + c * d * d + g * b * b - 2.0 * b * d * f - a * c * g) / (b * b - a * c);
   double r = (a - c) * (a - c) + 4.0 * b * b;
-  if(r < 0) { printf("In imEllipse : Warning : r is negative.\n"); }
+  if(r < 0) {
+    printf("In imEllipse : Warning : r is negative.\n");
+  }
 
   r = sqrt(r);
 
-  if(q / (r - (a + c)) < 0) { printf("In imEllipse : Warning : q/(r-(a+c)) is negative.\n"); }
-  if(q / (-r - (a + c)) < 0) { printf("In imEllipse : Warning : q/(-r-(a+c)) is negative.\n"); }
+  if(q / (r - (a + c)) < 0) {
+    printf("In imEllipse : Warning : q/(r-(a+c)) is negative.\n");
+  }
+  if(q / (-r - (a + c)) < 0) {
+    printf("In imEllipse : Warning : q/(-r-(a+c)) is negative.\n");
+  }
   double semi_a = sqrt(q / (r - (a + c))); // major axis
   double semi_b = sqrt(q / (-r - (a + c))); // minor axis
 
@@ -47,7 +58,8 @@ void imEllipse(std::vector<double> &p, double *semiA, double *semiB) {
 }
 
 // Get translation vector from the origin
-void imConicTranslation(std::vector<double> &p, std::vector<double> &t) {
+void imConicTranslation(std::vector<double> &p, std::vector<double> &t)
+{
   double a = p[0];
   double b = p[1] / 2.0;
   double c = p[2];
@@ -61,7 +73,8 @@ void imConicTranslation(std::vector<double> &p, std::vector<double> &t) {
 }
 
 // Translates a conic section given as an implicit equation
-void imConicTranslate(std::vector<double> &p, std::vector<double> &t) {
+void imConicTranslate(std::vector<double> &p, std::vector<double> &t)
+{
   double a = p[0];
   double b = p[1];
   double c = p[2];
@@ -84,13 +97,17 @@ void imConicTranslate(std::vector<double> &p, std::vector<double> &t) {
   p[5] = gt;
 }
 
-double acot(double x) {
-  if(fabs(x) < 1e-14) { printf("In acot : Warning : x = %10.16e - 1/x = %10.16e\n", x, 1. / x); }
+double acot(double x)
+{
+  if(fabs(x) < 1e-14) {
+    printf("In acot : Warning : x = %10.16e - 1/x = %10.16e\n", x, 1. / x);
+  }
   return atan(1. / x);
 }
 
 // Get rotation matrix
-void imConicRotation(std::vector<double> &p, std::vector<double> &R) {
+void imConicRotation(std::vector<double> &p, std::vector<double> &R)
+{
   double a = p[0];
   double b = p[1];
   double c = p[2];
@@ -131,7 +148,8 @@ void imConicRotation(std::vector<double> &p, std::vector<double> &R) {
 }
 
 void getExplicitEllipse(std::vector<double> &p, double *semiA, double *semiB,
-                        std::vector<double> &R, std::vector<double> &t) {
+                        std::vector<double> &R, std::vector<double> &t)
+{
   double a = p[0];
   double b = p[1] / 2.0;
   double c = p[2];
@@ -182,7 +200,8 @@ void getExplicitEllipse(std::vector<double> &p, double *semiA, double *semiB,
 */
 
 void getEllipsePoints(double a, double b, double c, double xC, double yC, std::vector<double> &x,
-                      std::vector<double> &y) {
+                      std::vector<double> &y)
+{
   std::vector<double> p = {a, b, c, 0., 0., -1.};
   std::vector<double> t(2, 0.);
   std::vector<double> R(4, 0.);
