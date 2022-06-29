@@ -9,23 +9,24 @@
 #include "feNorm.h"
 #include "feSpace.h"
 #include "feExporter.h"
+#include "feComputer.h"
 
 typedef struct feTol {
   double tolDx;
   double tolResidual;
   double maxIter;
-  // int maxIterWithoutRecompute = 5;
-  // double ratioUntilRecomputing= 1e-2;
+  double resRatio;
+  double iterBeforeRecompute;
 } feTolerances;
 
 /* Supported time integrators schemes */
-typedef enum { STATIONARY, BDF1, BDF2, DC2F, DC3, DC3F } timeIntegratorScheme;
+typedef enum { STATIONARY, BDF1, BDF2, DC2F, DC3, DC3F, DC4, DC4F , DC5, DC5F, DC3F_iniExacte, DC4F_iniExacte, DC5F_iniExacte} timeIntegratorScheme;
 
 // Deprecated ?
 void solveStationary(double *normL2, feTolerances tol, feMetaNumber *metaNumber,
                      feLinearSystem *linearSystem, std::vector<feBilinearForm *> &formMatrices,
                      std::vector<feBilinearForm *> &formResiduals, feSolution *sol,
-                     std::vector<feNorm *> &norms, feMesh *mesh);
+                     std::vector<feComputer *> &comput, feMesh *mesh);
 
 class TimeIntegrator
 {
@@ -34,7 +35,7 @@ protected:
   feMetaNumber *_metaNumber;
   feLinearSystem *_linearSystem;
   feSolution *_sol;
-  std::vector<feNorm *> &_norms;
+  std::vector<feComputer *> &_comput;
   feMesh *_mesh;
 
   feExportData _exportData;
@@ -57,10 +58,10 @@ protected:
 
 public:
   TimeIntegrator(feTolerances tol, feMetaNumber *metaNumber, feLinearSystem *linearSystem,
-                 feSolution *sol, std::vector<feNorm *> &norms, feMesh *mesh,
+                 feSolution *sol, std::vector<feComputer *> &comput, feMesh *mesh,
                  feExportData exportData, double t0 = 0., double tEnd = 0., int nTimeSteps = 1,
                  std::string CodeIni = "")
-    : _tol(tol), _metaNumber(metaNumber), _linearSystem(linearSystem), _sol(sol), _norms(norms),
+    : _tol(tol), _metaNumber(metaNumber), _linearSystem(linearSystem), _sol(sol), _comput(comput),
       _mesh(mesh), _exportData(exportData), _t0(t0), _tEnd(tEnd), _nTimeSteps(nTimeSteps),
       _tCurrent(t0), _currentStep(0), _CodeIni(CodeIni)
   {
@@ -87,7 +88,7 @@ class StationarySolver : public TimeIntegrator
 protected:
 public:
   StationarySolver(feTolerances tol, feMetaNumber *metaNumber, feLinearSystem *linearSystem,
-                   feSolution *sol, std::vector<feNorm *> &norms, feMesh *mesh,
+                   feSolution *sol, std::vector<feComputer *> &comput, feMesh *mesh,
                    feExportData exportData);
   virtual ~StationarySolver() {}
 
@@ -101,8 +102,8 @@ class BDF2Solver : public TimeIntegrator
 protected:
 public:
   BDF2Solver(feTolerances tol, feMetaNumber *metaNumber, feLinearSystem *linearSystem,
-             feSolution *sol, std::vector<feNorm *> &norms, feMesh *mesh, feExportData exportData,
-             double t0, double tEnd, int nTimeSteps, std::string CodeIni);
+             feSolution *sol, std::vector<feComputer *> &comput, feMesh *mesh,
+             feExportData exportData, double t0, double tEnd, int nTimeSteps, std::string CodeIni);
   virtual ~BDF2Solver() {}
 
   std::vector<double> &getNorm(int iNorm) { return _normL2[iNorm]; };
@@ -115,8 +116,8 @@ class BDF1Solver : public TimeIntegrator
 protected:
 public:
   BDF1Solver(feTolerances tol, feMetaNumber *metaNumber, feLinearSystem *linearSystem,
-             feSolution *sol, std::vector<feNorm *> &norms, feMesh *mesh, feExportData exportData,
-             double t0, double tEnd, int nTimeSteps);
+             feSolution *sol, std::vector<feComputer *> &comput, feMesh *mesh,
+             feExportData exportData, double t0, double tEnd, int nTimeSteps);
   virtual ~BDF1Solver() {}
 
   std::vector<double> &getNorm(int iNorm) { return _normL2[iNorm]; };
@@ -128,12 +129,11 @@ class DC2FSolver : public TimeIntegrator
 {
 protected:
   feSolutionContainer *_solutionContainerBDF1;
-  std::vector<std::vector<double> > _normL2BDF1;
 
 public:
   DC2FSolver(feTolerances tol, feMetaNumber *metaNumber, feLinearSystem *linearSystem,
-             feSolution *sol, std::vector<feNorm *> &norms, feMesh *mesh, feExportData exportData,
-             double t0, double tEnd, int nTimeSteps);
+             feSolution *sol, std::vector<feComputer *> &comput, feMesh *mesh,
+             feExportData exportData, double t0, double tEnd, int nTimeSteps);
   virtual ~DC2FSolver() { delete _solutionContainerBDF1; }
 
   std::vector<double> &getNorm(int iNorm) { return _normL2[iNorm]; };
@@ -149,12 +149,130 @@ protected:
 
 public:
   DC3FSolver(feTolerances tol, feMetaNumber *metaNumber, feLinearSystem *linearSystem,
-             feSolution *sol, std::vector<feNorm *> &norms, feMesh *mesh, feExportData exportData,
-             double t0, double tEnd, int nTimeSteps);
+             feSolution *sol, std::vector<feComputer *> &comput, feMesh *mesh,
+             feExportData exportData, double t0, double tEnd, int nTimeSteps);
   virtual ~DC3FSolver()
   {
     delete _solutionContainerBDF1;
     delete _solutionContainerDC2F;
+  }
+
+  std::vector<double> &getNorm(int iNorm) { return _normL2[iNorm]; };
+
+  virtual feStatus makeSteps(int nSteps);
+};
+
+class DC3FSolver_iniExacte : public TimeIntegrator
+{
+protected:
+  feSolutionContainer *_solutionContainerBDF1;
+  feSolutionContainer *_solutionContainerDC2F;
+
+public:
+  DC3FSolver_iniExacte(feTolerances tol, feMetaNumber *metaNumber, feLinearSystem *linearSystem,
+             feSolution *sol, std::vector<feComputer *> &comput, feMesh *mesh,
+             feExportData exportData, double t0, double tEnd, int nTimeSteps);
+  virtual ~DC3FSolver_iniExacte()
+  {
+    delete _solutionContainerBDF1;
+    delete _solutionContainerDC2F;
+  }
+
+  std::vector<double> &getNorm(int iNorm) { return _normL2[iNorm]; };
+
+  virtual feStatus makeSteps(int nSteps);
+};
+
+
+class DC4FSolver : public TimeIntegrator
+{
+protected:
+  feSolutionContainer *_solutionContainerBDF1;
+  feSolutionContainer *_solutionContainerDC2F;
+  feSolutionContainer *_solutionContainerDC3F;
+
+public:
+  DC4FSolver(feTolerances tol, feMetaNumber *metaNumber, feLinearSystem *linearSystem,
+             feSolution *sol, std::vector<feComputer *> &comput, feMesh *mesh,
+             feExportData exportData, double t0, double tEnd, int nTimeSteps);
+  virtual ~DC4FSolver()
+  {
+    delete _solutionContainerBDF1;
+    delete _solutionContainerDC2F;
+    delete _solutionContainerDC3F;
+  }
+
+  std::vector<double> &getNorm(int iNorm) { return _normL2[iNorm]; };
+
+  virtual feStatus makeSteps(int nSteps);
+};
+
+class DC4FSolver_iniExacte : public TimeIntegrator
+{
+protected:
+  feSolutionContainer *_solutionContainerBDF1;
+  feSolutionContainer *_solutionContainerDC2F;
+  feSolutionContainer *_solutionContainerDC3F;
+
+public:
+  DC4FSolver_iniExacte(feTolerances tol, feMetaNumber *metaNumber, feLinearSystem *linearSystem,
+             feSolution *sol, std::vector<feComputer *> &comput, feMesh *mesh,
+             feExportData exportData, double t0, double tEnd, int nTimeSteps);
+  virtual ~DC4FSolver_iniExacte()
+  {
+    delete _solutionContainerBDF1;
+    delete _solutionContainerDC2F;
+    delete _solutionContainerDC3F;
+  }
+
+  std::vector<double> &getNorm(int iNorm) { return _normL2[iNorm]; };
+
+  virtual feStatus makeSteps(int nSteps);
+};
+
+class DC5FSolver : public TimeIntegrator
+{
+protected:
+  feSolutionContainer *_solutionContainerBDF1;
+  feSolutionContainer *_solutionContainerDC2F;
+  feSolutionContainer *_solutionContainerDC3F;
+  feSolutionContainer *_solutionContainerDC4F;
+
+public:
+  DC5FSolver(feTolerances tol, feMetaNumber *metaNumber, feLinearSystem *linearSystem,
+             feSolution *sol, std::vector<feComputer *> &comput, feMesh *mesh,
+             feExportData exportData, double t0, double tEnd, int nTimeSteps);
+  virtual ~DC5FSolver()
+  {
+    delete _solutionContainerBDF1;
+    delete _solutionContainerDC2F;
+    delete _solutionContainerDC3F;
+    delete _solutionContainerDC4F;
+  }
+
+  std::vector<double> &getNorm(int iNorm) { return _normL2[iNorm]; };
+
+  virtual feStatus makeSteps(int nSteps);
+};
+
+class DC5FSolver_iniExacte : public TimeIntegrator
+{
+protected:
+  feSolutionContainer *_solutionContainerBDF1;
+  feSolutionContainer *_solutionContainerDC2F;
+  feSolutionContainer *_solutionContainerDC3F;
+  feSolutionContainer *_solutionContainerDC4F;
+
+public:
+  DC5FSolver_iniExacte(feTolerances tol, feMetaNumber *metaNumber, feLinearSystem *linearSystem,
+             feSolution *sol, std::vector<feComputer *> &comput, feMesh *mesh,
+             feExportData exportData, double t0, double tEnd, int nTimeSteps);
+  virtual ~DC5FSolver_iniExacte()
+  {
+    delete _solutionContainerBDF1;
+    delete _solutionContainerDC2F;
+    delete _solutionContainerDC3F;
+    delete _solutionContainerDC4F;
   }
 
   std::vector<double> &getNorm(int iNorm) { return _normL2[iNorm]; };
@@ -170,7 +288,7 @@ protected:
 
 public:
   DC3FSolver_centered(feTolerances tol, feMetaNumber *metaNumber, feLinearSystem *linearSystem,
-                      feSolution *sol, std::vector<feNorm *> &norms, feMesh *mesh,
+                      feSolution *sol, std::vector<feComputer *> &comput, feMesh *mesh,
                       feExportData exportData, double t0, double tEnd, int nTimeSteps);
   virtual ~DC3FSolver_centered()
   {
@@ -191,8 +309,8 @@ protected:
 
 public:
   DC3Solver(feTolerances tol, feMetaNumber *metaNumber, feLinearSystem *linearSystem,
-            feSolution *sol, std::vector<feNorm *> &norms, feMesh *mesh, feExportData exportData,
-            double t0, double tEnd, int nTimeSteps, std::string CodeIni);
+            feSolution *sol, std::vector<feComputer *> &comput, feMesh *mesh,
+            feExportData exportData, double t0, double tEnd, int nTimeSteps, std::string CodeIni);
   virtual ~DC3Solver()
   {
     delete _solutionContainerBDF2;
@@ -205,10 +323,60 @@ public:
   virtual feStatus makeSteps(int nSteps);
 };
 
+class DC4Solver : public TimeIntegrator
+{
+protected:
+  feSolutionContainer *_solutionContainerBDF2;
+  feSolutionContainer *_solutionContainerDC3F;
+  feSolutionContainer *_solutionContainerDC3;
+
+public:
+  DC4Solver(feTolerances tol, feMetaNumber *metaNumber, feLinearSystem *linearSystem,
+            feSolution *sol, std::vector<feComputer *> &comput, feMesh *mesh,
+            feExportData exportData, double t0, double tEnd, int nTimeSteps, std::string CodeIni);
+  virtual ~DC4Solver()
+  {
+    delete _solutionContainerBDF2;
+    delete _solutionContainerDC3F;
+    delete _solutionContainerDC3;
+  }
+
+  std::vector<double> &getNorm(int iNorm) { return _normL2[iNorm]; };
+  std::vector<double> &getInt(int iNorm) { return _normL2[iNorm]; };
+
+  virtual feStatus makeSteps(int nSteps);
+};
+
+class DC5Solver : public TimeIntegrator
+{
+protected:
+  feSolutionContainer *_solutionContainerBDF2;
+  feSolutionContainer *_solutionContainerDC3F;
+  feSolutionContainer *_solutionContainerDC3;
+  feSolutionContainer *_solutionContainerDC4;
+
+public:
+  DC5Solver(feTolerances tol, feMetaNumber *metaNumber, feLinearSystem *linearSystem,
+            feSolution *sol, std::vector<feComputer *> &comput, feMesh *mesh,
+            feExportData exportData, double t0, double tEnd, int nTimeSteps, std::string CodeIni);
+  virtual ~DC5Solver()
+  {
+    delete _solutionContainerBDF2;
+    delete _solutionContainerDC3F;
+    delete _solutionContainerDC3;
+    delete _solutionContainerDC4;
+  }
+
+  std::vector<double> &getNorm(int iNorm) { return _normL2[iNorm]; };
+  std::vector<double> &getInt(int iNorm) { return _normL2[iNorm]; };
+
+  virtual feStatus makeSteps(int nSteps);
+};
+
 feStatus createTimeIntegrator(TimeIntegrator *&solver, timeIntegratorScheme scheme,
                               feTolerances tolerances, feLinearSystem *system,
                               feMetaNumber *metaNumber, feSolution *solution, feMesh *mesh,
-                              std::vector<feNorm *> &norms, feExportData exportData = {},
+                              std::vector<feComputer *> &comput, feExportData exportData = {},
                               double tBegin = 0., double tEnd = 0., int nTimeSteps = 1,
                               std::string initializationCode = "");
 

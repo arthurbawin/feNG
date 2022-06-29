@@ -107,8 +107,8 @@ int main(int argc, char **argv)
 
   // Define post-processin tools to compute norms and whatnot (norms will be replaced by
   // fePostProc)
-  feNorm normU(uDomaine, &mesh, degreeQuadrature, funSol);
-  std::vector<feNorm *> norms = {&normU};
+  feComputer *normU = new feComputer(uDomaine, &mesh, &metaNumber, "L2Norm_1Field", funSol);
+  std::vector<feComputer *> norms = {normU};
   // Create an exporter structure to write the solution for visualization. Currently the only
   // supported format for visualization is VTK.
   feExporter *exporter;

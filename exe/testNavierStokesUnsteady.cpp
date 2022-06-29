@@ -96,7 +96,8 @@ int main(int argc, char **argv) {
   std::vector<int> nElm(nIter, 0);
 
   for(int iter = 0; iter < nIter; ++iter) {    
-    std::string meshName = "../data/Convergence/squarePression" + std::to_string(iter+1) + ".msh";
+    std::string meshName = "../data/Convergence/squarePression4.msh";
+    // std::string meshName = "../data/Convergence/squarePression" + std::to_string(iter+1) + ".msh";
     // std::string meshName = "../data/Convergence/squareNS" + std::to_string(iter + 1) + ".msh";
     // std::string meshName = "../data/Convergence/squareTaylor" + std::to_string(iter+1) + ".msh";
 
@@ -140,10 +141,10 @@ int main(int argc, char **argv) {
     feCheck(createLinearSystem(system, PETSC, spaces, {&NS2D}, &metaNumber, &mesh, argc, argv));
 
     //Norm
-    feNorm normU(U_surface, &mesh, degreeQuadrature, funSolU);
-    feNorm normV(V_surface, &mesh, degreeQuadrature, funSolV);
-    feNorm normP(P_surface, &mesh, degreeQuadrature, funSolP);
-    std::vector<feNorm *> norms = {&normU, &normV, &normP};
+    feComputer normU(U_surface, &mesh, &metaNumber, "L2Norm_1Field", funSolU);
+    feComputer normV(V_surface, &mesh, &metaNumber, "L2Norm_1Field", funSolV);
+    feComputer normP(P_surface, &mesh, &metaNumber, "L2Norm_1Field", funSolP);
+    std::vector<feComputer *> norms = {&normU, &normV, &normP};
 
     //Exporter
     feExporter *exporter;
@@ -154,10 +155,10 @@ int main(int argc, char **argv) {
 
     //Resolution
     TimeIntegrator *solver;
-    feTolerances tol{1e-9, 1e-8, 100};
+    feTolerances tol{1e-5, 1e-5, 100};
     double t0 = 0.;
     double t1 = 1;
-    int nTimeSteps = 10*pow(2,iter);
+    int nTimeSteps = 10*pow(2,iter+3);
     // std::string CodeIni = "BDF1/DCF";
     std::string CodeIni = " ";
     feCheck(createTimeIntegrator(solver, BDF2, tol, system, &metaNumber, &sol, &mesh, norms, exportData, t0, t1, nTimeSteps, CodeIni));

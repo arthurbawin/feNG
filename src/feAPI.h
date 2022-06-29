@@ -22,9 +22,9 @@
 #include "feMetric.h"
 #include "feCurvedAdapt.h"
 #include "feAdaptMesh.h"
-#include "fePostProc.h"
 #include "feNorm.h"
-//#include "feComputer.h"
+#include "feComputer.h"
+#include "fePostProc.h"
 
 #if defined(HAVE_OMP)
 #include "omp.h"

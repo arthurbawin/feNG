@@ -102,8 +102,8 @@ int main(int argc, char **argv)
 
   // Define post-processin tools to compute norms and whatnot (norms will be replaced by
   // fePostProc)
-  feNorm normU(uDomaine, &mesh, degreeQuadrature, funSol);
-  std::vector<feNorm *> norms = {&normU};
+  feComputer normU(uDomaine, &mesh, &metaNumber, "L2Norm_1Field", funSol);
+  std::vector<feComputer *> norms = {&normU};
   // Create an exporter structure to write the solution for visualization. Currently the only
   // supported format for visualization is VTK.
   feExporter *exporter;
@@ -120,7 +120,7 @@ int main(int argc, char **argv)
   // according to the exportData structure. The linear system is assembled and solved in the
   // "makeSteps()" call.
   TimeIntegrator *solver;
-  feTolerances tol{1e-9, 1e-8, 3};
+  feTolerances tol{1e-9, 1e-8, 3, 0, 0};
   feCheck(createTimeIntegrator(solver, STATIONARY, tol, system, &metaNumber, &sol, &mesh, norms,
                                exportData));
   feCheck(solver->makeSteps(0));

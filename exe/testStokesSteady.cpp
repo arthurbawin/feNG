@@ -141,10 +141,10 @@ int main(int argc, char **argv) {
     feCheck(createLinearSystem(system, PETSC, spaces, {&stokes2D}, &metaNumber, &mesh, argc, argv));
 
     //Norms
-    feNorm normU(U_surface, &mesh, degreeQuadrature, funSolU);
-    feNorm normV(V_surface, &mesh, degreeQuadrature, funSolV);
-    feNorm normP(P_surface, &mesh, degreeQuadrature, funSolP);
-    std::vector<feNorm *> norms = {&normU, &normV, &normP};
+    feComputer normU(U_surface, &mesh, &metaNumber, "L2Norm_1Field", funSolU);
+    feComputer normV(V_surface, &mesh, &metaNumber, "L2Norm_1Field", funSolV);
+    feComputer normP(P_surface, &mesh, &metaNumber, "L2Norm_1Field", funSolP);
+    std::vector<feComputer *> norms = {&normU, &normV, &normP};
 
     //Exporter
     feExporter *exporter;

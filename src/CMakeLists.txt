@@ -73,6 +73,7 @@ set(feNG_SRC
     feBilinearForm.cpp
     feCncGeo.cpp
     feCompressedRowStorage.cpp
+    feComputer.cpp
     feCurvedAdapt.cpp
     feExporter.cpp
     feLinearSystem.cpp
@@ -116,6 +117,7 @@ set(feNG_API
     feBilinearForm.h
     feCncGeo.h
     feCompressedRowStorage.h
+    feComputer.h
     feCurvedAdapt.h
     # feEdge.h feElement.h
     feExporter.h
