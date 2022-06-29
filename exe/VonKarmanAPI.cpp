@@ -37,7 +37,7 @@ double fSolP(const double t, const std::vector<double> &pos, const std::vector<d
 
 double fZero(const double t, const std::vector<double> &pos, const std::vector<double> &par)
 {
-  return 0.0;
+  return 0.01;
 }
 
 int main(int argc, char **argv)
@@ -51,8 +51,8 @@ int main(int argc, char **argv)
   TT.resize(nIter);
   for(int iter = 0; iter < nIter; ++iter) {
     // Set the default parameters.
-    // const char *meshFile ="../../data/VonKarman/vonKarman1.msh";
-    const char *meshFile = "../../data/VonKarman/test.msh";
+    const char *meshFile ="../../data/VonKarman/vonKarman1_V3.msh";
+    // const char *meshFile = "../../data/VonKarman/test.msh";
     int verbosity = 2;
     int order = 2;
     int degreeQuadrature = 5;
@@ -157,8 +157,9 @@ int main(int argc, char **argv)
     // createLinearSystem(system, PETSC, {&NS2D, &weakBC_UCylinder, &weakBC_VCylinder}, &metaNumber,
     // &mesh, argc, argv));
 
+    feComputer *Compute_intLu = new feComputer(Lu_cylinder, &mesh, &metaNumber, "L2Norm_1Field");
     feComputer *Compute_intLv = new feComputer(Lv_cylinder, &mesh, &metaNumber, "L2Norm_1Field");
-    std::vector<feComputer *> comput = {Compute_intLv};
+    std::vector<feComputer *> comput = {Compute_intLu,  Compute_intLv};
 
     // Create an exporter structure to write the solution for visualization. Currently the only
     // supported format for visualization is VTK.
@@ -176,22 +177,27 @@ int main(int argc, char **argv)
     // "makeSteps()" call.
     TimeIntegrator *solver;
     double t0 = 0.;
-    double t1 = 20.;
-    int nTimeSteps = 2 * pow(2, iter);
+    double t1 = 60.;
+    int nTimeSteps = 60 * pow(2, iter);
     TT[iter] = nTimeSteps;
-    feTolerances tol{1e-5, 1e-5, 5};
+    feTolerances tol{1e-5, 1e-5, 10};
+    tic();
+    std::string CodeIni = "BDF1/DCF";
     feCheck(createTimeIntegrator(solver, BDF2, tol, system, &metaNumber, &sol, &mesh, comput,
-                                 exportData, t0, t1, nTimeSteps));
+                                 exportData, t0, t1, nTimeSteps, CodeIni));
     feCheck(solver->makeSteps(nTimeSteps));
+    toc();
     // std::vector<double> &normLu = solver->getNorm(0);
+    std::vector<double> &normLu = Compute_intLu->getResult();
     std::vector<double> &normLv = Compute_intLv->getResult();
-    std::cout << "norm Lv" << normLv[2] << std::endl;
+    // std::cout << "norm Lv" << normLv[2] << std::endl;
+    // std::cout << "norm Lv" << normLv[2] << std::endl;
 
-    // std::cout << "Int LU" << std::endl;
-    // for(int i = 0; i < normLu.size(); i++) { std::cout << normLu[i] << std::endl; }
+    std::cout << "Int LU" << std::endl;
+    for(int i = 0; i < normLu.size(); i++) { std::cout << normLu[i] << std::endl; }
 
-    // std::cout << "Int LV" << std::endl;
-    // for(int i = 0; i < normLu.size(); i++) { std::cout << normLv[i] << std::endl; }
+    std::cout << "Int LV" << std::endl;
+    for(int i = 0; i < normLu.size(); i++) { std::cout << normLv[i] << std::endl; }
 
     // intL_u[2 * iter] = *std::max_element(normLu.begin(), normLu.end());
     // intL_v[2 * iter] = *std::max_element(normLv.begin(), normLv.end());
