@@ -948,7 +948,7 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, bool curved, bool reversed,
         input >> entityDim >> entityTag >> elemType >> numElementsInBlock;
 
         std::pair<int, int> p = {entityDim, entityTag};
-        bool printNodeWarning = true;
+        bool printNodeWarning = false;
         _entities[p].nElm = numElementsInBlock;
         // Element connectivity : there may be gaps in Gmsh's element numbering.
         // We use a serial numbering instead (countElems).
@@ -1136,6 +1136,7 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, bool curved, bool reversed,
         } // switch(elemType)
 
         std::map<int, int>::const_iterator it;
+        int pointcount = 0;
         for(int iElm = 0; iElm < numElementsInBlock; ++iElm) {
           // int nElemNodes = nodes_of_gmsh_element[elemType-1];
           int nElemNodes = _entities[p].nNodePerElem;
@@ -1383,20 +1384,34 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, bool curved, bool reversed,
             case 15: // 1-node point
             {
               // We only allow a geometric Point to have a single node
-              if(_entities[p].nElm == 1) {
-                _nNodesWithNoPhysical++;
-                if(printNodeWarning) {
-                  feWarning(
-                    "More than one node are present in geometric entity (dim = %d, gmshTag = %d). "
-                    "Only the first node was added, the others were discarded.",
-                    _entities[p].dim, _entities[p].tagGmsh);
-                  printNodeWarning = false;
-                }
-              } else {
+              if(!printNodeWarning) {
                 _entities[p].nElm = 1;
                 _entities[p].connecElem[0] = countElems++;
                 _entities[p].connecNodes[0] = elemNodes[0];
+                printNodeWarning = true;
+              } else{
+                _nNodesWithNoPhysical++;
+                feWarning(
+                  "More than one node are present in geometric entity (dim = %d, gmshTag = %d). "
+                  "Only the first node was added, the others were discarded.",
+                  _entities[p].dim, _entities[p].tagGmsh);
               }
+
+              // // We only allow a geometric Point to have a single node
+              // if(_entities[p].nElm == 1) {
+              //   _nNodesWithNoPhysical++;
+              //   if(printNodeWarning) {
+              //     feWarning(
+              //       "More than one node are present in geometric entity (dim = %d, gmshTag = %d). "
+              //       "Only the first node was added, the others were discarded.",
+              //       _entities[p].dim, _entities[p].tagGmsh);
+              //     printNodeWarning = false;
+              //   }
+              // } else {
+              //   _entities[p].nElm = 1;
+              //   _entities[p].connecElem[0] = countElems++;
+              //   _entities[p].connecNodes[0] = elemNodes[0];
+              // }
               break;
             }
             default: // any other element
