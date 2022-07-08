@@ -1160,7 +1160,9 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, bool curved, bool reversed,
             elemNodes[j] =
               it->second; // The node number (0...nNode) is used to create the connectivity
             /* Add the raw node number to the global connectivity table */
-            if(entityDim == 1) {
+            if(entityDim == 0){
+              // Skip ?
+            } else if(entityDim == 1) {
               _globalCurvesNodeConnectivity.push_back(ph1);
             } else if(entityDim == 2) {
               _globalSurfacesNodeConnectivity.push_back(ph1);
@@ -1236,8 +1238,9 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, bool curved, bool reversed,
                 }
 
                 /* Add a perturbation on the high-order nodes */
-                bool addPerturbation = true;
+                bool addPerturbation = false;
                 if(addPerturbation) {
+                feWarning(" ======= !!! Adding a perturbation to the curved mesh !!! ======= ");
                   for(int j = 0; j < 3; ++j) {
                     Vertex *v0 = &_vertices[_entities[p].connecNodes[nElemNodes * iElm + j]];
                     Vertex *vMid = &_vertices[_entities[p].connecNodes[nElemNodes * iElm + j + 3]];
