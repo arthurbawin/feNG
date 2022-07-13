@@ -1210,17 +1210,17 @@ void feSysElm_2D_Diffusion::computeBe(std::vector<double> &Ja, int numElem,
       double dsdx = -dxdr[1] / J;
       double dsdy = dxdr[0] / J;
 
-#if defined(HAVE_OMP)
+// #if defined(HAVE_OMP)
       dudx = intSpace[_idU]->interpolateFieldAtQuadNode_rDerivative(sol, k) * drdx +
              intSpace[_idU]->interpolateFieldAtQuadNode_sDerivative(sol, k) * dsdx;
       dudy = intSpace[_idU]->interpolateFieldAtQuadNode_rDerivative(sol, k) * drdy +
              intSpace[_idU]->interpolateFieldAtQuadNode_sDerivative(sol, k) * dsdy;
-#else
-      dudx = intSpace[_idU]->interpolateSolutionAtQuadNode_rDerivative(k) * drdx +
-             intSpace[_idU]->interpolateSolutionAtQuadNode_sDerivative(k) * dsdx;
-      dudy = intSpace[_idU]->interpolateSolutionAtQuadNode_rDerivative(k) * drdy +
-             intSpace[_idU]->interpolateSolutionAtQuadNode_sDerivative(k) * dsdy;
-#endif
+// #else
+//       dudx = intSpace[_idU]->interpolateSolutionAtQuadNode_rDerivative(k) * drdx +
+//              intSpace[_idU]->interpolateSolutionAtQuadNode_sDerivative(k) * dsdx;
+//       dudy = intSpace[_idU]->interpolateSolutionAtQuadNode_rDerivative(k) * drdy +
+//              intSpace[_idU]->interpolateSolutionAtQuadNode_sDerivative(k) * dsdy;
+// #endif
 
       // printf("Elm : %d - dudy : %f \n",numElem,dudy);
 
@@ -1236,8 +1236,10 @@ void feSysElm_2D_Diffusion::computeBe(std::vector<double> &Ja, int numElem,
         // }
       }
     } else {
-      dudx = intSpace[_idU]->interpolateSolutionAtQuadNode_xDerivative(numElem, k);
-      dudy = intSpace[_idU]->interpolateSolutionAtQuadNode_yDerivative(numElem, k);
+      // dudx = intSpace[_idU]->interpolateSolutionAtQuadNode_xDerivative(numElem, k);
+      // dudy = intSpace[_idU]->interpolateSolutionAtQuadNode_yDerivative(numElem, k);
+      dudx = intSpace[_idU]->interpolateFieldAtQuadNode_xDerivative(sol, numElem, k);
+      dudy = intSpace[_idU]->interpolateFieldAtQuadNode_yDerivative(sol, numElem, k);
 
       for(int i = 0; i < nFunctions; ++i) {
         _feUdx[i] = intSpace[_idU]->getdGlobalFunctiondxAtQuadNode(numElem, i, k);

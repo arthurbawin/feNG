@@ -494,6 +494,32 @@ double feSpace::interpolateFieldAtQuadNode_sDerivative(std::vector<double> field
   return res;
 }
 
+double feSpace::interpolateFieldAtQuadNode_xDerivative(std::vector<double> field, int iElm, int iNode)
+{
+  double res = 0.0;
+  if(field.size() != (unsigned)_nFunctions) {
+    printf(" In feSpace::interpolateFieldAtQuadNode : Erreur - Nombre de valeurs nodales (%d) non "
+           "compatible avec le nombre d'interpolants de l'espace (%d).\n",
+           field.size(), (unsigned)_nFunctions);
+    return res;
+  }
+  for(int i = 0; i < _nFunctions; ++i) res += field[i] * _dLdxglob[iElm][_nFunctions * iNode + i];
+  return res;
+}
+
+double feSpace::interpolateFieldAtQuadNode_yDerivative(std::vector<double> field, int iElm, int iNode)
+{
+  double res = 0.0;
+  if(field.size() != (unsigned)_nFunctions) {
+    printf(" In feSpace::interpolateFieldAtQuadNode : Erreur - Nombre de valeurs nodales (%d) non "
+           "compatible avec le nombre d'interpolants de l'espace (%d).\n",
+           field.size(), (unsigned)_nFunctions);
+    return res;
+  }
+  for(int i = 0; i < _nFunctions; ++i) res += field[i] * _dLdyglob[iElm][_nFunctions * iNode + i];
+  return res;
+}
+
 void feSpace::interpolateVectorField(std::vector<double> field, double r[3],
                                      std::vector<double> &res)
 {

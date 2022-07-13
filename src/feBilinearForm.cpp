@@ -224,8 +224,8 @@ void feBilinearForm::initialize(feMetaNumber *metaNumber, feMesh *mesh, feSoluti
   for(feSpace *fS : _intSpace) {
     fS->initializeAddressingVector(metaNumber->getNumbering(fS->getFieldID()), numElem, _adr);
     fS->initializeAddressingVector(metaNumber->getNumbering(fS->getFieldID()), numElem);
-    // fS->initializeSolution(sol);
-    // fS->initializeSolutionDot(sol);
+    fS->initializeSolution(sol);
+    fS->initializeSolutionDot(sol);
   }
 
   _sol.resize(_adr.size());

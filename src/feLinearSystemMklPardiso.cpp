@@ -156,7 +156,7 @@ void feLinearSystemMklPardiso::assembleResiduals(feSolution *sol)
       double *Be;
 
       #if defined(HAVE_OMP)
-      #pragma omp parallel for private(numThread, elm, eqt, nRow, Be, f)
+      #pragma omp parallel for private(numThread, elm, eqt, nRow, Be, f) 
       #endif
       for(int iElm = 0; iElm < nbElmC; ++iElm) {
 #if defined(HAVE_OMP)

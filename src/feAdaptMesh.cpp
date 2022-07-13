@@ -175,13 +175,11 @@ void createAnisoMesh(feMetric *metric, feMetricOptions metricOptions)
 */
 void createCurvedMesh(feFunction *solExact, feMetaNumber *metaNumber, feSolution *sol,
                       feSpace *intSpace, feRecovery *recovery, feMetric *metric,
-                      feMetricOptions metricOptions)
+                      feMetricOptions metricOptions, int onlyGenerateVertices)
 {
 #if defined(HAVE_GMSH)
   // if(metricOptions.isGmshModelReady){
   std::vector<double> pts;
-  std::string modelForMetric = metricOptions.gmshModel;
-  std::string modelForMesh = "adapt";
   int faceTag = 0;
   activeRecovery = recovery;
   activeIntSpace = intSpace;
@@ -189,25 +187,54 @@ void createCurvedMesh(feFunction *solExact, feMetaNumber *metaNumber, feSolution
   activeSolution = sol;
   exactSolution = solExact;
 
-  gmsh::model::add(modelForMesh);
-  gmsh::model::setCurrent(modelForMesh);
-  system("mmg2d metric.msh -hgrad 3");
-  gmsh::merge("metric.o.msh");
+  gmsh::model::add(metricOptions.modelForMesh);
+  gmsh::model::setCurrent(metricOptions.modelForMesh);
+
+  // Aniso mesh with MMG (used to get the boundary vertices only)
+  // std::string cmd = "mmg2d " + metricOptions.metricMeshNameForMMG + " -hgrad 3 -o " + metricOptions.metricMeshNameForMMG_out;
+  std::string cmd = "mmg2d " + metricOptions.metricMeshNameForMMG + " -hgrad 1.3 -o tmp.mesh";
+  system(cmd.c_str());
+  cmd = "gmsh tmp.mesh -o " + metricOptions.metricMeshNameForMMG_out + " -0";
+  system(cmd.c_str());
+
+  gmsh::merge(metricOptions.metricMeshNameForMMG_out);
+  // feInfo("Showing the model for mesh");
+  // gmsh::fltk::run();
+
+  gmsh::model::setCurrent(metricOptions.modelForMetric);
+  // feInfo("Showing the model for metric");
+  // gmsh::fltk::run();
+
+  gmsh::model::setCurrent(metricOptions.modelForMesh);
+  // feInfo("Switching back to mesh - Calling gmsh with viewtag = %d", metric->getMetricViewTag());
+  // gmsh::fltk::run();
 
   gmsh::option::setNumber("Mesh.MshFileVersion", 4.1);
 
-  // computePointsUsingScaledCrossFieldPlanarP2(
-    // modelForMetric.c_str(), modelForMesh.c_str(), metric->getMetricViewTag(), faceTag, pts,
-    // errorSquaredCallback, metricOptions.inside, gradErrorSquaredCallback);
+  std::vector<int> viewTags;
+  gmsh::view::getTags(viewTags);
+  feInfo("There are %d views in the gmsh model : ", viewTags.size());
+  for(auto val : viewTags){
+    feInfo("View %d with index %d", val, gmsh::view::getIndex(val));
+  }
 
-  // computePointsUsingScaledCrossFieldPlanarP2(modelForMetric.c_str(), modelForMesh.c_str(),
+  computePointsUsingScaledCrossFieldPlanarP2(
+    metricOptions.modelForMetric.c_str(),
+    metricOptions.modelForMesh.c_str(),
+    metric->getMetricViewTag(), 
+    faceTag,
+    pts,
+    errorSquaredCallback,
+    metricOptions.inside,
+    gradErrorSquaredCallback,
+    nullptr,
+    onlyGenerateVertices);
+
+  // computePointsUsingScaledCrossFieldPlanarP2(metricOptions.modelForMetric.c_str(), metricOptions.modelForMesh.c_str(),
   // metric->getMetricViewTag(), faceTag, pts, NULL, metricOptions.inside);
 
-  gmsh::write("sol_adapt.msh");
-  system("gmsh sol_adapt.msh &");
-  // } else{
-  // 	printf("In feAdaptMesh : Error - Metric file is not ready to generate a curved mesh.\n");
-  // }
+  gmsh::write(metricOptions.adaptedMeshName.c_str());
+
 #else
   printf("In feAdaptMesh : Error - Gmsh is required to generate curved meshes.\n");
 #endif

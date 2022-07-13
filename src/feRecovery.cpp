@@ -372,6 +372,66 @@ feRecovery::feRecovery(feMetaNumber *metaNumber, feSpace *space, feMesh *mesh, f
   getErrorPolynomials();
 }
 
+// Create a feRecovery from a file in which there are the derivatives at the DOFs
+feRecovery::feRecovery(feSpace *space, feMesh *mesh, std::string recoveryFile)
+  : _mesh(mesh), _intSpace(space)
+{
+  _cnc = space->getCncGeo();
+  _nElm = _cnc->getNbElm();
+  _nNodePerElm = _cnc->getNbNodePerElem();
+  _geoSpace = _cnc->getFeSpace();
+  _degSol = space->getPolynomialDegree();
+  _dim = mesh->getDim();
+  _patch = new fePatch(_cnc, _mesh);
+
+  // Read the recovery file
+  std::filebuf fb;
+  feInfo("Reading recovery file : %s", recoveryFile.c_str());
+  std::ifstream f(recoveryFile.c_str());
+  if(!f.good()) {
+    feWarning("Recovery file does not exist. Cannot create feRecovery.");
+  }
+
+  int nRecoveries, nDOFs;
+  if(fb.open(recoveryFile, std::ios::in)) {
+    std::istream input(&fb);
+    std::string buffer;
+
+    // getline(input, buffer);
+    input >> nRecoveries;
+    feInfo("Reading %d rec", nRecoveries);
+    derivAtVertices.resize(nRecoveries);
+    for(int i = 0; i < nRecoveries; ++i){
+      getline(input, buffer);
+      input >> nDOFs;
+      feInfo("Reading %d DOFs", nDOFs);
+      derivAtVertices[i].resize(nDOFs);
+      for(int j = 0; j < nDOFs; ++j){
+        getline(input, buffer);
+        input >> derivAtVertices[i][j];
+      }
+    }
+
+    getline(input, buffer);
+    input >> nRecoveries;
+    feInfo("Reading %d rec", nRecoveries);
+    derivAtEdges.resize(nRecoveries);
+    for(int i = 0; i < nRecoveries; ++i){
+      getline(input, buffer);
+      input >> nDOFs;
+      feInfo("Reading %d DOFs", nDOFs);
+      derivAtEdges[i].resize(nDOFs);
+      for(int j = 0; j < nDOFs; ++j){
+        getline(input, buffer);
+        input >> derivAtEdges[i][j];
+      }
+    }
+
+    fb.close();
+  } // if fb.open
+
+}
+
 void feRecovery::allocateStructures()
 {
 #if defined(HAVE_PETSC)
@@ -2624,4 +2684,32 @@ double feRecovery::evalDerivative(int indexDerivative, std::vector<double> &x)
 
   // fprintf(f, "};");
   // fclose(f);
+}
+
+// Dump all the recovered coefficients into a file to reload later
+void feRecovery::writeRecovery(std::string fileName){
+  FILE *f = fopen(fileName.c_str(), "w");
+  if(f != nullptr) {
+
+    fprintf(f, "%d\n", derivAtVertices.size()); // Number of recovered derivatives at vertices
+
+    for(int i = 0; i < derivAtVertices.size(); ++i){
+      feInfo("Printing recovery %d/%d on %d DOFs", i+1, derivAtVertices.size(), derivAtVertices[i].size());
+      fprintf(f, "%d\n", derivAtVertices[i].size()); // Number of DOFs
+      for(int j = 0; j < derivAtVertices[i].size(); ++j){
+        fprintf(f, "%+-1.17e\n", derivAtVertices[i][j]);
+      }
+    }
+
+    fprintf(f, "%d\n", derivAtEdges.size()); // Number of recovered derivatives on the edges
+    for(int i = 0; i < derivAtEdges.size(); ++i){
+      feInfo("Printing recovery %d/%d on %d DOFs", i+1, derivAtEdges.size(), derivAtEdges[i].size());
+      fprintf(f, "%d\n", derivAtEdges[i].size()); // Number of DOFs
+      for(int j = 0; j < derivAtEdges[i].size(); ++j){
+        fprintf(f, "%+-1.17e\n", derivAtEdges[i][j]);
+      }
+    }
+
+    fclose(f);
+  }
 }

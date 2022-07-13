@@ -9,6 +9,6 @@ void createAnisoMesh(feMetric *metric, feMetricOptions metricOptions);
 define the error callback, the objective function to minimize. */
 void createCurvedMesh(feFunction *solExact, feMetaNumber *metaNumber, feSolution *sol,
                       feSpace *intSpace, feRecovery *recovery, feMetric *metric,
-                      feMetricOptions metricOptions);
+                      feMetricOptions metricOptions, int onlyGenerateVertices);
 
 #endif

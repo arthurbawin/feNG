@@ -170,7 +170,7 @@ void feExporterVTK::writeField(std::ostream &output, feCncGeo *cnc, feSpace *int
   fclose(f);
 
   /* Write the additional P2 nodes. Interpolation is not required if the
-  field is quadratic , but it's easier to just interpolate for all fields. */
+  field is quadratic, but it's easier to just interpolate for all fields. */
   if(_addP2Nodes) {
     /* Additional nodes are added in the order of the edges,
     like in feExporterVTK::writeNodes. Both must be modified together. */

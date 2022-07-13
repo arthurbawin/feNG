@@ -130,6 +130,7 @@ public:
              std::string metricMeshName = "", feVectorFunction *solRefGrad = nullptr,
              feVectorFunction *solRefHess = nullptr, feFunction *fund3udx = nullptr,
              bool append = false);
+  feRecovery(feSpace *space, feMesh *mesh, std::string recoveryFile);
   ~feRecovery() { delete _patch; }
 
   int getDim() { return _dim; }
@@ -142,6 +143,8 @@ public:
   std::vector<int> &getYExponentsRecovery() { return _expYRecovery; }
   std::vector<int> &getZExponentsRecovery() { return _expZRecovery; }
   std::map<int, std::vector<double> > &getErrorCoefficients() { return errorCoeff; }
+
+  void writeRecovery(std::string fileName);
 
   void allocateStructures();
   void matrixInverseEigen1D();

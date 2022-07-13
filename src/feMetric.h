@@ -18,7 +18,10 @@ typedef struct feMetricOptions {
   int nPhi;
 
   // The name of the Gmsh model on which the metric field will be computed
-  std::string gmshModel;
+  std::string modelForMetric;
+
+  std::string modelForMesh;
+  
   bool isGmshModelReady = false;
   // Geometric data to create the model with Gmsh api
   double modelSizeX;
@@ -30,6 +33,9 @@ typedef struct feMetricOptions {
   // MMG parameters
   std::string meshName;
   std::string adaptedMeshName;
+  std::string metricMeshNameForMMG;
+  std::string metricMeshNameForMMG_out;
+  std::string recoveryName;
   double gradation;
 
 } feMetricOptions;
@@ -41,6 +47,7 @@ protected:
   feMetricOptions _options;
 
   std::map<int, SMetric3> _metrics;
+  std::map<int, SMetric3> _metricsOnGmshModel;
 
   // The tag of the gmsh view in which the metric field is stored (if using Gmsh)
   int _metricViewTag = -1;
@@ -56,6 +63,8 @@ public:
   int getMetricViewTag() { return _metricViewTag; }
 
   void metricScaling();
+  void metricScalingFromGmshSubstitute();
+
   // void metriqueSimplexe2D(int nPhi, std::vector<double> phi, std::vector<double> erreur, double
   // &A,
   //                         double &B, double &C, int max_iter);

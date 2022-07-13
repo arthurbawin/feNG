@@ -68,6 +68,7 @@
 #                       "${feNG_API}")
 
 set(feNG_SRC
+    myMatrix.cpp
     ellipseToolbox.cpp
     feAdaptMesh.cpp
     feBilinearForm.cpp
@@ -91,7 +92,7 @@ set(feNG_SRC
     fePostProc.cpp
     feRecovery.cpp
     feQuadrature.cpp
-    #feSimplex.cpp
+    feSimplex.cpp
     feSolution.cpp
     feSolutionContainer.cpp
     feSolver.cpp
@@ -110,6 +111,7 @@ list(
   ${CMAKE_SOURCE_DIR}/contrib/gmsh/poly34.cpp)
 
 set(feNG_API
+    myMatrix.h
     ellipseToolbox.h
     feAdaptMesh.h
     feAPI.h
@@ -136,7 +138,7 @@ set(feNG_API
     fePostProc.h
     feQuadrature.h
     feRecovery.h
-    #feSimplex.h
+    feSimplex.h
     feSolution.h
     feSolutionContainer.h
     feSolver.h
