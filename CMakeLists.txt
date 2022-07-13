@@ -77,11 +77,11 @@ endif()
 #  MPI
 if(ENABLE_MPI)
   find_package(MPI REQUIRED)
-  # MESSAGE(STATUS "MPI infos: ${MPI_CXX_INCLUDE_PATH}")
-  # MESSAGE(STATUS "MPI infos: ${MPI_LIBRARIES}")
-  # MESSAGE(STATUS "MPI infos: ${MPI_CXX_LIBRARIES}")
-  # MESSAGE(STATUS "MPI infos: ${MPI_CXX_LINK_FLAGS}")
-  # MESSAGE(STATUS "MPI infos: ${MPI_CFLAGS_OTHER}")
+  MESSAGE(STATUS "MPI infos: ${MPI_CXX_INCLUDE_PATH}")
+  MESSAGE(STATUS "MPI infos: ${MPI_LIBRARIES}")
+  MESSAGE(STATUS "MPI infos: ${MPI_CXX_LIBRARIES}")
+  MESSAGE(STATUS "MPI infos: ${MPI_CXX_LINK_FLAGS}")
+  MESSAGE(STATUS "MPI infos: ${MPI_CFLAGS_OTHER}")
   include_directories(${MPI_CXX_INCLUDE_PATH})
   list(APPEND feNG_EXTERNAL_LIBS ${MPI_CXX_LIBRARIES} ${MPI_CXX_LINK_FLAGS})
   add_definitions("-DHAVE_MPI")
@@ -172,7 +172,7 @@ endif()
 # See also src/CmakeLists.txt for the .cpp files
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/contrib/gmsh)
 
-# list(APPEND feNG_EXTERNAL_LIBS "-Wl,-no-as-needed,-lprofiler")
+list(APPEND feNG_EXTERNAL_LIBS "-Wl,-no-as-needed,-lprofiler")
 
 MESSAGE(STATUS "External libs for feNG : ${feNG_EXTERNAL_LIBS}")
 
