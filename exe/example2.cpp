@@ -6,61 +6,63 @@
 
 #include "feAPI.h"
 
-double fSol(const double t, const std::vector<double> pos, const std::vector<double> par)
+double fSol(const double t, const std::vector<double> &pos, const std::vector<double> &par)
 {
   double x = pos[0];
   double y = pos[1];
   return pow(x, 6);
 
-  // Solution for the Neumann problem
-  double u0 = 1.0;
-  double L = 2.0;
-  double H = 2.0;
-  double u = 0.0;
-  for(int n = 1; n < 100; n += 2){
-    u += 1./pow(n*M_PI,4) * sin(n*M_PI*x/L) * cosh(n*M_PI*y/L) / sinh(n*M_PI*H/L); 
-  }
-  u*= 8.*u0*L/H;
-  return u;
+  // // Solution for the Neumann problem
+  // double u0 = 1.0;
+  // double L = 2.0;
+  // double H = 2.0;
+  // double u = 0.0;
+  // for(int n = 1; n < 100; n += 2){
+  //   u += 1./pow(n*M_PI,4) * sin(n*M_PI*x/L) * cosh(n*M_PI*y/L) / sinh(n*M_PI*H/L); 
+  // }
+  // u*= 8.*u0*L/H;
+  // return u;
 }
 
-double fSource(const double t, const std::vector<double> x, const std::vector<double> par)
+double fSource(const double t, const std::vector<double> &x, const std::vector<double> &par)
 {
   double k = par[0];
   return k * 30. * pow(x[0], 4);
 }
 
-double fNeumannBC(const double t, const std::vector<double> pos, const std::vector<double> par)
-{
-  double x = pos[0];
-  double u0 = 1.0;
-  double L = 2.0;
-  double H = 2.0;
-  return u0/H*(1+x/L)*(1-x/L);
-}
+// double fNeumannBC(const double t, const std::vector<double> pos, const std::vector<double> par)
+// {
+//   double x = pos[0];
+//   double u0 = 1.0;
+//   double L = 2.0;
+//   double H = 2.0;
+//   return u0/H*(1+x/L)*(1-x/L);
+// }
 
-double fNeumannYBC(const double t, const std::vector<double> pos, const std::vector<double> par)
-{
-  double y = pos[1];
-  double u0 = 1.0;
-  double L = 2.0;
-  double H = 2.0;
-  return u0/H*(1+y/L)*(1-y/L);
-}
+// double fNeumannYBC(const double t, const std::vector<double> pos, const std::vector<double> par)
+// {
+//   double y = pos[1];
+//   double u0 = 1.0;
+//   double L = 2.0;
+//   double H = 2.0;
+//   return u0/H*(1+y/L)*(1-y/L);
+// }
 
-double fZero(const double t, const std::vector<double> x, const std::vector<double> par)
+double fZero(const double t, const std::vector<double> &x, const std::vector<double> &par)
 {
   return 0.0;
 }
 
-double fOne(const double t, const std::vector<double> x, const std::vector<double> par)
-{
-  double c = par[0];
-  return c;
-}
+// double fOne(const double t, const std::vector<double> x, const std::vector<double> par)
+// {
+//   double c = par[0];
+//   return c;
+// }
 
 int main(int argc, char **argv)
 {
+  // ProfilerStart();
+  petscInitialize(argc, argv);
   int order = 1;
   int nMesh = 1;
 
@@ -75,11 +77,11 @@ int main(int argc, char **argv)
   feFunction *funSol = new feFunction(fSol, {});
   feFunction *funSource = new feFunction(fSource, {k});
   feFunction *funZero = new feFunction(fZero, {});
-  feFunction *funNeumann = new feFunction(fNeumannBC, {});
-  feFunction *funNeumannY = new feFunction(fNeumannYBC, {});
-  feFunction *funOne = new feFunction(fOne, {1.0});
-  feFunction *funTwo = new feFunction(fOne, {2.0});
-  feFunction *funThree = new feFunction(fOne, {3.0});
+  // feFunction *funNeumann = new feFunction(fNeumannBC, {});
+  // feFunction *funNeumannY = new feFunction(fNeumannYBC, {});
+  // feFunction *funOne = new feFunction(fOne, {1.0});
+  // feFunction *funTwo = new feFunction(fOne, {2.0});
+  // feFunction *funThree = new feFunction(fOne, {3.0});
 
   std::vector<int> nElm(nMesh, 0);
   std::vector<double> L2errorU(2 * nMesh, 0.0);
@@ -88,7 +90,8 @@ int main(int argc, char **argv)
 
   // Compute the solution on each mesh
   for(int i = 0; i < nMesh; ++i){
-    std::string meshFile = "m" + std::to_string(i+1) + ".msh";
+    // std::string meshFile = "../data/Convergence/m" + std::to_string(i+3) + ".msh";
+    std::string meshFile = "../data/Convergence/m"+std::to_string(i+1)+".msh";
     // std::string meshFile = "wideCrack.msh";
     // std::string meshFile = "transfinite" + std::to_string(i+1) + "_P2.msh";
 
@@ -116,17 +119,8 @@ int main(int argc, char **argv)
     feMetaNumber metaNumber(&mesh, spaces, essentialSpaces);
     feSolution sol(&mesh, spaces, essentialSpaces, &metaNumber);
 
-    // feBilinearForm diffU({uDomaine}, &mesh, degreeQuadrature, new feSysElm_2D_Diffusion(k, nullptr));
-    // feBilinearForm sourceU({uDomaine}, &mesh, degreeQuadrature, new feSysElm_2D_Source(1.0, funSource));
-
     feBilinearForm diffU({uDomaine}, &mesh, degreeQuadrature, new feSysElm_2D_Diffusion(k, nullptr));
     feBilinearForm sourceU({uDomaine}, &mesh, degreeQuadrature, new feSysElm_2D_Source(1.0, funSource));
-    // feBilinearForm n1({uDroite}, &mesh, degreeQuadrature, new feSysElm_1D_NeumannBC(1.0, funNeumannY));
-    // feBilinearForm n2({uGauche}, &mesh, degreeQuadrature, new feSysElm_1D_NeumannBC(1.0, funZero));
-    // feBilinearForm n3({uHaut},   &mesh, degreeQuadrature, new feSysElm_1D_NeumannBC(1.0, funNeumann));
-    // feBilinearForm n4({uBas},    &mesh, degreeQuadrature, new feSysElm_1D_NeumannBC(1.0, funZero));
-    feBilinearForm n5({uSaut},   &mesh, degreeQuadrature, new feSysElm_1D_NeumannBC(1.0, funOne));
-    // feBilinearForm sautU({uSaut}, &mesh, degreeQuadrature, new feSysElm_1D_NeumannBC(1.0, funOne));
 
     feLinearSystem *system;
     // feCheck(createLinearSystem(system, MKLPARDISO, spaces, {&diffU, &sourceU}, &metaNumber, &mesh, argc, argv));
@@ -161,10 +155,7 @@ int main(int argc, char **argv)
 
     delete solver;
     delete exporter;
-    // delete uBord;
-    // delete uDirichlet;
-    // delete uNeumannHaut;
-    // delete uNeumannBas;
+    delete uBord;
     delete uDomaine;
   }
 
@@ -235,5 +226,8 @@ int main(int argc, char **argv)
   delete funSol;
   delete funSource;
 
+  petscFinalize();
+
+  // ProfilerStop();
   return 0;
 }

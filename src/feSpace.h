@@ -9,6 +9,7 @@
 #include "feQuadrature.h"
 #include "feFunction.h"
 #include "feCncGeo.h"
+#include "feNG.h"
 
 #include "../contrib/Eigen/Dense"
 
@@ -61,9 +62,9 @@ protected:
   std::vector<std::vector<double> > _dLdxglob;
   std::vector<std::vector<double> > _dLdyglob;
 
-  std::vector<int> _adr;
-  std::vector<double> _sol;
-  std::vector<double> _soldot;
+  // std::vector<int> _adr;
+  // std::vector<double> _sol;
+  // std::vector<double> _soldot;
 
   feFunction *_fct;
 
@@ -80,9 +81,9 @@ public:
   int getNbElm();
   int getNbNodePerElem();
 
-  std::string getFieldID() { return _fieldID; }
+  const std::string &getFieldID() { return _fieldID; }
   int getFieldTag() { return _fieldTag; }
-  std::string getCncGeoID() { return _cncGeoID; }
+  const std::string &getCncGeoID() { return _cncGeoID; }
   int getCncGeoTag() { return _cncGeoTag; }
   void setCncGeoTag(int tag)
   {
@@ -111,12 +112,12 @@ public:
 
   const std::vector<double> &getLcoor() { return _Lcoor; }
 
-  virtual std::vector<double> L(double r[3]) = 0;
+  virtual std::vector<double> L(double *r) = 0;
   virtual feStatus Lphys(int iElm, std::vector<double> &x, std::vector<double> &L,
                          std::vector<double> &dLdx, std::vector<double> &dLdy) = 0;
-  virtual std::vector<double> dLdr(double r[3]) = 0;
-  virtual std::vector<double> dLds(double r[3]) = 0;
-  virtual std::vector<double> dLdt(double r[3]) = 0;
+  virtual std::vector<double> dLdr(double *r) = 0;
+  virtual std::vector<double> dLds(double *r) = 0;
+  virtual std::vector<double> dLdt(double *r) = 0;
 
   double getFunctionAtQuadNode(int iFun, int iQuadNode)
   {
@@ -150,61 +151,82 @@ public:
   std::vector<double> &getSQuadraturePoints() { return _yQuad; }
   std::vector<double> &getTQuadraturePoints() { return _zQuad; }
 
-  void initializeSolution(feSolution *sol);
-  void initializeSolution(std::vector<double> &sol);
-  void initializeSolutionDot(feSolution *sol);
+  // void initializeSolution(feSolution *sol, std::vector<feInt> &adr);
+  // void initializeSolution(std::vector<double> &sol, std::vector<feInt> &adr);
+  // void initializeSolutionDot(feSolution *sol, std::vector<feInt> &adr);
 
   virtual void initializeNumberingUnknowns(feNumber *number) = 0;
   virtual void initializeNumberingEssential(feNumber *number) = 0;
-  virtual void initializeAddressingVector(feNumber *number, int numElem) = 0;
-  virtual void initializeAddressingVector(feNumber *number, int numElem, std::vector<int> &adr) = 0;
+  // virtual void initializeAddressingVector(feNumber *number, int numElem) = 0;
+  virtual void initializeAddressingVector(feNumber *number, int numElem, std::vector<feInt> &adr) = 0;
 
-  int getAddressingVectorAt(int node) { return _adr[node]; }
+  // int getAddressingVectorAt(int node) { return _adr[node]; }
 
   double evalFun(const double t, const std::vector<double> &x) { return _fct->eval(t, x); }
 
-  double interpolateField(std::vector<double> field, double r[3]);
-  double interpolateFieldAtQuadNode(std::vector<double> field, int iNode);
-  double interpolateField_rDerivative(std::vector<double> field, double r[3]);
-  double interpolateFieldAtQuadNode_rDerivative(std::vector<double> field, int iNode);
-  double interpolateFieldAtQuadNode_sDerivative(std::vector<double> field, int iNode);
-  double interpolateFieldAtQuadNode_xDerivative(std::vector<double> field, int iElm, int iNode);
-  double interpolateFieldAtQuadNode_yDerivative(std::vector<double> field, int iElm, int iNode);
+  // TO REMOVE
+  // double interpolateField(std::vector<double> field, double r[3]);
+  // double interpolateFieldAtQuadNode(std::vector<double> field, int iNode);
+  // double interpolateField_rDerivative(std::vector<double> field, double r[3]);
+  // double interpolateFieldAtQuadNode_rDerivative(std::vector<double> field, int iNode);
+  // double interpolateFieldAtQuadNode_sDerivative(std::vector<double> field, int iNode);
+  // double interpolateFieldAtQuadNode_xDerivative(std::vector<double> field, int iElm, int iNode);
+  // double interpolateFieldAtQuadNode_yDerivative(std::vector<double> field, int iElm, int iNode);
 
-  double interpolateSolution(double r[3]);
-  double interpolateSolution_rDerivative(double r[3]);
-  double interpolateSolution_sDerivative(double r[3]);
-  double interpolateSolution(int iElm, std::vector<double> &x);
-  double interpolateSolution(feNumber *number, feSolution *sol, std::vector<double> &x);
-  void interpolateSolution_gradrs(feNumber *number, feSolution *sol, std::vector<double> &x,
-                                  std::vector<double> &grad);
-  double interpolateSolution_xDerivative(int iElm, std::vector<double> &x);
-  double interpolateSolution_yDerivative(int iElm, std::vector<double> &x);
+  // double interpolateSolution(double r[3]);
+  // double interpolateSolution_rDerivative(double r[3]);
+  // double interpolateSolution_sDerivative(double r[3]);
+  // double interpolateSolution(int iElm, std::vector<double> &x);
+  // double interpolateSolution(feNumber *number, feSolution *sol, std::vector<double> &x);
+  // void interpolateSolution_gradrs(feNumber *number, feSolution *sol, std::vector<double> &x,
+  //                                 std::vector<double> &grad);
+  // double interpolateSolution_xDerivative(int iElm, std::vector<double> &x);
+  // double interpolateSolution_yDerivative(int iElm, std::vector<double> &x);
 
-  double interpolateSolutionAtQuadNode(int iNode);
-  double interpolateSolutionAtQuadNode(int iElm, int iNode);
-  double interpolateSolutionAtQuadNodeWithPhysicalBasisFunctions(int iElm, std::vector<double> &x);
-  double interpolateSolutionAtQuadNode_rDerivative(int iNode);
-  double interpolateSolutionAtQuadNode_sDerivative(int iNode);
-  double interpolateSolutionAtQuadNode_xDerivative(int iElm, int iNode);
-  double interpolateSolutionAtQuadNode_yDerivative(int iElm, int iNode);
+  // double interpolateSolutionAtQuadNode(int iNode);
+  // double interpolateSolutionAtQuadNode(int iElm, int iNode);
+  // double interpolateSolutionAtQuadNodeWithPhysicalBasisFunctions(int iElm, std::vector<double> &x);
+  // double interpolateSolutionAtQuadNode_rDerivative(int iNode);
+  // double interpolateSolutionAtQuadNode_sDerivative(int iNode);
+  // double interpolateSolutionAtQuadNode_xDerivative(int iElm, int iNode);
+  // double interpolateSolutionAtQuadNode_yDerivative(int iElm, int iNode);
 
-  double interpolateSolutionDotAtQuadNode(int iNode);
+  // double interpolateSolutionDotAtQuadNode(int iNode);
 
-  void interpolateVectorField(std::vector<double> field, double r[3], std::vector<double> &res);
-  void interpolateVectorField_rDerivative(std::vector<double> field, double r[3],
+  // void interpolateVectorField(std::vector<double> field, double r[3], std::vector<double> &res);
+  // void interpolateVectorField_rDerivative(std::vector<double> field, double r[3],
+
+  double interpolateField(std::vector<double> &field, double *r);
+  double interpolateField(std::vector<double> &field, int iElm, std::vector<double> &x);
+  double interpolateField(feNumber *number, feSolution *sol, std::vector<double> &x);
+  double interpolateField_rDerivative(std::vector<double> &field, double *r);
+  double interpolateField_sDerivative(std::vector<double> &field, double *r);
+  double interpolateField_xDerivative(std::vector<double> &field, int iElm, std::vector<double> &x);
+  double interpolateField_yDerivative(std::vector<double> &field, int iElm, std::vector<double> &x);
+  void interpolateField_gradrs(feNumber *number, feSolution *sol, std::vector<double> &x,
+                               std::vector<double> &grad);
+  double interpolateFieldAtQuadNode(std::vector<double> &field, int iNode);
+  double interpolateFieldAtQuadNode(std::vector<double> &field, int iElm, int iNode);
+  double interpolateFieldAtQuadNode_rDerivative(std::vector<double> &field, int iNode);
+  double interpolateFieldAtQuadNode_sDerivative(std::vector<double> &field, int iNode);
+  double interpolateFieldAtQuadNode_xDerivative(std::vector<double> &field, int iElm, int iNode);
+  double interpolateFieldAtQuadNode_yDerivative(std::vector<double> &field, int iElm, int iNode);
+
+  void interpolateVectorField(std::vector<double> &field, double *r, std::vector<double> &res);
+  void interpolateVectorField_rDerivative(std::vector<double> &field, double *r,
+
                                           std::vector<double> &res);
-  void interpolateVectorField_sDerivative(std::vector<double> field, double r[3],
+  void interpolateVectorField_sDerivative(std::vector<double> &field, double *r,
                                           std::vector<double> &res);
-  void interpolateVectorFieldAtQuadNode(std::vector<double> field, int iNode,
+  void interpolateVectorFieldAtQuadNode(std::vector<double> &field, int iNode,
                                         std::vector<double> &res);
-  void interpolateVectorFieldAtQuadNode_rDerivative(std::vector<double> field, int iNode,
+  void interpolateVectorFieldAtQuadNode_rDerivative(std::vector<double> &field, int iNode,
                                                     std::vector<double> &res);
-  void interpolateVectorFieldAtQuadNode_sDerivative(std::vector<double> field, int iNode,
+  void interpolateVectorFieldAtQuadNode_sDerivative(std::vector<double> &field, int iNode,
                                                     std::vector<double> &res);
 
-  std::vector<double> &getSolutionReference() { return _sol; };
-  std::vector<double> &getSolutionReferenceDot() { return _soldot; };
+  // std::vector<double> &getSolutionReference() { return _sol; };
+  // std::vector<double> &getSolutionReferenceDot() { return _soldot; };
   void printL();
   void printdLdr();
 };
@@ -226,7 +248,7 @@ public:
     : feSpace(mesh, fieldID, cncGeoID, fct)
   {
     _nFunctions = 1;
-    _adr.resize(_nFunctions);
+    // _adr.resize(_nFunctions);
     _nQuad = 1;
     _Lcoor = {1., 0., 0.};
   };
@@ -234,21 +256,21 @@ public:
 
   virtual int getNbFunctions() { return 1; }
   virtual int getPolynomialDegree() { return 0; }
-  virtual std::vector<double> L(double r[3]) { return {1.}; };
+  virtual std::vector<double> L(double *r) { return {1.}; };
   virtual feStatus Lphys(int iElm, std::vector<double> &x, std::vector<double> &L,
                          std::vector<double> &dLdx, std::vector<double> &dLdy)
   {
     printf("Not implemented\n");
     exit(-1);
   };
-  virtual std::vector<double> dLdr(double r[3]) { return {0.}; };
-  virtual std::vector<double> dLds(double r[3]) { return {0.}; };
-  virtual std::vector<double> dLdt(double r[3]) { return {0.}; };
+  virtual std::vector<double> dLdr(double *r) { return {0.}; };
+  virtual std::vector<double> dLds(double *r) { return {0.}; };
+  virtual std::vector<double> dLdt(double *r) { return {0.}; };
 
   virtual void initializeNumberingUnknowns(feNumber *number);
   virtual void initializeNumberingEssential(feNumber *number);
-  virtual void initializeAddressingVector(feNumber *number, int numElem);
-  virtual void initializeAddressingVector(feNumber *number, int numElem, std::vector<int> &adr);
+  // virtual void initializeAddressingVector(feNumber *number, int numElem);
+  virtual void initializeAddressingVector(feNumber *number, int numElem, std::vector<feInt> &adr);
 };
 
 // FESpace pour interpolant de Lagrange 1D de degre 1
@@ -265,28 +287,28 @@ public:
     : feSpace(mesh, fieldID, cncGeoID, fct)
   {
     _nFunctions = 2;
-    _adr.resize(_nFunctions);
+    // _adr.resize(_nFunctions);
     _Lcoor = {-1., 0., 0., 1., 0., 0.};
   };
   virtual ~feSpace1DP1() {}
 
   virtual int getNbFunctions() { return 2; }
   virtual int getPolynomialDegree() { return 1; }
-  virtual std::vector<double> L(double r[3]) { return {(1. - r[0]) / 2., (1. + r[0]) / 2.}; };
+  virtual std::vector<double> L(double *r) { return {(1. - r[0]) / 2., (1. + r[0]) / 2.}; };
   virtual feStatus Lphys(int iElm, std::vector<double> &x, std::vector<double> &L,
                          std::vector<double> &dLdx, std::vector<double> &dLdy)
   {
     printf("Not implemented\n");
     exit(-1);
   };
-  virtual std::vector<double> dLdr(double r[3]) { return {-1. / 2., 1. / 2.}; };
-  virtual std::vector<double> dLds(double r[3]) { return {0., 0.}; };
-  virtual std::vector<double> dLdt(double r[3]) { return {0., 0.}; };
+  virtual std::vector<double> dLdr(double *r) { return {-1. / 2., 1. / 2.}; };
+  virtual std::vector<double> dLds(double *r) { return {0., 0.}; };
+  virtual std::vector<double> dLdt(double *r) { return {0., 0.}; };
 
   virtual void initializeNumberingUnknowns(feNumber *number);
   virtual void initializeNumberingEssential(feNumber *number);
-  virtual void initializeAddressingVector(feNumber *number, int numElem);
-  virtual void initializeAddressingVector(feNumber *number, int numElem, std::vector<int> &adr);
+  // virtual void initializeAddressingVector(feNumber *number, int numElem);
+  virtual void initializeAddressingVector(feNumber *number, int numElem, std::vector<feInt> &adr);
 };
 
 class feSpace1DP1_nonConsistant : public feSpace
@@ -303,17 +325,17 @@ public:
     : feSpace(mesh, fieldID, cncGeoID, fct)
   {
     _nFunctions = 1;
-    _adr.resize(_nFunctions);
+    // _adr.resize(_nFunctions);
     _Lcoor = {0., 0., 0.};
   };
   virtual ~feSpace1DP1_nonConsistant() {}
 
   virtual int getNbFunctions() { return 1; }
   virtual int getPolynomialDegree() { return 0; }
-  virtual std::vector<double> L(double r[3]) { return {1.}; };
-  virtual std::vector<double> dLdr(double r[3]) { return {0.}; };
-  virtual std::vector<double> dLds(double r[3]) { return {0.}; };
-  virtual std::vector<double> dLdt(double r[3]) { return {0.}; };
+  virtual std::vector<double> L(double *r) { return {1.}; };
+  virtual std::vector<double> dLdr(double *r) { return {0.}; };
+  virtual std::vector<double> dLds(double *r) { return {0.}; };
+  virtual std::vector<double> dLdt(double *r) { return {0.}; };
 
   virtual feStatus Lphys(int iElm, std::vector<double> &x, std::vector<double> &L,
                          std::vector<double> &dLdx, std::vector<double> &dLdy)
@@ -324,8 +346,8 @@ public:
 
   virtual void initializeNumberingUnknowns(feNumber *number);
   virtual void initializeNumberingEssential(feNumber *number);
-  virtual void initializeAddressingVector(feNumber *number, int numElem);
-  virtual void initializeAddressingVector(feNumber *number, int numElem, std::vector<int> &adr);
+  // virtual void initializeAddressingVector(feNumber *number, int numElem);
+  virtual void initializeAddressingVector(feNumber *number, int numElem, std::vector<feInt> &adr);
 };
 
 // FESpace pour interpolant de Lagrange 1D de degre 2
@@ -342,14 +364,14 @@ public:
     : feSpace(mesh, fieldID, cncGeoID, fct)
   {
     _nFunctions = 3;
-    _adr.resize(_nFunctions);
+    // _adr.resize(_nFunctions);
     _Lcoor = {-1., 0., 0., 1., 0., 0., 0., 0., 0.};
   };
   virtual ~feSpace1DP2() {}
 
   virtual int getNbFunctions() { return 3; }
   virtual int getPolynomialDegree() { return 2; }
-  virtual std::vector<double> L(double r[3])
+  virtual std::vector<double> L(double *r)
   {
     return {-r[0] * (1. - r[0]) / 2., r[0] * (1. + r[0]) / 2., -(r[0] + 1.) * (r[0] - 1.)};
   };
@@ -359,17 +381,17 @@ public:
     printf("Not implemented\n");
     exit(-1);
   };
-  virtual std::vector<double> dLdr(double r[3])
+  virtual std::vector<double> dLdr(double *r)
   {
     return {(2. * r[0] - 1.) / 2., (2. * r[0] + 1.) / 2., -2. * r[0]};
   };
-  virtual std::vector<double> dLds(double r[3]) { return {0., 0., 0.}; };
-  virtual std::vector<double> dLdt(double r[3]) { return {0., 0., 0.}; };
+  virtual std::vector<double> dLds(double *r) { return {0., 0., 0.}; };
+  virtual std::vector<double> dLdt(double *r) { return {0., 0., 0.}; };
 
   virtual void initializeNumberingUnknowns(feNumber *number);
   virtual void initializeNumberingEssential(feNumber *number);
-  virtual void initializeAddressingVector(feNumber *number, int numElem);
-  virtual void initializeAddressingVector(feNumber *number, int numElem, std::vector<int> &adr);
+  // virtual void initializeAddressingVector(feNumber *number, int numElem);
+  virtual void initializeAddressingVector(feNumber *number, int numElem, std::vector<feInt> &adr);
 };
 
 // FESpace pour interpolant de Lagrange 1D de degre 3
@@ -387,14 +409,14 @@ public:
     : feSpace(mesh, fieldID, cncGeoID, fct)
   {
     _nFunctions = 4;
-    _adr.resize(_nFunctions);
+    // _adr.resize(_nFunctions);
     _Lcoor = {-1., 0., 0., 1., 0., 0., -1. / 3., 0., 0., 1. / 3., 0., 0.};
   };
   virtual ~feSpace1DP3() {}
 
   virtual int getNbFunctions() { return 4; }
   virtual int getPolynomialDegree() { return 3; }
-  virtual std::vector<double> L(double r[3])
+  virtual std::vector<double> L(double *r)
   {
     return {-9. / 16. * (r[0] + 1. / 3.) * (r[0] - 1. / 3.) * (r[0] - 1.),
             9. / 16. * (r[0] + 1. / 3.) * (r[0] - 1. / 3.) * (r[0] + 1.),
@@ -407,20 +429,20 @@ public:
     printf("Not implemented\n");
     exit(-1);
   };
-  virtual std::vector<double> dLdr(double r[3])
+  virtual std::vector<double> dLdr(double *r)
   {
     return {r[0] * (9. / 8.) - r[0] * r[0] * (27. / 16.) + 1. / 16.,
             r[0] * (9. / 8.) + r[0] * r[0] * (27. / 16.) - 1. / 16.,
             r[0] * (-9. / 8.) + r[0] * r[0] * (81. / 16.) - 27. / 16.,
             r[0] * (-9. / 8.) - r[0] * r[0] * (81. / 16.) + 27. / 16.};
   };
-  virtual std::vector<double> dLds(double r[3]) { return {0., 0., 0., 0.}; };
-  virtual std::vector<double> dLdt(double r[3]) { return {0., 0., 0., 0.}; };
+  virtual std::vector<double> dLds(double *r) { return {0., 0., 0., 0.}; };
+  virtual std::vector<double> dLdt(double *r) { return {0., 0., 0., 0.}; };
 
   virtual void initializeNumberingUnknowns(feNumber *number);
   virtual void initializeNumberingEssential(feNumber *number);
-  virtual void initializeAddressingVector(feNumber *number, int numElem);
-  virtual void initializeAddressingVector(feNumber *number, int numElem, std::vector<int> &adr);
+  // virtual void initializeAddressingVector(feNumber *number, int numElem);
+  virtual void initializeAddressingVector(feNumber *number, int numElem, std::vector<feInt> &adr);
 };
 
 // FESpace pour interpolant de Lagrange 1D de degre 4
@@ -437,14 +459,14 @@ public:
     : feSpace(mesh, fieldID, cncGeoID, fct)
   {
     _nFunctions = 5;
-    _adr.resize(_nFunctions);
+    // _adr.resize(_nFunctions);
     _Lcoor = {-1., 0., 0., 1., 0., 0., -1. / 2., 0., 0., 0., 0., 0., 1. / 2., 0., 0.};
   };
   virtual ~feSpace1DP4() {}
 
   virtual int getNbFunctions() { return 5; }
   virtual int getPolynomialDegree() { return 4; }
-  virtual std::vector<double> L(double r[3])
+  virtual std::vector<double> L(double *r)
   {
     return {r[0] * (r[0] - 1.0) * (r[0] - 1.0 / 2.0) * (r[0] + 1.0 / 2.0) * (2.0 / 3.0),
             r[0] * (r[0] + 1.0) * (r[0] - 1.0 / 2.0) * (r[0] + 1.0 / 2.0) * (2.0 / 3.0),
@@ -458,7 +480,7 @@ public:
     printf("Not implemented\n");
     exit(-1);
   };
-  virtual std::vector<double> dLdr(double r[3])
+  virtual std::vector<double> dLdr(double *r)
   {
     return {r[0] * (r[0] - 1.0) * (r[0] - 1.0 / 2.0) * (2.0 / 3.0) +
               r[0] * (r[0] - 1.0) * (r[0] + 1.0 / 2.0) * (2.0 / 3.0) +
@@ -481,13 +503,13 @@ public:
               r[0] * (r[0] + 1.0) * (r[0] + 1.0 / 2.0) * (8.0 / 3.0) -
               (r[0] - 1.0) * (r[0] + 1.0) * (r[0] + 1.0 / 2.0) * (8.0 / 3.0)};
   };
-  virtual std::vector<double> dLds(double r[3]) { return {0., 0., 0., 0., 0.}; };
-  virtual std::vector<double> dLdt(double r[3]) { return {0., 0., 0., 0., 0.}; };
+  virtual std::vector<double> dLds(double *r) { return {0., 0., 0., 0., 0.}; };
+  virtual std::vector<double> dLdt(double *r) { return {0., 0., 0., 0., 0.}; };
 
   virtual void initializeNumberingUnknowns(feNumber *number);
   virtual void initializeNumberingEssential(feNumber *number);
-  virtual void initializeAddressingVector(feNumber *number, int numElem);
-  virtual void initializeAddressingVector(feNumber *number, int numElem, std::vector<int> &adr);
+  // virtual void initializeAddressingVector(feNumber *number, int numElem);
+  virtual void initializeAddressingVector(feNumber *number, int numElem, std::vector<feInt> &adr);
 };
 
 #endif

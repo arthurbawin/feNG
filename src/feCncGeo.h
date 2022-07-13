@@ -34,10 +34,10 @@ protected:
   std::vector<double> _J; // Jacobiens
 
   // For elements coloring
-  std::map<int, int> _nbElmPerNode;
-  std::map<int, int> _nbElmPerElm;
-  std::map<int, std::vector<int>> _listElmPerNode;
-  std::map<int, std::vector<int>> _listElmPerElm;
+  std::vector<int> _nbElmPerNode;
+  std::vector<int> _nbElmPerElm;
+  std::vector<std::vector<int> > _listElmPerNode;
+  std::vector<std::vector<int> > _listElmPerElm;
 
   int _nbColor;
   std::vector<int> _elmToColor;
@@ -61,6 +61,7 @@ public:
     _nNod = std::unique(connecNodes.begin(), connecNodes.end()) - connecNodes.begin();
 
     int coloringAlgorithm = 1;
+    feInfo("Methode de Coloriage : %d", coloringAlgorithm);
     colorElements(coloringAlgorithm);
   };
   ~feCncGeo()
@@ -69,10 +70,10 @@ public:
     //   delete _space;
   }
 
-  std::string getID() { return _ID; }
+  std::string &getID() { return _ID; }
   int getTag() { return _tag; }
   int getDim() { return _dim; }
-  std::string getForme() { return _forme; }
+  std::string getForme() {return _forme;}
   int getNbNodes() { return _nNod; }
   int getNbNodePerElem() { return _nNodPerElm; }
   int getNbElm() { return _nElm; }
@@ -118,9 +119,12 @@ public:
   // void color5(int cncGeoTag = 0);
 
   int getNbColor() { return _nbColor; };
-  std::vector<int> getColorElm() { return _elmToColor; };
-  std::vector<int> getNbElmPerColor() { return _nbElmPerColor; };
-  std::vector<std::vector<int> > getListElmPerColor() { return _listElmPerColor; };
+  std::vector<int> &getColorElm() { return _elmToColor; };
+  std::vector<int> &getNbElmPerColor() { return _nbElmPerColor; };
+  std::vector<std::vector<int> > &getListElmPerColor() { return _listElmPerColor; };
+  int getNbElmPerColorI(int i) { return _nbElmPerColor[i]; };
+  std::vector<int> &getListElmPerColorI(int i) { return _listElmPerColor[i]; };
+  int getElmColored(int iColor, int iElmC) { return _listElmPerColor[iColor][iElmC]; };
 };
 
 #endif

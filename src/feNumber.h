@@ -44,16 +44,17 @@ public:
   int getNbNodes() { return _nNod; }
   int getNbDOFs() { return _nDofs; }
 
-  void defDDLSommet(feMesh *mesh, std::string cncGeoID, int numElem, int numVertex);
-  void defDDLElement(feMesh *mesh, std::string cncGeoID, int numElem, int numDOF);
-  void defDDLEdge(feMesh *mesh, std::string cncGeoID, int numElem, int numEdge, int numDOF);
-  void defDDLSommet_essentialBC(feMesh *mesh, std::string cncGeoID, int numElem, int numVertex);
-  void defDDLElement_essentialBC(feMesh *mesh, std::string cncGeoID, int numElem);
-  void defDDLEdge_essentialBC(feMesh *mesh, std::string cncGeoID, int numElem, int numEdge);
+  void defDDLSommet(feMesh *mesh, std::string const &cncGeoID, int numElem, int numVertex);
+  void defDDLElement(feMesh *mesh, std::string const &cncGeoID, int numElem, int numDOF);
+  void defDDLEdge(feMesh *mesh, std::string const &cncGeoID, int numElem, int numEdge, int numDOF);
+  void defDDLSommet_essentialBC(feMesh *mesh, std::string const &cncGeoID, int numElem,
+                                int numVertex);
+  void defDDLElement_essentialBC(feMesh *mesh, std::string const &cncGeoID, int numElem);
+  void defDDLEdge_essentialBC(feMesh *mesh, std::string const &cncGeoID, int numElem, int numEdge);
 
-  int getDDLSommet(feMesh *mesh, std::string cncGeoID, int numElem, int numVertex);
-  int getDDLElement(feMesh *mesh, std::string cncGeoID, int numElem, int numDOF);
-  int getDDLEdge(feMesh *mesh, std::string cncGeoID, int numElem, int numEdge, int numDOF);
+  int getDDLSommet(feMesh *mesh, std::string const &cncGeoID, int numElem, int numVertex);
+  int getDDLElement(feMesh *mesh, std::string const &cncGeoID, int numElem, int numDOF);
+  int getDDLEdge(feMesh *mesh, std::string const &cncGeoID, int numElem, int numEdge, int numDOF);
 
   void prepareNumbering();
   int numberUnknowns(int globalNum);

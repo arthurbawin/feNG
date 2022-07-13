@@ -77,6 +77,7 @@ public:
   void setLinearSystem(feLinearSystem *linearSystem) { _linearSystem = linearSystem; }
   void setSolution(feSolution *sol) { _sol = sol; }
   void setMesh(feMesh *mesh) { _mesh = mesh; }
+  std::vector<double> &getNorm(int iNorm) { return _normL2[iNorm]; };
 
   virtual feStatus makeSteps(int nSteps) = 0;
 };
@@ -127,6 +128,7 @@ class DC2FSolver : public TimeIntegrator
 {
 protected:
   feSolutionContainer *_solutionContainerBDF1;
+  std::vector<std::vector<double> > _normL2BDF1;
 
 public:
   DC2FSolver(feTolerances tol, feMetaNumber *metaNumber, feLinearSystem *linearSystem,

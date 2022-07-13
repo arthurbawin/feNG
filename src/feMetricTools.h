@@ -50,7 +50,8 @@ void smoothSizes(std::map<size_t, double> &L1, std::map<size_t, double> &L2, int
 
 double dtt(const double x, const double y, double C, double S, feRecovery *rec);
 double dttt(const double x, const double y, double C, double S, feRecovery *rec, int direction);
-double dtttAnalytical(const double x, const double y, double C, double S, feRecovery *rec, int direction);
+double dtttAnalytical(const double x, const double y, double C, double S, feRecovery *rec,
+                      int direction);
 
 void computeWorstMetric(int nTheta, int nIncr, double e, double x, double y, double C, double S, 
   double &h1Opt, double &h2Opt, feRecovery *rec, SMetric3 &M, double lMin, double lMax);

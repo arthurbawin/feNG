@@ -11,25 +11,25 @@ class feNorm
 protected:
   std::vector<feSpace *> _VecfeSpace;
   feSpace *_intSpace; // assossiated with _VecfeSpace[0]
-  int NbFields = 1;
-  int cncGeoTag;
-  feSpace *geoSpace;
-  int nElmGeo;
-  int dim;
-  int nNodePerElem;
-  std::vector<double> geoCoord;
+  int _NbFields = 1;
+  int _cncGeoTag;
+  feSpace *_geoSpace;
+  int _nElmGeo;
+  int _dim;
+  int _nNodePerElem;
+  std::vector<double> _geoCoord;
 
   int _nQuad;
   int _degQuad;
-  int deg;
-  std::vector<double> w;
-  std::vector<double> x;
-  std::vector<double> y;
-  std::vector<double> z;
+  int _deg;
+  std::vector<double> _w;
+  std::vector<double> _x;
+  std::vector<double> _y;
+  std::vector<double> _z;
 
   feFunction *_solRef;
   feVectorFunction *_VecSolRef = nullptr;
-  double norm;
+  double _norm;
   std::string _TypeNorm;
 
 public:
@@ -41,8 +41,8 @@ public:
   ~feNorm() {}
   // ~feNormVec() {}
 
-  double getNorm() { return norm; }
-  int getNbFields() { return NbFields; }
+  double getNorm() { return _norm; }
+  int getNbFields() { return _NbFields; }
   std::string getTypeNorm() { return _TypeNorm; }
   void computeL2Norm(feMetaNumber *metaNumber, feSolution *sol, feMesh *mesh);
   void computeL2NormVec(feMetaNumber *metaNumber, feSolution *sol, feMesh *mesh);
@@ -59,9 +59,9 @@ public:
   void computeL2Norm0D(feSolution *sol);
   void computeArea(feMetaNumber *metaNumber, feSolution *sol, feMesh *mesh);
   void computeIntegral(feMetaNumber *metaNumber, feSolution *sol, feMesh *mesh, feFunction *fun);
-  feStatus computeErrorNormFromExternalSolution(feMetaNumber *metaNumber, feSolution *sol, feMesh *mesh,
-                                                feMetaNumber *refMN, feSolution *refSol,
-                                                feMesh *refMesh,
+  feStatus computeErrorNormFromExternalSolution(feMetaNumber *metaNumber, feSolution *sol,
+                                                feMesh *mesh, feMetaNumber *refMN,
+                                                feSolution *refSol, feMesh *refMesh,
                                                 const std::vector<feSpace *> refSpaces);
 };
 

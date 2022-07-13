@@ -5,7 +5,8 @@
 // ====================================================================
 
 feCompressedRowStorage::feCompressedRowStorage(feMetaNumber *metaNumber, feMesh *mesh,
-                                               std::vector<feBilinearForm *> &formMatrices)
+                                               std::vector<feBilinearForm *> &formMatrices,
+                                               int numMatrixForms)
 {
   ordre = (feInt)metaNumber->getNbUnknowns();
   nnz = new feInt[ordre];
@@ -17,7 +18,7 @@ feCompressedRowStorage::feCompressedRowStorage(feMetaNumber *metaNumber, feMesh 
   // COMPTER LES ELEMENTS D'UN DEGRE DE LIBERTE
   // POUR CONSTRUIRE L'ESPACE TEMPORAIRE
   // ================================================================
-  feInt NumberOfBilinearForms = formMatrices.size();
+  // int NumberOfBilinearForms = numMatrixForms;
 
   // int cnt = 0;
   // #pragma omp parallel for private(cnt)
@@ -26,7 +27,7 @@ feCompressedRowStorage::feCompressedRowStorage(feMetaNumber *metaNumber, feMesh 
   //   printf("Thread %d has printed %2d times\n", omp_get_thread_num(), cnt++);
   // }
 
-  for(feInt eq = 0; eq < NumberOfBilinearForms; eq++) {
+  for(int eq = 0; eq < numMatrixForms; eq++) {
     feBilinearForm *equelm = formMatrices[eq];
     feInt cncGeoTag = equelm->getCncGeoTag();
     feInt nbElems = mesh->getNbElm(cncGeoTag);
@@ -36,7 +37,7 @@ feCompressedRowStorage::feCompressedRowStorage(feMetaNumber *metaNumber, feMesh 
       // omp_get_num_threads());
       equelm->initialize_vadij_only(metaNumber, e);
       feInt NBRI = equelm->getNiElm();
-      std::vector<int> VADI = equelm->getAdrI(); // &VADI ????
+      std::vector<feInt> VADI = equelm->getAdrI(); // &VADI ????
       for(feInt i = 0; i < NBRI; i++) {
         feInt I = (feInt)VADI[i];
         if(I < ordre) ddlNumberOfElements[I]++;
@@ -69,7 +70,7 @@ feCompressedRowStorage::feCompressedRowStorage(feMetaNumber *metaNumber, feMesh 
   // RECUPERER LES NUMEROS DES FORMES BIULINEAIRES ET DES ELEMENTS
   // ================================================================
   for(feInt i = 0; i < ordre; i++) ddlNumberOfElements[i] = 0;
-  for(feInt eq = 0; eq < NumberOfBilinearForms; eq++) {
+  for(int eq = 0; eq < numMatrixForms; eq++) {
     feBilinearForm *equelm = formMatrices[eq];
     feInt cncGeoTag = equelm->getCncGeoTag();
     feInt nbElems = mesh->getNbElm(cncGeoTag);
@@ -77,7 +78,7 @@ feCompressedRowStorage::feCompressedRowStorage(feMetaNumber *metaNumber, feMesh 
     for(feInt el = 0; el < nbElems; el++) {
       equelm->initialize_vadij_only(metaNumber, el);
       feInt NBRI = equelm->getNiElm();
-      std::vector<int> VADI = equelm->getAdrI();
+      std::vector<feInt> VADI = equelm->getAdrI();
 
       for(feInt i = 0; i < NBRI; i++) {
         feInt I = VADI[i];
@@ -126,7 +127,7 @@ feCompressedRowStorage::feCompressedRowStorage(feMetaNumber *metaNumber, feMesh 
       // feInt cncGeoTag = equelm->getCncGeoTag();
       equelm->initialize_vadij_only(metaNumber, el);
       feInt NBRJ = equelm->getNiElm();
-      std::vector<int> VADJ = equelm->getAdrJ();
+      std::vector<feInt> VADJ = equelm->getAdrJ();
 
       for(feInt j = 0; j < NBRJ; j++) {
         feInt J = VADJ[j];
@@ -191,8 +192,9 @@ int compint(const void *a, const void *b)
 }
 
 feCompressedRowStorageMklPardiso::feCompressedRowStorageMklPardiso(
-  feMetaNumber *metaNumber, feMesh *mesh, std::vector<feBilinearForm *> &formMatrices)
-  : feCompressedRowStorage(metaNumber, mesh, formMatrices)
+  feMetaNumber *metaNumber, feMesh *mesh, std::vector<feBilinearForm *> &formMatrices,
+  int numMatrixForms)
+  : feCompressedRowStorage(metaNumber, mesh, formMatrices, numMatrixForms)
 {
   // ================================================================
   // ALLOUER LA STRUCTURE CSR DE MKL PARDISO
@@ -252,7 +254,7 @@ feCompressedRowStorageMklPardiso::feCompressedRowStorageMklPardiso(
       // feInt cncGeoTag = equelm->getCncGeoTag();
       equelm->initialize_vadij_only(metaNumber, el);
       feInt NBRJ = equelm->getNiElm();
-      std::vector<int> VADJ = equelm->getAdrJ();
+      std::vector<feInt> VADJ = equelm->getAdrJ();
 
       for(feInt j = 0; j < NBRJ; j++) {
         feInt J = VADJ[j];

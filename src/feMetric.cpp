@@ -369,17 +369,18 @@ void feMetric::computeMetricsHechtKuate()
     std::vector<double> xP(nt, 0.);
     std::vector<double> yP(nt, 0.);
 
-    for(auto v : vertices){
+    for(auto v : vertices) {
       Vertex *vv = _recovery->_mesh->getVertex(v);
       SMetric3 M = _metrics[v];
-      getEllipsePoints(factor * M(0, 0), factor * 2.0 * M(0, 1), factor * M(1, 1), vv->x(), vv->y(), xP, yP);
+      getEllipsePoints(factor * M(0, 0), factor * 2.0 * M(0, 1), factor * M(1, 1), vv->x(), vv->y(),
+                       xP, yP);
       for(int j = 0; j < nt; ++j) {
         if(j != nt - 1) {
-          fprintf(debugFile, "SL(%.16g,%.16g,%.16g,%.16g,%.16g,%.16g){%u, %u};\n", xP[j], yP[j],
-                  0., xP[j + 1], yP[j + 1], 0., 1, 1);
+          fprintf(debugFile, "SL(%.16g,%.16g,%.16g,%.16g,%.16g,%.16g){%u, %u};\n", xP[j], yP[j], 0.,
+                  xP[j + 1], yP[j + 1], 0., 1, 1);
         } else {
-          fprintf(debugFile, "SL(%.16g,%.16g,%.16g,%.16g,%.16g,%.16g){%u, %u};\n", xP[j], yP[j],
-                  0., xP[0], yP[0], 0., 1, 1);
+          fprintf(debugFile, "SL(%.16g,%.16g,%.16g,%.16g,%.16g,%.16g){%u, %u};\n", xP[j], yP[j], 0.,
+                  xP[0], yP[0], 0., 1, 1);
         }
       }
     }

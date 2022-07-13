@@ -37,16 +37,22 @@ protected:
   std::vector<int> _jVar;
   feInt _niElm;
   feInt _njElm;
-  std::vector<int> _adrI;
-  std::vector<int> _adrJ;
+  std::vector<feInt> _adrI;
+  std::vector<feInt> _adrJ;
 
   double **_Ae;
   double *_Be;
 
 public:
   // Test : local attributes
-  std::vector<int> _adr;
-  std::vector<double> _sol;
+  // std::vector<feInt> _adr;
+  // std::vector<double> _sol;
+  // std::vector<double> _solDot;
+
+
+  std::vector<std::vector<feInt>> _adr;
+  std::vector<std::vector<double>> _sol;
+  std::vector<std::vector<double>> _solDot;
 
   // ==================================================================
   // Pointeur sur la méthode de construction de la matrice élémentaire
@@ -58,9 +64,9 @@ public:
   //                  Rh le résidu perturbé
   //                  h0 la perturbation de la solution
   // ==================================================================
-  double *R0;
-  double *Rh;
-  double h0;
+  double *_R0;
+  double *_Rh;
+  double _h0;
 
   void (feBilinearForm::*ptrComputeMatrix)(feMetaNumber *metaNumber, feMesh *mesh, feSolution *sol,
                                            int numElem);
@@ -75,10 +81,10 @@ public:
 
   bool hasMatrix() { return _sysElm->hasMatrix(); }
 
-  int getNiElm() { return _niElm; }
-  int getNjElm() { return _njElm; }
-  std::vector<int> &getAdrI() { return _adrI; }
-  std::vector<int> &getAdrJ() { return _adrJ; }
+  feInt getNiElm() { return _niElm; }
+  feInt getNjElm() { return _njElm; }
+  std::vector<feInt> &getAdrI() { return _adrI; }
+  std::vector<feInt> &getAdrJ() { return _adrJ; }
 
   double **getAe() { return _Ae; }
   double *getBe() { return _Be; }

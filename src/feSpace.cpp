@@ -129,7 +129,7 @@ feSpace::feSpace(feMesh *mesh, std::string fieldID, std::string cncGeoID, feFunc
   }
 }
 
-feCncGeo *feSpace::getCncGeo() { return _mesh->getCncGeoByTag(_cncGeoTag); }
+feCncGeo *feSpace::getCncGeo() {return _mesh->getCncGeoByTag(_cncGeoTag); }
 
 int feSpace::getDim() { return this->getCncGeo()->getDim(); }
 int feSpace::getNbElm() { return _mesh->getNbElm(_cncGeoTag); }
@@ -178,7 +178,7 @@ feStatus feSpace::setQuadratureRule(feQuadrature *rule)
     double rc[3] = {1. / 3., 1. / 3., 1. / 3.};
 
     for(int iElm = 0; iElm < nElm; ++iElm) {
-      geoCoord = _mesh->getCoord(_cncGeoTag, iElm);
+      _mesh->getCoord(_cncGeoTag, iElm, geoCoord);
 
       std::vector<double> LAtQuadNodes(_nFunctions * _nQuad);
       std::vector<double> dLdxAtQuadNodes(_nFunctions * _nQuad);
@@ -264,328 +264,322 @@ double feSpace::innerProductBasisFunctions(int iElm, int ex, int ey)
   return res;
 }
 
-// Initialize solution vector from a feSolution
-void feSpace::initializeSolution(feSolution *sol)
-{
-  _sol.resize(_adr.size());
-  for(size_t i = 0; i < _adr.size(); ++i) {
-    _sol[i] = sol->getSolAtDOF(_adr[i]);
-  }
-}
-
-// Initialize solution vector from another vector (typically coming from a solutionContainer)
-void feSpace::initializeSolution(std::vector<double> &sol)
-{
-  _sol.resize(_adr.size());
-  for(size_t i = 0; i < _adr.size(); ++i) {
-    _sol[i] = sol[_adr[i]];
-  }
-}
-
-void feSpace::initializeSolutionDot(feSolution *sol)
-{
-  _soldot.resize(_adr.size());
-  for(size_t i = 0; i < _adr.size(); ++i) _soldot[i] = sol->getSolDotAtDOF(_adr[i]);
-}
-
-double feSpace::interpolateSolution(double r[3])
+double feSpace::interpolateField(std::vector<double> &field, double *r) // match
 {
   double res = 0.0;
-  for(int i = 0; i < _nFunctions; ++i) res += _sol[i] * L(r)[i];
-  return res;
-}
-
-double feSpace::interpolateSolution_rDerivative(double r[3])
-{
-  double res = 0.0;
-  for(int i = 0; i < _nFunctions; ++i) res += _sol[i] * dLdr(r)[i];
-  return res;
-}
-
-double feSpace::interpolateSolution_sDerivative(double r[3])
-{
-  double res = 0.0;
-  for(int i = 0; i < _nFunctions; ++i) res += _sol[i] * dLds(r)[i];
-  return res;
-}
-
-double feSpace::interpolateSolution(int iElm, std::vector<double> &x)
-{
-  double res = 0.0;
-  std::vector<double> l(_nFunctions, 0.0);
-  std::vector<double> dldx(_nFunctions, 0.0);
-  std::vector<double> dldy(_nFunctions, 0.0);
-  Lphys(iElm, x, l, dldx, dldy);
-  for(int i = 0; i < _nFunctions; ++i) res += _sol[i] * l[i];
-  return res;
-}
-
-double feSpace::interpolateSolution(feNumber *number, feSolution *sol, std::vector<double> &x)
-{
-  std::vector<double> u(3, 0.0);
-  int elm = -1;
-  bool isFound = static_cast<feMesh2DP1 *>(_mesh)->locateVertex(x, elm, u);
-  if(!isFound) {
-    printf(
-      "In feSpace::interpolateSolution : Warning - Point (%f, %f, %f) was not found in the mesh.\n",
-      x[0], x[1], x[2]);
-    return 0.0;
-  } else {
-    this->initializeAddressingVector(number, elm);
-    this->initializeSolution(sol);
-    return this->interpolateSolution(u.data()); // Attention : fonctions de forme locales
-  }
-}
-
-void feSpace::interpolateSolution_gradrs(feNumber *number, feSolution *sol, std::vector<double> &x,
-                                         std::vector<double> &grad)
-{
-  std::vector<double> u(3, 0.0);
-  int elm = -1;
-  bool isFound = static_cast<feMesh2DP1 *>(_mesh)->locateVertex(x, elm, u);
-  if(!isFound) {
-    printf(
-      "In feSpace::interpolateSolution : Warning - Point (%f, %f, %f) was not found in the mesh.\n",
-      x[0], x[1], x[2]);
-    return;
-  } else {
-    this->initializeAddressingVector(number, elm);
-    this->initializeSolution(sol);
-    grad[0] =
-      this->interpolateSolution_rDerivative(u.data()); // Attention : fonctions de forme locales
-    grad[0] =
-      this->interpolateSolution_sDerivative(u.data()); // Attention : fonctions de forme locales
-  }
-}
-
-double feSpace::interpolateSolution_xDerivative(int iElm, std::vector<double> &x)
-{
-  double res = 0.0;
-  std::vector<double> l(_nFunctions, 0.0);
-  std::vector<double> dldx(_nFunctions, 0.0);
-  std::vector<double> dldy(_nFunctions, 0.0);
-  Lphys(iElm, x, l, dldx, dldy);
-  for(int i = 0; i < _nFunctions; ++i) res += _sol[i] * dldx[i];
-  return res;
-}
-
-double feSpace::interpolateSolution_yDerivative(int iElm, std::vector<double> &x)
-{
-  double res = 0.0;
-  std::vector<double> l(_nFunctions, 0.0);
-  std::vector<double> dldx(_nFunctions, 0.0);
-  std::vector<double> dldy(_nFunctions, 0.0);
-  Lphys(iElm, x, l, dldx, dldy);
-  for(int i = 0; i < _nFunctions; ++i) res += _sol[i] * dldy[i];
-  return res;
-}
-
-double feSpace::interpolateSolutionAtQuadNode(int iNode)
-{
-  double res = 0.0;
-  for(int i = 0; i < _nFunctions; ++i) {
-    res += _sol[i] * _L[_nFunctions * iNode + i];
-    // std::cout<<"_sol [ "<< i<<"]="<<_sol[i] << "_L =" << _L[_nFunctions * iNode + i]<<std::endl;
-  }
-  return res;
-}
-
-double feSpace::interpolateSolutionAtQuadNode(int iElm, int iNode)
-{
-  double res = 0.0;
-  for(int i = 0; i < _nFunctions; ++i) res += _sol[i] * _Lglob[iElm][_nFunctions * iNode + i];
-  return res;
-}
-
-double feSpace::interpolateSolutionDotAtQuadNode(int iNode)
-{
-  double res = 0.0;
-  for(int i = 0; i < _nFunctions; ++i) res += _soldot[i] * _L[_nFunctions * iNode + i];
-  return res;
-}
-
-double feSpace::interpolateSolutionAtQuadNode_rDerivative(int iNode)
-{
-  double res = 0.0;
-  for(int i = 0; i < _nFunctions; ++i) res += _sol[i] * _dLdr[_nFunctions * iNode + i];
-  return res;
-}
-
-double feSpace::interpolateSolutionAtQuadNode_sDerivative(int iNode)
-{
-  double res = 0.0;
-  for(int i = 0; i < _nFunctions; ++i) res += _sol[i] * _dLds[_nFunctions * iNode + i];
-  return res;
-}
-
-double feSpace::interpolateSolutionAtQuadNode_xDerivative(int iElm, int iNode)
-{
-  double res = 0.0;
-  for(int i = 0; i < _nFunctions; ++i) res += _sol[i] * _dLdxglob[iElm][_nFunctions * iNode + i];
-  return res;
-}
-
-double feSpace::interpolateSolutionAtQuadNode_yDerivative(int iElm, int iNode)
-{
-  double res = 0.0;
-  for(int i = 0; i < _nFunctions; ++i) res += _sol[i] * _dLdyglob[iElm][_nFunctions * iNode + i];
-  return res;
-}
-
-double feSpace::interpolateField(std::vector<double> field, double r[3])
-{
-  double res = 0.0;
+#ifdef DEBUG
   if(field.size() != (unsigned)_nFunctions) {
     printf(" In feSpace::interpolateField : Erreur - Nombre de valeurs nodales non compatible avec "
            "le nombre d'interpolants de l'espace.\n");
     return res;
   }
+#endif
   for(int i = 0; i < _nFunctions; ++i) res += field[i] * L(r)[i];
   return res;
 }
 
-double feSpace::interpolateFieldAtQuadNode(std::vector<double> field, int iNode)
+double feSpace::interpolateField(std::vector<double> &field, int iElm, std::vector<double> &x)
 {
   double res = 0.0;
+#ifdef DEBUG
+  if(field.size() != (unsigned)_nFunctions) {
+    printf(" In feSpace::interpolateField : Erreur - Nombre de valeurs nodales non compatible avec "
+           "le nombre d'interpolants de l'espace.\n");
+    return res;
+  }
+#endif
+  std::vector<double> l(_nFunctions, 0.0);
+  std::vector<double> dldx(_nFunctions, 0.0);
+  std::vector<double> dldy(_nFunctions, 0.0);
+  Lphys(iElm, x, l, dldx, dldy);
+  for(int i = 0; i < _nFunctions; ++i) res += field[i] * l[i];
+  return res;
+}
+
+double feSpace::interpolateField(feNumber *number, feSolution *sol, std::vector<double> &x)
+{
+  std::vector<double> u(3, 0.0);
+  int elm = -1;
+  bool isFound = static_cast<feMesh2DP1 *>(_mesh)->locateVertex(x, elm, u);
+#ifdef DEBUG
+  if(!isFound) {
+    printf(
+      "In feSpace::interpolateField : Warning - Point (%f, %f, %f) was not found in the mesh.\n",
+      x[0], x[1], x[2]);
+    return 0.0;
+  }
+#endif
+  std::vector<feInt> adr(this->getNbFunctions());
+  std::vector<double> solution(adr.size());
+  std::vector<double> &solVec = sol->getSolutionReference();
+  this->initializeAddressingVector(number, elm, adr);
+  for(size_t i = 0; i < adr.size(); ++i) {
+    solution[i] = solVec[adr[i]];
+  }
+  return this->interpolateField(solution, u.data()); // Attention : fonctions de forme locales
+}
+
+double feSpace::interpolateField_rDerivative(std::vector<double> &field, double *r) // match
+{
+  double res = 0.0;
+#ifdef DEBUG
+  if(field.size() != (unsigned)_nFunctions) {
+    printf(" In feSpace::interpolateField : Erreur - Nombre de valeurs nodales non compatible avec "
+           "le nombre d'interpolants de l'espace.\n");
+    return res;
+  }
+#endif
+  for(int i = 0; i < _nFunctions; ++i) res += field[i] * dLdr(r)[i];
+  return res;
+}
+
+double feSpace::interpolateField_sDerivative(std::vector<double> &field, double *r) // match
+{
+  double res = 0.0;
+#ifdef DEBUG
+  if(field.size() != (unsigned)_nFunctions) {
+    printf(" In feSpace::interpolateField : Erreur - Nombre de valeurs nodales non compatible avec "
+           "le nombre d'interpolants de l'espace.\n");
+    return res;
+  }
+#endif
+  for(int i = 0; i < _nFunctions; ++i) res += field[i] * dLds(r)[i];
+  return res;
+}
+
+double feSpace::interpolateField_xDerivative(std::vector<double> &field, int iElm,
+                                             std::vector<double> &x)
+{
+  double res = 0.0;
+#ifdef DEBUG
+  if(field.size() != (unsigned)_nFunctions) {
+    printf(" In feSpace::interpolateField : Erreur - Nombre de valeurs nodales non compatible avec "
+           "le nombre d'interpolants de l'espace.\n");
+    return res;
+  }
+#endif
+  std::vector<double> l(_nFunctions, 0.0);
+  std::vector<double> dldx(_nFunctions, 0.0);
+  std::vector<double> dldy(_nFunctions, 0.0);
+  Lphys(iElm, x, l, dldx, dldy);
+  for(int i = 0; i < _nFunctions; ++i) res += field[i] * dldx[i];
+  return res;
+}
+
+double feSpace::interpolateField_yDerivative(std::vector<double> &field, int iElm,
+                                             std::vector<double> &x)
+{
+  double res = 0.0;
+#ifdef DEBUG
+  if(field.size() != (unsigned)_nFunctions) {
+    printf(" In feSpace::interpolateField : Erreur - Nombre de valeurs nodales non compatible avec "
+           "le nombre d'interpolants de l'espace.\n");
+    return res;
+  }
+#endif
+  std::vector<double> l(_nFunctions, 0.0);
+  std::vector<double> dldx(_nFunctions, 0.0);
+  std::vector<double> dldy(_nFunctions, 0.0);
+  Lphys(iElm, x, l, dldx, dldy);
+  for(int i = 0; i < _nFunctions; ++i) res += field[i] * dldy[i];
+  return res;
+}
+
+void feSpace::interpolateField_gradrs(feNumber *number, feSolution *sol, std::vector<double> &x,
+                                      std::vector<double> &grad)
+{
+  std::vector<double> u(3, 0.0);
+  int elm = -1;
+  bool isFound = static_cast<feMesh2DP1 *>(_mesh)->locateVertex(x, elm, u);
+  if(!isFound) {
+    printf("In feSpace::interpolateField_gradrs: Warning - Point (%f, %f, %f) was not found in the "
+           "mesh.\n",
+           x[0], x[1], x[2]);
+    return;
+  } else {
+    std::vector<feInt> adr(this->getNbFunctions());
+    std::vector<double> solution(adr.size());
+    std::vector<double> &solVec = sol->getSolutionReference();
+    this->initializeAddressingVector(number, elm, adr);
+    for(size_t i = 0; i < adr.size(); ++i) {
+      solution[i] = solVec[adr[i]];
+    }
+    grad[0] = this->interpolateField_rDerivative(
+      solution, u.data()); // Attention : fonctions de forme locales
+    grad[0] = this->interpolateField_sDerivative(
+      solution, u.data()); // Attention : fonctions de forme locales
+  }
+}
+
+double feSpace::interpolateFieldAtQuadNode(std::vector<double> &field, int iNode) // match
+{
+  double res = 0.0;
+#ifdef DEBUG
   if(field.size() != (unsigned)_nFunctions) {
     printf(" In feSpace::interpolateFieldAtQuadNode : Erreur - Nombre de valeurs nodales non "
            "compatible avec le nombre d'interpolants de l'espace.\n");
     return res;
   }
+#endif
   for(int i = 0; i < _nFunctions; ++i) res += field[i] * _L[_nFunctions * iNode + i];
   return res;
 }
 
-double feSpace::interpolateField_rDerivative(std::vector<double> field, double r[3])
+double feSpace::interpolateFieldAtQuadNode(std::vector<double> &field, int iElm, int iNode)
 {
   double res = 0.0;
+#ifdef DEBUG
   if(field.size() != (unsigned)_nFunctions) {
-    printf(" In feSpace::interpolateField : Erreur - Nombre de valeurs nodales non compatible avec "
-           "le nombre d'interpolants de l'espace.\n");
+    printf(" In feSpace::interpolateFieldAtQuadNode : Erreur - Nombre de valeurs nodales non "
+           "compatible avec le nombre d'interpolants de l'espace.\n");
     return res;
   }
-  for(int i = 0; i < _nFunctions; ++i) res += field[i] * dLdr(r)[i];
+#endif
+  for(int i = 0; i < _nFunctions; ++i) res += field[i] * _Lglob[iElm][_nFunctions * iNode + i];
   return res;
 }
 
-double feSpace::interpolateFieldAtQuadNode_rDerivative(std::vector<double> field, int iNode)
+double feSpace::interpolateFieldAtQuadNode_rDerivative(std::vector<double> &field,
+                                                       int iNode) 
 {
   double res = 0.0;
+#ifdef DEBUG
   if(field.size() != (unsigned)_nFunctions) {
-    printf(" In feSpace::interpolateFieldAtQuadNode : Erreur - Nombre de valeurs nodales (%d) non "
+    printf(" In feSpace::interpolateFieldAtQuadNode : Erreur - Nombre de valeurs nodales (%ld) non "
            "compatible avec le nombre d'interpolants de l'espace (%d).\n",
            field.size(), (unsigned)_nFunctions);
     return res;
   }
+#endif
   for(int i = 0; i < _nFunctions; ++i) res += field[i] * _dLdr[_nFunctions * iNode + i];
   return res;
 }
 
-double feSpace::interpolateFieldAtQuadNode_sDerivative(std::vector<double> field, int iNode)
+double feSpace::interpolateFieldAtQuadNode_sDerivative(std::vector<double> &field,
+                                                       int iNode) 
 {
   double res = 0.0;
+#ifdef DEBUG
   if(field.size() != (unsigned)_nFunctions) {
-    printf(" In feSpace::interpolateFieldAtQuadNode : Erreur - Nombre de valeurs nodales (%d) non "
+    printf(" In feSpace::interpolateFieldAtQuadNode : Erreur - Nombre de valeurs nodales (%ld) non "
            "compatible avec le nombre d'interpolants de l'espace (%d).\n",
            field.size(), (unsigned)_nFunctions);
     return res;
   }
+#endif
   for(int i = 0; i < _nFunctions; ++i) res += field[i] * _dLds[_nFunctions * iNode + i];
   return res;
 }
 
-double feSpace::interpolateFieldAtQuadNode_xDerivative(std::vector<double> field, int iElm, int iNode)
+double feSpace::interpolateFieldAtQuadNode_xDerivative(std::vector<double> &field, int iElm,
+                                                       int iNode)
 {
   double res = 0.0;
+#ifdef DEBUG
   if(field.size() != (unsigned)_nFunctions) {
-    printf(" In feSpace::interpolateFieldAtQuadNode : Erreur - Nombre de valeurs nodales (%d) non "
+    printf(" In feSpace::interpolateFieldAtQuadNode : Erreur - Nombre de valeurs nodales (%ld) non "
            "compatible avec le nombre d'interpolants de l'espace (%d).\n",
            field.size(), (unsigned)_nFunctions);
     return res;
   }
+#endif
   for(int i = 0; i < _nFunctions; ++i) res += field[i] * _dLdxglob[iElm][_nFunctions * iNode + i];
   return res;
 }
 
-double feSpace::interpolateFieldAtQuadNode_yDerivative(std::vector<double> field, int iElm, int iNode)
+double feSpace::interpolateFieldAtQuadNode_yDerivative(std::vector<double> &field, int iElm,
+                                                       int iNode)
 {
   double res = 0.0;
+#ifdef DEBUG
   if(field.size() != (unsigned)_nFunctions) {
-    printf(" In feSpace::interpolateFieldAtQuadNode : Erreur - Nombre de valeurs nodales (%d) non "
+    printf(" In feSpace::interpolateFieldAtQuadNode : Erreur - Nombre de valeurs nodales (%ld) non "
            "compatible avec le nombre d'interpolants de l'espace (%d).\n",
            field.size(), (unsigned)_nFunctions);
     return res;
   }
+#endif
   for(int i = 0; i < _nFunctions; ++i) res += field[i] * _dLdyglob[iElm][_nFunctions * iNode + i];
   return res;
 }
 
-void feSpace::interpolateVectorField(std::vector<double> field, double r[3],
+void feSpace::interpolateVectorField(std::vector<double> &field, double *r,
                                      std::vector<double> &res)
 {
   // Field structure :
   // [fx0 fy0 fz0 fx1 fy1 fz1 ... fxn fyn fzn]
   res[0] = res[1] = res[2] = 0.0;
+#ifdef DEBUG
   if(field.size() != 3 * (unsigned)_nFunctions) {
     printf(" In feSpace::interpolateVectorField : Erreur - Nombre de valeurs nodales non "
            "compatible avec le nombre d'interpolants de l'espace.\n");
     return;
   }
+#endif
+  std::vector<double> l=L(r);
   for(int i = 0; i < 3; ++i) {
     for(int j = 0; j < _nFunctions; ++j) {
       // res[i] += field[3*i+j]*L(r)[j];
-      res[i] += field[3 * j + i] * L(r)[j];
+      res[i] += field[3 * j + i] * l[j];
     }
   }
 }
 
-void feSpace::interpolateVectorField_rDerivative(std::vector<double> field, double r[3],
+void feSpace::interpolateVectorField_rDerivative(std::vector<double> &field, double *r,
                                                  std::vector<double> &res)
 {
   // Field structure :
   // [fx0 fy0 fz0 fx1 fy1 fz1 ... fxn fyn fzn]
   res[0] = res[1] = res[2] = 0.0;
+#ifdef DEBUG
   if(field.size() != 3 * (unsigned)_nFunctions) {
     printf(" In feSpace::interpolateVectorField : Erreur - Nombre de valeurs nodales non "
            "compatible avec le nombre d'interpolants de l'espace.\n");
     return;
   }
+#endif
+  std::vector<double> dldr=dLdr(r);
   for(int i = 0; i < 3; ++i) {
     for(int j = 0; j < _nFunctions; ++j) {
-      res[i] += field[3 * j + i] * dLdr(r)[j];
+      res[i] += field[3 * j + i] * dldr[j];
     }
   }
 }
 
-void feSpace::interpolateVectorField_sDerivative(std::vector<double> field, double r[3],
+void feSpace::interpolateVectorField_sDerivative(std::vector<double> &field, double *r,
                                                  std::vector<double> &res)
 {
   // Field structure :
   // [fx0 fy0 fz0 fx1 fy1 fz1 ... fxn fyn fzn]
   res[0] = res[1] = res[2] = 0.0;
+#ifdef DEBUG
   if(field.size() != 3 * (unsigned)_nFunctions) {
     printf(" In feSpace::interpolateVectorField : Erreur - Nombre de valeurs nodales non "
            "compatible avec le nombre d'interpolants de l'espace.\n");
     return;
   }
+#endif
+  std::vector<double> dlds=dLds(r);
   for(int i = 0; i < 3; ++i) {
     for(int j = 0; j < _nFunctions; ++j) {
-      res[i] += field[3 * j + i] * dLds(r)[j];
+      res[i] += field[3 * j + i] * dlds[j];
     }
   }
 }
 
-void feSpace::interpolateVectorFieldAtQuadNode(std::vector<double> field, int iNode,
+void feSpace::interpolateVectorFieldAtQuadNode(std::vector<double> &field, int iNode,
                                                std::vector<double> &res)
 {
   // Field structure :
   // [fx0 fy0 fz0 fx1 fy1 fz1 ... fxn fyn fzn]
   res[0] = res[1] = res[2] = 0.0;
+#ifdef DEBUG
   if(field.size() != 3 * (unsigned)_nFunctions) {
     printf(" In feSpace::interpolateVectorFieldAtQuadNode : Erreur - Nombre de valeurs nodales non "
            "compatible avec le nombre d'interpolants de l'espace.\n");
     return;
   }
+#endif
   for(int i = 0; i < 3; ++i) {
     for(int j = 0; j < _nFunctions; ++j) {
       // res[i] += field[3*i+j]*_L[_nFunctions*iNode+j];
@@ -594,18 +588,20 @@ void feSpace::interpolateVectorFieldAtQuadNode(std::vector<double> field, int iN
   }
 }
 
-void feSpace::interpolateVectorFieldAtQuadNode_rDerivative(std::vector<double> field, int iNode,
+void feSpace::interpolateVectorFieldAtQuadNode_rDerivative(std::vector<double> &field, int iNode,
                                                            std::vector<double> &res)
 {
   // Field structure :
   // [fx0 fy0 fz0 fx1 fy1 fz1 ... fxn fyn fzn]
   res[0] = res[1] = res[2] = 0.0;
+#ifdef DEBUG
   if(field.size() != 3 * (unsigned)_nFunctions) {
     printf(" In feSpace::interpolateVectorFieldAtQuadNode_rDerivative : Erreur - Nombre de valeurs "
-           "nodales (%d) non compatible avec le nombre d'interpolants de l'espace (%d).\n",
+           "nodales (%ld) non compatible avec le nombre d'interpolants de l'espace (%d).\n",
            field.size(), (unsigned)_nFunctions);
     return;
   }
+#endif
   for(int i = 0; i < 3; ++i) {
     for(int j = 0; j < _nFunctions; ++j) {
       // res[i] += field[3*i+j]*_dLdr[_nFunctions*iNode+j];
@@ -614,18 +610,20 @@ void feSpace::interpolateVectorFieldAtQuadNode_rDerivative(std::vector<double> f
   }
 }
 
-void feSpace::interpolateVectorFieldAtQuadNode_sDerivative(std::vector<double> field, int iNode,
+void feSpace::interpolateVectorFieldAtQuadNode_sDerivative(std::vector<double> &field, int iNode,
                                                            std::vector<double> &res)
 {
   // Field structure :
   // [fx0 fy0 fz0 fx1 fy1 fz1 ... fxn fyn fzn]
   res[0] = res[1] = res[2] = 0.0;
+#ifdef DEBUG
   if(field.size() != 3 * (unsigned)_nFunctions) {
     printf(" In feSpace::interpolateVectorFieldAtQuadNode_sDerivative : Erreur - Nombre de valeurs "
-           "nodales (%d) non compatible avec le nombre d'interpolants de l'espace (%d).\n",
+           "nodales (%ld) non compatible avec le nombre d'interpolants de l'espace (%d).\n",
            field.size(), (unsigned)_nFunctions);
     return;
   }
+#endif
   for(int i = 0; i < 3; ++i) {
     for(int j = 0; j < _nFunctions; ++j) {
       // res[i] += field[3*i+j]*_dLdr[_nFunctions*iNode+j];
@@ -659,13 +657,13 @@ void feSpace1DP0::initializeNumberingEssential(feNumber *number)
     number->defDDLSommet_essentialBC(_mesh, _cncGeoID, i, 0);
 }
 
-void feSpace1DP0::initializeAddressingVector(feNumber *number, int numElem)
-{
-  // for(int i = 0; i < _mesh->getNbElm(_cncGeoID); ++i)
-  _adr[0] = number->getDDLSommet(_mesh, _cncGeoID, numElem, 0);
-}
+// void feSpace1DP0::initializeAddressingVector(feNumber *number, int numElem)
+// {
+//   // for(int i = 0; i < _mesh->getNbElm(_cncGeoID); ++i)
+//   _adr[0] = number->getDDLSommet(_mesh, _cncGeoID, numElem, 0);
+// }
 
-void feSpace1DP0::initializeAddressingVector(feNumber *number, int numElem, std::vector<int> &adr)
+void feSpace1DP0::initializeAddressingVector(feNumber *number, int numElem, std::vector<feInt> &adr)
 {
   // for(int i = 0; i < _mesh->getNbElm(_cncGeoID); ++i)
   adr[0] = number->getDDLSommet(_mesh, _cncGeoID, numElem, 0);
@@ -687,13 +685,13 @@ void feSpace1DP1::initializeNumberingEssential(feNumber *number)
   }
 }
 
-void feSpace1DP1::initializeAddressingVector(feNumber *number, int numElem)
-{
-  _adr[0] = number->getDDLSommet(_mesh, _cncGeoID, numElem, 0);
-  _adr[1] = number->getDDLSommet(_mesh, _cncGeoID, numElem, 1);
-}
+// void feSpace1DP1::initializeAddressingVector(feNumber *number, int numElem)
+// {
+//   _adr[0] = number->getDDLSommet(_mesh, _cncGeoID, numElem, 0);
+//   _adr[1] = number->getDDLSommet(_mesh, _cncGeoID, numElem, 1);
+// }
 
-void feSpace1DP1::initializeAddressingVector(feNumber *number, int numElem, std::vector<int> &adr)
+void feSpace1DP1::initializeAddressingVector(feNumber *number, int numElem, std::vector<feInt> &adr)
 {
   adr[0] = number->getDDLSommet(_mesh, _cncGeoID, numElem, 0);
   adr[1] = number->getDDLSommet(_mesh, _cncGeoID, numElem, 1);
@@ -718,13 +716,13 @@ void feSpace1DP1_nonConsistant::initializeNumberingEssential(feNumber *number)
   }
 }
 
-void feSpace1DP1_nonConsistant::initializeAddressingVector(feNumber *number, int numElem)
-{
-  _adr[0] = number->getDDLElement(_mesh, _cncGeoID, numElem, 0);
-}
+// void feSpace1DP1_nonConsistant::initializeAddressingVector(feNumber *number, int numElem)
+// {
+//   _adr[0] = number->getDDLElement(_mesh, _cncGeoID, numElem, 0);
+// }
 
 void feSpace1DP1_nonConsistant::initializeAddressingVector(feNumber *number, int numElem,
-                                                           std::vector<int> &adr)
+                                                           std::vector<feInt> &adr)
 {
   adr[0] = number->getDDLElement(_mesh, _cncGeoID, numElem, 0);
 }
@@ -766,18 +764,18 @@ void feSpace1DP2::initializeNumberingEssential(feNumber *number)
   }
 }
 
-void feSpace1DP2::initializeAddressingVector(feNumber *number, int numElem)
-{
-  _adr[0] = number->getDDLSommet(_mesh, _cncGeoID, numElem, 0);
-  _adr[1] = number->getDDLSommet(_mesh, _cncGeoID, numElem, 1);
-  if(this->getCncGeo()->getFeSpace()->getPolynomialDegree() == 2) {
-    _adr[2] = number->getDDLSommet(_mesh, _cncGeoID, numElem, 2);
-  } else {
-    _adr[2] = number->getDDLElement(_mesh, _cncGeoID, numElem, 0);
-  }
-}
+// void feSpace1DP2::initializeAddressingVector(feNumber *number, int numElem)
+// {
+//   _adr[0] = number->getDDLSommet(_mesh, _cncGeoID, numElem, 0);
+//   _adr[1] = number->getDDLSommet(_mesh, _cncGeoID, numElem, 1);
+//   if(this->getCncGeo()->getFeSpace()->getPolynomialDegree() == 2) {
+//     _adr[2] = number->getDDLSommet(_mesh, _cncGeoID, numElem, 2);
+//   } else {
+//     _adr[2] = number->getDDLElement(_mesh, _cncGeoID, numElem, 0);
+//   }
+// }
 
-void feSpace1DP2::initializeAddressingVector(feNumber *number, int numElem, std::vector<int> &adr)
+void feSpace1DP2::initializeAddressingVector(feNumber *number, int numElem, std::vector<feInt> &adr)
 {
   adr[0] = number->getDDLSommet(_mesh, _cncGeoID, numElem, 0);
   adr[1] = number->getDDLSommet(_mesh, _cncGeoID, numElem, 1);
@@ -812,21 +810,21 @@ void feSpace1DP3::initializeNumberingEssential(feNumber *number)
   }
 }
 
-void feSpace1DP3::initializeAddressingVector(feNumber *number, int numElem)
-{
-  _adr[0] = number->getDDLSommet(_mesh, _cncGeoID, numElem, 0);
-  _adr[1] = number->getDDLSommet(_mesh, _cncGeoID, numElem, 1);
-  int e = _mesh->getEdge(_cncGeoID, numElem, 0);
-  if(e > 0) {
-    _adr[2] = number->getDDLElement(_mesh, _cncGeoID, numElem, 0);
-    _adr[3] = number->getDDLElement(_mesh, _cncGeoID, numElem, 1);
-  } else {
-    _adr[2] = number->getDDLElement(_mesh, _cncGeoID, numElem, 1);
-    _adr[3] = number->getDDLElement(_mesh, _cncGeoID, numElem, 0);
-  }
-}
+// void feSpace1DP3::initializeAddressingVector(feNumber *number, int numElem)
+// {
+//   _adr[0] = number->getDDLSommet(_mesh, _cncGeoID, numElem, 0);
+//   _adr[1] = number->getDDLSommet(_mesh, _cncGeoID, numElem, 1);
+//   int e = _mesh->getEdge(_cncGeoID, numElem, 0);
+//   if(e > 0) {
+//     _adr[2] = number->getDDLElement(_mesh, _cncGeoID, numElem, 0);
+//     _adr[3] = number->getDDLElement(_mesh, _cncGeoID, numElem, 1);
+//   } else {
+//     _adr[2] = number->getDDLElement(_mesh, _cncGeoID, numElem, 1);
+//     _adr[3] = number->getDDLElement(_mesh, _cncGeoID, numElem, 0);
+//   }
+// }
 
-void feSpace1DP3::initializeAddressingVector(feNumber *number, int numElem, std::vector<int> &adr)
+void feSpace1DP3::initializeAddressingVector(feNumber *number, int numElem, std::vector<feInt> &adr)
 {
   adr[0] = number->getDDLSommet(_mesh, _cncGeoID, numElem, 0);
   adr[1] = number->getDDLSommet(_mesh, _cncGeoID, numElem, 1);
@@ -865,23 +863,23 @@ void feSpace1DP4::initializeNumberingEssential(feNumber *number)
   }
 }
 
-void feSpace1DP4::initializeAddressingVector(feNumber *number, int numElem)
-{
-  _adr[0] = number->getDDLSommet(_mesh, _cncGeoID, numElem, 0);
-  _adr[1] = number->getDDLSommet(_mesh, _cncGeoID, numElem, 1);
-  int e = _mesh->getEdge(_cncGeoID, numElem, 0);
-  if(e > 0) {
-    _adr[2] = number->getDDLElement(_mesh, _cncGeoID, numElem, 0);
-    _adr[3] = number->getDDLElement(_mesh, _cncGeoID, numElem, 1);
-    _adr[4] = number->getDDLElement(_mesh, _cncGeoID, numElem, 2);
-  } else {
-    _adr[4] = number->getDDLElement(_mesh, _cncGeoID, numElem, 0);
-    _adr[3] = number->getDDLElement(_mesh, _cncGeoID, numElem, 1);
-    _adr[2] = number->getDDLElement(_mesh, _cncGeoID, numElem, 2);
-  }
-}
+// void feSpace1DP4::initializeAddressingVector(feNumber *number, int numElem)
+// {
+//   _adr[0] = number->getDDLSommet(_mesh, _cncGeoID, numElem, 0);
+//   _adr[1] = number->getDDLSommet(_mesh, _cncGeoID, numElem, 1);
+//   int e = _mesh->getEdge(_cncGeoID, numElem, 0);
+//   if(e > 0) {
+//     _adr[2] = number->getDDLElement(_mesh, _cncGeoID, numElem, 0);
+//     _adr[3] = number->getDDLElement(_mesh, _cncGeoID, numElem, 1);
+//     _adr[4] = number->getDDLElement(_mesh, _cncGeoID, numElem, 2);
+//   } else {
+//     _adr[4] = number->getDDLElement(_mesh, _cncGeoID, numElem, 0);
+//     _adr[3] = number->getDDLElement(_mesh, _cncGeoID, numElem, 1);
+//     _adr[2] = number->getDDLElement(_mesh, _cncGeoID, numElem, 2);
+//   }
+// }
 
-void feSpace1DP4::initializeAddressingVector(feNumber *number, int numElem, std::vector<int> &adr)
+void feSpace1DP4::initializeAddressingVector(feNumber *number, int numElem, std::vector<feInt> &adr)
 {
   adr[0] = number->getDDLSommet(_mesh, _cncGeoID, numElem, 0);
   adr[1] = number->getDDLSommet(_mesh, _cncGeoID, numElem, 1);

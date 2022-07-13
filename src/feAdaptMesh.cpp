@@ -21,7 +21,7 @@ double pointwiseErrorCallback(double *x)
   // double recovery = activeRecovery->evalDerivative(0, pos);
   double recovery = exactSolution->eval(0, pos);
   // The finite element solution interpolated at x
-  double uh = activeIntSpace->interpolateSolution(activeNumbering, activeSolution, pos);
+  double uh = activeIntSpace->interpolateField(activeNumbering, activeSolution, pos);
 
   return recovery - uh;
 }
@@ -71,7 +71,7 @@ double errorSquaredCallback(double *xa, double *xb, double *xc, double *xab, dou
     // double recovery = activeRecovery->evalDerivative(0, pos);
     double recovery = exactSolution->eval(0, pos);
     // The finite element solution interpolated at x
-    double uh = activeIntSpace->interpolateSolution(activeNumbering, activeSolution, pos);
+    double uh = activeIntSpace->interpolateField(activeNumbering, activeSolution, pos);
 
     e2 += weights[i] * (recovery - uh) * (recovery - uh) * detJ;
   }
@@ -133,10 +133,10 @@ void gradErrorSquaredCallback(double *xa, double *xb, double *xc, double *xab, d
     double gradXRecovery = activeRecovery->evalDerivative(1, pos);
     double gradYRecovery = activeRecovery->evalDerivative(2, pos);
 
-    double uh = activeIntSpace->interpolateSolution(activeNumbering, activeSolution, pos);
+    double uh = activeIntSpace->interpolateField(activeNumbering, activeSolution, pos);
     // The gradient of the finite element solution interpolated at x
     std::vector<double> gradrs_uh(3, 0.0);
-    activeIntSpace->interpolateSolution_gradrs(activeNumbering, activeSolution, pos, gradrs_uh);
+    activeIntSpace->interpolateField_gradrs(activeNumbering, activeSolution, pos, gradrs_uh);
     double duhdx = gradrs_uh[0] * drdx + gradrs_uh[1] * dsdx;
     double duhdy = gradrs_uh[0] * drdy + gradrs_uh[1] * dsdy;
 
@@ -147,7 +147,7 @@ void gradErrorSquaredCallback(double *xa, double *xb, double *xc, double *xab, d
 #endif
 
 /* Creates an adapted straight-sided anisotropic mesh based on the computed metric field
-*/
+ */
 void createAnisoMesh(feMetric *metric, feMetricOptions metricOptions)
 {
   // Write size map
@@ -161,7 +161,8 @@ void createAnisoMesh(feMetric *metric, feMetricOptions metricOptions)
   std::string cmd = "mmg3Dto2D " + meshToAdapt3D;
   system(cmd.c_str());
   // Adapt mesh
-  cmd = "mmg2d " + meshToAdapt2D + " -sol sizeMapAniso.sol -hgrad 3 -o " + metricOptions.adaptedMeshName;
+  cmd = "mmg2d " + meshToAdapt2D + " -sol sizeMapAniso.sol -hgrad 3 -o " +
+        metricOptions.adaptedMeshName;
   system(cmd.c_str());
   // Open mesh
   cmd = "gmsh " + metricOptions.adaptedMeshName + " &";
