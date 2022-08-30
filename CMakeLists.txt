@@ -11,6 +11,7 @@ option(ENABLE_GMSH          "Enable Gmsh"                 OFF)
 option(ENABLE_MKL           "Enable MKL"                  OFF)
 option(ENABLE_METIS         "Enable Metis"                OFF)
 option(ENABLE_SOPLEX        "Enable SoPlex"               OFF)
+option(ENABLE_PROFILER      "Compile with -lprofiler"     OFF)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src)
@@ -193,8 +194,10 @@ endif()
 # See also src/CmakeLists.txt for the .cpp files
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/contrib/gmsh)
 
-# For profiling with Google Perftools
-list(APPEND feNG_EXTERNAL_LIBS "-Wl,-no-as-needed,-lprofiler")
+if(ENABLE_PROFILER)
+  # For profiling with Google Perftools
+  list(APPEND feNG_EXTERNAL_LIBS "-Wl,-no-as-needed,-lprofiler")
+endif()
 
 MESSAGE(STATUS "External libs for feNG : ${feNG_EXTERNAL_LIBS}")
 
