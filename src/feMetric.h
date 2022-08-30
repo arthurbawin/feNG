@@ -2,7 +2,8 @@
 #define _FEMETRIC_
 
 #include "feRecovery.h"
-#include "eigen3/Eigen/Eigen"
+// #include "eigen3/Eigen/Eigen"
+#include "../contrib/Eigen/Eigen"
 
 #include "STensor3.h"
 

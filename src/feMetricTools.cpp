@@ -12,8 +12,10 @@ using namespace soplex;
 #include "fullMatrix.h"
 #include "ellipseToolbox.h"
 #include "../contrib/root_finder/root_finder.hpp"
-#include "eigen3/Eigen/Eigen"
-#include "eigen3/unsupported/Eigen/MatrixFunctions"
+// #include "eigen3/Eigen/Eigen"
+// #include "eigen3/unsupported/Eigen/MatrixFunctions"
+#include "../contrib/Eigen/Eigen"
+#include "../contrib/unsupported/Eigen/MatrixFunctions"
 
 double evaluateFieldFromRecovery(int indexDerivative, feRecovery *rec, double *x)
 {

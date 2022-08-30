@@ -11,9 +11,12 @@ using namespace soplex;
 
 #include "ellipseToolbox.h"
 #include "feMetricTools.h"
-#include "eigen3/Eigen/Eigen"
-#include "eigen3/Eigen/Eigenvalues"
-#include "eigen3/unsupported/Eigen/MatrixFunctions"
+// #include "eigen3/Eigen/Eigen"
+// #include "eigen3/Eigen/Eigenvalues"
+// #include "eigen3/unsupported/Eigen/MatrixFunctions"
+#include "../contrib/Eigen/Eigen"
+#include "../contrib/Eigen/Eigenvalues"
+#include "../contrib/unsupported/Eigen/MatrixFunctions"
 
 #include <assert.h>
 #include <iostream>
