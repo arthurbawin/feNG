@@ -15,6 +15,7 @@ public:
   virtual int getNbFunctions() { return 3; }
   virtual int getPolynomialDegree() { return 1; }
   virtual std::vector<double> L(double *r);
+  virtual void L(double *r, double *L);
   virtual feStatus Lphys(int iElm, std::vector<double> &x, std::vector<double> &L,
                          std::vector<double> &dLdx, std::vector<double> &dLdy)
   {
@@ -43,6 +44,7 @@ public:
   virtual int getNbFunctions() { return 3; }
   virtual int getPolynomialDegree() { return 1; }
   virtual std::vector<double> L(double *r);
+  virtual void L(double *r, double *L);
 
   virtual feStatus Lphys(int iElm, std::vector<double> &x, std::vector<double> &L,
                          std::vector<double> &dLdx, std::vector<double> &dLdy)
@@ -73,6 +75,7 @@ public:
   virtual int getNbFunctions() { return 6; }
   virtual int getPolynomialDegree() { return 2; }
   virtual std::vector<double> L(double *r);
+  virtual void L(double *r, double *L);
   virtual feStatus Lphys(int iElm, std::vector<double> &x, std::vector<double> &L,
                          std::vector<double> &dLdx, std::vector<double> &dLdy);
   virtual std::vector<double> dLdr(double *r);
@@ -98,6 +101,7 @@ public:
   virtual int getPolynomialDegree() { return 2; }
 
   virtual std::vector<double> L(double *r);
+  virtual void L(double *r, double *L);
   virtual std::vector<double> dLdr(double *r);
   virtual std::vector<double> dLds(double *r);
   virtual std::vector<double> dLdt(double *r);
@@ -127,6 +131,7 @@ public:
   virtual int getNbFunctions() { return 10; }
   virtual int getPolynomialDegree() { return 3; }
   virtual std::vector<double> L(double *r);
+  virtual void L(double *r, double *L);
   virtual feStatus Lphys(int iElm, std::vector<double> &x, std::vector<double> &L,
                          std::vector<double> &dLdx, std::vector<double> &dLdy)
   {
@@ -155,6 +160,7 @@ public:
   virtual int getNbFunctions() { return 15; }
   virtual int getPolynomialDegree() { return 4; }
   virtual std::vector<double> L(double *r);
+  virtual void L(double *r, double *L);
   virtual feStatus Lphys(int iElm, std::vector<double> &x, std::vector<double> &L,
                          std::vector<double> &dLdx, std::vector<double> &dLdy)
   {

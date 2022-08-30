@@ -180,9 +180,9 @@ feBilinearForm::feBilinearForm(const feBilinearForm &f)
     case NEUMANN_1D:
       _sysElm = new feSysElm_1D_NeumannBC(static_cast<feSysElm_1D_NeumannBC &>(*f._sysElm));
       break;
-    // case ADVECTION_2D :
-    //   _sysElm=new feSysElm_2D_Advection();
-    //   break;
+    case ADVECTION_2D:
+    _sysElm = new feSysElm_2D_Advection(static_cast<feSysElm_2D_Advection &>(*f._sysElm));
+      break;
     case STOKES_2D :
       _sysElm=new feSysElm_2D_Stokes(static_cast<feSysElm_2D_Stokes &>(*f._sysElm));
       break;

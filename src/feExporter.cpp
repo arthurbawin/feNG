@@ -141,7 +141,7 @@ void feExporterVTK::writeField(std::ostream &output, feCncGeo *cnc, feSpace *int
   int iDOF;
   Vertex *v;
   std::vector<double> x;
-  std::vector<double> r(3, 0.0); 
+  double r[3]; 
   int elm;
   double val;
 
@@ -160,7 +160,7 @@ void feExporterVTK::writeField(std::ostream &output, feCncGeo *cnc, feSpace *int
       Interpolate solution at vertex. */
       v = _mesh->getVertex(iVertex);
       x = {v->x(), v->y(), v->z()};
-      _mesh->locateVertex(x, elm, r);
+      _mesh->locateVertex(x.data(), elm, r);
       intSpace->initializeAddressingVector(n, elm, adr);
 
       // initialise Solution
@@ -171,7 +171,7 @@ void feExporterVTK::writeField(std::ostream &output, feCncGeo *cnc, feSpace *int
       if(intSpace->useGlobalFunctions()) {
         val = intSpace->interpolateField(sol, elm, x);
       } else {
-        val = intSpace->interpolateField(sol, r.data());
+        val = intSpace->interpolateField(sol, r);
       }
 
       output << val << std::endl;
@@ -190,19 +190,19 @@ void feExporterVTK::writeField(std::ostream &output, feCncGeo *cnc, feSpace *int
     int elm;
     double val;
     std::vector<double> x;
-    std::vector<double> r(3, 0.0);
+    double r[3];
     for(auto e : _mesh->_edges) {
       v0 = e.getVertex(0);
       v1 = e.getVertex(1);
       x = {(v0->x() + v1->x()) / 2., (v0->y() + v1->y()) / 2.,
                                (v0->z() + v1->z()) / 2.};
-      _mesh->locateVertex(x, elm, r);
+      _mesh->locateVertex(x.data(), elm, r);
       intSpace->initializeAddressingVector(n, elm, adr);
       for(size_t i = 0; i < adr.size(); ++i) sol[i] = solVec[adr[i]];
       if(intSpace->useGlobalFunctions()) {
         val = intSpace->interpolateField(sol, elm, x);
       } else {
-        val = intSpace->interpolateField(sol, r.data());
+        val = intSpace->interpolateField(sol, r);
       }
       output << val << std::endl;
     }

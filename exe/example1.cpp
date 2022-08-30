@@ -6,11 +6,7 @@
 
 #include "feAPI.h"
 
-<<<<<<< HEAD
 double fSol(const double t, const std::vector<double> &pos, const std::vector<double> &par)
-=======
-double fSol(const double t, const std::vector<double> &x, const std::vector<double> &par)
->>>>>>> origin/baptiste
 {
   // return pow(x[0], 6);
   double x = pos[0];
@@ -35,7 +31,6 @@ double fSource(const double t, const std::vector<double> &pos, const std::vector
   return k * (uxx + uyy);
 }
 
-<<<<<<< HEAD
 double fNeumannBC(const double t, const std::vector<double> &pos, const std::vector<double> &par)
 {
   double x = pos[0];
@@ -45,8 +40,6 @@ double fNeumannBC(const double t, const std::vector<double> &pos, const std::vec
   return u0 / H * x / L * (1 - x / L);
 }
 
-=======
->>>>>>> origin/baptiste
 double fZero(const double t, const std::vector<double> &pos, const std::vector<double> &par)
 {
   return 0.0;

@@ -75,7 +75,7 @@ void feNumber::defDDLElement_essentialBC(feMesh *mesh, std::string const &cncGeo
 void feNumber::defDDLEdge_essentialBC(feMesh *mesh, std::string const &cncGeoID, int numElem,
                                       int numEdge)
 {
-  int edge = mesh->getEdge(cncGeoID, numElem, numEdge) - 1;
+  int edge = fabs(mesh->getEdge(cncGeoID, numElem, numEdge)) - 1;
   // printf("Setting global edge %d as ESS which is edge number %d of elem %d on cnc %s\n", edge,
   // numEdge, numElem, cncGeoID.c_str());
   _codeDOFEdges[edge] = ESS;
@@ -222,25 +222,23 @@ int feNumber::numberEssential(int globalNum)
   return globalNum;
 }
 
-feMetaNumber::feMetaNumber(feMesh *mesh, const std::vector<feSpace *> &space,
-                           const std::vector<feSpace *> &essBC)
+feMetaNumber::feMetaNumber(feMesh *mesh, const std::vector<feSpace *> &spaces,
+                           const std::vector<feSpace *> &essentialSpaces)
 {
   // AJOUTECHAMP
-  for(feSpace *fS : space) {
+  for(feSpace *fS : spaces) {
     if(std::find(_fieldIDs.begin(), _fieldIDs.end(), fS->getFieldID()) == _fieldIDs.end())
       _fieldIDs.push_back(fS->getFieldID());
   }
   _nFields = _fieldIDs.size();
   // VRFCHAMP
-  for(feSpace *fSBC : essBC) {
+  for(feSpace *fSBC : essentialSpaces) {
     bool err = true;
-    for(feSpace *fS : space)
+    for(feSpace *fS : spaces)
       if(fSBC->getFieldID() == fS->getFieldID() && fSBC->getCncGeoID() == fS->getCncGeoID())
         err = false;
     if(err)
-      std::cout << "ATTENTION : Condition essentielle imposée sur un champ ou une connectivité non "
-                   "présent(e)."
-                << std::endl;
+      feWarning("Condition essentielle imposée sur un champ ou une connectivité non présent(e).");
   }
   // Une numerotation pour chaque champ
   for(int i = 0; i < _nFields; ++i) {
@@ -248,11 +246,11 @@ feMetaNumber::feMetaNumber(feMesh *mesh, const std::vector<feSpace *> &space,
   }
 
   // INITIALISE_FENUMER
-  for(feSpace *fS : space) {
+  for(feSpace *fS : spaces) {
     fS->initializeNumberingUnknowns(_numberings[fS->getFieldID()]);
   }
   // INITIALISE_FENUMER_CLMESS
-  for(feSpace *fSBC : essBC) {
+  for(feSpace *fSBC : essentialSpaces) {
     fSBC->initializeNumberingEssential(_numberings[fSBC->getFieldID()]);
   }
   // PREPARER_NUMEROTATION
@@ -277,8 +275,9 @@ feMetaNumber::feMetaNumber(feMesh *mesh, const std::vector<feSpace *> &space,
 feMetaNumber::~feMetaNumber()
 {
   // Delete all numberings
-  for(std::map<std::string, feNumber *>::iterator it = _numberings.begin(); it != _numberings.end();
-      ++it) {
+  for(std::map<std::string, feNumber *>::iterator it = _numberings.begin(); it != _numberings.end(); )
+  {
     delete it->second;
+    it = _numberings.erase(it);
   }
 }

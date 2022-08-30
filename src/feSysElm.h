@@ -44,6 +44,8 @@ inline const std::string toString(elementSystemType t)
       return "SOURCE_2D";
     case DIFFUSION_2D:
       return "DIFFUSION_2D";
+    case ADVECTION_2D:
+      return "ADVECTION_2D";
     case STOKES_2D:
       return "STOKES_2D";
     default:
@@ -626,6 +628,8 @@ protected:
   std::vector<double> _feU;
   std::vector<double> _feUdx;
   std::vector<double> _feUdy;
+  std::vector<double> _dxdr; 
+  std::vector<double> _dxds; 
 
 public:
   feSysElm_2D_Advection(double par, feVectorFunction *fct) : feSysElm(true), _fct(fct), _par(par)

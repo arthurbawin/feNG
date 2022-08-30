@@ -695,11 +695,7 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, bool curved, bool reversed,
       // Save the description of the physical entities : this is used when looping and adapting the
       // mesh. Since mmg does not keep track of the name of the physical entities, they have to be
       // saved and loaded during the following adaptation cycles.
-      // for(int i = 0; i < _nPhysicalEntities; ++i) {
-      //   physicalEntity pE = _physicalEntities[i];
-      //   std::pair<int, int> p = {pE.dim, pE.tag};
-      //   _physicalEntitiesDescription[p] = pE.name;
-      // }
+      // Update : this should be dealt with during adaptation by using Gmsh's API to add physicals after adaptation with MMG
       for(auto pair : _physicalEntities) {
         _physicalEntitiesDescription[pair.first] = _physicalEntities[pair.first].name;
       }
@@ -729,11 +725,7 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, bool curved, bool reversed,
         //  pointTag(int) X(double) Y(double) Z(double)
         //  numPhysicalTags(size_t) physicalTag(int)
         input >> e.tagGmsh >> ph1D >> ph2D >> ph3D >> e.numPhysicalTags;
-        if(e.numPhysicalTags > 1) {
-          return feErrorMsg(FE_STATUS_ERROR,
-                            "Geometric entity can only be part of a maximum of one "
-                            "physical entity (named domain). Overlapping domains are not allowed.");
-        }
+
         for(int j = 0; j < e.numPhysicalTags; ++j) {
           input >> ph1;
           e.physicalTags.push_back(ph1);
@@ -743,7 +735,8 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, bool curved, bool reversed,
             // part of Physical
             // \"%s\"\n", e.dim, e.tagGmsh, _physicalEntities[{e.dim, ph1}].name.c_str());
           } else if(_physicalEntities.find({e.dim, -ph1}) !=
-                    _physicalEntities.end()) { // Physical entity numbered in reverse
+                    _physicalEntities.end())
+          { // Physical entity numbered in reverse
             _physicalEntities[{e.dim, -ph1}].listEntities.push_back(e.tag);
             if(FE_VERBOSE > -1) {
               // printf("In readGmsh4 : Geometric entity with dim = %d - tag = %d is part of
@@ -755,6 +748,18 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, bool curved, bool reversed,
             }
           }
         }
+
+        if(e.numPhysicalTags > 1) {
+          feInfo("Geometric entity with (dim,tagGmsh) = (%d,%d) is part of %d physical entities :",
+            e.dim, e.tagGmsh, e.numPhysicalTags);
+          for(int ii = 0; ii < e.numPhysicalTags; ++ii){
+            feInfo("    is part of physical %s", _physicalEntities[{e.dim,e.physicalTags[ii]}].name.c_str() );
+          }
+          return feErrorMsg(FE_STATUS_ERROR,
+                            "Geometric entity can only be part of a maximum of one "
+                            "physical entity (named domain). Overlapping domains are not allowed.");
+        }
+
         _entities.insert({{e.dim, e.tagGmsh}, e});
       }
       // Curves
@@ -768,11 +773,7 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, bool curved, bool reversed,
         //  numPhysicalTags(size_t) physicalTag(int) ...
         //  numBoundingPoints(size_t) pointTag(int) ... >>>>>>>>>>>>> Ignorés pour le moment
         input >> e.tagGmsh >> ph1D >> ph2D >> ph3D >> ph4D >> ph5D >> ph6D >> e.numPhysicalTags;
-        if(e.numPhysicalTags > 1) {
-          return feErrorMsg(FE_STATUS_ERROR,
-                            "Geometric entity can only be part of a maximum of one "
-                            "physical entity (named domain). Overlapping domains are not allowed.");
-        }
+
         for(int j = 0; j < e.numPhysicalTags; ++j) {
           input >> ph1;
           e.physicalTags.push_back(ph1);
@@ -784,19 +785,12 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, bool curved, bool reversed,
           if(ph1 != 0) {
             if(_physicalEntities.find({e.dim, ph1}) != _physicalEntities.end()) {
               _physicalEntities[{e.dim, ph1}].listEntities.push_back(e.tag);
-              // if(FE_VERBOSE) printf("In readGmsh4 (FE_VERBOSE) : Geometric entity with dim = %d -
-              // tag = %d is part of Physical \"%s\"\n", e.dim, e.tagGmsh, _physicalEntities[{e.dim,
-              // ph1}].name.c_str());
-            } else if(_physicalEntities.find({e.dim, -ph1}) !=
-                      _physicalEntities.end()) { // Physical entity numbered in reverse
+            } else if(_physicalEntities.find({e.dim, -ph1}) != _physicalEntities.end()) { 
+              // Physical entity numbered in reversed order
               _physicalEntities[{e.dim, -ph1}].listEntities.push_back(e.tag);
               if(FE_VERBOSE > -1) {
-                // printf("In readGmsh4 : Geometric entity with dim = %d - tag = %d is part of
-                // Physical \"%s\"\n", e.dim, e.tagGmsh, _physicalEntities[{e.dim,
-                // -ph1}].name.c_str());
                 feWarning("Physical entity \"%s\" is negative on geometric entity (%d,%d) and is "
-                          "thus numbered in "
-                          "reverse order.",
+                          "thus numbered in reverse order.",
                           _physicalEntities[{e.dim, -ph1}].name.c_str(), e.dim, e.tagGmsh);
               }
             }
@@ -804,6 +798,18 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, bool curved, bool reversed,
             _physicalEntities[{e.dim, tagUnnumberedEntities++}].listEntities.push_back(e.tag);
           }
         }
+
+        if(e.numPhysicalTags > 1) {
+          feInfo("Geometric entity with (dim,tagGmsh) = (%d,%d) is part of %d physical entities :",
+            e.dim, e.tagGmsh, e.numPhysicalTags);
+          for(int ii = 0; ii < e.numPhysicalTags; ++ii){
+            feInfo("    is part of physical %s", _physicalEntities[{e.dim,e.physicalTags[ii]}].name.c_str() );
+          }
+          return feErrorMsg(FE_STATUS_ERROR,
+                            "Geometric entity can only be part of a maximum of one "
+                            "physical entity (named domain). Overlapping domains are not allowed.");
+        }
+
         input >> numBoundingPoints;
         for(int j = 0; j < numBoundingPoints; ++j) {
           input >> ph1;
@@ -823,11 +829,7 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, bool curved, bool reversed,
         //   numPhysicalTags(size_t) physicalTag(int) ...
         //   numBoundingCurves(size_t) curveTag(int) ... >>>>>>>>>>>>> Ignorés pour le moment
         input >> e.tagGmsh >> ph1D >> ph2D >> ph3D >> ph4D >> ph5D >> ph6D >> e.numPhysicalTags;
-        if(e.numPhysicalTags > 1) {
-          return feErrorMsg(FE_STATUS_ERROR,
-                            "Geometric entity can only be part of a maximum of one "
-                            "physical entity (named domain). Overlapping domains are not allowed.");
-        }
+
         for(int j = 0; j < e.numPhysicalTags; ++j) {
           input >> ph1;
           e.physicalTags.push_back(ph1);
@@ -854,6 +856,18 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, bool curved, bool reversed,
             _physicalEntities[{e.dim, tagUnnumberedEntities++}].listEntities.push_back(e.tag);
           }
         }
+
+        if(e.numPhysicalTags > 1) {
+          feInfo("Geometric entity with (dim,tagGmsh) = (%d,%d) is part of %d physical entities :",
+            e.dim, e.tagGmsh, e.numPhysicalTags);
+          for(int ii = 0; ii < e.numPhysicalTags; ++ii){
+            feInfo("    is part of physical %s", _physicalEntities[{e.dim,e.physicalTags[ii]}].name.c_str() );
+          }
+          return feErrorMsg(FE_STATUS_ERROR,
+                            "Geometric entity can only be part of a maximum of one "
+                            "physical entity (named domain). Overlapping physical domains are not allowed.");
+        }
+
         input >> numBoundingCurves;
         for(int j = 0; j < numBoundingCurves; ++j) {
           input >> ph1;
@@ -873,11 +887,7 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, bool curved, bool reversed,
         //   numPhysicalTags(size_t) physicalTag(int) ...
         //   numBoundingSurfaces(size_t) surfaceTag(int) ... >>>>>>>>>>>>> Ignorés pour le moment
         input >> e.tagGmsh >> ph1D >> ph2D >> ph3D >> ph4D >> ph5D >> ph6D >> e.numPhysicalTags;
-        if(e.numPhysicalTags > 1) {
-          return feErrorMsg(FE_STATUS_ERROR,
-                            "Geometric entity can only be part of a maximum of one "
-                            "physical entity (named domain). Overlapping domains are not allowed.");
-        }
+
         for(int j = 0; j < e.numPhysicalTags; ++j) {
           input >> ph1;
           e.physicalTags.push_back(ph1);
@@ -887,6 +897,18 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, bool curved, bool reversed,
             _physicalEntities[{e.dim, tagUnnumberedEntities++}].listEntities.push_back(e.tag);
           }
         }
+
+        if(e.numPhysicalTags > 1) {
+          feInfo("Geometric entity with (dim,tagGmsh) = (%d,%d) is part of %d physical entities :",
+            e.dim, e.tagGmsh, e.numPhysicalTags);
+          for(int ii = 0; ii < e.numPhysicalTags; ++ii){
+            feInfo("    is part of physical %s", _physicalEntities[{e.dim,e.physicalTags[ii]}].name.c_str() );
+          }
+          return feErrorMsg(FE_STATUS_ERROR,
+                            "Geometric entity can only be part of a maximum of one "
+                            "physical entity (named domain). Overlapping domains are not allowed.");
+        }
+
         input >> numBoundingSurfaces;
         for(int j = 0; j < numBoundingSurfaces; ++j) {
           input >> ph1;
@@ -1197,7 +1219,13 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, bool curved, bool reversed,
             {
               // Keep Gmsh numbering for the high order nodes ?
               for(int j = 0; j < nElemNodes; ++j) {
-                _entities[p].connecNodes[nElemNodes * iElm + j] = elemNodes[j];
+                if(_entities[p].physicalTags[0] < 0){
+                  // Physical entity is reversed
+                  _entities[p].connecNodes[nElemNodes * iElm + j] = elemNodes[(nElemNodes-1) - j];
+                } else{
+                  // Physical entity is well oriented
+                  _entities[p].connecNodes[nElemNodes * iElm + j] = elemNodes[j];
+                }
               }
               break;
             }
@@ -1222,7 +1250,7 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, bool curved, bool reversed,
             case 46: // 66-node triangle (10th order)
             {
               if(curved) {
-                if(reversed) {
+                if(reversed || _entities[p].physicalTags[0] < 0) {
                   _entities[p].connecNodes[nElemNodes * iElm + 0] = elemNodes[0];
                   _entities[p].connecNodes[nElemNodes * iElm + 1] = elemNodes[2];
                   _entities[p].connecNodes[nElemNodes * iElm + 2] = elemNodes[1];
@@ -1268,7 +1296,7 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, bool curved, bool reversed,
                 }
 
               } else {
-                if(reversed) {
+                if(reversed || _entities[p].physicalTags[0] < 0) {
                   _entities[p].connecNodes[nElemNodes * iElm + 0] = elemNodes[0];
                   _entities[p].connecNodes[nElemNodes * iElm + 1] = elemNodes[2];
                   _entities[p].connecNodes[nElemNodes * iElm + 2] = elemNodes[1];
@@ -1282,15 +1310,7 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, bool curved, bool reversed,
               // Construct the triangle edges :
               Vertex *v0, *v1;
               for(int k = 0; k < 3; ++k) {
-                if(!reversed) {
-                  if(k == 2) {
-                    v0 = &_vertices[_verticesMap[elemNodesGmsh[2]]];
-                    v1 = &_vertices[_verticesMap[elemNodesGmsh[0]]];
-                  } else {
-                    v0 = &_vertices[_verticesMap[elemNodesGmsh[k]]];
-                    v1 = &_vertices[_verticesMap[elemNodesGmsh[k + 1]]];
-                  }
-                } else {
+                if(reversed || _entities[p].physicalTags[0] < 0) {
                   if(k == 0) {
                     v0 = &_vertices[_verticesMap[elemNodesGmsh[0]]];
                     v1 = &_vertices[_verticesMap[elemNodesGmsh[2]]];
@@ -1300,6 +1320,14 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, bool curved, bool reversed,
                   } else {
                     v0 = &_vertices[_verticesMap[elemNodesGmsh[1]]];
                     v1 = &_vertices[_verticesMap[elemNodesGmsh[0]]];
+                  }
+                } else {
+                  if(k == 2) {
+                    v0 = &_vertices[_verticesMap[elemNodesGmsh[2]]];
+                    v1 = &_vertices[_verticesMap[elemNodesGmsh[0]]];
+                  } else {
+                    v0 = &_vertices[_verticesMap[elemNodesGmsh[k]]];
+                    v1 = &_vertices[_verticesMap[elemNodesGmsh[k + 1]]];
                   }
                 }
                 std::pair<std::set<Edge, EdgeLessThan>::iterator, bool> ret;
@@ -1745,6 +1773,8 @@ feStatus feMesh2DP1::readGmsh(std::string meshName, bool curved, bool reversed,
   }
   _nCncGeo = _cncGeo.size();
 
+  double min2d[2], max2d[2];
+
   // Create an RTree storing the elements of highest dimension
   for(int i = 0; i < _elements.size(); ++i) {
     Triangle *t = _elements[i];
@@ -1755,7 +1785,15 @@ feStatus feMesh2DP1::readGmsh(std::string meshName, bool curved, bool reversed,
       bbox += pt;
     }
     _rtree.Insert((double *)(bbox.min()), (double *)(bbox.max()), t->getTag());
+    min2d[0] = bbox.min()[0];
+    min2d[1] = bbox.min()[1];
+    max2d[0] = bbox.max()[0];
+    max2d[1] = bbox.max()[1];
+    _rtree2d.Insert(min2d, max2d, t->getTag());
   }
+
+  // Initialize the search context structure that is used to search in the RTree
+  _searchCtx.elements = &_elements;
 
   return FE_STATUS_OK;
 }

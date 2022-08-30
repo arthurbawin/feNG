@@ -287,10 +287,26 @@ feMesh0DP0::~feMesh0DP0()
   }
 }
 
+// static bool rtreeCallback(int id, void *ctx)
+// {
+//   std::vector<int> *vec = reinterpret_cast<std::vector<int> *>(ctx);
+//   vec->push_back(id);
+//   return true;
+// }
+
 static bool rtreeCallback(int id, void *ctx)
 {
-  std::vector<int> *vec = reinterpret_cast<std::vector<int> *>(ctx);
-  vec->push_back(id);
+  rtreeSearchCtx *searchCtx = reinterpret_cast<rtreeSearchCtx*>(ctx);
+  Triangle *t = (*searchCtx->elements)[id];
+  t->xyz2uvw(searchCtx->x, searchCtx->r);
+  if(t->isInside(searchCtx->r[0], searchCtx->r[1], searchCtx->r[2])) {
+    searchCtx->iElm = id;
+    searchCtx->uvw[0] = searchCtx->r[0];
+    searchCtx->uvw[1] = searchCtx->r[1];
+    searchCtx->uvw[2] = searchCtx->r[2];
+    searchCtx->isFound = true;
+    return false;
+  }
   return true;
 }
 
@@ -316,30 +332,38 @@ feMesh2DP1::~feMesh2DP1()
   }
 }
 
+
+
 /* Locates the vertex with coordinates x in the mesh using an RTree.
    The search is performed in elements of the highest dimension only.
    The element number is assigned to iElm and the reference coordinates
    are assigned in u. */
-bool feMesh2DP1::locateVertex(std::vector<double> &x, int &iElm, std::vector<double> &u, double tol)
+bool feMesh2DP1::locateVertex(const double *x, int &iElm, double *u, double tol)
 {
-  double r[3];
-  double min[3] = {x[0] - tol, x[1] - tol, x[2] - tol};
-  double max[3] = {x[0] + tol, x[1] + tol, x[2] + tol};
-  std::vector<int> candidates;
-  _rtree.Search(min, max, rtreeCallback, &candidates);
-  bool isFound = false;
-  for(int val : candidates) {
-    Triangle *t = _elements[val];
-    t->xyz2uvw(x.data(), r);
-    if(t->isInside(r[0], r[1], r[2])) {
-      iElm = val;
-      u[0] = r[0];
-      u[1] = r[1];
-      u[2] = r[2];
-      isFound = true;
-    }
+  // double min[3] = {x[0] - tol, x[1] - tol, 0. - tol};
+  // double max[3] = {x[0] + tol, x[1] + tol, 0. + tol};
+
+  _searchCtx.min[0] = x[0] - tol;
+  _searchCtx.min[1] = x[1] - tol;
+  _searchCtx.max[0] = x[0] + tol;
+  _searchCtx.max[1] = x[1] + tol;
+
+  _searchCtx.x[0] = x[0];
+  _searchCtx.x[1] = x[1];
+  _searchCtx.x[2] = 0.0;
+
+  _searchCtx.isFound = false;
+
+  _rtree2d.Search(_searchCtx.min, _searchCtx.max, rtreeCallback, &_searchCtx);
+
+  if(_searchCtx.isFound){
+    iElm = _searchCtx.iElm;
+    u[0] = _searchCtx.uvw[0];
+    u[1] = _searchCtx.uvw[1];
+    u[2] = _searchCtx.uvw[2];
   }
-  return isFound;
+
+  return _searchCtx.isFound;
 }
 
 /* Transfers the solution(s) associated to the current mesh to another mesh.
@@ -411,7 +435,8 @@ void feMesh2DP1::transfer(feMesh2DP1 *otherMesh, feMetaNumber *myMN, feMetaNumbe
 
           std::vector<feInt> adr1(fS1->getNbFunctions());
           std::vector<feInt> adr2(fS2->getNbFunctions());
-          std::vector<double> geoCoord;
+          feInfo("taille %d", 3 * fS2->getCncGeo()->getNbNodePerElem());
+          std::vector<double> geoCoord(3 * fS2->getCncGeo()->getNbNodePerElem(),0.);
           for(int iElm = 0; iElm < nElm; ++iElm) {
             fS2->initializeAddressingVector(number2, iElm, adr2);
             otherMesh->getCoord(cncGeoTag, iElm, geoCoord);
@@ -443,6 +468,8 @@ void feMesh2DP1::transfer(feMesh2DP1 *otherMesh, feMetaNumber *myMN, feMetaNumbe
                     std::vector<double> sol1(adr1.size());
                     std::vector<double> &solVec1 = solutionContainer->getSolution(iSol);
                     for(size_t i = 0; i < adr1.size(); ++i) {
+                      feInfo("iSol = %d - Accessing %d in sol1 of size %d from %d in solVec1 of size %d",
+                        iSol, i, sol1.size(), adr1[i], solVec1.size());
                       sol1[i] = solVec1[adr1[i]];
                     }
 

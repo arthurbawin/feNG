@@ -695,7 +695,7 @@ feStatus feNorm::computeErrorNormFromExternalSolution(feMetaNumber *metaNumber, 
   }
 
   std::vector<double> x(3, 0.0);
-  std::vector<double> r(3, 0.0);
+  double r[3];
   std::vector<double> J = mesh->getCncGeoByTag(_cncGeoTag)->getJacobians();
 
   // Identify the feSpace from among the set of spaces from the reference solution (we should use a
@@ -727,7 +727,7 @@ feStatus feNorm::computeErrorNormFromExternalSolution(feMetaNumber *metaNumber, 
           solInt = _VecfeSpace[0]->interpolateFieldAtQuadNode(sol0, k);
           // Reference solution evaluated at quad node
           int elm = -1;
-          bool isFound = static_cast<feMesh2DP1 *>(refMesh)->locateVertex(x, elm, r);
+          bool isFound = static_cast<feMesh2DP1 *>(refMesh)->locateVertex(x.data(), elm, r);
           if(!isFound) {
             feWarning("Point (%f, %f, %f) was not found in the mesh.\n", x[0], x[1], x[2]);
             solRef = solInt; // Points outside the mesh do not contribute
@@ -736,7 +736,7 @@ feStatus feNorm::computeErrorNormFromExternalSolution(feMetaNumber *metaNumber, 
             for(size_t i = 0; i < adr.size(); ++i) {
               solS[i] = solVecS[adrS[i]];
             }
-            solRef = fS->interpolateField(solS, r.data());
+            solRef = fS->interpolateField(solS, r);
             normL2 += (solInt - solRef) * (solInt - solRef) * J[_nQuad * iElm + k] * _w[k];
           }
 

@@ -126,7 +126,7 @@ int main(int argc, char **argv)
     // feCheck(createLinearSystem(system, MKLPARDISO, spaces, {&diffU, &sourceU}, &metaNumber, &mesh, argc, argv));
     // feCheck(createLinearSystem(system, MKLPARDISO, spaces, {&diffU, &n1, &n2}, &metaNumber, &mesh, argc, argv));
     // feCheck(createLinearSystem(system, MKLPARDISO, spaces, {&diffU, &sautU}, &metaNumber, &mesh, argc, argv));
-    feCheck(createLinearSystem(system, MKLPARDISO, spaces, {&diffU, &n5}, &metaNumber, &mesh, argc, argv));
+    // feCheck(createLinearSystem(system, MKLPARDISO, spaces, {&diffU, &n5}, &metaNumber, &mesh, argc, argv));
 
     // Norms will be replaced by postproc
     feNorm normU(uDomaine, &mesh, degreeQuadrature, funSol);
@@ -155,7 +155,7 @@ int main(int argc, char **argv)
 
     delete solver;
     delete exporter;
-    delete uBord;
+    // delete uBord;
     delete uDomaine;
   }
 

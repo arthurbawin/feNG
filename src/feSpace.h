@@ -113,6 +113,7 @@ public:
   const std::vector<double> &getLcoor() { return _Lcoor; }
 
   virtual std::vector<double> L(double *r) = 0;
+  virtual void L(double *r, double *L) = 0;
   virtual feStatus Lphys(int iElm, std::vector<double> &x, std::vector<double> &L,
                          std::vector<double> &dLdx, std::vector<double> &dLdy) = 0;
   virtual std::vector<double> dLdr(double *r) = 0;
@@ -164,38 +165,7 @@ public:
 
   double evalFun(const double t, const std::vector<double> &x) { return _fct->eval(t, x); }
 
-  // TO REMOVE
-  // double interpolateField(std::vector<double> field, double r[3]);
-  // double interpolateFieldAtQuadNode(std::vector<double> field, int iNode);
-  // double interpolateField_rDerivative(std::vector<double> field, double r[3]);
-  // double interpolateFieldAtQuadNode_rDerivative(std::vector<double> field, int iNode);
-  // double interpolateFieldAtQuadNode_sDerivative(std::vector<double> field, int iNode);
-  // double interpolateFieldAtQuadNode_xDerivative(std::vector<double> field, int iElm, int iNode);
-  // double interpolateFieldAtQuadNode_yDerivative(std::vector<double> field, int iElm, int iNode);
-
-  // double interpolateSolution(double r[3]);
-  // double interpolateSolution_rDerivative(double r[3]);
-  // double interpolateSolution_sDerivative(double r[3]);
-  // double interpolateSolution(int iElm, std::vector<double> &x);
-  // double interpolateSolution(feNumber *number, feSolution *sol, std::vector<double> &x);
-  // void interpolateSolution_gradrs(feNumber *number, feSolution *sol, std::vector<double> &x,
-  //                                 std::vector<double> &grad);
-  // double interpolateSolution_xDerivative(int iElm, std::vector<double> &x);
-  // double interpolateSolution_yDerivative(int iElm, std::vector<double> &x);
-
-  // double interpolateSolutionAtQuadNode(int iNode);
-  // double interpolateSolutionAtQuadNode(int iElm, int iNode);
-  // double interpolateSolutionAtQuadNodeWithPhysicalBasisFunctions(int iElm, std::vector<double> &x);
-  // double interpolateSolutionAtQuadNode_rDerivative(int iNode);
-  // double interpolateSolutionAtQuadNode_sDerivative(int iNode);
-  // double interpolateSolutionAtQuadNode_xDerivative(int iElm, int iNode);
-  // double interpolateSolutionAtQuadNode_yDerivative(int iElm, int iNode);
-
-  // double interpolateSolutionDotAtQuadNode(int iNode);
-
-  // void interpolateVectorField(std::vector<double> field, double r[3], std::vector<double> &res);
-  // void interpolateVectorField_rDerivative(std::vector<double> field, double r[3],
-
+  void interpolateField(double *field, int fieldSize, double *r, double *shape, double &res);
   double interpolateField(std::vector<double> &field, double *r);
   double interpolateField(std::vector<double> &field, int iElm, std::vector<double> &x);
   double interpolateField(feNumber *number, feSolution *sol, std::vector<double> &x);
@@ -224,6 +194,8 @@ public:
                                                     std::vector<double> &res);
   void interpolateVectorFieldAtQuadNode_sDerivative(std::vector<double> &field, int iNode,
                                                     std::vector<double> &res);
+
+  void copyInto(feSpace *other, feSolution *sol);
 
   // std::vector<double> &getSolutionReference() { return _sol; };
   // std::vector<double> &getSolutionReferenceDot() { return _soldot; };
@@ -257,6 +229,7 @@ public:
   virtual int getNbFunctions() { return 1; }
   virtual int getPolynomialDegree() { return 0; }
   virtual std::vector<double> L(double *r) { return {1.}; };
+  virtual void L(double *r, double *L) { L[0] = 1.; };
   virtual feStatus Lphys(int iElm, std::vector<double> &x, std::vector<double> &L,
                          std::vector<double> &dLdx, std::vector<double> &dLdy)
   {
@@ -295,6 +268,11 @@ public:
   virtual int getNbFunctions() { return 2; }
   virtual int getPolynomialDegree() { return 1; }
   virtual std::vector<double> L(double *r) { return {(1. - r[0]) / 2., (1. + r[0]) / 2.}; };
+  virtual void L(double *r, double *L)
+  {
+    L[0] = (1. - r[0]) / 2.;
+    L[1] = (1. + r[0]) / 2.;
+  };
   virtual feStatus Lphys(int iElm, std::vector<double> &x, std::vector<double> &L,
                          std::vector<double> &dLdx, std::vector<double> &dLdy)
   {
@@ -333,6 +311,7 @@ public:
   virtual int getNbFunctions() { return 1; }
   virtual int getPolynomialDegree() { return 0; }
   virtual std::vector<double> L(double *r) { return {1.}; };
+  virtual void L(double *r, double *L) { L[0] = 1.; };
   virtual std::vector<double> dLdr(double *r) { return {0.}; };
   virtual std::vector<double> dLds(double *r) { return {0.}; };
   virtual std::vector<double> dLdt(double *r) { return {0.}; };
@@ -374,6 +353,12 @@ public:
   virtual std::vector<double> L(double *r)
   {
     return {-r[0] * (1. - r[0]) / 2., r[0] * (1. + r[0]) / 2., -(r[0] + 1.) * (r[0] - 1.)};
+  };
+  virtual void L(double *r, double *L)
+  {
+    L[0] = -r[0] * (1. - r[0]) / 2.;
+    L[1] =  r[0] * (1. + r[0]) / 2.;
+    L[2] = -(r[0] + 1.) * (r[0] - 1.);
   };
   virtual feStatus Lphys(int iElm, std::vector<double> &x, std::vector<double> &L,
                          std::vector<double> &dLdx, std::vector<double> &dLdy)
@@ -422,6 +407,13 @@ public:
             9. / 16. * (r[0] + 1. / 3.) * (r[0] - 1. / 3.) * (r[0] + 1.),
             27. / 16. * (r[0] + 1.) * (r[0] - 1. / 3.) * (r[0] - 1.),
             -27. / 16. * (r[0] + 1.) * (r[0] + 1. / 3.) * (r[0] - 1.)};
+  };
+  virtual void L(double *r, double *L)
+  {
+    L[0] =  -9. / 16. * (r[0] + 1. / 3.) * (r[0] - 1. / 3.) * (r[0] - 1.);
+    L[1] =   9. / 16. * (r[0] + 1. / 3.) * (r[0] - 1. / 3.) * (r[0] + 1.);
+    L[2] =  27. / 16. * (r[0] + 1.) * (r[0] - 1. / 3.) * (r[0] - 1.);
+    L[3] = -27. / 16. * (r[0] + 1.) * (r[0] + 1. / 3.) * (r[0] - 1.);
   };
   virtual feStatus Lphys(int iElm, std::vector<double> &x, std::vector<double> &L,
                          std::vector<double> &dLdx, std::vector<double> &dLdy)
@@ -474,6 +466,15 @@ public:
             (r[0] - 1.0) * (r[0] + 1.0) * (r[0] - 1.0 / 2.0) * (r[0] + 1.0 / 2.0) * 4.0,
             r[0] * (r[0] - 1.0) * (r[0] + 1.0) * (r[0] + 1.0 / 2.0) * (-8.0 / 3.0)};
   };
+  virtual void L(double *r, double *L)
+  {
+    L[0] = r[0] * (r[0] - 1.0) * (r[0] - 1.0 / 2.0) * (r[0] + 1.0 / 2.0) * (2.0 / 3.0);
+    L[1] = r[0] * (r[0] + 1.0) * (r[0] - 1.0 / 2.0) * (r[0] + 1.0 / 2.0) * (2.0 / 3.0);
+    L[2] = r[0] * (r[0] - 1.0) * (r[0] + 1.0) * (r[0] - 1.0 / 2.0) * (-8.0 / 3.0);
+    L[3] = (r[0] - 1.0) * (r[0] + 1.0) * (r[0] - 1.0 / 2.0) * (r[0] + 1.0 / 2.0) * 4.0;
+    L[4] = r[0] * (r[0] - 1.0) * (r[0] + 1.0) * (r[0] + 1.0 / 2.0) * (-8.0 / 3.0);
+  }
+
   virtual feStatus Lphys(int iElm, std::vector<double> &x, std::vector<double> &L,
                          std::vector<double> &dLdx, std::vector<double> &dLdy)
   {

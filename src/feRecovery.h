@@ -112,12 +112,21 @@ public:
   feVectorFunction *_solRefHess;
 
   std::map<int, std::map<int, std::vector<double> > > recoveryCoeff; // #vert : {#rec , coeffs}
+
   std::map<int, std::map<int, std::map<int, std::vector<double> > > >
     recoveryCoeffOnEdges; // #edge : {#dof : {#rec , coeffs}}
+
   std::map<int, std::map<int, std::vector<double> > > derivativeCoeff; // #vert : {#der , coeffs}
+
   std::map<int, std::map<int, std::map<int, std::vector<double> > > >
     derivativeCoeffOnEdges; // #edge : {#dof : {#rec , coeffs}}
+
   std::map<int, std::vector<double> > errorCoeff; // #vert : coeffs
+
+  // std::vector<double> recoveryCoeffAtVertices; // Size = nVertices * nDeriv * dimBase
+  // std::vector<double> derivativeCoeffAtVertices; // Size = nVertices * nDeriv * dimBase
+  // std::vector<double> recoveryCoeffOnEdges2;
+  // std::vector<double> derivativeCoeffOnEdges2;
 
   /* All recovered functions (solution and derivatives) evaluated at the vertices dof : #recovery :
     {#vertex : val} They are pushed after they are created : 1D : u, dudx, d2udx2, d3udx3, ...
@@ -165,7 +174,7 @@ public:
   void estimateHessError(std::vector<double> &norm, feVectorFunction *solRefHess);
   void estimated3Error(std::vector<double> &norm, feFunction *fund3udx);
 
-  double evalDerivative(int degDerivative, std::vector<double> &x);
+  double evalDerivative(int degDerivative, double *x);
 };
 
 #endif

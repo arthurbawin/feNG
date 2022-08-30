@@ -88,7 +88,7 @@ public:
   feSpace *getGeometricSpace(std::string const &cncGeoID);
   feSpace *getGeometricSpace(int cncGeoTag);
 
-  virtual bool locateVertex(std::vector<double> &x, int &iElm, std::vector<double> &u,
+  virtual bool locateVertex(const double *x, int &iElm, double *u,
                             double tol = 1e-5) = 0;
 
   void printInfo(bool printConnectivities = true);
@@ -110,7 +110,7 @@ public:
              std::string domID);
   virtual ~feMesh1DP1();
 
-  virtual bool locateVertex(std::vector<double> &x, int &iElm, std::vector<double> &u,
+  virtual bool locateVertex(const double *x, int &iElm, double *u,
                             double tol = 1e-5)
   {
     feInfo("function locateVertex not implemented for 1DP1 Mesh");
@@ -133,7 +133,7 @@ public:
   feMesh0DP0(double xA, int nElm, std::string domID);
   virtual ~feMesh0DP0();
 
-  virtual bool locateVertex(std::vector<double> &x, int &iElm, std::vector<double> &u,
+  virtual bool locateVertex(const double *x, int &iElm, double *u,
                             double tol = 1e-5)
   {
     feInfo("function locateVertex not implemented for 1DP1 Mesh");
@@ -143,6 +143,17 @@ public:
 
 class feMetaNumber;
 class feSolutionContainer;
+
+typedef struct rtreeSearchCtxStruct {
+    std::vector<Triangle*> *elements;
+    double uvw[3];
+    double r[3];
+    double x[3];
+    double min[2];
+    double max[2];
+    int iElm;
+    bool isFound;
+  } rtreeSearchCtx;
 
 class feMesh2DP1 : public feMesh
 {
@@ -184,6 +195,8 @@ private:
   } entity;
 
   RTree<int, double, 3> _rtree;
+  RTree<int, double, 2> _rtree2d;
+  rtreeSearchCtx _searchCtx;
 
 public:
   // FIXME : Choose more explicit name, for example "physicalEntitiesDescription"
@@ -239,7 +252,7 @@ public:
 
   int getGmshNodeTag(int iVertex) { return _sequentialNodeToGmshNode[iVertex]; }
 
-  bool locateVertex(std::vector<double> &x, int &iElm, std::vector<double> &u, double tol = 1e-5);
+  bool locateVertex(const double *x, int &iElm, double *u, double tol = 1e-5);
 
   void transfer(feMesh2DP1 *otherMesh, feMetaNumber *myMN, feMetaNumber *otherMN,
                 feSolutionContainer *solutionContainer, const std::vector<feSpace *> &mySpaces,

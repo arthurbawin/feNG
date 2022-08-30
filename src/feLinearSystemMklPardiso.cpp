@@ -86,9 +86,9 @@ void feLinearSystemMklPardiso::assembleMatrices(feSolution *sol)
         f->computeMatrix(_metaNumber, _mesh, sol, elm);
 
         nRow = f->getNiElm();
-        Row=f->getAdrI();
+        Row = f->getAdrI();
         nColumn = f->getNjElm();
-        Column=f->getAdrJ();
+        Column = f->getAdrJ();
         Ae = f->getAe();
 
         for(feInt i = 0; i < nRow; i++) {
@@ -103,6 +103,7 @@ void feLinearSystemMklPardiso::assembleMatrices(feSolution *sol)
             ncf = fin - debut;
 
             for(feInt j = 0; j < ncf; j++) {
+              feInfo("Accessing entry %d in vector ", debut + j);
               irangee[Aj[debut + j] - 1] = debut + j;
             }
 
@@ -154,15 +155,9 @@ void feLinearSystemMklPardiso::assembleResiduals(feSolution *sol)
       feInt nRow;
       std::vector<feInt> Row;
 
-<<<<<<< HEAD
-      #if defined(HAVE_OMP)
-      #pragma omp parallel for private(numThread, elm, eqt, nRow, Be, f) 
-      #endif
-=======
 #if defined(HAVE_OMP)
 #pragma omp parallel for private(numThread, elm, eqt, nRow, Row, Be, f) schedule(dynamic)
 #endif
->>>>>>> origin/baptiste
       for(int iElm = 0; iElm < nbElmC; ++iElm) {
 #if defined(HAVE_OMP)
         numThread = omp_get_thread_num();
