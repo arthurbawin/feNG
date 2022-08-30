@@ -264,6 +264,13 @@ double feSpace::innerProductBasisFunctions(int iElm, int ex, int ey)
   return res;
 }
 
+void feSpace::interpolateField(double *field, int fieldSize, double *r, double *shape, double &res)
+{
+  res = 0.0;
+  L(r, shape);
+  for(int i = 0; i < fieldSize; ++i){ res += field[i] * shape[i]; }
+}
+
 double feSpace::interpolateField(std::vector<double> &field, double *r) // match
 {
   double res = 0.0;
@@ -298,9 +305,9 @@ double feSpace::interpolateField(std::vector<double> &field, int iElm, std::vect
 
 double feSpace::interpolateField(feNumber *number, feSolution *sol, std::vector<double> &x)
 {
-  std::vector<double> u(3, 0.0);
+  double u[3];
   int elm = -1;
-  bool isFound = static_cast<feMesh2DP1 *>(_mesh)->locateVertex(x, elm, u);
+  bool isFound = static_cast<feMesh2DP1 *>(_mesh)->locateVertex(x.data(), elm, u);
 #ifdef DEBUG
   if(!isFound) {
     printf(
@@ -316,7 +323,7 @@ double feSpace::interpolateField(feNumber *number, feSolution *sol, std::vector<
   for(size_t i = 0; i < adr.size(); ++i) {
     solution[i] = solVec[adr[i]];
   }
-  return this->interpolateField(solution, u.data()); // Attention : fonctions de forme locales
+  return this->interpolateField(solution, u); // Attention : fonctions de forme locales
 }
 
 double feSpace::interpolateField_rDerivative(std::vector<double> &field, double *r) // match
@@ -388,9 +395,9 @@ double feSpace::interpolateField_yDerivative(std::vector<double> &field, int iEl
 void feSpace::interpolateField_gradrs(feNumber *number, feSolution *sol, std::vector<double> &x,
                                       std::vector<double> &grad)
 {
-  std::vector<double> u(3, 0.0);
+  double u[3];
   int elm = -1;
-  bool isFound = static_cast<feMesh2DP1 *>(_mesh)->locateVertex(x, elm, u);
+  bool isFound = static_cast<feMesh2DP1 *>(_mesh)->locateVertex(x.data(), elm, u);
   if(!isFound) {
     printf("In feSpace::interpolateField_gradrs: Warning - Point (%f, %f, %f) was not found in the "
            "mesh.\n",
@@ -405,9 +412,9 @@ void feSpace::interpolateField_gradrs(feNumber *number, feSolution *sol, std::ve
       solution[i] = solVec[adr[i]];
     }
     grad[0] = this->interpolateField_rDerivative(
-      solution, u.data()); // Attention : fonctions de forme locales
-    grad[0] = this->interpolateField_sDerivative(
-      solution, u.data()); // Attention : fonctions de forme locales
+      solution, u); // Attention : fonctions de forme locales
+    grad[1] = this->interpolateField_sDerivative(
+      solution, u); // Attention : fonctions de forme locales
   }
 }
 
@@ -630,6 +637,12 @@ void feSpace::interpolateVectorFieldAtQuadNode_sDerivative(std::vector<double> &
       res[i] += field[3 * j + i] * _dLds[_nFunctions * iNode + j];
     }
   }
+}
+
+// Copy the 
+void feSpace::copyInto(feSpace *other, feSolution *sol)
+{
+
 }
 
 void feSpace::printL()

@@ -137,6 +137,26 @@ void feSolution::initializeEssentialBC(feMesh *mesh, feMetaNumber *metaNumber,
   }
 }
 
+void feSolution::copySpace(feMesh *mesh, feMetaNumber *metaNumber, feSpace *s1, feSpace *s2)
+{
+  int nElm = mesh->getNbElm(s1->getCncGeoID());
+  std::vector<feInt> adr1(s1->getNbFunctions());
+  std::vector<feInt> adr2(s2->getNbFunctions());
+  std::vector<double> coor = s1->getLcoor();
+  int nbNodePerElem = mesh->getCncGeoByName(s1->getCncGeoID())->getNbNodePerElem();
+  std::vector<double> localCoord(3*nbNodePerElem);
+  std::vector<double> x(3);
+  feSpace *geoSpace = mesh->getGeometricSpace(s1->getCncGeoID());
+  
+  for(int iElm = 0; iElm < nElm; ++iElm) {
+    s1->initializeAddressingVector(metaNumber->getNumbering(s1->getFieldID()), iElm, adr1);
+    s2->initializeAddressingVector(metaNumber->getNumbering(s2->getFieldID()), iElm, adr2);    
+    for(int j = 0; j < s1->getNbFunctions(); ++j) {
+        _sol[adr2[j]] = _sol[adr1[j]];
+    }
+  }
+}
+
 void feSolution::setSolFromContainer(feSolutionContainer *solContainer, int iSol)
 {
   std::vector<double> &solFromContainer = solContainer->getSolution(iSol);

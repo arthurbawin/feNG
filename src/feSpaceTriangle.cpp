@@ -23,6 +23,12 @@ feSpaceTriP1::feSpaceTriP1(feMesh *mesh, std::string fieldID, std::string cncGeo
 }
 
 std::vector<double> feSpaceTriP1::L(double *r) { return {1.0 - r[0] - r[1], r[0], r[1]}; }
+void feSpaceTriP1::L(double *r, double *L)
+{
+  L[0] = 1.0 - r[0] - r[1];
+  L[1] = r[0];
+  L[2] = r[1];
+}
 std::vector<double> feSpaceTriP1::dLdr(double *r) { return {-1.0, 1.0, 0.0}; }
 std::vector<double> feSpaceTriP1::dLds(double *r) { return {-1.0, 0.0, 1.0}; }
 std::vector<double> feSpaceTriP1::dLdt(double *r) { return {0., 0., 0.}; }
@@ -82,7 +88,12 @@ std::vector<double> feSpaceTriP1_nonConsistant::L(double *r)
 {
   return {1 - 2.0 * r[1], -1.0 + 2.0 * r[0] + 2.0 * r[1], 1 - 2.0 * r[0]};
 }
-
+void feSpaceTriP1_nonConsistant::L(double *r, double *L)
+{
+  L[0] = 1 - 2.0 * r[1];
+  L[1] = -1.0 + 2.0 * r[0] + 2.0 * r[1];
+  L[2] = 1 - 2.0 * r[0];
+}
 std::vector<double> feSpaceTriP1_nonConsistant::dLdr(double *r) { return {0.0, 2.0, -2.0}; }
 std::vector<double> feSpaceTriP1_nonConsistant::dLds(double *r) { return {-2.0, 2.0, 0.0}; }
 std::vector<double> feSpaceTriP1_nonConsistant::dLdt(double *r) { return {0., 0., 0.}; }
@@ -146,6 +157,15 @@ std::vector<double> feSpaceTriP2::L(double *r)
           4. * r[0] * (1. - r[0] - r[1]),
           4. * r[0] * r[1],
           4. * r[1] * (1. - r[0] - r[1])};
+}
+void feSpaceTriP2::L(double *r, double *L)
+{
+  L[0] = (1. - r[0] - r[1]) * (1. - 2. * r[0] - 2. * r[1]);
+  L[1] = r[0] * (2. * r[0] - 1.);
+  L[2] = r[1] * (2. * r[1] - 1.);
+  L[3] = 4. * r[0] * (1. - r[0] - r[1]);
+  L[4] = 4. * r[0] * r[1];
+  L[5] = 4. * r[1] * (1. - r[0] - r[1]);
 }
 
 /*
@@ -431,6 +451,16 @@ std::vector<double> feSpaceTriP2_nonConsistant::L(double *r)
           4. * r[1] * (1. - r[0] - r[1]),
           2. - 3. * (r[0] * r[0] + r[1] * r[1] + (1. - r[0] - r[1]) * (1. - r[0] - r[1]))};
 }
+void feSpaceTriP2_nonConsistant::L(double *r, double *L)
+{
+  L[0] = (1. - r[0] - r[1]) * (1. - 2. * r[0] - 2. * r[1]);
+  L[1] = r[0] * (2. * r[0] - 1.);
+  L[2] = r[1] * (2. * r[1] - 1.);
+  L[3] = 4. * r[0] * (1. - r[0] - r[1]);
+  L[4] = 4. * r[0] * r[1];
+  L[5] = 4. * r[1] * (1. - r[0] - r[1]);
+  L[6] = 2. - 3. * (r[0] * r[0] + r[1] * r[1] + (1. - r[0] - r[1]) * (1. - r[0] - r[1]));
+}
 
 std::vector<double> feSpaceTriP2_nonConsistant::dLdr(double *r)
 {
@@ -563,6 +593,27 @@ std::vector<double> feSpaceTriP3::L(double *r)
           S * 9.0 - R * S * (4.5E1 / 2.0) + R * (S * S) * 2.7E1 + (R * R) * S * (2.7E1 / 2.0) -
             (S * S) * (4.5E1 / 2.0) + (S * S * S) * (2.7E1 / 2.0),
           R * S * 2.7E1 - R * (S * S) * 2.7E1 - (R * R) * S * 2.7E1};
+}
+void feSpaceTriP3::L(double *r, double *L)
+{
+  double R = r[0];
+  double S = r[1];
+  L[0] = R * (-1.1E1 / 2.0) - S * (1.1E1 / 2.0) + R * S * 1.8E1 - R * (S * S) * (2.7E1 / 2.0) -
+        (R * R) * S * (2.7E1 / 2.0) + (R * R) * 9.0 - (R * R * R) * (9.0 / 2.0) +
+        (S * S) * 9.0 - (S * S * S) * (9.0 / 2.0) + 1.0;
+  L[1] = R - (R * R) * (9.0 / 2.0) + (R * R * R) * (9.0 / 2.0);
+  L[2] = S - (S * S) * (9.0 / 2.0) + (S * S * S) * (9.0 / 2.0);
+  L[3] = R * 9.0 - R * S * (4.5E1 / 2.0) + R * (S * S) * (2.7E1 / 2.0) + (R * R) * S * 2.7E1 -
+        (R * R) * (4.5E1 / 2.0) + (R * R * R) * (2.7E1 / 2.0);
+  L[4] = R * (-9.0 / 2.0) + R * S * (9.0 / 2.0) - (R * R) * S * (2.7E1 / 2.0) + (R * R) * 1.8E1 -
+        (R * R * R) * (2.7E1 / 2.0);
+  L[5] = R * S * (-9.0 / 2.0) + (R * R) * S * (2.7E1 / 2.0);
+  L[6] = R * S * (-9.0 / 2.0) + R * (S * S) * (2.7E1 / 2.0);
+  L[7] = S * (-9.0 / 2.0) + R * S * (9.0 / 2.0) - R * (S * S) * (2.7E1 / 2.0) + (S * S) * 1.8E1 -
+        (S * S * S) * (2.7E1 / 2.0);
+  L[8] = S * 9.0 - R * S * (4.5E1 / 2.0) + R * (S * S) * 2.7E1 + (R * R) * S * (2.7E1 / 2.0) -
+        (S * S) * (4.5E1 / 2.0) + (S * S * S) * (2.7E1 / 2.0);
+  L[9] = R * S * 2.7E1 - R * (S * S) * 2.7E1 - (R * R) * S * 2.7E1;
 }
 
 std::vector<double> feSpaceTriP3::dLdr(double *r)
@@ -760,6 +811,7 @@ std::vector<double> feSpaceTriP4::L(double *r)
 
 std::vector<double> feSpaceTriP4::dLdr(double *r)
 {
+  feWarning("BASIS FUNCTIONS MAY BE WRONG : There is a 0 shape function...");
   double R = r[0];
   double S = r[1];
   return {32. / 3. *
@@ -785,6 +837,30 @@ std::vector<double> feSpaceTriP4::dLdr(double *r)
           128. * ((S * (12. * R * R + 16. * R * S - 14. * R + 4. * S * S - 7. * S + 3.)) / 4.),
           128. * (-(S * (8. * R * S - S - 10. * R + 12. * R * R + 1.)) / 4.),
           128. * (-(S * (4. * S - 1.) * (2. * R + S - 1.)) / 4.)};
+}
+void feSpaceTriP4::L(double *r, double *L)
+{
+  double R = r[0];
+  double S = r[1];
+  L[0] = 32. / 3. * (4. * R * R * R + 12. * R * R * S - (15. * R * R) / 2. + 12. * R * S * S - 15. * R * S +
+             (35. * R) / 8. + 4. * S * S * S - (15. * S * S) / 2. + (35. * S) / 8. - 25. / 32.);
+  L[1] = 32. / 3. * (4. * R * R * R - (9. * R * R) / 2. + (11. * R) / 8. - 3. / 32.);
+  L[2] = 32. / 3. * (0.0),
+  L[3] = 128. / 3. * (-4. * R * R * R - 9. * R * R * S + (27. * R * R) / 4. - 6. * R * S * S + 9. * R * S -
+             (13. * R) / 4. - S * S * S + (9. * S * S) / 4. - (13. * S) / 8. + 3. / 8.);
+  L[4] = 64. * (4. * R * R * R + 6. * R * R * S - 6. * R * R + 2. * R * S * S - (9. * R * S) / 2. +
+                 (19. * R) / 8. - S * S / 4. + (7. * S) / 16. - 3. / 16.);
+  L[5] = 128. / 3. * ((3. * R * S) / 2. - S / 8. - (7. * R) / 4. - 3. * R * R * S + (21. * R * R) / 4. -
+             4. * R * R * R + 1. / 8.);
+  L[6] = 128. / 3. * ((S * (24. * R * R - 12. * R + 1.)) / 8.);
+  L[7] = 64. * ((S * (8. * R - 1.) * (4. * S - 1.)) / 16.);
+  L[8] = 128. / 3. * (S * (S - 1. / 2.) * (S - 1. / 4.));
+  L[9] = 128. / 3. * (-S * (S - 1. / 2.) * (S - 1. / 4.));
+  L[10] = 64. * ((S * (4. * S - 1.) * (8. * R + 8. * S - 7.)) / 16.);
+  L[11] = 128. / 3. * (-(S * (24. * R * R + 48. * R * S - 36. * R + 24. * S * S - 36. * S + 13.)) / 8.);
+  L[12] = 128. * ((S * (12. * R * R + 16. * R * S - 14. * R + 4. * S * S - 7. * S + 3.)) / 4.);
+  L[13] = 128. * (-(S * (8. * R * S - S - 10. * R + 12. * R * R + 1.)) / 4.);
+  L[14] = 128. * (-(S * (4. * S - 1.) * (2. * R + S - 1.)) / 4.);
 }
 
 std::vector<double> feSpaceTriP4::dLds(double *r)

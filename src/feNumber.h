@@ -27,7 +27,7 @@ protected:
   std::vector<int> _nDOFVertices; // NUMER_ddl_sommet
   std::vector<int> _nDOFElements; // NUMER_ddl_element
   std::vector<int> _nDOFEdges;
-  std::vector<int> _numberingVertices; // NUMER_sommet      TODO : reflechir pour l'indexage
+  std::vector<int> _numberingVertices; // NUMER_sommet
   std::vector<int> _numberingElements; // NUMER_element
   std::vector<int> _numberingEdges;
 
@@ -39,7 +39,7 @@ protected:
 
 public:
   feNumber(feMesh *mesh);
-  ~feNumber() {}
+  ~feNumber() {};
 
   int getNbNodes() { return _nNod; }
   int getNbDOFs() { return _nDofs; }
@@ -133,7 +133,7 @@ protected:
   int _nDofs;
   int _nFields;
   std::vector<std::string> _fieldIDs;
-  std::map<std::string, feNumber *> _numberings;
+  std::map<std::string, feNumber*> _numberings;
 
 public:
   feMetaNumber(feMesh *mesh, const std::vector<feSpace *> &space,

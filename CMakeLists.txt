@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.3)
 project(feNG)
 
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 option(ENABLE_OPENMP        "Enable OpenMP"               ON )
@@ -10,6 +10,8 @@ option(ENABLE_PETSC         "Enable PETSc"                ON )
 option(ENABLE_GMSH          "Enable Gmsh"                 OFF)
 option(ENABLE_MKL           "Enable MKL"                  OFF)
 option(ENABLE_METIS         "Enable Metis"                OFF)
+option(ENABLE_SOPLEX        "Enable SoPlex"               OFF)
+option(ENABLE_PROFILER      "Compile with -lprofiler"     OFF)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src)
@@ -34,6 +36,7 @@ add_compile_options(-Wreturn-type)
 add_compile_options(-Wunused-variable)
 add_compile_options(-Wdisabled-optimization)
 add_compile_options(-fext-numeric-literals)
+# add_definitions(-Wfatal-errors)
 
 ############################################
 #  Macro pour definir une bibliotheque
@@ -56,7 +59,7 @@ macro(feNG_add_executable EXENAME SRC LIBS)
 endmacro()
 
 if(CMAKE_BUILD_TYPE STREQUAL Debug)
-  add_definitions(-DDEBUG)
+  add_definitions(-DHAVE_DEBUG)
 endif()
 
 # Initialize list of external libraries
@@ -77,11 +80,11 @@ endif()
 #  MPI
 if(ENABLE_MPI)
   find_package(MPI REQUIRED)
-  # MESSAGE(STATUS "MPI infos: ${MPI_CXX_INCLUDE_PATH}")
-  # MESSAGE(STATUS "MPI infos: ${MPI_LIBRARIES}")
-  # MESSAGE(STATUS "MPI infos: ${MPI_CXX_LIBRARIES}")
-  # MESSAGE(STATUS "MPI infos: ${MPI_CXX_LINK_FLAGS}")
-  # MESSAGE(STATUS "MPI infos: ${MPI_CFLAGS_OTHER}")
+  MESSAGE(STATUS "MPI infos: ${MPI_CXX_INCLUDE_PATH}")
+  MESSAGE(STATUS "MPI infos: ${MPI_LIBRARIES}")
+  MESSAGE(STATUS "MPI infos: ${MPI_CXX_LIBRARIES}")
+  MESSAGE(STATUS "MPI infos: ${MPI_CXX_LINK_FLAGS}")
+  MESSAGE(STATUS "MPI infos: ${MPI_CFLAGS_OTHER}")
   include_directories(${MPI_CXX_INCLUDE_PATH})
   list(APPEND feNG_EXTERNAL_LIBS ${MPI_CXX_LIBRARIES} ${MPI_CXX_LINK_FLAGS})
   add_definitions("-DHAVE_MPI")
@@ -153,9 +156,28 @@ if(ENABLE_METIS)
   MESSAGE(STATUS "METIS found (-:")
 endif()
 
+#  SoPlex (optimization library for aniso and curved mesh adaptation)
+if(ENABLE_SOPLEX)
+  find_package(SOPLEX)
+  MESSAGE(STATUS "SOPLEX_FOUND          : ${SOPLEX_FOUND}")
+  MESSAGE(STATUS "SOPLEX_INCLUDE_DIRS   : ${SOPLEX_INCLUDE_DIRS}")
+  MESSAGE(STATUS "SOPLEX_PIC_LIBRARIES  : ${SOPLEX_PIC_LIBRARIES}")
+  MESSAGE(STATUS "SOPLEX_LIBRARIES      : ${SOPLEX_LIBRARIES}")
+  include_directories(${SOPLEX_INCLUDE_DIRS})
+  list(APPEND feNG_EXTERNAL_LIBS ${SOPLEX_LIBRARIES} ${SOPLEX_PIC_LIBRARIES})
+  # GMP is required by SoPlex to solve with higher precision
+  # Tried to compile SoPlex with GMP=false but it still seems required
+  add_compile_options("-lgmp")
+  add_definitions("-DHAVE_SOPLEX")
+  MESSAGE(STATUS "SoPlex found (-:")
+endif()
+
 #  Eigen
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/contrib/Eigen)
 add_definitions("-DHAVE_EIGEN")
+
+#  Root-finder (https://github.com/ZhepeiWang/Root-Finder)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/contrib/root-finder)
 
 #  Gmsh
 if(ENABLE_GMSH)
@@ -172,7 +194,10 @@ endif()
 # See also src/CmakeLists.txt for the .cpp files
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/contrib/gmsh)
 
-# list(APPEND feNG_EXTERNAL_LIBS "-Wl,-no-as-needed,-lprofiler")
+if(ENABLE_PROFILER)
+  # For profiling with Google Perftools
+  list(APPEND feNG_EXTERNAL_LIBS "-Wl,-no-as-needed,-lprofiler")
+endif()
 
 MESSAGE(STATUS "External libs for feNG : ${feNG_EXTERNAL_LIBS}")
 

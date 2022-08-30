@@ -12,10 +12,10 @@ void Triangle::xyz2uvw(double xyz[3], double uvw[3])
   const double Jxz = d1[0] * d2[2] - d1[2] * d2[0];
   const double Jyz = d1[1] * d2[2] - d1[2] * d2[1];
 
-  if((std::abs(Jxy) > std::abs(Jxz)) && (std::abs(Jxy) > std::abs(Jyz))) {
+  if((fabs(Jxy) > fabs(Jxz)) && (fabs(Jxy) > fabs(Jyz))) {
     uvw[0] = (d[0] * d2[1] - d[1] * d2[0]) / Jxy;
     uvw[1] = (d[1] * d1[0] - d[0] * d1[1]) / Jxy;
-  } else if(std::abs(Jxz) > std::abs(Jyz)) {
+  } else if(fabs(Jxz) > fabs(Jyz)) {
     uvw[0] = (d[0] * d2[2] - d[2] * d2[0]) / Jxz;
     uvw[1] = (d[2] * d1[0] - d[0] * d1[2]) / Jxz;
   } else {

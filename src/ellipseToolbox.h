@@ -19,10 +19,10 @@ template <typename T> int sgn(T val) { return (T(0) < val) - (val < T(0)); }
    a and b are the explicit coefficients : x^2/a^2 + y^2/b^2 = 1
    R is the rotation matrix
    t is the translation vector */
-void getExplicitEllipse(std::vector<double> &p, double *a, double *b, std::vector<double> &R,
+bool getExplicitEllipse(std::vector<double> &p, double *a, double *b, std::vector<double> &R,
                         std::vector<double> &t);
 
-void getEllipsePoints(double a, double b, double c, double xC, double yC, std::vector<double> &x,
+bool getEllipsePoints(double a, double b, double c, double xC, double yC, std::vector<double> &x,
                       std::vector<double> &y);
 
 #endif

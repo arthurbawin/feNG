@@ -59,6 +59,8 @@ public:
   void setSolDotAtDOF(int iDOF, double val) { _dsoldt[iDOF] = val; }
   void setSolDotToZero();
 
+  void copySpace(feMesh *mesh, feMetaNumber *metaNumber, feSpace *s1, feSpace *s2);
+
   void printSol(std::string file = "");
 };
 

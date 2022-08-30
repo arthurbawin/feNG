@@ -28,9 +28,12 @@ void feCncGeo::computeJacobians()
         _space->interpolateVectorFieldAtQuadNode_rDerivative(geoCoord, k, dxdr);
         _space->interpolateVectorFieldAtQuadNode_sDerivative(geoCoord, k, dxds);
         _J[nQuad * iElm + k] = dxdr[0] * dxds[1] - dxdr[1] * dxds[0];
-        if(_J[nQuad * iElm + k] < 0) {
-          printf("In feCncGeo::computeJacobians : Error - Element jacobian = %+-12.12e\n",
-                 _J[nQuad * iElm + k]);
+        if(_J[nQuad * iElm + k] <= 0) {
+          printf("In feCncGeo::computeJacobians : Error - Element jacobian = %+-12.12e on elm %d with coordinates (%+-1.4e - %+-1.4e) - (%+-1.4e - %+-1.4e) - (%+-1.4e - %+-1.4e)\n",
+            _J[nQuad * iElm + k], iElm,
+            geoCoord[3*0+0], geoCoord[3*0+1], 
+            geoCoord[3*1+0], geoCoord[3*1+1], 
+            geoCoord[3*2+0], geoCoord[3*2+1]);
           exit(-1);
         }
       }
