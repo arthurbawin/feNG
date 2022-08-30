@@ -48,6 +48,8 @@ public:
 
   std::vector<double> &getResult() { return _Result; };
 
+  // feCncGeo *getCncGeo(){return _cnc; };
+  feSpace *getIntSpace(){return _intSpace;};
   double computeL2ErrorNorm(feSolution *sol);
   double computeL2ErrorNormVec(feSolution *sol);
   double computeH1ErrorNormVec(feSolution *sol);

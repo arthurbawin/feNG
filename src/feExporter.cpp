@@ -155,7 +155,6 @@ void feExporterVTK::writeField(std::ostream &output, feCncGeo *cnc, feSpace *int
       // There is a degree of freedom at this mesh vertex
       output << solVec[iDOF] << std::endl;
     } else {
-      feInfo("TEST");
       /* No dof associated to the mesh vertex.
       Interpolate solution at vertex. */
       v = _mesh->getVertex(iVertex);

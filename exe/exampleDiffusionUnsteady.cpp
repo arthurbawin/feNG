@@ -125,10 +125,10 @@ int main(int argc, char **argv)
   // according to the exportData structure. The linear system is assembled and solved in the
   // "makeSteps()" call.
   TimeIntegrator *solver;
-  feTolerances tol{1e-9, 1e-8, 3};
+  feTolerances tol{1e-9, 1e-8, 4};
   double t0 = 1.;
   double t1 = 1.2;
-  int nTimeSteps = 100;
+  int nTimeSteps = 10;
   feCheck(createTimeIntegrator(solver, BDF1, tol, system, &metaNumber, &sol, &mesh, norms, exportData, t0, t1, nTimeSteps));
   feCheck(solver->makeSteps(nTimeSteps));
 
@@ -138,6 +138,14 @@ int main(int argc, char **argv)
   feInfo("Integral of sol = %10.10f", post.computeSolutionIntegral(&sol));
   feInfo("Integral of fun = %10.10f", post.computeFunctionIntegral(funSol, 1.2));
   feInfo("L2 Error = %10.10f", post.computeL2ErrorNorm(&sol));
+
+  for(size_t i=0; i<norms.size();i++){
+      std::vector<double> result = norms[i]->getResult();
+      std::cout<< "Erreur norme L2 de " << norms[i]->getIntSpace()->getFieldID() << std::endl;
+      for(size_t j=0; j<result.size();j++){
+        feInfo("normL2[%d] = %10.10f",j,result[j]);
+      }
+  }
 
   // Free the used memory
   delete solver;

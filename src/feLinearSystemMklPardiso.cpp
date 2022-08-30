@@ -35,7 +35,7 @@ void feLinearSystemMklPardiso::print_matrix()
 void feLinearSystemMklPardiso::assembleMatrices(feSolution *sol)
 {
   feInfo("Assembling the Matrix...");
-  tic();
+  // tic();
 
   // feInt NumberOfBilinearForms = _formMatrices.size();
 
@@ -121,14 +121,14 @@ void feLinearSystemMklPardiso::assembleMatrices(feSolution *sol)
   // double res = 0.0;
   // for(feInt i = 0; i < nz; i++) res += fabs(Ax[i]);
   // feInfo("sumMatrix = %f", res);
-  feInfo("Done...");
-  toc();
+  // feInfo("Done...");
+  // toc();
 }
 
 void feLinearSystemMklPardiso::assembleResiduals(feSolution *sol)
 {
   feInfo("Assembling the residual...");
-  tic();
+  // tic();
 
   for(feInt eq = 0; eq < _numResidualForms; eq++) {
     feBilinearForm *f = _formResiduals[eq];
@@ -177,8 +177,8 @@ void feLinearSystemMklPardiso::assembleResiduals(feSolution *sol)
       }
     }
   }
-  toc();
-  feInfo("Done...");
+  // toc();
+  // feInfo("Done...");
   // toc();
   // for(int i=0;i<matrixOrder;i++){
   //   printf("%g \n",residu[i]);
@@ -228,7 +228,7 @@ void feLinearSystemMklPardiso::solve(double *normDx, double *normResidual, doubl
     // toc();
   }
   mklSolve();
-  feInfo("Done.");
+  // feInfo("Done.");
   symbolicFactorization = false;
 
   // feInfo("matrixOrder : %d",matrixOrder);

@@ -38,35 +38,39 @@ void feComputer::Compute(feSolution *sol, int i)
 where uh is the discrete solution stored in sol and u is the solution given in referenceSolution. */
 double feComputer::computeL2ErrorNorm(feSolution *sol)
 {
-  double L2Error = 0.0, solInt, solRef, t = sol->getCurrentTime();
-  std::vector<double> geoCoord(3*_nNodePerElem);
+  double L2Error = 0.0, ERROR = 0.0, solInt, solRef, t = sol->getCurrentTime();
+  std::vector<double> geoCoord;
   std::vector<double> &w = _intSpace->getQuadratureWeights();
   int nElm = _intSpace->getNbElm();
   int nQuad = _geoSpace->getNbQuadPoints();
-  std::vector<feInt> adr0(_intSpace->getNbFunctions());
-  std::vector<double> sol0(_intSpace->getNbFunctions());
+  std::vector<double> x;
+  
+  std::vector<feInt> adr0;
+  std::vector<double> sol0;
   std::vector<double> &solVec= sol->getSolutionReference();
 
   if(_referenceSolution == nullptr) feWarning("Reference solution is NULL.");
 
+#if defined(HAVE_OMP)
+#pragma omp parallel for private(geoCoord, adr0, sol0, solInt, solRef, x) reduction(+ : ERROR) reduction(+ : L2Error)schedule(dynamic)
+#endif
   for(int iElm = 0; iElm < nElm; ++iElm) {
+    adr0.resize(_intSpace->getNbFunctions());
     _intSpace->initializeAddressingVector(_metaNumber->getNumbering(_intSpace->getFieldID()), iElm, adr0);
+    sol0.resize(_intSpace->getNbFunctions());
     for(size_t i = 0; i<sol0.size(); ++i){
       sol0[i]=solVec[adr0[i]];
     }
+    geoCoord.resize(3*_nNodePerElem);
     _mesh->getCoord(_intSpace->getCncGeoTag(), iElm, geoCoord);
-    double ERROR = 0.0;
+    ERROR = 0.0;
+    x.resize(3);
     for(int k = 0; k < nQuad; ++k) {
-      std::vector<double> x(3, 0.0);
       _geoSpace->interpolateVectorFieldAtQuadNode(geoCoord, k, x);
       solInt = _intSpace->interpolateFieldAtQuadNode(sol0, k);
       solRef = (_referenceSolution != nullptr) ? _referenceSolution->eval(t, x) : 0.0;
       L2Error +=
         (solInt - solRef) * (solInt - solRef) * _cnc->getJacobians()[nQuad * iElm + k] * w[k];
-      // std::cout<<"solInt"<<solInt<<std::endl;
-      // std::cout<<"solRef"<<solRef<<std::endl;
-      // std::cout<<"_cnc->getJacobians()[nQuad * iElm + k]"<<_cnc->getJacobians()[nQuad * iElm +
-      // k]<<std::endl; std::cout<<"w[k]"<<w[k]<<std::endl;
       ERROR+=(solInt - solRef) * _cnc->getJacobians()[nQuad * iElm + k] * w[k];
     }
     // printf("%24.18e ", ERROR);
@@ -77,34 +81,48 @@ double feComputer::computeL2ErrorNorm(feSolution *sol)
 
 double feComputer::computeL2ErrorNormVec(feSolution *sol)
 {
-  double normL2 = 0.0, solIntU, solIntV, J, t = sol->getCurrentTime();
+  double normL2 = 0.0, solIntU, solIntV, t = sol->getCurrentTime();
   int nElm = _VecfeSpace[0]->getNbElm();
   int nQuad = _geoSpace->getNbQuadPoints();
   std::vector<double> &w = _VecfeSpace[0]->getQuadratureWeights();
-  std::vector<double> geoCoord(3*_nNodePerElem);
-  std::vector<feInt> adr0(_VecfeSpace[0]->getNbFunctions());
-  std::vector<double> sol0(_VecfeSpace[0]->getNbFunctions());
-  std::vector<feInt> adr1(_VecfeSpace[1]->getNbFunctions());
-  std::vector<double> sol1(_VecfeSpace[1]->getNbFunctions());
+  std::vector<double> geoCoord;
+  std::vector<double> x;
+  std::vector<double> solRef;
+
+  std::vector<feInt> adr0;
+  std::vector<double> sol0;
+  std::vector<feInt> adr1;
+  std::vector<double> sol1;
   std::vector<double> &solVec = sol->getSolutionReference();
+
+#if defined(HAVE_OMP)
+#pragma omp parallel for private(geoCoord, adr0, adr1, sol0, sol1, solIntU, solIntV, solRef, x) reduction(+ : normL2) schedule(dynamic)
+#endif
   for(int iElm = 0; iElm < nElm; ++iElm) {
+    adr0.resize(_VecfeSpace[0]->getNbFunctions());
     _VecfeSpace[0]->initializeAddressingVector(
       _metaNumber->getNumbering(_VecfeSpace[0]->getFieldID()), iElm, adr0);
+    sol0.resize(_VecfeSpace[0]->getNbFunctions());
     for(size_t i = 0; i<sol0.size(); ++i){
       sol0[i]=solVec[adr0[i]];
     }
+
+    adr1.resize(_VecfeSpace[1]->getNbFunctions()); 
     _VecfeSpace[1]->initializeAddressingVector(
       _metaNumber->getNumbering(_VecfeSpace[1]->getFieldID()), iElm, adr1);
+    sol1.resize(_VecfeSpace[1]->getNbFunctions());
     for(size_t i = 0; i<sol1.size(); ++i){
       sol1[i]=solVec[adr1[i]];
     }
+
+    geoCoord.resize(3*_nNodePerElem);
     _mesh->getCoord(_VecfeSpace[0]->getCncGeoTag(), iElm, geoCoord);
+    x.resize(3);
     for(int k = 0; k < nQuad; ++k) {
       solIntU = _VecfeSpace[0]->interpolateFieldAtQuadNode(sol0, k);
-      solIntV = _VecfeSpace[1]->interpolateFieldAtQuadNode(sol1, k);
-      std::vector<double> x(3, 0.0);
+      solIntV = _VecfeSpace[1]->interpolateFieldAtQuadNode(sol1, k);  
       _geoSpace->interpolateVectorFieldAtQuadNode(geoCoord, k, x);
-      std::vector<double> solRef(6, 0);
+      solRef.resize(6);
       if(_referenceVectorSolution != nullptr) {
         _referenceVectorSolution->eval(t, x, solRef);
       }
@@ -175,10 +193,7 @@ double feComputer::computeH1ErrorNormVec(feSolution *sol)
       E11 = 2 * dudx - 2 * solRef[2]; // solRef[2] = dUref/dx
       E22 = 2 * dvdy - 2 * solRef[5]; // solRef[2] = dVref/dy
       E12 = (dudy + dvdx) - (solRef[3] + solRef[4]);
-      normH1 +=
-        ((solIntU - solRef[0]) * (solIntU - solRef[0]) +
-         (solIntV - solRef[1]) * (solIntV - solRef[1]) + (E11 * E11 + 2 * E12 * E12 + E22 * E22)) *
-        J * w[k];
+      normH1 += ((solIntU - solRef[0]) * (solIntU - solRef[0]) + (solIntV - solRef[1]) * (solIntV - solRef[1]) + (E11 * E11 + 2 * E12 * E12 + E22 * E22)) * J * w[k];
     }
   }
   return sqrt(normH1);

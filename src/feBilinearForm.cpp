@@ -156,9 +156,9 @@ feBilinearForm::feBilinearForm(const feBilinearForm &f)
     // case SOURCE_CROSSED_0D :
     //   _sysElm=new feSysElm_0D_Source_crossed();
     //   break;
-    // case WEAKBC_EDO1_1D :
-    //   _sysElm=new feSysElm_1D_weakBC_edo1();
-    //   break;
+    case WEAKBC_EDO1_1D :
+      _sysElm=new feSysElm_1D_weakBC_edo1(static_cast<feSysElm_1D_weakBC_edo1 &>(*f._sysElm));
+      break;
     // case SOURCE_1D :
     //   _sysElm=new feSysElm_1D_Source();
     //   break;
