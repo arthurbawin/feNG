@@ -8,7 +8,8 @@
 #include "feNumber.h"
 
 /* Supported visualization formats */
-typedef enum { VTK } visualizationFormat;
+typedef enum { VTK, TXT } visualizationFormat;
+//TXT format is usefull in 0D to get the full solution along time
 
 class feExporter
 {
@@ -25,6 +26,29 @@ public:
   virtual ~feExporter() {}
 
   virtual feStatus writeStep(std::string fileName) = 0;
+};
+
+class feExporterTXT : public feExporter
+{
+protected:
+  bool _HeaderStatusBDF1 = 0;
+  bool _HeaderStatusBDF2 = 0;
+  bool _HeaderStatusDC3 = 0;
+  bool _HeaderStatusDC4 = 0;
+public:
+  feExporterTXT(feMesh *mesh, feSolution *sol, feMetaNumber *metaNumber,
+                const std::vector<feSpace *> &feSpaces)
+    : feExporter(mesh, sol, metaNumber, feSpaces){};
+  virtual ~feExporterTXT() {}
+
+  virtual feStatus writeStep(std::string fileName);
+
+private:
+  void writeHeader(std::ostream &output);
+  void writeNodes(std::ostream &output, feCncGeo *cnc){};
+  void writeElementsConnectivity(std::ostream &output, feCncGeo *cnc){};
+  void writeField(std::ostream &output, feCncGeo *cnc, feSpace *intSpace, std::string fieldID,
+                  bool LoopOverCnc = false);
 };
 
 class feExporterVTK : public feExporter

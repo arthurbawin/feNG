@@ -24,6 +24,7 @@
 #include "feAdaptMesh.h"
 #include "fePostProc.h"
 #include "feNorm.h"
+#include "feComputer.h"
 
 #if defined(HAVE_GMSH)
 #include "gmsh.h"

@@ -1,8 +1,8 @@
 #include "feNorm.h"
 #include <cmath>
 #include "feQuadrature.h"
-feNorm::feNorm(feSpace *intSpace, feMesh *mesh, int degQuad, feFunction *solRef,
-               feVectorFunction *VecSolRef, std::string TypeNorm)
+feNorm::feNorm(feSpace *intSpace, feMesh *mesh, int degQuad, std::string TypeNorm,
+               feFunction *solRef, feVectorFunction *VecSolRef)
   : _intSpace(intSpace), cncGeoTag(intSpace->getCncGeoTag()),
     geoSpace(mesh->getGeometricSpace(cncGeoTag)), nElmGeo(mesh->getNbElm(cncGeoTag)),
     dim(intSpace->getDim()), nNodePerElem(intSpace->getNbNodePerElem()), _solRef(solRef),
@@ -27,8 +27,8 @@ feNorm::feNorm(feSpace *intSpace, feMesh *mesh, int degQuad, feFunction *solRef,
   delete rule;
 }
 
-feNorm::feNorm(std::vector<feSpace *> &VecfeSpace, feMesh *mesh, int degQuad, feFunction *solRef,
-               feVectorFunction *VecSolRef, std::string TypeNorm)
+feNorm::feNorm(std::vector<feSpace *> &VecfeSpace, feMesh *mesh, int degQuad, std::string TypeNorm,
+               feFunction *solRef, feVectorFunction *VecSolRef)
   : _VecfeSpace(VecfeSpace), cncGeoTag(VecfeSpace[0]->getCncGeoTag()),
     geoSpace(mesh->getGeometricSpace(cncGeoTag)), nElmGeo(mesh->getNbElm(cncGeoTag)),
     dim(VecfeSpace[0]->getDim()), nNodePerElem(VecfeSpace[0]->getNbNodePerElem()), _solRef(solRef),

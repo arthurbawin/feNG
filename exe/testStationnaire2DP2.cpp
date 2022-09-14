@@ -19,33 +19,38 @@
 #include "feLinearSystemMklPardiso.h"
 #endif
 
-double fSol(const double t, const std::vector<double> x, const std::vector<double> par) {
+double fSol(const double t, const std::vector<double> x, const std::vector<double> par)
+{
   return pow(x[0], 6);
   // return pow(x[0],3);
   // return pow(x[0],2);
 }
 
-double fSol2(const double t, const std::vector<double> x, const std::vector<double> par) {
+double fSol2(const double t, const std::vector<double> x, const std::vector<double> par)
+{
   return pow(x[1], 6);
   // return pow(x[0],3);
   // return pow(x[0],2);
 }
 
-double fSource(const double t, const std::vector<double> x, const std::vector<double> par) {
+double fSource(const double t, const std::vector<double> x, const std::vector<double> par)
+{
   double kd = par[0];
   return kd * 30. * pow(x[0], 4);
   // return kd*6*x[0];
   // return kd*2;
 }
 
-double fSource2(const double t, const std::vector<double> x, const std::vector<double> par) {
+double fSource2(const double t, const std::vector<double> x, const std::vector<double> par)
+{
   double kd = par[0];
   return kd * 30. * pow(x[1], 4);
   // return kd*6*x[0];
   // return kd*2;
 }
 
-int main(int argc, char **argv) {
+int main(int argc, char **argv)
+{
 #ifdef HAVE_PETSC
   petscInitialize(argc, argv);
 #endif
@@ -90,7 +95,8 @@ int main(int argc, char **argv) {
     feNorm *norm = new feNorm(&U_surface, mesh, nQuad, funSol);
     std::vector<feNorm *> norms = {norm};
 
-    feTolerances tol{1e-9, 1e-8, 3};
+    // feTolerance {tolDx,tolResidual, maxIter}
+    feTolerances tol{1e-5, 1e-5, 20};
 
     // long int cnt = 0;
     // #pragma omp parallel for private(cnt)
