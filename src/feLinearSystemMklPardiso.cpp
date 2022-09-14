@@ -108,7 +108,9 @@ void feLinearSystemMklPardiso::solve(double *normDx, double *normResidual, doubl
   symbolicFactorization = false;
 
   *normDx = vectorMaxNorm(matrixOrder, du);
+  // std::cout<<"normDx = "<<*normDx<<std::endl;
   *normResidual = vectorMaxNorm(matrixOrder, residu);
+  // std::cout<<"normResidual = "<<*normResidual<<std::endl;
   *normAxb = 0.0;
   *nIter = 0;
 }

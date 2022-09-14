@@ -1,5 +1,57 @@
 #include <feSysElm.h>
 
+void feSysElm_system2Eq::createElementarySystem(std::vector<feSpace *> &space)
+{
+  _idU1 = 0;
+  _idU2 = 1;
+  _iVar.resize(space.size());
+  _jVar.resize(space.size());
+  for(int i = 0; i < space.size(); i++) {
+    _iVar[i] = i;
+    _jVar[i] = i;
+  }
+}
+
+void feSysElm_system2Eq::computeAe(std::vector<double> &J, int numElem,
+                                        std::vector<feSpace *> &intSpace, feSpace *geoSpace,
+                                        std::vector<double> &geoCoord, double c0, double tn,
+                                        double **Ae)
+{
+  // Ae[0][0] = c0;
+  // Ae[0][1] = 0.; //systeme decouplé
+  // // Ae[0][1] = 1.; //systeme couplé
+  // Ae[1][0] = 0.;
+  // Ae[1][1] = c0 ;
+
+  //Test avec matrice dependant du temps
+
+  Ae[0][0] = c0 * (1+tn*tn);
+  Ae[0][1] = c0*(2+ tn*tn*tn); //systeme couplé
+  Ae[1][0] = 2*c0;
+  Ae[1][1] = c0 ;
+}
+
+void feSysElm_system2Eq::computeBe(std::vector<double> &J, int numElem,
+                                        std::vector<feSpace *> &intSpace, feSpace *geoSpace,
+                                        std::vector<double> &geoCoord, double c0, double tn,
+                                        double dt, double *Be)
+{ std::vector<double> x(3, 0.0);
+  std::vector<double> f(intSpace.size(), 0);
+  double u1Dot, u2Dot; 
+  if(_fct != nullptr) _fct->eval(tn, x, f);
+  u1Dot = intSpace[0]->interpolateSolutionDotAtQuadNode(0);
+  u2Dot = intSpace[1]->interpolateSolutionDotAtQuadNode(0);
+  double u2 = intSpace[1]->interpolateSolutionAtQuadNode(0);
+
+  // Be[0] -=  u1Dot + f[0]; //systeme decouple
+  // // Be[0] -=  u1Dot + u2 + f[0]; // systeme couple
+  // Be[1] -=  u2Dot + f[1];
+
+  //Test avec matrice dependant du temps
+  Be[0] -=  u1Dot*(1+tn*tn) + u2Dot*(2+ tn*tn*tn) + f[0]; //systeme decouple
+  Be[1] -=  2*u1Dot + u2Dot + f[1];
+}
+
 void feSysElm_0D_StiffSpring::createElementarySystem(std::vector<feSpace *> &space)
 {
   _idX = 0;
@@ -128,6 +180,90 @@ void feSysElm_0D_Stiff3::computeBe(std::vector<double> &J, int numElem,
   Be[0] -= xDot + x - y - omega * z;
   Be[1] -= yDot - omega * z;
   Be[2] -= zDot + omega * y;
+}
+
+void feSysElm_0D_Stiff_Robertson::createElementarySystem(std::vector<feSpace *> &space)
+{
+  _idX = 0;
+  _idY = 1;
+  _idZ = 2;
+  _iVar.resize(space.size());
+  _jVar.resize(space.size());
+  for(int i = 0; i < space.size(); i++) {
+    _iVar[i] = i;
+    _jVar[i] = i;
+  }
+}
+
+void feSysElm_0D_Stiff_Robertson::computeAe(std::vector<double> &J, int numElem,
+                                   std::vector<feSpace *> &intSpace, feSpace *geoSpace,
+                                   std::vector<double> &geoCoord, double c0, double tn, double **Ae)
+{
+  double X0 = intSpace[_idX]->interpolateSolutionAtQuadNode(0);
+  double Y0 = intSpace[_idY]->interpolateSolutionAtQuadNode(0);
+  double Z0 = intSpace[_idZ]->interpolateSolutionAtQuadNode(0);
+  Ae[0][0] = c0 + 0.04;
+  Ae[0][1] = -1e-4 * Z0;
+  Ae[0][2] = -1e-4 * Y0; 
+  Ae[1][0] = -0.04;
+  Ae[1][1] = c0 + 1e4 * Z0 + 6e7 * Y0;
+  Ae[1][2] = 1e4* Y0;
+  Ae[2][0] = 0;
+  Ae[2][1] = -6e7 * Y0;
+  Ae[2][2] = c0 ;
+}
+
+void feSysElm_0D_Stiff_Robertson::computeBe(std::vector<double> &J, int numElem,
+                                   std::vector<feSpace *> &intSpace, feSpace *geoSpace,
+                                   std::vector<double> &geoCoord, double c0, double tn, double dt,
+                                   double *Be)
+{
+  double xDot = intSpace[_idX]->interpolateSolutionDotAtQuadNode(0);
+  double yDot = intSpace[_idY]->interpolateSolutionDotAtQuadNode(0);
+  double zDot = intSpace[_idZ]->interpolateSolutionDotAtQuadNode(0);
+  double x = intSpace[_idX]->interpolateSolutionAtQuadNode(0);
+  double y = intSpace[_idY]->interpolateSolutionAtQuadNode(0);
+  double z = intSpace[_idZ]->interpolateSolutionAtQuadNode(0);
+  Be[0] -= xDot + 0.04*x - 1e4*y*z;
+  Be[1] -= yDot -0.04* x + 1e4*y*z + 3e7*y*y;
+  Be[2] -= zDot - 3e7*y*y;
+}
+
+void feSysElm_0D_Stiff_FromBook::createElementarySystem(std::vector<feSpace *> &space)
+{
+  _idX = 0;
+  _idY = 1;
+  _iVar.resize(space.size());
+  _jVar.resize(space.size());
+  for(int i = 0; i < space.size(); i++) {
+    _iVar[i] = i;
+    _jVar[i] = i;
+  }
+}
+
+void feSysElm_0D_Stiff_FromBook::computeAe(std::vector<double> &J, int numElem,
+                                   std::vector<feSpace *> &intSpace, feSpace *geoSpace,
+                                   std::vector<double> &geoCoord, double c0, double tn, double **Ae)
+{
+  double omega = _par;
+  Ae[0][0] = c0 - 998.;
+  Ae[0][1] = -1998.;
+  Ae[1][0] = 999;
+  Ae[1][1] = c0 +1999.;
+
+}
+
+void feSysElm_0D_Stiff_FromBook::computeBe(std::vector<double> &J, int numElem,
+                                   std::vector<feSpace *> &intSpace, feSpace *geoSpace,
+                                   std::vector<double> &geoCoord, double c0, double tn, double dt,
+                                   double *Be)
+{
+  double xDot = intSpace[_idX]->interpolateSolutionDotAtQuadNode(0);
+  double yDot = intSpace[_idY]->interpolateSolutionDotAtQuadNode(0);
+  double x = intSpace[_idX]->interpolateSolutionAtQuadNode(0);
+  double y = intSpace[_idY]->interpolateSolutionAtQuadNode(0);
+  Be[0] -= xDot -998.*x - 1998.*y;
+  Be[1] -= yDot + 999*x + 1999.*y;
 }
 
 void feSysElm_0D_weakBC::createElementarySystem(std::vector<feSpace *> &space)
@@ -786,7 +922,8 @@ void feSysElm_1D_Source::computeBe(std::vector<double> &J, int numElem,
       // std::cout<<"feU["<<i<<"] = "<<_feU[i]<<std::endl;
       // std::cout<<"J = "<<J[nG * numElem + k]<<std::endl;
       // std::cout<<"w["<<k<<"] = "<<w[k]<<std::endl;
-      // std::cout<<"Be["<<i<<"] = "<<Be[i]<<std::endl;
+      // std::cout<<"S = "<< S <<std::endl;
+      // std::cout<<"from Source Be["<<i<<"] = "<<Be[i]<<std::endl;
     }
   }
 }
@@ -832,7 +969,7 @@ void feSysElm_1D_Diffusion::computeBe(std::vector<double> &J, int numElem,
 {
   int nG = geoSpace->getNbQuadPoints();
   std::vector<double> w = geoSpace->getQuadratureWeights();
-  double kD = _par;
+  double kd = _par;
   int nFunctions = intSpace[_idU]->getNbFunctions();
 
   double jac, dudx;
@@ -845,7 +982,8 @@ void feSysElm_1D_Diffusion::computeBe(std::vector<double> &J, int numElem,
     for(int i = 0; i < nFunctions; ++i) {
       _feUdx[i] = intSpace[_idU]->getdFunctiondrAtQuadNode(i, k);
       _feUdx[i] /= jac;
-      Be[i] -= _feUdx[i] * kD * dudx * jac * w[k];
+      Be[i] -= _feUdx[i] * kd * dudx * jac * w[k];
+      // std::cout<<"kD_diff = "<< kd <<std::endl;
       // std::cout<<"Be Diff["<<i<<"] = "<<Be[i]<<std::endl;
     }
   }
@@ -899,6 +1037,7 @@ void feSysElm_1D_Masse::computeBe(std::vector<double> &J, int numElem,
     for(int i = 0; i < nFunctions; ++i) {
       _feU[i] = intSpace[_idU]->getFunctionAtQuadNode(i, k);
       Be[i] -= _feU[i] * rho * uDot * jac * w[k];
+      // std::cout<<"rho_mass = "<<rho<<std::endl;
       // std::cout<<"Be Mass["<<i<<"] = "<<Be[i]<<std::endl;
     }
   }

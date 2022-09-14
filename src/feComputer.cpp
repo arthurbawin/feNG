@@ -62,9 +62,9 @@ double feComputer::computeL2ErrorNorm(feSolution *sol)
       // std::cout<<"solRef"<<solRef<<std::endl;
       // std::cout<<"_cnc->getJacobians()[nQuad * iElm + k]"<<_cnc->getJacobians()[nQuad * iElm +
       // k]<<std::endl; std::cout<<"w[k]"<<w[k]<<std::endl;
-      ERROR+=(solInt - solRef) * _cnc->getJacobians()[nQuad * iElm + k] * w[k];
+      // ERROR+=(solInt - solRef) * _cnc->getJacobians()[nQuad * iElm + k] * w[k];
     }
-    printf("%24.18e ", ERROR);
+    // printf("%24.18e ", ERROR);
     // std::cout<<",";
   }
   return sqrt(L2Error);
@@ -311,7 +311,7 @@ double feComputer::computeIntMultiplierNS(feSolution *sol)
       J = _cnc->getJacobians()[nQuad * iElm + k];
       p = (_referenceSolution != nullptr) ? _referenceSolution->eval(t, x) : 0.0; // here is the pressure
       double mu;
-      std::vector<double> gradf(3, 0);
+      std::vector<double> gradf(4, 0);
       if(_referenceVectorSolution != nullptr) {
         _referenceVectorSolution->eval(t, x,
                          gradf); // gradf[0] = dudx gradf[1] = dudy gradf[2] = dvdx gradf[3] = dvdy
@@ -328,8 +328,11 @@ double feComputer::computeIntMultiplierNS(feSolution *sol)
       T11 = 2 * gradf[0];
       T12 = gradf[1] + gradf[2];
       T22 = 2 * gradf[3];
+      // std::cout<<"T11   "<<T11<<std::endl;
+      // std::cout<<"T12   "<<T12<<std::endl;
       // std::cout<<"solInt   "<<solInt<<std::endl;
       // std::cout<<"J   "<<J<<std::endl;
+      // std::cout<<"pression   "<<p<<std::endl;
       // std::cout<<"IntForce   "<<- p * Nx + mu * (T11 * Nx + T12 * Ny)<<std::endl;
       // std::cout<<"IntForce   "<< mu * (T11 * Nx + T12 * Ny)<<std::endl;
 
