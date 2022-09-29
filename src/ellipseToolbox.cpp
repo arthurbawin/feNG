@@ -1,5 +1,6 @@
 #include "ellipseToolbox.h"
 
+#include <cstdio>
 #include <iostream>
 #include <cmath>
 

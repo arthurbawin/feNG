@@ -202,7 +202,7 @@ else()
     # Remplace le bloc precedent selon le compilateur
     if(MKL_OPENMP STREQUAL "gomp")
         list(APPEND MKL_LINK_TOOL_COMMAND "--openmp=gomp")
-    elseif(MKL_OPENMP STREQUAL "imop5")
+    elseif(MKL_OPENMP STREQUAL "iomp5")
         list(APPEND MKL_LINK_TOOL_COMMAND "--threading-library=iomp5")
         list(APPEND MKL_LINK_TOOL_COMMAND "--openmp=iomp5")
     endif()
