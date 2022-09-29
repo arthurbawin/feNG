@@ -75,13 +75,14 @@ void feSolution::initializeUnknowns(feMesh *mesh, feMetaNumber *metaNumber)
     
     for(int iElm = 0; iElm < nElm; ++iElm) {
       fS->initializeAddressingVector(metaNumber->getNumbering(fS->getFieldID()), iElm, adrS);
+      
       mesh->getCoord(fS->getCncGeoID(), iElm, localCoord);
       
       for(int j = 0; j < fS->getNbFunctions(); ++j) {
         double r[3] = {coor[3 * j], coor[3 * j + 1], coor[3 * j + 2]};
         // x[0] = geoSpace->interpolateField(localCoord, r);
         geoSpace->interpolateVectorField(localCoord, r, x);
-
+        
         // If the function given to the feSpace is null, the solution is not changed,
         // i.e. we continue with the value from a previous computation.
         if(fS->isFctDefined()) {

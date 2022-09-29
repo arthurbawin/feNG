@@ -128,6 +128,8 @@ void solveQNBDF(feSolutionContainer *solDot, feTolerances tol, feMetaNumber *met
     feWarning("Not converged at iter %2d : ||A*dx-res|| = %10.10e  (%4d iter.) \t ||dx|| = "
               "%10.10e \t ||res|| = %10.10e",
               iter, normAxb, linearSystemIter, normDx, normResidual);
+    exit(0);
+
   } else {
     feInfoCond(FE_VERBOSE > 0,
                "Converged in %2d Newton iterations : ||dx|| = %10.10e \t ||res|| = %10.10e", iter,

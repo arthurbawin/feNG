@@ -206,13 +206,13 @@ feMesh1DP1::feMesh1DP1(double xA, double xB, int nElm, std::string bndA_ID, std:
   connecBoundaryB[0] = _nNod - 1;
 
   feCncGeo *geoBndA = new feCncGeo(nCncGeo, dimBoundary, _nNodBoundary, _nElmBoundary, 0, _bndA_ID,
-                                   "Pt", new feSpace1DP0("xyz"), connecBoundaryA);
+                                   "Point0D", new feSpace1DP0("xyz"), connecBoundaryA);
   _cncGeo.push_back(geoBndA);
   _cncGeoMap[_bndA_ID] = nCncGeo;
   geoBndA->getFeSpace()->setCncGeoTag(nCncGeo++);
 
   feCncGeo *geoBndB = new feCncGeo(nCncGeo, dimBoundary, _nNodBoundary, _nElmBoundary, 0, _bndB_ID,
-                                   "Pt", new feSpace1DP0("xyz"), connecBoundaryB);
+                                   "Point0D", new feSpace1DP0("xyz"), connecBoundaryB);
   _cncGeo.push_back(geoBndB);
   _cncGeoMap[_bndB_ID] = nCncGeo;
   geoBndB->getFeSpace()->setCncGeoTag(nCncGeo++);
@@ -259,7 +259,7 @@ feMesh0DP0::feMesh0DP0(double xA, int nElm, std::string domID)
   std::vector<int> connecDomain(1, 0);
 
   int nCncGeo = 0;
-  feCncGeo *geoDom = new feCncGeo(nCncGeo, dimDomain, _nNodDomain, _nElmDomain, 0, _domID, "Pt",
+  feCncGeo *geoDom = new feCncGeo(nCncGeo, dimDomain, _nNodDomain, _nElmDomain, 0, _domID, "Point0D",
                                   new feSpace1DP0("xyz"), connecDomain);
   _cncGeo.push_back(geoDom);
   _cncGeoMap[_domID] = nCncGeo;

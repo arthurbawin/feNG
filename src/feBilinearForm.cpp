@@ -135,39 +135,39 @@ feBilinearForm::feBilinearForm(const feBilinearForm &f)
     // case STIFF3_0D :
     //   _sysElm=new feSysElm_0D_Stiff3();
     //   break;
-    // case WEAKBC_0D :
-    //   _sysElm=new feSysElm_0D_weakBC();
-    //   break;
-    // case WEAKBC_EDO1_0D :
-    //   _sysElm=new feSysElm_0D_weakBC_edo1();
-    //   break;
+    case WEAKBC_0D :
+      _sysElm=new feSysElm_0D_weakBC(static_cast<feSysElm_0D_weakBC &>(*f._sysElm));
+      break;
+    case WEAKBC_EDO1_0D :
+      _sysElm=new feSysElm_0D_weakBC_edo1(static_cast<feSysElm_0D_weakBC_edo1 &>(*f._sysElm));
+      break;
     // case WEAKBC_EDO1_V2_0D :
     //   _sysElm=new feSysElm_0D_weakBC_edo1_V2();
     //   break;
-    // case WEAKBC_EDO2_0D :
-    //   _sysElm=new feSysElm_0D_weakBC_edo2();
-    //   break;
-    // case MASSE_0D :
-    //   _sysElm=new feSysElm_0D_Masse();
-    //   break;
-    // case SOURCE_0D :
-    //   _sysElm=new feSysElm_0D_Source();
-    //   break;
+    case WEAKBC_EDO2_0D :
+      _sysElm=new feSysElm_0D_weakBC_edo2(static_cast<feSysElm_0D_weakBC_edo2 &>(*f._sysElm));
+      break;
+    case MASSE_0D :
+      _sysElm=new feSysElm_0D_Masse(static_cast<feSysElm_0D_Masse &>(*f._sysElm));
+      break;
+    case SOURCE_0D :
+      _sysElm=new feSysElm_0D_Source(static_cast<feSysElm_0D_Source &>(*f._sysElm));
+      break;
     // case SOURCE_CROSSED_0D :
     //   _sysElm=new feSysElm_0D_Source_crossed();
     //   break;
     case WEAKBC_EDO1_1D :
       _sysElm=new feSysElm_1D_weakBC_edo1(static_cast<feSysElm_1D_weakBC_edo1 &>(*f._sysElm));
       break;
-    // case SOURCE_1D :
-    //   _sysElm=new feSysElm_1D_Source();
-    //   break;
-    // case DIFF_1D :
-    //   _sysElm=new feSysElm_1D_Diffusion();
-    //   break;
-    // case MASSE_1D :
-    //   _sysElm=new feSysElm_1D_Masse(();
-    //     break;
+    case SOURCE_1D :
+      _sysElm=new feSysElm_1D_Source(static_cast<feSysElm_1D_Source &>(*f._sysElm));
+      break;
+    case DIFF_1D :
+      _sysElm=new feSysElm_1D_Diffusion(static_cast<feSysElm_1D_Diffusion &>(*f._sysElm));
+      break;
+    case MASSE_1D :
+      _sysElm=new feSysElm_1D_Masse(static_cast<feSysElm_1D_Masse &>(*f._sysElm));
+        break;
     case MASSE_2D :
       _sysElm=new feSysElm_2D_Masse(static_cast<feSysElm_2D_Masse &>(*f._sysElm));
       break;

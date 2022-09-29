@@ -129,7 +129,7 @@ void createCurvedMesh(feFunction *solExact, feMetaNumber *metaNumber, feSolution
   // Aniso mesh with MMG (used to get the boundary vertices only)
   // std::string cmd = "mmg2d " + metricOptions.metricMeshNameForMMG + " -hgrad 3 -o " + metricOptions.metricMeshNameForMMG_out;
   // std::string cmd1 = "mmg2d " + metricOptions.metricMeshNameForMMG + " -hgrad 10 -o tmp.mesh";
-  std::string cmd1 = "mmg2d " + metricOptions.metricMeshNameForMMG + " -hgrad -1 -o tmp.mesh";
+  std::string cmd1 = "/home/baptiste/Documents/Projet/mmg/build/bin/mmg2d_O3 " + metricOptions.metricMeshNameForMMG + " -hgrad -1 -o tmp.mesh";
   system(cmd1.c_str());
   std::string cmd2 = "gmsh tmp.mesh -o " + metricOptions.metricMeshNameForMMG_out + " -0";
   system(cmd2.c_str());
@@ -149,7 +149,7 @@ void createCurvedMesh(feFunction *solExact, feMetaNumber *metaNumber, feSolution
     // system(cmd3.c_str());
   };
 
-  // system(cmd3.c_str());
+  system(cmd3.c_str());
 
   gmsh::clear();
   gmsh::open(metricOptions.metricMeshNameForMMG_out);
@@ -263,23 +263,23 @@ void createCurvedMesh(feFunction *solExact, feMetaNumber *metaNumber, feSolution
 
     metric->setMetricViewTag(viewTags[0]);
 
-    computePointsUsingScaledCrossFieldPlanarP2(
-      metricOptions.modelForMetric.c_str(),
-      metricOptions.modelForMesh.c_str(),
-      metric->getMetricViewTag(), 
-      faceTag,
-      pts,
-      errorSquaredCallback,
-      metricOptions.inside,
-      nullptr,
-      onlyGenerateVertices,
-      evaluateFieldFromRecoveryCallback,
-      (void *) recovery,
-      interpolateMetricP1Wrapper,
-      interpolateMetricAndDerivativeOnP2EdgeWrapper,
-      interpolateMetricP1Wrapper1D,
-      interpolateMetricAndDerivativeOnP2EdgeWrapper1D,
-      (void *) metric);
+    // computePointsUsingScaledCrossFieldPlanarP2(
+    //   metricOptions.modelForMetric.c_str(),
+    //   metricOptions.modelForMesh.c_str(),
+    //   metric->getMetricViewTag(), 
+    //   faceTag,
+    //   pts,
+    //   errorSquaredCallback,
+    //   metricOptions.inside,
+    //   nullptr,
+    //   onlyGenerateVertices,
+    //   evaluateFieldFromRecoveryCallback,
+    //   (void *) recovery,
+    //   interpolateMetricP1Wrapper,
+    //   interpolateMetricAndDerivativeOnP2EdgeWrapper,
+    //   interpolateMetricP1Wrapper1D,
+    //   interpolateMetricAndDerivativeOnP2EdgeWrapper1D,
+    //   (void *) metric);
 
     gmsh::write(metricOptions.adaptedMeshName);
   }

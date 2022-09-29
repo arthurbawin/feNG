@@ -839,9 +839,10 @@ void feSysElm_1D_Diffusion::computeAe(std::vector<double> &J, int numElem,
   double jac;
   for(int k = 0; k < nG; ++k) {
     jac = J[nG * numElem + k];
-
-    for(int i = 0; i < nFunctions; ++i)
+    for(int i = 0; i < nFunctions; ++i){
       _feUdx[i] = intSpace[_idU]->getdFunctiondrAtQuadNode(i, k) / jac;
+      // feInfo("numElm : %d - dUdx[%d] : %10.10f", numElem, i, _feUdx[i]); 
+    }
 
     for(int i = 0; i < nFunctions; ++i) {
       for(int j = 0; j < nFunctions; ++j) {

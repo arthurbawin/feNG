@@ -143,10 +143,12 @@ feStatus feSpace::setQuadratureRule(feQuadrature *rule)
   _yQuad = rule->getYPoints();
   _zQuad = rule->getZPoints();
 
+
   _L.resize(_nFunctions * _nQuad, 0.0);
   _dLdr.resize(_nFunctions * _nQuad, 0.0);
   _dLds.resize(_nFunctions * _nQuad, 0.0);
   _dLdt.resize(_nFunctions * _nQuad, 0.0);
+
 
   /* Reference frame discretization : shape functions are computed once on the reference element,
   then evaluated at the quadrature nodes. */

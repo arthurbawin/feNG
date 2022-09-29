@@ -27,84 +27,87 @@ double fSource(const double t, const std::vector<double> &x, const std::vector<d
 }
 
 int main(int argc, char **argv) {
-#ifdef USING_PETSC
+
   petscInitialize(argc, argv);
-#endif
+
   double xa = 0.;
 
   feFunction *funSol = new feFunction(fSol, {});
   feFunction *funSource = new feFunction(fSource, {});
 
-  int nIter = 5;
+  int nIter = 1;
+
   std::vector<double> normL2BDF1(2 * nIter, 0.0);
-  // std::vector<double> normL2BDF2(2 * nIter, 0.0);
+
   std::vector<int> nElm(nIter, 0);
   std::vector<int> numberTimeStep;
   numberTimeStep.resize(nIter);
+  
+
+  int degreeQuadrature = 10;
   for(int iter = 0; iter < nIter; ++iter) {
     nElm[iter] = 1;
+    
     // Maillage
-    feMesh0DP0 *mesh = new feMesh0DP0(xa, 1, "M1D");
+    feMesh0DP0 mesh(xa, 1, "M1D");
+    
     // Espaces d'interpolation
-    feSpace1DP0 U_M1D = feSpace1DP0(mesh, "U", "M1D", funSol);
-    std::vector<feSpace *> fespace = {&U_M1D};
+    int dim;
+    feSpace *U_M1D;
+    feCheck(createFiniteElementSpace(U_M1D, &mesh, dim=0, POINT, 0, "U", "M1D", degreeQuadrature, funSol));
+    
+    std::vector<feSpace *> fespace = {U_M1D};
     std::vector<feSpace *> feEssBC = {};
+    
+    
     // Numerotations
-    feMetaNumber *metaNumber = new feMetaNumber(mesh, fespace, feEssBC);
+    feMetaNumber metaNumber(&mesh, fespace, feEssBC);
+    
+
     // Solution
+    feSolution sol(&mesh, fespace, feEssBC, &metaNumber);
+
+    
+    // Formes (bi)lineaires
+    feBilinearForm source({U_M1D}, &mesh, degreeQuadrature, new feSysElm_0D_Source(1.0, funSource));
+    feBilinearForm masse({U_M1D}, &mesh, degreeQuadrature, new feSysElm_0D_Masse(1.0, nullptr));
+        
+
+    // Systeme lineaire
+    feLinearSystem *system;
+    // feCheck(createLinearSystem(system, MKLPARDISO, spaces, {&NS2D, &weakBC_UCylinder, &weakBC_VCylinder},&metaNumber, &mesh, argc, argv));
+    feCheck(createLinearSystem(system, PETSC, fespace, {&source, &masse}, &metaNumber, &mesh, argc, argv));
+    
+    // Norme de la solution
+    feComputer *norm = new feComputer(U_M1D, &mesh, &metaNumber, "L2Norm_1Field", funSol);
+    std::vector<feComputer *> comput = {norm};
+
+
+    //exporter
+    feExporter *exporter;
+    feCheck(createVisualizationExporter(exporter, VTK, &metaNumber, &sol, &mesh, fespace));
+    int exportEveryNSteps = 1;
+    std::string vtkFileRoot = "../../data/ResultatVK/VonKarman";
+    feExportData exportData = {nullptr, exportEveryNSteps, vtkFileRoot};
+
+
+    // Resolution
+    TimeIntegrator *solver;
+    feTolerances tol{1e-8, 1e-8, 10};
     double t0 = 0.;
     double t1 = 1.;
-    int nTimeSteps = 5 * pow(2, iter);
+    std::string CodeIni = "";
+    int nTimeSteps = 10 * pow(2, iter);
     numberTimeStep[iter] = nTimeSteps;
-    feSolution *sol = new feSolution(mesh, fespace, feEssBC, metaNumber);
-    // sol->initializeTemporalSolution(t0,t1,nTimeSteps);
-    // sol->initializeUnknowns(mesh, metaNumber);
-    // sol->initializeEssentialBC(mesh, metaNumber);
-    // Formes (bi)lineaires
-    int nQuad = 8; // TODO : change to deg
-    // std::vector<feSpace*> spaceDiffusion1D_U = {&U_M1D};
-    std::vector<feSpace *> spaceSource1D_U = {&U_M1D};
-    std::vector<feSpace *> spaceMasse1D_U = {&U_M1D};
+    
+    feCheck(createTimeIntegrator(solver, BDF1, tol, system, &metaNumber, &sol, &mesh, comput, exportData, t0, t1, nTimeSteps, CodeIni));
+    feCheck(solver->makeSteps(nTimeSteps));
 
-    feBilinearForm *source_U_M1D =
-      new feBilinearForm(spaceSource1D_U, mesh, nQuad, new feSysElm_0D_Source(1.0, funSource));
-    feBilinearForm *masse_U_M1D =
-      new feBilinearForm(spaceMasse1D_U, mesh, nQuad, new feSysElm_0D_Masse(1.0, nullptr));
+    std::vector<double> &normL2_norm = norm->getResult();
+    normL2BDF1[2*iter] = *std::max_element(normL2_norm.begin(), normL2_norm.end());
 
-    std::vector<feBilinearForm *> formMatrices = {masse_U_M1D};
-    std::vector<feBilinearForm *> formResiduals = {masse_U_M1D, source_U_M1D};
-    // Norme de la solution
-    feNorm *norm = new feNorm(&U_M1D, mesh, nQuad, funSol);
-    std::vector<feNorm *> norms = {norm, norm};
-    // Systeme lineaire
-    feLinearSystemPETSc *linearSystem =
-      new feLinearSystemPETSc(argc, argv, formMatrices, formResiduals, metaNumber, mesh);
-#ifdef HAVE_PETSC
-    linearSystem->initialize();
-    // Resolution
-    feTolerances tol{1e-8, 1e-8, 10};
-    // std::vector<double> normL2BDF1(nTimeSteps,0.0);
-    // std::string CodeIni = "BDF1/DC"; // Define the way of initialization |"SolEx"->for exact
-    // solution|  |"BDF1/DCF"->using only initial conditions|
 
-    BDF1Solver solver(tol, metaNumber, linearSystem, sol, norms, mesh, t0, t1, nTimeSteps);
-    // BDF2Solver solver(tol, metaNumber, linearSystem, sol, norms, mesh, t0, t1, nTimeSteps,
-    //                  CodeIni);
-    solver.makeSteps(nTimeSteps, fespace);
-
-    std::vector<double> &normL2BDF = solver.getNorm(0);
-    // solveBDF2afterBDF1(normL2BDF1,normL2BDF2, tol, metaNumber, linearSystem, formMatrices,
-    // formResiduals, sol, norms, mesh, fespace);
-    normL2BDF1[2 * iter] = *std::max_element(normL2BDF.begin(), normL2BDF.end());
-#endif
-
-    delete norm;
-    delete linearSystem;
-    delete masse_U_M1D;
-    delete source_U_M1D;
-    delete sol;
-    delete metaNumber;
-    delete mesh;
+    delete U_M1D; 
   }
   delete funSource;
   delete funSol;
@@ -117,8 +120,8 @@ int main(int argc, char **argv) {
   for(int i = 0; i < nIter; ++i)
     printf("%12d \t %12d \t %12.6e \t %12.6e\n", numberTimeStep[i], nElm[i], normL2BDF1[2 * i],
            normL2BDF1[2 * i + 1]);
-#ifdef USING_PETSC
+
   petscFinalize();
-#endif
+
   return 0;
 }

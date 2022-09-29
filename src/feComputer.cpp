@@ -76,6 +76,7 @@ double feComputer::computeL2ErrorNorm(feSolution *sol)
     // printf("%24.18e ", ERROR);
     // std::cout<<",";
   }
+  // feInfo("%10.10f",sqrt(L2Error));
   return sqrt(L2Error);
 }
 

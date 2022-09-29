@@ -41,9 +41,9 @@ void feStationarySolution::computeSolTimeDerivative(feSolution *sol, feLinearSys
 
 void feSolutionBDF2::computeSolTimeDerivative(feSolution *sol, feLinearSystem *linearSystem)
 {
-  printf(" %12s \t %24.18e \n", "sol[0][0]", _sol[0][0]);
-  printf(" %12s \t %24.18e \n", "sol[0][1]", _sol[1][0]);
-  printf(" %12s \t %24.18e \n", "sol[0][2]", _sol[2][0]);
+  // printf(" %12s \t %24.18e \n", "sol[0][0]", _sol[0][0]);
+  // printf(" %12s \t %24.18e \n", "sol[0][1]", _sol[1][0]);
+  // printf(" %12s \t %24.18e \n", "sol[0][2]", _sol[2][0]);
   for(int i = 0; i < _nDofs; ++i) sol->setSolDotAtDOF(i, _cn[0] * _sol[0][i] + _cn[1] * _sol[1][i] + _cn[2] * _sol[2][i]);
 }
 
@@ -772,23 +772,28 @@ void initializeDC4F_begining(feSolution *sol, feMetaNumber *metaNumber, feMesh *
     f[3] = solDC3F->_fResidual[3][k];
     // std::cout<<"les residus valent "<<f[0]<< "et "<< f[1]<< "et" << f[2] <<std::endl;
     tableDD(t, f, table, delta);
-    // std::cout << "delta11 = "<< delta[0] << " delta12 = "<< delta[n]<< " et delta13 ="<< delta[2*n] <<
-    // std::endl;
+    // std::cout << "delta11 = "<< delta[0] << " delta12 = "<< delta[n]<< " et delta13 ="<< delta[2*n] <<std::endl;
     if(time=="T1"){
       int shift_T = 2;
       for(int i = shift_T; i < NbCoeffBDF +shift_T; ++i) {
         tt[i-shift_T] = t[i];
         // std::cout<<" tt pour t1"<<tt[i-shift_T]<<std::endl;
       }
+      // std::cout<<"les residus valent "<<f[0]<< "et "<< f[1]<< "et" << f[2] << "et" << f[3] << std::endl;
       // Coeffs BDF
       tableToCoeffBDF(tt, cn);
-      d4u=6*delta[2*n];
-      d3u =
-      2.0 * delta[n] + 2*delta[2*n]*(-k1 - 2*k2); 
+      d4u = 6*delta[2*n];
+      d3u = 2.0 * delta[n] + 2*delta[2*n]*(-k1 - 2*k2); 
       d2u = delta[0] + delta[n]*(-k1 - 2*k2) + delta[2*n]*k2*(k1+k2);
-      // std::cout<< "le derivee deuxieme vaut " << d2u << std::endl;
-      // std::cout<< "le derivee troisieme vaut " << d3u << std::endl;
-      // std::cout<< "le derivee quatrieme vaut " << d4u << std::endl;
+
+      // True correction
+      // d4u=6*delta[2*n];
+      // d3u =2.0 * delta[n] + 2*delta[2*n]*(2*k1 + k2); // Indexé par delta[i][j] = delta[n*j+i] : delta(1,2) = delta[0][1] = delta[n]
+      // d2u = delta[0] + delta[n]*(k1) + delta[2*n]*(k1*(k1+k2)); 
+
+      // std::cout<< "le derivee deuxieme vaut " << delta[0] << std::endl;
+      // std::cout<< "le derivee troisieme vaut " << delta[n] << std::endl;
+      // std::cout<< "le derivee quatrieme vaut " << delta[2*n] << std::endl;
       solDC4->_d[k] = d2u * k3 / 2.0 - d3u / 6.0 * k3 * k3 + d4u / 24. * k3*k3*k3;
       // std::cout<< "la correction du DC4F vaut " << d2u * k3 / 2.0 - d3u / 6.0 * k3 * k3 + d4u / 24. * k3*k3*k3 << std::endl;
       sol->setCurrentTime(t1); 

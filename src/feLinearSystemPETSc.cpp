@@ -248,7 +248,7 @@ void feLinearSystemPETSc::assembleMatrices(feSolution *sol)
           Ae = f->getAe();
 
           // Determine assignment indices
-          adrI = f->getAdrI();
+          adrI = f->getAdrI();          
           adrJ = f->getAdrJ();
           sizeI = adrI.size();
           niElm.reserve(sizeI);
