@@ -3,6 +3,7 @@
 #include <cstdio>
 #include <iostream>
 #include <cmath>
+#include <initializer_list>
 
 // Get discriminant of the conic
 double discriminant(std::vector<double> &p) {
