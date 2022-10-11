@@ -1,12 +1,13 @@
 cmake_minimum_required(VERSION 3.3)
 project(feNG)
 
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 option(ENABLE_OPENMP        "Enable OpenMP"               ON )
 option(ENABLE_MPI           "Enable MPI"                  ON )
 option(ENABLE_PETSC         "Enable PETSc"                ON )
+option(ENABLE_SLEPC         "Enable SLEPc"                OFF)
 option(ENABLE_GMSH          "Enable Gmsh"                 OFF)
 option(ENABLE_MKL           "Enable MKL"                  OFF)
 option(ENABLE_METIS         "Enable Metis"                OFF)
@@ -65,6 +66,13 @@ endif()
 # Initialize list of external libraries
 set(feNG_EXTERNAL_LIBS "")
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/")
+
+# It seems that CMake only defines -DNDEBUG when it is NOT in debug mode
+# Add also a -DFENG_DEBUG definition to avoid double negative conditions
+# -DDEBUG conflicts with definitions from other libraries such as SoPlex
+if(CMAKE_BUILD_TYPE STREQUAL Debug)
+  add_definitions(-DFENG_DEBUG)
+endif()
 
 #  OpenMP
 if(ENABLE_OPENMP)
@@ -141,6 +149,29 @@ if(ENABLE_PETSC)
   list(APPEND feNG_EXTERNAL_LIBS ${PETSC_LINK_LIBRARIES} ${PETSC_LDFLAGS})
   add_definitions("-DHAVE_PETSC")
   MESSAGE(STATUS "PETSc found (-:")
+endif()
+
+#  SLEPc (Eigenvalue solver based on PETSc)
+if(ENABLE_SLEPC)
+  if(NOT ENABLE_PETSC)
+    MESSAGE(FATAL_ERROR "SLEPc requires PETSc : please turn on ENABLE_PETSC.")
+  endif()
+  set(ENV{PKG_CONFIG_PATH} "$ENV{PKG_CONFIG_PATH}:${SLEPC_DIR}/${SLEPC_ARCH}/lib/pkgconfig")
+  find_package(PkgConfig REQUIRED)
+  pkg_check_modules(SLEPC REQUIRED slepc)
+  include_directories(${SLEPC_INCLUDE_DIRS})
+  # MESSAGE(STATUS "PETSC_FOUND          : ${PETSC_FOUND}")
+  # MESSAGE(STATUS "PETSC_LIBRARIES      : ${PETSC_LIBRARIES}")
+  # MESSAGE(STATUS "PETSC_LINK_LIBRARIES : ${PETSC_LINK_LIBRARIES}")
+  # MESSAGE(STATUS "PETSC_LIBRARY_DIRS   : ${PETSC_LIBRARY_DIRS}")
+  # MESSAGE(STATUS "PETSC_LDFLAGS        : ${PETSC_LDFLAGS}")
+  # MESSAGE(STATUS "PETSC_LDFLAGS_OTHER  : ${PETSC_LDFLAGS_OTHER}")
+  # MESSAGE(STATUS "PETSC_INCLUDE_DIRS   : ${PETSC_INCLUDE_DIRS}")
+  # MESSAGE(STATUS "PETSC_CFLAGS         : ${PETSC_CFLAGS}")
+  # MESSAGE(STATUS "PETSC_CFLAGS_OTHER   : ${PETSC_CFLAGS_OTHER}")
+  list(APPEND feNG_EXTERNAL_LIBS ${SLEPC_LINK_LIBRARIES} ${SLEPC_LDFLAGS})
+  add_definitions("-DHAVE_SLEPC")
+  MESSAGE(STATUS "SLEPc found (-:")
 endif()
 
 #  Metis

@@ -37,6 +37,11 @@ protected:
 
   std::vector<int> _elemToEdge;
 
+  // The index of all the degrees of freedom associated to this field.
+  // Elements, faces (edges) and vertices are mixed.
+  std::vector<int> _allEssentialDOF;
+  std::vector<int> _allUnknownDOF;
+
 public:
   feNumber(feMesh *mesh);
   ~feNumber() {};
@@ -60,70 +65,23 @@ public:
   int numberUnknowns(int globalNum);
   int numberEssential(int globalNum);
 
+  std::vector<int> &getEssentialDOF() { return _allEssentialDOF; };
+  std::vector<int> &getUnknownDOF() { return _allUnknownDOF; };
+
   int getDOFNumberAtVertex(int iVertex) { return _numberingVertices[iVertex]; };
+  int getDOFCodeAtVertex(int iVertex) { return _codeDOFVertices[iVertex]; };
 
-  void printNumberingVertices()
-  {
-    printf("nNod = %d\n", _nNod);
-    for(size_t i = 0; i < _numberingVertices.size(); ++i) {
-      if(_codeDOFVertices[i] == ESS)
-        printf("%d \t %s\n", _numberingVertices[i], "ESS");
-      else if(_codeDOFVertices[i] == INC)
-        printf("%d \t %s\n", _numberingVertices[i], "INC");
-      else
-        printf("%d \t %d\n", _numberingVertices[i], _codeDOFVertices[i]);
-    }
-  }
+  void exportNumberingVertices(feMesh *mesh, FILE *file);
 
-  void printNumberingElements()
-  {
-    printf("nElm = %d\n", _nElm);
-    printf("maxDOFPerElem = %d\n", _maxDOFperElem);
-    for(int i = 0; i < _nElm; ++i) {
-      for(int j = 0; j < _maxDOFperElem; ++j) {
-        if(_codeDOFElements[i] == ESS)
-          printf("elm %d - dof %d : %d \t %s\n", i, j, _numberingElements[_maxDOFperElem * i + j],
-                 "ESS");
-        else if(_codeDOFElements[i] == INC)
-          printf("elm %d - dof %d : %d \t %s\n", i, j, _numberingElements[_maxDOFperElem * i + j],
-                 "INC");
-        else
-          printf("elm %d - dof %d : %d \t %d\n", i, j, _numberingElements[_maxDOFperElem * i + j],
-                 _codeDOFElements[i]);
-      }
-    }
-  }
+  void compactFieldDOF();
 
-  void printNumberingEdges()
-  {
-    printf("nEdg = %d\n", _nEdg);
-    printf("maxDOFperEdge = %d\n", _maxDOFperEdge);
-    for(int i = 0; i < _nEdg; ++i) {
-      for(int j = 0; j < _maxDOFperEdge; ++j) {
-        if(_codeDOFEdges[i] == ESS)
-          printf("%d \t %s\n", _numberingEdges[_maxDOFperEdge * i + j], "ESS");
-        else if(_codeDOFEdges[i] == INC)
-          printf("%d \t %s\n", _numberingEdges[_maxDOFperEdge * i + j], "INC");
-        else
-          printf("%d \t %d\n", _numberingEdges[_maxDOFperEdge * i + j], _codeDOFEdges[i]);
-      }
-    }
-  }
-
-  void printCodeVertices()
-  {
-    for(auto val : _codeDOFVertices) std::cout << val << std::endl;
-  }
-
-  void printCodeElements()
-  {
-    for(auto val : _codeDOFElements) std::cout << val << std::endl;
-  }
-
-  void printCodeEdges()
-  {
-    for(auto val : _codeDOFEdges) std::cout << val << std::endl;
-  }
+public:
+  void printNumberingVertices();
+  void printNumberingElements();
+  void printNumberingEdges();
+  void printCodeVertices();
+  void printCodeElements();
+  void printCodeEdges();
 };
 
 class feMetaNumber
@@ -155,35 +113,16 @@ public:
     return _numberings[_fieldIDs[fieldTag]];
   } // TODO : check bounds (-:
 
-  void printFields()
-  {
-    for(auto s : _fieldIDs) std::cout << s << std::endl;
-  }
+  std::vector<int> &getEssentialDOF(std::string fieldID) { return _numberings[fieldID]->getEssentialDOF(); };
+  std::vector<int> &getEssentialDOF(int fieldTag) { return _numberings[_fieldIDs[fieldTag]]->getEssentialDOF(); };
+  std::vector<int> &getUnknownDOF(std::string fieldID) { return _numberings[fieldID]->getUnknownDOF(); };
+  std::vector<int> &getUnknownDOF(int fieldTag) { return _numberings[_fieldIDs[fieldTag]]->getUnknownDOF(); };
 
-  void printNumberings()
-  {
-    for(int i = 0; i < _nFields; ++i) {
-      // for(auto const& secondIsNumber : _numberings){
-      std::cout << "Field " << _fieldIDs[i] << " - vertices :" << std::endl;
-      _numberings[_fieldIDs[i]]->printNumberingVertices();
-      std::cout << "Field " << _fieldIDs[i] << " - elements :" << std::endl;
-      _numberings[_fieldIDs[i]]->printNumberingElements();
-      std::cout << "Field " << _fieldIDs[i] << " - edges :" << std::endl;
-      _numberings[_fieldIDs[i]]->printNumberingEdges();
-    }
-  }
+  feStatus exportNumberingVertices(feMesh *mesh, std::string fileName);
 
-  void printCodes()
-  { // Attention : ordre dépend du nom des variables (ordre du map.first)
-    for(auto const &secondIsNumber : _numberings) {
-      std::cout << "Field " << secondIsNumber.first << " - vertices :" << std::endl;
-      secondIsNumber.second->printCodeVertices();
-      std::cout << "Field " << secondIsNumber.first << " - elements :" << std::endl;
-      secondIsNumber.second->printCodeElements();
-      std::cout << "Field " << secondIsNumber.first << " - edges :" << std::endl;
-      secondIsNumber.second->printCodeEdges();
-    }
-  }
+  void printFields();
+  void printNumberings();
+  void printCodes();
 };
 
 #endif

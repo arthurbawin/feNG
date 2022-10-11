@@ -53,6 +53,57 @@ feNorm::feNorm(std::vector<feSpace *> &VecfeSpace, feMesh *mesh, int degQuad, fe
   delete rule;
 }
 
+void feNorm::computeL2Norm_uh(feMetaNumber *metaNumber, feSolution *sol, feMesh *mesh, double scaling)
+{
+  double normL2 = 0.0, solInt, solRef, J, t = sol->getCurrentTime();
+  std::vector<double> x;
+  std::vector<double> dxdr; // [dx/dr, dy/dr, dz/dr]
+  std::vector<double> dxds; // [dx/ds, dy/ds, dz/ds]
+
+  int nElm = _VecfeSpace[0]->getNbElm();
+  std::vector<feInt> adr0;
+  std::vector<double> sol0;
+  std::vector<double> &solVec = sol->getSolutionReference();
+
+#if defined(HAVE_OMP)
+#pragma omp parallel for private(_geoCoord, adr0, sol0, solInt, solRef, J, x, dxdr, dxds) reduction(+ : normL2) schedule(dynamic)
+#endif
+  for(int iElm = 0; iElm < nElm; ++iElm) {
+    adr0.resize(_VecfeSpace[0]->getNbFunctions());
+    _VecfeSpace[0]->initializeAddressingVector(
+      metaNumber->getNumbering(_VecfeSpace[0]->getFieldID()), iElm, adr0);
+    sol0.resize(adr0.size());
+    for(size_t i = 0; i < adr0.size(); ++i) {
+      sol0[i] = solVec[adr0[i]];
+    }
+    _geoCoord.resize(3*_nNodePerElem);
+    mesh->getCoord(_cncGeoTag, iElm, _geoCoord);
+    x.resize(3);
+    dxdr.resize(3);
+    dxds.resize(3);
+
+    for(int k = 0; k < _nQuad; ++k) {
+      solInt = _VecfeSpace[0]->interpolateFieldAtQuadNode(sol0, k);
+
+      _geoSpace->interpolateVectorFieldAtQuadNode(_geoCoord, k, x);
+
+      if(_dim == 0) {
+        J = 1.;
+      } else if(_dim == 1) {
+        _geoSpace->interpolateVectorFieldAtQuadNode_rDerivative(_geoCoord, k, dxdr);
+        J = sqrt(dxdr[0] * dxdr[0] + dxdr[1] * dxdr[1]);
+      } else if(_dim == 2) {
+        _geoSpace->interpolateVectorFieldAtQuadNode_rDerivative(_geoCoord, k, dxdr);
+        _geoSpace->interpolateVectorFieldAtQuadNode_sDerivative(_geoCoord, k, dxds);
+        J = dxdr[0] * dxds[1] - dxdr[1] * dxds[0];
+      }
+
+      normL2 += (solInt * scaling) * (solInt * scaling) * J * _w[k];
+    }
+  }
+  _norm = sqrt(normL2);
+}
+
 void feNorm::computeL2Norm0D(feSolution *sol)
 {
   double normL2 = 0.0, solInt, solRef, t = sol->getCurrentTime();
@@ -70,6 +121,7 @@ void feNorm::computeL2Norm0D(feSolution *sol)
   _norm = sqrt(normL2);
 }
 
+// This is actually the L2 norm of the error u-uh, with u = solRef
 void feNorm::computeL2Norm(feMetaNumber *metaNumber, feSolution *sol, feMesh *mesh)
 {
   double normL2 = 0.0, solInt, solRef, J, t = sol->getCurrentTime();
@@ -672,6 +724,74 @@ void feNorm::computeIntegral(feMetaNumber *metaNumber, feSolution *sol, feMesh *
     }
   }
   _norm = area;
+}
+
+// Compute the integral of uh * f, where f is a user-defined function 
+void feNorm::computeScalarProduct(feMetaNumber *metaNumber, feSolution *sol, feMesh *mesh,
+                             feFunction *fun)
+{
+  double I = 0.0, solInt, J, t = sol->getCurrentTime();
+  int nElm = _VecfeSpace[0]->getNbElm();
+  std::vector<feInt> adr0(_VecfeSpace[0]->getNbFunctions());
+  std::vector<double> sol0(adr0.size());
+  std::vector<double> &solVec = sol->getSolutionReference();
+
+  _geoCoord.resize(3*_nNodePerElem);
+  for(int iElm = 0; iElm < nElm; ++iElm) {
+    _VecfeSpace[0]->initializeAddressingVector(
+      metaNumber->getNumbering(_VecfeSpace[0]->getFieldID()), iElm, adr0);
+    for(size_t i = 0; i < adr0.size(); ++i) {
+      sol0[i] = solVec[adr0[i]];
+    }
+
+    mesh->getCoord(_cncGeoTag, iElm, _geoCoord);
+    for(int k = 0; k < _nQuad; ++k) {
+      solInt = _VecfeSpace[0]->interpolateFieldAtQuadNode(sol0, k);
+      std::vector<double> x(3, 0.0);
+      _geoSpace->interpolateVectorFieldAtQuadNode(_geoCoord, k, x);
+      std::vector<double> dxdr(3, 0.0); // [dx/dr, dy/dr, dz/dr]
+      std::vector<double> dxds(3, 0.0); // [dx/ds, dy/ds, dz/ds]
+      _geoSpace->interpolateVectorFieldAtQuadNode_rDerivative(_geoCoord, k, dxdr);
+      _geoSpace->interpolateVectorFieldAtQuadNode_sDerivative(_geoCoord, k, dxds);
+      J = dxdr[0] * dxds[1] - dxdr[1] * dxds[0];
+      I += fun->eval(t, x) * solInt * J * _w[k];
+    }
+  }
+  _norm = I;
+}
+
+// Compute ||f - uh||_L2, where f is a user-defined function 
+void feNorm::computeL2Norm_f_minus_uh(feMetaNumber *metaNumber, feSolution *sol, feMesh *mesh,
+                             feFunction *fun, double scaling)
+{
+  double I = 0.0, solInt, J, t = sol->getCurrentTime();
+  int nElm = _VecfeSpace[0]->getNbElm();
+  std::vector<feInt> adr0(_VecfeSpace[0]->getNbFunctions());
+  std::vector<double> sol0(adr0.size());
+  std::vector<double> &solVec = sol->getSolutionReference();
+
+  _geoCoord.resize(3*_nNodePerElem);
+  for(int iElm = 0; iElm < nElm; ++iElm) {
+    _VecfeSpace[0]->initializeAddressingVector(
+      metaNumber->getNumbering(_VecfeSpace[0]->getFieldID()), iElm, adr0);
+    for(size_t i = 0; i < adr0.size(); ++i) {
+      sol0[i] = solVec[adr0[i]];
+    }
+
+    mesh->getCoord(_cncGeoTag, iElm, _geoCoord);
+    for(int k = 0; k < _nQuad; ++k) {
+      solInt = _VecfeSpace[0]->interpolateFieldAtQuadNode(sol0, k);
+      std::vector<double> x(3, 0.0);
+      _geoSpace->interpolateVectorFieldAtQuadNode(_geoCoord, k, x);
+      std::vector<double> dxdr(3, 0.0); // [dx/dr, dy/dr, dz/dr]
+      std::vector<double> dxds(3, 0.0); // [dx/ds, dy/ds, dz/ds]
+      _geoSpace->interpolateVectorFieldAtQuadNode_rDerivative(_geoCoord, k, dxdr);
+      _geoSpace->interpolateVectorFieldAtQuadNode_sDerivative(_geoCoord, k, dxds);
+      J = dxdr[0] * dxds[1] - dxdr[1] * dxds[0];
+      I += (fun->eval(t, x) - solInt * scaling) * (fun->eval(t, x) - solInt * scaling) * J * _w[k];
+    }
+  }
+  _norm = sqrt(I);
 }
 
 /* Estimates the L2 norm of the error taking an external solution as the reference solution. */

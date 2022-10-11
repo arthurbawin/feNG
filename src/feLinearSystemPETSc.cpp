@@ -149,8 +149,7 @@ feLinearSystemPETSc::feLinearSystemPETSc(int argc, char **argv,
                                          feMetaNumber *metaNumber, feMesh *mesh)
   : feLinearSystem(bilinearForms, metaNumber, mesh), _argc(argc), _argv(argv)
 #if defined(HAVE_PETSC)
-    ,
-    _nInc(metaNumber->getNbUnknowns()), _nDofs(metaNumber->getNbDOFs())
+    , _nInc(metaNumber->getNbUnknowns()), _nDofs(metaNumber->getNbDOFs())
 #endif
 {
   this->initialize();
@@ -199,7 +198,7 @@ void feLinearSystemPETSc::assembleMatrices(feSolution *sol)
 {
 #if defined(HAVE_PETSC)
   if(recomputeMatrix) {
-    feInfo("Assembling the matrix ...");
+    // feInfo("Assembling the matrix ...");
     // tic();
 
     PetscErrorCode ierr = 0;
@@ -297,6 +296,17 @@ void feLinearSystemPETSc::assembleMatrices(feSolution *sol)
     // feInfo("Done");
     // toc();
     // viewMatrix();
+    // PetscViewer viewer;
+    // PetscViewerASCIIOpen(PETSC_COMM_WORLD, "matrix", FILE_MODE_WRITE, &viewer);
+    // MatView(_A,viewer);
+
+    PetscViewer viewer;
+    PetscViewerASCIIOpen(PETSC_COMM_WORLD, "matrix.m", &viewer);
+    PetscViewerPushFormat(viewer, PETSC_VIEWER_ASCII_MATLAB);
+    MatView(_A,viewer);
+    PetscViewerPopFormat(viewer);
+    PetscViewerDestroy(&viewer);
+    
   } // if(recomputeMatrix)
 #endif
 }
@@ -304,7 +314,7 @@ void feLinearSystemPETSc::assembleMatrices(feSolution *sol)
 void feLinearSystemPETSc::assembleResiduals(feSolution *sol)
 {
 #if defined(HAVE_PETSC)
-  feInfo("Assembling the residual...");
+  // feInfo("Assembling the residual...");
   // tic();
 
   PetscErrorCode ierr = 0;

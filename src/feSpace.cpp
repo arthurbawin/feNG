@@ -274,7 +274,7 @@ void feSpace::interpolateField(double *field, int fieldSize, double *r, double *
 double feSpace::interpolateField(std::vector<double> &field, double *r) // match
 {
   double res = 0.0;
-#ifdef DEBUG
+#ifdef FENG_DEBUG
   if(field.size() != (unsigned)_nFunctions) {
     printf(" In feSpace::interpolateField : Erreur - Nombre de valeurs nodales non compatible avec "
            "le nombre d'interpolants de l'espace.\n");
@@ -288,7 +288,7 @@ double feSpace::interpolateField(std::vector<double> &field, double *r) // match
 double feSpace::interpolateField(std::vector<double> &field, int iElm, std::vector<double> &x)
 {
   double res = 0.0;
-#ifdef DEBUG
+#ifdef FENG_DEBUG
   if(field.size() != (unsigned)_nFunctions) {
     printf(" In feSpace::interpolateField : Erreur - Nombre de valeurs nodales non compatible avec "
            "le nombre d'interpolants de l'espace.\n");
@@ -308,7 +308,7 @@ double feSpace::interpolateField(feNumber *number, feSolution *sol, std::vector<
   double u[3];
   int elm = -1;
   bool isFound = static_cast<feMesh2DP1 *>(_mesh)->locateVertex(x.data(), elm, u);
-#ifdef DEBUG
+#ifdef FENG_DEBUG
   if(!isFound) {
     printf(
       "In feSpace::interpolateField : Warning - Point (%f, %f, %f) was not found in the mesh.\n",
@@ -329,7 +329,7 @@ double feSpace::interpolateField(feNumber *number, feSolution *sol, std::vector<
 double feSpace::interpolateField_rDerivative(std::vector<double> &field, double *r) // match
 {
   double res = 0.0;
-#ifdef DEBUG
+#ifdef FENG_DEBUG
   if(field.size() != (unsigned)_nFunctions) {
     printf(" In feSpace::interpolateField : Erreur - Nombre de valeurs nodales non compatible avec "
            "le nombre d'interpolants de l'espace.\n");
@@ -343,7 +343,7 @@ double feSpace::interpolateField_rDerivative(std::vector<double> &field, double 
 double feSpace::interpolateField_sDerivative(std::vector<double> &field, double *r) // match
 {
   double res = 0.0;
-#ifdef DEBUG
+#ifdef FENG_DEBUG
   if(field.size() != (unsigned)_nFunctions) {
     printf(" In feSpace::interpolateField : Erreur - Nombre de valeurs nodales non compatible avec "
            "le nombre d'interpolants de l'espace.\n");
@@ -358,7 +358,7 @@ double feSpace::interpolateField_xDerivative(std::vector<double> &field, int iEl
                                              std::vector<double> &x)
 {
   double res = 0.0;
-#ifdef DEBUG
+#ifdef FENG_DEBUG
   if(field.size() != (unsigned)_nFunctions) {
     printf(" In feSpace::interpolateField : Erreur - Nombre de valeurs nodales non compatible avec "
            "le nombre d'interpolants de l'espace.\n");
@@ -377,7 +377,7 @@ double feSpace::interpolateField_yDerivative(std::vector<double> &field, int iEl
                                              std::vector<double> &x)
 {
   double res = 0.0;
-#ifdef DEBUG
+#ifdef FENG_DEBUG
   if(field.size() != (unsigned)_nFunctions) {
     printf(" In feSpace::interpolateField : Erreur - Nombre de valeurs nodales non compatible avec "
            "le nombre d'interpolants de l'espace.\n");
@@ -421,7 +421,7 @@ void feSpace::interpolateField_gradrs(feNumber *number, feSolution *sol, std::ve
 double feSpace::interpolateFieldAtQuadNode(std::vector<double> &field, int iNode) // match
 {
   double res = 0.0;
-#ifdef DEBUG
+#ifdef FENG_DEBUG
   if(field.size() != (unsigned)_nFunctions) {
     printf(" In feSpace::interpolateFieldAtQuadNode : Erreur - Nombre de valeurs nodales non "
            "compatible avec le nombre d'interpolants de l'espace.\n");
@@ -435,7 +435,7 @@ double feSpace::interpolateFieldAtQuadNode(std::vector<double> &field, int iNode
 double feSpace::interpolateFieldAtQuadNode(std::vector<double> &field, int iElm, int iNode)
 {
   double res = 0.0;
-#ifdef DEBUG
+#ifdef FENG_DEBUG
   if(field.size() != (unsigned)_nFunctions) {
     printf(" In feSpace::interpolateFieldAtQuadNode : Erreur - Nombre de valeurs nodales non "
            "compatible avec le nombre d'interpolants de l'espace.\n");
@@ -450,7 +450,7 @@ double feSpace::interpolateFieldAtQuadNode_rDerivative(std::vector<double> &fiel
                                                        int iNode) 
 {
   double res = 0.0;
-#ifdef DEBUG
+#ifdef FENG_DEBUG
   if(field.size() != (unsigned)_nFunctions) {
     printf(" In feSpace::interpolateFieldAtQuadNode : Erreur - Nombre de valeurs nodales (%ld) non "
            "compatible avec le nombre d'interpolants de l'espace (%d).\n",
@@ -466,7 +466,7 @@ double feSpace::interpolateFieldAtQuadNode_sDerivative(std::vector<double> &fiel
                                                        int iNode) 
 {
   double res = 0.0;
-#ifdef DEBUG
+#ifdef FENG_DEBUG
   if(field.size() != (unsigned)_nFunctions) {
     printf(" In feSpace::interpolateFieldAtQuadNode : Erreur - Nombre de valeurs nodales (%ld) non "
            "compatible avec le nombre d'interpolants de l'espace (%d).\n",
@@ -482,7 +482,7 @@ double feSpace::interpolateFieldAtQuadNode_xDerivative(std::vector<double> &fiel
                                                        int iNode)
 {
   double res = 0.0;
-#ifdef DEBUG
+#ifdef FENG_DEBUG
   if(field.size() != (unsigned)_nFunctions) {
     printf(" In feSpace::interpolateFieldAtQuadNode : Erreur - Nombre de valeurs nodales (%ld) non "
            "compatible avec le nombre d'interpolants de l'espace (%d).\n",
@@ -498,7 +498,7 @@ double feSpace::interpolateFieldAtQuadNode_yDerivative(std::vector<double> &fiel
                                                        int iNode)
 {
   double res = 0.0;
-#ifdef DEBUG
+#ifdef FENG_DEBUG
   if(field.size() != (unsigned)_nFunctions) {
     printf(" In feSpace::interpolateFieldAtQuadNode : Erreur - Nombre de valeurs nodales (%ld) non "
            "compatible avec le nombre d'interpolants de l'espace (%d).\n",
@@ -516,7 +516,7 @@ void feSpace::interpolateVectorField(std::vector<double> &field, double *r,
   // Field structure :
   // [fx0 fy0 fz0 fx1 fy1 fz1 ... fxn fyn fzn]
   res[0] = res[1] = res[2] = 0.0;
-#ifdef DEBUG
+#ifdef FENG_DEBUG
   if(field.size() != 3 * (unsigned)_nFunctions) {
     printf(" In feSpace::interpolateVectorField : Erreur - Nombre de valeurs nodales non "
            "compatible avec le nombre d'interpolants de l'espace.\n");
@@ -538,7 +538,7 @@ void feSpace::interpolateVectorField_rDerivative(std::vector<double> &field, dou
   // Field structure :
   // [fx0 fy0 fz0 fx1 fy1 fz1 ... fxn fyn fzn]
   res[0] = res[1] = res[2] = 0.0;
-#ifdef DEBUG
+#ifdef FENG_DEBUG
   if(field.size() != 3 * (unsigned)_nFunctions) {
     printf(" In feSpace::interpolateVectorField : Erreur - Nombre de valeurs nodales non "
            "compatible avec le nombre d'interpolants de l'espace.\n");
@@ -559,7 +559,7 @@ void feSpace::interpolateVectorField_sDerivative(std::vector<double> &field, dou
   // Field structure :
   // [fx0 fy0 fz0 fx1 fy1 fz1 ... fxn fyn fzn]
   res[0] = res[1] = res[2] = 0.0;
-#ifdef DEBUG
+#ifdef FENG_DEBUG
   if(field.size() != 3 * (unsigned)_nFunctions) {
     printf(" In feSpace::interpolateVectorField : Erreur - Nombre de valeurs nodales non "
            "compatible avec le nombre d'interpolants de l'espace.\n");
@@ -580,7 +580,7 @@ void feSpace::interpolateVectorFieldAtQuadNode(std::vector<double> &field, int i
   // Field structure :
   // [fx0 fy0 fz0 fx1 fy1 fz1 ... fxn fyn fzn]
   res[0] = res[1] = res[2] = 0.0;
-#ifdef DEBUG
+#ifdef FENG_DEBUG
   if(field.size() != 3 * (unsigned)_nFunctions) {
     printf(" In feSpace::interpolateVectorFieldAtQuadNode : Erreur - Nombre de valeurs nodales non "
            "compatible avec le nombre d'interpolants de l'espace.\n");
@@ -601,7 +601,7 @@ void feSpace::interpolateVectorFieldAtQuadNode_rDerivative(std::vector<double> &
   // Field structure :
   // [fx0 fy0 fz0 fx1 fy1 fz1 ... fxn fyn fzn]
   res[0] = res[1] = res[2] = 0.0;
-#ifdef DEBUG
+#ifdef FENG_DEBUG
   if(field.size() != 3 * (unsigned)_nFunctions) {
     printf(" In feSpace::interpolateVectorFieldAtQuadNode_rDerivative : Erreur - Nombre de valeurs "
            "nodales (%ld) non compatible avec le nombre d'interpolants de l'espace (%d).\n",
@@ -623,7 +623,7 @@ void feSpace::interpolateVectorFieldAtQuadNode_sDerivative(std::vector<double> &
   // Field structure :
   // [fx0 fy0 fz0 fx1 fy1 fz1 ... fxn fyn fzn]
   res[0] = res[1] = res[2] = 0.0;
-#ifdef DEBUG
+#ifdef FENG_DEBUG
   if(field.size() != 3 * (unsigned)_nFunctions) {
     printf(" In feSpace::interpolateVectorFieldAtQuadNode_sDerivative : Erreur - Nombre de valeurs "
            "nodales (%ld) non compatible avec le nombre d'interpolants de l'espace (%d).\n",

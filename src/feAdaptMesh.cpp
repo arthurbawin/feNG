@@ -153,6 +153,7 @@ void createCurvedMesh(feFunction *solExact, feMetaNumber *metaNumber, feSolution
 
   gmsh::clear();
   gmsh::open(metricOptions.metricMeshNameForMMG_out);
+  // gmsh::open("thegmshModel.msh");
   gmsh::model::getCurrent(metricOptions.modelForMesh);
 
   gmsh::write("beforeVersion.msh");
@@ -169,8 +170,8 @@ void createCurvedMesh(feFunction *solExact, feMetaNumber *metaNumber, feSolution
   std::vector<double> jac, det, points;
   gmsh::model::mesh::getJacobians(triP1, localCoord, jac, det, points);
 
-  for(int i = 0; i < 20; ++i)
-    feInfo("det1 = %f", det[i]);
+  // for(int i = 0; i < 20; ++i)
+  //   feInfo("det1 = %f", det[i]);
 
   // Check the first determinant
   if(det[0] < 0){
@@ -179,8 +180,8 @@ void createCurvedMesh(feFunction *solExact, feMetaNumber *metaNumber, feSolution
   }
 
   gmsh::model::mesh::getJacobians(triP1, localCoord, jac, det, points);
-  for(int i = 0; i < 20; ++i)
-    feInfo("det2 = %f", det[i]);
+  // for(int i = 0; i < 20; ++i)
+  //   feInfo("det2 = %f", det[i]);
 
   // Get geometric entities and assign physical entities (should be improved)
   gmsh::vectorpair dimTags;
@@ -275,6 +276,7 @@ void createCurvedMesh(feFunction *solExact, feMetaNumber *metaNumber, feSolution
       onlyGenerateVertices,
       evaluateFieldFromRecoveryCallback,
       (void *) recovery,
+      interpolateMetricP1WithDerivativesWrapper,
       interpolateMetricP1Wrapper,
       interpolateMetricAndDerivativeOnP2EdgeWrapper,
       interpolateMetricP1Wrapper1D,

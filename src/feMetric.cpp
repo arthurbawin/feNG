@@ -16,6 +16,7 @@ using namespace soplex;
 // #include "eigen3/unsupported/Eigen/MatrixFunctions"
 #include "../contrib/Eigen/Eigen"
 #include "../contrib/Eigen/Eigenvalues"
+#include "../contrib/Eigen/QR"
 #include "../contrib/unsupported/Eigen/MatrixFunctions"
 
 #include <assert.h>
@@ -400,467 +401,7 @@ void feMetric::computeMetricsHechtKuate()
 // gmsh model given in metricOptions.gmshModel
 void feMetric::computeMetricsWithDirectionField()
 {
-// #if defined(HAVE_GMSH)
-//   if(!_options.isGmshModelReady) {
-//     printf("In feMetric : Error - No Gmsh model available to compute a metric field.\n"
-//            "In feMetric : Error - Create a Gmsh geometry and mesh it first.\n");
-//     return;
-//   }
-
-//   gmsh::model::setCurrent(_options.modelForMetric);
-
-//   // Get the nodes from the Gmsh model
-//   std::vector<std::size_t> nodeTags;
-//   std::vector<double> coord;
-//   std::vector<double> parametricCoord;
-//   int dim = -1;
-//   int tag = -1;
-//   int includeBoundary = true;
-//   gmsh::model::mesh::getNodes(nodeTags, coord, parametricCoord, dim, tag, includeBoundary, false);
-
-//   // Create a view which will contain the metric field
-//   _metricViewTag = gmsh::view::add(":metric", 17);
-//   feInfo("_metricViewTag = %d", _metricViewTag);
-//   int recoveryViewTag = gmsh::view::add("recovery", 21);
-//   std::vector<std::vector<double> > metricData;
-//   std::vector<std::vector<double> > recoveryData;
-
-//   double xpos[2], g00, g01, g11, C, S;
-
-//   FILE *debugFile1, *debugFile2;
-//   if(_options.debug) {
-//     debugFile1 = fopen("directionsBeforeSmoothing.pos", "w");
-//     debugFile2 = fopen("directionsAfterSmoothing.pos", "w");
-//     fprintf(debugFile1, "View \" \"{\n");
-//     fprintf(debugFile2, "View \" \"{\n");
-//   }
-
-//   // Compute and smooth the direction field
-//   std::map<size_t, double> COS;
-//   std::map<size_t, double> SIN;
-
-//   std::map<size_t, double> L1;
-//   std::map<size_t, double> L2;
-
-//   feInfo("%d noeuds", nodeTags.size());
-
-//   for(size_t i = 0; i < nodeTags.size(); i++) {
-//     const double x = coord[3 * i + 0];
-//     const double y = coord[3 * i + 1];
-
-//     xpos[0] = x;
-//     xpos[1] = y;
-
-//     switch(_options.directionFieldFromDerivativesOfOrder) {
-//       case 1:
-//         computeDirectionFieldFromGradient(xpos, C, S, 1e-8, _recovery, debugFile1);
-//         break;
-//       case 2:
-//         computeDirectionFieldFromHessian(xpos, C, S, 1e-8, _recovery, debugFile1);
-//         break;
-//       case 3:
-//         // computeDirectionFieldFromThirdOrderDerivatives(x, y, C, S, _rec, debugFile1);
-//         break;
-//       default:
-//         printf(
-//           "In feMetric : Error - Cannot compute direction field from derivatives of this order.\n");
-//     }
-
-//     COS[nodeTags[i]] = C;
-//     SIN[nodeTags[i]] = S;
-//   }
-
-//   int smoothMaxIter = 100;
-//   double smoothTol = 0.8;
-//   smoothDirections(COS, SIN, debugFile2, smoothMaxIter, smoothTol);
-
-//   FILE *debugFile3, *debugFile4, *debugFile5, *debugFile6;
-//   if(_options.debug) {
-//     fprintf(debugFile1, "};");
-//     fclose(debugFile1);
-//     fprintf(debugFile2, "};");
-//     fclose(debugFile2);
-//     debugFile3 = fopen("ellipses.pos", "w");
-//     fprintf(debugFile3, "View \" ellipses \"{\n");
-//     debugFile4 = fopen("scaledDirections.pos", "w");
-//     fprintf(debugFile4, "View \" \"{\n");
-//     debugFile5 = fopen("afterScaling.pos", "w");
-//     fprintf(debugFile5, "View \" \"{\n");
-//     debugFile6 = fopen("afterGradation.pos", "w");
-//     fprintf(debugFile6, "View \" \"{\n");
-//   }
-
-//   double factor = 100.;
-//   int nt = 30;
-//   std::vector<double> xP(nt, 0.);
-//   std::vector<double> yP(nt, 0.);
-
-//   std::vector<SMetric3> metrics(nodeTags.size());
-
-//   // Compute the principal sizes
-//   const int deg = _options.polynomialDegree;
-//   const double lMin = _options.hMin;
-//   const double lMax = _options.hMax;
-//   const double eps = _options.eTargetError;
-
-//   // Min and max eigenvalues based on sizes
-//   double lambdaMax = 1./(lMin*lMin);
-//   double lambdaMin = 1./(lMax*lMax);
-
-//   // Parameters for the log-simplex metric computation
-//   Eigen::Matrix2d Q, V, D = Eigen::Matrix2d::Identity();
-//   Eigen::EigenSolver<Eigen::Matrix2d> es;
-//   Eigen::EigenSolver<Eigen::Matrix2d>::EigenvalueType ev;
-//   bool res;
-//   int maxIter = 20;
-//   double tol = 5e-1; // Tolerance on the difference Q-Qprev
-//   int nThetaPerQuadrant = 50;
-//   int numIter;
-
-//   // Set generic LP solver data
-//   linearProblem myLP;
-//   myLP.problem.setIntParam(SoPlex::VERBOSITY, SoPlex::VERBOSITY_WARNING);
-//   myLP.problem.setIntParam(SoPlex::OBJSENSE,  SoPlex::OBJSENSE_MINIMIZE);
-//   DSVector dummycol(0);
-//   myLP.problem.addColReal(LPCol(1.0, dummycol, infinity, -infinity));
-//   myLP.problem.addColReal(LPCol(0.0, dummycol, infinity, -infinity));
-//   myLP.problem.addColReal(LPCol(1.0, dummycol, infinity, -infinity));
-
-//   myLP.row.setMax(3);
-//   myLP.prim.reDim(3);
-//   myLP.lprow = LPRow(3);
-//   myLP.lprow.setRhs(infinity);
-//   myLP.lprowset = LPRowSet(4*nThetaPerQuadrant,3);
-
-//   for(int i = 0; i < 4*nThetaPerQuadrant; ++i){
-//     DSVector row(3);
-//     row.add(0, 1.0);
-//     row.add(1, 1.0);
-//     row.add(2, 1.0);
-//     myLP.problem.addRowReal(LPRow(1.0, row, infinity));
-//   }
-
-//   for(size_t i = 0; i < nodeTags.size(); i++) {
-//     const double x = coord[3 * i + 0];
-//     const double y = coord[3 * i + 1];
-
-//     xpos[0] = x;
-//     xpos[1] = y;
-
-//     double C = COS[nodeTags[i]];
-//     double S = SIN[nodeTags[i]];
-
-//     SMetric3 Mkuate;
-
-//     double l0, l1; // The sizes, not the eigenvalues
-//     switch(deg) {
-//       case 1: {
-//         const double dtt0_ = fabs(dtt(xpos, C, S, _recovery));
-//         const double dtt1_ = fabs(dtt(xpos, -S, C, _recovery));
-//         l0 = fabs(dtt0_) > 1e-14 ? pow(2.0 * eps / dtt0_, 0.5) : lMax;
-//         l1 = fabs(dtt1_) > 1e-14 ? pow(2.0 * eps / dtt1_, 0.5) : lMax;
-//         break;
-//       }
-//       case 2: {
-//         const double sizeAlongIsoline = fabs(dttt(xpos, C, S, _recovery, 0));
-//         const double sizeAlongGradient = fabs(dttt(xpos, C, S, _recovery, 1));
-
-//         l0 = fabs(sizeAlongIsoline) > 1e-10 ? pow(6.0 * eps / sizeAlongIsoline, 0.3333) : lMax;
-//         l1 = fabs(sizeAlongGradient) > 1e-10 ? pow(6.0 * eps / sizeAlongGradient, 0.3333) : lMax;
-
-//         // computeWorstMetric(200, 100, eps, xpos, C, S, l0, l1, _recovery, Mkuate, lMin, lMax);
-
-//         res = computeMetricLogSimplexCurved(xpos, C, S, _recovery, Q, maxIter, nThetaPerQuadrant, tol, numIter, myLP);
-//         if(res){
-//           feInfo("Metric (%+-1.5e - %+-1.5e - %+-1.5e) found in %2d iterations (log-simplex method)", 
-//             Q(0,0), Q(1,0), Q(1,1), numIter);
-
-//           // Bound the eigenvalues of Q
-//           es.compute(Q, true);
-//           ev = es.eigenvalues();
-//           D(0,0) = fmin(lambdaMax, fmax(lambdaMin, ev(0).real() ));
-//           D(1,1) = fmin(lambdaMax, fmax(lambdaMin, ev(1).real() ));
-//           Q = es.eigenvectors().real() * D * es.eigenvectors().transpose().real();
-
-//         } else{
-//           feWarning("Could not compute a metric at (%+-1.5e - %+-1.5e). Setting Q = lmax*I.", x, y);
-//           Q = 1. / (lMax * lMax) * Eigen::Matrix2d::Identity();
-//         }
-
-//         break;
-//       }
-//       default: {
-//         printf("In feMetric : Error - No metric computation scheme for deg = 0 or deg > 2\n");
-//         l0 = lMax;
-//         l1 = lMax;
-//       }
-//     }
-
-//     l0 = std::min(l0, lMax);
-//     l0 = std::max(l0, lMin);
-//     l1 = std::min(l1, lMax);
-//     l1 = std::max(l1, lMin);
-
-//     fprintf(debugFile4, "VP(%g,%g,0){%g,%g,0};", x, y, l0 * C, l0 * S);
-//     // fprintf(debugFile4, "VP(%g,%g,0){%g,%g,0};", x, y, -l1 * S, l1 * C);
-
-//     // Eigenvalues
-//     double h0 = 1. / (l0 * l0);
-//     double h1 = 1. / (l1 * l1);
-
-//     double g00 = C * C * h0 + S * S * h1;
-//     double g11 = S * S * h0 + C * C * h1;
-//     double g01 = S * C * (h1 - h0);
-
-//     // Check det(M) is positive
-//     if(g00 * g11 - g01 * g01 < 1e-10) {
-//       printf(
-//         "In feMetric : Error - Metric determinant d = %12.12e is negative at node (%4.4e, %4.4e)\n",
-//         g00 * g11 - g01 * g01, x, y);
-//       g11 = g00 = 1. / lMax / lMax;
-//       g01 = 0.0;
-//     }
-
-//     // std::vector<double> vMetric(9);
-//     // std::vector<double> vRecovery(1);
-
-//     // vMetric[0] = g00;
-//     // vMetric[1] = -g01;
-//     // vMetric[2] = 0;
-
-//     // vMetric[3] = -g01;
-//     // vMetric[4] = g11;
-//     // vMetric[5] = 0;
-
-//     // vMetric[6] = 0;
-//     // vMetric[7] = 0;
-//     // vMetric[8] = 1.0; // export f as well.
-//     // vRecovery[0] = f(_recovery, x, y);
-
-//     // metricData.push_back(vMetric);
-//     // recoveryData.push_back(vRecovery);
-
-//     SMetric3 M;
-//     // M.set_m11(g00);
-//     // M.set_m21(-g01);
-//     // M.set_m22(g11);
-//     M.set_m11(Q(0,0));
-//     M.set_m21(Q(0,1));
-//     M.set_m22(Q(1,1));
-
-//     double tol = 1e-1;
-//     if(_options.debug) {
-//       factor = 100.;
-//       getEllipsePoints(factor * M(0, 0), factor * 2.0 * M(0, 1), factor * M(1, 1), x, y, xP, yP);
-//       for(int j = 0; j < nt; ++j) {
-//         if(j != nt - 1) {
-//           fprintf(debugFile3, "SL(%.16g,%.16g,%.16g,%.16g,%.16g,%.16g){%u, %u};\n", xP[j], yP[j],
-//                   0., xP[j + 1], yP[j + 1], 0., 1, 1);
-//         } else {
-//           fprintf(debugFile3, "SL(%.16g,%.16g,%.16g,%.16g,%.16g,%.16g){%u, %u};\n", xP[j], yP[j],
-//                   0., xP[0], yP[0], 0., 1, 1);
-//         }
-//       }
-
-//       // if(fabs(x - 0.158414) < tol && fabs(y - 0.453362) < tol){
-//       //   FILE *myf = fopen("singleEllipseBissection.pos", "w");
-//       //   fprintf(myf, "View \" \"{\n");
-//       //   for(int j = 0; j < nt; ++j) {
-//       //     if(j != nt - 1) {
-//       //       fprintf(myf, "SL(%.16g,%.16g,%.16g,%.16g,%.16g,%.16g){%u, %u};\n", xP[j], yP[j],
-//       //               0., xP[j + 1], yP[j + 1], 0., 1, 1);
-//       //     } else {
-//       //       fprintf(myf, "SL(%.16g,%.16g,%.16g,%.16g,%.16g,%.16g){%u, %u};\n", xP[j], yP[j],
-//       //               0., xP[0], yP[0], 0., 1, 1);
-//       //     }
-//       //   }
-//       //   fprintf(myf, "};");
-//       //   fclose(myf);
-//       //   feInfo("Printing ellipse at %1.16e - %1.16e with sizes %1.16e - %1.16e", x, y, l0, l1);
-//       //   // exit(-1);
-//       // }
-//     }
-
-//     // TEMPORAIRE : essai
-//     metrics[i] = M;
-//     // metrics[i] = Mkuate;
-//     _metricsOnGmshModel[nodeTags[i]] = M;
-//     // _metricsOnGmshModel[i] = Mkuate;
-//     // if(Mkuate.determinant() <= 1e-10){
-//     //   feInfo("det = %1.16e", Mkuate.determinant());
-//     //   Mkuate.print("");
-//     //   exit(-1);
-//     // }
-
-//     // Pas besoin d'identifier la métrique à un noeud du maillage initial (pas possible même)
-
-//     // double tol = 1e-5;
-//     // bool wasFound = false;
-//     // std::vector<int> &vertices = _recovery->getVertices();
-//     // for(auto v : vertices){
-//     //   Vertex *vv = _recovery->_mesh->getVertex(v);
-//     //   if(fabs(vv->x() - x) < tol && fabs(vv->y() - y) < tol){
-//     //     _metrics[v] = M;
-//     //     wasFound = true;
-//     //     break;
-//     //   }
-//     // }
-//     // if(!wasFound){
-//     //   feInfo("Point %f - %f was not found in step 1", x, y);      
-//     //   exit(-1);
-//     // }
-
-//     // auto pp = alreadyWrittenTags.insert(nodeTags[i]);
-
-//     // if(pp.second) {
-//     //   fprintf(ffff, "%d \t %+-4.4e \t %+-4.4e : %+-4.4e \t %+-4.4e \t %+-4.4e \n", nodeTags[i],
-//     //   x, y, M(0, 0), M(0, 1), M(1, 1));
-//     //   // fprintf(ffff, "%d \t %+-4.4e \t %+-4.4e : %+-4.4e \t %+-4.4e \t %+-4.4e \n",
-//     //   nodeTags[i],
-//     //   // x, y, M(0, 0), M(0, 1), M(1, 1)); Write .sol size field
-//     //   // fprintf(myfile, "%+-10.12f \t %+-10.12f \t %+-10.12f \t %+-10.12f \t %+-10.12f\n", x, y,
-//     //   M(0, 0), M(0, 1), M(1, 1)); fprintf(myfile, "%+-10.12f \t %+-10.12f \t %+-10.12f\n", M(0,
-//     //   0), M(0, 1), M(1, 1));
-//     // }
-//   }
-
-//   if(_options.nTargetVertices > 0){
-//     metricScalingFromGmshSubstitute();
-//     // metricScaling();
-//   }
-
-//   // Plot the metrics after scaling but before gradation
-//   for(size_t i = 0; i < nodeTags.size(); i++) {
-//     const double x = coord[3 * i + 0];
-//     const double y = coord[3 * i + 1];
-
-//     SMetric3 M = _metricsOnGmshModel[nodeTags[i]];
-//     factor = 100.;
-//     getEllipsePoints(factor * M(0, 0), factor * 2.0 * M(0, 1), factor * M(1, 1), x, y, xP, yP);
-//     for(int j = 0; j < nt; ++j) {
-//       if(j != nt - 1) {
-//         fprintf(debugFile5, "SL(%.16g,%.16g,%.16g,%.16g,%.16g,%.16g){%u, %u};\n", xP[j], yP[j],
-//                 0., xP[j + 1], yP[j + 1], 0., 1, 1);
-//       } else {
-//         fprintf(debugFile5, "SL(%.16g,%.16g,%.16g,%.16g,%.16g,%.16g){%u, %u};\n", xP[j], yP[j],
-//                 0., xP[0], yP[0], 0., 1, 1);
-//       }
-//     }
-//   }
-
-//   gradationMetriques(1.6, 3, coord, _metricsOnGmshModel);
-//   // feInfo("%d noeuds", nodeTags.size());
-
-//   for(size_t i = 0; i < nodeTags.size(); i++) {
-//     const double x = coord[3 * i + 0];
-//     const double y = coord[3 * i + 1];
-
-//     SMetric3 M = _metricsOnGmshModel[nodeTags[i]];
-
-//     std::vector<double> vMetric(9);
-//     std::vector<double> vRecovery(1);
-
-//     vMetric[0] = M(0,0);
-//     vMetric[1] = M(0,1);
-//     vMetric[2] = 0;
-
-//     vMetric[3] = M(0,1);
-//     vMetric[4] = M(1,1);
-//     vMetric[5] = 0;
-
-//     vMetric[6] = 0;
-//     vMetric[7] = 0;
-//     vMetric[8] = 1.0; // export f as well.
-//     vRecovery[0] = f(_recovery, xpos);
-
-//     metricData.push_back(vMetric);
-//     recoveryData.push_back(vRecovery);    
-
-//     double tol = 1e-2;
-//     if(_options.debug) {
-//       factor = 100.;
-//       getEllipsePoints(factor * M(0, 0), factor * 2.0 * M(0, 1), factor * M(1, 1), x, y, xP, yP);
-//       for(int j = 0; j < nt; ++j) {
-//         if(j != nt - 1) {
-//           fprintf(debugFile6, "SL(%.16g,%.16g,%.16g,%.16g,%.16g,%.16g){%u, %u};\n", xP[j], yP[j],
-//                   0., xP[j + 1], yP[j + 1], 0., 1, 1);
-//         } else {
-//           fprintf(debugFile6, "SL(%.16g,%.16g,%.16g,%.16g,%.16g,%.16g){%u, %u};\n", xP[j], yP[j],
-//                   0., xP[0], yP[0], 0., 1, 1);
-//         }
-//       }
-
-//       // if(fabs(x - 0.158414) < tol && fabs(y - 0.453362) < tol){
-//       //   FILE *myf = fopen("singleEllipseAfterScaling.pos", "w");
-//       //   fprintf(myf, "View \" \"{\n");
-//       //   for(int j = 0; j < nt; ++j) {
-//       //     if(j != nt - 1) {
-//       //       fprintf(myf, "SL(%.16g,%.16g,%.16g,%.16g,%.16g,%.16g){%u, %u};\n", xP[j], yP[j],
-//       //               0., xP[j + 1], yP[j + 1], 0., 1, 1);
-//       //     } else {
-//       //       fprintf(myf, "SL(%.16g,%.16g,%.16g,%.16g,%.16g,%.16g){%u, %u};\n", xP[j], yP[j],
-//       //               0., xP[0], yP[0], 0., 1, 1);
-//       //     }
-//       //   }
-//       //   fprintf(myf, "};");
-//       //   fclose(myf);
-//       // }
-//     }
-//   }
-
-//   if(_options.debug) {
-//     fprintf(debugFile3, "};");
-//     fclose(debugFile3);
-//     fprintf(debugFile4, "};");
-//     fclose(debugFile4);
-//     fprintf(debugFile5, "};");
-//     fclose(debugFile5);
-//     fprintf(debugFile6, "};");
-//     fclose(debugFile6);
-//   }
-
-//   gmsh::view::addModelData(_metricViewTag, 0, _options.modelForMetric, "NodeData", nodeTags, metricData);
-//   gmsh::view::addModelData(recoveryViewTag, 0, _options.modelForMetric, "NodeData", nodeTags, recoveryData);
-//   feInfo("Showing the metric and recovery views added to the modelForMetric");
-
-//   std::vector<int> viewTags;
-//   gmsh::view::getTags(viewTags);
-//   feInfo("There are %d views in the gmsh model : ", viewTags.size());
-//   for(auto val : viewTags){
-//     feInfo("View %d with index %d", val, gmsh::view::getIndex(val));
-//     feInfo("probing view %d", val);
-//     std::vector<double> values;
-//     double dist;
-//     gmsh::view::probe(val, 0.153352, 0.921018, 0.0, values, dist, -1, 9, false, -1.);
-//     feInfo("Probed values are : ");
-//     for(auto val : values)
-//       std::cout<<val<<std::endl;
-//   }
-
-//   // gmsh::fltk::run();
-
-//   gmsh::option::setNumber("Mesh.MshFileVersion", 2.2);
-//   gmsh::view::write(_metricViewTag, _options.metricMeshNameForMMG);
-//   gmsh::view::write(recoveryViewTag, _options.recoveryName);
-
-//   // metricOptions.isGmshModelReady = true;
-
-//   // gmsh::option::setNumber("Mesh.MshFileVersion", 2.2);
-//   // gmsh::write("metric.msh");
-//   // gmsh::write(metricMeshName);
-//   // gmsh::view::write(viewTagF, "sol.msh");
-
-//   // size_t lastindex = metricMeshName.find_last_of(".");
-//   // std::string metricMeshNameRoot = metricMeshName.substr(0, lastindex);
-//   // std::string toAdapt = metricMeshNameRoot + "_toAdapt.msh";
-//   // gmsh::view::write(viewTag, toAdapt);
-//   //  gmsh::view::write(viewTagF,"metric.msh",true);
-
-// #else
-//   printf("In feMetric : Error - Gmsh is required to create a metric field based on a direction "
-//          "field.\n");
-//   return;
-// #endif
+  // Devenu "computeMetricsExtremeSizesOnly"
 }
 
 void feMetric::computeMetricsLogSimplex()
@@ -996,8 +537,8 @@ void feMetric::computeMetricsLogSimplex()
   Eigen::EigenSolver<Eigen::Matrix2d>::EigenvalueType ev;
   bool res;
   int maxIter = 50;
-  tol = 1e-1; // Tolerance on the difference Q-Qprev
-  int nThetaPerQuadrant = 50;
+  tol = 1e-2; // Tolerance on the difference Q-Qprev
+  int nThetaPerQuadrant = 250;
   int numIter;
   int size = 2 * 4 * nThetaPerQuadrant; // 2 coordonnees * 4 quadrants * nPhi angles/quadrant
   myLP.lvl1.resize(size, 0.);
@@ -1150,6 +691,12 @@ void feMetric::computeMetricsLogSimplex()
     m(0,1) = M(0,1);
     m(1,0) = M(1,0);
     m(1,1) = M(1,1);
+    // ////////////////////////////////////////////
+    // m(0,0) = 10.456 + 2.123 * x*x + 4.6789 * y;
+    // m(0,1) = 0.;
+    // m(1,0) = 0.;
+    // m(1,1) = 10.456 + 2.123 * x*x + 4.6789 * y;
+    // ////////////////////////////////////////////
     _metricsOnGmshModel_eigen[nodeTags[i]] = m;
 
     std::vector<double> vMetric(9);
@@ -1339,6 +886,286 @@ void feMetric::computeMetricsLogSimplex()
 #endif
 }
 
+void feMetric::computeMetricsExtremeSizesOnly()
+{
+#if defined(HAVE_GMSH)
+  if(!_options.isGmshModelReady) {
+    printf("In feMetric : Error - No Gmsh model available to compute a metric field.\n"
+           "In feMetric : Error - Create a Gmsh geometry and mesh it first.\n");
+    return;
+  }
+
+  feInfo("Computing metrics on Gmsh model %s", _options.modelForMetric.c_str());
+  gmsh::model::setCurrent(_options.modelForMetric);
+
+  // Get the nodes from the Gmsh model
+  std::vector<std::size_t> nodeTags;
+  std::vector<double> coord;
+  std::vector<double> parametricCoord;
+  int dim = -1;
+  int tag = -1;
+  int includeBoundary = true;
+  gmsh::model::mesh::getNodes(nodeTags, coord, parametricCoord, dim, tag, includeBoundary, false);
+
+  if(nodeTags.size() == 0){
+    feWarning("nodeTags is empty");
+    exit(-1);
+  }
+
+  std::vector<Vertex> &meshVertices = _recovery->_mesh->getVertices();
+
+  // Create a nodeTags to feVertex->tag map (brute-force for now)
+
+  // On ne peut pas créer le map pour les maillages aniso intermédiaires, puisqu'il n'y a pas de feMesh associé.
+  // Il faut recréer le maillage dans la boucle d'intégration pour pouvoir interpoler les métriques.
+  // C'est-à-dire : il faut lancer avec -nLoop 0 -nAdapt N, puisque si -nLoop est autre que 0 on boucle sur le maillage aniso
+  // avec la même reconstruction.
+  double tol = 1e-5;
+  _v2n.clear();
+  for(Vertex& v : meshVertices){
+    _v2n[&v] = -1;
+  }
+  for(int i = 0; i < nodeTags.size(); i++) {
+    const double x = coord[3 * i + 0];
+    const double y = coord[3 * i + 1];
+    for(Vertex& v : meshVertices){
+      if(fabs(x - v.x()) < tol && fabs(y - v.y()) < tol){
+        _v2n[&v] = nodeTags[i];
+      }
+    }
+  }
+  // Check
+  for(Vertex& v : meshVertices){
+    if(_v2n[&v] == -1){
+      feInfo("No Gmsh tag was associated to vertex %f - %f", v.x(), v.y());
+      exit(-1);
+    } 
+  }
+
+  // Create a view which will contain the metric field
+  _metricViewTag = gmsh::view::add(":metric", 17);
+  feInfo("_metricViewTag = %d", _metricViewTag);
+  int recoveryViewTag = gmsh::view::add("recovery", 21);
+  std::vector<std::vector<double> > metricData;
+  std::vector<std::vector<double> > recoveryData;
+
+  double xpos[2], C, S;
+
+  // Compute and smooth the direction field
+  std::map<size_t, double> COS;
+  std::map<size_t, double> SIN;
+
+  FILE *graBeforeSmoothing = fopen("graBeforeSmoothing.pos", "w");
+  FILE *isoBeforeSmoothing = fopen("isoBeforeSmoothing.pos", "w");
+  fprintf(graBeforeSmoothing, "View \" graBeforeSmoothing \"{\n");
+  fprintf(isoBeforeSmoothing, "View \" isoBeforeSmoothing \"{\n");
+
+  for(size_t i = 0; i < nodeTags.size(); i++) {
+    const double x = coord[3 * i + 0];
+    const double y = coord[3 * i + 1];
+
+    xpos[0] = x;
+    xpos[1] = y;
+
+    switch(_options.directionFieldFromDerivativesOfOrder) {
+      case 1:
+        computeDirectionFieldFromGradient(xpos, C, S, 1e-8, _recovery, graBeforeSmoothing, isoBeforeSmoothing);
+        break;
+      case 2:
+        computeDirectionFieldFromHessian(xpos, C, S, 1e-8, _recovery, nullptr);
+        break;
+      default:
+        printf(
+          "In feMetric : Error - Cannot compute direction field from derivatives of this order.\n");
+    }
+    COS[nodeTags[i]] = C;
+    SIN[nodeTags[i]] = S;
+  }
+
+  fprintf(graBeforeSmoothing, "};"); fclose(graBeforeSmoothing);
+  fprintf(isoBeforeSmoothing, "};"); fclose(isoBeforeSmoothing);
+
+  // int smoothMaxIter = 100;
+  // double smoothTol = 0.8;
+  // smoothDirections(COS, SIN, smoothMaxIter, smoothTol);
+
+  FILE *debugFile3, *debugFile5, *debugFile6;
+  if(_options.debug) {
+    debugFile3 = fopen("ellipses.pos", "w");
+    fprintf(debugFile3, "View \" ellipses \"{\n");
+    debugFile5 = fopen("afterScaling.pos", "w");
+    fprintf(debugFile5, "View \" \"{\n");
+    debugFile6 = fopen("afterGradation.pos", "w");
+    fprintf(debugFile6, "View \" \"{\n");
+  }
+
+  double factor = 100.;
+  int nt = 30;
+  std::vector<double> xP(nt, 0.);
+  std::vector<double> yP(nt, 0.);
+
+  std::vector<SMetric3> metrics(nodeTags.size());
+
+  // Compute the principal sizes
+  const int deg = _options.polynomialDegree;
+  const double lMin = _options.hMin;
+  const double lMax = _options.hMax;
+  const double eps = _options.eTargetError;
+
+  // Min and max eigenvalues based on sizes
+  double lambdaMax = 1./(lMin*lMin);
+  double lambdaMin = 1./(lMax*lMax);
+
+  for(size_t i = 0; i < nodeTags.size(); i++) {
+    const double x = coord[3 * i + 0];
+    const double y = coord[3 * i + 1];
+
+    xpos[0] = x;
+    xpos[1] = y;
+
+    double C = COS[nodeTags[i]];
+    double S = SIN[nodeTags[i]];
+
+    double hIso, hGrad;
+    switch(deg) {
+      case 2: {
+        const double derivativeAlongGradient = fabs(dttt(xpos, C, S, _recovery, 0));
+        const double derivativeAlongIsoline = fabs(dttt(xpos, C, S, _recovery, 1));
+
+        hIso  = pow(6.0 * eps / derivativeAlongIsoline, 0.3333);
+        hGrad = pow(6.0 * eps / derivativeAlongGradient, 0.3333);
+
+        break;
+      }
+      default: {
+        printf("In feMetric : Error - No metric computation scheme for deg != 2\n");
+         exit(-1);
+      }
+    }
+
+    Eigen::Matrix2d Q, V, D = Eigen::Matrix2d::Identity();
+    Eigen::EigenSolver<Eigen::Matrix2d> es;
+    Eigen::EigenSolver<Eigen::Matrix2d>::EigenvalueType ev;
+
+    double lambdaIso  = 1. / (hIso * hIso);
+    double lambdaGrad = 1. / (hGrad * hGrad);
+
+    V(0,0) = C;
+    V(1,0) = S;
+
+    V(0,1) = -S;
+    V(1,1) = C;
+
+    D(0,0) = fmin(lambdaMax, fmax(lambdaMin, lambdaGrad ));
+    D(1,1) = fmin(lambdaMax, fmax(lambdaMin, lambdaIso  ));
+
+    Q = V * D * V.transpose();
+
+    SMetric3 M;
+    M.set_m11(Q(0,0));
+    M.set_m21(Q(0,1));
+    M.set_m22(Q(1,1));
+
+    metrics[i] = M;
+    _metricsOnGmshModel[nodeTags[i]] = M;
+
+    // Plot the "raw" metrics before scaling
+    factor = 100.;
+    getEllipsePoints(factor * M(0, 0), factor * 2.0 * M(0, 1), factor * M(1, 1), x, y, xP, yP);
+    for(int j = 0; j < nt; ++j) {
+      if(j != nt - 1) {
+        fprintf(debugFile3, "SL(%.16g,%.16g,%.16g,%.16g,%.16g,%.16g){%u, %u};\n", xP[j], yP[j],
+                0., xP[j + 1], yP[j + 1], 0., 1, 1);
+      } else {
+        fprintf(debugFile3, "SL(%.16g,%.16g,%.16g,%.16g,%.16g,%.16g){%u, %u};\n", xP[j], yP[j],
+                0., xP[0], yP[0], 0., 1, 1);
+      }
+    }
+  }
+
+  if(_options.enableGradation){
+    gradationMetriques(_options.gradation, 200, coord, _metricsOnGmshModel);
+  }
+
+  // Plot the metrics after gradation
+  for(size_t i = 0; i < nodeTags.size(); i++) {
+    const double x = coord[3 * i + 0];
+    const double y = coord[3 * i + 1];
+    SMetric3 M = _metricsOnGmshModel[nodeTags[i]];
+    factor = 100.;
+    getEllipsePoints(factor * M(0, 0), factor * 2.0 * M(0, 1), factor * M(1, 1), x, y, xP, yP);
+    for(int j = 0; j < nt; ++j) {
+      if(j != nt - 1) {
+        fprintf(debugFile6, "SL(%.16g,%.16g,%.16g,%.16g,%.16g,%.16g){%u, %u};\n", xP[j], yP[j],
+                0., xP[j + 1], yP[j + 1], 0., 1, 1);
+      } else {
+        fprintf(debugFile6, "SL(%.16g,%.16g,%.16g,%.16g,%.16g,%.16g){%u, %u};\n", xP[j], yP[j],
+                0., xP[0], yP[0], 0., 1, 1);
+      }
+    }
+  }
+
+  for(size_t i = 0; i < nodeTags.size(); i++) {
+    const double x = coord[3 * i + 0];
+    const double y = coord[3 * i + 1];
+
+    SMetric3 M = _metricsOnGmshModel[nodeTags[i]];
+
+    Eigen::Matrix2d m;
+    m(0,0) = M(0,0);
+    m(0,1) = M(0,1);
+    m(1,0) = M(1,0);
+    m(1,1) = M(1,1);
+    // ////////////////////////////////////////////
+    // m(0,0) = 10.456 + 2.123 * x + 4.6789 * y;
+    // m(0,1) = 0.;
+    // m(1,0) = 0.;
+    // m(1,1) = 10.456 + 2.123 * x + 4.6789 * y;
+    // ////////////////////////////////////////////
+    _metricsOnGmshModel_eigen[nodeTags[i]] = m;
+
+    std::vector<double> vMetric(9);
+    std::vector<double> vRecovery(1);
+
+    vMetric[0] = M(0,0);
+    vMetric[1] = M(0,1);
+    vMetric[2] = 0;
+
+    vMetric[3] = M(0,1);
+    vMetric[4] = M(1,1);
+    vMetric[5] = 0;
+
+    vMetric[6] = 0;
+    vMetric[7] = 0;
+    vMetric[8] = 1.0; // export f as well.
+    vRecovery[0] = f(_recovery, xpos);
+
+    metricData.push_back(vMetric);
+    recoveryData.push_back(vRecovery);    
+  }
+
+  if(_options.debug) {
+    fprintf(debugFile3, "};");
+    fclose(debugFile3);
+    fprintf(debugFile5, "};");
+    fclose(debugFile5);
+    fprintf(debugFile6, "};");
+    fclose(debugFile6);
+  }
+
+  gmsh::view::addModelData(_metricViewTag, 0, _options.modelForMetric, "NodeData", nodeTags, metricData);
+  gmsh::view::addModelData(recoveryViewTag, 0, _options.modelForMetric, "NodeData", nodeTags, recoveryData);
+
+  gmsh::option::setNumber("Mesh.MshFileVersion", 2.2);
+  gmsh::view::write(_metricViewTag, _options.metricMeshNameForMMG);
+  gmsh::view::write(recoveryViewTag, _options.recoveryName);
+
+#else
+  printf("In feMetric : Error - Gmsh is required to create a metric field and SoPlex is required to compute the metric tensors.\n");
+  return;
+#endif
+}
+
 void feMetric::computeMetrics()
 {
   switch(_options.computationMethod) {
@@ -1349,7 +1176,10 @@ void feMetric::computeMetrics()
       computeMetricsWithDirectionField();
       break;
     case 3 :
-    computeMetricsLogSimplex();
+      computeMetricsLogSimplex();
+      break;
+    case 4 :
+      computeMetricsExtremeSizesOnly();
       break;
     default:
       printf("In feMetric : Error - Unknown metric computation method.\n");
@@ -1361,6 +1191,172 @@ static double GRADUVW[6];
 // static Eigen::Matrix2d logM0;
 // static Eigen::Matrix2d logM1;
 // static Eigen::Matrix2d logM2;
+
+void feMetric::interpolateMetricP1WithDerivatives(const double *x, Eigen::Matrix2d &M, Eigen::Matrix2d &dMdx, Eigen::Matrix2d &dMdy)
+{
+  int elm;
+  bool isFound = static_cast<feMesh2DP1 *>(_recovery->_mesh)->locateVertex(x, elm, UVW);
+  if(!isFound) {
+    feWarning("In interpolateMetricP1 : Point (%f, %f) was not found in the mesh.\n", x[0], x[1]);
+    M = Eigen::Matrix2d::Identity();
+    return;
+  } else {
+
+    double r = UVW[0];
+    double s = UVW[1];
+
+    // Interpolate the log-metric and take exponential
+    Triangle *t = _recovery->_mesh->_elements[elm];
+
+    int t0 = _v2n[t->getVertex(0)];
+    int t1 = _v2n[t->getVertex(1)];
+    int t2 = _v2n[t->getVertex(2)];
+
+    Eigen::Matrix2d M0 = _metricsOnGmshModel_eigen[t0];
+    Eigen::Matrix2d M1 = _metricsOnGmshModel_eigen[t1];
+    Eigen::Matrix2d M2 = _metricsOnGmshModel_eigen[t2];
+
+    // std::cout << "M0 = " << M0 <<std::endl;
+    // std::cout << "M1 = " << M1 <<std::endl;
+    // std::cout << "M2 = " << M2 <<std::endl;
+
+    // std::cout << "r = " << r <<std::endl;
+    // std::cout << "s = " << s <<std::endl;
+
+    Eigen::Matrix2d logM0 = M0.log();
+    Eigen::Matrix2d logM1 = M1.log();
+    Eigen::Matrix2d logM2 = M2.log();
+
+    Eigen::Matrix2d L = (1. - r - s) * logM0 + r * logM1 + s * logM2;
+    M = L.exp();
+
+    // std::cout << "L = " << L <<std::endl;
+    // std::cout << "M = " << M <<std::endl;
+
+    // Compute the derivatives of the eigen decomposition (from Aparicio-Estrems et al, High order metric interpolation
+    // for curved r-adaptation by distortion minimization, IMR 2021 or 2022)
+    Eigen::EigenSolver<Eigen::Matrix2d> es;
+    Eigen::EigenSolver<Eigen::Matrix2d>::EigenvalueType eigenvalues;
+    Eigen::EigenSolver<Eigen::Matrix2d>::EigenvectorsType eigenvectors;
+
+    es.compute(L, true);
+    eigenvalues = es.eigenvalues();
+    Eigen::Vector2d lambda = eigenvalues.real();
+
+    eigenvectors = es.eigenvectors();
+    Eigen::Matrix2d U = eigenvectors.real();
+    // std::cout << "eigenvectors = " << eigenvectors <<std::endl;
+    // std::cout << "U = " << U <<std::endl;
+    Eigen::Vector2d u1 = U.col(0);
+    Eigen::Vector2d u2 = U.col(1);
+
+    // std::cout << "lambda = " << lambda <<std::endl;
+    // std::cout << "u1 = " << u1 <<std::endl;
+    // std::cout << "u2 = " << u2 <<std::endl;
+
+    // Gradient de L ( = sum_i log M_i phi_i)
+    double x1 = t->getVertex(0)->x();
+    double y1 = t->getVertex(0)->y();
+    double x2 = t->getVertex(1)->x();
+    double y2 = t->getVertex(1)->y();
+    double x3 = t->getVertex(2)->x();
+    double y3 = t->getVertex(2)->y();
+
+    // std::cout<<"Coordonnees"<<std::endl;
+    // std::cout<<x1<<std::endl;
+    // std::cout<<y1<<std::endl;
+    // std::cout<<x2<<std::endl;
+    // std::cout<<y2<<std::endl;
+    // std::cout<<x3<<std::endl;
+    // std::cout<<y3<<std::endl;
+
+    double J = (x2-x1) * (y3-y1) - (x3-x1) * (y2-y1);
+
+    // std::cout << "J = " << J <<std::endl;
+
+    double drdx =  (y3-y1)/J;
+    double drdy = -(x3-x1)/J;
+    double dsdx = -(y2-y1)/J;
+    double dsdy =  (x2-x1)/J;
+
+    double dphi0dr = -1.;
+    double dphi0ds = -1.;
+    double dphi1dr =  1.;
+    double dphi1ds =  0.;
+    double dphi2dr =  0.;
+    double dphi2ds =  1.;
+
+    double dphi0dx = dphi0dr * drdx + dphi0ds * dsdx;
+    double dphi0dy = dphi0dr * drdy + dphi0ds * dsdy;
+    double dphi1dx = dphi1dr * drdx + dphi1ds * dsdx;
+    double dphi1dy = dphi1dr * drdy + dphi1ds * dsdy;
+    double dphi2dx = dphi2dr * drdx + dphi2ds * dsdx;
+    double dphi2dy = dphi2dr * drdy + dphi2ds * dsdy;
+
+    Eigen::Matrix2d dLdx = logM0 * dphi0dx + logM1 * dphi1dx + logM2 * dphi2dx;
+    Eigen::Matrix2d dLdy = logM0 * dphi0dy + logM1 * dphi1dy + logM2 * dphi2dy;
+
+    // std::cout << "dLdx = " << dLdx <<std::endl;
+    // std::cout << "dLdy = " << dLdy <<std::endl;
+
+    // Gradient des valeurs propres d_j lambda_l
+    double dl1dx = u1.transpose() * dLdx * u1;
+    double dl1dy = u1.transpose() * dLdy * u1;
+
+    double dl2dx = u2.transpose() * dLdx * u2;
+    double dl2dy = u2.transpose() * dLdy * u2;
+
+    // std::cout << "dl1dx = " << dl1dx <<std::endl;
+    // std::cout << "dl2dx = " << dl2dx <<std::endl;
+    // std::cout << "dl1dy = " << dl1dy <<std::endl;
+    // std::cout << "dl2dy = " << dl2dy <<std::endl;
+
+    // Gradient des vecteurs propres d_j u_l
+    Eigen::Matrix2d L1 = L - lambda(0) * Eigen::Matrix2d::Identity();
+    Eigen::Matrix2d dL1dx = dLdx - dl1dx * Eigen::Matrix2d::Identity();
+    Eigen::Matrix2d dL1dy = dLdy - dl1dy * Eigen::Matrix2d::Identity();
+
+    Eigen::Matrix2d L2 = L - lambda(1) * Eigen::Matrix2d::Identity();
+    Eigen::Matrix2d dL2dx = dLdx - dl2dx * Eigen::Matrix2d::Identity();
+    Eigen::Matrix2d dL2dy = dLdy - dl2dy * Eigen::Matrix2d::Identity();
+
+    Eigen::Vector2d du1dx = L1.completeOrthogonalDecomposition().solve(-dL1dx*u1);
+    Eigen::Vector2d du1dy = L1.completeOrthogonalDecomposition().solve(-dL1dy*u1);
+
+    Eigen::Vector2d du2dx = L2.completeOrthogonalDecomposition().solve(-dL2dx*u2);
+    Eigen::Vector2d du2dy = L2.completeOrthogonalDecomposition().solve(-dL2dy*u2);
+
+    // std::cout << "du1dx = " << du1dx <<std::endl;
+    // std::cout << "du2dx = " << du2dx <<std::endl;
+    // std::cout << "du1dy = " << du1dy <<std::endl;
+    // std::cout << "du2dy = " << du2dy <<std::endl;
+    
+    Eigen::Matrix2d dUdx = Eigen::Matrix2d::Zero(), dUdy = Eigen::Matrix2d::Zero();
+    dUdx.col(0) = du1dx;
+    dUdx.col(1) = du2dx;
+    dUdy.col(0) = du1dy;
+    dUdy.col(1) = du2dy;
+
+    Eigen::Matrix2d expD; expD << exp(lambda(0)), 0., 0., exp(lambda(1));
+    Eigen::Matrix2d dDdx; dDdx << dl1dx, 0., 0., dl2dx;
+    Eigen::Matrix2d dDdy; dDdy << dl1dy, 0., 0., dl2dy;
+
+    // std::cout << expD <<std::endl;
+    // std::cout << dDdx <<std::endl;
+
+    Eigen::Matrix2d dexpDdx = expD * dDdx;
+    Eigen::Matrix2d dexpDdy = expD * dDdy;
+
+    dMdx = dUdx * expD * U.transpose() + U * dexpDdx * U.transpose() + U * expD * dUdx.transpose();
+    dMdy = dUdy * expD * U.transpose() + U * dexpDdy * U.transpose() + U * expD * dUdy.transpose();
+
+    // std::cout << dMdx <<std::endl;
+    // std::cout << dMdy <<std::endl;
+    // std::cout<< "ref = " << 2.123 * 2. * x[0] << std::endl;
+
+    // exit(-1);
+  }
+}
 
 void feMetric::interpolateMetricP1(const double *x, Eigen::Matrix2d &M,
   Eigen::Matrix2d &sumduda1M, Eigen::Matrix2d &sumduda2M)
@@ -1606,6 +1602,13 @@ void feMetric::interpolateMetricAndDerivativeOnP2Edge(double t,
     kfac *= k;
     dMda += 1./((double) kfac) * dTnda;
   }
+}
+
+void interpolateMetricP1WithDerivativesWrapper(void* metric, const double *x, Eigen::Matrix2d &M,
+  Eigen::Matrix2d &dMdx, Eigen::Matrix2d &dMdy)
+{
+  feMetric *m = static_cast<feMetric*>(metric);
+  m->interpolateMetricP1WithDerivatives(x, M, dMdx, dMdy);
 }
 
 void interpolateMetricP1Wrapper(void* metric, const double *x, Eigen::Matrix2d &M,

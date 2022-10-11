@@ -69,9 +69,9 @@ double dtt(double *x, double C, double S, feRecovery *rec)
 double dttt(double *x, double C, double S, feRecovery *rec, int direction)
 {
   const double c111 = fxxx(rec, x);
-  const double c222 = fyyy(rec, x);
   const double c112 = (fxxy(rec, x) + fxyx(rec, x) + fyxx(rec, x)) / 3.;
   const double c122 = (fxyy(rec, x) + fyyx(rec, x) + fyxy(rec, x)) / 3.;
+  const double c222 = fyyy(rec, x);
 
   const double c11 = fxx(rec, x);
   const double c12 = (fxy(rec, x) + fyx(rec, x)) / 2.;
@@ -199,7 +199,7 @@ double dtttAnalytical(double x, double y, double C, double S, feRecovery *rec,
 }
 
 void computeDirectionFieldFromGradient(double *x, double &C, double &S, double tol,
-                                       feRecovery *rec, FILE *F)
+                                       feRecovery *rec, FILE *F_grad, FILE *F_iso)
 {
   double a, b;
   a = fx(rec, x);
@@ -211,9 +211,8 @@ void computeDirectionFieldFromGradient(double *x, double &C, double &S, double t
     double theta1 = atan2(b, a);
     C = cos(theta1);
     S = sin(theta1);
-    if(F != nullptr) {
-      fprintf(F, "VP(%g,%g,%g){%g,%g,%g};\n", x[0], x[1], 0., C, S, 0.);
-    }
+    if(F_grad != nullptr) { fprintf(F_grad, "VP(%g,%g,%g){%g,%g,%g};\n", x[0], x[1], 0.,  C, S, 0.); }
+    if(F_iso  != nullptr) { fprintf(F_iso , "VP(%g,%g,%g){%g,%g,%g};\n", x[0], x[1], 0., -S, C, 0.); }
   } else {
     // Gradient norm is too small : directions will be smoothed
     C = 1.;
@@ -254,8 +253,7 @@ void computeDirectionFieldFromHessian(double *x, double &C, double &S, double to
   }
 }
 
-void smoothDirections(std::map<size_t, double> &C, std::map<size_t, double> &S, FILE *F, int nIter,
-                      double tol)
+void smoothDirections(std::map<size_t, double> &C, std::map<size_t, double> &S, int nIter, double tol)
 {
 #if defined(HAVE_GMSH)
   std::vector<int> elementTypes;
@@ -311,8 +309,8 @@ void smoothDirections(std::map<size_t, double> &C, std::map<size_t, double> &S, 
     }
   }
 
-  // FILE *f = fopen("dirs.pos", "w");
-  // fprintf(f, "View\"Dirs\"{\n");
+  FILE *fIso = fopen("isoAfterSmoothing.pos", "w"); fprintf(fIso, "View\"isoAfterSmoothing\"{\n");
+  FILE *fGra = fopen("graAfterSmoothing.pos", "w"); fprintf(fGra, "View\"graAfterSmoothing\"{\n");
 
   for(auto n : nodes) {
     double c = C[n];
@@ -326,11 +324,12 @@ void smoothDirections(std::map<size_t, double> &C, std::map<size_t, double> &S, 
     int entityDim, entityTag;
     gmsh::model::mesh::getNode(n, coord, par, entityDim, entityTag);
 
-    if(F != nullptr) fprintf(F, "VP(%g,%g,0){%g,%g,0};", coord[0], coord[1], c, s);
+    fprintf(fGra, "VP(%g,%g,0){%g,%g,0};", coord[0], coord[1],  c, s);
+    fprintf(fIso, "VP(%g,%g,0){%g,%g,0};", coord[0], coord[1], -s, c);
   }
 
-  // fprintf(f, "};\n");
-  // fclose(f);
+  fprintf(fIso, "};"); fclose(fIso);
+  fprintf(fGra, "};"); fclose(fGra);
 #endif
 }
 
@@ -1243,7 +1242,7 @@ static inline SMetric3 intersectionReductionSimultaneeExplicite(const SMetric3 &
   } else{
 
     // Check if metrics are multiple of one another
-    if( fabs(a2/a1 - c2/c1) < 1e-6 && fabs(a2/a1 - b2/b1) < 1e-6 ){
+    if( fabs(a2/a1 - c2/c1) < 1e-3 && fabs(a2/a1 - b2/b1) < 1e-3 ){
       return (a2/a1 <= 1) ? m1 : m2;
     } else{
       v00 = (sqrt(a1*a1*c2*c2 - 2*a1*a2*c1*c2 - 4*a1*b1*b2*c2 + 4*a1*b2*b2*c1 + a2*a2*c1*c1 + 4*a2*b1*b1*c2 - 4*a2*b1*b2*c1) + a1*c2 + a2*c1 - 2*b1*b2)/(2*(a1*b2 - a2*b1)) - (a1*c2 - b1*b2)/(a1*b2 - a2*b1);
@@ -1459,18 +1458,48 @@ static double solveErrorFunction(double k, double *v, double *w, double H[2][2],
   double v1 = v[0];
   double v2 = v[1];
 
-  double cs6 = (C[0][0][0]*a1*a1*a1 + 3.*C[0][0][1]*a1*a1*a2 + 3.*C[0][1][1]*a1*a2*a2 + C[1][1][1]*a2*a2*a2)/60.;
+  double H11 = H[0][0];
+  double H12 = H[0][1];
+  double H21 = H[1][0];
+  double H22 = H[1][1];
 
-  double cs5 = C[0][0][0]*a1*a1*v1/10. + 3.*C[0][0][1]*(v2*a1*a1/30. + a2*v1*a1/15.) + 3.*C[0][1][1]*(v1*a2*a2/30. + a1*v2*a2/15.) + C[1][1][1]*a2*a2*v2/10.;
-  double cs4 = C[0][0][0]*a1*v1*v1/4.  + 3.*C[0][0][1]*(a2*v1*v1/12. + a1*v2*v1/6. ) + 3.*C[0][1][1]*(a1*v2*v2/12. + a2*v1*v2/6. ) + C[1][1][1]*a2*v2*v2/4.;
+  double C111 =  C[0][0][0];
+  double C112 = (C[0][0][1] + C[0][1][0] + C[1][0][0])/3.;
+  double C122 = (C[0][1][1] + C[1][0][1] + C[1][1][0])/3.;
+  double C222 =  C[1][1][1];
 
-  double cs3 = C[0][0][0]*v1*v1*v1/3. + 3.*C[0][0][1]*v1*v1*v2/3. + 3.*C[0][1][1]*v1*v2*v2/3. + C[1][1][1]*v2*v2*v2/3.;
+  // double cs6 = (C[0][0][0]*a1*a1*a1 + 3.*C[0][0][1]*a1*a1*a2 + 3.*C[0][1][1]*a1*a2*a2 + C[1][1][1]*a2*a2*a2)/60.;
 
-  cs4 += 3.*(H[0][0]*a1*a1/12. + H[0][1]*a1*a2/12. + H[1][0]*a1*a2/12. + H[1][1]*a2*a2/12.);
-  cs3 += 3.*(H[0][0]*v1*a1/3.  + H[0][1]*a2*v1/3.  + H[1][0]*a1*v2/3.  + H[1][1]*v2*a2/3. );
+  // double cs5 = C[0][0][0]*a1*a1*v1/10. + 3.*C[0][0][1]*(v2*a1*a1/30. + a2*v1*a1/15.) + 3.*C[0][1][1]*(v1*a2*a2/30. + a1*v2*a2/15.) + C[1][1][1]*a2*a2*v2/10.;
+  // double cs4 = C[0][0][0]*a1*v1*v1/4.  + 3.*C[0][0][1]*(a2*v1*v1/12. + a1*v2*v1/6. ) + 3.*C[0][1][1]*(a1*v2*v2/12. + a2*v1*v2/6. ) + C[1][1][1]*a2*v2*v2/4.;
 
-  // CMINUS = {{cs6, cs5, cs4, cs3, 0., 0.,  1.}};
-  // CPLUS = {{cs6, cs5, cs4, cs3, 0., 0., -1.}};
+  // double cs3 = C[0][0][0]*v1*v1*v1/3. + 3.*C[0][0][1]*v1*v1*v2/3. + 3.*C[0][1][1]*v1*v2*v2/3. + C[1][1][1]*v2*v2*v2/3.;
+
+  // cs4 += 3.*(H[0][0]*a1*a1/12. + H[0][1]*a1*a2/12. + H[1][0]*a1*a2/12. + H[1][1]*a2*a2/12.);
+  // cs3 += 3.*(H[0][0]*v1*a1/3.  + H[0][1]*a2*v1/3.  + H[1][0]*a1*v2/3.  + H[1][1]*v2*a2/3. );
+
+  // CMINUS(0) = cs6/2.;
+  // CMINUS(1) = cs5/2.;
+  // CMINUS(2) = cs4/2.;
+  // CMINUS(3) = cs3/2.;
+  // CMINUS(4) = 0.;
+  // CMINUS(5) = 0.;
+  // CMINUS(6) = 1.;
+
+  // CPLUS(0) = cs6/2.;
+  // CPLUS(1) = cs5/2.;
+  // CPLUS(2) = cs4/2.;
+  // CPLUS(3) = cs3/2.;
+  // CPLUS(4) = 0.;
+  // CPLUS(5) = 0.;
+  // CPLUS(6) = -1.;
+
+  double cs6 = (C111*a1*a1*a1 + 3.*C112*a1*a1*a2 + 3.*C122*a1*a2*a2 + C222*a2*a2*a2)/120.;
+  double cs5 = C111*a1*a1*v1/20. + C112*a1*a1*v2/20. + C122*a2*a2*v1/20. + C222*a2*a2*v2/20. + C112*a1*a2*v1/10. + C122*a1*a2*v2/10.;
+  double cs4 = C111*a1*v1*v1/8.  + C112*a2*v1*v1/8.  + C122*a1*v2*v2/8.  + C222*a2*v2*v2/8.  + C112*a1*v1*v2/4.  + C122*a2*v1*v2/4.;
+  double cs3 = C111*v1*v1*v1/6.  + C112*v1*v1*v2/2.  + C122*v1*v2*v2/2.  + C222*v2*v2*v2/6. ;
+  cs4 += (H11*a1*a1 + H12*a1*a2 + H21*a1*a2 + H22*a2*a2)/8.;
+  cs3 += (H11*a1*v1 + H12*a2*v1 + H21*a1*v2 + H22*a2*v2)/2.;
 
   CMINUS(0) = cs6;
   CMINUS(1) = cs5;
@@ -1487,25 +1516,6 @@ static double solveErrorFunction(double k, double *v, double *w, double H[2][2],
   CPLUS(4) = 0.;
   CPLUS(5) = 0.;
   CPLUS(6) = -1.;
-
-  // Essai avec majoration (multiplie par S)
-  // CMINUS(0) = cs6;
-  // CMINUS(1) = cs5;
-  // CMINUS(2) = cs4;
-  // CMINUS(3) = cs3;
-  // CMINUS(4) = 0.;
-  // CMINUS(5) = 0.;
-  // CMINUS(6) = 0.;
-  // CMINUS(7) = 1.;
-
-  // CPLUS(0) = cs6;
-  // CPLUS(1) = cs5;
-  // CPLUS(2) = cs4;
-  // CPLUS(3) = cs3;
-  // CPLUS(4) = 0.;
-  // CPLUS(5) = 0.;
-  // CPLUS(6) = 0.;
-  // CPLUS(7) = -1.;
 
   double s = 1e10;
   roots = RootFinder::solvePolynomial(CMINUS, 0., INFINITY, 1e-8);
@@ -1739,17 +1749,88 @@ bool computeMetricLogSimplexCurved(double *x, double cG, double sG, feRecovery *
   g2[0] = -sG;
   g2[1] = cG;
 
-  double c1 = fx(rec, x);
-  double c2 = fy(rec, x);
+  // Derivatives from recoveries
+  // double c1 = fx(rec, x);
+  // double c2 = fy(rec, x);
 
-  double c11 = fxx(rec, x);
-  double c12 = (fxy(rec, x) + fyx(rec, x)) / 2.;
-  double c22 = fyy(rec, x);
+  // double c11 = fxx(rec, x);
+  // double c12 = (fxy(rec, x) + fyx(rec, x)) / 2.;
+  // double c22 = fyy(rec, x);
 
-  double c111 = fxxx(rec, x);
-  double c222 = fyyy(rec, x);
-  double c112 = (fxxy(rec, x) + fxyx(rec, x) + fyxx(rec, x)) / 3.;
-  double c122 = (fxyy(rec, x) + fyyx(rec, x) + fyxy(rec, x)) / 3.;
+  // double c111 = fxxx(rec, x);
+  // double c222 = fyyy(rec, x);
+  // double c112 = (fxxy(rec, x) + fxyx(rec, x) + fyxx(rec, x)) / 3.;
+  // double c122 = (fxyy(rec, x) + fyyx(rec, x) + fyxy(rec, x)) / 3.;
+
+  // Analytical derivatives
+  double X = x[0];
+  double Y = x[1];
+
+  // tanh
+  // double a = 10.;
+  // double b = 1.5;
+  // double T = pow(tanh(a*(X/2. - sin(M_PI*b*Y)/4.)),2);
+
+  // double c1 = -(a*(T - 1))/4.;
+  // double c2 = (a*b*M_PI*cos(M_PI*b*Y)*(T - 1.))/8.;
+
+  // double c11 = (a*a*tanh(a*(X/2. - sin(M_PI*b*Y)/4.))*(T - 1))/4;
+  // double c12 = -(a*a*b*M_PI*tanh(a*(X/2. - sin(M_PI*b*Y)/4.))*cos(M_PI*b*Y)*(T - 1.))/8.;
+  // double c22 = (a*a*b*b*M_PI*M_PI*tanh(a*(X/2. - sin(M_PI*b*Y)/4.))*pow(cos(M_PI*b*Y),2)*(T - 1.))/16. - (a*b*b*M_PI*M_PI*sin(M_PI*b*Y)*(T - 1.))/8.;
+
+  // double y = Y;
+  // double pi = M_PI;
+  // double c111 = - (a*a*a*pow((T - 1),2))/8 - (a*a*a*T*(T - 1))/4;
+  // double c112 = (a*a*a*b*pi*cos(pi*b*y)*pow((T - 1),2))/16 + (a*a*a*b*pi*T*cos(pi*b*y)*(T - 1))/8;
+  // double c122 = (a*a*b*b*M_PI*M_PI*tanh(a*(X/2 - sin(pi*b*y)/4))*sin(pi*b*y)*(T - 1))/8 - (a*a*a*b*b*M_PI*M_PI*T*pow(cos(pi*b*y),2)*(T - 1))/16 - (a*a*a*b*b*M_PI*M_PI*pow(cos(pi*b*y),2)*pow((T - 1),2))/32;
+  // double c222 = (a*a*a*b*b*b*M_PI*M_PI*M_PI*pow(cos(pi*b*y),3)*pow((T - 1),2))/64 - (a*b*b*b*M_PI*M_PI*M_PI*cos(pi*b*y)*(T - 1))/8 + (a*a*a*b*b*b*M_PI*M_PI*M_PI*T*pow(cos(pi*b*y),3)*(T - 1))/32 - (3*a*a*b*b*b*M_PI*M_PI*M_PI*tanh(a*(X/2 - sin(pi*b*y)/4))*cos(pi*b*y)*sin(pi*b*y)*(T - 1))/16;
+
+  // pour r4 = (x^2+y^2)^2 = x^4 + y^4 + 2*x^2 y^2
+  // double c1 = 4.*X*X*X + 4. * X*Y*Y;
+  // double c2 = 4.*Y*Y*Y + 4. * X*X*Y;
+
+  // double c11 = 12.*X*X + 4.*Y*Y;
+  // double c12 = 8.*X*Y;
+  // double c22 = 12.*Y*Y + 4.*X*X;
+
+  // double c111 = 24.*X;
+  // double c112 = 8.*Y;
+  // double c122 = 8.*X;
+  // double c222 = 24.*Y;
+
+  // x^3 + 20*y^3
+  // double c1 =3*X*X;
+  // double c2 = 60.*Y*Y;
+
+  // double c11 = 6.0*X;
+  // double c12 = 0.;
+  // double c22 = 120.*Y;
+
+  // double c111 = 6.0;
+  // double c112 = 0.;
+  // double c122 = 120.; /// ???
+  // double c222 = 0.;
+
+  // atan(10*(sin(3*pi*y/2) - 2x)) du papier IMR
+  double pi = M_PI;
+  double T = pow(20.*X - 10.*sin((3.*pi*Y)/2.),2);
+  double TT = (T + 1.)*(T + 1.);
+  double TTT = (T + 1.)*(T + 1.)*(T + 1.);
+
+  double R = 800*X - 400*sin((3*pi*Y)/2);
+  double S = cos((3*pi*Y)/2);
+
+  double c1 = -20/(T + 1);
+  double c2 = (15*pi*S)/(T + 1);
+  
+  double c11 = (20*R)/TT;
+  double c12 = -(600*pi*S*(20*X - 10*sin((3*pi*Y)/2)))/TT;
+  double c22 = (450*pi*pi*S*S*(20*X - 10*sin((3*pi*Y)/2)))/TT - (45*pi*pi*sin((3*pi*Y)/2))/(2*(T + 1));
+  
+  double c111 = 16000/TT - (40*R*R)/TTT;
+  double c112 = (1200*pi*S*(20*X - 10*sin((3*pi*Y)/2))*R)/TTT - (12000*pi*S)/TT;
+  double c122 = (9000*pi*pi*S*S)/TT + (900*pi*pi*sin((3*pi*Y)/2)*(20*X - 10*sin((3*pi*Y)/2)))/TT - (36000*pi*pi*S*S*T)/TTT;
+  double c222 = (27000*pi*pi*pi*S*S*S*T)/TTT - (135*pi*pi*pi*S)/(4*(T + 1)) - (6750*pi*pi*pi*S*S*S)/TT - (2025*pi*pi*pi*S*sin((3*pi*Y)/2)*(20*X - 10*sin((3*pi*Y)/2)))/TT;
 
   double Hij[2][2] = {{c11, c12}, {c12, c22}};
   double Cijk[2][2][2] = {{{c111, c112}, {c112, c122}}, {{c112, c122}, {c122, c222}}};

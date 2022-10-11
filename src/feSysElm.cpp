@@ -1039,7 +1039,8 @@ void feSysElm_2D_Diffusion::computeAe(std::vector<double> &Ja, int numElem,
     geoSpace->interpolateVectorFieldAtQuadNode_sDerivative(geoCoord, k, _dxds);
 
     // if(!globalFunctions) {
-      J = _dxdr[0]*_dxds[1]-_dxdr[1]*_dxds[0];
+      // J = _dxdr[0]*_dxds[1]-_dxdr[1]*_dxds[0];
+      J = Ja[nG * numElem + k];
       double drdx = _dxds[1] / J;
       double drdy = -_dxds[0] / J;
       double dsdx = -_dxdr[1] / J;

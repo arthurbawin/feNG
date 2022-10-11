@@ -36,17 +36,18 @@ public:
 #else
     int nThreads = 1;
 #endif
+
     feInfo("Nombre max de threads : %d", nThreads);
     for(int i = 0; i < nThreads; ++i) {
       for(feBilinearForm *f : bilinearForms) {
-#if defined(HAVE_OMP)
-        feBilinearForm *fCpy = new feBilinearForm(*f);
-        _formResiduals.push_back(fCpy);
-        if(f->hasMatrix()) _formMatrices.push_back(fCpy);
-#else
-        _formResiduals.push_back(f);
-        if(f->hasMatrix()) _formMatrices.push_back(f);
-#endif
+        #if defined(HAVE_OMP)
+            feBilinearForm *fCpy = new feBilinearForm(*f);
+            _formResiduals.push_back(fCpy);
+            if(f->hasMatrix()) _formMatrices.push_back(fCpy);
+        #else
+            _formResiduals.push_back(f);
+            if(f->hasMatrix()) _formMatrices.push_back(f);
+        #endif
         if(f->hasMatrix() && i == 0) _numMatrixForms++;
       }
     }

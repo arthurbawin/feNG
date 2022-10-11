@@ -222,6 +222,120 @@ int feNumber::numberEssential(int globalNum)
   return globalNum;
 }
 
+// Is used in feMetaNumber::exportNumberingVertices.
+// Writes the DOFs numbering along with the physical coordinates of the DOFs for this field.
+// Writes a file with format : (1 if essential 0 otherwise) #dof x_dof y_dof z_dof
+void feNumber::exportNumberingVertices(feMesh *mesh, FILE *file)
+{
+  std::vector<Vertex> &vertices = mesh->getVertices();
+  int dofNumber;
+  double x, y, z;
+  Vertex v;
+  for(size_t i = 0; i < vertices.size(); ++i){
+    dofNumber = _numberingVertices[i];
+    v = vertices[i];
+    fprintf(file, "%d %d %+-1.16e %+-1.16e %+-1.16e\n", _codeDOFVertices[i] == ESS, dofNumber, v.x(), v.y(), v.z());
+  }
+}
+
+void feNumber::compactFieldDOF()
+{
+  _allEssentialDOF.clear();
+  _allUnknownDOF.clear();
+  for(size_t i = 0; i < _numberingVertices.size(); ++i) {
+    if(_codeDOFVertices[i] == ESS){
+      _allEssentialDOF.push_back(_numberingVertices[i]);
+    } else if(_codeDOFVertices[i] == INC){
+      _allUnknownDOF.push_back(_numberingVertices[i]);
+    } else{
+      // "Ghost" degrees of freedom are not kept
+    }
+  }
+
+  for(int i = 0; i < _nElm; ++i) {
+    for(int j = 0; j < _maxDOFperElem; ++j) {
+      if(_codeDOFElements[i] == ESS){
+        _allEssentialDOF.push_back(_numberingElements[_maxDOFperElem * i + j]);
+      } else if(_codeDOFElements[i] == INC){
+        _allUnknownDOF.push_back(_numberingElements[_maxDOFperElem * i + j]);
+      }
+    }
+  }
+
+  for(int i = 0; i < _nEdg; ++i) {
+    for(int j = 0; j < _maxDOFperEdge; ++j) {
+      if(_codeDOFEdges[i] == ESS){
+        _allEssentialDOF.push_back(_numberingEdges[_maxDOFperEdge * i + j]);
+      } else if(_codeDOFEdges[i] == INC){
+        _allUnknownDOF.push_back(_numberingEdges[_maxDOFperEdge * i + j]);
+      }
+    }
+  }
+}
+
+void feNumber::printNumberingVertices()
+{
+  printf("nNod = %d\n", _nNod);
+  for(size_t i = 0; i < _numberingVertices.size(); ++i) {
+    if(_codeDOFVertices[i] == ESS)
+      printf("%d \t %s\n", _numberingVertices[i], "ESS");
+    else if(_codeDOFVertices[i] == INC)
+      printf("%d \t %s\n", _numberingVertices[i], "INC");
+    else
+      printf("%d \t %d\n", _numberingVertices[i], _codeDOFVertices[i]);
+  }
+}
+
+void feNumber::printNumberingElements()
+{
+  printf("nElm = %d\n", _nElm);
+  printf("maxDOFPerElem = %d\n", _maxDOFperElem);
+  for(int i = 0; i < _nElm; ++i) {
+    for(int j = 0; j < _maxDOFperElem; ++j) {
+      if(_codeDOFElements[i] == ESS)
+        printf("elm %d - dof %d : %d \t %s\n", i, j, _numberingElements[_maxDOFperElem * i + j],
+               "ESS");
+      else if(_codeDOFElements[i] == INC)
+        printf("elm %d - dof %d : %d \t %s\n", i, j, _numberingElements[_maxDOFperElem * i + j],
+               "INC");
+      else
+        printf("elm %d - dof %d : %d \t %d\n", i, j, _numberingElements[_maxDOFperElem * i + j],
+               _codeDOFElements[i]);
+    }
+  }
+}
+
+void feNumber::printNumberingEdges()
+{
+  printf("nEdg = %d\n", _nEdg);
+  printf("maxDOFperEdge = %d\n", _maxDOFperEdge);
+  for(int i = 0; i < _nEdg; ++i) {
+    for(int j = 0; j < _maxDOFperEdge; ++j) {
+      if(_codeDOFEdges[i] == ESS)
+        printf("%d \t %s\n", _numberingEdges[_maxDOFperEdge * i + j], "ESS");
+      else if(_codeDOFEdges[i] == INC)
+        printf("%d \t %s\n", _numberingEdges[_maxDOFperEdge * i + j], "INC");
+      else
+        printf("%d \t %d\n", _numberingEdges[_maxDOFperEdge * i + j], _codeDOFEdges[i]);
+    }
+  }
+}
+
+void feNumber::printCodeVertices()
+{
+  for(auto val : _codeDOFVertices) std::cout << val << std::endl;
+}
+
+void feNumber::printCodeElements()
+{
+  for(auto val : _codeDOFElements) std::cout << val << std::endl;
+}
+
+void feNumber::printCodeEdges()
+{
+  for(auto val : _codeDOFEdges) std::cout << val << std::endl;
+}
+
 feMetaNumber::feMetaNumber(feMesh *mesh, const std::vector<feSpace *> &spaces,
                            const std::vector<feSpace *> &essentialSpaces)
 {
@@ -268,8 +382,12 @@ feMetaNumber::feMetaNumber(feMesh *mesh, const std::vector<feSpace *> &spaces,
     globalNum = _numberings[_fieldIDs[i]]->numberEssential(globalNum);
   }
   _nDofs = globalNum;
-  // printNumberings();
-  // printCodes();
+
+  // Summarize all the degrees of freedom assigned for each field in the _allFieldDOF vector
+  for(int i = 0; i < _nFields; ++i) {
+    _numberings[_fieldIDs[i]]->compactFieldDOF();
+  }
+
 }
 
 feMetaNumber::~feMetaNumber()
@@ -279,5 +397,50 @@ feMetaNumber::~feMetaNumber()
   {
     delete it->second;
     it = _numberings.erase(it);
+  }
+}
+
+feStatus feMetaNumber::exportNumberingVertices(feMesh *mesh, std::string fileName)
+{
+  FILE *file = fopen(fileName.data(), "w");
+  if(file == nullptr){
+    return feErrorMsg(FE_STATUS_WRITE_ERROR, "Could not export field numbering to file %s", fileName.data());
+  }
+
+  for(auto pair : _numberings){
+    pair.second->exportNumberingVertices(mesh, file);
+  }
+
+  fclose(file);
+  return FE_STATUS_OK;
+}
+
+void feMetaNumber::printFields()
+{
+  for(auto s : _fieldIDs) std::cout << s << std::endl;
+}
+
+void feMetaNumber::printNumberings()
+{
+  for(int i = 0; i < _nFields; ++i) {
+    // for(auto const& secondIsNumber : _numberings){
+    std::cout << "Field " << _fieldIDs[i] << " - vertices :" << std::endl;
+    _numberings[_fieldIDs[i]]->printNumberingVertices();
+    std::cout << "Field " << _fieldIDs[i] << " - elements :" << std::endl;
+    _numberings[_fieldIDs[i]]->printNumberingElements();
+    std::cout << "Field " << _fieldIDs[i] << " - edges :" << std::endl;
+    _numberings[_fieldIDs[i]]->printNumberingEdges();
+  }
+}
+
+void feMetaNumber::printCodes()
+{ // Attention : ordre dépend du nom des variables (ordre du map.first)
+  for(auto const &secondIsNumber : _numberings) {
+    std::cout << "Field " << secondIsNumber.first << " - vertices :" << std::endl;
+    secondIsNumber.second->printCodeVertices();
+    std::cout << "Field " << secondIsNumber.first << " - elements :" << std::endl;
+    secondIsNumber.second->printCodeElements();
+    std::cout << "Field " << secondIsNumber.first << " - edges :" << std::endl;
+    secondIsNumber.second->printCodeEdges();
   }
 }

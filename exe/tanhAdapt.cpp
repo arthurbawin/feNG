@@ -42,10 +42,16 @@ double fSol(const double t, const std::vector<double> &pos, const std::vector<do
   // double r = sqrt(x*x + y*y);
   // return (x*x + y*y) * (x*x + y*y);
 
+  // x^3
+  // return x*x*x + 20*y*y*y;
+
+  // atan (IMR paper)
+  return atan(10.*(sin(3.*M_PI*y/2.) - 2.*x));
+
   // The full atan on [-1,1]
-  double a = 20.0;
-  double b = 1.5;
-  return 0.5*(1.0 + tanh(a*(x/2. - sin(b*M_PI*y)/4.0)));
+  // double a = 10.0;
+  // double b = 1.5;
+  // return 0.5*(1.0 + tanh(a*(x/2. - sin(b*M_PI*y)/4.0 )));
 
   // return cos(2.0*M_PI*x) * sin(2.0*M_PI*y);
 
@@ -122,20 +128,23 @@ int main(int argc, char **argv)
     std::string metricMeshName = "recoveredDerivatives.msh";
     std::vector<double> estErreur(2, 0.);
 
-    // if(std::string(meshFile) == "coarser.msh"){
-    //   // Load recovery
-    //   recovery = new feRecovery(uDomaine, &mesh, "recoveryFileFullAtan_coarser.txt");
-    // } else{
-      // Compute recovery
-      recovery = new feRecovery(&metaNumber, uDomaine, &mesh, &sol, estErreur, nullptr, meshFile, metricMeshName);
-      // recovery->writeRecovery("recoveryFileFullAtan_coarser.txt");
-    // }
+    recovery = new feRecovery(&metaNumber, uDomaine, &mesh, &sol, estErreur, nullptr, meshFile, metricMeshName);
 
     feMetricOptions metricOptions;
-    metricOptions.computationMethod = 3;
+    // if( iAdapt + 1 == nAdaptationCycles){
+      // JF's metric for curving
+      // metricOptions.computationMethod = 4;
+      // metricOptions.eTargetError = eTargetError;
+      // metricOptions.nTargetVertices = -1;
+    // } else{
+    //   // Logsimplex metric for the intermediary aniso meshes
+      metricOptions.computationMethod = 3;
+      metricOptions.eTargetError = 1.;
+      metricOptions.nTargetVertices = nTargetVertices;
+    // }
+    
+    metricOptions.directionFieldFromDerivativesOfOrder = 1;
     metricOptions.polynomialDegree = 2;
-    metricOptions.eTargetError = 1.0;
-    metricOptions.nTargetVertices = nTargetVertices;
 
     if(gradation < 0){
       metricOptions.enableGradation = false;
@@ -152,8 +161,6 @@ int main(int argc, char **argv)
     metricOptions.inside = inside;
     metricOptions.hMin = modelSize / 100000;
     metricOptions.hMax = modelSize / 1.;
-
-    metricOptions.directionFieldFromDerivativesOfOrder = 1;
 
   #if defined(HAVE_GMSH)  
 
@@ -179,6 +186,7 @@ int main(int argc, char **argv)
 
     feInfo("Creating curved mesh...");
     createCurvedMesh(nullptr, &metaNumber, &sol, uDomaine, recovery, &metric, metricOptions, 0, nLoopsAnisoMesh, (iAdapt+1) == nAdaptationCycles);
+    // createCurvedMesh(nullptr, &metaNumber, &sol, uDomaine, recovery, &metric, metricOptions, 0, nLoopsAnisoMesh, false);
 
     // Attention : meshFile will be empty once metricOptions is deleted...
     meshFile = metricOptions.adaptedMeshName.c_str();

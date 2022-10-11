@@ -11,27 +11,21 @@
 
 int feMesh::getCncGeoTag(std::string const &cncGeoID)
 {
-#ifdef DEBUG
-  if(_cncGeoMap.find(cncGeoID) == _cncGeoMap.end()) return -1;
-#endif
-return _cncGeoMap[cncGeoID];
+  auto it = _cncGeoMap.find(cncGeoID); 
+  return (it == _cncGeoMap.end()) ? -1 : it->second;
 }
 
 feCncGeo *feMesh::getCncGeoByName(std::string const &cncGeoID)
 {
-#ifdef DEBUG
-  if(_cncGeoMap.find(cncGeoID) == _cncGeoMap.end()) return nullptr;
-#endif
-return _cncGeo[_cncGeoMap[cncGeoID]];
+  auto it = _cncGeoMap.find(cncGeoID); 
+  return (it == _cncGeoMap.end()) ? nullptr : _cncGeo[it->second];
 }
 
 feCncGeo *feMesh::getCncGeoByTag(int cncGeoTag)
 {
-#ifdef DEBUG
   if(cncGeoTag < 0)
     if((unsigned)cncGeoTag > _cncGeo.size()) return nullptr;
-#endif  
-return _cncGeo[cncGeoTag];
+  return _cncGeo[cncGeoTag];
 }
 
 // Returns a vector containing the physical coordinates of the nodes on the
@@ -41,7 +35,7 @@ void feMesh::getCoord(std::string const &cncGeoID, int numElem, std::vector<doub
 {
   feCncGeo *cnc = getCncGeoByName(cncGeoID);
   int nNodePerElem = cnc->getNbNodePerElem();
-#ifdef DEBUG
+#ifdef FENG_DEBUG
   if(geoCoord.size() != 3 * nNodePerElem) {
     printf(" In feMesh::getCoord : Erreur - Wrong Size for vector geoCoord\n");
   }
@@ -61,7 +55,7 @@ void feMesh::getCoord(int cncGeoTag, int numElem, std::vector<double> &geoCoord)
 {
   feCncGeo *cnc = getCncGeoByTag(cncGeoTag);
   int nNodePerElem = cnc->getNbNodePerElem();
-#ifdef DEBUG
+#ifdef FENG_DEBUG
   if(geoCoord.size() != 3 * nNodePerElem) {
     printf(" In feMesh::getCoord : Erreur - Wrong Size for vector geoCoord\n");
   }

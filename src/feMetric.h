@@ -69,6 +69,7 @@ public:
   void computeMetricsHechtKuate();
   void computeMetricsWithDirectionField();
   void computeMetricsLogSimplex();
+  void computeMetricsExtremeSizesOnly();
 
   void setMetricViewTag(int tag) { _metricViewTag = tag; }
   int getMetricViewTag() { return _metricViewTag; }
@@ -76,15 +77,14 @@ public:
   void metricScaling();
   void metricScalingFromGmshSubstitute();
 
-  // void metriqueSimplexe2D(int nPhi, std::vector<double> phi, std::vector<double> erreur, double
-  // &A,
-  //                         double &B, double &C, int max_iter);
-
   // Intersecter avec un autre feMetric
   void writeSizeFieldSol2D(std::string solFileName);
   void writeSizeFieldSol3D(std::string solFileName);
   void writeSizeFieldGmsh(std::string meshName, std::string metricMeshName);
   void drawEllipsoids(std::string posFile);
+
+  // With gradient wrt to physical coordinates x,y
+  void interpolateMetricP1WithDerivatives(const double *x, Eigen::Matrix2d &M, Eigen::Matrix2d &dMdx, Eigen::Matrix2d &dMdy);
 
   // With gradient of M wrt 2d position alpha (a1,a2)
   void interpolateMetricP1(const double *x, Eigen::Matrix2d &M,
@@ -101,6 +101,9 @@ public:
   const Eigen::Matrix2d &M11, const Eigen::Matrix2d &M20, const Eigen::Matrix2d &M02,
   const Eigen::Matrix2d &sumdudaM, Eigen::Matrix2d &M, Eigen::Matrix2d &dMda);
 };
+
+void interpolateMetricP1WithDerivativesWrapper(void* metric, const double *x, Eigen::Matrix2d &M,
+  Eigen::Matrix2d &dMdx, Eigen::Matrix2d &dMdy);
 
 void interpolateMetricP1Wrapper(void* metric, const double *x, Eigen::Matrix2d &M,
   Eigen::Matrix2d &sumduda1M, Eigen::Matrix2d &sumduda2M);

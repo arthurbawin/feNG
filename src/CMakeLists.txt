@@ -5,6 +5,7 @@ set(feNG_SRC
     feCncGeo.cpp
     feCompressedRowStorage.cpp
     feCurvedAdapt.cpp
+    feEigenProblem.cpp
     feExporter.cpp
     feLinearSystem.cpp
     feLinearSystemMklPardiso.cpp
@@ -48,7 +49,9 @@ set(feNG_API
     feCncGeo.h
     feCompressedRowStorage.h
     feCurvedAdapt.h
-    # feEdge.h feElement.h
+    feEdge.h
+    feEigenProblem.h
+    feElement.h
     feExporter.h
     feFunction.h
     # feLine.h

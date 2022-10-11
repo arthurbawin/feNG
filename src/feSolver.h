@@ -19,7 +19,7 @@ typedef struct feTol {
 } feTolerances;
 
 /* Supported time integrators schemes */
-typedef enum { STATIONARY, BDF1, BDF2, DC2F, DC3, DC3F } timeIntegratorScheme;
+typedef enum { EIGENSOLVER, STATIONARY, BDF1, BDF2, DC2F, DC3, DC3F } timeIntegratorScheme;
 
 // Deprecated ?
 void solveStationary(double *normL2, feTolerances tol, feMetaNumber *metaNumber,

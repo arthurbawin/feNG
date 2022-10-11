@@ -57,12 +57,11 @@ double fyyx(feRecovery *rec, double *x);
 double fyyy(feRecovery *rec, double *x);
 
 void computeDirectionFieldFromGradient(double *x, double &C, double &S, double tol,
-                                       feRecovery *rec, FILE *F = nullptr);
+                                       feRecovery *rec, FILE *F_grad = nullptr, FILE *F_iso = nullptr);
 void computeDirectionFieldFromHessian(double *x, double &C, double &S, double tol,
                                       feRecovery *rec, FILE *F = nullptr);
 
-void smoothDirections(std::map<size_t, double> &C, std::map<size_t, double> &S, FILE *F = nullptr,
-                      int nIter = 100, double tol = 0.1);
+void smoothDirections(std::map<size_t, double> &C, std::map<size_t, double> &S, int nIter = 100, double tol = 0.1);
 
 void smoothSizes(std::map<size_t, double> &L1, std::map<size_t, double> &L2, int nIter,
                       double tol);
@@ -94,6 +93,9 @@ int computePointsUsingScaledCrossFieldPlanarP2(
   int onlyGenerateVertices,
   double evaluateFieldFromRecovery(int, void*, double*),
   void* recoveryUserPointer,
+
+  void interpolateMetricP1WithDerivativesWrapper(void*, const double *, Eigen::Matrix2d&,
+  Eigen::Matrix2d&, Eigen::Matrix2d&),
 
   void interpolateMetricP1Wrapper(void*, const double *, Eigen::Matrix2d&,
   Eigen::Matrix2d&, Eigen::Matrix2d&),

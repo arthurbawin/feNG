@@ -1467,6 +1467,9 @@ feStatus feMesh2DP1::readGmsh(std::string meshName, bool curved, bool reversed,
   _gmshVersion = 0;
   std::filebuf fb;
 
+  feInfo("=====================================================================");
+  feInfo("                         Mesh informations                          ");
+  feInfo("=====================================================================");
   feInfo("Reading mesh file : %s", meshName.c_str());
 
   std::ifstream f(meshName.c_str());
@@ -1794,6 +1797,10 @@ feStatus feMesh2DP1::readGmsh(std::string meshName, bool curved, bool reversed,
 
   // Initialize the search context structure that is used to search in the RTree
   _searchCtx.elements = &_elements;
+
+  feInfo("=====================================================================");
+  feInfo("                     End of mesh informations                        ");
+  feInfo("=====================================================================");
 
   return FE_STATUS_OK;
 }

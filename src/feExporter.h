@@ -6,17 +6,20 @@
 #include "feMesh.h"
 #include "feSolution.h"
 #include "feNumber.h"
+#include "feEigenProblem.h"
 
 /* Supported visualization formats */
 typedef enum { VTK } visualizationFormat;
 
 class feExporter
 {
-protected:
+public:
   feMesh *_mesh;
   feSolution *_sol;
   feMetaNumber *_metaNumber;
   const std::vector<feSpace *> &_spaces;
+
+  feEigenProblem *_eigenProblem;
 
   bool _addP2Nodes;
   int _writtenNodes;
@@ -30,6 +33,7 @@ public:
   virtual ~feExporter() {}
 
   virtual feStatus writeStep(std::string fileName) = 0;
+  virtual feStatus writeEigenvectors(std::string fileName) = 0;
 };
 
 class feExporterVTK : public feExporter
@@ -39,16 +43,21 @@ public:
   feExporterVTK(feMesh *mesh, feSolution *sol, feMetaNumber *metaNumber,
                 const std::vector<feSpace *> &feSpaces)
     : feExporter(mesh, sol, metaNumber, feSpaces){};
+  feExporterVTK(feMesh *mesh, feSolution *sol, feEigenProblem *eigenProblem, feMetaNumber *metaNumber,
+                const std::vector<feSpace *> &feSpaces);
   virtual ~feExporterVTK() {}
 
   virtual feStatus writeStep(std::string fileName);
+  virtual feStatus writeEigenvectors(std::string fileName);
 
 private:
   void writeHeader(std::ostream &output);
   void writeNodes(std::ostream &output, feCncGeo *cnc);
   void writeElementsConnectivity(std::ostream &output, feCncGeo *cnc);
   void writeField(std::ostream &output, feCncGeo *cnc, feSpace *intSpace, std::string fieldID,
-                  bool LoopOverCnc = false);
+    bool loopOverCnc = false);
+  void writeEigenvector(std::ostream &output, feCncGeo *cnc, feSpace *intSpace,
+    std::string fieldID, int eigenPairIndex, size_t nEigenPairs, eigenPair &ep, bool loopOverCnc = false);
 };
 
 typedef struct feExportData {
@@ -60,5 +69,9 @@ typedef struct feExportData {
 feStatus createVisualizationExporter(feExporter *&exporter, visualizationFormat format,
                                      feMetaNumber *metaNumber, feSolution *solution, feMesh *mesh,
                                      const std::vector<feSpace *> &feSpaces);
+
+feStatus createVisualizationExporter(feExporter *&exporter, visualizationFormat format,
+                                     feMetaNumber *metaNumber, feSolution *solution, feEigenProblem *eigenProblem, 
+                                     feMesh *mesh, const std::vector<feSpace *> &feSpaces);
 
 #endif

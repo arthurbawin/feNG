@@ -45,6 +45,7 @@ public:
   int getNbFields() { return _NbFields; }
   std::string getTypeNorm() { return _TypeNorm; }
   void computeL2Norm(feMetaNumber *metaNumber, feSolution *sol, feMesh *mesh);
+  void computeL2Norm_uh(feMetaNumber *metaNumber, feSolution *sol, feMesh *mesh, double scaling = 1.0);
   void computeL2NormVec(feMetaNumber *metaNumber, feSolution *sol, feMesh *mesh);
   void computeH1NormVec(feMetaNumber *metaNumber, feSolution *sol, feMesh *mesh);
   void computeSemiH1NormVec(feMetaNumber *metaNumber, feSolution *sol, feMesh *mesh);
@@ -59,6 +60,9 @@ public:
   void computeL2Norm0D(feSolution *sol);
   void computeArea(feMetaNumber *metaNumber, feSolution *sol, feMesh *mesh);
   void computeIntegral(feMetaNumber *metaNumber, feSolution *sol, feMesh *mesh, feFunction *fun);
+  void computeScalarProduct(feMetaNumber *metaNumber, feSolution *sol, feMesh *mesh, feFunction *fun);
+  void computeL2Norm_f_minus_uh(feMetaNumber *metaNumber, feSolution *sol, feMesh *mesh, feFunction *fun, double scaling = 1.);
+
   feStatus computeErrorNormFromExternalSolution(feMetaNumber *metaNumber, feSolution *sol,
                                                 feMesh *mesh, feMetaNumber *refMN,
                                                 feSolution *refSol, feMesh *refMesh,
