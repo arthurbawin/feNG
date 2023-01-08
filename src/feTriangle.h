@@ -5,7 +5,7 @@
 
 #include <cmath>
 
-// Class and methods copied/inspired from Gmsh's MTriangle
+// Adapted from Gmsh's MTriangle
 
 class Triangle
 {

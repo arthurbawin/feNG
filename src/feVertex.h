@@ -7,8 +7,8 @@ class Vertex
 {
 protected:
   double coord[3];
-
   int _tag; // The Gmsh numbering of the node, used to create edges
+  
 public:
   Vertex() {}
   Vertex(double x, int tag = -1)

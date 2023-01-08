@@ -2,10 +2,7 @@
 #include "feNG.h"
 
 #include <algorithm>
-
-#if defined(HAVE_EIGEN)
 #include "../contrib/Eigen/Dense"
-#endif
 
 static bool isBoundary(feMesh *mesh, int vertex)
 {
@@ -46,6 +43,23 @@ static inline double matNorm2(const std::vector<double> &v1, const std::vector<d
   return sqrt(sqr);
 }
 
+static inline double myPow(double base, int exp){
+  // if (exp == 0)
+  //     return 1.;
+  // else if (exp % 2)
+  //     return base * myPow(base, exp - 1);
+  // else {
+  //     int temp = myPow(base, exp / 2);
+  //     return temp * temp;
+  // }
+
+  // return pow(base, exp);
+  double res = 1.;
+  for(int i = 0; i < exp; ++i)
+    res *= base;
+  return res;
+}
+
 // The names of the reconstructed fields
 static std::map<std::pair<int, int>, std::string> suffix = {
   {{0, 0}, ""},     {{1, 0}, "dx"},   {{1, 1}, "dy"},   {{2, 0}, "dxx"},  {{2, 1}, "dxy"},
@@ -65,7 +79,6 @@ fePatch::fePatch(feCncGeo *cnc, feMesh *mesh)
   _nNodePerElm = cnc->getNbNodePerElem();
   _nEdgePerElm = cnc->getNbEdgePerElem();
   std::vector<int> &connecNodes = cnc->getNodeConnectivityRef();
-  std::vector<int> &connecEdges = cnc->getEdgeConnectivityRef();
 
   int nElm = cnc->getNbElm();
   for(int i = 0; i < nElm; ++i) {
@@ -113,19 +126,6 @@ fePatch::fePatch(feCncGeo *cnc, feMesh *mesh)
         std::cout << std::endl;
       }
 
-      // vertToElems[0].clear();
-      // vertToElems[0].insert(0);
-      // // vertToElems[0].insert(1);
-      // // vertToElems[0].insert(2);
-      // // vertToElems[0].insert(3);
-      // // vertToElems[0].insert(4);
-      // // vertToElems[0].insert(5);
-      // // vertToElems[0].insert(6);
-      // vertToElems[40].clear();
-      // vertToElems[40].insert(39);
-      // vertToElems[40].insert(38);
-      // vertToElems[40].insert(37);
-      // vertToElems[40].insert(36);
       break;
     case 2:
 
@@ -184,6 +184,8 @@ feRecovery::feRecovery(feMetaNumber *metaNumber, feSpace *space, feMesh *mesh, f
   _cnc = space->getCncGeo();
   _nElm = _cnc->getNbElm();
   _nNodePerElm = _cnc->getNbNodePerElem();
+  _adr.resize(_intSpace->getNbFunctions());
+  _solution.resize(_adr.size());
   _geoSpace = _cnc->getFeSpace();
   _degSol = space->getPolynomialDegree();
   _patch = new fePatch(_cnc, _mesh);
@@ -219,6 +221,25 @@ feRecovery::feRecovery(feMetaNumber *metaNumber, feSpace *space, feMesh *mesh, f
              _cnc->getForme().c_str());
     }
   }
+
+  // // Resize coefficients vectors
+  // std::vector<int> &vertices = _patch->getVertices();
+
+  // int nVertices = vertices.size();
+  // int nEdges = _mesh->_edges.size();
+
+  // // int localEdge = fabs(_cnc->getEdgeConnectivity(elem, iEdge));
+
+  // feInfo("size1 = %d", nVertices * _nTotalRecoveries * _dimRecovery);
+  // feInfo("size1 = %d", nVertices * _nTotalDerivations * _dimDerivation);
+  // feInfo("size2 = %d", nEdges * _nTotalRecoveries * _dimRecovery);
+  // feInfo("size2 = %d", nEdges * _nTotalDerivations * _dimDerivation);
+
+  // recoveryCoeffAtVertices.resize(nVertices * _nTotalRecoveries * _dimRecovery, 0.);
+  // derivativeCoeffAtVertices.resize(nVertices * _nTotalDerivations * _dimDerivation, 0.);
+
+  // recoveryCoeffOnEdges2.resize(nEdges * _nTotalRecoveries * _dimRecovery, 0.);
+  // derivativeCoeffOnEdges2.resize(nEdges * _nTotalDerivations * _dimDerivation, 0.);
 
   // The exponents of the monomials :
   _expXRecovery.resize(_dimRecovery, 0);
@@ -372,6 +393,66 @@ feRecovery::feRecovery(feMetaNumber *metaNumber, feSpace *space, feMesh *mesh, f
   getErrorPolynomials();
 }
 
+// Create a feRecovery from a file in which there are the derivatives at the DOFs
+feRecovery::feRecovery(feSpace *space, feMesh *mesh, std::string recoveryFile)
+  : _mesh(mesh), _intSpace(space)
+{
+  _cnc = space->getCncGeo();
+  _nElm = _cnc->getNbElm();
+  _nNodePerElm = _cnc->getNbNodePerElem();
+  _geoSpace = _cnc->getFeSpace();
+  _degSol = space->getPolynomialDegree();
+  _dim = mesh->getDim();
+  _patch = new fePatch(_cnc, _mesh);
+
+  // Read the recovery file
+  std::filebuf fb;
+  feInfo("Reading recovery file : %s", recoveryFile.c_str());
+  std::ifstream f(recoveryFile.c_str());
+  if(!f.good()) {
+    feWarning("Recovery file does not exist. Cannot create feRecovery.");
+  }
+
+  int nRecoveries, nDOFs;
+  if(fb.open(recoveryFile, std::ios::in)) {
+    std::istream input(&fb);
+    std::string buffer;
+
+    // getline(input, buffer);
+    input >> nRecoveries;
+    feInfo("Reading %d rec", nRecoveries);
+    derivAtVertices.resize(nRecoveries);
+    for(int i = 0; i < nRecoveries; ++i){
+      getline(input, buffer);
+      input >> nDOFs;
+      feInfo("Reading %d DOFs", nDOFs);
+      derivAtVertices[i].resize(nDOFs);
+      for(int j = 0; j < nDOFs; ++j){
+        getline(input, buffer);
+        input >> derivAtVertices[i][j];
+      }
+    }
+
+    getline(input, buffer);
+    input >> nRecoveries;
+    feInfo("Reading %d rec", nRecoveries);
+    derivAtEdges.resize(nRecoveries);
+    for(int i = 0; i < nRecoveries; ++i){
+      getline(input, buffer);
+      input >> nDOFs;
+      feInfo("Reading %d DOFs", nDOFs);
+      derivAtEdges[i].resize(nDOFs);
+      for(int j = 0; j < nDOFs; ++j){
+        getline(input, buffer);
+        input >> derivAtEdges[i][j];
+      }
+    }
+
+    fb.close();
+  } // if fb.open
+
+}
+
 void feRecovery::allocateStructures()
 {
 #if defined(HAVE_PETSC)
@@ -472,11 +553,13 @@ void feRecovery::matrixInverseEigen1D()
   std::vector<double> &w = _geoSpace->getQuadratureWeights();
   std::vector<double> &J = _cnc->getJacobians();
 
-  std::vector<double> geoCoord, x(3, 0.0), monomials(_dimRecovery, 0.);
+  std::vector<double> geoCoord(9, 0.), x(3, 0.0), monomials(_dimRecovery, 0.);
 
   int nQuad = _geoSpace->getNbQuadPoints();
 
   std::cout << nQuad << std::endl;
+
+  std::vector<double> &solVec = _sol->getSolutionReference();
 
   // Matrices defined on the vertices
   for(auto v : _patch->getVertices()) {
@@ -491,9 +574,12 @@ void feRecovery::matrixInverseEigen1D()
 
     for(auto elem : elemPatch) {
       _intSpace->initializeAddressingVector(_metaNumber->getNumbering(_intSpace->getFieldID()),
-                                            elem);
-      _intSpace->initializeSolution(_sol);
-      geoCoord = _mesh->getCoord(_intSpace->getCncGeoTag(), elem);
+                                            elem, _adr);
+      for(size_t i = 0; i < _adr.size(); ++i) {
+        _solution[i] = solVec[_adr[i]];
+      }
+
+      _mesh->getCoord(_intSpace->getCncGeoTag(), elem, geoCoord);
 
       // Loop over quad points and increment least square matrix
       for(int k = 0; k < nQuad; ++k) {
@@ -505,6 +591,7 @@ void feRecovery::matrixInverseEigen1D()
 
         for(int i = 0; i < _dimRecovery; ++i) {
           monomials[i] = pow(xLoc, _expXRecovery[i]);
+          // monomials[i] = myPow(xLoc, _expXRecovery[i]);
         }
 
         // std::cout<<"Monomes : "<<std::endl;
@@ -570,9 +657,11 @@ void feRecovery::matrixInverseEigen1D()
 
     for(auto elem : elemPatch) {
       _intSpace->initializeAddressingVector(_metaNumber->getNumbering(_intSpace->getFieldID()),
-                                            elem);
-      _intSpace->initializeSolution(_sol);
-      geoCoord = _mesh->getCoord(_intSpace->getCncGeoTag(), elem);
+                                            elem, _adr);
+      for(size_t i = 0; i < _adr.size(); ++i) {
+        _solution[i] = solVec[_adr[i]];
+      }
+      _mesh->getCoord(_intSpace->getCncGeoTag(), elem, geoCoord);
 
       // Loop over quad points and increment least square matrix
       for(int k = 0; k < nQuad; ++k) {
@@ -583,7 +672,8 @@ void feRecovery::matrixInverseEigen1D()
         // printf("Edge %d (%2.2f)- Elem %d - Quad node %d (%2.2f) - xLoc = %2.2f\n",
         //   e.getTag(), (_mesh->getVertex(e.getTag(0))->x() +
         //   _mesh->getVertex(e.getTag(1))->x())/2.0, elem, k, x[0], xLoc);
-        for(int i = 0; i < _dimRecovery; ++i) monomials[i] = pow(xLoc, _expXRecovery[i]);
+        // for(int i = 0; i < _dimRecovery; ++i) monomials[i] = pow(xLoc, _expXRecovery[i]);
+        for(int i = 0; i < _dimRecovery; ++i) monomials[i] = myPow(xLoc, _expXRecovery[i]);
 
         // std::cout<<"Monomes : "<<std::endl;
         // for(auto val : monomials)
@@ -634,12 +724,14 @@ void feRecovery::matrixInverseEigen2D()
   std::vector<double> &w = _geoSpace->getQuadratureWeights();
   std::vector<double> &J = _cnc->getJacobians();
 
-  std::vector<double> geoCoord, x(3, 0.0), xLoc(3, 0.0), monomials(_dimRecovery, 0.);
+  std::vector<double> geoCoord(9, 0.), x(3, 0.0), xLoc(3, 0.0), monomials(_dimRecovery, 0.);
 
   int nQuad = _geoSpace->getNbQuadPoints();
 
+  std::vector<double> &solVec = _sol->getSolutionReference();
+
   // Matrices defined on the vertices
-  printf("Looping over %d vertices... ", _patch->getVertices().size());
+  printf("Looping over %ld vertices... ", _patch->getVertices().size());
   tic();
   for(auto v : _patch->getVertices()) {
     double xv = _mesh->getVertex(v)->x();
@@ -654,9 +746,12 @@ void feRecovery::matrixInverseEigen2D()
     for(auto elem : elemPatch) {
       // std::cout<<elem<<std::endl;
       _intSpace->initializeAddressingVector(_metaNumber->getNumbering(_intSpace->getFieldID()),
-                                            elem);
-      _intSpace->initializeSolution(_sol);
-      geoCoord = _mesh->getCoord(_intSpace->getCncGeoTag(), elem);
+                                            elem, _adr);
+      for(size_t i = 0; i < _adr.size(); ++i) {
+        _solution[i] = solVec[_adr[i]];
+      }
+
+      _mesh->getCoord(_intSpace->getCncGeoTag(), elem, geoCoord);
 
       // // Sommets de l'element
       // double r1[3] = {0., 0., 0.};
@@ -683,7 +778,8 @@ void feRecovery::matrixInverseEigen2D()
         xLoc[2] = (x[2] - zv);
 
         for(int i = 0; i < _dimRecovery; ++i) {
-          monomials[i] = pow(xLoc[0], _expXRecovery[i]) * pow(xLoc[1], _expYRecovery[i]);
+          // monomials[i] = pow(xLoc[0], _expXRecovery[i]) * pow(xLoc[1], _expYRecovery[i]);
+          monomials[i] = myPow(xLoc[0], _expXRecovery[i]) * myPow(xLoc[1], _expYRecovery[i]);
         }
 
         for(int i = 0; i < _dimRecovery; ++i) {
@@ -713,7 +809,7 @@ void feRecovery::matrixInverseEigen2D()
   toc();
 
   // Matrices defined on the edges
-  printf("Looping over %d edges... ", _mesh->_edges.size());
+  printf("Looping over %ld edges... ", _mesh->_edges.size());
   tic();
   for(auto e : _mesh->_edges) {
     // TODO : boucler sur le nombre de DOFS par edge, ici on suppose juste un P2 avec 1 dof
@@ -726,9 +822,11 @@ void feRecovery::matrixInverseEigen2D()
 
     for(auto elem : elemPatch) {
       _intSpace->initializeAddressingVector(_metaNumber->getNumbering(_intSpace->getFieldID()),
-                                            elem);
-      _intSpace->initializeSolution(_sol);
-      geoCoord = _mesh->getCoord(_intSpace->getCncGeoTag(), elem);
+                                            elem, _adr);
+      for(size_t i = 0; i < _adr.size(); ++i) {
+        _solution[i] = solVec[_adr[i]];
+      }
+      _mesh->getCoord(_intSpace->getCncGeoTag(), elem, geoCoord);
 
       // Loop over quad points and increment least square matrix
       for(int k = 0; k < nQuad; ++k) {
@@ -749,8 +847,10 @@ void feRecovery::matrixInverseEigen2D()
                           _mesh->getVertexFromGmshNodeTag(e.getTag(1))->z()) /
                            2.0;
 
-        for(int i = 0; i < _dimRecovery; ++i)
-          monomials[i] = pow(xLoc[0], _expXRecovery[i]) * pow(xLoc[1], _expYRecovery[i]);
+        for(int i = 0; i < _dimRecovery; ++i){
+          // monomials[i] = pow(xLoc[0], _expXRecovery[i]) * pow(xLoc[1], _expYRecovery[i]);
+          monomials[i] = myPow(xLoc[0], _expXRecovery[i]) * myPow(xLoc[1], _expYRecovery[i]);
+        }
 
         for(int i = 0; i < _dimRecovery; ++i) {
           for(int j = 0; j < _dimRecovery; ++j) {
@@ -783,7 +883,7 @@ void feRecovery::solveLeastSquareEigen1D(int indRecovery, int iDerivative)
 {
   std::vector<double> &w = _geoSpace->getQuadratureWeights();
   std::vector<double> &J = _cnc->getJacobians();
-  std::vector<double> geoCoord;
+  std::vector<double> geoCoord(9, 0.);
   std::vector<double> x(3, 0.0);
   std::vector<double> monomials(_dimRecovery, 0.);
 
@@ -793,7 +893,7 @@ void feRecovery::solveLeastSquareEigen1D(int indRecovery, int iDerivative)
 
   std::vector<double> u(indRecovery, 0.);
 
-  int nDOFPerElem = _intSpace->getNbFunctions();
+  std::vector<double> &solVec = _sol->getSolutionReference();
 
   for(auto v : vertices) {
     double xv = _mesh->getVertex(v)->x();
@@ -808,9 +908,12 @@ void feRecovery::solveLeastSquareEigen1D(int indRecovery, int iDerivative)
 
     for(auto elem : elemPatch) {
       _intSpace->initializeAddressingVector(_metaNumber->getNumbering(_intSpace->getFieldID()),
-                                            elem);
-      _intSpace->initializeSolution(_sol);
-      geoCoord = _mesh->getCoord(_intSpace->getCncGeoTag(), elem);
+                                            elem, _adr);
+      for(size_t i = 0; i < _adr.size(); ++i) {
+        _solution[i] = solVec[_adr[i]];
+      }
+
+      _mesh->getCoord(_intSpace->getCncGeoTag(), elem, geoCoord);
 
       // Loop over quad points and increment right hand side
       for(int k = 0; k < nQuad; ++k) {
@@ -819,7 +922,8 @@ void feRecovery::solveLeastSquareEigen1D(int indRecovery, int iDerivative)
         double xLoc = x[0] - xv;
 
         for(int i = 0; i < _dimRecovery; ++i) {
-          monomials[i] = pow(xLoc, _expXRecovery[i]);
+          // monomials[i] = pow(xLoc, _expXRecovery[i]);
+          monomials[i] = myPow(xLoc, _expXRecovery[i]);
         }
 
         // printf("Vertex %d (%2.2f)- Elem %d - Quad node %d (%2.2f) - xLoc = %2.2f\n",
@@ -852,7 +956,7 @@ void feRecovery::solveLeastSquareEigen1D(int indRecovery, int iDerivative)
         } else {
           // Simply interpolate the solution at quad nodes
           for(int iDeriv = 0; iDeriv < indRecovery; ++iDeriv) {
-            u[iDeriv] = _intSpace->interpolateSolutionAtQuadNode(k);
+            u[iDeriv] = _intSpace->interpolateFieldAtQuadNode(_solution, k);
             // u[iDeriv] = pow(x[0],5);
             // printf("u = %+-4.4f - uRef = %+-4.4f\n", u[iDeriv], pow(x[0],4));
           }
@@ -948,9 +1052,12 @@ void feRecovery::solveLeastSquareEigen1D(int indRecovery, int iDerivative)
 
     for(auto elem : elemPatch) {
       _intSpace->initializeAddressingVector(_metaNumber->getNumbering(_intSpace->getFieldID()),
-                                            elem);
-      _intSpace->initializeSolution(_sol);
-      geoCoord = _mesh->getCoord(_intSpace->getCncGeoTag(), elem);
+                                            elem, _adr);
+      for(size_t i = 0; i < _adr.size(); ++i) {
+        _solution[i] = solVec[_adr[i]];
+      }
+
+      _mesh->getCoord(_intSpace->getCncGeoTag(), elem, geoCoord);
 
       // Loop over quad points and increment right hand side
       for(int k = 0; k < nQuad; ++k) {
@@ -961,7 +1068,8 @@ void feRecovery::solveLeastSquareEigen1D(int indRecovery, int iDerivative)
           x[0] - (_mesh->getVertex(e.getTag(0))->x() + _mesh->getVertex(e.getTag(1))->x()) / 2.0;
 
         for(int i = 0; i < _dimRecovery; ++i) {
-          monomials[i] = pow(xLoc, _expXRecovery[i]);
+          // monomials[i] = pow(xLoc, _expXRecovery[i]);
+          monomials[i] = myPow(xLoc, _expXRecovery[i]);
         }
 
         if(iDerivative > 0) {
@@ -987,7 +1095,7 @@ void feRecovery::solveLeastSquareEigen1D(int indRecovery, int iDerivative)
         } else {
           // Simply interpolate the solution at quad nodes
           for(int iDeriv = 0; iDeriv < indRecovery; ++iDeriv) {
-            u[iDeriv] = _intSpace->interpolateSolutionAtQuadNode(k);
+            u[iDeriv] = _intSpace->interpolateFieldAtQuadNode(_solution, k);
             // u[iDeriv] = pow(x[0],5);
             // printf("u = %+-4.4f - uRef = %+-4.4f\n", u[iDeriv], pow(x[0],4));
           }
@@ -1063,7 +1171,7 @@ void feRecovery::solveLeastSquareEigen2D(int indRecovery, int iDerivative)
   std::vector<double> &w = _geoSpace->getQuadratureWeights();
   std::vector<double> &J = _cnc->getJacobians();
 
-  std::vector<double> geoCoord;
+  std::vector<double> geoCoord(9, 0.);
   std::vector<double> x(3, 0.0);
   std::vector<double> xLoc(3, 0.0);
   std::vector<double> monomials(_dimRecovery, 0.);
@@ -1074,26 +1182,41 @@ void feRecovery::solveLeastSquareEigen2D(int indRecovery, int iDerivative)
 
   std::vector<double> u(indRecovery, 0.);
 
-  int nDOFPerElem = _intSpace->getNbFunctions();
   int _nEdgePerElm = _cnc->getNbEdgePerElem();
   int _nVertPerElm = _nNodePerElm;
+
+  std::vector<double> &solVec = _sol->getSolutionReference();
+
+  std::vector<Eigen::VectorXd> RHS6(indRecovery, Eigen::VectorXd::Zero(6));
+  std::vector<Eigen::VectorXd> RHS10(indRecovery, Eigen::VectorXd::Zero(10));
+
+  std::vector<double> recoveryVector(10, 0.);
+  Eigen::VectorXd sol;
 
   for(auto v : vertices) {
     double xv = _mesh->getVertex(v)->x();
     double yv = _mesh->getVertex(v)->y();
     double zv = _mesh->getVertex(v)->z();
 
-    std::vector<Eigen::VectorXd> RHS6(indRecovery, Eigen::MatrixXd::Zero(6, 1));
-    std::vector<Eigen::VectorXd> RHS10(indRecovery, Eigen::MatrixXd::Zero(10, 1));
+    // std::vector<Eigen::VectorXd> RHS6(indRecovery, Eigen::MatrixXd::Zero(6, 1));
+    // std::vector<Eigen::VectorXd> RHS10(indRecovery, Eigen::MatrixXd::Zero(10, 1));
+    for(int i = 0; i < indRecovery; ++i){
+    //   RHS6[i] = Eigen::VectorXd::Zero(6);
+      RHS6[i].setZero(6);
+    //   RHS10[i] = Eigen::VectorXd::Zero(10);
+      RHS10[i].setZero(10);
+    }
 
     // Get patch of elements
     std::set<int> &elemPatch = _patch->getPatch(v);
 
     for(auto elem : elemPatch) {
       _intSpace->initializeAddressingVector(_metaNumber->getNumbering(_intSpace->getFieldID()),
-                                            elem);
-      _intSpace->initializeSolution(_sol);
-      geoCoord = _mesh->getCoord(_intSpace->getCncGeoTag(), elem);
+                                            elem, _adr);
+      for(size_t i = 0; i < _adr.size(); ++i) {
+        _solution[i] = solVec[_adr[i]];
+      }
+      _mesh->getCoord(_intSpace->getCncGeoTag(), elem, geoCoord);
 
       // // Sommets de l'element
       // double r1[3] = {0., 0., 0.};
@@ -1120,7 +1243,8 @@ void feRecovery::solveLeastSquareEigen2D(int indRecovery, int iDerivative)
         xLoc[2] = (x[2] - zv);
 
         for(int i = 0; i < _dimRecovery; ++i) {
-          monomials[i] = pow(xLoc[0], _expXRecovery[i]) * pow(xLoc[1], _expYRecovery[i]);
+          // monomials[i] = pow(xLoc[0], _expXRecovery[i]) * pow(xLoc[1], _expYRecovery[i]);
+          monomials[i] = myPow(xLoc[0], _expXRecovery[i]) * myPow(xLoc[1], _expYRecovery[i]);
         }
 
         if(iDerivative > 0) {
@@ -1208,7 +1332,7 @@ void feRecovery::solveLeastSquareEigen2D(int indRecovery, int iDerivative)
         } else {
           // Simply interpolate the solution at quad nodes
           for(int iDeriv = 0; iDeriv < indRecovery; ++iDeriv) {
-            u[iDeriv] = _intSpace->interpolateSolutionAtQuadNode(k);
+            u[iDeriv] = _intSpace->interpolateFieldAtQuadNode(_solution, k);
           }
         }
 
@@ -1230,15 +1354,20 @@ void feRecovery::solveLeastSquareEigen2D(int indRecovery, int iDerivative)
     for(int iDeriv = 0; iDeriv < indRecovery; ++iDeriv) {
       switch(_degSol) {
         case 1: {
-          Eigen::VectorXd sol = lsInvAtVertices6[v] * RHS6[iDeriv];
-          recoveryCoeff[v][iDeriv] =
-            std::vector<double>(sol.data(), sol.data() + sol.rows() * sol.cols());
+          sol = lsInvAtVertices6[v] * RHS6[iDeriv];
+          recoveryCoeff[v][iDeriv] = std::vector<double>(sol.data(), sol.data() + 6);
+            // std::vector<double>(sol.data(), sol.data() + sol.rows() * sol.cols());
           break;
         }
         case 2: {
-          Eigen::VectorXd sol = lsInvAtVertices10[v] * RHS10[iDeriv];
-          recoveryCoeff[v][iDeriv] =
-            std::vector<double>(sol.data(), sol.data() + sol.rows() * sol.cols());
+          sol = lsInvAtVertices10[v] * RHS10[iDeriv];
+          for(int i = 0; i < 10; ++i){
+            recoveryVector[i] = sol(i);
+          }
+          recoveryCoeff[v][iDeriv] = recoveryVector;
+          // recoveryCoeff[v][iDeriv] =
+          //   std::vector<double>(sol.data(), sol.data() + 10);
+            // std::vector<double>(sol.data(), sol.data() + sol.rows() * sol.cols());
           break;
         }
       }
@@ -1246,17 +1375,25 @@ void feRecovery::solveLeastSquareEigen2D(int indRecovery, int iDerivative)
   }
 
   for(auto e : _mesh->_edges) {
-    std::vector<Eigen::VectorXd> RHS6(indRecovery, Eigen::MatrixXd::Zero(6, 1));
-    std::vector<Eigen::VectorXd> RHS10(indRecovery, Eigen::MatrixXd::Zero(10, 1));
+    // std::vector<Eigen::VectorXd> RHS6(indRecovery, Eigen::MatrixXd::Zero(6, 1));
+    // std::vector<Eigen::VectorXd> RHS10(indRecovery, Eigen::MatrixXd::Zero(10, 1));
+    for(int i = 0; i < indRecovery; ++i){
+    //   RHS6[i] = Eigen::VectorXd::Zero(6);
+      RHS6[i].setZero(6);
+    //   RHS10[i] = Eigen::VectorXd::Zero(10);
+      RHS10[i].setZero(10);
+    }
 
     // Get patch of elements
     std::set<int> &elemPatch = _patch->getEdgePatch(e.getTag());
 
     for(auto elem : elemPatch) {
       _intSpace->initializeAddressingVector(_metaNumber->getNumbering(_intSpace->getFieldID()),
-                                            elem);
-      _intSpace->initializeSolution(_sol);
-      geoCoord = _mesh->getCoord(_intSpace->getCncGeoTag(), elem);
+                                            elem, _adr);
+      for(size_t i = 0; i < _adr.size(); ++i) {
+        _solution[i] = solVec[_adr[i]];
+      }
+      _mesh->getCoord(_intSpace->getCncGeoTag(), elem, geoCoord);
 
       // // Sommets de l'element
       // double r1[3] = {0., 0., 0.};
@@ -1286,7 +1423,8 @@ void feRecovery::solveLeastSquareEigen2D(int indRecovery, int iDerivative)
                            2.0;
 
         for(int i = 0; i < _dimRecovery; ++i) {
-          monomials[i] = pow(xLoc[0], _expXRecovery[i]) * pow(xLoc[1], _expYRecovery[i]);
+          // monomials[i] = pow(xLoc[0], _expXRecovery[i]) * pow(xLoc[1], _expYRecovery[i]);
+          monomials[i] = myPow(xLoc[0], _expXRecovery[i]) * myPow(xLoc[1], _expYRecovery[i]);
         }
 
         if(iDerivative > 0) {
@@ -1318,7 +1456,10 @@ void feRecovery::solveLeastSquareEigen2D(int indRecovery, int iDerivative)
             // printf("elem with vertices\n");
             for(int iVert = 0; iVert < _nVertPerElm; ++iVert) {
               int vNode = _cnc->getNodeConnectivity(elem, iVert);
-              std::vector<double> &du = derivativeCoeff[vNode][iDeriv];
+
+              // OPT_CHANGE
+              // std::vector<double> &du = derivativeCoeff[vNode][iDeriv];
+
               // xLoc[0] = x[0] - _mesh->getVertex(vNode)->x();
               // xLoc[1] = x[1] - _mesh->getVertex(vNode)->y();
               // xLoc[2] = x[2] - _mesh->getVertex(vNode)->z();
@@ -1327,13 +1468,21 @@ void feRecovery::solveLeastSquareEigen2D(int indRecovery, int iDerivative)
               // += _geoSpace->getFunctionAtQuadNode(iVert, k) * du[i] * pow(xLoc[0], _expX[i]) *
               // pow(xLoc[1], _expY[i]); u[iDeriv] += _intSpace->getFunctionAtQuadNode(iVert, k) *
               // du[i] * pow(xLoc[0], _expX[i]) * pow(xLoc[1], _expY[i]);
-              u[iDeriv] += _intSpace->getFunctionAtQuadNode(iVert, k) * du[0];
+
+              // OPT_CHANGE
+              // u[iDeriv] += _intSpace->getFunctionAtQuadNode(iVert, k) * du[0];
+              u[iDeriv] += _intSpace->getFunctionAtQuadNode(iVert, k) * derivativeCoeff[vNode][iDeriv][0];
+
               // }
             }
             // Edges
             for(int iEdge = 0; iEdge < _nEdgePerElm; ++iEdge) {
               int localEdge = fabs(_cnc->getEdgeConnectivity(elem, iEdge));
-              std::vector<double> &du = derivativeCoeffOnEdges[localEdge][0][iDeriv];
+
+              // OPT_CHANGE
+              // std::vector<double> &du = derivativeCoeffOnEdges[localEdge][0][iDeriv];
+              // du = derivativeCoeffOnEdges[localEdge][0][iDeriv];
+
               // int v1, v2;
               // if(iEdge == _nEdgePerElm-1){
               //   v1 = _cnc->getNodeConnectivity(elem, iEdge);
@@ -1364,7 +1513,10 @@ void feRecovery::solveLeastSquareEigen2D(int indRecovery, int iDerivative)
               // _expX[i]) * pow(xLoc[1], _expY[i]); u[iDeriv] +=
               // _intSpace->getFunctionAtQuadNode(iEdge+3, k) * du[i] * pow(xLoc[0], _expX[i]) *
               // pow(xLoc[1], _expY[i]);
-              u[iDeriv] += _intSpace->getFunctionAtQuadNode(iEdge + 3, k) * du[0];
+
+              // OPT_CHANGE
+              // u[iDeriv] += _intSpace->getFunctionAtQuadNode(iEdge + 3, k) * du[0];
+              u[iDeriv] += _intSpace->getFunctionAtQuadNode(iEdge + 3, k) * derivativeCoeffOnEdges[localEdge][0][iDeriv][0];
               // }
             }
           }
@@ -1372,7 +1524,7 @@ void feRecovery::solveLeastSquareEigen2D(int indRecovery, int iDerivative)
         } else {
           // Simply interpolate the solution at quad nodes
           for(int iDeriv = 0; iDeriv < indRecovery; ++iDeriv) {
-            u[iDeriv] = _intSpace->interpolateSolutionAtQuadNode(k);
+            u[iDeriv] = _intSpace->interpolateFieldAtQuadNode(_solution, k);
           }
         }
 
@@ -1394,15 +1546,19 @@ void feRecovery::solveLeastSquareEigen2D(int indRecovery, int iDerivative)
     for(int iDeriv = 0; iDeriv < indRecovery; ++iDeriv) {
       switch(_degSol) {
         case 1: {
-          Eigen::VectorXd sol = lsInvAtVertices6OnEdges[e.getTag()] * RHS6[iDeriv];
+          sol = lsInvAtVertices6OnEdges[e.getTag()] * RHS6[iDeriv];
           recoveryCoeffOnEdges[e.getTag()][0][iDeriv] =
             std::vector<double>(sol.data(), sol.data() + sol.rows() * sol.cols());
           break;
         }
         case 2: {
-          Eigen::VectorXd sol = lsInvAtVertices10OnEdges[e.getTag()] * RHS10[iDeriv];
-          recoveryCoeffOnEdges[e.getTag()][0][iDeriv] =
-            std::vector<double>(sol.data(), sol.data() + sol.rows() * sol.cols());
+          sol = lsInvAtVertices10OnEdges[e.getTag()] * RHS10[iDeriv];
+          for(int i = 0; i < 10; ++i){
+            recoveryVector[i] = sol(i);
+          }
+          recoveryCoeffOnEdges[e.getTag()][0][iDeriv] = recoveryVector;
+          // recoveryCoeffOnEdges[e.getTag()][0][iDeriv] =
+          //   std::vector<double>(sol.data(), sol.data() + sol.rows() * sol.cols());
           break;
         }
       }
@@ -1453,9 +1609,9 @@ void feRecovery::solveLeastSquareEigen2D(int indRecovery, int iDerivative)
 //     for(auto elem : elemPatch) {
 //       // std::cout<<elem<<std::endl;
 //       _intSpace->initializeAddressingVector(_metaNumber->getNumbering(_intSpace->getFieldID()),
-//                                             elem);
-//       _intSpace->initializeSolution(_sol);
-//       geoCoord = _mesh->getCoord(_intSpace->getCncGeoTag(), elem);
+//                                             elem,  _adr);
+//       _intSpace->initializeSolution(_sol, _adr);
+//       _mesh->getCoord(_intSpace->getCncGeoTag(), elem, geoCoord);
 
 //       // Sommets de l'element
 //       double r1[3] = {0., 0., 0.};
@@ -1579,7 +1735,7 @@ void feRecovery::derivative(int indRecovery, int iDerivative, std::ostream &outp
   double tol = 0.0;
 
   if(iDerivative == 0) {
-    /* Store the independant term of the solution.
+    /* Store the independent term of the solution.
     Used in feRecovery::evalDerivative. */
     std::vector<double> solV(vertices.size(), 0.0);
     for(auto v : vertices) solV[v] = recoveryCoeff[v][0][0];
@@ -1721,7 +1877,6 @@ void feRecovery::derivative(int indRecovery, int iDerivative, std::ostream &outp
     output << "$NodeData\n";
     output << "1\n\"" << _intSpace->getFieldID() << "\"\n1\n3000\n3\n0\n1\n"
            << vertices.size() << "\n";
-    int cnt = 0;
     for(auto v : vertices) {
       // printf("Writing %d at vertex %d\n", v, _mesh->getVertex(cnt)->getTag());
       // output << _mesh->getVertex(cnt++)->getTag() << " " << recoveryCoeff[v][indRecovery][0] <<
@@ -1738,7 +1893,6 @@ void feRecovery::derivative(int indRecovery, int iDerivative, std::ostream &outp
     std::string fieldName = "d" + std::to_string(iDerivative + 1) + _intSpace->getFieldID() +
                             suffix[{iDerivative + 1, _dim * indRecovery + i}];
     output << "1\n\"" << fieldName << "\"\n1\n3000\n3\n0\n1\n" << vertices.size() << "\n";
-    int cnt = 0;
     for(auto v : vertices) {
       // output << _mesh->getVertex(cnt++)->getTag() << " " << derivativeCoeff[v][_dim * indRecovery
       // + i][0] << std::endl;
@@ -1825,7 +1979,7 @@ void feRecovery::estimateError(std::vector<double> &norm, feFunction *solRef)
 {
   norm[0] = norm[1] = 0.0;
 
-  std::vector<double> geoCoord;
+  std::vector<double> geoCoord(9, 0.);
   std::vector<double> x(3, 0.);
   std::vector<double> xLoc(3, 0.);
   std::vector<double> monomials(_dimRecovery, 0.);
@@ -1837,13 +1991,19 @@ void feRecovery::estimateError(std::vector<double> &norm, feFunction *solRef)
   int _nVertPerElm = _nNodePerElm;
   int _nEdgePerElm = _cnc->getNbEdgePerElem();
 
+  std::vector<double> &solVec = _sol->getSolutionReference();
+
   FILE *f = fopen("solutionReconstruite.txt", "w");
 
   for(int iElm = 0; iElm < _nElm; ++iElm) {
     // for(auto iElm : elemPatch) {
-    _intSpace->initializeAddressingVector(_metaNumber->getNumbering(_intSpace->getFieldID()), iElm);
-    _intSpace->initializeSolution(_sol);
-    geoCoord = _mesh->getCoord(_intSpace->getCncGeoTag(), iElm);
+    _intSpace->initializeAddressingVector(_metaNumber->getNumbering(_intSpace->getFieldID()), iElm,
+                                          _adr);
+    for(size_t i = 0; i < _adr.size(); ++i) {
+      _solution[i] = solVec[_adr[i]];
+    }
+
+    _mesh->getCoord(_intSpace->getCncGeoTag(), iElm, geoCoord);
 
     for(int k = 0; k < nQuad; ++k) {
       // Coordonnées des points d'intégration
@@ -1948,11 +2108,12 @@ void feRecovery::estimateError(std::vector<double> &norm, feFunction *solRef)
       // }
 
       norm[0] += J[nQuad * iElm + k] * w[k] *
-                 pow(uReconstruit - _intSpace->interpolateSolutionAtQuadNode(k), 2);
+                 pow(uReconstruit - _intSpace->interpolateFieldAtQuadNode(_solution, k), 2);
       if(solRef) norm[1] += J[nQuad * iElm + k] * w[k] * pow(uReconstruit - solRef->eval(0, x), 2);
 
       fprintf(f, "%+-12.12e \t %+-12.12e \t %+-12.12e \t %+-12.12e \t %+-12.12e\n", x[0], x[1],
-              uReconstruit, solRef->eval(0, x), _intSpace->interpolateSolutionAtQuadNode(k));
+              uReconstruit, solRef->eval(0, x),
+              _intSpace->interpolateFieldAtQuadNode(_solution, k));
     }
   }
   norm[0] = sqrt(norm[0]);
@@ -1965,7 +2126,7 @@ void feRecovery::estimateDudxError(std::vector<double> &norm, feVectorFunction *
 {
   norm[14] = norm[15] = norm[16] = norm[17] = 0.0;
 
-  std::vector<double> geoCoord;
+  std::vector<double> geoCoord(9, 0.);
   std::vector<double> x(3, 0.);
   std::vector<double> xLoc(3, 0.);
   std::vector<double> monomials(_dimRecovery, 0.);
@@ -1981,11 +2142,17 @@ void feRecovery::estimateDudxError(std::vector<double> &norm, feVectorFunction *
 
   std::set<int> &elemPatch = _patch->getPatch(4);
 
+  std::vector<double> &solVec = _sol->getSolutionReference();
+
   // for(int iElm = 0; iElm < _nElm; ++iElm) {
   for(auto iElm : elemPatch) {
-    _intSpace->initializeAddressingVector(_metaNumber->getNumbering(_intSpace->getFieldID()), iElm);
-    _intSpace->initializeSolution(_sol);
-    geoCoord = _mesh->getCoord(_intSpace->getCncGeoTag(), iElm);
+    _intSpace->initializeAddressingVector(_metaNumber->getNumbering(_intSpace->getFieldID()), iElm,
+                                          _adr);
+    for(size_t i = 0; i < _adr.size(); ++i) {
+      _solution[i] = solVec[_adr[i]];
+    }
+
+    _mesh->getCoord(_intSpace->getCncGeoTag(), iElm, geoCoord);
 
     for(int k = 0; k < nQuad; ++k) {
       // Coordonnées des points d'intégration
@@ -2051,7 +2218,7 @@ void feRecovery::estimateDudxError(std::vector<double> &norm, feVectorFunction *
       switch(_dim) {
         case 1:
           jac = dxdr[0];
-          duhdx = _intSpace->interpolateSolutionAtQuadNode_rDerivative(k);
+          duhdx = _intSpace->interpolateFieldAtQuadNode_rDerivative(_solution, k);
           duhdx /= jac;
           break;
         case 2:
@@ -2060,10 +2227,10 @@ void feRecovery::estimateDudxError(std::vector<double> &norm, feVectorFunction *
           double drdy = -dxds[0] / jac;
           double dsdx = -dxdr[1] / jac;
           double dsdy = dxdr[0] / jac;
-          duhdx = _intSpace->interpolateSolutionAtQuadNode_rDerivative(k) * drdx +
-                  _intSpace->interpolateSolutionAtQuadNode_sDerivative(k) * dsdx;
-          duhdy = _intSpace->interpolateSolutionAtQuadNode_rDerivative(k) * drdy +
-                  _intSpace->interpolateSolutionAtQuadNode_sDerivative(k) * dsdy;
+          duhdx = _intSpace->interpolateFieldAtQuadNode_rDerivative(_solution, k) * drdx +
+                  _intSpace->interpolateFieldAtQuadNode_sDerivative(_solution, k) * dsdx;
+          duhdy = _intSpace->interpolateFieldAtQuadNode_rDerivative(_solution, k) * drdy +
+                  _intSpace->interpolateFieldAtQuadNode_sDerivative(_solution, k) * dsdy;
           break;
       }
 
@@ -2088,7 +2255,7 @@ void feRecovery::estimateH1Error(std::vector<double> &norm, feVectorFunction *so
   norm[2] = norm[3] = norm[4] = norm[5] = norm[6] = norm[7] = 0.0;
   norm[18] = norm[19] = norm[20] = 0.0;
 
-  std::vector<double> geoCoord;
+  std::vector<double> geoCoord(9, 0.);
   std::vector<double> x(3, 0.);
   std::vector<double> xLoc(3, 0.);
   std::vector<double> monomials(_dimDerivation, 0.);
@@ -2104,13 +2271,17 @@ void feRecovery::estimateH1Error(std::vector<double> &norm, feVectorFunction *so
 
   // for(int iElm = 0; iElm < _nElm; ++iElm) {
 
-  std::set<int> &elemPatch = _patch->getPatch(4);
+  std::vector<double> &solVec = _sol->getSolutionReference();
 
   for(int iElm = 0; iElm < _nElm; ++iElm) {
     // for(auto iElm : elemPatch) {
-    _intSpace->initializeAddressingVector(_metaNumber->getNumbering(_intSpace->getFieldID()), iElm);
-    _intSpace->initializeSolution(_sol);
-    geoCoord = _mesh->getCoord(_intSpace->getCncGeoTag(), iElm);
+    _intSpace->initializeAddressingVector(_metaNumber->getNumbering(_intSpace->getFieldID()), iElm,
+                                          _adr);
+    for(size_t i = 0; i < _adr.size(); ++i) {
+      _solution[i] = solVec[_adr[i]];
+    }
+
+    _mesh->getCoord(_intSpace->getCncGeoTag(), iElm, geoCoord);
 
     for(int k = 0; k < nQuad; ++k) {
       // Coordonnées des points d'intégration
@@ -2220,7 +2391,7 @@ void feRecovery::estimateH1Error(std::vector<double> &norm, feVectorFunction *so
       switch(_dim) {
         case 1:
           jac = dxdr[0];
-          duhdx = _intSpace->interpolateSolutionAtQuadNode_rDerivative(k);
+          duhdx = _intSpace->interpolateFieldAtQuadNode_rDerivative(_solution, k);
           duhdx /= jac;
           break;
         case 2:
@@ -2229,10 +2400,10 @@ void feRecovery::estimateH1Error(std::vector<double> &norm, feVectorFunction *so
           double drdy = -dxds[0] / jac;
           double dsdx = -dxdr[1] / jac;
           double dsdy = dxdr[0] / jac;
-          duhdx = _intSpace->interpolateSolutionAtQuadNode_rDerivative(k) * drdx +
-                  _intSpace->interpolateSolutionAtQuadNode_sDerivative(k) * dsdx;
-          duhdy = _intSpace->interpolateSolutionAtQuadNode_rDerivative(k) * drdy +
-                  _intSpace->interpolateSolutionAtQuadNode_sDerivative(k) * dsdy;
+          duhdx = _intSpace->interpolateFieldAtQuadNode_rDerivative(_solution, k) * drdx +
+                  _intSpace->interpolateFieldAtQuadNode_sDerivative(_solution, k) * dsdx;
+          duhdy = _intSpace->interpolateFieldAtQuadNode_rDerivative(_solution, k) * drdy +
+                  _intSpace->interpolateFieldAtQuadNode_sDerivative(_solution, k) * dsdy;
           break;
       }
 
@@ -2271,7 +2442,7 @@ void feRecovery::estimateHessError(std::vector<double> &norm, feVectorFunction *
 {
   norm[8] = norm[9] = norm[10] = norm[11] = norm[12] = norm[13] = 0.0;
 
-  std::vector<double> geoCoord;
+  std::vector<double> geoCoord(9, 0.);
   std::vector<double> x(3, 0.);
   std::vector<double> xLoc(3, 0.);
   std::vector<double> monomials(_dimDerivation, 0.);
@@ -2283,6 +2454,8 @@ void feRecovery::estimateHessError(std::vector<double> &norm, feVectorFunction *
   int _nVertPerElm = _nNodePerElm;
   int _nEdgePerElm = _cnc->getNbEdgePerElem();
 
+  std::vector<double> &solVec = _sol->getSolutionReference();
+
   // for(int iElm = 0; iElm < _nElm; ++iElm) {
 
   // std::set<int> &elemPatch = _patch->getPatch(4);
@@ -2291,9 +2464,12 @@ void feRecovery::estimateHessError(std::vector<double> &norm, feVectorFunction *
 
   for(int iElm = 0; iElm < _nElm; ++iElm) {
     // for(auto iElm : elemPatch) {
-    _intSpace->initializeAddressingVector(_metaNumber->getNumbering(_intSpace->getFieldID()), iElm);
-    _intSpace->initializeSolution(_sol);
-    geoCoord = _mesh->getCoord(_intSpace->getCncGeoTag(), iElm);
+    _intSpace->initializeAddressingVector(_metaNumber->getNumbering(_intSpace->getFieldID()), iElm,
+                                          _adr);
+    for(size_t i = 0; i < _adr.size(); ++i) {
+      _solution[i] = solVec[_adr[i]];
+    }
+    _mesh->getCoord(_intSpace->getCncGeoTag(), iElm, geoCoord);
 
     for(int k = 0; k < nQuad; ++k) {
       // Coordonnées des points d'intégration
@@ -2447,7 +2623,7 @@ void feRecovery::estimated3Error(std::vector<double> &norm, feFunction *fund3udx
 {
   norm[21] = 0.0;
 
-  std::vector<double> geoCoord;
+  std::vector<double> geoCoord(9, 0.);
   std::vector<double> x(3, 0.);
   std::vector<double> xLoc(3, 0.);
   std::vector<double> monomials(_dimDerivation, 0.);
@@ -2458,6 +2634,8 @@ void feRecovery::estimated3Error(std::vector<double> &norm, feFunction *fund3udx
 
   int _nVertPerElm = _nNodePerElm;
   int _nEdgePerElm = _cnc->getNbEdgePerElem();
+
+  std::vector<double> &solVec = _sol->getSolutionReference();
 
   FILE *f = fopen("d3uReconstruite.txt", "w");
 
@@ -2470,9 +2648,13 @@ void feRecovery::estimated3Error(std::vector<double> &norm, feFunction *fund3udx
     // std::set<int> &elemPatch = _patch->getPatch(v);
     // norm[21] = 0.0;
     // for(auto iElm : elemPatch) {
-    _intSpace->initializeAddressingVector(_metaNumber->getNumbering(_intSpace->getFieldID()), iElm);
-    _intSpace->initializeSolution(_sol);
-    geoCoord = _mesh->getCoord(_intSpace->getCncGeoTag(), iElm);
+    _intSpace->initializeAddressingVector(_metaNumber->getNumbering(_intSpace->getFieldID()), iElm,
+                                          _adr);
+    for(size_t i = 0; i < _adr.size(); ++i) {
+      _solution[i] = solVec[_adr[i]];
+    }
+
+    _mesh->getCoord(_intSpace->getCncGeoTag(), iElm, geoCoord);
 
     for(int k = 0; k < nQuad; ++k) {
       // Coordonnées des points d'intégration
@@ -2508,9 +2690,13 @@ void feRecovery::estimated3Error(std::vector<double> &norm, feFunction *fund3udx
 
   // Last N elements : interpolate based on previous element
   for(int iElm = _nElm - 3; iElm < _nElm; ++iElm) {
-    _intSpace->initializeAddressingVector(_metaNumber->getNumbering(_intSpace->getFieldID()), iElm);
-    _intSpace->initializeSolution(_sol);
-    geoCoord = _mesh->getCoord(_intSpace->getCncGeoTag(), iElm);
+    _intSpace->initializeAddressingVector(_metaNumber->getNumbering(_intSpace->getFieldID()), iElm,
+                                          _adr);
+    for(size_t i = 0; i < _adr.size(); ++i) {
+      _solution[i] = solVec[_adr[i]];
+    }
+
+    _mesh->getCoord(_intSpace->getCncGeoTag(), iElm, geoCoord);
 
     for(int k = 0; k < nQuad; ++k) {
       // Coordonnées des points d'intégration
@@ -2558,28 +2744,31 @@ void feRecovery::estimated3Error(std::vector<double> &norm, feFunction *fund3udx
   fclose(f);
 }
 
+static double NODAL_VALUES[6];
+static double UVW[3];
+static double SHAPE[6];
+static double RESULT;
+
 // Interpolates the recovered solution or its derivatives at point x.
-double feRecovery::evalDerivative(int indexDerivative, std::vector<double> &x)
+double feRecovery::evalDerivative(int indexDerivative, double *x)
 {
   // For P2 intspace only : 6 nodal values
-
-  std::vector<double> u(3, 0.0);
   int elm = -1;
-  bool isFound = static_cast<feMesh2DP1 *>(_mesh)->locateVertex(x, elm, u);
+  bool isFound = static_cast<feMesh2DP1 *>(_mesh)->locateVertex(x, elm, UVW);
   if(!isFound) {
     printf(
-      "In feRecovery::evalDerivative : Warning - Point (%f, %f, %f) was not found in the mesh.\n",
-      x[0], x[1], x[2]);
+      "In feRecovery::evalDerivative : Warning - Point (%f, %f) was not found in the mesh.\n",
+      x[0], x[1]);
     return 0.0;
   } else {
-    std::vector<double> nodalValues(6, 0.0);
-    nodalValues[0] = derivAtVertices[indexDerivative][_cnc->getNodeConnectivity(elm, 0)];
-    nodalValues[1] = derivAtVertices[indexDerivative][_cnc->getNodeConnectivity(elm, 1)];
-    nodalValues[2] = derivAtVertices[indexDerivative][_cnc->getNodeConnectivity(elm, 2)];
-    nodalValues[3] = derivAtEdges[indexDerivative][fabs(_cnc->getEdgeConnectivity(elm, 0)) - 1];
-    nodalValues[4] = derivAtEdges[indexDerivative][fabs(_cnc->getEdgeConnectivity(elm, 1)) - 1];
-    nodalValues[5] = derivAtEdges[indexDerivative][fabs(_cnc->getEdgeConnectivity(elm, 2)) - 1];
-    return _intSpace->interpolateField(nodalValues, u.data());
+    NODAL_VALUES[0] = derivAtVertices[indexDerivative][_cnc->getNodeConnectivity(elm, 0)];
+    NODAL_VALUES[1] = derivAtVertices[indexDerivative][_cnc->getNodeConnectivity(elm, 1)];
+    NODAL_VALUES[2] = derivAtVertices[indexDerivative][_cnc->getNodeConnectivity(elm, 2)];
+    NODAL_VALUES[3] = derivAtEdges[indexDerivative][fabs(_cnc->getEdgeConnectivity(elm, 0)) - 1];
+    NODAL_VALUES[4] = derivAtEdges[indexDerivative][fabs(_cnc->getEdgeConnectivity(elm, 1)) - 1];
+    NODAL_VALUES[5] = derivAtEdges[indexDerivative][fabs(_cnc->getEdgeConnectivity(elm, 2)) - 1];
+    _intSpace->interpolateField(NODAL_VALUES, 6, UVW, SHAPE, RESULT);
+    return RESULT;
   }
 
   // std::string meshName = "foo.msh";
@@ -2624,4 +2813,32 @@ double feRecovery::evalDerivative(int indexDerivative, std::vector<double> &x)
 
   // fprintf(f, "};");
   // fclose(f);
+}
+
+// Dump all the recovered coefficients into a file to reload later
+void feRecovery::writeRecovery(std::string fileName){
+  FILE *f = fopen(fileName.c_str(), "w");
+  if(f != nullptr) {
+
+    fprintf(f, "%ld\n", derivAtVertices.size()); // Number of recovered derivatives at vertices
+
+    for(size_t i = 0; i < derivAtVertices.size(); ++i){
+      feInfo("Printing recovery %ld/%ld on %d DOFs", i+1, derivAtVertices.size(), derivAtVertices[i].size());
+      fprintf(f, "%ld\n", derivAtVertices[i].size()); // Number of DOFs
+      for(int j = 0; j < derivAtVertices[i].size(); ++j){
+        fprintf(f, "%+-1.17e\n", derivAtVertices[i][j]);
+      }
+    }
+
+    fprintf(f, "%ld\n", derivAtEdges.size()); // Number of recovered derivatives on the edges
+    for(size_t i = 0; i < derivAtEdges.size(); ++i){
+      feInfo("Printing recovery %ld/%ld on %ld DOFs", i+1, derivAtEdges.size(), derivAtEdges[i].size());
+      fprintf(f, "%ld\n", derivAtEdges[i].size()); // Number of DOFs
+      for(int j = 0; j < derivAtEdges[i].size(); ++j){
+        fprintf(f, "%+-1.17e\n", derivAtEdges[i][j]);
+      }
+    }
+
+    fclose(f);
+  }
 }

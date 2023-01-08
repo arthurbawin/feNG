@@ -1,0 +1,5 @@
+/home/bawina/Code/feNG/glfw/build/CMakeFiles/rebuild_cache.dir
+/home/bawina/Code/feNG/glfw/build/CMakeFiles/edit_cache.dir
+/home/bawina/Code/feNG/glfw/build/src/CMakeFiles/rebuild_cache.dir
+/home/bawina/Code/feNG/glfw/build/src/CMakeFiles/edit_cache.dir
+/home/bawina/Code/feNG/glfw/build/src/CMakeFiles/glfw.dir

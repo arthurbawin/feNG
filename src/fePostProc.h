@@ -25,7 +25,8 @@ public:
              feVectorFunction *referenceVectorSolution = nullptr)
     : _intSpace(intSpace), _geoSpace(intSpace->getCncGeo()->getFeSpace()),
       _referenceSolution(referenceSolution), _referenceVectorSolution(referenceVectorSolution),
-      _mesh(mesh), _metaNumber(metaNumber), _cnc(intSpace->getCncGeo()){};
+      _mesh(mesh), _metaNumber(metaNumber), _cnc(intSpace->getCncGeo()) {};
+
   ~fePostProc() {}
 
   double computeMeasure();

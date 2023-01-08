@@ -94,6 +94,8 @@ protected:
 public:
   int _nElm;
   int _nNodePerElm;
+  std::vector<feInt> _adr;
+  std::vector<double> _solution;
 
   feMetaNumber *_metaNumber;
   feMesh *_mesh;
@@ -110,12 +112,21 @@ public:
   feVectorFunction *_solRefHess;
 
   std::map<int, std::map<int, std::vector<double> > > recoveryCoeff; // #vert : {#rec , coeffs}
+
   std::map<int, std::map<int, std::map<int, std::vector<double> > > >
     recoveryCoeffOnEdges; // #edge : {#dof : {#rec , coeffs}}
+
   std::map<int, std::map<int, std::vector<double> > > derivativeCoeff; // #vert : {#der , coeffs}
+
   std::map<int, std::map<int, std::map<int, std::vector<double> > > >
     derivativeCoeffOnEdges; // #edge : {#dof : {#rec , coeffs}}
+
   std::map<int, std::vector<double> > errorCoeff; // #vert : coeffs
+
+  // std::vector<double> recoveryCoeffAtVertices; // Size = nVertices * nDeriv * dimBase
+  // std::vector<double> derivativeCoeffAtVertices; // Size = nVertices * nDeriv * dimBase
+  // std::vector<double> recoveryCoeffOnEdges2;
+  // std::vector<double> derivativeCoeffOnEdges2;
 
   /* All recovered functions (solution and derivatives) evaluated at the vertices dof : #recovery :
     {#vertex : val} They are pushed after they are created : 1D : u, dudx, d2udx2, d3udx3, ...
@@ -130,6 +141,7 @@ public:
              std::string metricMeshName = "", feVectorFunction *solRefGrad = nullptr,
              feVectorFunction *solRefHess = nullptr, feFunction *fund3udx = nullptr,
              bool append = false);
+  feRecovery(feSpace *space, feMesh *mesh, std::string recoveryFile);
   ~feRecovery() { delete _patch; }
 
   int getDim() { return _dim; }
@@ -142,6 +154,8 @@ public:
   std::vector<int> &getYExponentsRecovery() { return _expYRecovery; }
   std::vector<int> &getZExponentsRecovery() { return _expZRecovery; }
   std::map<int, std::vector<double> > &getErrorCoefficients() { return errorCoeff; }
+
+  void writeRecovery(std::string fileName);
 
   void allocateStructures();
   void matrixInverseEigen1D();
@@ -160,7 +174,7 @@ public:
   void estimateHessError(std::vector<double> &norm, feVectorFunction *solRefHess);
   void estimated3Error(std::vector<double> &norm, feFunction *fund3udx);
 
-  double evalDerivative(int degDerivative, std::vector<double> &x);
+  double evalDerivative(int degDerivative, double *x);
 };
 
 #endif

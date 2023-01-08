@@ -5,6 +5,7 @@
 #include "feSpace.h"
 #include "feNumber.h"
 #include "feSolutionContainer.h"
+#include "omp.h"
 
 class feSolutionContainer;
 
@@ -49,6 +50,7 @@ public:
 
   std::vector<double> getSolutionCopy() { return _sol; }
   std::vector<double> &getSolutionReference() { return _sol; }
+  std::vector<double> &getSolutionReferenceDot() { return _dsoldt; }
   double getSolAtDOF(int iDOF) { return _sol[iDOF]; }
   void setSolAtDOF(int iDOF, double val) { _sol[iDOF] = val; }
   void incrementSolAtDOF(int iDOF, double val) { _sol[iDOF] += val; }
@@ -57,7 +59,11 @@ public:
   void setSolDotAtDOF(int iDOF, double val) { _dsoldt[iDOF] = val; }
   void setSolDotToZero();
 
+  void copySpace(feMesh *mesh, feMetaNumber *metaNumber, feSpace *s1, feSpace *s2);
+
   void printSol(std::string file = "");
 };
+
+void myFun();
 
 #endif

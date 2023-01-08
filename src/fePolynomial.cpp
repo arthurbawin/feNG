@@ -63,7 +63,8 @@ double Polynomial::integrate(feMesh *mesh, std::string cncGeoID, int iElm)
 {
   double res = 0.0;
 
-  std::vector<double> geoCoord = mesh->getCoord(cncGeoID, iElm);
+  std::vector<double> geoCoord; 
+  mesh->getCoord(cncGeoID, iElm, geoCoord);
   feSpace *geoSpace = mesh->getGeometricSpace(cncGeoID);
 
   int n = geoSpace->getNbQuadPoints();
@@ -81,7 +82,8 @@ double Polynomial::innerProduct(Polynomial &other, feMesh *mesh, std::string cnc
 {
   double res = 0.0;
 
-  std::vector<double> geoCoord = mesh->getCoord(cncGeoID, iElm);
+  std::vector<double> geoCoord;
+  mesh->getCoord(cncGeoID, iElm, geoCoord);
   feSpace *geoSpace = mesh->getGeometricSpace(cncGeoID);
 
   // std::cout<<cncGeoID<<" - "<<iElm<<std::endl;

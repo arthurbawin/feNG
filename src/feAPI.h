@@ -16,6 +16,7 @@
 #include "feBilinearForm.h"
 #include "feSolver.h"
 #include "feLinearSystem.h"
+#include "feEigenProblem.h"
 #include "feLinearSystemPETSc.h"
 #include "feExporter.h"
 #include "feRecovery.h"
@@ -24,6 +25,12 @@
 #include "feAdaptMesh.h"
 #include "fePostProc.h"
 #include "feNorm.h"
+#include "feGraphics.h"
+//#include "feComputer.h"
+
+#if defined(HAVE_OMP)
+#include "omp.h"
+#endif
 
 #if defined(HAVE_GMSH)
 #include "gmsh.h"

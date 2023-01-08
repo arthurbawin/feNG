@@ -2,9 +2,12 @@
 #define _FECNCGEO_
 
 #include <vector>
+#include <map>
 #include <string>
 #include <iostream>
 #include <algorithm>
+
+#include "feMessage.h"
 
 class feSpace;
 class feMesh;
@@ -30,6 +33,17 @@ protected:
 
   std::vector<double> _J; // Jacobiens
 
+  // For elements coloring
+  std::vector<int> _nbElmPerNode;
+  std::vector<int> _nbElmPerElm;
+  std::vector<std::vector<int> > _listElmPerNode;
+  std::vector<std::vector<int> > _listElmPerElm;
+
+  int _nbColor;
+  std::vector<int> _elmToColor;
+  std::vector<int> _nbElmPerColor;
+  std::vector<std::vector<int> > _listElmPerColor;
+
 public:
   feCncGeo(int tag, int dim, int nNod, int nElm, int nEdg, std::string ID, std::string forme,
            feSpace *space, std::vector<int> connecNodes,
@@ -45,6 +59,10 @@ public:
 
     std::sort(connecNodes.begin(), connecNodes.end());
     _nNod = std::unique(connecNodes.begin(), connecNodes.end()) - connecNodes.begin();
+
+    int coloringAlgorithm = 1;
+    feInfo("Methode de Coloriage : %d", coloringAlgorithm);
+    colorElements(coloringAlgorithm);
   };
   ~feCncGeo()
   {
@@ -52,9 +70,10 @@ public:
     //   delete _space;
   }
 
-  std::string getID() { return _ID; }
+  std::string &getID() { return _ID; }
+  int getTag() { return _tag; }
   int getDim() { return _dim; }
-  std::string getForme() { return _forme; }
+  std::string getForme() {return _forme;}
   int getNbNodes() { return _nNod; }
   int getNbNodePerElem() { return _nNodPerElm; }
   int getNbElm() { return _nElm; }
@@ -89,6 +108,23 @@ public:
   void computeJacobians();
   // double getJacobianAtQuadNode(int numElem, int iQuadNode){ return _J; }
   std::vector<double> &getJacobians() { return _J; }
+
+  // void createPatchNode(int nbElm, int nbNodePerElm, std::vector<int> &cncNodes);
+  // void createPatchElm(int nbElm, int nbNodePerElm, std::vector<int> &cncNodes);
+
+  void colorElements(int coloringAlgorithm);
+  // void color2(int cncGeoTag = 0);
+  // void color3(int cncGeoTag = 0);
+  // void color4(int cncGeoTag = 0);
+  // void color5(int cncGeoTag = 0);
+
+  int getNbColor() { return _nbColor; };
+  std::vector<int> &getColorElm() { return _elmToColor; };
+  std::vector<int> &getNbElmPerColor() { return _nbElmPerColor; };
+  std::vector<std::vector<int> > &getListElmPerColor() { return _listElmPerColor; };
+  int getNbElmPerColorI(int i) { return _nbElmPerColor[i]; };
+  std::vector<int> &getListElmPerColorI(int i) { return _listElmPerColor[i]; };
+  int getElmColored(int iColor, int iElmC) { return _listElmPerColor[iColor][iElmC]; };
 };
 
 #endif

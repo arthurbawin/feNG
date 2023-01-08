@@ -34,13 +34,12 @@ protected:
 
   int _nCncGeo;
   std::vector<feCncGeo *> _cncGeo;
+
   std::map<std::string, int> _cncGeoMap;
 
 public:
   feMesh(int nNod = 0, int dim = 0, int nCncGeo = 0, std::string ID = "")
-    : _ID(ID), _dim(dim), _nNod(nNod), _nEdg(0), _nCncGeo(nCncGeo){
-
-                                                 };
+    : _ID(ID), _dim(dim), _nNod(nNod), _nEdg(0), _nCncGeo(nCncGeo){};
   virtual ~feMesh() {}
 
   std::string getID() { return _ID; }
@@ -57,8 +56,8 @@ public:
   double getXCoord(int i) { return _coord[i * _dim]; }
   double getYCoord(int i) { return _coord[i * _dim + 1]; }
   double getZCoord(int i) { return _coord[i * _dim + 2]; }
-  std::vector<double> getCoord(std::string cncGeoID, int numElm);
-  std::vector<double> getCoord(int cncGeoTag, int numElm);
+  void getCoord(std::string const &cncGeoID, int numElm, std::vector<double> &geoCoord);
+  void getCoord(int cncGeoTag, int numElm, std::vector<double> &geoCoord);
 
   int getVertexSequentialTagFromGmshTag(int gmshNodeTag) { return _verticesMap[gmshNodeTag]; }
   Vertex *getVertex(int iVertex) { return &_vertices[iVertex]; }
@@ -73,23 +72,23 @@ public:
 
   int getNbCncGeo() { return _nCncGeo; }
   std::vector<feCncGeo *> &getCncGeo() { return _cncGeo; }
-  int getCncGeoTag(std::string cncGeoID);
-  feCncGeo *getCncGeoByName(std::string cncGeoID);
+  int getCncGeoTag(std::string const &cncGeoID);
+  feCncGeo *getCncGeoByName(std::string const &cncGeoID);
   feCncGeo *getCncGeoByTag(int cncGeoTag);
-  int getNbElm(std::string cncGeoID);
+  int getNbElm(std::string const &cncGeoID);
   int getNbElm(int cncGeoTag);
-  int getNbNodePerElem(std::string cncGeoID);
+  int getNbNodePerElem(std::string const &cncGeoID);
   int getNbNodePerElem(int cncGeoTag);
-  int getVertex(std::string cncGeoID, int numElem, int numVertex);
+  int getVertex(std::string const &cncGeoID, int numElem, int numVertex);
   int getVertex(int cncGeoTag, int numElem, int numVertex);
-  int getElement(std::string cncGeoID, int numElem);
+  int getElement(std::string const &cncGeoID, int numElem);
   int getElement(int cncGeoTag, int numElem);
-  int getEdge(std::string cncGeoID, int numElem, int numEdge);
+  int getEdge(std::string const &cncGeoID, int numElem, int numEdge);
   int getEdge(int cncGeoTag, int numElem, int numEdge);
-  feSpace *getGeometricSpace(std::string cncGeoID);
+  feSpace *getGeometricSpace(std::string const &cncGeoID);
   feSpace *getGeometricSpace(int cncGeoTag);
 
-  virtual bool locateVertex(std::vector<double> &x, int &iElm, std::vector<double> &u,
+  virtual bool locateVertex(const double *x, int &iElm, double *u,
                             double tol = 1e-5) = 0;
 
   void printInfo(bool printConnectivities = true);
@@ -111,8 +110,8 @@ public:
              std::string domID);
   virtual ~feMesh1DP1();
 
-  virtual bool locateVertex(std::vector<double> &x, int &iElm, std::vector<double> &u,
-                            double tol = 1e-5){};
+  virtual bool locateVertex(const double *x, int &iElm, double *u,
+                            double tol = 1e-5);
 };
 
 class feMesh0DP0 : public feMesh
@@ -130,12 +129,27 @@ public:
   feMesh0DP0(double xA, int nElm, std::string domID);
   virtual ~feMesh0DP0();
 
-  virtual bool locateVertex(std::vector<double> &x, int &iElm, std::vector<double> &u,
-                            double tol = 1e-5){};
+  virtual bool locateVertex(const double *x, int &iElm, double *u,
+                            double tol = 1e-5)
+  {
+    u[0] = 1.;
+    return true;
+  };
 };
 
 class feMetaNumber;
 class feSolutionContainer;
+
+typedef struct rtreeSearchCtxStruct {
+  std::vector<Triangle*> *elements;
+  double uvw[3];
+  double r[3];
+  double x[3];
+  double min[2];
+  double max[2];
+  int iElm;
+  bool isFound;
+} rtreeSearchCtx;
 
 class feMesh2DP1 : public feMesh
 {
@@ -177,6 +191,8 @@ private:
   } entity;
 
   RTree<int, double, 3> _rtree;
+  RTree<int, double, 2> _rtree2d;
+  rtreeSearchCtx _searchCtx;
 
 public:
   // FIXME : Choose more explicit name, for example "physicalEntitiesDescription"
@@ -189,6 +205,8 @@ protected:
 
   mapType _physicalEntitiesDescription;
 
+  std::vector<int> _globalCurvesNodeConnectivity;
+  std::vector<int> _globalSurfacesNodeConnectivity;
   std::vector<int> _sequentialNodeToGmshNode;
 
   int _nPoints;
@@ -212,13 +230,15 @@ public:
   // Empty constructor : the mesh must be created afterwards with feCheck(readGmsh(...))
   feMesh2DP1(){};
   // Constructor calling readGmsh : will probably be removed
-  feMesh2DP1(std::string meshName, bool curved = false,
+  feMesh2DP1(std::string meshName, bool curved = false, bool reversed = false,
              mapType physicalEntitiesDescription = mapType());
   ~feMesh2DP1();
 
-  feStatus readMsh2(std::istream &input, bool curved, mapType physicalEntitiesDescription);
-  feStatus readMsh4(std::istream &input, bool curved, mapType physicalEntitiesDescription);
-  feStatus readGmsh(std::string meshName, bool curved = false,
+  feStatus readMsh2(std::istream &input, bool curved, bool reversed,
+                    mapType physicalEntitiesDescription);
+  feStatus readMsh4(std::istream &input, bool curved, bool reversed,
+                    mapType physicalEntitiesDescription);
+  feStatus readGmsh(std::string meshName, bool curved = false, bool reversed = false,
                     mapType physicalEntitiesDescription = mapType());
 
   bool isMeshFileBinary() { return _isBinary; }
@@ -228,7 +248,7 @@ public:
 
   int getGmshNodeTag(int iVertex) { return _sequentialNodeToGmshNode[iVertex]; }
 
-  bool locateVertex(std::vector<double> &x, int &iElm, std::vector<double> &u, double tol = 1e-5);
+  bool locateVertex(const double *x, int &iElm, double *u, double tol = 1e-5);
 
   void transfer(feMesh2DP1 *otherMesh, feMetaNumber *myMN, feMetaNumber *otherMN,
                 feSolutionContainer *solutionContainer, const std::vector<feSpace *> &mySpaces,

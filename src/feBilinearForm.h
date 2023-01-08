@@ -14,17 +14,31 @@ class feBilinearForm
 {
 protected:
   feSysElm *_sysElm;
+
+public:
+  // These members are used to compute the elementary system.
+  // Since friendship is not inherited by feSysElm derived class,
+  // they are public for now although it's probably not optimal.
   std::vector<feSpace *> _intSpace;
-
   feCncGeo *_cnc;
+  feSpace *_geoSpace;
+  std::vector<double> _geoCoord;
 
+  double _c0; // First coefficient of the BDF expansion
+  double _tn; // Current time
+  double _dt; // Time step
+
+  int _numElem;
+
+  double **_Ae;
+  double *_Be;
+
+protected:
   int _cncGeoTag;
   std::string _cncGeoID;
-  feSpace *_geoSpace;
   int _nCoord;
   int _nGeoNodes;
   int _nGeoElm;
-  std::vector<double> _geoCoord;
 
   int _nQuad;
   int _degQuad;
@@ -37,46 +51,49 @@ protected:
   std::vector<int> _jVar;
   feInt _niElm;
   feInt _njElm;
-  std::vector<int> _adrI;
-  std::vector<int> _adrJ;
+  std::vector<feInt> _adrI;
+  std::vector<feInt> _adrJ;  
 
-  double **_Ae;
-  double *_Be;
+public:
+  std::vector<std::vector<feInt>> _adr;
 
-  // ==================================================================
-  // Pointeur sur la méthode de construction de la matrice élémentaire
-  // (1) Utilisation d'une construction analytique
-  // (2) Construction par la méthode des différences finies
-  //     Utile pour : (i)  Pour développement rapide, mais
-  //                  (ii) Plus coûteux
-  //     Utilise    : R0 le résidu
-  //                  Rh le résidu perturbé
-  //                  h0 la perturbation de la solution
-  // ==================================================================
-  double *R0;
-  double *Rh;
-  double h0;
+  // The solution at DOFs on the current element for all FE spaces
+  std::vector<std::vector<double>> _sol;
+  std::vector<std::vector<double>> _solDot;
+
+  // The solution on the previous and next element (for e.g. DG fluxes)
+  std::vector<std::vector<double>> _solPrev;
+  std::vector<std::vector<double>> _solNext;
+
+public:
+  // To compute the elementary matrix with finite differences
+  double *_R0;
+  double *_Rh;
+  double _h0;
 
   void (feBilinearForm::*ptrComputeMatrix)(feMetaNumber *metaNumber, feMesh *mesh, feSolution *sol,
                                            int numElem);
 
 public:
   feBilinearForm(std::vector<feSpace *> space, feMesh *mesh, int degQuad, feSysElm *sysElm);
+  feBilinearForm(const feBilinearForm &f);
   ~feBilinearForm();
 
+  feCncGeo *getCncGeo() { return _cnc; }
   int getCncGeoTag() { return _cncGeoTag; }
 
   bool hasMatrix() { return _sysElm->hasMatrix(); }
 
-  int getNiElm() { return _niElm; }
-  int getNjElm() { return _njElm; }
-  std::vector<int> &getAdrI() { return _adrI; }
-  std::vector<int> &getAdrJ() { return _adrJ; }
+  feInt getNiElm() { return _niElm; }
+  feInt getNjElm() { return _njElm; }
+  std::vector<feInt> &getAdrI() { return _adrI; }
+  std::vector<feInt> &getAdrJ() { return _adrJ; }
 
   double **getAe() { return _Ae; }
   double *getBe() { return _Be; }
 
-  std::string getID() { return _sysElm->getID(); }
+  elementSystemType getID() { return _sysElm->getID(); }
+  std::string getIDName() { return _sysElm->getIDName(); }
 
   void initialize_vadij_only(feMetaNumber *metaNumber, int numElem);
   void initialize(feMetaNumber *metaNumber, feMesh *mesh, feSolution *sol, int numElem);
@@ -90,32 +107,6 @@ public:
 
   double getMatrixNorm();
   double getResidualNorm();
-
-  void printInfo()
-  {
-    printf("============== Bilinear form ==============\n");
-    printf("_cncGeoTag = %d\n", _cncGeoTag);
-    printf("_nCoord = %d\n", _nCoord);
-    printf("_nGeoNodes = %d\n", _nGeoNodes);
-    printf("_nGeoElm = %d\n", _nGeoElm);
-    printf("_geoCoord :");
-    for(auto val : _geoCoord) std::cout << val << " ";
-    std::cout << std::endl;
-    printf("_iVar :");
-    for(auto val : _iVar) std::cout << val << " ";
-    std::cout << std::endl;
-    printf("_jVar :");
-    for(auto val : _jVar) std::cout << val << " ";
-    std::cout << std::endl;
-    printf("_adrI :");
-    for(auto val : _adrI) std::cout << val << " ";
-    std::cout << std::endl;
-    printf("_adrJ :");
-    for(auto val : _adrJ) std::cout << val << " ";
-    std::cout << std::endl;
-    // printf("_Ae :"); for(auto val : _Ae) std::cout<<val<<" "; std::cout<<std::endl;
-    // printf("_Be :"); for(auto val : _Be) std::cout<<val<<" "; std::cout<<std::endl;
-  }
 };
 
 #endif

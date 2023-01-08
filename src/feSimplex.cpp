@@ -89,7 +89,7 @@ inline int iterate_simplex()
       }
     }
   }
-  if(isinf(max_constr))
+  if(std::isinf(max_constr))
     return -1;
   else
     pivot(best_constr, best_var);

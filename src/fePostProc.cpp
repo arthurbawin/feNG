@@ -11,8 +11,12 @@ double fePostProc::computeMeasure()
   int nElm = _intSpace->getNbElm();
   int nQuad = _geoSpace->getNbQuadPoints();
 
+#if defined(HAVE_OMP)
+#pragma omp parallel for private(geoCoord) reduction(+ : meas) schedule(dynamic)
+#endif
   for(int iElm = 0; iElm < nElm; ++iElm) {
-    geoCoord = _mesh->getCoord(_intSpace->getCncGeoTag(), iElm);
+    geoCoord.resize(_cnc->getNbNodePerElem()*3);
+    _mesh->getCoord(_intSpace->getCncGeoTag(), iElm, geoCoord);
     for(int k = 0; k < nQuad; ++k) {
       meas += _cnc->getJacobians()[nQuad * iElm + k] * w[k];
     }
@@ -28,13 +32,28 @@ double fePostProc::computeSolutionIntegral(feSolution *sol)
   std::vector<double> &w = _intSpace->getQuadratureWeights();
   int nElm = _intSpace->getNbElm();
   int nQuad = _geoSpace->getNbQuadPoints();
+  
+  std::vector<feInt> adr;
+  std::vector<double> solution;
+  std::vector<double> &solVec = sol->getSolutionReference();
 
+#if defined(HAVE_OMP)
+#pragma omp parallel for private(geoCoord, adr, solInt, solution) reduction(+ : integral) schedule(dynamic)
+#endif
   for(int iElm = 0; iElm < nElm; ++iElm) {
-    _intSpace->initializeAddressingVector(_metaNumber->getNumbering(_intSpace->getFieldID()), iElm);
-    _intSpace->initializeSolution(sol);
-    geoCoord = _mesh->getCoord(_intSpace->getCncGeoTag(), iElm);
+    adr.resize(_intSpace->getNbFunctions());
+    _intSpace->initializeAddressingVector(_metaNumber->getNumbering(_intSpace->getFieldID()), iElm,
+                                          adr);
+
+    solution.resize(adr.size());    
+    for(size_t i = 0; i < adr.size(); ++i) {
+      solution[i] = solVec[adr[i]];
+    }
+
+    geoCoord.resize(_cnc->getNbNodePerElem()*3);
+    _mesh->getCoord(_intSpace->getCncGeoTag(), iElm, geoCoord);
     for(int k = 0; k < nQuad; ++k) {
-      solInt = _intSpace->interpolateSolutionAtQuadNode(k);
+      solInt = _intSpace->interpolateFieldAtQuadNode(solution, k);
       integral += solInt * _cnc->getJacobians()[nQuad * iElm + k] * w[k];
     }
   }
@@ -44,17 +63,22 @@ double fePostProc::computeSolutionIntegral(feSolution *sol)
 /* Compute the integral at time t of a given function fun on the associated geometric connectivity
  */
 double fePostProc::computeFunctionIntegral(feFunction *fun, double t)
-{
+{ 
   double integral = 0.0;
   std::vector<double> geoCoord;
   std::vector<double> &w = _intSpace->getQuadratureWeights();
+  std::vector<double> x;
   int nElm = _intSpace->getNbElm();
   int nQuad = _geoSpace->getNbQuadPoints();
 
+#if defined(HAVE_OMP)
+#pragma omp parallel for private(geoCoord, x) reduction(+ : integral) schedule(dynamic)
+#endif
   for(int iElm = 0; iElm < nElm; ++iElm) {
-    geoCoord = _mesh->getCoord(_intSpace->getCncGeoTag(), iElm);
+    geoCoord.resize(_cnc->getNbNodePerElem()*3);
+    _mesh->getCoord(_intSpace->getCncGeoTag(), iElm, geoCoord);
+    x.resize(3);
     for(int k = 0; k < nQuad; ++k) {
-      std::vector<double> x(3, 0.0);
       _geoSpace->interpolateVectorFieldAtQuadNode(geoCoord, k, x);
       integral += fun->eval(t, x) * _cnc->getJacobians()[nQuad * iElm + k] * w[k];
     }
@@ -69,19 +93,39 @@ double fePostProc::computeL2ErrorNorm(feSolution *sol)
   double L2Error = 0.0, solInt, solRef, t = sol->getCurrentTime();
   std::vector<double> geoCoord;
   std::vector<double> &w = _intSpace->getQuadratureWeights();
+  std::vector<double> x;
   int nElm = _intSpace->getNbElm();
   int nQuad = _geoSpace->getNbQuadPoints();
 
-  if(_referenceSolution == nullptr) feWarning("Reference solution is NULL.");
+  std::vector<feInt> adr;
+  std::vector<double> solution;
+  std::vector<double> &solVec = sol->getSolutionReference();
 
+  if(_referenceSolution == nullptr) feWarning("Reference solution is NULL.");
+#if defined(HAVE_OMP)
+#pragma omp parallel for private(geoCoord, adr, solInt, solRef, x, solution) reduction(+ : L2Error) schedule(dynamic)
+#endif
   for(int iElm = 0; iElm < nElm; ++iElm) {
-    _intSpace->initializeAddressingVector(_metaNumber->getNumbering(_intSpace->getFieldID()), iElm);
-    _intSpace->initializeSolution(sol);
-    geoCoord = _mesh->getCoord(_intSpace->getCncGeoTag(), iElm);
+    adr.resize(_intSpace->getNbFunctions());
+    _intSpace->initializeAddressingVector(_metaNumber->getNumbering(_intSpace->getFieldID()), iElm,
+                                          adr);
+    solution.resize(adr.size());
+    for(size_t i = 0; i < adr.size(); ++i) {
+      solution[i] = solVec[adr[i]];
+    }
+
+    geoCoord.resize(_cnc->getNbNodePerElem()*3);
+    _mesh->getCoord(_intSpace->getCncGeoTag(), iElm, geoCoord);
+    x.resize(3);
     for(int k = 0; k < nQuad; ++k) {
-      std::vector<double> x(3, 0.0);
       _geoSpace->interpolateVectorFieldAtQuadNode(geoCoord, k, x);
-      solInt = _intSpace->interpolateSolutionAtQuadNode(k);
+
+      if(_intSpace->useGlobalFunctions()) {
+        solInt = _intSpace->interpolateFieldAtQuadNode(solution, iElm, k);
+      } else {
+        solInt = _intSpace->interpolateFieldAtQuadNode(solution, k);
+      }
+
       solRef = (_referenceSolution != nullptr) ? _referenceSolution->eval(t, x) : 0.0;
       L2Error +=
         (solInt - solRef) * (solInt - solRef) * _cnc->getJacobians()[nQuad * iElm + k] * w[k];
@@ -142,7 +186,7 @@ double fePostProc::computeL2ErrorNorm(feSolution *sol)
 
 //       for(int iElm = 0; iElm < nElm; ++iElm) {
 //         _intSpace->initializeAddressingVector(metaNumber->getNumbering(_intSpace->getFieldID()),
-//         iElm); _intSpace->initializeSolution(sol); geoCoord = mesh->getCoord(cncGeoTag, iElm);
+//         iElm); _intSpace->initializeSolution(sol); mesh->getCoord(cncGeoTag, iElm, geoCoord);
 //         for(int k = 0; k < _nQuad; ++k) {
 //           geoSpace->interpolateVectorFieldAtQuadNode(geoCoord, k, x);
 //           // Current solution

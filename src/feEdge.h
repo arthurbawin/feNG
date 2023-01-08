@@ -40,7 +40,7 @@ public:
 };
 
 struct EdgeLessThan {
-  bool operator()(const Edge e1, const Edge e2) const
+  bool operator()(const Edge &e1, const Edge &e2) const
   {
     int tag10 = e1.getTag(0), tag11 = e1.getTag(1);
     int tag20 = e2.getTag(0), tag21 = e2.getTag(1);

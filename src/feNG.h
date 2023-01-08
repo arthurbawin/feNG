@@ -32,7 +32,7 @@
 #endif
 
 #if defined(HAVE_PETSC)
-typedef PetscInt64 feInt;
+typedef PetscInt feInt;
 #elif defined(HAVE_MKL)
 typedef long int feInt;
 #else

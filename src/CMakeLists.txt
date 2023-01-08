@@ -1,72 +1,3 @@
-# set(feNG_SRC ellipseToolbox.cpp 
-# feBilinearForm.cpp 
-# feCncGeo.cpp 
-# feCompressedRowStorage.cpp 
-# feCurvedAdapt.cpp 
-# feExporter.cpp 
-# feLinearSystem.cpp 
-# feLinearSystemMklPardiso.cpp 
-# feLinearSystemPETSc.cpp 
-# feMesh.cpp 
-# feMeshRead.cpp 
-# feMetric.cpp 
-# feNorm.cpp 
-# feNumber.cpp 
-# feRecovery.cpp 
-# feQuadrature.cpp 
-# feSimplex.cpp 
-# feSolution.cpp 
-# feSolutionContainer.cpp 
-# feSolver.cpp 
-# feSpace.cpp 
-# feSpaceTriangle.cpp 
-# feSysElm.cpp 
-# feTriangle.cpp
-# )
-
-# #Add Gmsh files for STensor3
-#   list(
-#   APPEND feNG_SRC 
-#   ${CMAKE_SOURCE_DIR}/contrib/gmsh/fullMatrix.cpp 
-#   ${CMAKE_SOURCE_DIR}/contrib/gmsh/Numeric.cpp 
-#   ${CMAKE_SOURCE_DIR}/contrib/gmsh/STensor3.cpp 
-#   ${CMAKE_SOURCE_DIR}/contrib/gmsh/poly34.cpp
-#   )
-
-# set(
-# feNG_API ellipseToolbox.h 
-# feBilinearForm.h 
-# feCncGeo.h 
-# feCompressedRowStorage.h 
-# feCurvedAdapt.h
-# #feEdge.h
-# #feElement.h 
-# feExporter.h 
-# feFunction.h
-# #feLine.h 
-# feLinearSystem.h 
-# feLinearSystemMklPardiso.h 
-# feLinearSystemPETSc.h 
-# feMesh.h 
-# feMetric.h 
-# feNG.h 
-# feNorm.h 
-# feNumber.h 
-# feQuadrature.h 
-# feRecovery.h 
-# feSimplex.h 
-# feSolution.h 
-# feSolutionContainer.h 
-# feSolver.h 
-# feSpace.h 
-# feSysElm.h 
-# feTriangle.h 
-# feVertex.h
-# )
-
-# feNG_add_library(feNG "${feNG_SRC}"
-#                       "${feNG_API}")
-
 set(feNG_SRC
     ellipseToolbox.cpp
     feAdaptMesh.cpp
@@ -74,7 +5,9 @@ set(feNG_SRC
     feCncGeo.cpp
     feCompressedRowStorage.cpp
     feCurvedAdapt.cpp
+    feEigenProblem.cpp
     feExporter.cpp
+    feGraphics.cpp
     feLinearSystem.cpp
     feLinearSystemMklPardiso.cpp
     feLinearSystemPETSc.cpp
@@ -97,17 +30,23 @@ set(feNG_SRC
     feSolver.cpp
     feSpace.cpp
     feSpaceTriangle.cpp
-    feSysElm.cpp
-    feTriangle.cpp)
+    # feSysElm.cpp
+    feSysElm_0D.cpp
+    feSysElm_1D.cpp
+    feSysElm_2D.cpp
+    feTriangle.cpp
+    glfem.cpp)
 
-# Add Gmsh files for STensor3
-list(
-  APPEND
-  feNG_SRC
-  ${CMAKE_SOURCE_DIR}/contrib/gmsh/fullMatrix.cpp
-  ${CMAKE_SOURCE_DIR}/contrib/gmsh/Numeric.cpp
-  ${CMAKE_SOURCE_DIR}/contrib/gmsh/STensor3.cpp
-  ${CMAKE_SOURCE_DIR}/contrib/gmsh/poly34.cpp)
+if(ENABLE_METRIC)
+    # Add Gmsh files for STensor3
+    list(
+      APPEND
+      feNG_SRC
+      ${CMAKE_SOURCE_DIR}/contrib/gmsh/fullMatrix.cpp
+      ${CMAKE_SOURCE_DIR}/contrib/gmsh/Numeric.cpp
+      ${CMAKE_SOURCE_DIR}/contrib/gmsh/STensor3.cpp
+      ${CMAKE_SOURCE_DIR}/contrib/gmsh/poly34.cpp)
+endif()
 
 set(feNG_API
     ellipseToolbox.h
@@ -117,8 +56,11 @@ set(feNG_API
     feCncGeo.h
     feCompressedRowStorage.h
     feCurvedAdapt.h
-    # feEdge.h feElement.h
+    feEdge.h
+    feEigenProblem.h
+    feElement.h
     feExporter.h
+    feGraphics.h
     feFunction.h
     # feLine.h
     feLinearSystem.h
@@ -143,7 +85,8 @@ set(feNG_API
     feSpace.h
     feSysElm.h
     feTriangle.h
-    feVertex.h)
+    feVertex.h
+    glfem.h)
 
 feng_add_library(feNG "${feNG_SRC}" "${feNG_API}")
 

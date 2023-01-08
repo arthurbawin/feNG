@@ -10,7 +10,7 @@ class feCompressedRowStorage
 {
 public:
   feCompressedRowStorage(feMetaNumber *metaNumber, feMesh *mesh,
-                         std::vector<feBilinearForm *> &formMatrices);
+                         std::vector<feBilinearForm *> &formMatrices, int numMatrixForms);
   ~feCompressedRowStorage()
   {
     if(nnz != NULL) delete[] nnz;
@@ -27,6 +27,11 @@ public:
     if(ddlElms != NULL) {
       if(ddlElms[0] != NULL) delete[] ddlElms[0];
       delete[] ddlElms;
+    }
+
+    if(ddlColor != NULL) {
+      if(ddlColor[0] != NULL) delete[] ddlColor[0];
+      delete[] ddlColor;
     }
 
     if(liste != NULL) delete[] liste;
@@ -55,6 +60,7 @@ protected:
   feInt *ddlNumberOfElements = NULL;
   feInt **ddlBiLinearForms = NULL;
   feInt **ddlElms = NULL;
+  feInt **ddlColor = NULL;
   feInt *liste = NULL;
   bool *ddl_rngcof = NULL;
 
@@ -65,7 +71,7 @@ class feCompressedRowStorageMklPardiso : public feCompressedRowStorage
 {
 public:
   feCompressedRowStorageMklPardiso(feMetaNumber *metaNumber, feMesh *mesh,
-                                   std::vector<feBilinearForm *> &formMatrices);
+                                   std::vector<feBilinearForm *> &formMatrices, int numMatrixForms);
   ~feCompressedRowStorageMklPardiso()
   {
     if(rangee != NULL) delete[] rangee;
@@ -80,6 +86,8 @@ public:
   // ================================================================
   feInt *getAp() { return Ap; };
   feInt *getAj() { return Aj; };
+  double *getRangee() { return rangee; };
+  feInt *getIrangee() { return irangee; };
   double *allocateMatrix() { return new double[nz]; };
   void freeMatrix(double *Matrix)
   {

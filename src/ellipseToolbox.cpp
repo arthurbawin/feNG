@@ -95,7 +95,6 @@ void imConicRotation(std::vector<double> &p, std::vector<double> &R) {
   double b = p[1];
   double c = p[2];
 
-  double D = discriminant(p);
   double ra = a;
   double rc = c;
 
@@ -130,7 +129,7 @@ void imConicRotation(std::vector<double> &p, std::vector<double> &R) {
   R[3] = cos_phi;
 }
 
-void getExplicitEllipse(std::vector<double> &p, double *semiA, double *semiB,
+bool getExplicitEllipse(std::vector<double> &p, double *semiA, double *semiB,
                         std::vector<double> &R, std::vector<double> &t) {
   double a = p[0];
   double b = p[1] / 2.0;
@@ -162,9 +161,11 @@ void getExplicitEllipse(std::vector<double> &p, double *semiA, double *semiB,
       }
     } else {
       printf("In getExplicitEllipse : Warning : coefficients describe a degenerate ellipse.\n");
+      return false;
     }
   } else {
     printf("In getExplicitEllipse : Warning : coefficients describe a hyperbola.\n");
+    return false;
   }
 
   imConicTranslation(p, t);
@@ -172,6 +173,7 @@ void getExplicitEllipse(std::vector<double> &p, double *semiA, double *semiB,
   t[1] *= -1.0;
   imConicTranslate(p, t);
   imConicRotation(p, R);
+  return true;
 }
 
 /* Return the discretization (x,y) of the ellipse given by the implicit form ax² + b*x*y + cy² = 1
@@ -181,24 +183,29 @@ void getExplicitEllipse(std::vector<double> &p, double *semiA, double *semiB,
     ( b c )
 */
 
-void getEllipsePoints(double a, double b, double c, double xC, double yC, std::vector<double> &x,
+bool getEllipsePoints(double a, double b, double c, double xC, double yC, std::vector<double> &x,
                       std::vector<double> &y) {
   std::vector<double> p = {a, b, c, 0., 0., -1.};
   std::vector<double> t(2, 0.);
   std::vector<double> R(4, 0.);
   double semiA, semiB;
 
-  getExplicitEllipse(p, &semiA, &semiB, R, t);
+  bool res = getExplicitEllipse(p, &semiA, &semiB, R, t);
 
-  size_t size = x.size();
+  if(res){
+    size_t size = x.size();
 
-  double xTmp, yTmp;
+    double xTmp, yTmp;
 
-  for(size_t i = 0; i < size; ++i) {
-    xTmp = semiA * cos(i * 2.0 * M_PI / size);
-    yTmp = semiB * sin(i * 2.0 * M_PI / size);
+    for(size_t i = 0; i < size; ++i) {
+      xTmp = semiA * cos(i * 2.0 * M_PI / size);
+      yTmp = semiB * sin(i * 2.0 * M_PI / size);
 
-    x[i] = xC + R[0] * xTmp + R[1] * yTmp;
-    y[i] = yC + R[2] * xTmp + R[3] * yTmp;
+      x[i] = xC + R[0] * xTmp + R[1] * yTmp;
+      y[i] = yC + R[2] * xTmp + R[3] * yTmp;
+    }
+    return true;
+  } else{
+    return false;
   }
 }
