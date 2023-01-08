@@ -9,7 +9,7 @@
 double fSol(const double t, const std::vector<double> &pos, const std::vector<double> &par)
 {
   double x = pos[0];
-  double y = pos[1];
+  // double y = pos[1];
   return pow(x, 6);
 
   // // Solution for the Neumann problem
@@ -86,35 +86,37 @@ int main(int argc, char **argv)
   std::vector<int> nElm(nMesh, 0);
   std::vector<double> L2errorU(2 * nMesh, 0.0);
 
-  bool hasAnalyticSolution = false;
+  bool hasAnalyticSolution = true;
 
   // Compute the solution on each mesh
   for(int i = 0; i < nMesh; ++i){
     // std::string meshFile = "../data/Convergence/m" + std::to_string(i+3) + ".msh";
-    std::string meshFile = "../data/Convergence/m"+std::to_string(i+1)+".msh";
+    std::string meshFile = "squareIso" + std::to_string(i+1) + ".msh";
     // std::string meshFile = "wideCrack.msh";
     // std::string meshFile = "transfinite" + std::to_string(i+1) + "_P2.msh";
 
     feMesh2DP1 mesh(meshFile);
     nElm[i] = mesh.getNbInteriorElems();
 
-    // feSpace *uBord, *uDomaine;
-    int degreeQuadrature = 30;
+    feSpace *uBord, *uDomaine;
+    int degreeQuadrature = 12;
     int dim;
-    // feCheck(createFiniteElementSpace(uBord, &mesh, 1, LINE, order, "U", "Bord", degreeQuadrature, funSol));
-    // feCheck(createFiniteElementSpace(uDomaine, &mesh, 2, TRI, order, "U", "Domaine", degreeQuadrature, funZero));
-    feSpace *uSaut, *uHaut, *uBas, *uDroite, *uGauche, *uDomaine;
-    feCheck(createFiniteElementSpace(uHaut,    &mesh, dim = 1, LINE, order, "U", "Haut",    degreeQuadrature, funZero));
-    feCheck(createFiniteElementSpace(uBas,     &mesh, dim = 1, LINE, order, "U", "Bas",     degreeQuadrature, funZero));
-    feCheck(createFiniteElementSpace(uDroite,  &mesh, dim = 1, LINE, order, "U", "Droite",  degreeQuadrature, funZero));
-    feCheck(createFiniteElementSpace(uGauche,  &mesh, dim = 1, LINE, order, "U", "Gauche",  degreeQuadrature, funZero));
-    feCheck(createFiniteElementSpace(uSaut,    &mesh, dim = 1, LINE, order, "U", "Saut",    degreeQuadrature, funZero));
-    feCheck(createFiniteElementSpace(uDomaine, &mesh, dim = 2, TRI,  order, "U", "Domaine", degreeQuadrature, funZero));
+    feCheck(createFiniteElementSpace(uBord, &mesh, dim = 1, LINE, order, "U", "Bord", degreeQuadrature, funSol));
+    feCheck(createFiniteElementSpace(uDomaine, &mesh, dim = 2, TRI, order, "U", "Domaine", degreeQuadrature, funZero));
+    // feSpace *uSaut, *uHaut, *uBas, *uDroite, *uGauche, *uDomaine;
+    // feCheck(createFiniteElementSpace(uHaut,    &mesh, dim = 1, LINE, order, "U", "Haut",    degreeQuadrature, funZero));
+    // feCheck(createFiniteElementSpace(uBas,     &mesh, dim = 1, LINE, order, "U", "Bas",     degreeQuadrature, funZero));
+    // feCheck(createFiniteElementSpace(uDroite,  &mesh, dim = 1, LINE, order, "U", "Droite",  degreeQuadrature, funZero));
+    // feCheck(createFiniteElementSpace(uGauche,  &mesh, dim = 1, LINE, order, "U", "Gauche",  degreeQuadrature, funZero));
+    // feCheck(createFiniteElementSpace(uSaut,    &mesh, dim = 1, LINE, order, "U", "Saut",    degreeQuadrature, funZero));
+    // feCheck(createFiniteElementSpace(uDomaine, &mesh, dim = 2, TRI,  order, "U", "Domaine", degreeQuadrature, funZero));
 
-    std::vector<feSpace *> spaces = {uSaut, uHaut, uBas, uDroite, uGauche, uDomaine};
+    // std::vector<feSpace *> spaces = {uSaut, uHaut, uBas, uDroite, uGauche, uDomaine};
     // std::vector<feSpace *> spaces = {uHaut, uBas, uDroite, uGauche, uDomaine};
+    std::vector<feSpace *> spaces = {uBord, uDomaine};
     // std::vector<feSpace *> essentialSpaces = {uDroite, uGauche};
-    std::vector<feSpace *> essentialSpaces = {uHaut, uBas, uGauche, uDroite};
+    // std::vector<feSpace *> essentialSpaces = {uHaut, uBas, uGauche, uDroite};
+    std::vector<feSpace *> essentialSpaces = {uBord};
 
     feMetaNumber metaNumber(&mesh, spaces, essentialSpaces);
     feSolution sol(&mesh, spaces, essentialSpaces, &metaNumber);
@@ -123,6 +125,7 @@ int main(int argc, char **argv)
     feBilinearForm sourceU({uDomaine}, &mesh, degreeQuadrature, new feSysElm_2D_Source(1.0, funSource));
 
     feLinearSystem *system;
+    feCheck(createLinearSystem(system, PETSC, spaces, {&diffU, &sourceU}, &metaNumber, &mesh, argc, argv));
     // feCheck(createLinearSystem(system, MKLPARDISO, spaces, {&diffU, &sourceU}, &metaNumber, &mesh, argc, argv));
     // feCheck(createLinearSystem(system, MKLPARDISO, spaces, {&diffU, &n1, &n2}, &metaNumber, &mesh, argc, argv));
     // feCheck(createLinearSystem(system, MKLPARDISO, spaces, {&diffU, &sautU}, &metaNumber, &mesh, argc, argv));
@@ -155,7 +158,7 @@ int main(int argc, char **argv)
 
     delete solver;
     delete exporter;
-    // delete uBord;
+    delete uBord;
     delete uDomaine;
   }
 

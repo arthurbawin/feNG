@@ -309,8 +309,8 @@ void feCompressedRowStorageMklPardiso::print_info()
 {
   // for(feInt i=0;i<nz;i++) printf(" %ld \n", Aj[i]);
   for(feInt i = 0; i < ordre; i++) {
-    printf("rangee (%ld) ", i + 1);
-    for(feInt j = 0; j < Ap[i + 1] - Ap[i]; j++) printf(" %ld ", Aj[Ap[i] - 1 + j]);
+    printf("rangee (%d) ", i + 1);
+    for(feInt j = 0; j < Ap[i + 1] - Ap[i]; j++) printf(" %d ", Aj[Ap[i] - 1 + j]);
     printf("\n");
   }
 }

@@ -65,32 +65,94 @@ void feSolution::initializeTemporalSolution(double t0, double t1, int nTimeSteps
 void feSolution::initializeUnknowns(feMesh *mesh, feMetaNumber *metaNumber)
 {
   for(feSpace *const &fS : _space) {
+
     int nElm = mesh->getNbElm(fS->getCncGeoID()); // On pourrait donner un _nElm au feSpace
-    std::vector<feInt> adrS(fS->getNbFunctions());
+    std::vector<feInt> adr(fS->getNbFunctions());
     std::vector<double> coor = fS->getLcoor();
     int nbNodePerElem = mesh->getCncGeoByName(fS->getCncGeoID())->getNbNodePerElem();
     std::vector<double> localCoord(3*nbNodePerElem);
     std::vector<double> x(3);
     feSpace *geoSpace = mesh->getGeometricSpace(fS->getCncGeoID());
     
-    for(int iElm = 0; iElm < nElm; ++iElm) {
-      fS->initializeAddressingVector(metaNumber->getNumbering(fS->getFieldID()), iElm, adrS);
-      mesh->getCoord(fS->getCncGeoID(), iElm, localCoord);
-      
-      for(int j = 0; j < fS->getNbFunctions(); ++j) {
-        double r[3] = {coor[3 * j], coor[3 * j + 1], coor[3 * j + 2]};
-        // x[0] = geoSpace->interpolateField(localCoord, r);
-        geoSpace->interpolateVectorField(localCoord, r, x);
+    if(true){
+      // Node based: the initial condition is imposed at the vertices DOF
+      for(int iElm = 0; iElm < nElm; ++iElm) {
+        fS->initializeAddressingVector(metaNumber->getNumbering(fS->getFieldID()), iElm, adr);
+        mesh->getCoord(fS->getCncGeoID(), iElm, localCoord);
+        
+        for(int j = 0; j < fS->getNbFunctions(); ++j) {
+          double r[3] = {coor[3 * j], coor[3 * j + 1], coor[3 * j + 2]};
+          // x[0] = geoSpace->interpolateField(localCoord, r);
+          geoSpace->interpolateVectorField(localCoord, r, x);
 
-        // If the function given to the feSpace is null, the solution is not changed,
-        // i.e. we continue with the value from a previous computation.
-        if(fS->isFctDefined()) {
-          double val = fS->evalFun(_tn, x);
-          _sol[adrS[j]] = val;
-        } else {
-          // printf("Sol un changed in field %s - %s\n", fS->getFieldID().c_str(),
-          // fS->getCncGeoID().c_str());
+          // If the function given to the feSpace is null, the solution is not changed,
+          // i.e. we continue with the value from a previous computation.
+          if(fS->isFctDefined()) {
+            double val = fS->evalFun(_tn, x);
+            _sol[adr[j]] = val;
+          }
         }
+      }
+    } else{
+      // Cell based 1D Legendre polynomials: the initial condition is satisfied on each element in the least-square sense:
+      //
+      //  <phi_i, phi_j> U_j^e = <phi_i, funSol> ==> A_ij^e U_j^e = B_j^e
+      //
+      // !!! We assume that the jacobian cancels out from both side, which is true only for P1 line geometry !!!
+
+      // The analytic diagonal mass matrix A_ii = 2/(2*i+1)
+      std::vector<double> A(fS->getNbFunctions(), 0.);
+      std::vector<double> B(fS->getNbFunctions(), 0.);
+      for(int i = 0; i < fS->getNbFunctions(); ++i){
+        A[i] = 2./(2. * i + 1.);
+      }
+
+      int nQuad = geoSpace->getNbQuadPoints();
+      std::vector<double> wQuad = geoSpace->getQuadratureWeights();
+      std::vector<double> xQuad = geoSpace->getRQuadraturePoints();
+
+      // std::vector<double> &J = mesh->getCncGeoByName(fS->getCncGeoID())->getJacobians();
+
+      double uQuad = 0.;
+      std::vector<double> phi(fS->getNbFunctions(), 0.);
+      for(int iElm = 0; iElm < nElm; ++iElm){
+
+        fS->initializeAddressingVector(metaNumber->getNumbering(fS->getFieldID()), iElm, adr);
+        mesh->getCoord(fS->getCncGeoID(), iElm, localCoord);
+
+        // Compute the RHS
+        for(int i = 0; i < fS->getNbFunctions(); ++i){
+
+          B[i] = 0.;
+
+          for(int k = 0; k < nQuad; ++k){
+
+            // Evaluate analytic solution at quad points
+            double r[3] = {xQuad[k], 0., 0.};
+            geoSpace->interpolateVectorField(localCoord, r, x);
+            uQuad = fS->evalFun(_tn, x);
+            // Evaluate Legendre polynomials at quad points
+            fS->L(r, phi.data());
+
+            // feInfo("u = %f - phi(%f) = (%f - %f - %f vs %f)", uQuad, r[0], phi[0], phi[1], phi[2], 3./2.*r[0]*r[0] - 0.5);
+
+            B[i] += wQuad[k] * phi[i] * uQuad;
+          }
+        }
+
+        // Solve Aij Uj = Bj on the element
+        std::vector<double> elmSolution(adr.size());
+        for(int i = 0; i < fS->getNbFunctions(); ++i){
+          _sol[adr[i]] = B[i] / A[i];
+          elmSolution[i] = _sol[adr[i]];
+          // feInfo("elm %d - %d - dof %d: Bi = %f Ai = %f - Computed initial condition %f", iElm, i, adr[i], B[i], A[i], B[i] / A[i];
+        }
+
+        double rr[3] = {-1., 0., 0.};
+        geoSpace->interpolateVectorField(localCoord, rr, x);
+        double myVal = fS->interpolateField(elmSolution, rr);
+        feInfo("Interpolation en x = %f : uh = %f - u = %f - adr = %d %d %d", x[0], myVal, fS->evalFun(_tn, x), adr[0], adr[1], adr[2]);
+
       }
     }
   }
@@ -146,7 +208,6 @@ void feSolution::copySpace(feMesh *mesh, feMetaNumber *metaNumber, feSpace *s1, 
   int nbNodePerElem = mesh->getCncGeoByName(s1->getCncGeoID())->getNbNodePerElem();
   std::vector<double> localCoord(3*nbNodePerElem);
   std::vector<double> x(3);
-  feSpace *geoSpace = mesh->getGeometricSpace(s1->getCncGeoID());
   
   for(int iElm = 0; iElm < nElm; ++iElm) {
     s1->initializeAddressingVector(metaNumber->getNumbering(s1->getFieldID()), iElm, adr1);

@@ -7,8 +7,7 @@
 #include "feSpace.h"
 #include "feCncGeo.h"
 
-#define ESS -1
-#define INC -2
+typedef enum {DOF_ESSENTIAL = -1, DOF_UNKNOWN = -2, DOF_NOT_ASSIGNED = -3} dofType;
 
 class feNumber
 {
@@ -21,6 +20,7 @@ protected:
   int _nElm;
   int _nEdg;
 
+  int _maxDOFperVertex;
   int _maxDOFperElem;
   int _maxDOFperEdge;
 
@@ -49,7 +49,8 @@ public:
   int getNbNodes() { return _nNod; }
   int getNbDOFs() { return _nDofs; }
 
-  void defDDLSommet(feMesh *mesh, std::string const &cncGeoID, int numElem, int numVertex);
+  // Assign 1 DOF per vertex by default for continuous elements (i.e. not for DG)
+  void defDDLSommet(feMesh *mesh, std::string const &cncGeoID, int numElem, int numVertex, int numDOF = 1);
   void defDDLElement(feMesh *mesh, std::string const &cncGeoID, int numElem, int numDOF);
   void defDDLEdge(feMesh *mesh, std::string const &cncGeoID, int numElem, int numEdge, int numDOF);
   void defDDLSommet_essentialBC(feMesh *mesh, std::string const &cncGeoID, int numElem,
@@ -57,7 +58,7 @@ public:
   void defDDLElement_essentialBC(feMesh *mesh, std::string const &cncGeoID, int numElem);
   void defDDLEdge_essentialBC(feMesh *mesh, std::string const &cncGeoID, int numElem, int numEdge);
 
-  int getDDLSommet(feMesh *mesh, std::string const &cncGeoID, int numElem, int numVertex);
+  int getDDLSommet(feMesh *mesh, std::string const &cncGeoID, int numElem, int numVertex, int numDOF = 0);
   int getDDLElement(feMesh *mesh, std::string const &cncGeoID, int numElem, int numDOF);
   int getDDLEdge(feMesh *mesh, std::string const &cncGeoID, int numElem, int numEdge, int numDOF);
 
@@ -69,6 +70,7 @@ public:
   std::vector<int> &getUnknownDOF() { return _allUnknownDOF; };
 
   int getDOFNumberAtVertex(int iVertex) { return _numberingVertices[iVertex]; };
+  int getDOFNumberAtVertex(int iVertex, int numDOF) { return _numberingVertices[_maxDOFperVertex * iVertex + numDOF]; };
   int getDOFCodeAtVertex(int iVertex) { return _codeDOFVertices[iVertex]; };
 
   void exportNumberingVertices(feMesh *mesh, FILE *file);

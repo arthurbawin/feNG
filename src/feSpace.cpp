@@ -22,6 +22,7 @@ feStatus createFiniteElementSpace(feSpace *&space, feMesh *mesh, int dim, elemTy
       break;
     case 1:
       if(type == LINE) {
+        // Lagrange polynomials of degree 1 to 4 on line elements
         switch(deg) {
           case 0:
             space = new feSpace1DP0(mesh, fieldID, cncGeoID, fct);
@@ -42,6 +43,9 @@ feStatus createFiniteElementSpace(feSpace *&space, feMesh *mesh, int dim, elemTy
             return feErrorMsg(FE_STATUS_ERROR,
                               "No LINE finite element space implemented for deg > 4.");
         }
+      } else if(type == LINE_LEGENDRE) {
+          // Legendre polynomials of arbitrary degree on line elements
+          space = new feSpace1D_Legendre_DG(deg, mesh, fieldID, cncGeoID, fct);
       } else if(type == LINE_CR) {
         switch(deg) {
           case 1:
@@ -114,8 +118,7 @@ feStatus createFiniteElementSpace(feSpace *&space, feMesh *mesh, int dim, elemTy
   return FE_STATUS_OK;
 }
 
-feSpace::feSpace(feMesh *mesh, std::string fieldID, std::string cncGeoID, feFunction *fct,
-                 bool useGlobalShapeFunctions)
+feSpace::feSpace(feMesh *mesh, std::string fieldID, std::string cncGeoID, feFunction *fct, bool useGlobalShapeFunctions)
   : _mesh(mesh), _fieldID(fieldID), _fieldTag(-1), _cncGeoID(cncGeoID), _cncGeoTag(-1), _nQuad(-1),
     _nFunctions(0), _fct(fct), _useGlobalShapeFunctions(useGlobalShapeFunctions)
 {
@@ -175,7 +178,6 @@ feStatus feSpace::setQuadratureRule(feQuadrature *rule)
     _dLdyglob.resize(nElm);
     std::vector<double> geoCoord;
     std::vector<double> xq(3, 0.0);
-    double rc[3] = {1. / 3., 1. / 3., 1. / 3.};
 
     for(int iElm = 0; iElm < nElm; ++iElm) {
       _mesh->getCoord(_cncGeoTag, iElm, geoCoord);
@@ -271,7 +273,7 @@ void feSpace::interpolateField(double *field, int fieldSize, double *r, double *
   for(int i = 0; i < fieldSize; ++i){ res += field[i] * shape[i]; }
 }
 
-double feSpace::interpolateField(std::vector<double> &field, double *r) // match
+double feSpace::interpolateField(std::vector<double> &field, double *r)
 {
   double res = 0.0;
 #ifdef FENG_DEBUG
@@ -307,14 +309,16 @@ double feSpace::interpolateField(feNumber *number, feSolution *sol, std::vector<
 {
   double u[3];
   int elm = -1;
-  bool isFound = static_cast<feMesh2DP1 *>(_mesh)->locateVertex(x.data(), elm, u);
 #ifdef FENG_DEBUG
+  bool isFound = static_cast<feMesh2DP1 *>(_mesh)->locateVertex(x.data(), elm, u);
   if(!isFound) {
     printf(
       "In feSpace::interpolateField : Warning - Point (%f, %f, %f) was not found in the mesh.\n",
       x[0], x[1], x[2]);
     return 0.0;
   }
+#else
+  static_cast<feMesh2DP1 *>(_mesh)->locateVertex(x.data(), elm, u);
 #endif
   std::vector<feInt> adr(this->getNbFunctions());
   std::vector<double> solution(adr.size());
@@ -906,4 +910,60 @@ void feSpace1DP4::initializeAddressingVector(feNumber *number, int numElem, std:
     adr[3] = number->getDDLElement(_mesh, _cncGeoID, numElem, 1);
     adr[2] = number->getDDLElement(_mesh, _cncGeoID, numElem, 2);
   }
+}
+
+void legendrePolynomials(double x, int p, double *phi)
+{
+  phi[0] = 1.0;
+  if (p >= 1) phi[1] = x;
+  for (int i=1; i < p; i++)
+    phi[i+1] = ((2*i+1)*x*phi[i] - i*phi[i-1]) / (i+1); 
+}
+
+std::vector<double> feSpace1D_Legendre_DG::L(double *r)
+{
+  std::vector<double> phi(_nFunctions);
+  legendrePolynomials(r[0], _degree, phi.data());
+  return phi;
+}
+
+void feSpace1D_Legendre_DG::L(double *r, double *L)
+{
+  legendrePolynomials(r[0], _degree, L);
+}
+
+void feSpace1D_Legendre_DG::initializeNumberingUnknowns(feNumber *number)
+{
+  for(int i = 0; i < _mesh->getNbElm(_cncGeoID); ++i) {
+    // number->defDDLSommet(_mesh, _cncGeoID, i, 0, 2);
+    // number->defDDLSommet(_mesh, _cncGeoID, i, 1, 2);
+    // number->defDDLElement(_mesh, _cncGeoID, i, _degree - 1);
+    number->defDDLElement(_mesh, _cncGeoID, i, _degree + 1);
+    number->defDDLEdge(_mesh, _cncGeoID, i, 0, _degree + 1);
+
+    // Autre option: 2 aux sommets et le reste sur l'élément?
+  }
+}
+
+void feSpace1D_Legendre_DG::initializeNumberingEssential(feNumber *number)
+{
+  for(int i = 0; i < _mesh->getNbElm(_cncGeoID); ++i) {
+    // number->defDDLSommet_essentialBC(_mesh, _cncGeoID, i, 0);
+    // number->defDDLSommet_essentialBC(_mesh, _cncGeoID, i, 1);
+    number->defDDLElement_essentialBC(_mesh, _cncGeoID, i);
+  }
+}
+
+void feSpace1D_Legendre_DG::initializeAddressingVector(feNumber *number, int numElem, std::vector<feInt> &adr)
+{
+  // adr[0] = number->getDDLSommet(_mesh, _cncGeoID, numElem, 0, 1); // DOF^+ (right) on first vertex
+  // adr[1] = number->getDDLSommet(_mesh, _cncGeoID, numElem, 1, 0); // DOF^- (left)  on end   vertex
+  // for(int i = 0; i < _degree - 1; ++i){
+  //   adr[i+2] = number->getDDLElement(_mesh, _cncGeoID, numElem, i);
+  // }
+  for(int i = 0; i < _degree + 1; ++i){
+    adr[i] = number->getDDLElement(_mesh, _cncGeoID, numElem, i);
+  }
+  // adr[0] = number->getDDLSommet(_mesh, _cncGeoID, numElem, 0, 1); // DOF^+ (right) on first vertex
+  // adr[1] = number->getDDLSommet(_mesh, _cncGeoID, numElem, 1, 0); // DOF^- (left)  on end   vertex
 }

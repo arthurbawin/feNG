@@ -37,7 +37,6 @@ public:
     int nThreads = 1;
 #endif
 
-    feInfo("Nombre max de threads : %d", nThreads);
     for(int i = 0; i < nThreads; ++i) {
       for(feBilinearForm *f : bilinearForms) {
         #if defined(HAVE_OMP)

@@ -66,7 +66,7 @@ feStatus createEigenProblem(feEigenProblem *&eigenProblem,
 
   switch(type) {
     case SLEPC:
-#if defined(HAVE_SLEPC) && defined(HAVE_PETSC)
+#if defined(HAVE_SLEPC)
       if(argc == 0 || argv == nullptr) {
         return feErrorMsg(FE_STATUS_ERROR,
                           "Please provide argc and argv to create a SLEPc eigen solver.");
@@ -94,7 +94,7 @@ feEigenProblem::feEigenProblem(int argc, char **argv,
                  feMetaNumber *metaNumber,
                  feMesh *mesh)
   : _argc(argc), _argv(argv), _metaNumber(metaNumber), _mesh(mesh)
-#if defined(HAVE_PETSC)
+#if defined(HAVE_SLEPC)
   , _nInc(metaNumber->getNbUnknowns()), _nDofs(metaNumber->getNbDOFs())
 #endif
  {
@@ -127,7 +127,7 @@ feEigenProblem::feEigenProblem(int argc, char **argv,
     }
   }
 
- #if defined(HAVE_SLEPC) && defined(HAVE_PETSC)
+ #if defined(HAVE_SLEPC)
   PetscErrorCode ierr;
 
   // Allocate matrices:
@@ -164,21 +164,21 @@ feEigenProblem::feEigenProblem(int argc, char **argv,
 
 void feEigenProblem::viewLHSMatrix()
 {
-#if defined(HAVE_PETSC)
+#if defined(HAVE_SLEPC)
   MatView(_A, PETSC_VIEWER_STDOUT_WORLD);
 #endif
 }
 
 void feEigenProblem::viewRHSMatrix()
 {
-#if defined(HAVE_PETSC)
+#if defined(HAVE_SLEPC)
   MatView(_B, PETSC_VIEWER_STDOUT_WORLD);
 #endif
 }
 
 void feEigenProblem::setMatricesToZero()
 {
-#if defined(HAVE_PETSC)
+#if defined(HAVE_SLEPC)
   PetscErrorCode ierr;
   ierr = MatZeroEntries(_A); CHKERRABORT(PETSC_COMM_WORLD, ierr);
   ierr = MatZeroEntries(_B); CHKERRABORT(PETSC_COMM_WORLD, ierr);
@@ -187,7 +187,7 @@ void feEigenProblem::setMatricesToZero()
 
 void feEigenProblem::assembleLHSMatrix(feSolution *sol)
 {
-#if defined(HAVE_PETSC)
+#if defined(HAVE_SLEPC)
   PetscErrorCode ierr = 0;
 
   for(feInt eq = 0; eq < _numAForms; ++eq) {
@@ -279,7 +279,7 @@ void feEigenProblem::assembleLHSMatrix(feSolution *sol)
 
 void feEigenProblem::assembleRHSMatrix(feSolution *sol)
 {
-#if defined(HAVE_PETSC)
+#if defined(HAVE_SLEPC)
   PetscErrorCode ierr = 0;
 
   for(feInt eq = 0; eq < _numBForms; ++eq) {
@@ -377,7 +377,7 @@ void feEigenProblem::assemble(feSolution *sol)
 
 void feEigenProblem::solve(feSolution *sol)
 {
-#if defined (HAVE_SLEPC) && defined(HAVE_PETSC)
+#if defined (HAVE_SLEPC)
 
 	sol->initializeUnknowns(_mesh, _metaNumber);
   sol->initializeEssentialBC(_mesh, _metaNumber);
@@ -452,7 +452,7 @@ void feEigenProblem::solve(feSolution *sol)
 // For example, if U is the computed field, the eigenmode will be stored in the feSolution instead of U.
 void feEigenProblem::setEigenmodeAsActiveSolution(feSolution *sol, size_t eigenPairIndex, std::string fieldID)
 {
-#if defined(HAVE_PETSC)
+#if defined(HAVE_SLEPC)
 	std::vector<int> allUnknownDOF = _metaNumber->getUnknownDOF(fieldID);
 
 	PetscScalar *vecRealArray;
@@ -466,7 +466,7 @@ void feEigenProblem::setEigenmodeAsActiveSolution(feSolution *sol, size_t eigenP
 
 feEigenProblem::~feEigenProblem()
 {
-#if defined(HAVE_PETSC)
+#if defined(HAVE_SLEPC)
 	for(size_t i = 0; i < _eigenPairs.size(); ++i){
 		VecDestroy(&_eigenPairs[i].vecReal);
 		VecDestroy(&_eigenPairs[i].vecImag);

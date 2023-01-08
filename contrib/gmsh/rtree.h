@@ -1015,7 +1015,8 @@ bool RTREE_QUAL::InsertRectRec(Rect* a_rect, const DATATYPE& a_id, Node* a_node,
   else if(a_node->m_level == a_level) // Have reached level for insertion. Add rect, split if necessary
   {
     branch.m_rect = *a_rect;
-    branch.m_child = (Node*) a_id;
+    // branch.m_child = (Node*) a_id;
+    branch.m_child = reinterpret_cast<Node*>(a_id);
     // Child field of leaves contains id of data record
     return AddBranch(&branch, a_node, a_newNode);
   }

@@ -976,7 +976,7 @@ void computeWorstMetric(int nTheta, int nIncr, double e, double *x, double cG, d
   double c112 = (fxxy(rec, x) + fxyx(rec, x) + fyxx(rec, x)) / 3.;
   double c122 = (fxyy(rec, x) + fyyx(rec, x) + fyxy(rec, x)) / 3.;
 
-  double grad[2] = {c1, c2};
+  // double grad[2] = {c1, c2};
   double hess[2][2] = {{c11, c12}, {c12, c22}};
   double cijk[2][2][2] = {{{c111, c112}, {c112, c122}}, {{c112, c122}, {c122, c222}}};
   
@@ -1468,38 +1468,25 @@ static double solveErrorFunction(double k, double *v, double *w, double H[2][2],
   double C122 = (C[0][1][1] + C[1][0][1] + C[1][1][0])/3.;
   double C222 =  C[1][1][1];
 
-  // double cs6 = (C[0][0][0]*a1*a1*a1 + 3.*C[0][0][1]*a1*a1*a2 + 3.*C[0][1][1]*a1*a2*a2 + C[1][1][1]*a2*a2*a2)/60.;
-
-  // double cs5 = C[0][0][0]*a1*a1*v1/10. + 3.*C[0][0][1]*(v2*a1*a1/30. + a2*v1*a1/15.) + 3.*C[0][1][1]*(v1*a2*a2/30. + a1*v2*a2/15.) + C[1][1][1]*a2*a2*v2/10.;
-  // double cs4 = C[0][0][0]*a1*v1*v1/4.  + 3.*C[0][0][1]*(a2*v1*v1/12. + a1*v2*v1/6. ) + 3.*C[0][1][1]*(a1*v2*v2/12. + a2*v1*v2/6. ) + C[1][1][1]*a2*v2*v2/4.;
-
-  // double cs3 = C[0][0][0]*v1*v1*v1/3. + 3.*C[0][0][1]*v1*v1*v2/3. + 3.*C[0][1][1]*v1*v2*v2/3. + C[1][1][1]*v2*v2*v2/3.;
-
-  // cs4 += 3.*(H[0][0]*a1*a1/12. + H[0][1]*a1*a2/12. + H[1][0]*a1*a2/12. + H[1][1]*a2*a2/12.);
-  // cs3 += 3.*(H[0][0]*v1*a1/3.  + H[0][1]*a2*v1/3.  + H[1][0]*a1*v2/3.  + H[1][1]*v2*a2/3. );
-
-  // CMINUS(0) = cs6/2.;
-  // CMINUS(1) = cs5/2.;
-  // CMINUS(2) = cs4/2.;
-  // CMINUS(3) = cs3/2.;
-  // CMINUS(4) = 0.;
-  // CMINUS(5) = 0.;
-  // CMINUS(6) = 1.;
-
-  // CPLUS(0) = cs6/2.;
-  // CPLUS(1) = cs5/2.;
-  // CPLUS(2) = cs4/2.;
-  // CPLUS(3) = cs3/2.;
-  // CPLUS(4) = 0.;
-  // CPLUS(5) = 0.;
-  // CPLUS(6) = -1.;
-
   double cs6 = (C111*a1*a1*a1 + 3.*C112*a1*a1*a2 + 3.*C122*a1*a2*a2 + C222*a2*a2*a2)/120.;
   double cs5 = C111*a1*a1*v1/20. + C112*a1*a1*v2/20. + C122*a2*a2*v1/20. + C222*a2*a2*v2/20. + C112*a1*a2*v1/10. + C122*a1*a2*v2/10.;
   double cs4 = C111*a1*v1*v1/8.  + C112*a2*v1*v1/8.  + C122*a1*v2*v2/8.  + C222*a2*v2*v2/8.  + C112*a1*v1*v2/4.  + C122*a2*v1*v2/4.;
   double cs3 = C111*v1*v1*v1/6.  + C112*v1*v1*v2/2.  + C122*v1*v2*v2/2.  + C222*v2*v2*v2/6. ;
   cs4 += (H11*a1*a1 + H12*a1*a2 + H21*a1*a2 + H22*a2*a2)/8.;
   cs3 += (H11*a1*v1 + H12*a2*v1 + H21*a1*v2 + H22*a2*v2)/2.;
+
+  // Ajout du développement limité au premier ordre de Hij = Hij(x0) + s*Cijk*vk
+  cs5 += (a1*a1/20.) * (C111*v1 + C112*v2);
+  cs4 += (v1*a1/8. ) * (C111*v1 + C112*v2);
+
+  cs5 += (a1*a2/20.) * (C112*v1 + C122*v2); // C121*v1 + C122*v2
+  cs4 += (v1*a2/8. ) * (C112*v1 + C122*v2);
+
+  cs5 += (a1*a2/20.) * (C112*v1 + C122*v2); // C211*v1 + C212*v2
+  cs4 += (v2*a1/8. ) * (C112*v1 + C122*v2);
+
+  cs5 += (a2*a2/20.) * (C122*v1 + C222*v2); // C221*v1 + C222*v2
+  cs4 += (v2*a2/8. ) * (C122*v1 + C222*v2);
 
   CMINUS(0) = cs6;
   CMINUS(1) = cs5;
@@ -1750,21 +1737,21 @@ bool computeMetricLogSimplexCurved(double *x, double cG, double sG, feRecovery *
   g2[1] = cG;
 
   // Derivatives from recoveries
-  // double c1 = fx(rec, x);
-  // double c2 = fy(rec, x);
+  double c1 = fx(rec, x);
+  double c2 = fy(rec, x);
 
-  // double c11 = fxx(rec, x);
-  // double c12 = (fxy(rec, x) + fyx(rec, x)) / 2.;
-  // double c22 = fyy(rec, x);
+  double c11 = fxx(rec, x);
+  double c12 = (fxy(rec, x) + fyx(rec, x)) / 2.;
+  double c22 = fyy(rec, x);
 
-  // double c111 = fxxx(rec, x);
-  // double c222 = fyyy(rec, x);
-  // double c112 = (fxxy(rec, x) + fxyx(rec, x) + fyxx(rec, x)) / 3.;
-  // double c122 = (fxyy(rec, x) + fyyx(rec, x) + fyxy(rec, x)) / 3.;
+  double c111 = fxxx(rec, x);
+  double c222 = fyyy(rec, x);
+  double c112 = (fxxy(rec, x) + fxyx(rec, x) + fyxx(rec, x)) / 3.;
+  double c122 = (fxyy(rec, x) + fyyx(rec, x) + fyxy(rec, x)) / 3.;
 
   // Analytical derivatives
-  double X = x[0];
-  double Y = x[1];
+  // double X = x[0];
+  // double Y = x[1];
 
   // tanh
   // double a = 10.;
@@ -1785,7 +1772,7 @@ bool computeMetricLogSimplexCurved(double *x, double cG, double sG, feRecovery *
   // double c122 = (a*a*b*b*M_PI*M_PI*tanh(a*(X/2 - sin(pi*b*y)/4))*sin(pi*b*y)*(T - 1))/8 - (a*a*a*b*b*M_PI*M_PI*T*pow(cos(pi*b*y),2)*(T - 1))/16 - (a*a*a*b*b*M_PI*M_PI*pow(cos(pi*b*y),2)*pow((T - 1),2))/32;
   // double c222 = (a*a*a*b*b*b*M_PI*M_PI*M_PI*pow(cos(pi*b*y),3)*pow((T - 1),2))/64 - (a*b*b*b*M_PI*M_PI*M_PI*cos(pi*b*y)*(T - 1))/8 + (a*a*a*b*b*b*M_PI*M_PI*M_PI*T*pow(cos(pi*b*y),3)*(T - 1))/32 - (3*a*a*b*b*b*M_PI*M_PI*M_PI*tanh(a*(X/2 - sin(pi*b*y)/4))*cos(pi*b*y)*sin(pi*b*y)*(T - 1))/16;
 
-  // pour r4 = (x^2+y^2)^2 = x^4 + y^4 + 2*x^2 y^2
+  // Analytique : r4 = (x^2+y^2)^2 = x^4 + y^4 + 2*x^2 y^2
   // double c1 = 4.*X*X*X + 4. * X*Y*Y;
   // double c2 = 4.*Y*Y*Y + 4. * X*X*Y;
 
@@ -1798,7 +1785,7 @@ bool computeMetricLogSimplexCurved(double *x, double cG, double sG, feRecovery *
   // double c122 = 8.*X;
   // double c222 = 24.*Y;
 
-  // x^3 + 20*y^3
+  // Analytique : x^3 + 20*y^3
   // double c1 =3*X*X;
   // double c2 = 60.*Y*Y;
 
@@ -1811,26 +1798,28 @@ bool computeMetricLogSimplexCurved(double *x, double cG, double sG, feRecovery *
   // double c122 = 120.; /// ???
   // double c222 = 0.;
 
-  // atan(10*(sin(3*pi*y/2) - 2x)) du papier IMR
-  double pi = M_PI;
-  double T = pow(20.*X - 10.*sin((3.*pi*Y)/2.),2);
-  double TT = (T + 1.)*(T + 1.);
-  double TTT = (T + 1.)*(T + 1.)*(T + 1.);
+  // Analytique papier IMR : atan(10*(sin(3*pi*y/2) - 2x))
+  // double X = x[0];
+  // double Y = x[1];
+  // double pi = M_PI;
+  // double T = pow(20.*X - 10.*sin((3.*pi*Y)/2.),2);
+  // double TT = (T + 1.)*(T + 1.);
+  // double TTT = (T + 1.)*(T + 1.)*(T + 1.);
 
-  double R = 800*X - 400*sin((3*pi*Y)/2);
-  double S = cos((3*pi*Y)/2);
+  // double R = 800*X - 400*sin((3*pi*Y)/2);
+  // double S = cos((3*pi*Y)/2);
 
-  double c1 = -20/(T + 1);
-  double c2 = (15*pi*S)/(T + 1);
+  // double c1 = -20/(T + 1);
+  // double c2 = (15*pi*S)/(T + 1);
   
-  double c11 = (20*R)/TT;
-  double c12 = -(600*pi*S*(20*X - 10*sin((3*pi*Y)/2)))/TT;
-  double c22 = (450*pi*pi*S*S*(20*X - 10*sin((3*pi*Y)/2)))/TT - (45*pi*pi*sin((3*pi*Y)/2))/(2*(T + 1));
+  // double c11 = (20*R)/TT;
+  // double c12 = -(600*pi*S*(20*X - 10*sin((3*pi*Y)/2)))/TT;
+  // double c22 = (450*pi*pi*S*S*(20*X - 10*sin((3*pi*Y)/2)))/TT - (45*pi*pi*sin((3*pi*Y)/2))/(2*(T + 1));
   
-  double c111 = 16000/TT - (40*R*R)/TTT;
-  double c112 = (1200*pi*S*(20*X - 10*sin((3*pi*Y)/2))*R)/TTT - (12000*pi*S)/TT;
-  double c122 = (9000*pi*pi*S*S)/TT + (900*pi*pi*sin((3*pi*Y)/2)*(20*X - 10*sin((3*pi*Y)/2)))/TT - (36000*pi*pi*S*S*T)/TTT;
-  double c222 = (27000*pi*pi*pi*S*S*S*T)/TTT - (135*pi*pi*pi*S)/(4*(T + 1)) - (6750*pi*pi*pi*S*S*S)/TT - (2025*pi*pi*pi*S*sin((3*pi*Y)/2)*(20*X - 10*sin((3*pi*Y)/2)))/TT;
+  // double c111 = 16000/TT - (40*R*R)/TTT;
+  // double c112 = (1200*pi*S*(20*X - 10*sin((3*pi*Y)/2))*R)/TTT - (12000*pi*S)/TT;
+  // double c122 = (9000*pi*pi*S*S)/TT + (900*pi*pi*sin((3*pi*Y)/2)*(20*X - 10*sin((3*pi*Y)/2)))/TT - (36000*pi*pi*S*S*T)/TTT;
+  // double c222 = (27000*pi*pi*pi*S*S*S*T)/TTT - (135*pi*pi*pi*S)/(4*(T + 1)) - (6750*pi*pi*pi*S*S*S)/TT - (2025*pi*pi*pi*S*sin((3*pi*Y)/2)*(20*X - 10*sin((3*pi*Y)/2)))/TT;
 
   double Hij[2][2] = {{c11, c12}, {c12, c22}};
   double Cijk[2][2][2] = {{{c111, c112}, {c112, c122}}, {{c112, c122}, {c122, c222}}};

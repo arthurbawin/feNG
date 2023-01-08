@@ -95,7 +95,6 @@ void imConicRotation(std::vector<double> &p, std::vector<double> &R) {
   double b = p[1];
   double c = p[2];
 
-  double D = discriminant(p);
   double ra = a;
   double rc = c;
 

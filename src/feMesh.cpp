@@ -11,7 +11,7 @@
 
 int feMesh::getCncGeoTag(std::string const &cncGeoID)
 {
-  auto it = _cncGeoMap.find(cncGeoID); 
+  auto it = _cncGeoMap.find(cncGeoID);
   return (it == _cncGeoMap.end()) ? -1 : it->second;
 }
 
@@ -24,7 +24,7 @@ feCncGeo *feMesh::getCncGeoByName(std::string const &cncGeoID)
 feCncGeo *feMesh::getCncGeoByTag(int cncGeoTag)
 {
   if(cncGeoTag < 0)
-    if((unsigned)cncGeoTag > _cncGeo.size()) return nullptr;
+    if((unsigned) cncGeoTag > _cncGeo.size()) return nullptr;
   return _cncGeo[cncGeoTag];
 }
 
@@ -172,6 +172,10 @@ feMesh1DP1::feMesh1DP1(double xA, double xB, int nElm, std::string bndA_ID, std:
     connecNodeDomain[_nNodDomain * i + 0] = i;
     connecNodeDomain[_nNodDomain * i + 1] = i + 1;
   }
+
+  _nInteriorElm = _nElmDomain;
+  _nBoundaryElm = _nElmBoundary;
+
   // Create edges
   int nEdges = 1; // Numbered starting at 1 to match the 2D numbering
   std::vector<int> connecEdgeDomain(_nElmDomain, 0);
@@ -200,18 +204,18 @@ feMesh1DP1::feMesh1DP1(double xA, double xB, int nElm, std::string bndA_ID, std:
   connecBoundaryB[0] = _nNod - 1;
 
   feCncGeo *geoBndA = new feCncGeo(nCncGeo, dimBoundary, _nNodBoundary, _nElmBoundary, 0, _bndA_ID,
-                                   "Pt", new feSpace1DP0("xyz"), connecBoundaryA);
+                                   "Point0D", new feSpace1DP0("xyz"), connecBoundaryA);
   _cncGeo.push_back(geoBndA);
   _cncGeoMap[_bndA_ID] = nCncGeo;
   geoBndA->getFeSpace()->setCncGeoTag(nCncGeo++);
 
   feCncGeo *geoBndB = new feCncGeo(nCncGeo, dimBoundary, _nNodBoundary, _nElmBoundary, 0, _bndB_ID,
-                                   "Pt", new feSpace1DP0("xyz"), connecBoundaryB);
+                                   "Point0D", new feSpace1DP0("xyz"), connecBoundaryB);
   _cncGeo.push_back(geoBndB);
   _cncGeoMap[_bndB_ID] = nCncGeo;
   geoBndB->getFeSpace()->setCncGeoTag(nCncGeo++);
 
-  // Fonction COMPLETER : connectivite globale des elements
+  // Connectivite globale des elements
   int numElmGlo = 0;
   for(feCncGeo *cnc : _cncGeo) {
     for(int i = 0; i < cnc->getNbElm(); ++i) cnc->setElementConnectivity(i, numElmGlo++);
@@ -231,6 +235,29 @@ feMesh1DP1::~feMesh1DP1()
     delete cnc->getFeSpace();
     delete cnc;
   }
+}
+
+// Locate physical point x in 1D mesh aligned with the x-axis.
+// Assigns iElm the index of the element in which x lies, and
+// u the vector (r, 0, 0) with r the coordinate of x in the reference
+// [-1,1] element.
+bool feMesh1DP1::locateVertex(const double *x, int &iElm, double *u, double tol)
+{
+  for(int i = 0; i < _nInteriorElm; ++i)
+  {
+    double x0 = _vertices[i].x();
+    double x1 = _vertices[i + 1].x();
+    if(x0 <= x[0] && x[0] <= x1){
+      iElm = i;
+      // Trivial inversion of the reference to physical transformation
+      u[0] = (x[0] - (x0+x1)/2.) * 2. / (x1-x0);
+      u[1] = 0.;
+      u[2] = 0.;
+      return true;
+    }
+  }
+  feErrorMsg(FE_STATUS_ERROR, "Point %f was not found in 1D mesh :/", x[0]);
+  return false;
 }
 
 feMesh0DP0::feMesh0DP0(double xA, int nElm, std::string domID)
@@ -253,7 +280,7 @@ feMesh0DP0::feMesh0DP0(double xA, int nElm, std::string domID)
   std::vector<int> connecDomain(1, 0);
 
   int nCncGeo = 0;
-  feCncGeo *geoDom = new feCncGeo(nCncGeo, dimDomain, _nNodDomain, _nElmDomain, 0, _domID, "Pt",
+  feCncGeo *geoDom = new feCncGeo(nCncGeo, dimDomain, _nNodDomain, _nElmDomain, 0, _domID, "Point0D",
                                   new feSpace1DP0("xyz"), connecDomain);
   _cncGeo.push_back(geoDom);
   _cncGeoMap[_domID] = nCncGeo;
@@ -326,8 +353,6 @@ feMesh2DP1::~feMesh2DP1()
   }
 }
 
-
-
 /* Locates the vertex with coordinates x in the mesh using an RTree.
    The search is performed in elements of the highest dimension only.
    The element number is assigned to iElm and the reference coordinates
@@ -382,7 +407,7 @@ void feMesh2DP1::transfer(feMesh2DP1 *otherMesh, feMetaNumber *myMN, feMetaNumbe
   RTree<int, double, 3> rtree;
 
   // Add domain (not boundary) elements to the rtree
-  for(int j = 0; j < _elements.size(); ++j) {
+  for(size_t j = 0; j < _elements.size(); ++j) {
     Triangle *t = _elements[j];
     SBoundingBox3d bbox;
     // printf("element %2d : %2d - %2d - %2d\n", t->getTag(), t->getVertex(0)->getTag(),

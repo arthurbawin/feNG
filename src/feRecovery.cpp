@@ -79,7 +79,6 @@ fePatch::fePatch(feCncGeo *cnc, feMesh *mesh)
   _nNodePerElm = cnc->getNbNodePerElem();
   _nEdgePerElm = cnc->getNbEdgePerElem();
   std::vector<int> &connecNodes = cnc->getNodeConnectivityRef();
-  std::vector<int> &connecEdges = cnc->getEdgeConnectivityRef();
 
   int nElm = cnc->getNbElm();
   for(int i = 0; i < nElm; ++i) {
@@ -894,8 +893,6 @@ void feRecovery::solveLeastSquareEigen1D(int indRecovery, int iDerivative)
 
   std::vector<double> u(indRecovery, 0.);
 
-  int nDOFPerElem = _intSpace->getNbFunctions();
-
   std::vector<double> &solVec = _sol->getSolutionReference();
 
   for(auto v : vertices) {
@@ -1185,7 +1182,6 @@ void feRecovery::solveLeastSquareEigen2D(int indRecovery, int iDerivative)
 
   std::vector<double> u(indRecovery, 0.);
 
-  int nDOFPerElem = _intSpace->getNbFunctions();
   int _nEdgePerElm = _cnc->getNbEdgePerElem();
   int _nVertPerElm = _nNodePerElm;
 
@@ -1739,7 +1735,7 @@ void feRecovery::derivative(int indRecovery, int iDerivative, std::ostream &outp
   double tol = 0.0;
 
   if(iDerivative == 0) {
-    /* Store the independant term of the solution.
+    /* Store the independent term of the solution.
     Used in feRecovery::evalDerivative. */
     std::vector<double> solV(vertices.size(), 0.0);
     for(auto v : vertices) solV[v] = recoveryCoeff[v][0][0];
@@ -1881,7 +1877,6 @@ void feRecovery::derivative(int indRecovery, int iDerivative, std::ostream &outp
     output << "$NodeData\n";
     output << "1\n\"" << _intSpace->getFieldID() << "\"\n1\n3000\n3\n0\n1\n"
            << vertices.size() << "\n";
-    int cnt = 0;
     for(auto v : vertices) {
       // printf("Writing %d at vertex %d\n", v, _mesh->getVertex(cnt)->getTag());
       // output << _mesh->getVertex(cnt++)->getTag() << " " << recoveryCoeff[v][indRecovery][0] <<
@@ -1898,7 +1893,6 @@ void feRecovery::derivative(int indRecovery, int iDerivative, std::ostream &outp
     std::string fieldName = "d" + std::to_string(iDerivative + 1) + _intSpace->getFieldID() +
                             suffix[{iDerivative + 1, _dim * indRecovery + i}];
     output << "1\n\"" << fieldName << "\"\n1\n3000\n3\n0\n1\n" << vertices.size() << "\n";
-    int cnt = 0;
     for(auto v : vertices) {
       // output << _mesh->getVertex(cnt++)->getTag() << " " << derivativeCoeff[v][_dim * indRecovery
       // + i][0] << std::endl;
@@ -2276,8 +2270,6 @@ void feRecovery::estimateH1Error(std::vector<double> &norm, feVectorFunction *so
   FILE *f = fopen("duReconstruite.txt", "w");
 
   // for(int iElm = 0; iElm < _nElm; ++iElm) {
-
-  std::set<int> &elemPatch = _patch->getPatch(4);
 
   std::vector<double> &solVec = _sol->getSolutionReference();
 
@@ -2828,20 +2820,20 @@ void feRecovery::writeRecovery(std::string fileName){
   FILE *f = fopen(fileName.c_str(), "w");
   if(f != nullptr) {
 
-    fprintf(f, "%d\n", derivAtVertices.size()); // Number of recovered derivatives at vertices
+    fprintf(f, "%ld\n", derivAtVertices.size()); // Number of recovered derivatives at vertices
 
-    for(int i = 0; i < derivAtVertices.size(); ++i){
-      feInfo("Printing recovery %d/%d on %d DOFs", i+1, derivAtVertices.size(), derivAtVertices[i].size());
-      fprintf(f, "%d\n", derivAtVertices[i].size()); // Number of DOFs
+    for(size_t i = 0; i < derivAtVertices.size(); ++i){
+      feInfo("Printing recovery %ld/%ld on %d DOFs", i+1, derivAtVertices.size(), derivAtVertices[i].size());
+      fprintf(f, "%ld\n", derivAtVertices[i].size()); // Number of DOFs
       for(int j = 0; j < derivAtVertices[i].size(); ++j){
         fprintf(f, "%+-1.17e\n", derivAtVertices[i][j]);
       }
     }
 
-    fprintf(f, "%d\n", derivAtEdges.size()); // Number of recovered derivatives on the edges
-    for(int i = 0; i < derivAtEdges.size(); ++i){
-      feInfo("Printing recovery %d/%d on %d DOFs", i+1, derivAtEdges.size(), derivAtEdges[i].size());
-      fprintf(f, "%d\n", derivAtEdges[i].size()); // Number of DOFs
+    fprintf(f, "%ld\n", derivAtEdges.size()); // Number of recovered derivatives on the edges
+    for(size_t i = 0; i < derivAtEdges.size(); ++i){
+      feInfo("Printing recovery %ld/%ld on %ld DOFs", i+1, derivAtEdges.size(), derivAtEdges[i].size());
+      fprintf(f, "%ld\n", derivAtEdges[i].size()); // Number of DOFs
       for(int j = 0; j < derivAtEdges[i].size(); ++j){
         fprintf(f, "%+-1.17e\n", derivAtEdges[i][j]);
       }

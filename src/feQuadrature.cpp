@@ -16,7 +16,12 @@ feQuadrature::feQuadrature(int degQuad, int dimQuad, std::string formGeo)
 
   int method = 1;
 
-  if(_dimQuad == 1) {
+  if(_dimQuad == 0 && formGeo == "Point0D"){
+    _w.resize(1);
+    _w[0] = 1.;
+    _xr.resize(1);
+    _xr[0] = 0.;
+  } else if(_dimQuad == 1) {
     calculateWeightAndRoot(_nQuad1D);
     _w = _w1D;
     _xr = _x1D;
@@ -26,13 +31,12 @@ feQuadrature::feQuadrature(int degQuad, int dimQuad, std::string formGeo)
     calculateWeightAndRootSquare();
   } else if(_dimQuad == 3 && formGeo == "QuadP1") {
     calculateWeightAndRootCube();
-  } else if(_dimQuad == 0 && formGeo == "Point0D") {
-    _w.resize(1);
-    _w[0] = 1.;
-    _xr.resize(1);
-    _xr[0] = 0.;
-  } else {
+  } else if(_dimQuad == 3 && formGeo == "TetP1"){
     calculateWeightAndRootTetra();
+  } else{
+    feErrorMsg(FE_STATUS_ERROR, "Could not create a quadrature rule for dimension %d "
+      "and geometry \"%s\".", dimQuad, formGeo.data());
+    exit(-1);
   }
 }
 

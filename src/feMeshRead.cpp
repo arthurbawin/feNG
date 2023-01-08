@@ -670,8 +670,6 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, bool curved, bool reversed,
     if(buffer == "$PhysicalNames") { // Read physical entities
       input >> _nPhysicalEntities;
       getline(input, buffer);
-      // The tag for physical entities does not necessarily start at 0
-      int sequentialTagForPhysicals = 0;
       for(int i = 0; i < _nPhysicalEntities; ++i) {
         physicalEntity pE;
         // dimension(ASCII int) - physicalTag(ASCII int) - "name"(127 characters max)
@@ -1158,7 +1156,6 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, bool curved, bool reversed,
         } // switch(elemType)
 
         std::map<int, int>::const_iterator it;
-        int pointcount = 0;
         for(int iElm = 0; iElm < numElementsInBlock; ++iElm) {
           // int nElemNodes = nodes_of_gmsh_element[elemType-1];
           int nElemNodes = _entities[p].nNodePerElem;
@@ -1468,7 +1465,7 @@ feStatus feMesh2DP1::readGmsh(std::string meshName, bool curved, bool reversed,
   std::filebuf fb;
 
   feInfo("=====================================================================");
-  feInfo("                         Mesh informations                          ");
+  feInfo("                   Beginning of mesh information                     ");
   feInfo("=====================================================================");
   feInfo("Reading mesh file : %s", meshName.c_str());
 
@@ -1799,7 +1796,7 @@ feStatus feMesh2DP1::readGmsh(std::string meshName, bool curved, bool reversed,
   _searchCtx.elements = &_elements;
 
   feInfo("=====================================================================");
-  feInfo("                     End of mesh informations                        ");
+  feInfo("                     End of mesh information                         ");
   feInfo("=====================================================================");
 
   return FE_STATUS_OK;

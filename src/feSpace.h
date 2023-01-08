@@ -16,7 +16,7 @@
 typedef Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> EigenMat;
 
 /* Supported geometries to define finite element spaces */
-typedef enum { POINT, LINE, LINE_CR, TRI, TRI_CR } elemType;
+typedef enum { POINT, LINE, LINE_LEGENDRE, LINE_CR, TRI, TRI_CR } elemType;
 
 class feMesh;
 class feNumber;
@@ -61,10 +61,6 @@ protected:
   std::vector<std::vector<double> > _Lglob;
   std::vector<std::vector<double> > _dLdxglob;
   std::vector<std::vector<double> > _dLdyglob;
-
-  // std::vector<int> _adr;
-  // std::vector<double> _sol;
-  // std::vector<double> _soldot;
 
   feFunction *_fct;
 
@@ -145,16 +141,12 @@ public:
     return _dLdyglob[iElm][_nFunctions * iQuadNode + iFun];
   }
 
-  feStatus setQuadratureRule(feQuadrature *quad);
+  feStatus setQuadratureRule(feQuadrature *quadratureRule);
   int getNbQuadPoints() { return _nQuad; }
   std::vector<double> &getQuadratureWeights() { return _wQuad; }
   std::vector<double> &getRQuadraturePoints() { return _xQuad; }
   std::vector<double> &getSQuadraturePoints() { return _yQuad; }
   std::vector<double> &getTQuadraturePoints() { return _zQuad; }
-
-  // void initializeSolution(feSolution *sol, std::vector<feInt> &adr);
-  // void initializeSolution(std::vector<double> &sol, std::vector<feInt> &adr);
-  // void initializeSolutionDot(feSolution *sol, std::vector<feInt> &adr);
 
   virtual void initializeNumberingUnknowns(feNumber *number) = 0;
   virtual void initializeNumberingEssential(feNumber *number) = 0;
@@ -220,7 +212,6 @@ public:
     : feSpace(mesh, fieldID, cncGeoID, fct)
   {
     _nFunctions = 1;
-    // _adr.resize(_nFunctions);
     _nQuad = 1;
     _Lcoor = {1., 0., 0.};
   };
@@ -510,6 +501,40 @@ public:
   virtual void initializeNumberingUnknowns(feNumber *number);
   virtual void initializeNumberingEssential(feNumber *number);
   // virtual void initializeAddressingVector(feNumber *number, int numElem);
+  virtual void initializeAddressingVector(feNumber *number, int numElem, std::vector<feInt> &adr);
+};
+
+// FESpace pour polynôme de Legendre de degre n sur elements discontinus
+class feSpace1D_Legendre_DG : public feSpace
+{
+protected:
+  int _degree;
+public:
+  feSpace1D_Legendre_DG(int degree, feMesh *mesh, std::string fieldID, std::string cncGeoID, feFunction *fct)
+    : feSpace(mesh, fieldID, cncGeoID, fct)
+  {
+    _degree = degree;
+    _nFunctions = degree + 1;
+    _Lcoor = {};
+  };
+  virtual ~feSpace1D_Legendre_DG() {}
+
+  virtual int getNbFunctions() { return _nFunctions; }
+  virtual int getPolynomialDegree() { return _degree; }
+  virtual std::vector<double> L(double *r);
+  virtual void L(double *r, double *L);
+  virtual feStatus Lphys(int iElm, std::vector<double> &x, std::vector<double> &L,
+                         std::vector<double> &dLdx, std::vector<double> &dLdy)
+  {
+    printf("Not implemented\n");
+    exit(-1);
+  };
+  virtual std::vector<double> dLdr(double *r) { return {0., 1., 3.*r[0]}; };
+  virtual std::vector<double> dLds(double *r) { return {0., 0.}; };
+  virtual std::vector<double> dLdt(double *r) { return {0., 0.}; };
+
+  virtual void initializeNumberingUnknowns(feNumber *number);
+  virtual void initializeNumberingEssential(feNumber *number);
   virtual void initializeAddressingVector(feNumber *number, int numElem, std::vector<feInt> &adr);
 };
 

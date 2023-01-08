@@ -183,7 +183,6 @@ void feSpaceTriP2::L(double *r, double *L)
 feStatus feSpaceTriP2::Lphys(int iElm, std::vector<double> &x, std::vector<double> &L,
                              std::vector<double> &dLdx, std::vector<double> &dLdy)
 {
-  int nNodePerElem = this->getNbNodePerElem();
   std::vector<double> geoCoord;
   _mesh->getCoord(_cncGeoTag, iElm, geoCoord);
 

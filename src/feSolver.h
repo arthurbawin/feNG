@@ -21,12 +21,6 @@ typedef struct feTol {
 /* Supported time integrators schemes */
 typedef enum { EIGENSOLVER, STATIONARY, BDF1, BDF2, DC2F, DC3, DC3F } timeIntegratorScheme;
 
-// Deprecated ?
-void solveStationary(double *normL2, feTolerances tol, feMetaNumber *metaNumber,
-                     feLinearSystem *linearSystem, std::vector<feBilinearForm *> &formMatrices,
-                     std::vector<feBilinearForm *> &formResiduals, feSolution *sol,
-                     std::vector<feNorm *> &norms, feMesh *mesh);
-
 class TimeIntegrator
 {
 protected:
@@ -79,6 +73,7 @@ public:
   void setMesh(feMesh *mesh) { _mesh = mesh; }
   std::vector<double> &getNorm(int iNorm) { return _normL2[iNorm]; };
 
+  virtual feStatus makeStep() = 0;
   virtual feStatus makeSteps(int nSteps) = 0;
 };
 
@@ -93,6 +88,7 @@ public:
 
   double getNorm(int iNorm) { return _normL2[iNorm][0]; };
 
+  virtual feStatus makeStep();
   virtual feStatus makeSteps(int nSteps);
 };
 
@@ -107,6 +103,7 @@ public:
 
   std::vector<double> &getNorm(int iNorm) { return _normL2[iNorm]; };
 
+  virtual feStatus makeStep(){};
   virtual feStatus makeSteps(int nSteps);
 };
 
@@ -121,6 +118,7 @@ public:
 
   std::vector<double> &getNorm(int iNorm) { return _normL2[iNorm]; };
 
+  virtual feStatus makeStep();
   virtual feStatus makeSteps(int nSteps);
 };
 
@@ -138,6 +136,7 @@ public:
 
   std::vector<double> &getNorm(int iNorm) { return _normL2[iNorm]; };
 
+  virtual feStatus makeStep(){};
   virtual feStatus makeSteps(int nSteps);
 };
 
@@ -159,6 +158,7 @@ public:
 
   std::vector<double> &getNorm(int iNorm) { return _normL2[iNorm]; };
 
+  virtual feStatus makeStep(){};
   virtual feStatus makeSteps(int nSteps);
 };
 
@@ -180,6 +180,7 @@ public:
 
   std::vector<double> &getNorm(int iNorm) { return _normL2[iNorm]; };
 
+  virtual feStatus makeStep(){};
   virtual feStatus makeSteps(int nSteps);
 };
 
@@ -202,6 +203,7 @@ public:
   std::vector<double> &getNorm(int iNorm) { return _normL2[iNorm]; };
   std::vector<double> &getInt(int iNorm) { return _normL2[iNorm]; };
 
+  virtual feStatus makeStep(){};
   virtual feStatus makeSteps(int nSteps);
 };
 

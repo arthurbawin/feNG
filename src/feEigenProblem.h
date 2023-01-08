@@ -8,6 +8,10 @@
 #include "feSolution.h"
 #include "feSolutionContainer.h"
 
+#if defined(HAVE_PETSC)
+#include "petscksp.h"
+#endif
+
 #if defined(HAVE_SLEPC)
 #include "slepceps.h"
 #endif
@@ -37,7 +41,7 @@ protected:
   int _argc;
   char **_argv;
 
-#if defined(HAVE_SLEPC) && defined(HAVE_PETSC)
+#if defined(HAVE_SLEPC)
   PetscInt _nInc;
   PetscInt _nDofs;
   Mat _A,_B;

@@ -15,8 +15,8 @@ static double xmin = -1.;
 static double xmax =  1.;
 static double ymin = -1.;
 static double ymax =  1.;
-static double x_0 = -0.2;
-static double y_0 = -0.2;
+// static double x_0 = -0.2;
+// static double y_0 = -0.2;
 
 
 bool inside(double* x, bool strictly = false){
@@ -61,7 +61,7 @@ double fSol(const double t, const std::vector<double> &pos, const std::vector<do
 
 double fSource(const double t, const std::vector<double> &pos, const std::vector<double> &par)
 {
-  double k = par[0];
+  // double k = par[0];
   return 0.;
 }
 

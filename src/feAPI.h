@@ -25,6 +25,7 @@
 #include "feAdaptMesh.h"
 #include "fePostProc.h"
 #include "feNorm.h"
+#include "feGraphics.h"
 //#include "feComputer.h"
 
 #if defined(HAVE_OMP)

@@ -14,17 +14,31 @@ class feBilinearForm
 {
 protected:
   feSysElm *_sysElm;
+
+public:
+  // These members are used to compute the elementary system.
+  // Since friendship is not inherited by feSysElm derived class,
+  // they are public for now although it's probably not optimal.
   std::vector<feSpace *> _intSpace;
-
   feCncGeo *_cnc;
+  feSpace *_geoSpace;
+  std::vector<double> _geoCoord;
 
+  double _c0; // First coefficient of the BDF expansion
+  double _tn; // Current time
+  double _dt; // Time step
+
+  int _numElem;
+
+  double **_Ae;
+  double *_Be;
+
+protected:
   int _cncGeoTag;
   std::string _cncGeoID;
-  feSpace *_geoSpace;
   int _nCoord;
   int _nGeoNodes;
   int _nGeoElm;
-  std::vector<double> _geoCoord;
 
   int _nQuad;
   int _degQuad;
@@ -38,32 +52,21 @@ protected:
   feInt _niElm;
   feInt _njElm;
   std::vector<feInt> _adrI;
-  std::vector<feInt> _adrJ;
-
-  double **_Ae;
-  double *_Be;
+  std::vector<feInt> _adrJ;  
 
 public:
-  // Test : local attributes
-  // std::vector<feInt> _adr;
-  // std::vector<double> _sol;
-  // std::vector<double> _solDot;
-
-
   std::vector<std::vector<feInt>> _adr;
+
+  // The solution at DOFs on the current element for all FE spaces
   std::vector<std::vector<double>> _sol;
   std::vector<std::vector<double>> _solDot;
 
-  // ==================================================================
-  // Pointeur sur la méthode de construction de la matrice élémentaire
-  // (1) Utilisation d'une construction analytique
-  // (2) Construction par la méthode des différences finies
-  //     Utile pour : (i)  Pour développement rapide, mais
-  //                  (ii) Plus coûteux
-  //     Utilise    : R0 le résidu
-  //                  Rh le résidu perturbé
-  //                  h0 la perturbation de la solution
-  // ==================================================================
+  // The solution on the previous and next element (for e.g. DG fluxes)
+  std::vector<std::vector<double>> _solPrev;
+  std::vector<std::vector<double>> _solNext;
+
+public:
+  // To compute the elementary matrix with finite differences
   double *_R0;
   double *_Rh;
   double _h0;
@@ -104,36 +107,6 @@ public:
 
   double getMatrixNorm();
   double getResidualNorm();
-
-  void printInfo()
-  {
-    printf("============== Bilinear form ==============\n");
-    // printf("_cncGeoTag = %d\n", _cncGeoTag);
-    // printf("_nCoord = %d\n", _nCoord);
-    // printf("_nGeoNodes = %d\n", _nGeoNodes);
-    // printf("_nGeoElm = %d\n", _nGeoElm);
-    // printf("feBili ID : %s \n",getID().c_str());
-    // std::cout<<"Adresse feBili : "<<this<<std::endl;
-    // printf("_geoCoord :");
-    // for(auto val : _geoCoord) std::cout << val << " ";
-    // std::cout << std::endl;
-    // printf("_iVar :");
-    // for(auto val : _iVar) std::cout << val << " ";
-    // std::cout << std::endl;
-    // printf("_jVar :");
-    // for(auto val : _jVar) std::cout << val << " ";
-    // std::cout << std::endl;
-    // printf("_adrI :");
-    // for(auto val : _adrI) std::cout << val << " ";
-    // std::cout << std::endl;
-    // printf("_adrJ :");
-    // for(auto val : _adrJ) std::cout << val << " ";
-    // std::cout << std::endl;
-    // printf("_Ae :"); for(auto val : _Ae) std::cout<<val<<" "; std::cout<<std::endl;
-    // printf("_Be :"); for(auto val : _Be)
-    // printf("Adresse Be :");std::cout<<_Be<<std::endl;
-    // printf("_Be :"); for(int jj = 0; jj < 6; ++jj)std::cout<<_Be[jj]<<" "; std::cout<<std::endl;
-  }
 };
 
 #endif

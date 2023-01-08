@@ -55,7 +55,7 @@ feNorm::feNorm(std::vector<feSpace *> &VecfeSpace, feMesh *mesh, int degQuad, fe
 
 void feNorm::computeL2Norm_uh(feMetaNumber *metaNumber, feSolution *sol, feMesh *mesh, double scaling)
 {
-  double normL2 = 0.0, solInt, solRef, J, t = sol->getCurrentTime();
+  double normL2 = 0.0, solInt, J;
   std::vector<double> x;
   std::vector<double> dxdr; // [dx/dr, dy/dr, dz/dr]
   std::vector<double> dxds; // [dx/ds, dy/ds, dz/ds]
@@ -66,7 +66,7 @@ void feNorm::computeL2Norm_uh(feMetaNumber *metaNumber, feSolution *sol, feMesh 
   std::vector<double> &solVec = sol->getSolutionReference();
 
 #if defined(HAVE_OMP)
-#pragma omp parallel for private(_geoCoord, adr0, sol0, solInt, solRef, J, x, dxdr, dxds) reduction(+ : normL2) schedule(dynamic)
+#pragma omp parallel for private(_geoCoord, adr0, sol0, solInt, J, x, dxdr, dxds) reduction(+ : normL2) schedule(dynamic)
 #endif
   for(int iElm = 0; iElm < nElm; ++iElm) {
     adr0.resize(_VecfeSpace[0]->getNbFunctions());
@@ -619,7 +619,7 @@ void feNorm::computeIntFluxNy(feMetaNumber *metaNumber, feSolution *sol, feMesh 
 
 void feNorm::computeIntegralNum(feMetaNumber *metaNumber, feSolution *sol, feMesh *mesh)
 {
-  double Integral = 0.0, solInt, p, J, t = sol->getCurrentTime(), T11, T12, T22;
+  double Integral = 0.0, solInt, J;
   int nElm = _VecfeSpace[0]->getNbElm();
   std::vector<feInt> adr0(_VecfeSpace[0]->getNbFunctions());
   std::vector<double> sol0(adr0.size());
@@ -691,7 +691,7 @@ void feNorm::computeArea(feMetaNumber *metaNumber, feSolution *sol, feMesh *mesh
 void feNorm::computeIntegral(feMetaNumber *metaNumber, feSolution *sol, feMesh *mesh,
                              feFunction *fun)
 {
-  double area = 0.0, solInt, J, t = sol->getCurrentTime();
+  double area = 0.0, solInt, J;
   int nElm = _VecfeSpace[0]->getNbElm();
   std::vector<feInt> adr0(_VecfeSpace[0]->getNbFunctions());
   std::vector<double> sol0(adr0.size());

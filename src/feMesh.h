@@ -111,11 +111,7 @@ public:
   virtual ~feMesh1DP1();
 
   virtual bool locateVertex(const double *x, int &iElm, double *u,
-                            double tol = 1e-5)
-  {
-    feInfo("function locateVertex not implemented for 1DP1 Mesh");
-    return 0;
-  };
+                            double tol = 1e-5);
 };
 
 class feMesh0DP0 : public feMesh
@@ -136,8 +132,8 @@ public:
   virtual bool locateVertex(const double *x, int &iElm, double *u,
                             double tol = 1e-5)
   {
-    feInfo("function locateVertex not implemented for 1DP1 Mesh");
-    return 0;
+    u[0] = 1.;
+    return true;
   };
 };
 
@@ -145,15 +141,15 @@ class feMetaNumber;
 class feSolutionContainer;
 
 typedef struct rtreeSearchCtxStruct {
-    std::vector<Triangle*> *elements;
-    double uvw[3];
-    double r[3];
-    double x[3];
-    double min[2];
-    double max[2];
-    int iElm;
-    bool isFound;
-  } rtreeSearchCtx;
+  std::vector<Triangle*> *elements;
+  double uvw[3];
+  double r[3];
+  double x[3];
+  double min[2];
+  double max[2];
+  int iElm;
+  bool isFound;
+} rtreeSearchCtx;
 
 class feMesh2DP1 : public feMesh
 {

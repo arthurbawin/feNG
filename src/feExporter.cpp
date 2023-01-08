@@ -10,15 +10,15 @@ extern bool FE_VERBOSE;
 static int VTK_VERTEX = 1;
 static int VTK_LINE = 3;
 static int VTK_TRIANGLE = 5;
-static int VTK_QUAD = 9;
-static int VTK_TETRA = 10;
-static int VTK_HEXAHEDRON = 12;
-static int VTK_PYRAMID = 14;
+// static int VTK_QUAD = 9;
+// static int VTK_TETRA = 10;
+// static int VTK_HEXAHEDRON = 12;
+// static int VTK_PYRAMID = 14;
 static int VTK_QUADRATIC_EDGE = 21;
 static int VTK_QUADRATIC_TRIANGLE = 22;
-static int VTK_QUADRATIC_QUAD = 23;
-static int VTK_QUADRATIC_TETRA = 24;
-static int VTK_QUADRATIC_HEXAHEDRON = 25;
+// static int VTK_QUADRATIC_QUAD = 23;
+// static int VTK_QUADRATIC_TETRA = 24;
+// static int VTK_QUADRATIC_HEXAHEDRON = 25;
 
 // A etoffer au fur et a mesure
 std::map<std::string, int> cncToVTKmap = {{"Point0D", VTK_VERTEX},
@@ -330,12 +330,10 @@ void feExporterVTK::writeEigenvector(std::ostream &output, feCncGeo *cnc, feSpac
   // Name of the field is the number of the mode followed by the real part of its eigenvalue
   output << "Mode" + padded + "_" + std::to_string(ep.valReal) << " 1 "<< _writtenNodes << " double" << std::endl;
 
-  int iDOF;
+  int iDOF, elm;
   Vertex *v;
   std::vector<double> x;
   double r[3];
-  int elm;
-  double val;
 
   PetscScalar *vecRealArray;
   VecGetArray(ep.vecReal, &vecRealArray);
@@ -346,12 +344,12 @@ void feExporterVTK::writeEigenvector(std::ostream &output, feCncGeo *cnc, feSpac
     if(iDOF >= 0) {
       // There is a degree of freedom at this mesh vertex
       
-      if(n->getDOFCodeAtVertex(iVertex) == ESS){
+      if(n->getDOFCodeAtVertex(iVertex) == DOF_ESSENTIAL){
         // DOF is an essential BC: assign the corresponding BC stored in the feSolution
         output << solVec[iDOF] << std::endl;
       }
 
-      if(n->getDOFCodeAtVertex(iVertex) == INC){
+      if(n->getDOFCodeAtVertex(iVertex) == DOF_UNKNOWN){
         // True DOF: read value from the eigenvector (computed at true DOFs only)
         // feInfo("Reading ev %d at DOF %d = %f", eigenPairIndex, iDOF, vecRealArray[iDOF]);
         output << vecRealArray[iDOF] << std::endl;

@@ -137,10 +137,7 @@ void feLinearSystemPETSc::initialize()
   VecGetSize(_res, &Nres);
   VecGetSize(_dx, &Ndx);
   VecGetSize(_linSysRes, &NlinSysRes);
-  feInfoCond(FE_VERBOSE > 0, "Created a linear system of size %d x %d\n", M, N);
-  feInfoCond(FE_VERBOSE > 0, "Created a res vector of size %d\n", Nres);
-  feInfoCond(FE_VERBOSE > 0, "Created a dx vector of size %d\n", Ndx);
-  feInfoCond(FE_VERBOSE > 0, "Created a linSysRes vector of size %d\n", NlinSysRes);
+  feInfoCond(FE_VERBOSE > 0, "Created a linear system of size %d x %d", M, N);
 #endif
 }
 
@@ -218,9 +215,8 @@ void feLinearSystemPETSc::assembleMatrices(feSolution *sol)
         // nbElmC = cnc->getNbElmPerColorI(iColor);
         // listElmC = cnc -> getListElmPerColorI(iColor);
 
-        int numThread = 0;
+        // int numThread = 0;
         int elm;
-        int eqt;
 
         double **Ae;
         feInt sizeI;
@@ -232,13 +228,13 @@ void feLinearSystemPETSc::assembleMatrices(feSolution *sol)
         std::vector<PetscScalar> values;
 
 #if defined(HAVE_OMP)
-#pragma omp parallel for private(numThread, elm, eqt, f, niElm, njElm, sizeI, sizeJ, adrI, adrJ,   \
+#pragma omp parallel for private(elm, f, niElm, njElm, sizeI, sizeJ, adrI, adrJ,   \
                                  Ae, ierr, values)
 #endif
         for(int iElm = 0; iElm < nbElmC; ++iElm) {
 #if defined(HAVE_OMP)
-          numThread = omp_get_thread_num();
-          eqt = eq + numThread * _numMatrixForms;
+          // numThread = omp_get_thread_num();
+          int eqt = eq + omp_get_thread_num() * _numMatrixForms;
           f = _formMatrices[eqt];
 #endif
           elm = listElmC[iElm];
@@ -334,9 +330,8 @@ void feLinearSystemPETSc::assembleResiduals(feSolution *sol)
       // nbElmC = cnc->getNbElmPerColorI(iColor);
       // listElmC = cnc -> getListElmPerColorI(iColor);
 
-      int numThread = 0;
+      // int numThread = 0;
       int elm;
-      int eqt;
 
       double *Be;
       feInt sizeI;
@@ -345,12 +340,12 @@ void feLinearSystemPETSc::assembleResiduals(feSolution *sol)
       std::vector<PetscScalar> values;
 
 #if defined(HAVE_OMP)
-#pragma omp parallel for private(numThread, elm, eqt, niElm, Be, f, adrI, ierr, values, sizeI)
+#pragma omp parallel for private(elm, niElm, Be, f, adrI, ierr, values, sizeI)
 #endif
       for(int iElm = 0; iElm < nbElmC; ++iElm) {
 #if defined(HAVE_OMP)
-        numThread = omp_get_thread_num();
-        eqt = eq + numThread * _numResidualForms;
+        // numThread = omp_get_thread_num();
+        int eqt = eq + omp_get_thread_num() * _numResidualForms;
         f = _formResiduals[eqt];
 #endif
 
@@ -376,6 +371,12 @@ void feLinearSystemPETSc::assembleResiduals(feSolution *sol)
           values[i] = Be[niElm[i]];
         }
 
+        // if(f->getID() == DG_ADVECTION_1D){
+        //   for(feInt i = 0; i < sizeI; ++i) {
+        //     feInfo("Adding values[%d] = %f", i, values[i]);
+        //   }
+        // }
+
         ierr = VecSetValues(_res, adrI.size(), adrI.data(), values.data(), ADD_VALUES);
         niElm.clear();
 
@@ -396,6 +397,9 @@ void feLinearSystemPETSc::assembleResiduals(feSolution *sol)
   // VecNorm(_res, NORM_2, &normResidual);
   // CHKERRABORT(PETSC_COMM_WORLD, ierr);
   // printf("Norme du résidu : %10.10e\n", normResidual);
+
+  // feInfo("Assembled residual:");
+  // printResidual();
 
 #endif
 }

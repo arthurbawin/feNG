@@ -20,6 +20,9 @@ typedef enum {
   DIFF_1D,
   MASSE_1D,
   NEUMANN_1D,
+  ADVECTION_1D,
+  DG_ADVECTION_1D,
+  SUPG_STABILIZATION_1D,
   MASSE_2D,
   SOURCE_2D,
   DIFFUSION_2D,
@@ -38,6 +41,8 @@ inline const std::string toString(elementSystemType t)
       return "MASSE_1D";
     case NEUMANN_1D:
       return "NEUMANN_1D";
+    case DG_ADVECTION_1D:
+      return "DG_ADVECTION_1D";
     case MASSE_2D:
       return "MASSE_2D";
     case SOURCE_2D:
@@ -53,6 +58,8 @@ inline const std::string toString(elementSystemType t)
   }
 }
 
+class feBilinearForm;
+
 class feSysElm
 {
 protected:
@@ -61,9 +68,10 @@ protected:
 
   elementSystemType _ID;
 
-  bool matrixAnalyticalStatus = true;
+  // Compute the element FE matrix using finite differences
+  bool _computeMatrixWithFD = false;
 
-  // Does this form has an elementary matrix to assemble ?
+  // Does this form have an elementary matrix to assemble?
   bool _hasMatrix = false;
 
 public:
@@ -80,18 +88,13 @@ public:
   elementSystemType getID() { return _ID; }
   std::string getIDName() { return toString(_ID); }
 
-  bool getMatrixAnalyticalStatus() { return matrixAnalyticalStatus; };
+  bool computeMatrixWithFD() { return _computeMatrixWithFD; };
 
   bool hasMatrix() { return _hasMatrix; }
 
   virtual void createElementarySystem(std::vector<feSpace *> &space) = 0;
-  virtual void computeAe(std::vector<double> &J, int numElem, std::vector<feSpace *> &intSpace,
-                         feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn,
-                         double **Ae, std::vector<std::vector<double>> &sol, std::vector<std::vector<double>> &solDot) = 0;
-  virtual void computeBe(std::vector<double> &J, int numElem, std::vector<feSpace *> &intSpace,
-                         feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn,
-                         double dt, double *Be, std::vector<std::vector<double>> &sol,
-                         std::vector<std::vector<double>> &solDot) = 0;
+  virtual void computeAe(feBilinearForm *form) = 0;
+  virtual void computeBe(feBilinearForm *form) = 0;
 };
 
 class feSysElm_0D_StiffSpring : public feSysElm
@@ -113,13 +116,8 @@ public:
   virtual ~feSysElm_0D_StiffSpring() {}
 
   virtual void createElementarySystem(std::vector<feSpace *> &space);
-  virtual void computeAe(std::vector<double> &J, int numElem, std::vector<feSpace *> &intSpace,
-                         feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn,
-                         double **Ae, std::vector<std::vector<double>> &sol, std::vector<std::vector<double>> &solDot);
-  virtual void computeBe(std::vector<double> &J, int numElem, std::vector<feSpace *> &intSpace,
-                         feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn,
-                         double dt, double *Be, std::vector<std::vector<double>> &sol,
-                         std::vector<std::vector<double>> &solDot);
+  virtual void computeAe(feBilinearForm *form);
+  virtual void computeBe(feBilinearForm *form);
 };
 
 class feSysElm_0D_Stiff2 : public feSysElm
@@ -142,13 +140,8 @@ public:
   virtual ~feSysElm_0D_Stiff2() {}
 
   virtual void createElementarySystem(std::vector<feSpace *> &space);
-  virtual void computeAe(std::vector<double> &J, int numElem, std::vector<feSpace *> &intSpace,
-                         feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn,
-                         double **Ae, std::vector<std::vector<double>> &sol, std::vector<std::vector<double>> &solDot);
-  virtual void computeBe(std::vector<double> &J, int numElem, std::vector<feSpace *> &intSpace,
-                         feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn,
-                         double dt, double *Be, std::vector<std::vector<double>> &sol,
-                         std::vector<std::vector<double>> &solDot);
+  virtual void computeAe(feBilinearForm *form);
+  virtual void computeBe(feBilinearForm *form);
 };
 
 class feSysElm_0D_Stiff3 : public feSysElm
@@ -171,13 +164,8 @@ public:
   virtual ~feSysElm_0D_Stiff3() {}
 
   virtual void createElementarySystem(std::vector<feSpace *> &space);
-  virtual void computeAe(std::vector<double> &J, int numElem, std::vector<feSpace *> &intSpace,
-                         feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn,
-                         double **Ae, std::vector<std::vector<double>> &sol, std::vector<std::vector<double>> &solDot);
-  virtual void computeBe(std::vector<double> &J, int numElem, std::vector<feSpace *> &intSpace,
-                         feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn,
-                         double dt, double *Be, std::vector<std::vector<double>> &sol,
-                         std::vector<std::vector<double>> &solDot);
+  virtual void computeAe(feBilinearForm *form);
+  virtual void computeBe(feBilinearForm *form);
 };
 
 class feSysElm_0D_weakBC : public feSysElm
@@ -198,13 +186,8 @@ public:
   virtual ~feSysElm_0D_weakBC() {}
 
   virtual void createElementarySystem(std::vector<feSpace *> &space);
-  virtual void computeAe(std::vector<double> &J, int numElem, std::vector<feSpace *> &intSpace,
-                         feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn,
-                         double **Ae, std::vector<std::vector<double>> &sol, std::vector<std::vector<double>> &solDot);
-  virtual void computeBe(std::vector<double> &J, int numElem, std::vector<feSpace *> &intSpace,
-                         feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn,
-                         double dt, double *Be, std::vector<std::vector<double>> &sol,
-                         std::vector<std::vector<double>> &solDot);
+  virtual void computeAe(feBilinearForm *form);
+  virtual void computeBe(feBilinearForm *form);
 };
 
 class feSysElm_0D_weakBC_edo1 : public feSysElm
@@ -226,13 +209,8 @@ public:
   virtual ~feSysElm_0D_weakBC_edo1() {}
 
   virtual void createElementarySystem(std::vector<feSpace *> &space);
-  virtual void computeAe(std::vector<double> &J, int numElem, std::vector<feSpace *> &intSpace,
-                         feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn,
-                         double **Ae, std::vector<std::vector<double>> &sol, std::vector<std::vector<double>> &solDot);
-  virtual void computeBe(std::vector<double> &J, int numElem, std::vector<feSpace *> &intSpace,
-                         feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn,
-                         double dt, double *Be, std::vector<std::vector<double>> &sol,
-                         std::vector<std::vector<double>> &solDot);
+  virtual void computeAe(feBilinearForm *form);
+  virtual void computeBe(feBilinearForm *form);
 };
 
 class feSysElm_0D_weakBC_edo1_V2 : public feSysElm
@@ -254,13 +232,8 @@ public:
   virtual ~feSysElm_0D_weakBC_edo1_V2() {}
 
   virtual void createElementarySystem(std::vector<feSpace *> &space);
-  virtual void computeAe(std::vector<double> &J, int numElem, std::vector<feSpace *> &intSpace,
-                         feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn,
-                         double **Ae, std::vector<std::vector<double>> &sol, std::vector<std::vector<double>> &solDot);
-  virtual void computeBe(std::vector<double> &J, int numElem, std::vector<feSpace *> &intSpace,
-                         feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn,
-                         double dt, double *Be, std::vector<std::vector<double>> &sol,
-                         std::vector<std::vector<double>> &solDot);
+  virtual void computeAe(feBilinearForm *form);
+  virtual void computeBe(feBilinearForm *form);
 };
 
 class feSysElm_0D_weakBC_edo2 : public feSysElm
@@ -283,13 +256,8 @@ public:
   virtual ~feSysElm_0D_weakBC_edo2() {}
 
   virtual void createElementarySystem(std::vector<feSpace *> &space);
-  virtual void computeAe(std::vector<double> &J, int numElem, std::vector<feSpace *> &intSpace,
-                         feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn,
-                         double **Ae, std::vector<std::vector<double>> &sol, std::vector<std::vector<double>> &solDot);
-  virtual void computeBe(std::vector<double> &J, int numElem, std::vector<feSpace *> &intSpace,
-                         feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn,
-                         double dt, double *Be, std::vector<std::vector<double>> &sol,
-                         std::vector<std::vector<double>> &solDot);
+  virtual void computeAe(feBilinearForm *form);
+  virtual void computeBe(feBilinearForm *form);
 };
 
 class feSysElm_0D_Masse : public feSysElm
@@ -308,13 +276,8 @@ public:
   virtual ~feSysElm_0D_Masse() {}
 
   virtual void createElementarySystem(std::vector<feSpace *> &space);
-  virtual void computeAe(std::vector<double> &J, int numElem, std::vector<feSpace *> &intSpace,
-                         feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn,
-                         double **Ae, std::vector<std::vector<double>> &sol, std::vector<std::vector<double>> &solDot);
-  virtual void computeBe(std::vector<double> &J, int numElem, std::vector<feSpace *> &intSpace,
-                         feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn,
-                         double dt, double *Be, std::vector<std::vector<double>> &sol,
-                         std::vector<std::vector<double>> &solDot);
+  virtual void computeAe(feBilinearForm *form);
+  virtual void computeBe(feBilinearForm *form);
 };
 
 class feSysElm_0D_Source : public feSysElm
@@ -333,13 +296,8 @@ public:
   virtual ~feSysElm_0D_Source() {}
 
   virtual void createElementarySystem(std::vector<feSpace *> &space);
-  virtual void computeAe(std::vector<double> &J, int numElem, std::vector<feSpace *> &intSpace,
-                         feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn,
-                         double **Ae, std::vector<std::vector<double>> &sol, std::vector<std::vector<double>> &solDot){};
-  virtual void computeBe(std::vector<double> &J, int numElem, std::vector<feSpace *> &intSpace,
-                         feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn,
-                         double dt, double *Be, std::vector<std::vector<double>> &sol,
-                         std::vector<std::vector<double>> &solDot);
+  virtual void computeAe(feBilinearForm *form);
+  virtual void computeBe(feBilinearForm *form);
 };
 
 class feSysElm_0D_Source_crossed : public feSysElm
@@ -359,43 +317,9 @@ public:
   virtual ~feSysElm_0D_Source_crossed() {}
 
   virtual void createElementarySystem(std::vector<feSpace *> &space);
-  virtual void computeAe(std::vector<double> &J, int numElem, std::vector<feSpace *> &intSpace,
-                         feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn,
-                         double **Ae, std::vector<std::vector<double>> &sol, std::vector<std::vector<double>> &solDot){};
-  virtual void computeBe(std::vector<double> &J, int numElem, std::vector<feSpace *> &intSpace,
-                         feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn,
-                         double dt, double *Be, std::vector<std::vector<double>> &sol,
-                         std::vector<std::vector<double>> &solDot);
+  virtual void computeAe(feBilinearForm *form);
+  virtual void computeBe(feBilinearForm *form);
 };
-
-// class feSysElm_1D_weakBC_Vec : public feSysElm {
-// protected:
-//   feVectorFunction *_fct;
-//   std::vector<double> &_par; // Parametre
-//   int _idU;
-//   int _idV;
-//   int _idL;
-//   int _idBu;
-//   int _idBv;
-//   std::vector<double> _feU;
-//   std::vector<double> _feV;
-//   std::vector<double> _feL;
-//   std::vector<double> _feBu;
-//   std::vector<double> _feBv;
-
-// public:
-//   feSysElm_1D_weakBC_Vec(std::vector<double> &par, feVectorFunction *fct) : _fct(fct),
-//   _par(par){}; virtual ~feSysElm_1D_weakBC_Vec() {}
-
-//   virtual void createElementarySystem(std::vector<feSpace *> &space);
-//   virtual void computeAe(std::vector<double> &J, int numElem, std::vector<feSpace *> &intSpace,
-//                          feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn,
-//                          double **Ae, std::vector<std::vector<double>> &sol, std::vector<std::vector<double>> &solDot);
-//   virtual void computeBe(std::vector<double> &J, int numElem, std::vector<feSpace *> &intSpace,
-//                          feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn,
-//                          double dt, double *Be, std::vector<std::vector<double>> &sol, std::vector<double>
-//                          &solDot);
-// };
 
 class feSysElm_1D_weakBC_edo1 : public feSysElm
 {
@@ -417,13 +341,8 @@ public:
   virtual ~feSysElm_1D_weakBC_edo1() {}
 
   virtual void createElementarySystem(std::vector<feSpace *> &space);
-  virtual void computeAe(std::vector<double> &J, int numElem, std::vector<feSpace *> &intSpace,
-                         feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn,
-                         double **Ae, std::vector<std::vector<double>> &sol, std::vector<std::vector<double>> &solDot);
-  virtual void computeBe(std::vector<double> &J, int numElem, std::vector<feSpace *> &intSpace,
-                         feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn,
-                         double dt, double *Be, std::vector<std::vector<double>> &sol,
-                         std::vector<std::vector<double>> &solDot);
+  virtual void computeAe(feBilinearForm *form);
+  virtual void computeBe(feBilinearForm *form);
 };
 
 class feSysElm_1D_Source : public feSysElm
@@ -443,13 +362,8 @@ public:
   virtual ~feSysElm_1D_Source() {}
 
   virtual void createElementarySystem(std::vector<feSpace *> &space);
-  virtual void computeAe(std::vector<double> &J, int numElem, std::vector<feSpace *> &intSpace,
-                         feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn,
-                         double **Ae, std::vector<std::vector<double>> &sol, std::vector<std::vector<double>> &solDot){};
-  virtual void computeBe(std::vector<double> &J, int numElem, std::vector<feSpace *> &intSpace,
-                         feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn,
-                         double dt, double *Be, std::vector<std::vector<double>> &sol,
-                         std::vector<std::vector<double>> &solDot);
+  virtual void computeAe(feBilinearForm *form){};
+  virtual void computeBe(feBilinearForm *form);
 };
 
 class feSysElm_1D_Diffusion : public feSysElm
@@ -465,17 +379,13 @@ public:
   feSysElm_1D_Diffusion(double par, feFunction *fct) : feSysElm(true), _fct(fct), _par(par)
   {
     _ID = DIFF_1D;
+    _computeMatrixWithFD = true;
   };
   virtual ~feSysElm_1D_Diffusion() {}
 
   virtual void createElementarySystem(std::vector<feSpace *> &space);
-  virtual void computeAe(std::vector<double> &J, int numElem, std::vector<feSpace *> &intSpace,
-                         feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn,
-                         double **Ae, std::vector<std::vector<double>> &sol, std::vector<std::vector<double>> &solDot);
-  virtual void computeBe(std::vector<double> &J, int numElem, std::vector<feSpace *> &intSpace,
-                         feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn,
-                         double dt, double *Be, std::vector<std::vector<double>> &sol,
-                         std::vector<std::vector<double>> &solDot);
+  virtual void computeAe(feBilinearForm *form);
+  virtual void computeBe(feBilinearForm *form);
 };
 
 class feSysElm_1D_Masse : public feSysElm
@@ -491,17 +401,13 @@ public:
   feSysElm_1D_Masse(double par, feFunction *fct) : feSysElm(true), _fct(fct), _par(par)
   {
     _ID = MASSE_1D;
+    _computeMatrixWithFD = false;
   };
   virtual ~feSysElm_1D_Masse() {}
 
   virtual void createElementarySystem(std::vector<feSpace *> &space);
-  virtual void computeAe(std::vector<double> &J, int numElem, std::vector<feSpace *> &intSpace,
-                         feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn,
-                         double **Ae, std::vector<std::vector<double>> &sol, std::vector<std::vector<double>> &solDot);
-  virtual void computeBe(std::vector<double> &J, int numElem, std::vector<feSpace *> &intSpace,
-                         feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn,
-                         double dt, double *Be, std::vector<std::vector<double>> &sol,
-                         std::vector<std::vector<double>> &solDot);
+  virtual void computeAe(feBilinearForm *form);
+  virtual void computeBe(feBilinearForm *form);
 };
 
 class feSysElm_1D_NeumannBC : public feSysElm
@@ -521,13 +427,74 @@ public:
   virtual ~feSysElm_1D_NeumannBC() {}
 
   virtual void createElementarySystem(std::vector<feSpace *> &space);
-  virtual void computeAe(std::vector<double> &J, int numElem, std::vector<feSpace *> &intSpace,
-                         feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn,
-                         double **Ae, std::vector<std::vector<double>> &sol, std::vector<std::vector<double>> &solDot){};
-  virtual void computeBe(std::vector<double> &J, int numElem, std::vector<feSpace *> &intSpace,
-                         feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn,
-                         double dt, double *Be, std::vector<std::vector<double>> &sol,
-                         std::vector<std::vector<double>> &solDot);
+  virtual void computeAe(feBilinearForm *form){};
+  virtual void computeBe(feBilinearForm *form);
+};
+
+class feSysElm_1D_Advection : public feSysElm
+{
+protected:
+  feFunction *_fct;
+  double _par; // Parametres
+  int _idU;
+  std::vector<double> _feU;
+  std::vector<double> _feUdx;
+
+public:
+  feSysElm_1D_Advection(double par, feFunction *fct) : feSysElm(true), _fct(fct), _par(par)
+  {
+    _ID = ADVECTION_1D;
+    _computeMatrixWithFD = false;
+  };
+  virtual ~feSysElm_1D_Advection() {}
+
+  virtual void createElementarySystem(std::vector<feSpace *> &space);
+  virtual void computeAe(feBilinearForm *form);
+  virtual void computeBe(feBilinearForm *form);
+};
+
+class feSysElm_1D_SUPGStab : public feSysElm
+{
+protected:
+  feFunction *_fct;
+  std::vector<double> _par;
+  int _idU;
+  std::vector<double> _feU;
+  std::vector<double> _feUdx;
+
+public:
+  feSysElm_1D_SUPGStab(std::vector<double> par, feFunction *fct) : feSysElm(true), _fct(fct), _par(par)
+  {
+    _ID = SUPG_STABILIZATION_1D;
+    _computeMatrixWithFD = true;
+  };
+  virtual ~feSysElm_1D_SUPGStab() {}
+
+  virtual void createElementarySystem(std::vector<feSpace *> &space);
+  virtual void computeAe(feBilinearForm *form);
+  virtual void computeBe(feBilinearForm *form);
+};
+
+class feSysElm_1D_DG_Advection : public feSysElm
+{
+protected:
+  feFunction *_fct;
+  double _par; // Parametres
+  int _idU;
+  std::vector<double> _feU;
+  std::vector<double> _feUdx;
+
+public:
+  feSysElm_1D_DG_Advection(double par, feFunction *fct) : feSysElm(true), _fct(fct), _par(par)
+  {
+    _ID = DG_ADVECTION_1D;
+    _computeMatrixWithFD = false;
+  };
+  virtual ~feSysElm_1D_DG_Advection() {}
+
+  virtual void createElementarySystem(std::vector<feSpace *> &space);
+  virtual void computeAe(feBilinearForm *form);
+  virtual void computeBe(feBilinearForm *form);
 };
 
 class feSysElm_2D_Masse : public feSysElm
@@ -546,17 +513,13 @@ public:
   feSysElm_2D_Masse(double par, feFunction *fct) : feSysElm(true), _fct(fct), _par(par)
   {
     _ID = MASSE_2D;
+    _computeMatrixWithFD = false;
   };
   virtual ~feSysElm_2D_Masse() {}
 
   virtual void createElementarySystem(std::vector<feSpace *> &space);
-  virtual void computeAe(std::vector<double> &J, int numElem, std::vector<feSpace *> &intSpace,
-                         feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn,
-                         double **Ae, std::vector<std::vector<double>> &sol, std::vector<std::vector<double>> &solDot);
-  virtual void computeBe(std::vector<double> &J, int numElem, std::vector<feSpace *> &intSpace,
-                         feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn,
-                         double dt, double *Be, std::vector<std::vector<double>> &sol,
-                         std::vector<std::vector<double>> &solDot);
+  virtual void computeAe(feBilinearForm *form);
+  virtual void computeBe(feBilinearForm *form);
 };
 
 class feSysElm_2D_Source : public feSysElm
@@ -579,13 +542,8 @@ public:
   virtual ~feSysElm_2D_Source() {}
 
   virtual void createElementarySystem(std::vector<feSpace *> &space);
-  virtual void computeAe(std::vector<double> &J, int numElem, std::vector<feSpace *> &intSpace,
-                         feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn,
-                         double **Ae, std::vector<std::vector<double>> &sol, std::vector<std::vector<double>> &solDot){};
-  virtual void computeBe(std::vector<double> &J, int numElem, std::vector<feSpace *> &intSpace,
-                         feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn,
-                         double dt, double *Be, std::vector<std::vector<double>> &sol,
-                         std::vector<std::vector<double>> &solDot);
+  virtual void computeAe(feBilinearForm *form){};
+  virtual void computeBe(feBilinearForm *form);
 };
 
 class feSysElm_2D_Diffusion : public feSysElm
@@ -604,19 +562,14 @@ public:
   feSysElm_2D_Diffusion(double par, feFunction *fct) : feSysElm(true), _fct(fct), _par(par)
   {
     _ID = DIFFUSION_2D;
-    matrixAnalyticalStatus = true;
+    _computeMatrixWithFD = false;
   };
 
   virtual ~feSysElm_2D_Diffusion() {}
 
   virtual void createElementarySystem(std::vector<feSpace *> &space);
-  virtual void computeAe(std::vector<double> &J, int numElem, std::vector<feSpace *> &intSpace,
-                         feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn,
-                         double **Ae, std::vector<std::vector<double>> &sol, std::vector<std::vector<double>> &solDot);
-  virtual void computeBe(std::vector<double> &J, int numElem, std::vector<feSpace *> &intSpace,
-                         feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn,
-                         double dt, double *Be, std::vector<std::vector<double>> &sol,
-                         std::vector<std::vector<double>> &solDot);
+  virtual void computeAe(feBilinearForm *form);
+  virtual void computeBe(feBilinearForm *form);
 };
 
 class feSysElm_2D_Advection : public feSysElm
@@ -635,18 +588,13 @@ public:
   feSysElm_2D_Advection(double par, feVectorFunction *fct) : feSysElm(true), _fct(fct), _par(par)
   {
     _ID = ADVECTION_2D;
-    matrixAnalyticalStatus = false;
+    _computeMatrixWithFD = true;
   };
   virtual ~feSysElm_2D_Advection() {}
 
   virtual void createElementarySystem(std::vector<feSpace *> &space);
-  virtual void computeAe(std::vector<double> &J, int numElem, std::vector<feSpace *> &intSpace,
-                         feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn,
-                         double **Ae, std::vector<std::vector<double>> &sol, std::vector<std::vector<double>> &solDot);
-  virtual void computeBe(std::vector<double> &J, int numElem, std::vector<feSpace *> &intSpace,
-                         feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn,
-                         double dt, double *Be, std::vector<std::vector<double>> &sol,
-                         std::vector<std::vector<double>> &solDot);
+  virtual void computeAe(feBilinearForm *form);
+  virtual void computeBe(feBilinearForm *form);
 };
 
 class feSysElm_2D_Stokes : public feSysElm
@@ -672,18 +620,13 @@ public:
     : feSysElm(true), _fct(fct), _par(par)
   {
     _ID = STOKES_2D;
-    matrixAnalyticalStatus = true;
+    _computeMatrixWithFD = false;
   };
   virtual ~feSysElm_2D_Stokes() {}
 
   virtual void createElementarySystem(std::vector<feSpace *> &space);
-  virtual void computeAe(std::vector<double> &J, int numElem, std::vector<feSpace *> &intSpace,
-                         feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn,
-                         double **Ae, std::vector<std::vector<double>> &sol, std::vector<std::vector<double>> &solDot);
-  virtual void computeBe(std::vector<double> &J, int numElem, std::vector<feSpace *> &intSpace,
-                         feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn,
-                         double dt, double *Be, std::vector<std::vector<double>> &sol,
-                         std::vector<std::vector<double>> &solDot);
+  virtual void computeAe(feBilinearForm *form);
+  virtual void computeBe(feBilinearForm *form);
 };
 
 class feSysElm_2D_NavierStokes : public feSysElm
@@ -711,18 +654,13 @@ public:
     : feSysElm(true), _fct(fct), _par(par), _viscosityFct(viscosityFct)
   {
     _ID = NAVIERSTOKES_2D;
-    matrixAnalyticalStatus = true;
+    _computeMatrixWithFD = false;
   };
   virtual ~feSysElm_2D_NavierStokes() {}
 
   virtual void createElementarySystem(std::vector<feSpace *> &space);
-  virtual void computeAe(std::vector<double> &J, int numElem, std::vector<feSpace *> &intSpace,
-                         feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn,
-                         double **Ae, std::vector<std::vector<double>> &sol, std::vector<std::vector<double>> &solDot);
-  virtual void computeBe(std::vector<double> &J, int numElem, std::vector<feSpace *> &intSpace,
-                         feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn,
-                         double dt, double *Be, std::vector<std::vector<double>> &sol,
-                         std::vector<std::vector<double>> &solDot);
+  virtual void computeAe(feBilinearForm *form);
+  virtual void computeBe(feBilinearForm *form);
 };
 
 // Outflow boundary condition
@@ -747,19 +685,13 @@ public:
     : feSysElm(true), _fct(fct), _par(par), _viscosityFct(viscosityFct)
   {
     _ID = DIRECTIONALDONOTHING_1D;
-    matrixAnalyticalStatus = false;
+    _computeMatrixWithFD = true;
   };
   virtual ~feSysElm_1D_DirectionalDoNothing() {}
 
   virtual void createElementarySystem(std::vector<feSpace *> &space);
-  // Matrix not implemented : finite differences only
-  virtual void computeAe(std::vector<double> &J, int numElem, std::vector<feSpace *> &intSpace,
-                         feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn,
-                         double **Ae, std::vector<std::vector<double>> &sol, std::vector<std::vector<double>> &solDot);
-  virtual void computeBe(std::vector<double> &J, int numElem, std::vector<feSpace *> &intSpace,
-                         feSpace *geoSpace, std::vector<double> &geoCoord, double c0, double tn,
-                         double dt, double *Be, std::vector<std::vector<double>> &sol,
-                         std::vector<std::vector<double>> &solDot);
+  virtual void computeAe(feBilinearForm *form);
+  virtual void computeBe(feBilinearForm *form);
 };
 
 #endif

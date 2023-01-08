@@ -20,71 +20,72 @@ feNumber::feNumber(feMesh *mesh) : _nNod(mesh->getNbNodes()), _nEdg(mesh->getNbE
   _nDOFVertices.resize(_nNod);
   _nDOFElements.resize(_nElm);
   _nDOFEdges.resize(_nEdg);
-  _codeDOFVertices.resize(_nNod, -3);
-  _codeDOFElements.resize(_nElm, -3);
-  _codeDOFEdges.resize(_nEdg, -3);
+  _codeDOFVertices.resize(_nNod, DOF_NOT_ASSIGNED);
+  _codeDOFElements.resize(_nElm, DOF_NOT_ASSIGNED);
+  _codeDOFEdges.resize(_nEdg, DOF_NOT_ASSIGNED);
 
   // TODO : Ajouter une b-rep et verifier la compatibilite des feSpace frontieres
 }
 
-void feNumber::defDDLSommet(feMesh *mesh, std::string const &cncGeoID, int numElem, int numVertex)
+void feNumber::defDDLSommet(feMesh *mesh, std::string const &cncGeoID, int numElem, int numVertex, int numDOF)
 {
   int vert = mesh->getVertex(cncGeoID, numElem, numVertex);
-  // printf("Assigning INC and 1 dof at vertex %d on cnc %s on elem %d at vertex %d\n", vert,
+  // printf("Assigning DOF_UNKNOWN and 1 dof at vertex %d on cnc %s on elem %d at vertex %d\n", vert,
   // cncGeoID.c_str(), numElem, numVertex);
-  _nDOFVertices[vert] = 1;
-  _codeDOFVertices[vert] = INC;
+  _nDOFVertices[vert] = numDOF;
+  _codeDOFVertices[vert] = DOF_UNKNOWN;
 }
 
 void feNumber::defDDLElement(feMesh *mesh, std::string const &cncGeoID, int numElem, int numDOF)
 {
   int elem = mesh->getElement(cncGeoID, numElem);
-  // printf("Assigning INC and %d dof(s) at elem %d on cnc %s on elem %d\n", numDOF, elem,
+  // printf("Assigning DOF_UNKNOWN and %d dof(s) at elem %d on cnc %s on elem %d\n", numDOF, elem,
   // cncGeoID.c_str(), numElem);
   _nDOFElements[elem] = numDOF;
-  _codeDOFElements[elem] = INC;
+  _codeDOFElements[elem] = DOF_UNKNOWN;
 }
 
 void feNumber::defDDLEdge(feMesh *mesh, std::string const &cncGeoID, int numElem, int numEdge,
                           int numDOF)
 {
   int edge = fabs(mesh->getEdge(cncGeoID, numElem, numEdge)) - 1; // fabs ?
-  // printf("Assigning INC and %d dof(s) at edge %d which is edge number %d of elem %d on cnc %s\n",
+  // printf("Assigning DOF_UNKNOWN and %d dof(s) at edge %d which is edge number %d of elem %d on cnc %s\n",
   // numDOF, edge, numEdge, numElem, cncGeoID.c_str());
   _nDOFEdges[edge] = numDOF;
-  _codeDOFEdges[edge] = INC;
+  _codeDOFEdges[edge] = DOF_UNKNOWN;
 }
 
 void feNumber::defDDLSommet_essentialBC(feMesh *mesh, std::string const &cncGeoID, int numElem,
                                         int numVertex)
 {
   int vert = mesh->getVertex(cncGeoID, numElem, numVertex);
-  // printf("Setting global vertex %d as ESS - on cnc %s on elem %d at vertex %d\n", vert,
+  // printf("Setting global vertex %d as DOF_ESSENTIAL - on cnc %s on elem %d at vertex %d\n", vert,
   // cncGeoID.c_str(), numElem, numVertex);
-  _codeDOFVertices[vert] = ESS;
+  _codeDOFVertices[vert] = DOF_ESSENTIAL;
 }
 
 void feNumber::defDDLElement_essentialBC(feMesh *mesh, std::string const &cncGeoID, int numElem)
 {
   int elem = mesh->getElement(cncGeoID, numElem);
-  // printf("Setting global element %d as ESS - on cnc %s on elem %d\n", elem, cncGeoID.c_str(),
+  // printf("Setting global element %d as DOF_ESSENTIAL - on cnc %s on elem %d\n", elem, cncGeoID.c_str(),
   // numElem);
-  _codeDOFElements[elem] = ESS;
+  _codeDOFElements[elem] = DOF_ESSENTIAL;
 }
 
 void feNumber::defDDLEdge_essentialBC(feMesh *mesh, std::string const &cncGeoID, int numElem,
                                       int numEdge)
 {
   int edge = fabs(mesh->getEdge(cncGeoID, numElem, numEdge)) - 1;
-  // printf("Setting global edge %d as ESS which is edge number %d of elem %d on cnc %s\n", edge,
+  // printf("Setting global edge %d as DOF_ESSENTIAL which is edge number %d of elem %d on cnc %s\n", edge,
   // numEdge, numElem, cncGeoID.c_str());
-  _codeDOFEdges[edge] = ESS;
+  _codeDOFEdges[edge] = DOF_ESSENTIAL;
 }
 
-int feNumber::getDDLSommet(feMesh *mesh, std::string const &cncGeoID, int numElem, int numVertex)
+int feNumber::getDDLSommet(feMesh *mesh, std::string const &cncGeoID, int numElem, int numVertex, int numDOF)
 {
   int vert = mesh->getVertex(cncGeoID, numElem, numVertex);
-  return _numberingVertices[vert];
+  // return _numberingVertices[vert];
+  return _numberingVertices[_maxDOFperVertex * vert + numDOF];
 }
 
 int feNumber::getDDLElement(feMesh *mesh, std::string const &cncGeoID, int numElem, int numDOF)
@@ -96,76 +97,74 @@ int feNumber::getDDLElement(feMesh *mesh, std::string const &cncGeoID, int numEl
 int feNumber::getDDLEdge(feMesh *mesh, std::string const &cncGeoID, int numElem, int numEdge,
                          int numDOF)
 {
-  // In connecEdges, edges are numbering starting from 1 and can be negative
+  // In connecEdges, edges are numbered starting from 1 and can be negative
   int edge = abs(mesh->getEdge(cncGeoID, numElem, numEdge)) - 1;
   return _numberingEdges[_maxDOFperEdge * edge + numDOF];
 }
 
 void feNumber::prepareNumbering()
 {
+  _maxDOFperVertex = *std::max_element(_nDOFVertices.begin(), _nDOFVertices.end());
   _maxDOFperElem = *std::max_element(_nDOFElements.begin(), _nDOFElements.end());
   _maxDOFperEdge = 0;
   if(_nEdg > 0) {
     _maxDOFperEdge = *std::max_element(_nDOFEdges.begin(), _nDOFEdges.end());
   }
 
-  _numberingVertices.resize(_nNod, -3);
-  _numberingElements.resize(_nElm * _maxDOFperElem, -3);
-  _numberingEdges.resize(_nEdg * _maxDOFperEdge, -3);
+  // Initialize the numbering arrays
+  _numberingVertices.resize(_nNod * _maxDOFperVertex, DOF_NOT_ASSIGNED);
+  _numberingElements.resize(_nElm * _maxDOFperElem, DOF_NOT_ASSIGNED);
+  _numberingEdges.resize(_nEdg * _maxDOFperEdge, DOF_NOT_ASSIGNED);
 
+  // Copy the code of the DOF into the numbering array. If multiple DOFs are associated
+  // to an entity, they all have the same code, i.e. a vertex, element or edge cannot be
+  // part unknown and part essential.
   for(int iVertex = 0; iVertex < _nNod; ++iVertex) {
-    if(_nDOFVertices[iVertex] == 1) _numberingVertices[iVertex] = _codeDOFVertices[iVertex];
+    for(int iDOF = 0; iDOF < _nDOFVertices[iVertex]; ++iDOF){
+      // if(_nDOFVertices[_maxDOFperVertex * iVertex + iDOF] >= 1){
+        _numberingVertices[_maxDOFperVertex * iVertex + iDOF] = _codeDOFVertices[iVertex];
+      // }
+    }
   }
-  // printf("Numérotation des sommets : \n");
-  // for(int iVertex = 0; iVertex < _nNod; ++iVertex) {
-  //   std::cout<<_numberingVertices[iVertex]<<std::endl;
-  // }
+
   for(int iElm = 0; iElm < _nElm; ++iElm) {
     for(int iDOF = 0; iDOF < _nDOFElements[iElm]; ++iDOF)
       _numberingElements[_maxDOFperElem * iElm + iDOF] = _codeDOFElements[iElm];
   }
-  // printf("Numérotation des elements : \n");
-  // for(int iElm = 0; iElm < _nElm; ++iElm) {
-  //   for(int iDOF = 0; iDOF < _nDOFElements[iElm]; ++iDOF)
-  //     std::cout<<_numberingElements[_maxDOFperElem * iElm + iDOF]<<std::endl;
-  // }
+
   for(int iEdg = 0; iEdg < _nEdg; ++iEdg) {
     for(int iDOF = 0; iDOF < _nDOFEdges[iEdg]; ++iDOF) {
       _numberingEdges[_maxDOFperEdge * iEdg + iDOF] = _codeDOFEdges[iEdg];
     }
   }
-  // printf("Numérotation des aretes : \n");
-  // for(int iEdg = 0; iEdg < _nEdg; ++iEdg) {
-  //   for(int iDOF = 0; iDOF < _nDOFEdges[iEdg]; ++iDOF) {
-  //     std::cout<<_numberingEdges[_maxDOFperEdge * iEdg + iDOF]<<std::endl;
-  //   }
-  // }
 }
 
 int feNumber::numberUnknowns(int globalNum)
 {
   _nInc = 0;
+
+  // Number the unknown vertices DOF
   for(int i = 0; i < _nNod; ++i) {
-    if(_numberingVertices[i] == INC) {
-      ++_nInc;
-      _numberingVertices[i] = globalNum++;
+    for(int j = 0; j < _nDOFVertices[i]; ++j) {
+      if(_numberingVertices[_maxDOFperVertex * i + j] == DOF_UNKNOWN) {
+        ++_nInc;
+        _numberingVertices[_maxDOFperVertex * i + j] = globalNum++;
+      }
     }
   }
+
+  // Number the unknown elements DOF
   for(int i = 0; i < _nElm; ++i) {
     for(int j = 0; j < _nDOFElements[i]; ++j) {
-      if(_numberingElements[_maxDOFperElem * i + j] == INC) {
+      if(_numberingElements[_maxDOFperElem * i + j] == DOF_UNKNOWN) {
         ++_nInc;
         _numberingElements[_maxDOFperElem * i + j] = globalNum;
-        // std::cout<<"coucou1"<<std::endl;
         // Update _numberingEdges : element DOFs may have already been numbered by boundary elements
         if(_elemToEdge[i] != 0) {
-          // std::cout<<"coucou2"<<std::endl;
           int iEdge = fabs(_elemToEdge[i]) - 1;
-          // std::cout<<"coucou3"<<std::endl;
           // It should be OK to use j because we should have _nDOFEdges[iEdge] == _nDOFElements[i]
           // if the element is also an edge
           _numberingEdges[_maxDOFperEdge * iEdge + j] = globalNum++;
-          // std::cout<<"coucou4"<<std::endl;
 
         } else {
           globalNum++;
@@ -173,30 +172,38 @@ int feNumber::numberUnknowns(int globalNum)
       }
     }
   }
+
+  // Number the unknown edges DOF
   for(int i = 0; i < _nEdg; ++i) {
     for(int j = 0; j < _nDOFEdges[i]; ++j) {
-      if(_numberingEdges[_maxDOFperEdge * i + j] == INC) {
+      if(_numberingEdges[_maxDOFperEdge * i + j] == DOF_UNKNOWN) {
         ++_nInc;
         _numberingEdges[_maxDOFperEdge * i + j] = globalNum++;
-        // std::cout<<"coucou"<<std::endl;
       }
     }
   }
+
   return globalNum;
 }
 
 int feNumber::numberEssential(int globalNum)
 {
   _nDofs = _nInc;
+
+  // Number the essential vertices DOF
   for(int i = 0; i < _nNod; ++i) {
-    if(_numberingVertices[i] == ESS) {
-      ++_nDofs;
-      _numberingVertices[i] = globalNum++;
+    for(int j = 0; j < _nDOFVertices[i]; ++j) {
+      if(_numberingVertices[_maxDOFperVertex * i + j] == DOF_ESSENTIAL) {
+        ++_nDofs;
+        _numberingVertices[_maxDOFperVertex * i + j] = globalNum++;
+      }
     }
   }
+
+  // Number the essential elements DOF
   for(int i = 0; i < _nElm; ++i) {
     for(int j = 0; j < _nDOFElements[i]; ++j) {
-      if(_numberingElements[_maxDOFperElem * i + j] == ESS) {
+      if(_numberingElements[_maxDOFperElem * i + j] == DOF_ESSENTIAL) {
         ++_nDofs;
         _numberingElements[_maxDOFperElem * i + j] = globalNum;
         // Update _numberingEdges : element DOFs may have already been numbered by boundary elements
@@ -211,14 +218,17 @@ int feNumber::numberEssential(int globalNum)
       }
     }
   }
+
+  // Number the essential edges DOF
   for(int i = 0; i < _nEdg; ++i) {
     for(int j = 0; j < _nDOFEdges[i]; ++j) {
-      if(_numberingEdges[_maxDOFperEdge * i + j] == ESS) {
+      if(_numberingEdges[_maxDOFperEdge * i + j] == DOF_ESSENTIAL) {
         ++_nDofs;
         _numberingEdges[_maxDOFperEdge * i + j] = globalNum++;
       }
     }
   }
+
   return globalNum;
 }
 
@@ -229,12 +239,11 @@ void feNumber::exportNumberingVertices(feMesh *mesh, FILE *file)
 {
   std::vector<Vertex> &vertices = mesh->getVertices();
   int dofNumber;
-  double x, y, z;
   Vertex v;
   for(size_t i = 0; i < vertices.size(); ++i){
     dofNumber = _numberingVertices[i];
     v = vertices[i];
-    fprintf(file, "%d %d %+-1.16e %+-1.16e %+-1.16e\n", _codeDOFVertices[i] == ESS, dofNumber, v.x(), v.y(), v.z());
+    fprintf(file, "%d %d %+-1.16e %+-1.16e %+-1.16e\n", _codeDOFVertices[i] == DOF_ESSENTIAL, dofNumber, v.x(), v.y(), v.z());
   }
 }
 
@@ -243,9 +252,9 @@ void feNumber::compactFieldDOF()
   _allEssentialDOF.clear();
   _allUnknownDOF.clear();
   for(size_t i = 0; i < _numberingVertices.size(); ++i) {
-    if(_codeDOFVertices[i] == ESS){
+    if(_codeDOFVertices[i] == DOF_ESSENTIAL){
       _allEssentialDOF.push_back(_numberingVertices[i]);
-    } else if(_codeDOFVertices[i] == INC){
+    } else if(_codeDOFVertices[i] == DOF_UNKNOWN){
       _allUnknownDOF.push_back(_numberingVertices[i]);
     } else{
       // "Ghost" degrees of freedom are not kept
@@ -254,9 +263,9 @@ void feNumber::compactFieldDOF()
 
   for(int i = 0; i < _nElm; ++i) {
     for(int j = 0; j < _maxDOFperElem; ++j) {
-      if(_codeDOFElements[i] == ESS){
+      if(_codeDOFElements[i] == DOF_ESSENTIAL){
         _allEssentialDOF.push_back(_numberingElements[_maxDOFperElem * i + j]);
-      } else if(_codeDOFElements[i] == INC){
+      } else if(_codeDOFElements[i] == DOF_UNKNOWN){
         _allUnknownDOF.push_back(_numberingElements[_maxDOFperElem * i + j]);
       }
     }
@@ -264,9 +273,9 @@ void feNumber::compactFieldDOF()
 
   for(int i = 0; i < _nEdg; ++i) {
     for(int j = 0; j < _maxDOFperEdge; ++j) {
-      if(_codeDOFEdges[i] == ESS){
+      if(_codeDOFEdges[i] == DOF_ESSENTIAL){
         _allEssentialDOF.push_back(_numberingEdges[_maxDOFperEdge * i + j]);
-      } else if(_codeDOFEdges[i] == INC){
+      } else if(_codeDOFEdges[i] == DOF_UNKNOWN){
         _allUnknownDOF.push_back(_numberingEdges[_maxDOFperEdge * i + j]);
       }
     }
@@ -275,48 +284,60 @@ void feNumber::compactFieldDOF()
 
 void feNumber::printNumberingVertices()
 {
-  printf("nNod = %d\n", _nNod);
-  for(size_t i = 0; i < _numberingVertices.size(); ++i) {
-    if(_codeDOFVertices[i] == ESS)
-      printf("%d \t %s\n", _numberingVertices[i], "ESS");
-    else if(_codeDOFVertices[i] == INC)
-      printf("%d \t %s\n", _numberingVertices[i], "INC");
-    else
-      printf("%d \t %d\n", _numberingVertices[i], _codeDOFVertices[i]);
+  feInfo("\t Number of vertices = %d", _nNod);
+  feInfo("\t Max number of DOF per vertex = %d", _maxDOFperVertex);
+  for(int i = 0; i < _nNod; ++i) {
+    for(int j = 0; j < _maxDOFperVertex; ++j) {
+      if(_codeDOFVertices[i] == DOF_ESSENTIAL)
+        feInfo("\t DOF: %d \t %s", _numberingVertices[_maxDOFperVertex * i + j], "DOF_ESSENTIAL");
+      else if(_codeDOFVertices[i] == DOF_UNKNOWN)
+        feInfo("\t DOF: %d \t %s", _numberingVertices[_maxDOFperVertex * i + j], "DOF_UNKNOWN");
+      else if(_codeDOFVertices[i] == DOF_NOT_ASSIGNED)
+        feInfo("\t DOF: %d \t %s", _numberingVertices[_maxDOFperVertex * i + j], "DOF_NOT_ASSIGNED");
+      else{
+        feErrorMsg(FE_STATUS_ERROR, "Unexpected value %d for vertex DOF %d - %d :/", _numberingVertices[_maxDOFperVertex * i + j], i, j);
+        exit(-1);
+      }
+    }
   }
 }
 
 void feNumber::printNumberingElements()
 {
-  printf("nElm = %d\n", _nElm);
-  printf("maxDOFPerElem = %d\n", _maxDOFperElem);
+  feInfo("\t Number of elements = %d", _nElm);
+  feInfo("\t Max number of DOF per element = %d", _maxDOFperElem);
   for(int i = 0; i < _nElm; ++i) {
     for(int j = 0; j < _maxDOFperElem; ++j) {
-      if(_codeDOFElements[i] == ESS)
-        printf("elm %d - dof %d : %d \t %s\n", i, j, _numberingElements[_maxDOFperElem * i + j],
-               "ESS");
-      else if(_codeDOFElements[i] == INC)
-        printf("elm %d - dof %d : %d \t %s\n", i, j, _numberingElements[_maxDOFperElem * i + j],
-               "INC");
-      else
-        printf("elm %d - dof %d : %d \t %d\n", i, j, _numberingElements[_maxDOFperElem * i + j],
-               _codeDOFElements[i]);
+      if(_codeDOFElements[i] == DOF_ESSENTIAL)
+        feInfo("\t elm %d - dof %d : %d \t %s", i, j, _numberingElements[_maxDOFperElem * i + j], "DOF_ESSENTIAL");
+      else if(_codeDOFElements[i] == DOF_UNKNOWN)
+        feInfo("\t elm %d - dof %d : %d \t %s", i, j, _numberingElements[_maxDOFperElem * i + j], "DOF_UNKNOWN");
+      else if(_codeDOFElements[i] == DOF_NOT_ASSIGNED)
+        feInfo("\t elm %d - dof %d : %d \t %s", i, j, _numberingElements[_maxDOFperElem * i + j], "DOF_NOT_ASSIGNED");
+      else{
+        feErrorMsg(FE_STATUS_ERROR, "Unexpected value %d for element DOF %d - %d :/", _numberingElements[_maxDOFperElem * i + j], i, j);
+        exit(-1);
+      }
     }
   }
 }
 
 void feNumber::printNumberingEdges()
 {
-  printf("nEdg = %d\n", _nEdg);
-  printf("maxDOFperEdge = %d\n", _maxDOFperEdge);
+  feInfo("\t Number of edges = %d", _nEdg);
+  feInfo("\t Max number of DOF per edge = %d", _maxDOFperEdge);
   for(int i = 0; i < _nEdg; ++i) {
     for(int j = 0; j < _maxDOFperEdge; ++j) {
-      if(_codeDOFEdges[i] == ESS)
-        printf("%d \t %s\n", _numberingEdges[_maxDOFperEdge * i + j], "ESS");
-      else if(_codeDOFEdges[i] == INC)
-        printf("%d \t %s\n", _numberingEdges[_maxDOFperEdge * i + j], "INC");
-      else
-        printf("%d \t %d\n", _numberingEdges[_maxDOFperEdge * i + j], _codeDOFEdges[i]);
+      if(_codeDOFEdges[i] == DOF_ESSENTIAL)
+        feInfo("\t %d \t %s", _numberingEdges[_maxDOFperEdge * i + j], "DOF_ESSENTIAL");
+      else if(_codeDOFEdges[i] == DOF_UNKNOWN)
+        feInfo("\t %d \t %s", _numberingEdges[_maxDOFperEdge * i + j], "DOF_UNKNOWN");
+      else if(_codeDOFEdges[i] == DOF_NOT_ASSIGNED)
+        feInfo("\t %d \t %s", _numberingEdges[_maxDOFperEdge * i + j], "DOF_NOT_ASSIGNED");
+      else{
+        feErrorMsg(FE_STATUS_ERROR, "Unexpected value %d for edge DOF %d - %d :/", _numberingEdges[_maxDOFperEdge * i + j], i, j);
+        exit(-1);
+      }
     }
   }
 }
@@ -363,7 +384,7 @@ feMetaNumber::feMetaNumber(feMesh *mesh, const std::vector<feSpace *> &spaces,
   for(feSpace *fS : spaces) {
     fS->initializeNumberingUnknowns(_numberings[fS->getFieldID()]);
   }
-  // INITIALISE_FENUMER_CLMESS
+  // INITIALISE_FENUMER_CLMDOF_ESSENTIAL
   for(feSpace *fSBC : essentialSpaces) {
     fSBC->initializeNumberingEssential(_numberings[fSBC->getFieldID()]);
   }
@@ -423,12 +444,11 @@ void feMetaNumber::printFields()
 void feMetaNumber::printNumberings()
 {
   for(int i = 0; i < _nFields; ++i) {
-    // for(auto const& secondIsNumber : _numberings){
-    std::cout << "Field " << _fieldIDs[i] << " - vertices :" << std::endl;
+    feInfo("Field \"%s\" - Numbering of vertex degrees of freedom:", _fieldIDs[i].data());
     _numberings[_fieldIDs[i]]->printNumberingVertices();
-    std::cout << "Field " << _fieldIDs[i] << " - elements :" << std::endl;
+    feInfo("Field \"%s\" - Numbering of element degrees of freedom:", _fieldIDs[i].data());
     _numberings[_fieldIDs[i]]->printNumberingElements();
-    std::cout << "Field " << _fieldIDs[i] << " - edges :" << std::endl;
+    feInfo("Field \"%s\" - Numbering of edge degrees of freedom:", _fieldIDs[i].data());
     _numberings[_fieldIDs[i]]->printNumberingEdges();
   }
 }
