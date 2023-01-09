@@ -1,5 +1,7 @@
 #include "feNumber.h"
 
+extern int FE_VERBOSE;
+
 feNumber::feNumber(feMesh *mesh) : _nNod(mesh->getNbNodes()), _nEdg(mesh->getNbEdges())
 {
   _nElm = 0;
@@ -48,7 +50,7 @@ void feNumber::defDDLElement(feMesh *mesh, std::string const &cncGeoID, int numE
 void feNumber::defDDLEdge(feMesh *mesh, std::string const &cncGeoID, int numElem, int numEdge,
                           int numDOF)
 {
-  int edge = fabs(mesh->getEdge(cncGeoID, numElem, numEdge)) - 1; // fabs ?
+  int edge = fabs(mesh->getEdge(cncGeoID, numElem, numEdge)) - 1;
   // printf("Assigning DOF_UNKNOWN and %d dof(s) at edge %d which is edge number %d of elem %d on cnc %s\n",
   // numDOF, edge, numEdge, numElem, cncGeoID.c_str());
   _nDOFEdges[edge] = numDOF;
@@ -409,6 +411,18 @@ feMetaNumber::feMetaNumber(feMesh *mesh, const std::vector<feSpace *> &spaces,
     _numberings[_fieldIDs[i]]->compactFieldDOF();
   }
 
+  feInfoCond(FE_VERBOSE > 0, "");
+  feInfoCond(FE_VERBOSE > 0, "DEGREES OF FREEDOM:");
+  for(int i = 0; i < _nFields; ++i) {
+    feInfoCond(FE_VERBOSE > 0, "\t\tInfo for field \"%s\":",
+      _fieldIDs[i].data());
+    feInfoCond(FE_VERBOSE > 0, "\t\t\tNumber of DOF: %d",
+      _numberings[_fieldIDs[i]]->getNbDOFs());
+    feInfoCond(FE_VERBOSE > 0, "\t\t\tNumber of unknown DOF: %d",
+      _numberings[_fieldIDs[i]]->getUnknownDOF().size());
+    feInfoCond(FE_VERBOSE > 0, "\t\t\tNumber of essential DOF: %d",
+      _numberings[_fieldIDs[i]]->getEssentialDOF().size());
+  }
 }
 
 feMetaNumber::~feMetaNumber()

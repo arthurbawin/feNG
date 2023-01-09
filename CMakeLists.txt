@@ -38,7 +38,6 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/lib)
 add_compile_options(-Wreturn-type)
 add_compile_options(-Wunused-variable)
 add_compile_options(-Wdisabled-optimization)
-add_compile_options(-fext-numeric-literals)
 # add_compile_options(-Werror)
 
 ############################################
@@ -222,7 +221,7 @@ if(ENABLE_GMSH)
   MESSAGE(STATUS "Gmsh found (-:")
 endif()
 
-#  Gmsh classes for metric tensors and rtree 
+# Gmsh classes for metric tensors and rtree 
 # See also src/CmakeLists.txt for the .cpp files
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/contrib/gmsh)
 
@@ -234,9 +233,10 @@ endif()
 if(ENABLE_GLFW)
   find_package(OpenGL REQUIRED)
   include_directories(${OPENGL_INCLUDE_DIR})
-  add_subdirectory(glfw)
-  include_directories(${CMAKE_CURRENT_SOURCE_DIR}/glfw/include)
+  add_subdirectory(contrib/glfw)
+  include_directories(${CMAKE_CURRENT_SOURCE_DIR}/contrib/glfw/include)
   list(APPEND feNG_EXTERNAL_LIBS glfw ${OPENGL_gl_LIBRARY})
+  add_definitions("-DHAVE_GLFW")
 endif()
 
 MESSAGE(STATUS "External libs for feNG : ${feNG_EXTERNAL_LIBS}")

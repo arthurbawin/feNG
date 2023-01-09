@@ -100,14 +100,13 @@ protected:
   int _nElm;
   double _xA, _xB;
   std::string _bndA_ID, _bndB_ID, _domID;
-  int _nElmDomain;
-  int _nElmBoundary;
+  int _nElmPerBoundary;
   int _nNodDomain;
   int _nNodBoundary;
 
 public:
-  feMesh1DP1(double xA, double xB, int nElm, std::string bndA_ID, std::string bndB_ID,
-             std::string domID);
+  feMesh1DP1(double xBegin, double xEnd, int numElements,
+    std::string boundaryBeginName, std::string boundaryEndName, std::string domainName);
   virtual ~feMesh1DP1();
 
   virtual bool locateVertex(const double *x, int &iElm, double *u,

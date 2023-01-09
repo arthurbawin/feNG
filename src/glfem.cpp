@@ -20,6 +20,7 @@ double glScale(double minimum, double maximum, double value);
 static int gRasterH = 800;
 static int gRasterV = 600;
 
+#if defined(HAVE_GLFW)
 GLubyte space[] = 
     {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
@@ -121,9 +122,11 @@ GLubyte specialletters[][13] = {
 };
 
 GLuint fontOffset;
+#endif
 
 void glMakeRasterFont(void)
 {
+#if defined(HAVE_GLFW)
     GLuint i, j;
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);  
     glShadeModel (GL_FLAT);
@@ -149,6 +152,7 @@ void glMakeRasterFont(void)
         glBitmap(8, 13, 0.0, 2.0, 10.0, 0.0, specialletters[i]);
         glEndList(); }
     glShadeModel (GL_SMOOTH);
+#endif
 }
 
 void glfemSetRasterSize(int h, int v)
@@ -159,6 +163,7 @@ void glfemSetRasterSize(int h, int v)
 
 void glfemDrawMessage(int h, int v, char *s)
 {
+#if defined(HAVE_GLFW)
     // Les coordonnées négatives sont normalement admises :-)
     // On conserve le strint entier même si le début est off-screen
 
@@ -191,6 +196,7 @@ void glfemDrawMessage(int h, int v, char *s)
     glPopMatrix();
     glMatrixMode(GL_MODELVIEW);
     glPopAttrib ();
+#endif
 }
 
 
@@ -216,9 +222,9 @@ double glScale(double minimum, double maximum, double value)
     return (value - minimum) / fabs(maximum - minimum);
 }
 
-
 void glfemDrawNodes(double *x, double *y, int n) 
 {
+#if defined(HAVE_GLFW)
     int i;
     glEnable(GL_POINT_SMOOTH);
     glPointSize(8.0);
@@ -226,10 +232,12 @@ void glfemDrawNodes(double *x, double *y, int n)
     for (i = 0; i < n; i++) {      
         glVertex2d(x[i],y[i]); }
     glEnd();
+#endif
 }
 
 void glfemDrawCurve(double *x, double *y, int n) 
 {
+#if defined(HAVE_GLFW)
     int i;
     glLineWidth(2.0);
     glBegin(GL_LINES);
@@ -237,7 +245,7 @@ void glfemDrawCurve(double *x, double *y, int n)
         glVertex2d(x[i],y[i]); 
         glVertex2d(x[i+1],y[i+1]);}
     glEnd();
-
+#endif
 }
 
 void glfemDrawCurveDiscrete(double *x, double *y, int n) 
@@ -248,6 +256,7 @@ void glfemDrawCurveDiscrete(double *x, double *y, int n)
 
 void glfemDrawCurveDG(double *x, double *y, int n, int m) 
 {
+#if defined(HAVE_GLFW)
     int i,j;
     glEnable(GL_POINT_SMOOTH);
     glPointSize(8.0);
@@ -263,12 +272,14 @@ void glfemDrawCurveDG(double *x, double *y, int n, int m)
             glVertex2d(x[i*m+j],y[i*m+j]); 
             glVertex2d(x[i*m+j+1],y[i*m+j+1]);}
     glEnd(); 
+#endif
 }
     
 
 
 void glfemReshapeWindowsBox(double minX, double maxX, double minY, double maxY, int w, int h)
 {
+#if defined(HAVE_GLFW)
     double sizeX = (maxX-minX)/1.9;
     double meanX = (maxX+minX)/2.0; 
     double sizeY = (maxY-minY)/1.9;
@@ -289,6 +300,7 @@ void glfemReshapeWindowsBox(double minX, double maxX, double minY, double maxY, 
     glOrtho((GLdouble)left, (GLdouble)right, (GLdouble)bottom, (GLdouble)top, -5.0, 5.0);
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
+#endif
 }
 
 
@@ -301,6 +313,7 @@ void glfemMessage(char *message)
 
 GLFWwindow* glfemInit(char *theWindowName)
 {
+#if defined(HAVE_GLFW)
     glfwInit();
     GLFWwindow* window = glfwCreateWindow(480,480,"Simple example with graphics",NULL,NULL);    
     glfwMakeContextCurrent(window);
@@ -309,4 +322,5 @@ GLFWwindow* glfemInit(char *theWindowName)
     glShadeModel(GL_SMOOTH);
     glMakeRasterFont();
     return(window);
+#endif
 }

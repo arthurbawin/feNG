@@ -732,7 +732,7 @@ void feRecovery::matrixInverseEigen2D()
 
   // Matrices defined on the vertices
   printf("Looping over %ld vertices... ", _patch->getVertices().size());
-  tic();
+  // tic();
   for(auto v : _patch->getVertices()) {
     double xv = _mesh->getVertex(v)->x();
     double yv = _mesh->getVertex(v)->y();
@@ -806,11 +806,11 @@ void feRecovery::matrixInverseEigen2D()
     }
   }
   printf("Least square matrices at vertices : done\n");
-  toc();
+  // toc();
 
   // Matrices defined on the edges
   printf("Looping over %ld edges... ", _mesh->_edges.size());
-  tic();
+  // tic();
   for(auto e : _mesh->_edges) {
     // TODO : boucler sur le nombre de DOFS par edge, ici on suppose juste un P2 avec 1 dof
 
@@ -876,7 +876,7 @@ void feRecovery::matrixInverseEigen2D()
     }
   }
   printf("Least square matrices at edges : done\n");
-  toc();
+  // toc();
 }
 
 void feRecovery::solveLeastSquareEigen1D(int indRecovery, int iDerivative)

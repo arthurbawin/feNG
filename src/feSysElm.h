@@ -12,18 +12,18 @@ typedef enum {
   WEAKBC_EDO1_0D,
   WEAKBC_EDO1_V2_0D,
   WEAKBC_EDO2_0D,
-  MASSE_0D,
+  MASS_0D,
   SOURCE_0D,
   SOURCE_CROSSED_0D,
   WEAKBC_EDO1_1D,
   SOURCE_1D,
-  DIFF_1D,
-  MASSE_1D,
+  DIFFUSION_1D,
+  MASS_1D,
   NEUMANN_1D,
   ADVECTION_1D,
   DG_ADVECTION_1D,
   SUPG_STABILIZATION_1D,
-  MASSE_2D,
+  MASS_2D,
   SOURCE_2D,
   DIFFUSION_2D,
   ADVECTION_2D,
@@ -35,16 +35,28 @@ typedef enum {
 inline const std::string toString(elementSystemType t)
 {
   switch(t) {
-    case DIFF_1D:
-      return "DIFF_1D";
-    case MASSE_1D:
-      return "MASSE_1D";
-    case NEUMANN_1D:
-      return "NEUMANN_1D";
+    case MASS_0D:
+      return "MASS_0D";
+    case SOURCE_0D:
+      return "SOURCE_0D";
+
+    case MASS_1D:
+      return "MASS_1D";
+    case SOURCE_1D:
+      return "SOURCE_1D";
+    case DIFFUSION_1D:
+      return "DIFFUSION_1D";
+    case ADVECTION_1D:
+      return "ADVECTION_1D";
     case DG_ADVECTION_1D:
       return "DG_ADVECTION_1D";
-    case MASSE_2D:
-      return "MASSE_2D";
+    case SUPG_STABILIZATION_1D:
+      return "SUPG_STABILIZATION_1D";
+    case NEUMANN_1D:
+      return "NEUMANN_1D";
+
+    case MASS_2D:
+      return "MASS_2D";
     case SOURCE_2D:
       return "SOURCE_2D";
     case DIFFUSION_2D:
@@ -53,6 +65,8 @@ inline const std::string toString(elementSystemType t)
       return "ADVECTION_2D";
     case STOKES_2D:
       return "STOKES_2D";
+    case NAVIERSTOKES_2D:
+      return "NAVIERSTOKES_2D";
     default:
       return "[Unknown elementSystemType]";
   }
@@ -63,14 +77,14 @@ class feBilinearForm;
 class feSysElm
 {
 protected:
+  int _dim;
   std::vector<int> _iVar;
   std::vector<int> _jVar;
-
   elementSystemType _ID;
 
   // Compute the element FE matrix using finite differences
-  bool _computeMatrixWithFD = false;
 
+  bool _computeMatrixWithFD = false;
   // Does this form have an elementary matrix to assemble?
   bool _hasMatrix = false;
 
@@ -82,6 +96,7 @@ public:
   };
   virtual ~feSysElm() {}
 
+  int getDim(){ return _dim; }
   std::vector<int> &getIVar() { return _iVar; }
   std::vector<int> &getJVar() { return _jVar; }
 
@@ -111,6 +126,7 @@ public:
   feSysElm_0D_StiffSpring(std::vector<double> par, feFunction *fct)
     : feSysElm(true), _fct(fct), _par(par)
   {
+    _dim = 0;
     _ID = STIFFSPRING_0D;
   };
   virtual ~feSysElm_0D_StiffSpring() {}
@@ -135,6 +151,7 @@ protected:
 public:
   feSysElm_0D_Stiff2(double par, feFunction *fct) : feSysElm(true), _fct(fct), _par(par)
   {
+    _dim = 0;
     _ID = STIFF2_0D;
   };
   virtual ~feSysElm_0D_Stiff2() {}
@@ -159,6 +176,7 @@ protected:
 public:
   feSysElm_0D_Stiff3(double par, feFunction *fct) : feSysElm(true), _fct(fct), _par(par)
   {
+    _dim = 0;
     _ID = STIFF3_0D;
   };
   virtual ~feSysElm_0D_Stiff3() {}
@@ -181,6 +199,7 @@ protected:
 public:
   feSysElm_0D_weakBC(double par, feFunction *fct) : feSysElm(true), _fct(fct), _par(par)
   {
+    _dim = 0;
     _ID = WEAKBC_0D;
   };
   virtual ~feSysElm_0D_weakBC() {}
@@ -204,6 +223,7 @@ protected:
 public:
   feSysElm_0D_weakBC_edo1(double par, feFunction *fct) : feSysElm(true), _fct(fct), _par(par)
   {
+    _dim = 0;
     _ID = WEAKBC_EDO1_0D;
   };
   virtual ~feSysElm_0D_weakBC_edo1() {}
@@ -227,6 +247,7 @@ protected:
 public:
   feSysElm_0D_weakBC_edo1_V2(double par, feFunction *fct) : feSysElm(true), _fct(fct), _par(par)
   {
+    _dim = 0;
     _ID = WEAKBC_EDO1_V2_0D;
   };
   virtual ~feSysElm_0D_weakBC_edo1_V2() {}
@@ -251,6 +272,7 @@ protected:
 public:
   feSysElm_0D_weakBC_edo2(double par, feFunction *fct) : feSysElm(true), _fct(fct), _par(par)
   {
+    _dim = 0;
     _ID = WEAKBC_EDO2_0D;
   };
   virtual ~feSysElm_0D_weakBC_edo2() {}
@@ -271,7 +293,8 @@ protected:
 public:
   feSysElm_0D_Masse(double par, feFunction *fct) : feSysElm(true), _fct(fct), _par(par)
   {
-    _ID = MASSE_0D;
+    _dim = 0;
+    _ID = MASS_0D;
   };
   virtual ~feSysElm_0D_Masse() {}
 
@@ -291,6 +314,7 @@ protected:
 public:
   feSysElm_0D_Source(double par, feFunction *fct) : feSysElm(false), _fct(fct), _par(par)
   {
+    _dim = 0;
     _ID = SOURCE_0D;
   };
   virtual ~feSysElm_0D_Source() {}
@@ -312,6 +336,7 @@ public:
   feSysElm_0D_Source_crossed(double par, feVectorFunction *fct)
     : feSysElm(false), _fct(fct), _par(par)
   {
+    _dim = 0;
     _ID = SOURCE_CROSSED_0D;
   };
   virtual ~feSysElm_0D_Source_crossed() {}
@@ -336,6 +361,7 @@ protected:
 public:
   feSysElm_1D_weakBC_edo1(double par, feFunction *fct) : feSysElm(true), _fct(fct), _par(par)
   {
+    _dim = 1;
     _ID = WEAKBC_EDO1_1D;
   };
   virtual ~feSysElm_1D_weakBC_edo1() {}
@@ -357,6 +383,7 @@ protected:
 public:
   feSysElm_1D_Source(double par, feFunction *fct) : feSysElm(false), _fct(fct), _par(par)
   {
+    _dim = 1;
     _ID = SOURCE_1D;
   };
   virtual ~feSysElm_1D_Source() {}
@@ -378,7 +405,8 @@ protected:
 public:
   feSysElm_1D_Diffusion(double par, feFunction *fct) : feSysElm(true), _fct(fct), _par(par)
   {
-    _ID = DIFF_1D;
+    _dim = 1;
+    _ID = DIFFUSION_1D;
     _computeMatrixWithFD = true;
   };
   virtual ~feSysElm_1D_Diffusion() {}
@@ -400,7 +428,8 @@ protected:
 public:
   feSysElm_1D_Masse(double par, feFunction *fct) : feSysElm(true), _fct(fct), _par(par)
   {
-    _ID = MASSE_1D;
+    _dim = 1;
+    _ID = MASS_1D;
     _computeMatrixWithFD = false;
   };
   virtual ~feSysElm_1D_Masse() {}
@@ -422,6 +451,7 @@ protected:
 public:
   feSysElm_1D_NeumannBC(double par, feFunction *fct) : feSysElm(false), _fct(fct), _par(par)
   {
+    _dim = 1;
     _ID = NEUMANN_1D;
   };
   virtual ~feSysElm_1D_NeumannBC() {}
@@ -443,6 +473,7 @@ protected:
 public:
   feSysElm_1D_Advection(double par, feFunction *fct) : feSysElm(true), _fct(fct), _par(par)
   {
+    _dim = 1;
     _ID = ADVECTION_1D;
     _computeMatrixWithFD = false;
   };
@@ -465,6 +496,7 @@ protected:
 public:
   feSysElm_1D_SUPGStab(std::vector<double> par, feFunction *fct) : feSysElm(true), _fct(fct), _par(par)
   {
+    _dim = 1;
     _ID = SUPG_STABILIZATION_1D;
     _computeMatrixWithFD = true;
   };
@@ -487,6 +519,7 @@ protected:
 public:
   feSysElm_1D_DG_Advection(double par, feFunction *fct) : feSysElm(true), _fct(fct), _par(par)
   {
+    _dim = 1;
     _ID = DG_ADVECTION_1D;
     _computeMatrixWithFD = false;
   };
@@ -512,7 +545,8 @@ protected:
 public:
   feSysElm_2D_Masse(double par, feFunction *fct) : feSysElm(true), _fct(fct), _par(par)
   {
-    _ID = MASSE_2D;
+    _dim = 2;
+    _ID = MASS_2D;
     _computeMatrixWithFD = false;
   };
   virtual ~feSysElm_2D_Masse() {}
@@ -536,6 +570,7 @@ protected:
 public:
   feSysElm_2D_Source(double par, feFunction *fct) : feSysElm(false), _fct(fct), _par(par)
   {
+    _dim = 2;
     _ID = SOURCE_2D;
   };
 
@@ -561,6 +596,7 @@ protected:
 public:
   feSysElm_2D_Diffusion(double par, feFunction *fct) : feSysElm(true), _fct(fct), _par(par)
   {
+    _dim = 2;
     _ID = DIFFUSION_2D;
     _computeMatrixWithFD = false;
   };
@@ -587,6 +623,7 @@ protected:
 public:
   feSysElm_2D_Advection(double par, feVectorFunction *fct) : feSysElm(true), _fct(fct), _par(par)
   {
+    _dim = 2;
     _ID = ADVECTION_2D;
     _computeMatrixWithFD = true;
   };
@@ -619,6 +656,7 @@ public:
   feSysElm_2D_Stokes(std::vector<double> &par, feVectorFunction *fct)
     : feSysElm(true), _fct(fct), _par(par)
   {
+    _dim = 2;
     _ID = STOKES_2D;
     _computeMatrixWithFD = false;
   };
@@ -653,6 +691,7 @@ public:
                            feFunction *viscosityFct = nullptr)
     : feSysElm(true), _fct(fct), _par(par), _viscosityFct(viscosityFct)
   {
+    _dim = 2;
     _ID = NAVIERSTOKES_2D;
     _computeMatrixWithFD = false;
   };
@@ -684,6 +723,7 @@ public:
                                    feFunction *viscosityFct = nullptr)
     : feSysElm(true), _fct(fct), _par(par), _viscosityFct(viscosityFct)
   {
+    _dim = 1;
     _ID = DIRECTIONALDONOTHING_1D;
     _computeMatrixWithFD = true;
   };

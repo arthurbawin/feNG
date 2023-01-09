@@ -2,20 +2,27 @@
 
 feBasicViewer::feBasicViewer(std::string windowTitle)
 {
+#if defined(HAVE_GLFW)
   _window = glfemInit(windowTitle.data());
   glfwMakeContextCurrent(_window);
   glfwGetFramebufferSize(_window, &_windowWidth, &_windowHeight);
+#else
+  feWarning("Cannot create a display window without GLFW support :/");
+#endif
 }
 
 void feBasicViewer::reshapeWindowBox(double xMin, double xMax, double yMin, double yMax)
 {
+#if defined(HAVE_GLFW)
   glfemReshapeWindowsBox(xMin, xMax, yMin, yMax, _windowWidth, _windowHeight);
+#endif
 }
 
 // Reshape the window according to the min/max positions in the 1D mesh
 // and the min/max field values in the solution, with a scale factor.
 void feBasicViewer::reshapeWindowBox(double scaleFactor, feMesh &mesh, feSolution &solution)
 {
+#if defined(HAVE_GLFW)
   double xMin =  DBL_MAX;
   double yMin =  DBL_MAX;
   double xMax = -DBL_MAX;
@@ -34,26 +41,36 @@ void feBasicViewer::reshapeWindowBox(double scaleFactor, feMesh &mesh, feSolutio
   double dy = yMax-yMin;
   this->reshapeWindowBox(xC - dx/2.*scaleFactor, xC + dx/2.*scaleFactor,
                          yC - dy/2.*scaleFactor, yC + dy/2.*scaleFactor);
+#endif
 }
 
 void feBasicViewer::windowUpdate()
 {
+#if defined(HAVE_GLFW)
   glfwSwapBuffers(_window);
   glfwPollEvents();
+#endif
 }
 
 void feBasicViewer::getWindowBox()
 {
+#if defined(HAVE_GLFW)
   glfwGetFramebufferSize(_window, &_windowWidth, &_windowHeight);
+#endif
 }
 
 bool feBasicViewer::windowShouldClose()
 {
+#if defined(HAVE_GLFW)
   return glfwGetKey(_window,GLFW_KEY_ESCAPE) == GLFW_PRESS || glfwWindowShouldClose(_window) == 1;
+#else
+  return true;
+#endif
 }
 
 void draw1DCurve(feMesh &mesh, feMetaNumber &numbering, feSolution &solution, feSpace *space, feFunction *analyticSolution)
 {
+#if defined(HAVE_GLFW)
   int sizePlot = 40;
   int nNod = mesh.getNbNodes();
   int nElm = mesh.getNbInteriorElems();
@@ -127,10 +144,12 @@ void draw1DCurve(feMesh &mesh, feMetaNumber &numbering, feSolution &solution, fe
   glfemDrawCurve(x, u, nElm * sizePlot);
   glColor3f(0.0, 0.0, 1.0);
   glfemDrawCurveDG(x, uh, nElm, sizePlot); 
+#endif
 }
 
 void draw1DCurveDG(feMesh &mesh, feMetaNumber &numbering, feSolution &solution, feSpace *space, feFunction *analyticSolution)
 {
+#if defined(HAVE_GLFW)
   int sizePlot = 40;
   int nNod = mesh.getNbNodes();
   int nElm = mesh.getNbInteriorElems();
@@ -215,5 +234,6 @@ void draw1DCurveDG(feMesh &mesh, feMetaNumber &numbering, feSolution &solution, 
   glColor3f(1.0, 0.0, 0.0);
   glfemDrawCurve(x, u, nElm * sizePlot);
   glColor3f(0.0, 0.0, 1.0);
-  glfemDrawCurveDG(x, uh, nElm, sizePlot); 
+  glfemDrawCurveDG(x, uh, nElm, sizePlot);
+#endif
 }

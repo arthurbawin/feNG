@@ -38,6 +38,7 @@ void feLinearSystemPETSc::initialize()
     printf("In feLinearSystemPETSc::initialize : This is a uniprocessor example only\n");
     return;
   }
+
   // Allocate vectors and matrix
   ierr = VecCreate(PETSC_COMM_WORLD, &_dx);
   CHKERRABORT(PETSC_COMM_WORLD, ierr);
@@ -53,16 +54,12 @@ void feLinearSystemPETSc::initialize()
   ierr = VecSet(_dx, 1.0);
 
   // Determine the nonzero structure
-  // feInfo("feCompressedRowStorage ....");
-  // tic();
   feCompressedRowStorage CRS(_metaNumber, _mesh, _formMatrices, _numMatrixForms);
-  // toc();
-  // feInfo("done.");
+
   feInt *NNZ = CRS.getNnz();
   std::vector<PetscInt> nnz(_nInc, 0);
   for(int i = 0; i < _nInc; ++i) {
     nnz[i] = NNZ[i];
-    // feInfo("NNZ  %d : %d",i,NNZ[i]);
   }
 
   bool withPrealloc = true;
@@ -137,7 +134,22 @@ void feLinearSystemPETSc::initialize()
   VecGetSize(_res, &Nres);
   VecGetSize(_dx, &Ndx);
   VecGetSize(_linSysRes, &NlinSysRes);
-  feInfoCond(FE_VERBOSE > 0, "Created a linear system of size %d x %d", M, N);
+
+  feInfoCond(FE_VERBOSE > 0, "\t\tCreated a PETSc linear system of size %d x %d", M, N);
+  feInfoCond(FE_VERBOSE > 0, "\t\tIterative linear solver info:");
+
+  KSPType krylovType;
+  ierr = KSPGetType(ksp, &krylovType);
+  feInfoCond(FE_VERBOSE > 0, "\t\t\tKrylov method: %s", krylovType);
+
+  PCType preconditionerType;
+  ierr = PCGetType(preconditioner, &preconditionerType);
+  feInfoCond(FE_VERBOSE > 0, "\t\t\tPreconditioner: %s", preconditionerType);
+
+  feInfoCond(FE_VERBOSE > 0, "\t\t\tRelative tolerance: %1.4e", rel_tol);
+  feInfoCond(FE_VERBOSE > 0, "\t\t\tAbsolute tolerance: %1.4e", abs_tol);
+  feInfoCond(FE_VERBOSE > 0, "\t\t\tDivergence criterion: %1.4e", div_tol);
+  feInfoCond(FE_VERBOSE > 0, "\t\t\tMax number of iterations: %d", max_iter);
 #endif
 }
 

@@ -9,6 +9,8 @@
 #include <iostream>
 #include <fstream>
 
+extern int FE_VERBOSE;
+
 int feMesh::getCncGeoTag(std::string const &cncGeoID)
 {
   auto it = _cncGeoMap.find(cncGeoID);
@@ -152,77 +154,94 @@ void feMesh::printInfo(bool printConnectivities)
   }
 }
 
-feMesh1DP1::feMesh1DP1(double xA, double xB, int nElm, std::string bndA_ID, std::string bndB_ID,
-                       std::string domID)
-  : feMesh(nElm + 1, 1, 3, "1D"), _nElm(nElm), _xA(xA), _xB(xB), _bndA_ID(bndA_ID),
-    _bndB_ID(bndB_ID), _domID(domID), _nElmDomain(nElm), _nElmBoundary(1), _nNodDomain(2),
-    _nNodBoundary(1)
+feMesh1DP1::feMesh1DP1(double xBegin, double xEnd, int numElements,
+    std::string boundaryBeginName, std::string boundaryEndName, std::string domainName)
+  : feMesh(numElements + 1, 1, 3, "1D")
+  , _nElm(numElements)
+  , _xA(xBegin)
+  , _xB(xEnd)
+  , _bndA_ID(boundaryBeginName)
+  , _bndB_ID(boundaryEndName)
+  , _domID(domainName)
+  , _nElmPerBoundary(1)
+  , _nNodDomain(2)
+  , _nNodBoundary(1)
 {
-  // Sommets
+  feInfoCond(FE_VERBOSE > 0, "");
+  feInfoCond(FE_VERBOSE > 0, "MESH:");
+  feInfoCond(FE_VERBOSE > 0, "\t\tCreating a 1D mesh for domain [%f, %f]", xBegin, xEnd);
+  feInfoCond(FE_VERBOSE > 0, "\t\t\tNumber of 1D inner elements: %d", numElements);
+  feInfoCond(FE_VERBOSE > 0, "\t\t\t1D element size (step): %f", (xEnd - xBegin) / (_nNod - 1));
+  feInfoCond(FE_VERBOSE > 0, "\t\t\tNumber of 0D boundary elements: %d", 2);
+  feInfoCond(FE_VERBOSE > 0, "\t\t\tNumber of vertices: %d", _nNod);
+  feInfoCond(FE_VERBOSE > 0, "\t\t\tNumber of local connectivities: %d", 3);
+
+  _nInteriorElm = numElements;
+  _nBoundaryElm = 2;
+
+  // Create the vertices
   _coord.resize(_nNod);
-  for(int i = 0; i < _nNod; ++i) _coord[i] = xA + i * (xB - xA) / (_nNod - 1);
-
+  for(int i = 0; i < _nNod; ++i) _coord[i] = xBegin + i * (xEnd - xBegin) / (_nNod - 1);
   _vertices.resize(_nNod);
-  for(int i = 0; i < _nNod; ++i) _vertices[i] = Vertex(xA + i * (xB - xA) / (_nNod - 1), 0., 0., i);
+  for(int i = 0; i < _nNod; ++i) _vertices[i] = Vertex(xBegin + i * (xEnd - xBegin) / (_nNod - 1), 0., 0., i);
 
-  // Elements 1D
+  // Create the (trivial) elements connectivity
   int dimDomain = 1;
-  std::vector<int> connecNodeDomain(_nElmDomain * _nNodDomain, 0);
-  for(int i = 0; i < _nElmDomain; ++i) {
+  std::vector<int> connecNodeDomain(_nInteriorElm * _nNodDomain, 0);
+  for(int i = 0; i < _nInteriorElm; ++i) {
     connecNodeDomain[_nNodDomain * i + 0] = i;
     connecNodeDomain[_nNodDomain * i + 1] = i + 1;
   }
 
-  _nInteriorElm = _nElmDomain;
-  _nBoundaryElm = _nElmBoundary;
-
   // Create edges
-  int nEdges = 1; // Numbered starting at 1 to match the 2D numbering
-  std::vector<int> connecEdgeDomain(_nElmDomain, 0);
-  for(int i = 0; i < _nElmDomain; ++i, ++nEdges) {
+  int nEdges = 1; // Numbering starts at 1 to match the 2D numbering
+  std::vector<int> connecEdgeDomain(_nInteriorElm, 0);
+  for(int i = 0; i < _nInteriorElm; ++i, ++nEdges) {
     Vertex *v0 = &_vertices[i];
     Vertex *v1 = &_vertices[i + 1];
     Edge e(v0, v1, nEdges, 0);
     _edges.insert(e);
     connecEdgeDomain[i] = nEdges; // Trivial edge connectivity but starting at 1
   }
-  _nEdg = _nElmDomain;
+  _nEdg = _nInteriorElm;
 
+  // Create the local connectivity associated to the inner 1D domain
   int nCncGeo = 0;
-  feCncGeo *geoDom =
-    new feCncGeo(nCncGeo, dimDomain, _nNodDomain, _nElmDomain, 1, _domID, "Lg",
-                 new feSpace1DP1("xyz"), connecNodeDomain, std::vector<int>(), connecEdgeDomain);
+  feCncGeo *geoDom = new feCncGeo(nCncGeo, dimDomain, _nNodDomain, _nInteriorElm, 1, _domID, "Lg",
+    new feSpace1DP1("xyz"), connecNodeDomain, std::vector<int>(), connecEdgeDomain);
   _cncGeo.push_back(geoDom);
   _cncGeoMap[_domID] = nCncGeo;
   geoDom->getFeSpace()->setCncGeoTag(nCncGeo++);
 
-  // Elements 0D
+  // Create the 0D boundary elements
   int dimBoundary = 0;
-  std::vector<int> connecBoundaryA(_nElmBoundary * _nNodBoundary, 0);
-  std::vector<int> connecBoundaryB(_nElmBoundary * _nNodBoundary, 0);
+  std::vector<int> connecBoundaryA(_nElmPerBoundary * _nNodBoundary, 0);
+  std::vector<int> connecBoundaryB(_nElmPerBoundary * _nNodBoundary, 0);
   connecBoundaryA[0] = 0;
   connecBoundaryB[0] = _nNod - 1;
 
-  feCncGeo *geoBndA = new feCncGeo(nCncGeo, dimBoundary, _nNodBoundary, _nElmBoundary, 0, _bndA_ID,
-                                   "Point0D", new feSpace1DP0("xyz"), connecBoundaryA);
+  // Create the local connectivity for the left boundary
+  feCncGeo *geoBndA = new feCncGeo(nCncGeo, dimBoundary, _nNodBoundary, _nElmPerBoundary, 0, _bndA_ID,
+    "Point0D", new feSpace1DP0("xyz"), connecBoundaryA);
   _cncGeo.push_back(geoBndA);
   _cncGeoMap[_bndA_ID] = nCncGeo;
   geoBndA->getFeSpace()->setCncGeoTag(nCncGeo++);
 
-  feCncGeo *geoBndB = new feCncGeo(nCncGeo, dimBoundary, _nNodBoundary, _nElmBoundary, 0, _bndB_ID,
-                                   "Point0D", new feSpace1DP0("xyz"), connecBoundaryB);
+  // Create the local connectivity for the right boundary
+  feCncGeo *geoBndB = new feCncGeo(nCncGeo, dimBoundary, _nNodBoundary, _nElmPerBoundary, 0, _bndB_ID,
+    "Point0D", new feSpace1DP0("xyz"), connecBoundaryB);
   _cncGeo.push_back(geoBndB);
   _cncGeoMap[_bndB_ID] = nCncGeo;
   geoBndB->getFeSpace()->setCncGeoTag(nCncGeo++);
 
-  // Connectivite globale des elements
+  // Set the global element connectivity (a single continuous connectivity for the whole mesh)
   int numElmGlo = 0;
   for(feCncGeo *cnc : _cncGeo) {
     for(int i = 0; i < cnc->getNbElm(); ++i) cnc->setElementConnectivity(i, numElmGlo++);
   }
   _nTotalElm = numElmGlo;
 
-  // Assign pointer to the mesh to cnc and their fespace :
+  // Assign pointer to the mesh to cnc and their FE space:
   for(feCncGeo *cnc : _cncGeo) {
     cnc->setMeshPtr(this);
     cnc->getFeSpace()->setMeshPtr(this);

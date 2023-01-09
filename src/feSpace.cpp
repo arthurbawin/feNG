@@ -3,26 +3,38 @@
 #include "feMesh.h"
 #include "feNumber.h"
 #include "feSolution.h"
-#include "omp.h"
+
+extern int FE_VERBOSE;
 
 feStatus createFiniteElementSpace(feSpace *&space, feMesh *mesh, int dim, elemType type, int deg,
                                   std::string fieldID, std::string cncGeoID, int dQuad,
                                   feFunction *fct, bool useGlobalShapeFunctions)
 {
+  feInfoCond(FE_VERBOSE > 0, "");
+  feInfoCond(FE_VERBOSE > 0, "FINITE ELEMENT SPACE:");
+  feInfoCond(FE_VERBOSE > 0, "\t\tCreating FE space for field \"%s\" on entity \"%s\"",
+    fieldID.data(),
+    cncGeoID.data());
+  feInfoCond(FE_VERBOSE > 0, "\t\t\tDimension: %d", dim);
+
   if(mesh == nullptr) return feErrorMsg(FE_STATUS_ERROR, "Null mesh pointer.");
   if(fct == nullptr) return feErrorMsg(FE_STATUS_ERROR, "Null function pointer.");
 
   switch(dim) {
     case 0:
+      feInfoCond(FE_VERBOSE > 0, "\t\t\tGeometry: Point");
       if(type == POINT) {
+        feInfoCond(FE_VERBOSE > 0, "\t\t\tShape functions: Lagrange polynomials");
         space = new feSpace1DP0(mesh, fieldID, cncGeoID, fct);
       } else {
         return feErrorMsg(FE_STATUS_ERROR, "Unsupported geometry.");
       }
       break;
     case 1:
+      feInfoCond(FE_VERBOSE > 0, "\t\t\tGeometry: Line");
       if(type == LINE) {
         // Lagrange polynomials of degree 1 to 4 on line elements
+        feInfoCond(FE_VERBOSE > 0, "\t\t\tShape functions: Lagrange polynomials");
         switch(deg) {
           case 0:
             space = new feSpace1DP0(mesh, fieldID, cncGeoID, fct);
@@ -45,7 +57,8 @@ feStatus createFiniteElementSpace(feSpace *&space, feMesh *mesh, int dim, elemTy
         }
       } else if(type == LINE_LEGENDRE) {
           // Legendre polynomials of arbitrary degree on line elements
-          space = new feSpace1D_Legendre_DG(deg, mesh, fieldID, cncGeoID, fct);
+        feInfoCond(FE_VERBOSE > 0, "\t\t\tShape functions: Legendre polynomials");
+        space = new feSpace1D_Legendre_DG(deg, mesh, fieldID, cncGeoID, fct);
       } else if(type == LINE_CR) {
         switch(deg) {
           case 1:
@@ -53,7 +66,7 @@ feStatus createFiniteElementSpace(feSpace *&space, feMesh *mesh, int dim, elemTy
             break;
           default:
             return feErrorMsg(FE_STATUS_ERROR,
-                              "No LINE finite element space implemented for deg > 4.");
+                              "No LINE_CR finite element space implemented for deg > 1.");
         }
       } else {
         return feErrorMsg(FE_STATUS_ERROR, "Unsupported geometry.");
@@ -61,6 +74,8 @@ feStatus createFiniteElementSpace(feSpace *&space, feMesh *mesh, int dim, elemTy
       break;
     case 2:
       if(type == TRI) {
+        feInfoCond(FE_VERBOSE > 0, "\t\t\tGeometry: Triangle");
+        feInfoCond(FE_VERBOSE > 0, "\t\t\tShape functions: Lagrange polynomials");
         switch(deg) {
           case 0:
             return feErrorMsg(FE_STATUS_ERROR,
@@ -82,10 +97,12 @@ feStatus createFiniteElementSpace(feSpace *&space, feMesh *mesh, int dim, elemTy
                               "No LINE finite element space implemented for deg > 4.");
         }
       } else if(type == TRI_CR) {
+        feInfoCond(FE_VERBOSE > 0, "\t\t\tGeometry: Triangle");
+        feInfoCond(FE_VERBOSE > 0, "\t\t\tShape functions: Non conformal Crouzeix-Raviart");
         switch(deg) {
           case 0:
             return feErrorMsg(FE_STATUS_ERROR,
-                              "No TRI_CR finite element space implemented for deg >2.");
+                              "No TRI_CR finite element space implemented for deg = 0.");
           case 1:
             space = new feSpaceTriP1_nonConsistant(mesh, fieldID, cncGeoID, fct);
             break;
@@ -94,7 +111,7 @@ feStatus createFiniteElementSpace(feSpace *&space, feMesh *mesh, int dim, elemTy
             break;
           default:
             return feErrorMsg(FE_STATUS_ERROR,
-                              "No LINE finite element space implemented for deg > 4.");
+                              "No TRI_CR finite element space implemented for deg > 2.");
         }
       } else {
         return feErrorMsg(FE_STATUS_ERROR, "Unsupported geometry.");
@@ -107,6 +124,8 @@ feStatus createFiniteElementSpace(feSpace *&space, feMesh *mesh, int dim, elemTy
       return feErrorMsg(FE_STATUS_ERROR,
                         "Cannot create a finite element space for dimension > 3 or < 0.");
   }
+
+  feInfoCond(FE_VERBOSE > 0, "\t\t\tPolynomial degree: %d", deg);
 
   // space->useGlobalFunctions(useGlobalShapeFunctions);
 
@@ -209,7 +228,10 @@ feStatus feSpace::setQuadratureRule(feQuadrature *rule)
 
   // If the space is a geometric interpolant, precompute jacobians of the elements
   if(_fieldID == "GEO") {
-    this->getCncGeo()->computeJacobians();
+    feStatus s = this->getCncGeo()->computeJacobians();
+    if(s != FE_STATUS_OK){
+      return s;
+    }
   }
 
   return FE_STATUS_OK;

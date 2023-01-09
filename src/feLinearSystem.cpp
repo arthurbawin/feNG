@@ -2,6 +2,8 @@
 #include "feLinearSystemMklPardiso.h"
 #include "feLinearSystemPETSc.h"
 
+extern int FE_VERBOSE;
+
 extern bool petscWasInitialized;
 
 feStatus createLinearSystem(feLinearSystem *&system, linearSolverType type,
@@ -9,8 +11,11 @@ feStatus createLinearSystem(feLinearSystem *&system, linearSolverType type,
                             std::vector<feBilinearForm *> bilinearForms, feMetaNumber *metaNumber,
                             feMesh *mesh, int argc, char **argv)
 {
+  feInfoCond(FE_VERBOSE > 0, "");
+  feInfoCond(FE_VERBOSE > 0, "LINEAR SYSTEM:");
+
   if(metaNumber->getNbUnknowns() == 0)
-    return feErrorMsg(FE_STATUS_ERROR, "0 unknowns : attempting to create a 0 x 0 linear system.");
+    return feErrorMsg(FE_STATUS_ERROR, "0 unknowns : attempting to create a linear system of size 0.");
 
   // Check that all (bi-)linear forms are defined on existing connectivities.
   // The finite element spaces of a single form must be defined on the same geometric connectivity.
@@ -34,7 +39,7 @@ feStatus createLinearSystem(feLinearSystem *&system, linearSolverType type,
       break;
 #else
       return feErrorMsg(FE_STATUS_ERROR,
-                        "feNG must be compiled with Intel MKL to solve with Pardiso.");
+                        "feNG must be compiled with Intel MKL to solve with MKL Pardiso.");
 #endif
     case PETSC:
 #if defined(HAVE_PETSC)
@@ -56,5 +61,6 @@ feStatus createLinearSystem(feLinearSystem *&system, linearSolverType type,
     default:
       return feErrorMsg(FE_STATUS_ERROR, "Unsupported linear solver type.");
   }
+
   return FE_STATUS_OK;
 }

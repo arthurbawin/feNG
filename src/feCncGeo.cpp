@@ -3,14 +3,19 @@
 #include "feSpace.h"
 #include "feMesh.h"
 
-void feCncGeo::computeJacobians()
+extern int FE_VERBOSE;
+
+feStatus feCncGeo::computeJacobians()
 {
   int nQuad = _space->getNbQuadPoints();
   _J.resize(_nElm * nQuad);
 
   std::vector<double> geoCoord(_nNodPerElm*3);
 
-  if(_space->getDim() == 1) {
+  if(_space->getDim() == 0) {
+    _J[0] = 1.0;
+  }
+  else if(_space->getDim() == 1) {
     std::vector<double> j(3, 0.0);
     for(int iElm = 0; iElm < _nElm; ++iElm) {
       _mesh->getCoord(_tag, iElm, geoCoord);
@@ -19,7 +24,8 @@ void feCncGeo::computeJacobians()
         _J[nQuad * iElm + k] = sqrt(j[0] * j[0] + j[1] * j[1]);
       }
     }
-  } else if(_space->getDim() == 2) {
+  }
+  else if(_space->getDim() == 2) {
     std::vector<double> dxdr(3, 0.0); // [dx/dr, dy/dr, dz/dr]
     std::vector<double> dxds(3, 0.0); // [dx/ds, dy/ds, dz/ds]
     for(int iElm = 0; iElm < _nElm; ++iElm) {
@@ -29,22 +35,21 @@ void feCncGeo::computeJacobians()
         _space->interpolateVectorFieldAtQuadNode_sDerivative(geoCoord, k, dxds);
         _J[nQuad * iElm + k] = dxdr[0] * dxds[1] - dxdr[1] * dxds[0];
         if(_J[nQuad * iElm + k] <= 0) {
-          printf("In feCncGeo::computeJacobians : Error - Element jacobian = %+-12.12e on elm %d with coordinates (%+-1.4e - %+-1.4e) - (%+-1.4e - %+-1.4e) - (%+-1.4e - %+-1.4e)\n",
+          return feErrorMsg(FE_STATUS_ERROR, 
+            "Negative or zero jacobian = %+-12.12e on elm %d with coordinates (%+-1.4e - %+-1.4e) - (%+-1.4e - %+-1.4e) - (%+-1.4e - %+-1.4e)\n",
             _J[nQuad * iElm + k], iElm,
             geoCoord[3*0+0], geoCoord[3*0+1], 
             geoCoord[3*1+0], geoCoord[3*1+1], 
             geoCoord[3*2+0], geoCoord[3*2+1]);
-          exit(-1);
         }
       }
     }
-  } else if(_space->getDim() == 0) {
-    _J[0] = 1.0;
+  }
+  else {
+    return feErrorMsg(FE_STATUS_ERROR,"Element jacobian not implemented for 3D elements.\n");
   }
 
-  else {
-    printf("TODO : Implement jacobian for 3D elements.\n");
-  }
+  return FE_STATUS_OK;
 }
 
 static int colorChoice(std::vector<bool> availableColor, std::vector<int> &nbElmPerColor,
@@ -77,10 +82,8 @@ static int colorChoice(std::vector<bool> availableColor, std::vector<int> &nbElm
 
 void feCncGeo::colorElements(int coloringAlgorithm)
 {
-  feInfo("Coloring connectivity %s ...", _ID.c_str());
-  // tic();
+  feInfoCond(FE_VERBOSE > 0, "\t\tColoring connectivity %s...", _ID.c_str());
   // Create the node patch :
-  // tic();
   int size= *std::max_element(_connecNodes.begin(), _connecNodes.end())+1;
   _listElmPerNode.resize(size);
   _nbElmPerNode.resize(size);
@@ -91,8 +94,6 @@ void feCncGeo::colorElements(int coloringAlgorithm)
       _listElmPerNode[nds].push_back(i);
     }
   }
-
-  // toc();
 
   switch(coloringAlgorithm) {
     case 1: // Returning a non homogeneous distribution of elements per color
@@ -135,16 +136,11 @@ void feCncGeo::colorElements(int coloringAlgorithm)
         _nbColor = _nbColor + 1;
 
       } // while
-      // feInfo("nbColor : %d", _nbColor);
-      // for(int i = 0; i < _nbColor; i++) {
-      //   feInfo("%d,%d,%d",_nElm, i, _nbElmPerColor[i]);
-      // }
       break;
     }
 
       case 2:  //Returning a homogeneous distribution of elements per color
       {
-
         // Create the Elements patch : 
         int sizeElm = *std::max_element(_connecElem.begin(), _connecElem.end())+1;
         _nbElmPerElm.resize(sizeElm);
@@ -194,10 +190,6 @@ void feCncGeo::colorElements(int coloringAlgorithm)
             _listElmPerColor[activColor].push_back(iElm);
           }
         }
-        // feInfo("nbColor : %d", _nbColor);
-        // for (int i=0;i<_nbColor;i++){
-        //   feInfo("%d,%d,%d",_nElm, i, _nbElmPerColor[i]);
-        // }
         break;
       }
 
@@ -249,16 +241,9 @@ void feCncGeo::colorElements(int coloringAlgorithm)
             noColor = false;
           }
         }
-
       } // while
-
-      // feInfo("nbColor : %d", _nbColor);
-      // for(int i = 0; i < _nbColor; i++) {
-      //   feInfo("%d,%d,%d",_nElm, i, _nbElmPerColor[i]);
-      // }
       break;
     }
   }
-  // toc();
-  feInfo("Done");
+  feInfoCond(FE_VERBOSE > 0, "\t\tDone");
 }

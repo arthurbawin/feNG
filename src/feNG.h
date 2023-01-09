@@ -25,7 +25,9 @@
 #include <chrono>
 #include <thread>
 
+#if defined(HAVE_OMP)
 #include "omp.h"
+#endif
 
 #if defined(HAVE_PETSC)
 #include "petscsystypes.h"
@@ -44,7 +46,7 @@ typedef int fePardisoInt;
 typedef long long int feMKLPardisoInt;
 #endif
 
-void tic(int mode = 0);
-void toc();
+// void tic(int mode = 0);
+// void toc();
 
 #endif

@@ -14,7 +14,7 @@
 #define _GLFEM_H_
 
 #define GLFW_INCLUDE_GLU
-#include <GLFW/glfw3.h>
+#include <../contrib/glfw/include/GLFW/glfw3.h>
 
 void glfemDrawNodes(double *x, double *y, int n);
 void glfemDrawCurve(double *x, double *y, int n);

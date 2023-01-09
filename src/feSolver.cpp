@@ -45,67 +45,78 @@ feStatus createTimeIntegrator(TimeIntegrator *&solver, timeIntegratorScheme sche
   return FE_STATUS_OK;
 }
 
-void solveQNBDF(feSolutionContainer *solDot, feTolerances tol, feMetaNumber *metaNumber,
+feStatus solveQNBDF(feSolutionContainer *solDot, feTolerances tol, feMetaNumber *metaNumber,
                 feLinearSystem *linearSystem, feSolution *sol, feMesh *mesh)
 {
-  feInfo("\t Nonlinear solver:");
-  bool newton = true;
+  feInfoCond(FE_VERBOSE > 0, "\t\t\tNONLINEAR SOLVER:");
+  bool continueNewton = true;
   bool status = linearSystem->getRecomputeStatus();
   bool prev_status = status;
   int iter = 0, linearSystemIter;
   double normDx, normResidual, normAxb;
-  int cnt = 0; // nb of iteration without recompute the matrix
-  while(newton) {
+  int nIterSinceMatrixComputation = 0;
+
+  // Newton-Rapshon iteration
+  while(continueNewton) {
+
+    // Reset, assemble and solve the linear system J(u) * du = -NL(u)
     linearSystem->setToZero();
     solDot->computeSolTimeDerivative(sol, linearSystem);
     linearSystem->assemble(sol);
     linearSystem->solve(&normDx, &normResidual, &normAxb, &linearSystemIter);
+
     if(iter == 0 && status == 1) _normR0 = normResidual;
     if(iter == 0 && status == 0) _normFirstR0 = normResidual; // in case we have to recalculate the matrix and update the R0
-    // FECORRECTIONSOLUTION
+    
     linearSystem->correctSolution(sol);
     solDot->setSol(0, sol->getSolutionCopy());
 
-    feInfoCond(
-      FE_VERBOSE > 0,
-      "\t iter %2d : ||A*dx-res|| = %10.10e (%4d iter.) \t ||dx|| = %10.10e \t ||res|| = %10.10e",
+    feInfoCond(FE_VERBOSE > 0,
+      "\t\t\t\tIter %2d : ||J*du - NL(u)|| = %10.10e (%4d iter.) \t ||du|| = %10.10e \t ||NL(u)|| = %10.10e",
       ++iter, normAxb, linearSystemIter, normDx, normResidual);
 
-    newton = !((normDx <= tol.tolDx && normResidual <= tol.tolResidual) || iter > tol.maxIter);
+    continueNewton = !((normDx <= tol.tolDx && normResidual <= tol.tolResidual) || iter > tol.maxIter);
 
-    if((iter > 2 || prev_status == 0) && ((normResidual / _normR0) < 0.001) && normDx < 0.1 && cnt < 8) {
+    if((iter > 2 || prev_status == 0) && ((normResidual / _normR0) < 0.001) && normDx < 0.1 && nIterSinceMatrixComputation < 8) {
       linearSystem->setRecomputeStatus(false);
     } else if(iter == 1 && prev_status == 0){
         if(normResidual < 0.1){
-          linearSystem->setRecomputeStatus(false); // we decide to try with the old matrix at the firs // iteration just to see if it's enough
-        }else{
+          // Try with the old jacobian matrix for the first iteration
+          linearSystem->setRecomputeStatus(false); 
+        } else{
           linearSystem->setRecomputeStatus(true);
         }
-    }else {
-      if(iter == 2 && prev_status == 0)
-        _normR0 = _normFirstR0; // if we have to recompute the matrix we update the R0
+    } else {
+      if(iter == 2 && prev_status == 0){
+        // If we have to recompute the matrix we update the R0
+        _normR0 = _normFirstR0;
+      }
       linearSystem->setRecomputeStatus(true);
-      cnt = 0;
+      nIterSinceMatrixComputation = 0;
     }
-    cnt++;
+    nIterSinceMatrixComputation++;
   }
 
   if(iter > tol.maxIter) {
-    feWarning("\t Not converged at iter %2d : ||A*dx-res|| = %10.10e  (%4d iter.) \t ||dx|| = "
-              "%10.10e \t ||res|| = %10.10e",
+    return feErrorMsg(FE_STATUS_ERROR, "Nonlinear solver did not converge at iter %2d : ||J*du - NL(u)|| = %10.10e  (%4d iter.) \t ||du|| = "
+              "%10.10e \t ||NL(u)|| = %10.10e",
               iter, normAxb, linearSystemIter, normDx, normResidual);
   } else {
     feInfoCond(FE_VERBOSE > 0,
-               "\t Converged in %2d Newton iterations : ||dx|| = %10.10e \t ||res|| = %10.10e", iter,
+               "\t\t\t\tConverged in %2d Newton iterations : ||du|| = %10.10e \t ||NL(u)|| = %10.10e", iter,
                normDx, normResidual);
   }
-  // linearSystem->setRecomputeStatus(status);
+  return FE_STATUS_OK;
 }
 
-StationarySolver::StationarySolver(feTolerances tol, feMetaNumber *metaNumber,
-                                   feLinearSystem *linearSystem, feSolution *sol,
-                                   std::vector<feNorm *> &norms, feMesh *mesh,
-                                   feExportData exportData)
+StationarySolver::StationarySolver(
+  feTolerances tol,
+  feMetaNumber *metaNumber,
+  feLinearSystem *linearSystem,
+  feSolution *sol,
+  std::vector<feNorm *> &norms,
+  feMesh *mesh,
+  feExportData exportData)
   : TimeIntegrator(tol, metaNumber, linearSystem, sol, norms, mesh, exportData)
 {
   // Initialize the solution container with a single solution
@@ -119,7 +130,7 @@ StationarySolver::StationarySolver(feTolerances tol, feMetaNumber *metaNumber,
 
 feStatus StationarySolver::makeStep()
 {
-  this->makeSteps(0);
+  return this->makeSteps(0);
 }
 
 feStatus StationarySolver::makeSteps(int nSteps)
@@ -127,21 +138,21 @@ feStatus StationarySolver::makeSteps(int nSteps)
   // Recompute global matrix at every Newton iteration if stationary
   _linearSystem->setRecomputeStatus(true);
 
-  feInfo("=====================================================================");
-  feInfo("              Beginning of time integration information              ");
-  feInfo("=====================================================================");
-  feInfo("");
-  feInfo("Solving for steady state solution");
-  feInfo("Recompute global matrix at each Newton iteration = %s", _linearSystem->getRecomputeStatus() ? "true" : "false");
+  feInfoCond(FE_VERBOSE > 0, "");
+  feInfoCond(FE_VERBOSE > 0, "STATIONARY SOLVER:");
+  feInfoCond(FE_VERBOSE > 0, "\t\tSolving for steady state solution");
+  feInfoCond(FE_VERBOSE > 0, "\t\tRecompute jacobian matrix at each Newton iteration: %s",
+    _linearSystem->getRecomputeStatus() ? "true" : "false");
 
   // Solve
-  solveQNBDF(_solutionContainer, _tol, _metaNumber, _linearSystem, _sol, _mesh);
+  feStatus s = solveQNBDF(_solutionContainer, _tol, _metaNumber, _linearSystem, _sol, _mesh);
 
-  feInfo("Steady-state solution found");
+  if(s != FE_STATUS_OK){
+    return s;
+  }
 
-  feInfo("=====================================================================");
-  feInfo("                  End of time integration information                ");
-  feInfo("=====================================================================");
+  feInfoCond(FE_VERBOSE > 0, "\t\tSteady-state solution found");
+
   // Compute L2 norm of solution(s)
   for(int k = 0; k < _norms.size(); ++k) {
     if(_norms[k]->getNbFields() > 1) {
@@ -171,6 +182,7 @@ feStatus StationarySolver::makeSteps(int nSteps)
       }
     }
   }
+
   // Export for visualization
   if(_exportData.exporter != nullptr) {
     std::string fileName = _exportData.fileNameRoot + "Stationary.vtk";
@@ -196,23 +208,28 @@ void fePstClc(feSolution *sol, feLinearSystem *linearSystem, feSolutionContainer
 double _f = 0.20; //_f =0.2 means dt1/dt2 = 4  _f=0.25 means dt1/dt2 = 3
 bool K1K2 = false;
 
-BDF2Solver::BDF2Solver(feTolerances tol, feMetaNumber *metaNumber, feLinearSystem *linearSystem,
-                       feSolution *sol, std::vector<feNorm *> &norms, feMesh *mesh,
-                       feExportData exportData, double t0, double tEnd, int nTimeSteps,
-                       std::string CodeIni)
-  : TimeIntegrator(tol, metaNumber, linearSystem, sol, norms, mesh, exportData, t0, tEnd,
-                   nTimeSteps, CodeIni)
+BDF2Solver::BDF2Solver(
+  feTolerances tol,
+  feMetaNumber *metaNumber,
+  feLinearSystem *linearSystem,
+  feSolution *sol,
+  std::vector<feNorm *> &norms,
+  feMesh *mesh,
+  feExportData exportData,
+  double t0,
+  double tEnd,
+  int nTimeSteps,
+  std::string CodeIni)
+  : TimeIntegrator(tol, metaNumber, linearSystem, sol, norms, 
+    mesh, exportData, t0, tEnd, nTimeSteps, CodeIni)
 {
-  // Initialize the solution container
+  // Initialize the solution container with 3 solutions
   int nSol = 3;
   _solutionContainer = new feSolutionBDF2(nSol, _sol->getCurrentTime(), _metaNumber);
   _solutionContainer->initialize(_sol, _mesh, _metaNumber);
 
   _normL2.resize(norms.size());
   for(auto &n : _normL2) n.resize(_nTimeSteps, 0.);
-
-  // printf("Initializing BDF2 solver : integrating from t0 = %f to tEnd = %f in %d steps\n", _t0,
-  //        _tEnd, _nTimeSteps);
 }
 
 feStatus BDF2Solver::makeSteps(int nSteps)
@@ -343,13 +360,21 @@ feStatus BDF2Solver::makeSteps(int nSteps)
   return FE_STATUS_OK;
 }
 
-BDF1Solver::BDF1Solver(feTolerances tol, feMetaNumber *metaNumber, feLinearSystem *linearSystem,
-                       feSolution *sol, std::vector<feNorm *> &norms, feMesh *mesh,
-                       feExportData exportData, double t0, double tEnd, int nTimeSteps)
-  : TimeIntegrator(tol, metaNumber, linearSystem, sol, norms, mesh, exportData, t0, tEnd,
-                   nTimeSteps)
+BDF1Solver::BDF1Solver(
+  feTolerances tol,
+  feMetaNumber *metaNumber,
+  feLinearSystem *linearSystem,
+  feSolution *sol,
+  std::vector<feNorm *> &norms,
+  feMesh *mesh,
+  feExportData exportData,
+  double t0,
+  double tEnd,
+  int nTimeSteps)
+  : TimeIntegrator(tol, metaNumber, linearSystem, sol, norms,
+    mesh, exportData, t0, tEnd, nTimeSteps)
 {
-  // Initialize the solution container
+  // Initialize the solution container with 2 solutions
   int nSol = 2;
   _solutionContainer = new feSolutionBDF1(nSol, _sol->getCurrentTime(), _metaNumber);
   _solutionContainer->initialize(_sol, _mesh, _metaNumber);
@@ -357,14 +382,16 @@ BDF1Solver::BDF1Solver(feTolerances tol, feMetaNumber *metaNumber, feLinearSyste
   _normL2.resize(norms.size());
   for(auto &n : _normL2) n.resize(_nTimeSteps, 0.);
 
-  printf("Initializing BDF1 solver : integrating from t0 = %f to tEnd = %f in %d steps\n", _t0,
-         _tEnd, _nTimeSteps);
+  feInfoCond(FE_VERBOSE > 0, "BDF1 SOLVER:");
+  feInfoCond(FE_VERBOSE > 0, "\t\t\Time integration from t0 = %1.3e to tEnd = %1.3e in %d constant steps",
+    _t0, _tEnd, _nTimeSteps);
 }
 
 // Advance time integration by a single step
 feStatus BDF1Solver::makeStep()
 {
-  feInfo("BDF1 : Advancing 1 step from t = %f to t = %f", _tCurrent, _tCurrent + _dt);
+  feInfoCond(FE_VERBOSE > 0, "\t\tAdvancing 1 step from t = %1.3e to t = %1.3e (dt = %1.3e)",
+    _tCurrent, _tCurrent + _dt, _dt);
 
   if(_currentStep == 0) {
     // Initialization and first step

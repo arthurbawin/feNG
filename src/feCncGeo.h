@@ -29,7 +29,7 @@ protected:
   std::vector<int> _connecFaces; // Connectivite des faces
 
   feSpace *_space;
-  feMesh *_mesh; // Ou alors donner le vecteur de Vertex de la cnc
+  feMesh *_mesh;
 
   std::vector<double> _J; // Jacobiens
 
@@ -54,21 +54,18 @@ public:
       _connecNodes(connecNodes), _connecElem(connecElem), _connecEdges(connecEdges),
       _connecFaces(connecFaces), _space(space)
   {
-    if(connecElem.size() == 0) _connecElem.resize(nElm);
-    if(connecEdges.size() == 0) _connecEdges.resize(nElm * nEdg);
+    if(connecElem.size() == 0)
+      _connecElem.resize(nElm);
+    if(connecEdges.size() == 0)
+      _connecEdges.resize(nElm * nEdg);
 
     std::sort(connecNodes.begin(), connecNodes.end());
     _nNod = std::unique(connecNodes.begin(), connecNodes.end()) - connecNodes.begin();
 
-    int coloringAlgorithm = 1;
-    feInfo("Methode de Coloriage : %d", coloringAlgorithm);
-    colorElements(coloringAlgorithm);
+    // Color the elements for partitioning
+    colorElements(1);
   };
-  ~feCncGeo()
-  {
-    // if(_space != nullptr)
-    //   delete _space;
-  }
+  ~feCncGeo(){ }
 
   std::string &getID() { return _ID; }
   int getTag() { return _tag; }
@@ -105,7 +102,7 @@ public:
     _connecEdges[_nEdg * numElem + iEdge] = val;
   }
 
-  void computeJacobians();
+  feStatus computeJacobians();
   // double getJacobianAtQuadNode(int numElem, int iQuadNode){ return _J; }
   std::vector<double> &getJacobians() { return _J; }
 
@@ -113,10 +110,6 @@ public:
   // void createPatchElm(int nbElm, int nbNodePerElm, std::vector<int> &cncNodes);
 
   void colorElements(int coloringAlgorithm);
-  // void color2(int cncGeoTag = 0);
-  // void color3(int cncGeoTag = 0);
-  // void color4(int cncGeoTag = 0);
-  // void color5(int cncGeoTag = 0);
 
   int getNbColor() { return _nbColor; };
   std::vector<int> &getColorElm() { return _elmToColor; };

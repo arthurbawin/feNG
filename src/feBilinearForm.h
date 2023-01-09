@@ -10,6 +10,9 @@
 #include "feSolution.h"
 #include "feCncGeo.h"
 
+feStatus createBilinearForm(feBilinearForm *&form, std::vector<feSpace *> spaces, 
+  feMesh *mesh, int degQuad, feSysElm *elementarySystem);
+
 class feBilinearForm
 {
 protected:
@@ -18,7 +21,7 @@ protected:
 public:
   // These members are used to compute the elementary system.
   // Since friendship is not inherited by feSysElm derived class,
-  // they are public for now although it's probably not optimal.
+  // they are public for now, even if it's probably not optimal.
   std::vector<feSpace *> _intSpace;
   feCncGeo *_cnc;
   feSpace *_geoSpace;
@@ -36,7 +39,6 @@ public:
 protected:
   int _cncGeoTag;
   std::string _cncGeoID;
-  int _nCoord;
   int _nGeoNodes;
   int _nGeoElm;
 
@@ -75,7 +77,7 @@ public:
                                            int numElem);
 
 public:
-  feBilinearForm(std::vector<feSpace *> space, feMesh *mesh, int degQuad, feSysElm *sysElm);
+  feBilinearForm(std::vector<feSpace*> spaces, feMesh *mesh, int degQuad, feSysElm *elementarySystem);
   feBilinearForm(const feBilinearForm &f);
   ~feBilinearForm();
 
