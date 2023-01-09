@@ -25,6 +25,9 @@ void glfemReshapeWindowsBox(double minX, double maxX, double minY, double maxY, 
 void glfemMessage(char *message);
 void glfemDrawMessage(int h, int v, char *message);
 void glfemSetRasterSize(int width, int height);
+
+#if defined(HAVE_GLFW)
 GLFWwindow* glfemInit(char *windowName);
+#endif
 
 #endif
