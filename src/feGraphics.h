@@ -4,12 +4,17 @@
 /* Basic graphic features */
 
 #include "feAPI.h"
+
+#if defined(HAVE_GLFW)
 #include "glfem.h"
+#endif
 
 class feBasicViewer
 {
 protected:
+#if defined(HAVE_GLFW)
   GLFWwindow* _window;
+#endif
 
   int _windowWidth;
   int _windowHeight;
