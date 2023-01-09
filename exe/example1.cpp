@@ -6,15 +6,14 @@
 
   on a 2D domain subject to Dirichlet boundary conditions.
   The domain is discretized in space using a simplcial (triangle) mesh.
-
 */
 
 #include "feAPI.h"
 
 double fSol(const double t, const std::vector<double> &pos, const std::vector<double> &par)
 {
-  // return pow(x[0], 6);
   double x = pos[0];
+  // return pow(x, 6);
   double y = pos[1];
   double a = 10.0;
   double b = 2.;
@@ -48,7 +47,7 @@ int main(int argc, char **argv)
   petscInitialize(argc, argv);
 
   // Set the default parameters.
-  const char *meshFile = "squareIso1.msh";
+  const char *meshFile = "../data/square1.msh";
   int verbosity = 2;
   int order = 1;
   int degreeQuadrature = 10;
@@ -121,14 +120,15 @@ int main(int argc, char **argv)
   //                      /
   //
   // There is no form to define on the boundary.
-  feBilinearForm diffU({uDomaine}, &mesh, degreeQuadrature, new feSysElm_2D_Diffusion(k, nullptr));
-  feBilinearForm sourceU({uDomaine}, &mesh, degreeQuadrature, new feSysElm_2D_Source(1.0, funSource));
+  feBilinearForm *diff, *source;
+  feCheck(createBilinearForm(  diff, {uDomaine}, &mesh, degreeQuadrature, new feSysElm_2D_Diffusion(k, nullptr)  ));
+  feCheck(createBilinearForm(source, {uDomaine}, &mesh, degreeQuadrature, new feSysElm_2D_Source(1.0, funSource) ));
 
   // Create the linear system. Assembly of the elementary matrices and RHS is
   // performed in the solve step below ("makeSteps"). Two linear solvers are available:
   // MKL Pardiso (direct solver) and PETSc (collection of iterative solvers).
   feLinearSystem *system;
-  feCheck(createLinearSystem(system, PETSC, spaces, {&diffU, &sourceU}, &numbering, &mesh, argc, argv));
+  feCheck(createLinearSystem(system, PETSC, spaces, {diff, source}, &numbering, &mesh, argc, argv));
 
   // Post-processing tools to compute norms and whatnot
   feNorm normU(uDomaine, &mesh, degreeQuadrature, funSol);
@@ -144,7 +144,7 @@ int main(int argc, char **argv)
 
   // Solve the discrete problem. Initialize a TimeIntegrator object and tolerances on the
   // Newton-Raphson nonlinear solver (tolerance on the solution correction dx, tolerance on the
-  // residual, max number of iterations). Here the PDE is linear: the nonlinear solver should
+  // residual, max number of iterations). Here the PDE is linear in u: the nonlinear solver should
   // converge in 2 iterations. The TimeIntegrator can be STATIONARY, BDF1, BDF2 or a
   // deferred-correction method (DC2F, DC3, DC3F, still experimental). The solution will be 
   // exported for visualization according to the exportData structure. The linear system is 
@@ -159,6 +159,8 @@ int main(int argc, char **argv)
   feInfo("L2 error = %10.10f", post.computeL2ErrorNorm(&sol));
 
   // Free the used memory
+  delete diff;
+  delete source;
   delete solver;
   delete exporter;
   delete uDomaine;

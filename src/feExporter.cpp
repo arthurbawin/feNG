@@ -257,7 +257,7 @@ feStatus feExporterVTK::writeStep(std::string fileName)
       }
     }
 
-    feInfoCond(FE_VERBOSE > 0, "Exporting geometric connectivity \"%s\" to file \"%s\"",
+    feInfoCond(FE_VERBOSE > 0, "\t\tExporting geometric connectivity \"%s\" to file \"%s\"",
                cnc->getID().c_str(), fileName.c_str());
 
     /* Although VTK_HIGHER_ORDER_TRIANGLE and VTK_LAGRANGE_TRIANGLE
@@ -442,7 +442,7 @@ feStatus feExporterVTK::writeEigenvectors(std::string fileName)
       }
     }
 
-    feInfoCond(FE_VERBOSE > 0, "Exporting geometric connectivity \"%s\" to file \"%s\"",
+    feInfoCond(FE_VERBOSE > 0, "\t\tExporting geometric connectivity \"%s\" to file \"%s\"",
                cnc->getID().c_str(), fileName.c_str());
 
     int geometryPolynomialDegree;
