@@ -692,23 +692,3 @@ void feSpace::interpolateVectorFieldAtQuadNode_sDerivative(std::vector<double> &
     }
   }
 }
-
-// Copy the 
-void feSpace::copyInto(feSpace *other, feSolution *sol)
-{
-
-}
-
-void feSpace::printL()
-{
-  std::cout << "taille = " << _L.size() << std::endl;
-  for(double l : _L) std::cout << l << " ";
-  std::cout << std::endl;
-}
-
-void feSpace::printdLdr()
-{
-  std::cout << "taille = " << _dLdr.size() << std::endl;
-  for(double l : _dLdr) std::cout << l << " ";
-  std::cout << std::endl;
-}

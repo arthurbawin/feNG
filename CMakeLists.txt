@@ -14,7 +14,7 @@ option(ENABLE_MKL           "Enable MKL"                        OFF)
 option(ENABLE_METIS         "Enable Metis"                      OFF)
 option(ENABLE_SOPLEX        "Enable SoPlex"                     OFF)
 option(ENABLE_PROFILER      "Compile with -lprofiler"           OFF)
-option(ENABLE_GLFW          "Enable basic GLFW graphics"        ON )
+option(ENABLE_GLFW          "Enable basic GLFW graphics"        OFF)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src)

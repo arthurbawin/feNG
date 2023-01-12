@@ -204,7 +204,7 @@ public:
   double interpolateField_yDerivative(std::vector<double> &field, int iElm, std::vector<double> &x);
   void interpolateField_gradrs(feNumber *number, feSolution *sol, std::vector<double> &x,
                                std::vector<double> &grad);
-  
+
   double interpolateFieldAtQuadNode(std::vector<double> &field, int iNode);
   double interpolateFieldAtQuadNode(std::vector<double> &field, int iElm, int iNode);
   double interpolateFieldAtQuadNode_rDerivative(std::vector<double> &field, int iNode);
@@ -224,13 +224,6 @@ public:
                                                     std::vector<double> &res);
   void interpolateVectorFieldAtQuadNode_sDerivative(std::vector<double> &field, int iNode,
                                                     std::vector<double> &res);
-
-  void copyInto(feSpace *other, feSolution *sol);
-
-  // std::vector<double> &getSolutionReference() { return _sol; };
-  // std::vector<double> &getSolutionReferenceDot() { return _soldot; };
-  void printL();
-  void printdLdr();
 };
 
 //
