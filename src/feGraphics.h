@@ -7,10 +7,7 @@
  *  Detailed description starts here.
  */
 #include "feAPI.h"
-
-#if defined(HAVE_GLFW)
 #include "glfem.h"
-#endif
 
 class feBasicViewer
 {

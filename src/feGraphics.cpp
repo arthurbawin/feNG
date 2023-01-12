@@ -25,9 +25,11 @@ feBasicViewer::feBasicViewer(std::string windowTitle, int nElm, int nInteriorPlo
 
 feBasicViewer::~feBasicViewer()
 {
+#if defined(HAVE_GLFW)
   free(_x);
   free(_u);
   free(_uh);
+#endif
 }
 
 void feBasicViewer::drawMessage(std::string &message)
@@ -45,10 +47,12 @@ void feBasicViewer::setAxesLimits(double *xLim, double *yLim)
 }
 void feBasicViewer::drawAxes()
 {
+#if defined(HAVE_GLFW)
   double zero[2] = {0., 0.};
   glColor3f(0.0, 0.0, 0.0);
   glfemDrawCurve(_xLim, zero, 2);
   glfemDrawCurve(zero, _yLim, 2);
+#endif
 }
 
 void feBasicViewer::reshapeWindowBox(double xMin, double xMax, double yMin, double yMax)
