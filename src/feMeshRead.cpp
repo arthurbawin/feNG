@@ -2,7 +2,6 @@
 #include "feElement.h"
 #include "feTriangle.h"
 #include "feLine.h"
-#include "feSpaceTriangle.h"
 
 #include <iostream>
 #include <fstream>
@@ -265,8 +264,8 @@ int dim_of_gmsh_element[] = {
   // TODO : Complete the table (-:
 };
 
-feStatus feMesh2DP1::readMsh2(std::istream &input, bool curved, bool reversed,
-                              mapType physicalEntitiesDescription)
+feStatus feMesh2DP1::readMsh2(std::istream &input, const bool curved, const bool reversed,
+                              const mapType physicalEntitiesDescription)
 {
   std::string buffer;
   int ph1; // Placeholder
@@ -640,8 +639,8 @@ feStatus feMesh2DP1::readMsh2(std::istream &input, bool curved, bool reversed,
   return FE_STATUS_OK;
 }
 
-feStatus feMesh2DP1::readMsh4(std::istream &input, bool curved, bool reversed,
-                              mapType physicalEntitiesDescription)
+feStatus feMesh2DP1::readMsh4(std::istream &input, const bool curved, const bool reversed,
+                              const mapType physicalEntitiesDescription)
 {
   std::string buffer;
   // Placeholders
@@ -1458,8 +1457,8 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, bool curved, bool reversed,
   return FE_STATUS_OK;
 }
 
-feStatus feMesh2DP1::readGmsh(std::string meshName, bool curved, bool reversed,
-                              mapType physicalEntitiesDescription)
+feStatus feMesh2DP1::readGmsh(const std::string meshName, const bool curved, const bool reversed,
+                              const mapType physicalEntitiesDescription)
 {
   _gmshVersion = 0;
   std::filebuf fb;

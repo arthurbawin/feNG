@@ -4,7 +4,6 @@
 #include "feMesh.h"
 #include "feCncGeo.h"
 #include "feSpace.h"
-#include "feSpaceTriangle.h"
 #include "feVertex.h"
 #include "feNumber.h"
 #include "feSolution.h"

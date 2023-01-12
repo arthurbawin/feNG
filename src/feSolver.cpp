@@ -49,7 +49,7 @@ feStatus solveQNBDF(feSolutionContainer *solDot, feTolerances tol, feMetaNumber 
                 feLinearSystem *linearSystem, feSolution *sol, feMesh *mesh)
 {
   feInfoCond(FE_VERBOSE > 0, "\t\t\tNONLINEAR SOLVER:");
-  bool continueNewton = true;
+  bool stop = false;
   bool status = linearSystem->getRecomputeStatus();
   bool prev_status = status;
   int iter = 0, linearSystemIter;
@@ -57,7 +57,7 @@ feStatus solveQNBDF(feSolutionContainer *solDot, feTolerances tol, feMetaNumber 
   int nIterSinceMatrixComputation = 0;
 
   // Newton-Rapshon iteration
-  while(continueNewton) {
+  while(!stop) {
 
     // Reset, assemble and solve the linear system J(u) * du = -NL(u)
     linearSystem->setToZero();
@@ -75,7 +75,7 @@ feStatus solveQNBDF(feSolutionContainer *solDot, feTolerances tol, feMetaNumber 
       "\t\t\t\tIter %2d : ||J*du - NL(u)|| = %10.10e (%4d iter.) \t ||du|| = %10.10e \t ||NL(u)|| = %10.10e",
       ++iter, normAxb, linearSystemIter, normDx, normResidual);
 
-    continueNewton = !((normDx <= tol.tolDx && normResidual <= tol.tolResidual) || iter > tol.maxIter);
+    stop = (normDx <= tol.tolDx && normResidual <= tol.tolResidual) || iter > tol.maxIter;
 
     if((iter > 2 || prev_status == 0) && ((normResidual / _normR0) < 0.001) && normDx < 0.1 && nIterSinceMatrixComputation < 8) {
       linearSystem->setRecomputeStatus(false);

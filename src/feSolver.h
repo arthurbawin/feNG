@@ -61,9 +61,7 @@ public:
     _dt = (tEnd - t0) / (double)nTimeSteps;
     _sol->initializeTemporalSolution(_t0, _tEnd, _nTimeSteps);
   };
-  virtual ~TimeIntegrator()
-  { /*delete _solutionContainer;*/
-  }
+  virtual ~TimeIntegrator(){};
 
   feSolutionContainer *getSolutionContainer() { return _solutionContainer; }
 
@@ -72,6 +70,8 @@ public:
   void setSolution(feSolution *sol) { _sol = sol; }
   void setMesh(feMesh *mesh) { _mesh = mesh; }
   std::vector<double> &getNorm(int iNorm) { return _normL2[iNorm]; };
+
+  int getCurrentStep(){ return _currentStep; };
 
   virtual feStatus makeStep() = 0;
   virtual feStatus makeSteps(int nSteps) = 0;

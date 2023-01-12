@@ -6,6 +6,7 @@
 
   on a 2D domain subject to Dirichlet boundary conditions.
   The domain is discretized in space using a simplcial (triangle) mesh.
+  
 */
 
 #include "feAPI.h"
@@ -92,8 +93,8 @@ int main(int argc, char **argv)
   // The feFunction provided is used to initialize the degrees of freedom on the feSpace.
   int dim;
   feSpace *uBord, *uDomaine;
-  feCheck(createFiniteElementSpace(uBord, &mesh, dim = 1, LINE, order, "U", "Bord", degreeQuadrature, funSol));
-  feCheck(createFiniteElementSpace(uDomaine, &mesh, dim = 2, TRI, order, "U", "Domaine", degreeQuadrature, funZero));
+  feCheck(createFiniteElementSpace(uBord, &mesh, dim = 1, LINE, LAGRANGE, order, "U", "Bord", degreeQuadrature, funSol));
+  feCheck(createFiniteElementSpace(uDomaine, &mesh, dim = 2, TRI, LAGRANGE, order, "U", "Domaine", degreeQuadrature, funZero));
 
   // Define the set of all finite elements spaces and the set of FE spaces
   // forming the essential (Dirichlet) boundary conditions. The second set must always be

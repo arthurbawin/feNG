@@ -118,12 +118,15 @@ void feSysElm_1D_Source::computeBe(feBilinearForm *form)
 
   std::vector<double> x(3, 0.0);
 
+  double jac;
   for(int k = 0; k < nG; ++k) {
+    jac = J[nG * form->_numElem + k];
+
     form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, x);
     double S = _fct->eval(form->_tn, x);
     for(int i = 0; i < nFunctions; ++i) {
       _feU[i] = form->_intSpace[_idU]->getFunctionAtQuadNode(i, k);
-      form->_Be[i] -= _feU[i] * S * J[nG * form->_numElem + k] * w[k];
+      form->_Be[i] -= _feU[i] * S * jac * w[k];
     }
   }
 }

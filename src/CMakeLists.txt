@@ -29,7 +29,8 @@ set(feNG_SRC
     feSolutionContainer.cpp
     feSolver.cpp
     feSpace.cpp
-    feSpaceTriangle.cpp
+    feSpace_1D.cpp
+    feSpace_2D.cpp
     # feSysElm.cpp
     feSysElm_0D.cpp
     feSysElm_1D.cpp

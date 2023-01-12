@@ -17,7 +17,7 @@ int main(int argc, char **argv)
   feMesh1DP1 mesh(xa, xb, nElm, "BXA", "BXB", "Domaine");
 
   feSpace *uDomaine;
-  feCheck(createFiniteElementSpace(uDomaine, &mesh, dim = 1, LINE, deg, "U", "Domaine", degreeQuadrature, funTest));
+  feCheck(createFiniteElementSpace(uDomaine, &mesh, dim = 1, LINE, LAGRANGE, deg, "U", "Domaine", degreeQuadrature, funTest));
 
   std::vector<feSpace*> spaces = {uDomaine};
   std::vector<feSpace*> essentialSpaces = {};
@@ -27,12 +27,16 @@ int main(int argc, char **argv)
   feSolution sol(&mesh, spaces, essentialSpaces, &numbering);
   sol.initializeUnknowns(&mesh, &numbering);
 
-  feBasicViewer viewer("Testing the graphic window");
+  int nInteriorPlotNodes = 40;
+  feBasicViewer viewer("Testing the graphic window", mesh.getNbInteriorElems(), nInteriorPlotNodes);
+
+  double xLim[2] = {0., 1.};
+  double yLim[2] = {0., 1.};
+  viewer.setAxesLimits(xLim, yLim);
 
   do{
-    viewer.getWindowBox();
     viewer.reshapeWindowBox(1.2, mesh, sol);
-    draw1DCurve(mesh, numbering, sol, uDomaine, funTest);
+    viewer.draw1DCurve(mesh, numbering, sol, uDomaine, funTest);
     viewer.windowUpdate();
   } while(!viewer.windowShouldClose());
 

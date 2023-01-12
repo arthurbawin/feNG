@@ -11,35 +11,32 @@
 
 extern int FE_VERBOSE;
 
-int feMesh::getCncGeoTag(std::string const &cncGeoID)
+int feMesh::getCncGeoTag(const std::string &cncGeoID) const
 {
   auto it = _cncGeoMap.find(cncGeoID);
   return (it == _cncGeoMap.end()) ? -1 : it->second;
 }
 
-feCncGeo *feMesh::getCncGeoByName(std::string const &cncGeoID)
+feCncGeo *feMesh::getCncGeoByName(const std::string &cncGeoID) const
 {
   auto it = _cncGeoMap.find(cncGeoID); 
   return (it == _cncGeoMap.end()) ? nullptr : _cncGeo[it->second];
 }
 
-feCncGeo *feMesh::getCncGeoByTag(int cncGeoTag)
+feCncGeo *feMesh::getCncGeoByTag(int cncGeoTag) const
 {
   if(cncGeoTag < 0)
     if((unsigned) cncGeoTag > _cncGeo.size()) return nullptr;
   return _cncGeo[cncGeoTag];
 }
 
-// Returns a vector containing the physical coordinates of the nodes on the
-// element with LOCAL number "numElem" on the connectivity named "cncGeoID" :
-// coord = [x1 y1 z1 x2 y2 z2 ... xn yn zn]
-void feMesh::getCoord(std::string const &cncGeoID, int numElem, std::vector<double> &geoCoord)
+void feMesh::getCoord(std::string const &cncGeoID, const int numElem, std::vector<double> &geoCoord)
 {
   feCncGeo *cnc = getCncGeoByName(cncGeoID);
   int nNodePerElem = cnc->getNbNodePerElem();
 #ifdef FENG_DEBUG
   if(geoCoord.size() != 3 * nNodePerElem) {
-    printf(" In feMesh::getCoord : Erreur - Wrong Size for vector geoCoord\n");
+    printf(" In feMesh::getCoord : Wrong size for vector geoCoord\n");
   }
 #endif
   for(int i = 0; i < nNodePerElem; ++i) {
@@ -50,16 +47,13 @@ void feMesh::getCoord(std::string const &cncGeoID, int numElem, std::vector<doub
   }
 }
 
-// Returns a vector containing the physical coordinates of the nodes on the
-// element with LOCAL number "numElem" on the connectivity numbered "cncGeoTag" :
-// coord = [x1 y1 z1 x2 y2 z2 ... xn yn zn]
-void feMesh::getCoord(int cncGeoTag, int numElem, std::vector<double> &geoCoord)
+void feMesh::getCoord(const int cncGeoTag, const int numElem, std::vector<double> &geoCoord)
 {
   feCncGeo *cnc = getCncGeoByTag(cncGeoTag);
   int nNodePerElem = cnc->getNbNodePerElem();
 #ifdef FENG_DEBUG
   if(geoCoord.size() != 3 * nNodePerElem) {
-    printf(" In feMesh::getCoord : Erreur - Wrong Size for vector geoCoord\n");
+    printf(" In feMesh::getCoord : Wrong Size for vector geoCoord\n");
   }
 #endif
   for(int i = 0; i < nNodePerElem; ++i) {
@@ -75,37 +69,37 @@ int feMesh::getNbNodePerElem(std::string const &cncGeoID)
   return getCncGeoByName(cncGeoID)->getNbNodePerElem();
 }
 
-int feMesh::getNbNodePerElem(int cncGeoTag)
+int feMesh::getNbNodePerElem(const int cncGeoTag)
 {
   return getCncGeoByTag(cncGeoTag)->getNbNodePerElem();
 }
 
-int feMesh::getVertex(std::string const &cncGeoID, int numElem, int numVertex)
+int feMesh::getVertex(std::string const &cncGeoID, const int numElem, const int numVertex)
 {
   return getCncGeoByName(cncGeoID)->getNodeConnectivity(numElem, numVertex);
 }
 
-int feMesh::getVertex(int cncGeoTag, int numElem, int numVertex)
+int feMesh::getVertex(const int cncGeoTag, const int numElem, const int numVertex)
 {
   return getCncGeoByTag(cncGeoTag)->getNodeConnectivity(numElem, numVertex);
 }
 
-int feMesh::getElement(std::string const &cncGeoID, int numElem)
+int feMesh::getElement(std::string const &cncGeoID, const int numElem)
 {
   return getCncGeoByName(cncGeoID)->getElementConnectivity(numElem);
 }
 
-int feMesh::getElement(int cncGeoTag, int numElem)
+int feMesh::getElement(const int cncGeoTag, const int numElem)
 {
   return getCncGeoByTag(cncGeoTag)->getElementConnectivity(numElem);
 }
 
-int feMesh::getEdge(std::string const &cncGeoID, int numElem, int numEdge)
+int feMesh::getEdge(std::string const &cncGeoID, const int numElem, const int numEdge)
 {
   return getCncGeoByName(cncGeoID)->getEdgeConnectivity(numElem, numEdge);
 }
 
-int feMesh::getEdge(int cncGeoTag, int numElem, int numEdge)
+int feMesh::getEdge(const int cncGeoTag, const int numElem, const int numEdge)
 {
   return getCncGeoByTag(cncGeoTag)->getEdgeConnectivity(numElem, numEdge);
 }
@@ -124,40 +118,13 @@ feSpace *feMesh::getGeometricSpace(int cncGeoTag)
   return getCncGeoByTag(cncGeoTag)->getFeSpace();
 }
 
-void feMesh::printInfo(bool printConnectivities)
-{
-  std::cout << "Nombre total d'elements : " << _nTotalElm << std::endl;
-  std::cout << "Nombre de connectivites : " << _nCncGeo << std::endl;
-  for(feCncGeo *cnc : _cncGeo) {
-    std::cout << "CncGeo " << cnc->getID() << " : " << cnc->getForme() << " - " << cnc->getNbElm()
-              << " elements" << std::endl;
-    if(printConnectivities) {
-      printf("Connectivité des noeuds :\n");
-      for(int i = 0; i < cnc->getNbElm(); ++i) {
-        for(int j = 0; j < cnc->getNbNodePerElem(); ++j) {
-          std::cout << cnc->getNodeConnectivity(i, j) << " ";
-        }
-        std::cout << std::endl;
-      }
-      printf("Connectivité des éléments :\n");
-      for(int i = 0; i < cnc->getNbElm(); ++i) {
-        std::cout << cnc->getElementConnectivity(i) << std::endl;
-      }
-    }
-    // printf("Connectivité des arêtes :\n");
-    // for(int i = 0; i < cnc->getNbElm(); ++i){
-    //   for(int j = 0; j < cnc->getNbEdgePerElem(); ++j){
-    //     std::cout<< cnc->getEdgeConnectivity(i,j)<<" - ";
-    //   }
-    //   std::cout<<std::endl;
-    // }
-  }
-}
-
-feMesh1DP1::feMesh1DP1(double xBegin, double xEnd, int numElements,
-    std::string boundaryBeginName, std::string boundaryEndName, std::string domainName)
+feMesh1DP1::feMesh1DP1(const double xBegin, const double xEnd,
+  const int numElements,
+  const std::string &boundaryBeginName,
+  const std::string &boundaryEndName,
+  const std::string &domainName)
   : feMesh(numElements + 1, 1, 3, "1D")
-  , _nElm(numElements)
+  // , _nElm(numElements)
   , _xA(xBegin)
   , _xB(xEnd)
   , _bndA_ID(boundaryBeginName)
@@ -180,8 +147,8 @@ feMesh1DP1::feMesh1DP1(double xBegin, double xEnd, int numElements,
   _nBoundaryElm = 2;
 
   // Create the vertices
-  _coord.resize(_nNod);
-  for(int i = 0; i < _nNod; ++i) _coord[i] = xBegin + i * (xEnd - xBegin) / (_nNod - 1);
+  // _coord.resize(_nNod);
+  // for(int i = 0; i < _nNod; ++i) _coord[i] = xBegin + i * (xEnd - xBegin) / (_nNod - 1);
   _vertices.resize(_nNod);
   for(int i = 0; i < _nNod; ++i) _vertices[i] = Vertex(xBegin + i * (xEnd - xBegin) / (_nNod - 1), 0., 0., i);
 
@@ -284,10 +251,10 @@ feMesh0DP0::feMesh0DP0(double xA, int nElm, std::string domID)
     _nNodDomain(1), _nNodBoundary(1)
 {
   // Sommets
-  _coord.resize(_nNod);
-  for(int i = 0; i < _nNod; ++i) {
-    _coord[i] = xA;
-  }
+  // _coord.resize(_nNod);
+  // for(int i = 0; i < _nNod; ++i) {
+  //   _coord[i] = xA;
+  // }
 
   _vertices.resize(_nNod);
   for(int i = 0; i < _nNod; ++i) {
@@ -350,8 +317,10 @@ static bool rtreeCallback(int id, void *ctx)
   return true;
 }
 
-feMesh2DP1::feMesh2DP1(std::string meshName, bool curved, bool reversed,
-                       mapType physicalEntitiesDescription)
+feMesh2DP1::feMesh2DP1(const std::string &meshName, 
+  const bool curved,
+  const bool reversed,
+  const mapType &physicalEntitiesDescription)
   : feMesh()
 {
   feStatus s = readGmsh(meshName, curved, reversed, physicalEntitiesDescription);
@@ -404,9 +373,6 @@ bool feMesh2DP1::locateVertex(const double *x, int &iElm, double *u, double tol)
   return _searchCtx.isFound;
 }
 
-/* Transfers the solution(s) associated to the current mesh to another mesh.
-   The solution(s) are stored in solutionContainer and are transferred in place,
-   hence the old solutions are lost after transfer. */
 void feMesh2DP1::transfer(feMesh2DP1 *otherMesh, feMetaNumber *myMN, feMetaNumber *otherMN,
                           feSolutionContainer *solutionContainer,
                           const std::vector<feSpace *> &mySpaces,
@@ -520,9 +486,7 @@ void feMesh2DP1::transfer(feMesh2DP1 *otherMesh, feMetaNumber *myMN, feMetaNumbe
             }
           } // for iElm
         } else { // if fields match
-          // std::cout << "NOT INTERPOLATING : MISMATCH between " << fS1->getFieldID() << " - "
-          //           << fS1->getCncGeoID() << " and " << fS2->getFieldID() << " - "
-          //           << fS2->getCncGeoID() << std::endl;
+          
         }
       }
     }
@@ -540,22 +504,5 @@ void feMesh2DP1::transfer(feMesh2DP1 *otherMesh, feMetaNumber *myMN, feMetaNumbe
       solutionContainer->_sol[iSol][iDOF] = scTmp->_sol[iSol][iDOF];
   }
 
-  // for(int iDOF = 0; iDOF < 20; ++iDOF) {
-  //   printf("%5d : ", iDOF);
-  //   for(int i = 0; i < solutionContainer->getNbSol(); ++i) {
-  //     printf("%+-10.10e \t", solutionContainer->_sol[i][iDOF]);
-  //   }
-  //   printf("\n");
-  // }
-
   delete scTmp;
 }
-
-// std::vector<vector<int>> feMesh2DP1::getListeElmPerNode()
-// {
-//   std::vector<vector<int>> ListeElmPerNode(_nNod,vector<int> (max(NbElmPerNode),0));
-
-//   for
-
-//   return(ListeElmPerNode);
-// }
