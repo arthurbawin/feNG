@@ -28,7 +28,7 @@ feStatus createLinearSystem(feLinearSystem *&system, linearSolverType type,
       return feErrorMsg(
         FE_STATUS_ERROR,
         "(Bi-)linear form %s is not defined on any known geometric connectivity (named subdomain).",
-        form->getIDName().c_str());
+        form->getWeakFormName().c_str());
     }
   }
 

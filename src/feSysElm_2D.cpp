@@ -4,8 +4,8 @@
 void feSysElm_2D_Source::createElementarySystem(std::vector<feSpace *> &space)
 {
   _idU = 0;
-  _iVar[0] = _idU;
-  _jVar[0] = _idU;
+  _fieldsLayoutI[0] = _idU;
+  _fieldsLayoutJ[0] = _idU;
   _feU.resize(space[_idU]->getNbFunctions());
   _feUdx.resize(space[_idU]->getNbFunctions());
   _feUdy.resize(space[_idU]->getNbFunctions());
@@ -16,9 +16,9 @@ void feSysElm_2D_Source::computeBe(feBilinearForm *form)
 {
   int nG = form->_geoSpace->getNbQuadPoints();
   std::vector<double> &w = form->_geoSpace->getQuadratureWeights();
-  int nFunctions = form->_intSpace[_idU]->getNbFunctions();
+  int nFunctions = form->_intSpaces[_idU]->getNbFunctions();
   std::vector<double> &J = form->_cnc->getJacobians();
-  bool globalFunctions = form->_intSpace[_idU]->useGlobalFunctions();
+  bool globalFunctions = form->_intSpaces[_idU]->useGlobalFunctions();
 
   double jac;
   for(int k = 0; k < nG; ++k) {
@@ -29,9 +29,9 @@ void feSysElm_2D_Source::computeBe(feBilinearForm *form)
 
     for(int i = 0; i < nFunctions; ++i) {
       if(globalFunctions) {
-        _feU[i] = form->_intSpace[_idU]->getGlobalFunctionAtQuadNode(form->_numElem, i, k);
+        _feU[i] = form->_intSpaces[_idU]->getGlobalFunctionAtQuadNode(form->_numElem, i, k);
       } else {
-        _feU[i] = form->_intSpace[_idU]->getFunctionAtQuadNode(i, k);
+        _feU[i] = form->_intSpaces[_idU]->getFunctionAtQuadNode(i, k);
       }
       form->_Be[i] -= _feU[i] * S * jac * w[k];
       // #pragma omp critical
@@ -45,8 +45,8 @@ void feSysElm_2D_Source::computeBe(feBilinearForm *form)
 void feSysElm_2D_Diffusion::createElementarySystem(std::vector<feSpace *> &space)
 {
   _idU = 0;
-  _iVar[0] = _idU;
-  _jVar[0] = _idU;
+  _fieldsLayoutI[0] = _idU;
+  _fieldsLayoutJ[0] = _idU;
   _feU.resize(space[_idU]->getNbFunctions());
   _feUdx.resize(space[_idU]->getNbFunctions());
   _feUdy.resize(space[_idU]->getNbFunctions());
@@ -59,9 +59,9 @@ void feSysElm_2D_Diffusion::computeAe(feBilinearForm *form)
   int nG = form->_geoSpace->getNbQuadPoints();
   std::vector<double> &w = form->_geoSpace->getQuadratureWeights();
   double kD = _par;
-  int nFunctions = form->_intSpace[_idU]->getNbFunctions();
+  int nFunctions = form->_intSpaces[_idU]->getNbFunctions();
   std::vector<double> &J = form->_cnc->getJacobians();
-  // bool globalFunctions = form->_intSpace[_idU]->useGlobalFunctions();
+  // bool globalFunctions = form->_intSpaces[_idU]->useGlobalFunctions();
 
   double jac;
   for(int k = 0; k < nG; ++k) {
@@ -77,10 +77,10 @@ void feSysElm_2D_Diffusion::computeAe(feBilinearForm *form)
       double dsdy = _dxdr[0] / jac;
 
       for(int i = 0; i < nFunctions; ++i) {
-        _feUdx[i] = form->_intSpace[_idU]->getdFunctiondrAtQuadNode(i, k) * drdx +
-                    form->_intSpace[_idU]->getdFunctiondsAtQuadNode(i, k) * dsdx;
-        _feUdy[i] = form->_intSpace[_idU]->getdFunctiondrAtQuadNode(i, k) * drdy +
-                    form->_intSpace[_idU]->getdFunctiondsAtQuadNode(i, k) * dsdy;
+        _feUdx[i] = form->_intSpaces[_idU]->getdFunctiondrAtQuadNode(i, k) * drdx +
+                    form->_intSpaces[_idU]->getdFunctiondsAtQuadNode(i, k) * dsdx;
+        _feUdy[i] = form->_intSpaces[_idU]->getdFunctiondrAtQuadNode(i, k) * drdy +
+                    form->_intSpaces[_idU]->getdFunctiondsAtQuadNode(i, k) * dsdy;
       }
 
       for(int i = 0; i < nFunctions; ++i) {
@@ -92,8 +92,8 @@ void feSysElm_2D_Diffusion::computeAe(feBilinearForm *form)
     // } else {
     //   // Using global interpolation functions
     //   for(int i = 0; i < nFunctions; ++i) {
-    //     _feUdx[i] = form->_intSpace[_idU]->getdGlobalFunctiondxAtQuadNode(form->_numElem, i, k);
-    //     _feUdy[i] = form->_intSpace[_idU]->getdGlobalFunctiondyAtQuadNode(form->_numElem, i, k);
+    //     _feUdx[i] = form->_intSpaces[_idU]->getdGlobalFunctiondxAtQuadNode(form->_numElem, i, k);
+    //     _feUdy[i] = form->_intSpaces[_idU]->getdGlobalFunctiondyAtQuadNode(form->_numElem, i, k);
     //   }
 
     //   for(int i = 0; i < nFunctions; ++i) {
@@ -212,7 +212,7 @@ void feSysElm_2D_Diffusion::computeAe(feBilinearForm *form)
   //       fprintf(f, "VP(%.16g,%.16g,%.16g){%.16g,%.16g,%.16g};\n", x[0], x[1], 0., -ny, nx, 0.0);
   //       fprintf(f, "VP(%.16g,%.16g,%.16g){%.16g,%.16g,%.16g};\n", x[0], x[1], 0., nx, ny, 0.0);
 
-  //       form->_intSpace[_idU]->Lphys(form->_numElem, x, l, dldx, dldy);
+  //       form->_intSpaces[_idU]->Lphys(form->_numElem, x, l, dldx, dldy);
 
   //       for(int i = 0; i < nFunctions; ++i) {
   //         _feU[i] = l[i];
@@ -239,8 +239,8 @@ void feSysElm_2D_Diffusion::computeBe(feBilinearForm *form)
   int nG = form->_geoSpace->getNbQuadPoints();
   std::vector<double> &w = form->_geoSpace->getQuadratureWeights();
   double kD = _par;
-  int nFunctions = form->_intSpace[_idU]->getNbFunctions();
-  bool globalFunctions = form->_intSpace[_idU]->useGlobalFunctions();
+  int nFunctions = form->_intSpaces[_idU]->getNbFunctions();
+  bool globalFunctions = form->_intSpaces[_idU]->useGlobalFunctions();
 
   double J, dudx, dudy;
   for(int k = 0; k < nG; ++k) {
@@ -255,16 +255,16 @@ void feSysElm_2D_Diffusion::computeBe(feBilinearForm *form)
       double dsdx = -_dxdr[1] / J;
       double dsdy = _dxdr[0] / J;
 
-      dudx = form->_intSpace[_idU]->interpolateFieldAtQuadNode_rDerivative(form->_sol[_idU], k) * drdx +
-             form->_intSpace[_idU]->interpolateFieldAtQuadNode_sDerivative(form->_sol[_idU], k) * dsdx;
-      dudy = form->_intSpace[_idU]->interpolateFieldAtQuadNode_rDerivative(form->_sol[_idU], k) * drdy +
-             form->_intSpace[_idU]->interpolateFieldAtQuadNode_sDerivative(form->_sol[_idU], k) * dsdy;
+      dudx = form->_intSpaces[_idU]->interpolateFieldAtQuadNode_rDerivative(form->_sol[_idU], k) * drdx +
+             form->_intSpaces[_idU]->interpolateFieldAtQuadNode_sDerivative(form->_sol[_idU], k) * dsdx;
+      dudy = form->_intSpaces[_idU]->interpolateFieldAtQuadNode_rDerivative(form->_sol[_idU], k) * drdy +
+             form->_intSpaces[_idU]->interpolateFieldAtQuadNode_sDerivative(form->_sol[_idU], k) * dsdy;
 
       for(int i = 0; i < nFunctions; ++i) {
-        _feUdx[i] = form->_intSpace[_idU]->getdFunctiondrAtQuadNode(i, k) * drdx +
-                    form->_intSpace[_idU]->getdFunctiondsAtQuadNode(i, k) * dsdx;
-        _feUdy[i] = form->_intSpace[_idU]->getdFunctiondrAtQuadNode(i, k) * drdy +
-                    form->_intSpace[_idU]->getdFunctiondsAtQuadNode(i, k) * dsdy;
+        _feUdx[i] = form->_intSpaces[_idU]->getdFunctiondrAtQuadNode(i, k) * drdx +
+                    form->_intSpaces[_idU]->getdFunctiondsAtQuadNode(i, k) * dsdx;
+        _feUdy[i] = form->_intSpaces[_idU]->getdFunctiondrAtQuadNode(i, k) * drdy +
+                    form->_intSpaces[_idU]->getdFunctiondsAtQuadNode(i, k) * dsdy;
         form->_Be[i] -= (_feUdx[i] * dudx + _feUdy[i] * dudy) * kD * J * w[k];
       }
     } else {
@@ -273,12 +273,12 @@ void feSysElm_2D_Diffusion::computeBe(feBilinearForm *form)
       feWarning("FORME FAIBLE DOIT ETRE CORRIGEE POUR LES FONCTIONS GLOBALES");
       feWarning("FORME FAIBLE DOIT ETRE CORRIGEE POUR LES FONCTIONS GLOBALES");
       feWarning("FORME FAIBLE DOIT ETRE CORRIGEE POUR LES FONCTIONS GLOBALES");
-    //   dudx = form->_intSpace[_idU]->interpolateFieldAtQuadNode_xDerivative(sol, form->_numElem, k);
-    //   dudy = form->_intSpace[_idU]->interpolateFieldAtQuadNode_yDerivative(sol, form->_numElem, k);
+    //   dudx = form->_intSpaces[_idU]->interpolateFieldAtQuadNode_xDerivative(sol, form->_numElem, k);
+    //   dudy = form->_intSpaces[_idU]->interpolateFieldAtQuadNode_yDerivative(sol, form->_numElem, k);
 
     //   for(int i = 0; i < nFunctions; ++i) {
-    //     _feUdx[i] = form->_intSpace[_idU]->getdGlobalFunctiondxAtQuadNode(form->_numElem, i, k);
-    //     _feUdy[i] = form->_intSpace[_idU]->getdGlobalFunctiondyAtQuadNode(form->_numElem, i, k);
+    //     _feUdx[i] = form->_intSpaces[_idU]->getdGlobalFunctiondxAtQuadNode(form->_numElem, i, k);
+    //     _feUdy[i] = form->_intSpaces[_idU]->getdGlobalFunctiondyAtQuadNode(form->_numElem, i, k);
     //     form->_Be[i] -= (_feUdx[i] * dudx + _feUdy[i] * dudy) * kD * J * w[k];
       // }
     }
@@ -376,10 +376,10 @@ void feSysElm_2D_Diffusion::computeBe(feBilinearForm *form)
   //       // x[1] -= xc[1];
   //       // x[2] -= xc[2];
 
-  //       form->_intSpace[_idU]->Lphys(form->_numElem, x, l, dldx, dldy);
+  //       form->_intSpaces[_idU]->Lphys(form->_numElem, x, l, dldx, dldy);
 
-  //       dudx = form->_intSpace[_idU]->interpolateField_xDerivative(sol, form->_numElem, x);
-  //       dudy = form->_intSpace[_idU]->interpolateField_yDerivative(sol, form->_numElem, x);
+  //       dudx = form->_intSpaces[_idU]->interpolateField_xDerivative(sol, form->_numElem, x);
+  //       dudy = form->_intSpaces[_idU]->interpolateField_yDerivative(sol, form->_numElem, x);
 
   //       // double sumPhi = 0.0;
   //       for(int i = 0; i < nFunctions; ++i) {
@@ -405,8 +405,8 @@ void feSysElm_2D_Diffusion::computeBe(feBilinearForm *form)
 void feSysElm_2D_Masse::createElementarySystem(std::vector<feSpace *> &space)
 {
   _idU = 0;
-  _iVar[0] = _idU;
-  _jVar[0] = _idU;
+  _fieldsLayoutI[0] = _idU;
+  _fieldsLayoutJ[0] = _idU;
   _feU.resize(space[_idU]->getNbFunctions());
   _feUdx.resize(space[_idU]->getNbFunctions());
   _feUdy.resize(space[_idU]->getNbFunctions());
@@ -419,7 +419,7 @@ void feSysElm_2D_Masse::computeAe(feBilinearForm *form)
   int nG = form->_geoSpace->getNbQuadPoints();
   std::vector<double> &w = form->_geoSpace->getQuadratureWeights();
   double rho = _par;
-  int nFunctionsU = form->_intSpace[_idU]->getNbFunctions();
+  int nFunctionsU = form->_intSpaces[_idU]->getNbFunctions();
 
   double jac, u, dudt;
   for(int k = 0; k < nG; ++k) {
@@ -427,10 +427,10 @@ void feSysElm_2D_Masse::computeAe(feBilinearForm *form)
     form->_geoSpace->interpolateVectorFieldAtQuadNode_sDerivative(form->_geoCoord, k, _dxds);
     jac = _dxdr[0] * _dxds[1] - _dxdr[1] * _dxds[0];
 
-    u = form->_intSpace[_idU]->interpolateFieldAtQuadNode(form->_sol[_idU], k);
-    dudt = form->_intSpace[_idU]->interpolateFieldAtQuadNode(form->_solDot[_idU], k);
+    u = form->_intSpaces[_idU]->interpolateFieldAtQuadNode(form->_sol[_idU], k);
+    dudt = form->_intSpaces[_idU]->interpolateFieldAtQuadNode(form->_solDot[_idU], k);
 
-    for(int i = 0; i < nFunctionsU; ++i) _feU[i] = form->_intSpace[_idU]->getFunctionAtQuadNode(i, k);
+    for(int i = 0; i < nFunctionsU; ++i) _feU[i] = form->_intSpaces[_idU]->getFunctionAtQuadNode(i, k);
 
     for(int i = 0; i < nFunctionsU; ++i) {
       for(int j = 0; j < nFunctionsU; ++j) {
@@ -445,7 +445,7 @@ void feSysElm_2D_Masse::computeBe(feBilinearForm *form)
   int nG = form->_geoSpace->getNbQuadPoints();
   std::vector<double> &w = form->_geoSpace->getQuadratureWeights();
   double rho = _par;
-  int nFunctionsU = form->_intSpace[_idU]->getNbFunctions();
+  int nFunctionsU = form->_intSpaces[_idU]->getNbFunctions();
 
   double jac, dudt;
   for(int k = 0; k < nG; ++k) {
@@ -453,10 +453,10 @@ void feSysElm_2D_Masse::computeBe(feBilinearForm *form)
     form->_geoSpace->interpolateVectorFieldAtQuadNode_sDerivative(form->_geoCoord, k, _dxds);
     jac = _dxdr[0] * _dxds[1] - _dxdr[1] * _dxds[0];
 
-    dudt = form->_intSpace[_idU]->interpolateFieldAtQuadNode(form->_solDot[_idU], k);
+    dudt = form->_intSpaces[_idU]->interpolateFieldAtQuadNode(form->_solDot[_idU], k);
 
     for(int i = 0; i < nFunctionsU; ++i) {
-      _feU[i] = form->_intSpace[_idU]->getFunctionAtQuadNode(i, k);
+      _feU[i] = form->_intSpaces[_idU]->getFunctionAtQuadNode(i, k);
       form->_Be[i] -= _feU[i] * rho * dudt * jac * w[k];
     }
   }
@@ -465,8 +465,8 @@ void feSysElm_2D_Masse::computeBe(feBilinearForm *form)
 void feSysElm_2D_Advection::createElementarySystem(std::vector<feSpace *> &space)
 {
   _idU = 0;
-  _iVar[0] = _idU;
-  _jVar[0] = _idU;
+  _fieldsLayoutI[0] = _idU;
+  _fieldsLayoutJ[0] = _idU;
   _feU.resize(space[_idU]->getNbFunctions());
   _feUdx.resize(space[_idU]->getNbFunctions());
   _feUdy.resize(space[_idU]->getNbFunctions());
@@ -483,7 +483,7 @@ void feSysElm_2D_Advection::computeBe(feBilinearForm *form)
 {
   int nG = form->_geoSpace->getNbQuadPoints();
   std::vector<double> w = form->_geoSpace->getQuadratureWeights();
-  int nFunctions = form->_intSpace[_idU]->getNbFunctions();
+  int nFunctions = form->_intSpaces[_idU]->getNbFunctions();
 
   double Jac, u, dudt, dudx, dudy;
   for(int k = 0; k < nG; ++k) {
@@ -506,17 +506,17 @@ void feSysElm_2D_Advection::computeBe(feBilinearForm *form)
     // Compute SUPG parameter
     // double tau1 = 0.0, tau2 = 0.0, tau3 = 0.0, c = 0.0, cT = 0.0, kT = 0.0;
     // for(int i = 0; i < nFunctions; ++i) {
-    //   dudt = form->_intSpace[_idU]->interpolateSolutionDotAtQuadNode(k);
-    //   dudx = form->_intSpace[_idU]->interpolateSolutionAtQuadNode_rDerivative(k) * drdx +
-    //          form->_intSpace[_idU]->interpolateSolutionAtQuadNode_sDerivative(k) * dsdx;
-    //   dudy = form->_intSpace[_idU]->interpolateSolutionAtQuadNode_rDerivative(k) * drdy +
-    //          form->_intSpace[_idU]->interpolateSolutionAtQuadNode_sDerivative(k) * dsdy;
+    //   dudt = form->_intSpaces[_idU]->interpolateSolutionDotAtQuadNode(k);
+    //   dudx = form->_intSpaces[_idU]->interpolateSolutionAtQuadNode_rDerivative(k) * drdx +
+    //          form->_intSpaces[_idU]->interpolateSolutionAtQuadNode_sDerivative(k) * dsdx;
+    //   dudy = form->_intSpaces[_idU]->interpolateSolutionAtQuadNode_rDerivative(k) * drdy +
+    //          form->_intSpaces[_idU]->interpolateSolutionAtQuadNode_sDerivative(k) * dsdy;
 
-    //   _feU[i] = form->_intSpace[_idU]->getFunctionAtQuadNode(i, k);
-    //   _feUdx[i] = form->_intSpace[_idU]->getdFunctiondrAtQuadNode(i, k) * drdx +
-    //               form->_intSpace[_idU]->getdFunctiondsAtQuadNode(i, k) * dsdx;
-    //   _feUdy[i] = form->_intSpace[_idU]->getdFunctiondrAtQuadNode(i, k) * drdy +
-    //               form->_intSpace[_idU]->getdFunctiondsAtQuadNode(i, k) * dsdy;
+    //   _feU[i] = form->_intSpaces[_idU]->getFunctionAtQuadNode(i, k);
+    //   _feUdx[i] = form->_intSpaces[_idU]->getdFunctiondrAtQuadNode(i, k) * drdx +
+    //               form->_intSpaces[_idU]->getdFunctiondsAtQuadNode(i, k) * dsdx;
+    //   _feUdy[i] = form->_intSpaces[_idU]->getdFunctiondrAtQuadNode(i, k) * drdy +
+    //               form->_intSpaces[_idU]->getdFunctiondsAtQuadNode(i, k) * dsdy;
     //   c  += J * w[k] * _feU[i] * (v[0] * dudx + v[1] * dudy);
     //   cT += J * w[k] * (v[0] * _feUdx[i] + v[1] * _feUdy[i]) * dudt;
     //   kT += J * w[k] * (v[0] * _feUdx[i] + v[1] * _feUdy[i]) * (v[0] * dudx + v[1] * dudy);
@@ -546,18 +546,18 @@ void feSysElm_2D_Advection::computeBe(feBilinearForm *form)
     // printf("Re = %+-4.4e - c = %+-4.4e - cT = %+-4.4e - kT = %+-4.4e - delta = %+-4.4e\n", Re, c, cT, kT, deltaSUPG);
 
     for(int i = 0; i < nFunctions; ++i) {
-      u = form->_intSpace[_idU]->interpolateFieldAtQuadNode(form->_sol[_idU], k);
-      dudt = form->_intSpace[_idU]->interpolateFieldAtQuadNode(form->_solDot[_idU],k);
-      dudx = form->_intSpace[_idU]->interpolateFieldAtQuadNode_rDerivative(form->_sol[_idU], k) * drdx +
-             form->_intSpace[_idU]->interpolateFieldAtQuadNode_sDerivative(form->_sol[_idU], k) * dsdx;
-      dudy = form->_intSpace[_idU]->interpolateFieldAtQuadNode_rDerivative(form->_sol[_idU], k) * drdy +
-             form->_intSpace[_idU]->interpolateFieldAtQuadNode_sDerivative(form->_sol[_idU], k) * dsdy;
+      u = form->_intSpaces[_idU]->interpolateFieldAtQuadNode(form->_sol[_idU], k);
+      dudt = form->_intSpaces[_idU]->interpolateFieldAtQuadNode(form->_solDot[_idU],k);
+      dudx = form->_intSpaces[_idU]->interpolateFieldAtQuadNode_rDerivative(form->_sol[_idU], k) * drdx +
+             form->_intSpaces[_idU]->interpolateFieldAtQuadNode_sDerivative(form->_sol[_idU], k) * dsdx;
+      dudy = form->_intSpaces[_idU]->interpolateFieldAtQuadNode_rDerivative(form->_sol[_idU], k) * drdy +
+             form->_intSpaces[_idU]->interpolateFieldAtQuadNode_sDerivative(form->_sol[_idU], k) * dsdy;
 
-      _feU[i] = form->_intSpace[_idU]->getFunctionAtQuadNode(i, k);
-      _feUdx[i] = form->_intSpace[_idU]->getdFunctiondrAtQuadNode(i, k) * drdx +
-                  form->_intSpace[_idU]->getdFunctiondsAtQuadNode(i, k) * dsdx;
-      _feUdy[i] = form->_intSpace[_idU]->getdFunctiondrAtQuadNode(i, k) * drdy +
-                  form->_intSpace[_idU]->getdFunctiondsAtQuadNode(i, k) * dsdy;
+      _feU[i] = form->_intSpaces[_idU]->getFunctionAtQuadNode(i, k);
+      _feUdx[i] = form->_intSpaces[_idU]->getdFunctiondrAtQuadNode(i, k) * drdx +
+                  form->_intSpaces[_idU]->getdFunctiondsAtQuadNode(i, k) * dsdx;
+      _feUdy[i] = form->_intSpaces[_idU]->getdFunctiondrAtQuadNode(i, k) * drdy +
+                  form->_intSpaces[_idU]->getdFunctiondsAtQuadNode(i, k) * dsdy;
       // form->_Be[i] -= (v[0] * _feUdx[i] + v[1] * _feUdy[i]) * u * J * w[k];
       // SUPG ?
       // double delta = form->_geoCoord[3]-form->_geoCoord[0];
@@ -574,8 +574,8 @@ void feSysElm_2D_Stokes::createElementarySystem(std::vector<feSpace *> &space)
   _idU = 0;
   _idV = 1;
   _idP = 2;
-  _iVar = {_idU, _idV, _idP};
-  _jVar = {_idU, _idV, _idP};
+  _fieldsLayoutI = {_idU, _idV, _idP};
+  _fieldsLayoutJ = {_idU, _idV, _idP};
   _feU.resize(space[_idU]->getNbFunctions());
   _feUdx.resize(space[_idU]->getNbFunctions());
   _feUdy.resize(space[_idU]->getNbFunctions());
@@ -595,9 +595,9 @@ void feSysElm_2D_Stokes::computeBe(feBilinearForm *form)
   std::vector<double> &w = form->_geoSpace->getQuadratureWeights();
   // double             rho = _par[0];
   double mu = _par[1];
-  int nFunctionsU = form->_intSpace[_idU]->getNbFunctions();
-  int nFunctionsV = form->_intSpace[_idV]->getNbFunctions();
-  int nFunctionsP = form->_intSpace[_idP]->getNbFunctions();
+  int nFunctionsU = form->_intSpaces[_idU]->getNbFunctions();
+  int nFunctionsV = form->_intSpaces[_idV]->getNbFunctions();
+  int nFunctionsP = form->_intSpaces[_idP]->getNbFunctions();
 
   double J, u, v, p, dudx, dudy, dvdx, dvdy, Sxx, Sxy, Syx, Syy;
   std::vector<double> x(3);
@@ -617,18 +617,18 @@ void feSysElm_2D_Stokes::computeBe(feBilinearForm *form)
     double dsdx = -_dxdr[1] / J;
     double dsdy = _dxdr[0] / J;
 
-    u = form->_intSpace[_idU]->interpolateFieldAtQuadNode(form->_sol[_idU], k);
-    v = form->_intSpace[_idV]->interpolateFieldAtQuadNode(form->_sol[_idV], k);
-    p = form->_intSpace[_idP]->interpolateFieldAtQuadNode(form->_sol[_idP], k);
+    u = form->_intSpaces[_idU]->interpolateFieldAtQuadNode(form->_sol[_idU], k);
+    v = form->_intSpaces[_idV]->interpolateFieldAtQuadNode(form->_sol[_idV], k);
+    p = form->_intSpaces[_idP]->interpolateFieldAtQuadNode(form->_sol[_idP], k);
 
-    dudx = form->_intSpace[_idU]->interpolateFieldAtQuadNode_rDerivative(form->_sol[_idU], k) * drdx +
-           form->_intSpace[_idU]->interpolateFieldAtQuadNode_sDerivative(form->_sol[_idU], k) * dsdx;
-    dudy = form->_intSpace[_idU]->interpolateFieldAtQuadNode_rDerivative(form->_sol[_idU], k) * drdy +
-           form->_intSpace[_idU]->interpolateFieldAtQuadNode_sDerivative(form->_sol[_idU], k) * dsdy;
-    dvdx = form->_intSpace[_idV]->interpolateFieldAtQuadNode_rDerivative(form->_sol[_idV], k) * drdx +
-           form->_intSpace[_idV]->interpolateFieldAtQuadNode_sDerivative(form->_sol[_idV], k) * dsdx;
-    dvdy = form->_intSpace[_idV]->interpolateFieldAtQuadNode_rDerivative(form->_sol[_idV], k) * drdy +
-           form->_intSpace[_idV]->interpolateFieldAtQuadNode_sDerivative(form->_sol[_idV], k) * dsdy;
+    dudx = form->_intSpaces[_idU]->interpolateFieldAtQuadNode_rDerivative(form->_sol[_idU], k) * drdx +
+           form->_intSpaces[_idU]->interpolateFieldAtQuadNode_sDerivative(form->_sol[_idU], k) * dsdx;
+    dudy = form->_intSpaces[_idU]->interpolateFieldAtQuadNode_rDerivative(form->_sol[_idU], k) * drdy +
+           form->_intSpaces[_idU]->interpolateFieldAtQuadNode_sDerivative(form->_sol[_idU], k) * dsdy;
+    dvdx = form->_intSpaces[_idV]->interpolateFieldAtQuadNode_rDerivative(form->_sol[_idV], k) * drdx +
+           form->_intSpaces[_idV]->interpolateFieldAtQuadNode_sDerivative(form->_sol[_idV], k) * dsdx;
+    dvdy = form->_intSpaces[_idV]->interpolateFieldAtQuadNode_rDerivative(form->_sol[_idV], k) * drdy +
+           form->_intSpaces[_idV]->interpolateFieldAtQuadNode_sDerivative(form->_sol[_idV], k) * dsdy;
 
     Sxx = -p + 2. * mu * dudx;
     Sxy = mu * (dudy + dvdx);
@@ -638,27 +638,27 @@ void feSysElm_2D_Stokes::computeBe(feBilinearForm *form)
     int cnt = 0;
     // Residu pour u
     for(int i = 0; i < nFunctionsU; ++i) {
-      _feU[i] = form->_intSpace[_idU]->getFunctionAtQuadNode(
+      _feU[i] = form->_intSpaces[_idU]->getFunctionAtQuadNode(
         i, k); // Fonction test de u : uniquement pour les forces volumiques
-      _feUdx[i] = form->_intSpace[_idU]->getdFunctiondrAtQuadNode(i, k) * drdx +
-                  form->_intSpace[_idU]->getdFunctiondsAtQuadNode(i, k) * dsdx;
-      _feUdy[i] = form->_intSpace[_idU]->getdFunctiondrAtQuadNode(i, k) * drdy +
-                  form->_intSpace[_idU]->getdFunctiondsAtQuadNode(i, k) * dsdy;
+      _feUdx[i] = form->_intSpaces[_idU]->getdFunctiondrAtQuadNode(i, k) * drdx +
+                  form->_intSpaces[_idU]->getdFunctiondsAtQuadNode(i, k) * dsdx;
+      _feUdy[i] = form->_intSpaces[_idU]->getdFunctiondrAtQuadNode(i, k) * drdy +
+                  form->_intSpaces[_idU]->getdFunctiondsAtQuadNode(i, k) * dsdy;
       form->_Be[cnt++] -= (Sxx * _feUdx[i] + Sxy * _feUdy[i] - f[0] * _feU[i]) * J * w[k];
     }
     // Residu pour v
     for(int i = 0; i < nFunctionsV; ++i) {
-      _feV[i] = form->_intSpace[_idV]->getFunctionAtQuadNode(
+      _feV[i] = form->_intSpaces[_idV]->getFunctionAtQuadNode(
         i, k); // Fonction test de v : uniquement pour les forces volumiques
-      _feVdx[i] = form->_intSpace[_idV]->getdFunctiondrAtQuadNode(i, k) * drdx +
-                  form->_intSpace[_idV]->getdFunctiondsAtQuadNode(i, k) * dsdx;
-      _feVdy[i] = form->_intSpace[_idV]->getdFunctiondrAtQuadNode(i, k) * drdy +
-                  form->_intSpace[_idV]->getdFunctiondsAtQuadNode(i, k) * dsdy;
+      _feVdx[i] = form->_intSpaces[_idV]->getdFunctiondrAtQuadNode(i, k) * drdx +
+                  form->_intSpaces[_idV]->getdFunctiondsAtQuadNode(i, k) * dsdx;
+      _feVdy[i] = form->_intSpaces[_idV]->getdFunctiondrAtQuadNode(i, k) * drdy +
+                  form->_intSpaces[_idV]->getdFunctiondsAtQuadNode(i, k) * dsdy;
       form->_Be[cnt++] -= (Syx * _feVdx[i] + Syy * _feVdy[i] - f[1] * _feV[i]) * J * w[k];
     }
     // Residu pour p
     for(int i = 0; i < nFunctionsP; ++i) {
-      _feP[i] = form->_intSpace[_idP]->getFunctionAtQuadNode(i, k);
+      _feP[i] = form->_intSpaces[_idP]->getFunctionAtQuadNode(i, k);
       form->_Be[cnt++] += _feP[i] * (dudx + dvdy) * J * w[k];
     }
   }
@@ -672,9 +672,9 @@ void feSysElm_2D_Stokes::computeAe(feBilinearForm *form)
   std::vector<double> &w = form->_geoSpace->getQuadratureWeights();
   // double             rho = _par[0];
   double mu = _par[1];
-  int nFunctionsU = form->_intSpace[_idU]->getNbFunctions();
-  int nFunctionsV = form->_intSpace[_idV]->getNbFunctions();
-  int nFunctionsP = form->_intSpace[_idP]->getNbFunctions();
+  int nFunctionsU = form->_intSpaces[_idU]->getNbFunctions();
+  int nFunctionsV = form->_intSpaces[_idV]->getNbFunctions();
+  int nFunctionsP = form->_intSpaces[_idP]->getNbFunctions();
 
   double jac, dudx, dudy, dvdx, dvdy;
   std::vector<double> x(3);
@@ -694,34 +694,34 @@ void feSysElm_2D_Stokes::computeAe(feBilinearForm *form)
     double dsdx = -_dxdr[1] / jac;
     double dsdy = _dxdr[0] / jac;
 
-    dudx = form->_intSpace[_idU]->interpolateFieldAtQuadNode_rDerivative(form->_sol[_idU], k) * drdx +
-           form->_intSpace[_idU]->interpolateFieldAtQuadNode_sDerivative(form->_sol[_idU], k) * dsdx;
-    dudy = form->_intSpace[_idU]->interpolateFieldAtQuadNode_rDerivative(form->_sol[_idU], k) * drdy +
-           form->_intSpace[_idU]->interpolateFieldAtQuadNode_sDerivative(form->_sol[_idU], k) * dsdy;
-    dvdx = form->_intSpace[_idV]->interpolateFieldAtQuadNode_rDerivative(form->_sol[_idV], k) * drdx +
-           form->_intSpace[_idV]->interpolateFieldAtQuadNode_sDerivative(form->_sol[_idV], k) * dsdx;
-    dvdy = form->_intSpace[_idV]->interpolateFieldAtQuadNode_rDerivative(form->_sol[_idV], k) * drdy +
-           form->_intSpace[_idV]->interpolateFieldAtQuadNode_sDerivative(form->_sol[_idV], k) * dsdy;
+    dudx = form->_intSpaces[_idU]->interpolateFieldAtQuadNode_rDerivative(form->_sol[_idU], k) * drdx +
+           form->_intSpaces[_idU]->interpolateFieldAtQuadNode_sDerivative(form->_sol[_idU], k) * dsdx;
+    dudy = form->_intSpaces[_idU]->interpolateFieldAtQuadNode_rDerivative(form->_sol[_idU], k) * drdy +
+           form->_intSpaces[_idU]->interpolateFieldAtQuadNode_sDerivative(form->_sol[_idU], k) * dsdy;
+    dvdx = form->_intSpaces[_idV]->interpolateFieldAtQuadNode_rDerivative(form->_sol[_idV], k) * drdx +
+           form->_intSpaces[_idV]->interpolateFieldAtQuadNode_sDerivative(form->_sol[_idV], k) * dsdx;
+    dvdy = form->_intSpaces[_idV]->interpolateFieldAtQuadNode_rDerivative(form->_sol[_idV], k) * drdy +
+           form->_intSpaces[_idV]->interpolateFieldAtQuadNode_sDerivative(form->_sol[_idV], k) * dsdy;
 
     int I = 0, J;
 
     // Set up interpolation functions
     for(int i = 0; i < nFunctionsU; ++i) {
-      _feU[i] = form->_intSpace[_idU]->getFunctionAtQuadNode(i, k);
-      _feUdx[i] = form->_intSpace[_idU]->getdFunctiondrAtQuadNode(i, k) * drdx +
-                  form->_intSpace[_idU]->getdFunctiondsAtQuadNode(i, k) * dsdx;
-      _feUdy[i] = form->_intSpace[_idU]->getdFunctiondrAtQuadNode(i, k) * drdy +
-                  form->_intSpace[_idU]->getdFunctiondsAtQuadNode(i, k) * dsdy;
+      _feU[i] = form->_intSpaces[_idU]->getFunctionAtQuadNode(i, k);
+      _feUdx[i] = form->_intSpaces[_idU]->getdFunctiondrAtQuadNode(i, k) * drdx +
+                  form->_intSpaces[_idU]->getdFunctiondsAtQuadNode(i, k) * dsdx;
+      _feUdy[i] = form->_intSpaces[_idU]->getdFunctiondrAtQuadNode(i, k) * drdy +
+                  form->_intSpaces[_idU]->getdFunctiondsAtQuadNode(i, k) * dsdy;
     }
     for(int i = 0; i < nFunctionsV; ++i) {
-      _feV[i] = form->_intSpace[_idV]->getFunctionAtQuadNode(i, k);
-      _feVdx[i] = form->_intSpace[_idV]->getdFunctiondrAtQuadNode(i, k) * drdx +
-                  form->_intSpace[_idU]->getdFunctiondsAtQuadNode(i, k) * dsdx;
-      _feVdy[i] = form->_intSpace[_idV]->getdFunctiondrAtQuadNode(i, k) * drdy +
-                  form->_intSpace[_idU]->getdFunctiondsAtQuadNode(i, k) * dsdy;
+      _feV[i] = form->_intSpaces[_idV]->getFunctionAtQuadNode(i, k);
+      _feVdx[i] = form->_intSpaces[_idV]->getdFunctiondrAtQuadNode(i, k) * drdx +
+                  form->_intSpaces[_idU]->getdFunctiondsAtQuadNode(i, k) * dsdx;
+      _feVdy[i] = form->_intSpaces[_idV]->getdFunctiondrAtQuadNode(i, k) * drdy +
+                  form->_intSpaces[_idU]->getdFunctiondsAtQuadNode(i, k) * dsdy;
     }
     for(int i = 0; i < nFunctionsP; ++i) {
-      _feP[i] = form->_intSpace[_idP]->getFunctionAtQuadNode(i, k);
+      _feP[i] = form->_intSpaces[_idP]->getFunctionAtQuadNode(i, k);
     }
 
     // Équations pour u
@@ -776,8 +776,8 @@ void feSysElm_2D_NavierStokes::createElementarySystem(std::vector<feSpace *> &sp
   _idU = 0;
   _idV = 1;
   _idP = 2;
-  _iVar = {_idU, _idV, _idP};
-  _jVar = {_idU, _idV, _idP};
+  _fieldsLayoutI = {_idU, _idV, _idP};
+  _fieldsLayoutJ = {_idU, _idV, _idP};
   _feU.resize(space[_idU]->getNbFunctions());
   _feUdx.resize(space[_idU]->getNbFunctions());
   _feUdy.resize(space[_idU]->getNbFunctions());
@@ -797,9 +797,9 @@ void feSysElm_2D_NavierStokes::computeBe(feBilinearForm *form)
   std::vector<double> &w = form->_geoSpace->getQuadratureWeights();
   double rho = _par[0];
   double mu = _par[1];
-  int nFunctionsU = form->_intSpace[_idU]->getNbFunctions();
-  int nFunctionsV = form->_intSpace[_idV]->getNbFunctions();
-  int nFunctionsP = form->_intSpace[_idP]->getNbFunctions();
+  int nFunctionsU = form->_intSpaces[_idU]->getNbFunctions();
+  int nFunctionsV = form->_intSpaces[_idV]->getNbFunctions();
+  int nFunctionsP = form->_intSpaces[_idP]->getNbFunctions();
 
   double J, u, v, p, dudt, dvdt, dudx, dudy, dvdx, dvdy, Sxx, Sxy, Syx, Syy;
   std::vector<double> x(3, 0.);
@@ -819,21 +819,21 @@ void feSysElm_2D_NavierStokes::computeBe(feBilinearForm *form)
     double dsdx = -_dxdr[1] / J;
     double dsdy = _dxdr[0] / J;
 
-    u = form->_intSpace[_idU]->interpolateFieldAtQuadNode(form->_sol[_idU], k);
-    v = form->_intSpace[_idV]->interpolateFieldAtQuadNode(form->_sol[_idV], k);
-    p = form->_intSpace[_idP]->interpolateFieldAtQuadNode(form->_sol[_idP], k);
+    u = form->_intSpaces[_idU]->interpolateFieldAtQuadNode(form->_sol[_idU], k);
+    v = form->_intSpaces[_idV]->interpolateFieldAtQuadNode(form->_sol[_idV], k);
+    p = form->_intSpaces[_idP]->interpolateFieldAtQuadNode(form->_sol[_idP], k);
 
-    dudt = form->_intSpace[_idU]->interpolateFieldAtQuadNode(form->_solDot[_idU], k);
-    dvdt = form->_intSpace[_idV]->interpolateFieldAtQuadNode(form->_solDot[_idV], k);
+    dudt = form->_intSpaces[_idU]->interpolateFieldAtQuadNode(form->_solDot[_idU], k);
+    dvdt = form->_intSpaces[_idV]->interpolateFieldAtQuadNode(form->_solDot[_idV], k);
 
-    dudx = form->_intSpace[_idU]->interpolateFieldAtQuadNode_rDerivative(form->_sol[_idU], k) * drdx +
-           form->_intSpace[_idU]->interpolateFieldAtQuadNode_sDerivative(form->_sol[_idU], k) * dsdx;
-    dudy = form->_intSpace[_idU]->interpolateFieldAtQuadNode_rDerivative(form->_sol[_idU], k) * drdy +
-           form->_intSpace[_idU]->interpolateFieldAtQuadNode_sDerivative(form->_sol[_idU], k) * dsdy;
-    dvdx = form->_intSpace[_idV]->interpolateFieldAtQuadNode_rDerivative(form->_sol[_idV], k) * drdx +
-           form->_intSpace[_idV]->interpolateFieldAtQuadNode_sDerivative(form->_sol[_idV], k) * dsdx;
-    dvdy = form->_intSpace[_idV]->interpolateFieldAtQuadNode_rDerivative(form->_sol[_idV], k) * drdy +
-           form->_intSpace[_idV]->interpolateFieldAtQuadNode_sDerivative(form->_sol[_idV], k) * dsdy;
+    dudx = form->_intSpaces[_idU]->interpolateFieldAtQuadNode_rDerivative(form->_sol[_idU], k) * drdx +
+           form->_intSpaces[_idU]->interpolateFieldAtQuadNode_sDerivative(form->_sol[_idU], k) * dsdx;
+    dudy = form->_intSpaces[_idU]->interpolateFieldAtQuadNode_rDerivative(form->_sol[_idU], k) * drdy +
+           form->_intSpaces[_idU]->interpolateFieldAtQuadNode_sDerivative(form->_sol[_idU], k) * dsdy;
+    dvdx = form->_intSpaces[_idV]->interpolateFieldAtQuadNode_rDerivative(form->_sol[_idV], k) * drdx +
+           form->_intSpaces[_idV]->interpolateFieldAtQuadNode_sDerivative(form->_sol[_idV], k) * dsdx;
+    dvdy = form->_intSpaces[_idV]->interpolateFieldAtQuadNode_rDerivative(form->_sol[_idV], k) * drdy +
+           form->_intSpaces[_idV]->interpolateFieldAtQuadNode_sDerivative(form->_sol[_idV], k) * dsdy;
 
     Sxx = -p + 2. * mu * dudx;
     Sxy = mu * (dudy + dvdx);
@@ -843,29 +843,29 @@ void feSysElm_2D_NavierStokes::computeBe(feBilinearForm *form)
     int cnt = 0;
     // Residu pour u
     for(int i = 0; i < nFunctionsU; ++i) {
-      _feU[i] = form->_intSpace[_idU]->getFunctionAtQuadNode(i, k);
-      _feUdx[i] = form->_intSpace[_idU]->getdFunctiondrAtQuadNode(i, k) * drdx +
-                  form->_intSpace[_idU]->getdFunctiondsAtQuadNode(i, k) * dsdx;
-      _feUdy[i] = form->_intSpace[_idU]->getdFunctiondrAtQuadNode(i, k) * drdy +
-                  form->_intSpace[_idU]->getdFunctiondsAtQuadNode(i, k) * dsdy;
+      _feU[i] = form->_intSpaces[_idU]->getFunctionAtQuadNode(i, k);
+      _feUdx[i] = form->_intSpaces[_idU]->getdFunctiondrAtQuadNode(i, k) * drdx +
+                  form->_intSpaces[_idU]->getdFunctiondsAtQuadNode(i, k) * dsdx;
+      _feUdy[i] = form->_intSpaces[_idU]->getdFunctiondrAtQuadNode(i, k) * drdy +
+                  form->_intSpaces[_idU]->getdFunctiondsAtQuadNode(i, k) * dsdy;
       form->_Be[cnt++] -= (_feU[i] * rho * (dudt + u * dudx + v * dudy) + Sxx * _feUdx[i] +
                     Sxy * _feUdy[i] - f[0] * _feU[i]) *
                    J * w[k];
     }
     // Residu pour v
     for(int i = 0; i < nFunctionsV; ++i) {
-      _feV[i] = form->_intSpace[_idV]->getFunctionAtQuadNode(i, k);
-      _feVdx[i] = form->_intSpace[_idV]->getdFunctiondrAtQuadNode(i, k) * drdx +
-                  form->_intSpace[_idV]->getdFunctiondsAtQuadNode(i, k) * dsdx;
-      _feVdy[i] = form->_intSpace[_idV]->getdFunctiondrAtQuadNode(i, k) * drdy +
-                  form->_intSpace[_idV]->getdFunctiondsAtQuadNode(i, k) * dsdy;
+      _feV[i] = form->_intSpaces[_idV]->getFunctionAtQuadNode(i, k);
+      _feVdx[i] = form->_intSpaces[_idV]->getdFunctiondrAtQuadNode(i, k) * drdx +
+                  form->_intSpaces[_idV]->getdFunctiondsAtQuadNode(i, k) * dsdx;
+      _feVdy[i] = form->_intSpaces[_idV]->getdFunctiondrAtQuadNode(i, k) * drdy +
+                  form->_intSpaces[_idV]->getdFunctiondsAtQuadNode(i, k) * dsdy;
       form->_Be[cnt++] -= (_feV[i] * rho * (dvdt + u * dvdx + v * dvdy) + Syx * _feVdx[i] +
                     Syy * _feVdy[i] - f[1] * _feV[i]) *
                    J * w[k];
     }
     // Residu pour p
     for(int i = 0; i < nFunctionsP; ++i) {
-      _feP[i] = form->_intSpace[_idP]->getFunctionAtQuadNode(i, k);
+      _feP[i] = form->_intSpaces[_idP]->getFunctionAtQuadNode(i, k);
       form->_Be[cnt++] += _feP[i] * (dudx + dvdy) * J * w[k];
     }
   }
@@ -879,9 +879,9 @@ void feSysElm_2D_NavierStokes::computeAe(feBilinearForm *form)
   std::vector<double> w = form->_geoSpace->getQuadratureWeights();
   double rho = _par[0];
   double mu = _par[1];
-  int nFunctionsU = form->_intSpace[_idU]->getNbFunctions();
-  int nFunctionsV = form->_intSpace[_idV]->getNbFunctions();
-  int nFunctionsP = form->_intSpace[_idP]->getNbFunctions();
+  int nFunctionsU = form->_intSpaces[_idU]->getNbFunctions();
+  int nFunctionsV = form->_intSpaces[_idV]->getNbFunctions();
+  int nFunctionsP = form->_intSpaces[_idP]->getNbFunctions();
 
   double jac, u, v, dudt, dvdt, dudx, dudy, dvdx, dvdy;
   std::vector<double> x(3);
@@ -901,40 +901,40 @@ void feSysElm_2D_NavierStokes::computeAe(feBilinearForm *form)
     double dsdx = -_dxdr[1] / jac;
     double dsdy = _dxdr[0] / jac;
 
-    u = form->_intSpace[_idU]->interpolateFieldAtQuadNode(form->_sol[_idU], k);
-    v = form->_intSpace[_idV]->interpolateFieldAtQuadNode(form->_sol[_idV], k);
+    u = form->_intSpaces[_idU]->interpolateFieldAtQuadNode(form->_sol[_idU], k);
+    v = form->_intSpaces[_idV]->interpolateFieldAtQuadNode(form->_sol[_idV], k);
 
-    dudt = form->_intSpace[_idU]->interpolateFieldAtQuadNode(form->_solDot[_idU], k);
-    dvdt = form->_intSpace[_idV]->interpolateFieldAtQuadNode(form->_solDot[_idV], k);
+    dudt = form->_intSpaces[_idU]->interpolateFieldAtQuadNode(form->_solDot[_idU], k);
+    dvdt = form->_intSpaces[_idV]->interpolateFieldAtQuadNode(form->_solDot[_idV], k);
 
-    dudx = form->_intSpace[_idU]->interpolateFieldAtQuadNode_rDerivative(form->_sol[_idU], k) * drdx +
-           form->_intSpace[_idU]->interpolateFieldAtQuadNode_sDerivative(form->_sol[_idU], k) * dsdx;
-    dudy = form->_intSpace[_idU]->interpolateFieldAtQuadNode_rDerivative(form->_sol[_idU], k) * drdy +
-           form->_intSpace[_idU]->interpolateFieldAtQuadNode_sDerivative(form->_sol[_idU], k) * dsdy;
-    dvdx = form->_intSpace[_idV]->interpolateFieldAtQuadNode_rDerivative(form->_sol[_idV], k) * drdx +
-           form->_intSpace[_idV]->interpolateFieldAtQuadNode_sDerivative(form->_sol[_idV], k) * dsdx;
-    dvdy = form->_intSpace[_idV]->interpolateFieldAtQuadNode_rDerivative(form->_sol[_idV], k) * drdy +
-           form->_intSpace[_idV]->interpolateFieldAtQuadNode_sDerivative(form->_sol[_idV], k) * dsdy;
+    dudx = form->_intSpaces[_idU]->interpolateFieldAtQuadNode_rDerivative(form->_sol[_idU], k) * drdx +
+           form->_intSpaces[_idU]->interpolateFieldAtQuadNode_sDerivative(form->_sol[_idU], k) * dsdx;
+    dudy = form->_intSpaces[_idU]->interpolateFieldAtQuadNode_rDerivative(form->_sol[_idU], k) * drdy +
+           form->_intSpaces[_idU]->interpolateFieldAtQuadNode_sDerivative(form->_sol[_idU], k) * dsdy;
+    dvdx = form->_intSpaces[_idV]->interpolateFieldAtQuadNode_rDerivative(form->_sol[_idV], k) * drdx +
+           form->_intSpaces[_idV]->interpolateFieldAtQuadNode_sDerivative(form->_sol[_idV], k) * dsdx;
+    dvdy = form->_intSpaces[_idV]->interpolateFieldAtQuadNode_rDerivative(form->_sol[_idV], k) * drdy +
+           form->_intSpaces[_idV]->interpolateFieldAtQuadNode_sDerivative(form->_sol[_idV], k) * dsdy;
 
     int I = 0, J = 0;
 
     // Set up interpolation functions
     for(int i = 0; i < nFunctionsU; ++i) {
-      _feU[i] = form->_intSpace[_idU]->getFunctionAtQuadNode(i, k);
-      _feUdx[i] = form->_intSpace[_idU]->getdFunctiondrAtQuadNode(i, k) * drdx +
-                  form->_intSpace[_idU]->getdFunctiondsAtQuadNode(i, k) * dsdx;
-      _feUdy[i] = form->_intSpace[_idU]->getdFunctiondrAtQuadNode(i, k) * drdy +
-                  form->_intSpace[_idU]->getdFunctiondsAtQuadNode(i, k) * dsdy;
+      _feU[i] = form->_intSpaces[_idU]->getFunctionAtQuadNode(i, k);
+      _feUdx[i] = form->_intSpaces[_idU]->getdFunctiondrAtQuadNode(i, k) * drdx +
+                  form->_intSpaces[_idU]->getdFunctiondsAtQuadNode(i, k) * dsdx;
+      _feUdy[i] = form->_intSpaces[_idU]->getdFunctiondrAtQuadNode(i, k) * drdy +
+                  form->_intSpaces[_idU]->getdFunctiondsAtQuadNode(i, k) * dsdy;
     }
     for(int i = 0; i < nFunctionsV; ++i) {
-      _feV[i] = form->_intSpace[_idV]->getFunctionAtQuadNode(i, k);
-      _feVdx[i] = form->_intSpace[_idV]->getdFunctiondrAtQuadNode(i, k) * drdx +
-                  form->_intSpace[_idU]->getdFunctiondsAtQuadNode(i, k) * dsdx;
-      _feVdy[i] = form->_intSpace[_idV]->getdFunctiondrAtQuadNode(i, k) * drdy +
-                  form->_intSpace[_idU]->getdFunctiondsAtQuadNode(i, k) * dsdy;
+      _feV[i] = form->_intSpaces[_idV]->getFunctionAtQuadNode(i, k);
+      _feVdx[i] = form->_intSpaces[_idV]->getdFunctiondrAtQuadNode(i, k) * drdx +
+                  form->_intSpaces[_idU]->getdFunctiondsAtQuadNode(i, k) * dsdx;
+      _feVdy[i] = form->_intSpaces[_idV]->getdFunctiondrAtQuadNode(i, k) * drdy +
+                  form->_intSpaces[_idU]->getdFunctiondsAtQuadNode(i, k) * dsdy;
     }
     for(int i = 0; i < nFunctionsP; ++i) {
-      _feP[i] = form->_intSpace[_idP]->getFunctionAtQuadNode(i, k);
+      _feP[i] = form->_intSpaces[_idP]->getFunctionAtQuadNode(i, k);
     }
 
     // Équations pour u

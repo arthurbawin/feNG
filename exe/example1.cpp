@@ -41,6 +41,11 @@ double fZero(const double t, const std::vector<double> &pos, const std::vector<d
   return 0.0;
 }
 
+double fConstant(const double t, const std::vector<double> &pos, const std::vector<double> &par)
+{
+  return par[0];
+}
+
 int main(int argc, char **argv)
 {
   // The executable should start with petscInitialize and end with petscFinalize.
@@ -83,6 +88,7 @@ int main(int argc, char **argv)
   feFunction *funSol    = new feFunction(fSol,    {});
   feFunction *funSource = new feFunction(fSource, {k});
   feFunction *funZero   = new feFunction(fZero,   {});
+  feFunction *kDiffusivity = new feFunction(fConstant, {1.0});
 
   // Define a finite element space on each subdomain of the computational domain.
   // The subdomains are defined by the Physical Entities in gmsh, and the name given
@@ -106,7 +112,7 @@ int main(int argc, char **argv)
   feMetaNumber numbering(&mesh, spaces, essentialSpaces);
 
   // Create the solution structure (it is essentially a wrapper containing the solution at each DOF).
-  feSolution sol(&mesh, spaces, essentialSpaces, &numbering);
+  feSolution sol(numbering.getNbDOFs(), spaces, essentialSpaces);
 
   // Define the (bi-)linear forms: here we define on the interior a bilinear symmetric "diffusion" form:
   // 
@@ -122,8 +128,8 @@ int main(int argc, char **argv)
   //
   // There is no form to define on the boundary.
   feBilinearForm *diff, *source;
-  feCheck(createBilinearForm(  diff, {uDomaine}, &mesh, degreeQuadrature, new feSysElm_2D_Diffusion(k, nullptr)  ));
-  feCheck(createBilinearForm(source, {uDomaine}, &mesh, degreeQuadrature, new feSysElm_2D_Source(1.0, funSource) ));
+  feCheck(createBilinearForm(  diff, {uDomaine}, new feSysElm_2D_Diffusion(k, nullptr)  ));
+  feCheck(createBilinearForm(source, {uDomaine}, new feSysElm_2D_Source(1.0, funSource) ));
 
   // Create the linear system. Assembly of the elementary matrices and RHS is
   // performed in the solve step below ("makeSteps"). Two linear solvers are available:

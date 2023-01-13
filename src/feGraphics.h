@@ -1,11 +1,6 @@
 #ifndef _FEGRAPHICS_
 #define _FEGRAPHICS_
 
-/*! \brief Basic graphic features to visualize 1D solutions
- *         in an OpenGL window.
- *
- *  Detailed description starts here.
- */
 #include "feAPI.h"
 #include "glfem.h"
 
@@ -39,25 +34,33 @@ protected:
   double *_uh;
 
 public:
-  feBasicViewer(std::string windowTitle, int nElm, int nInteriorPlotNodes);
+  // Create an OpenGL window for 1D curves visualization. See testGraphic.cpp
+  // for example use including resizing of the window, drawing and buffer update.
+  //
+  //               nElm: the number of line elements in the 1D mesh
+  // nInteriorPlotNodes: the number of additional interior nodes used to plot
+  //                     a smooth curve. 0 means the plot only connects the
+  //                     extremities of each element.
+  feBasicViewer(const std::string &windowTitle, int nElm, int nInteriorPlotNodes);
   ~feBasicViewer();
 
   void drawMessage(std::string &message);
   void setAxesLimits(double *xLim, double *yLim);
   void drawAxes();
+
+  // Draw the 1D curve discretized by continuous or discontinuous
+  // elements stored in solution on the active OpenGL window.
   void draw1DCurve(feMesh &mesh,
                    feMetaNumber &numbering,
                    feSolution &solution,
                    feSpace *space,
                    feFunction *analyticSolution = nullptr);
+
   void reshapeWindowBox(double xMin, double xMax, double yMin, double yMax);
   void reshapeWindowBox(double scaleFactor, feMesh &mesh, feSolution &solution);
   void windowUpdate();
   void getWindowBox();
   bool windowShouldClose();
 };
-
-// Draw the 1D curve discretized by continuous or discontinuous elements stored in solution on the active OpenGL window
-// void draw1DCurveDG(feMesh &mesh, feMetaNumber &numbering, feSolution &solution, feSpace *space, feFunction *analyticSolution = nullptr);
 
 #endif 

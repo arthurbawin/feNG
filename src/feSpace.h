@@ -31,8 +31,8 @@ class feSolution;
 //                          during the call.
 //                    mesh: valid pointer to the mesh
 //               dimension: dimension of the connectivity on which the FE space is defined
-//                geometry: geometric support of the finite element
-//                   shape: the choice of degrees of freedom
+//                geometry: geometric support of the finite element (see enum above)
+//                   shape: the choice of degrees of freedom (see enum above)
 //                  degree: degree (order) of the polynomial interpolation
 //               fieldName: name of the field for which the space is defined
 //        connectivityName: name of the geometric connectivity on which the FE space is defined
@@ -40,7 +40,7 @@ class feSolution;
 //                          a quadrature rule
 //                     fct: field used to initialize the degrees of freedom
 // useGlobalShapeFunctions: choose between local (reference space) or global (physical space)
-//                          shape functions (global still experimental: use local only).
+//                          shape functions (global still experimental, do not use yet).
 feStatus createFiniteElementSpace(feSpace *&space,
   feMesh *mesh,
   const int dimension,
@@ -53,9 +53,12 @@ feStatus createFiniteElementSpace(feSpace *&space,
   feFunction *fct,
   const bool useGlobalShapeFunctions = false);
 
-// Abstract class defined a finite element space, handling the interpolation
+// Abstract class defining a finite element space, handling the interpolation
 // functions defined over the elements. A finite element space can be used 
 // to interpolate either the geometry or the fields of interest.
+//
+// An FE space is defined on a single geometric connectivity (which 
+// corresponds to a Physical Entity in the mesh).
 class feSpace
 {
 protected:
@@ -70,7 +73,8 @@ protected:
   // Number (tag) of the geometric connectivity
   int _cncGeoTag;
 
-  // Quadrature: number of quadrature nodes, weights and coordinates
+  // Quadrature rule on the reference element:
+  // number of quadrature nodes, weights and coordinates
   int _nQuad;
   std::vector<double> _wQuad;
   std::vector<double> _xQuad;
@@ -88,17 +92,18 @@ protected:
   std::vector<double> _dLds;
   std::vector<double> _dLdt;
 
-  // Use global (physical) interpolation functions
+  // Use global (physical) interpolation functions (experimental, do not use yet)
   bool _useGlobalShapeFunctions = false;
   // Global shape functions and derivatives evaluated at quadrature points on each element
   std::vector<std::vector<double> > _Lglob;
   std::vector<std::vector<double> > _dLdxglob;
   std::vector<std::vector<double> > _dLdyglob;
 
-  // Field used to initialize the DOFs
+  // Scalar field used to initialize the DOFs
   feFunction *_fct;
 
 public:
+  // Do not use the abstract class constructor directly, call the derived classes.
   feSpace(feMesh *mesh = nullptr, const std::string &fieldID = "", const std::string &cncGeoID = "",
     feFunction *fct = nullptr, const bool useGlobalShapeFunctions = false);
   virtual ~feSpace(){};
@@ -185,45 +190,58 @@ public:
   // Evaluate prescribed scalar field
   double evalFun(const double t, const std::vector<double> &x) { return _fct->eval(t, x); }
 
-  // Interpolate field (or derivatives) at reference node r = [r,s,t] or at quadrature node
+  //
+  // Interpolation of fields and derivatives at reference node r = [r,s,t] or physical node x:
+  //
 
-  // Interpolate field at reference node r = [r,s,t] using local shape functions.
-  // Default interpolation function.
+  // Interpolate scalar field or derivatives at reference node r = [r,s,t]
+  // using local shape functions (default)
   double interpolateField(std::vector<double> &field, double *r);
-  // Interpolate field at physical node x on element iElm using global shape functions.
+  double interpolateField_rDerivative(std::vector<double> &field, double *r);
+  double interpolateField_sDerivative(std::vector<double> &field, double *r);
+
+  // Interpolate scalar field or derivatives at physical node x on element iElm
+  // using global shape functions
   double interpolateField(std::vector<double> &field, int iElm, std::vector<double> &x);
-  // Argument *field is a double pointer whose size is fieldSize.
-  // fieldSize must match the number of shape functions.
+  double interpolateField_xDerivative(std::vector<double> &field, int iElm, std::vector<double> &x);
+  double interpolateField_yDerivative(std::vector<double> &field, int iElm, std::vector<double> &x);
+
+  // Interpolate field and also get the shape functions at r.
+  // size(field) = size(shape) = fieldSize.
+  // shape will be filled with values of the shape functions.
   // The result of the interpolation is stored in res.
   void interpolateField(double *field, int fieldSize, double *r, double *shape, double &res);
 
   double interpolateField(feNumber *number, feSolution *sol, std::vector<double> &x);
-  double interpolateField_rDerivative(std::vector<double> &field, double *r);
-  double interpolateField_sDerivative(std::vector<double> &field, double *r);
-  double interpolateField_xDerivative(std::vector<double> &field, int iElm, std::vector<double> &x);
-  double interpolateField_yDerivative(std::vector<double> &field, int iElm, std::vector<double> &x);
   void interpolateField_gradrs(feNumber *number, feSolution *sol, std::vector<double> &x,
                                std::vector<double> &grad);
 
+  // Interpolate vector field or derivatives at reference node r = [r,s,t]
+  // using local shape functions (default). Result is stored in res.
+  void interpolateVectorField(std::vector<double> &field, double *r, std::vector<double> &res);
+  void interpolateVectorField_rDerivative(std::vector<double> &field, double *r, std::vector<double> &res);
+  void interpolateVectorField_sDerivative(std::vector<double> &field, double *r, std::vector<double> &res);
+
+  //
+  // Interpolation of fields and derivatives at quadrature node:
+  //
+
+  // Interpolate scalar field or derivatives at iNode-th quadrature node using local shape functions (default)
   double interpolateFieldAtQuadNode(std::vector<double> &field, int iNode);
-  double interpolateFieldAtQuadNode(std::vector<double> &field, int iElm, int iNode);
   double interpolateFieldAtQuadNode_rDerivative(std::vector<double> &field, int iNode);
   double interpolateFieldAtQuadNode_sDerivative(std::vector<double> &field, int iNode);
+  // Interpolate scalar field or derivatives at iNode-th quadrature node using global shape functions
+  double interpolateFieldAtQuadNode(std::vector<double> &field, int iElm, int iNode);
   double interpolateFieldAtQuadNode_xDerivative(std::vector<double> &field, int iElm, int iNode);
   double interpolateFieldAtQuadNode_yDerivative(std::vector<double> &field, int iElm, int iNode);
 
-  void interpolateVectorField(std::vector<double> &field, double *r, std::vector<double> &res);
-  void interpolateVectorField_rDerivative(std::vector<double> &field, double *r,
-
-                                          std::vector<double> &res);
-  void interpolateVectorField_sDerivative(std::vector<double> &field, double *r,
-                                          std::vector<double> &res);
+  // Interpolate vector field or derivatives at iNode-th quadrature node using local shape functions (default)
   void interpolateVectorFieldAtQuadNode(std::vector<double> &field, int iNode,
                                         std::vector<double> &res);
-  void interpolateVectorFieldAtQuadNode_rDerivative(std::vector<double> &field, int iNode,
-                                                    std::vector<double> &res);
-  void interpolateVectorFieldAtQuadNode_sDerivative(std::vector<double> &field, int iNode,
-                                                    std::vector<double> &res);
+  void interpolateVectorFieldAtQuadNode_rDerivative(std::vector<double> &field,
+    int iNode, std::vector<double> &res);
+  void interpolateVectorFieldAtQuadNode_sDerivative(std::vector<double> &field,
+    int iNode, std::vector<double> &res);
 };
 
 //

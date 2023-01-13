@@ -188,7 +188,7 @@ void feLinearSystemMklPardiso::assembleMatrices(feSolution *sol)
         for(auto val : Row)
           feInfo("val = %d", val);
 
-        nColumn = f->getNjElm();
+        nColumn = f->getLocalMatrixN();
         Column = f->getAdrJ();
         Ae = f->getAe();
 

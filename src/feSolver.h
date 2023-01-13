@@ -84,12 +84,12 @@ public:
   StationarySolver(feTolerances tol, feMetaNumber *metaNumber, feLinearSystem *linearSystem,
                    feSolution *sol, std::vector<feNorm *> &norms, feMesh *mesh,
                    feExportData exportData);
-  virtual ~StationarySolver() {}
+  ~StationarySolver() {}
 
   double getNorm(int iNorm) { return _normL2[iNorm][0]; };
 
-  virtual feStatus makeStep();
-  virtual feStatus makeSteps(int nSteps);
+  feStatus makeStep();
+  feStatus makeSteps(int nSteps);
 };
 
 class BDF2Solver : public TimeIntegrator
@@ -99,12 +99,12 @@ public:
   BDF2Solver(feTolerances tol, feMetaNumber *metaNumber, feLinearSystem *linearSystem,
              feSolution *sol, std::vector<feNorm *> &norms, feMesh *mesh, feExportData exportData,
              double t0, double tEnd, int nTimeSteps, std::string CodeIni);
-  virtual ~BDF2Solver() {}
+  ~BDF2Solver() {}
 
   std::vector<double> &getNorm(int iNorm) { return _normL2[iNorm]; };
 
-  virtual feStatus makeStep(){};
-  virtual feStatus makeSteps(int nSteps);
+  feStatus makeStep(){ return FE_STATUS_OK; };
+  feStatus makeSteps(int nSteps);
 };
 
 class BDF1Solver : public TimeIntegrator
@@ -114,12 +114,12 @@ public:
   BDF1Solver(feTolerances tol, feMetaNumber *metaNumber, feLinearSystem *linearSystem,
              feSolution *sol, std::vector<feNorm *> &norms, feMesh *mesh, feExportData exportData,
              double t0, double tEnd, int nTimeSteps);
-  virtual ~BDF1Solver() {}
+  ~BDF1Solver() {}
 
   std::vector<double> &getNorm(int iNorm) { return _normL2[iNorm]; };
 
-  virtual feStatus makeStep();
-  virtual feStatus makeSteps(int nSteps);
+  feStatus makeStep();
+  feStatus makeSteps(int nSteps);
 };
 
 class DC2FSolver : public TimeIntegrator
@@ -132,12 +132,12 @@ public:
   DC2FSolver(feTolerances tol, feMetaNumber *metaNumber, feLinearSystem *linearSystem,
              feSolution *sol, std::vector<feNorm *> &norms, feMesh *mesh, feExportData exportData,
              double t0, double tEnd, int nTimeSteps);
-  virtual ~DC2FSolver() { delete _solutionContainerBDF1; }
+  ~DC2FSolver() { delete _solutionContainerBDF1; }
 
   std::vector<double> &getNorm(int iNorm) { return _normL2[iNorm]; };
 
-  virtual feStatus makeStep(){};
-  virtual feStatus makeSteps(int nSteps);
+  feStatus makeStep(){ return FE_STATUS_OK; };
+  feStatus makeSteps(int nSteps);
 };
 
 class DC3FSolver : public TimeIntegrator
@@ -150,7 +150,7 @@ public:
   DC3FSolver(feTolerances tol, feMetaNumber *metaNumber, feLinearSystem *linearSystem,
              feSolution *sol, std::vector<feNorm *> &norms, feMesh *mesh, feExportData exportData,
              double t0, double tEnd, int nTimeSteps);
-  virtual ~DC3FSolver()
+  ~DC3FSolver()
   {
     delete _solutionContainerBDF1;
     delete _solutionContainerDC2F;
@@ -158,8 +158,8 @@ public:
 
   std::vector<double> &getNorm(int iNorm) { return _normL2[iNorm]; };
 
-  virtual feStatus makeStep(){};
-  virtual feStatus makeSteps(int nSteps);
+  feStatus makeStep(){ return FE_STATUS_OK; };
+  feStatus makeSteps(int nSteps);
 };
 
 class DC3FSolver_centered : public TimeIntegrator
@@ -172,7 +172,7 @@ public:
   DC3FSolver_centered(feTolerances tol, feMetaNumber *metaNumber, feLinearSystem *linearSystem,
                       feSolution *sol, std::vector<feNorm *> &norms, feMesh *mesh,
                       feExportData exportData, double t0, double tEnd, int nTimeSteps);
-  virtual ~DC3FSolver_centered()
+  ~DC3FSolver_centered()
   {
     delete _solutionContainerBDF1;
     delete _solutionContainerDC2F;
@@ -180,8 +180,8 @@ public:
 
   std::vector<double> &getNorm(int iNorm) { return _normL2[iNorm]; };
 
-  virtual feStatus makeStep(){};
-  virtual feStatus makeSteps(int nSteps);
+  feStatus makeStep(){ return FE_STATUS_OK; };
+  feStatus makeSteps(int nSteps);
 };
 
 class DC3Solver : public TimeIntegrator
@@ -194,7 +194,7 @@ public:
   DC3Solver(feTolerances tol, feMetaNumber *metaNumber, feLinearSystem *linearSystem,
             feSolution *sol, std::vector<feNorm *> &norms, feMesh *mesh, feExportData exportData,
             double t0, double tEnd, int nTimeSteps, std::string CodeIni);
-  virtual ~DC3Solver()
+  ~DC3Solver()
   {
     delete _solutionContainerBDF2;
     delete _solutionContainerDC3F;
@@ -203,8 +203,8 @@ public:
   std::vector<double> &getNorm(int iNorm) { return _normL2[iNorm]; };
   std::vector<double> &getInt(int iNorm) { return _normL2[iNorm]; };
 
-  virtual feStatus makeStep(){};
-  virtual feStatus makeSteps(int nSteps);
+  feStatus makeStep(){ return FE_STATUS_OK; };
+  feStatus makeSteps(int nSteps);
 };
 
 feStatus createTimeIntegrator(TimeIntegrator *&solver, timeIntegratorScheme scheme,

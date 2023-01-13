@@ -31,8 +31,8 @@ feCompressedRowStorage::feCompressedRowStorage(feMetaNumber *metaNumber, feMesh 
     for(feInt iElm = 0; iElm < nbElems; iElm++) {
       // printf("Assembling element %8d on thread %d/%d\n", e, omp_get_thread_num(),
       // omp_get_num_threads());
-      f->initialize_vadij_only(metaNumber, iElm);
-      feInt NBRI = f->getNiElm();
+      f->initializeAddressingVectors(metaNumber, iElm);
+      feInt NBRI = f->getLocalMatrixM();
       std::vector<feInt> VADI = f->getAdrI(); // &VADI ????
 
       // feInfo("niELm = %d", NBRI);
@@ -88,8 +88,8 @@ feCompressedRowStorage::feCompressedRowStorage(feMetaNumber *metaNumber, feMesh 
     feInt nbElems = mesh->getNbElm(cncGeoTag);
 
     for(feInt el = 0; el < nbElems; el++) {
-      equelm->initialize_vadij_only(metaNumber, el);
-      feInt NBRI = equelm->getNiElm();
+      equelm->initializeAddressingVectors(metaNumber, el);
+      feInt NBRI = equelm->getLocalMatrixM();
       std::vector<feInt> VADI = equelm->getAdrI();
 
       for(feInt i = 0; i < NBRI; i++) {
@@ -137,8 +137,8 @@ feCompressedRowStorage::feCompressedRowStorage(feMetaNumber *metaNumber, feMesh 
 
       feBilinearForm *equelm = formMatrices[eq];
       // feInt cncGeoTag = equelm->getCncGeoTag();
-      equelm->initialize_vadij_only(metaNumber, el);
-      feInt NBRJ = equelm->getNiElm();
+      equelm->initializeAddressingVectors(metaNumber, el);
+      feInt NBRJ = equelm->getLocalMatrixM();
       std::vector<feInt> VADJ = equelm->getAdrJ();
 
       for(feInt j = 0; j < NBRJ; j++) {
@@ -267,8 +267,8 @@ feCompressedRowStorageMklPardiso::feCompressedRowStorageMklPardiso(
 
       feBilinearForm *equelm = formMatrices[eq];
       // feInt cncGeoTag = equelm->getCncGeoTag();
-      equelm->initialize_vadij_only(metaNumber, el);
-      feInt NBRJ = equelm->getNiElm();
+      equelm->initializeAddressingVectors(metaNumber, el);
+      feInt NBRJ = equelm->getLocalMatrixM();
       std::vector<feInt> VADJ = equelm->getAdrJ();
 
       for(feInt j = 0; j < NBRJ; j++) {

@@ -53,6 +53,11 @@ double fZero(const double t, const std::vector<double> &x, const std::vector<dou
   return 0.0;
 }
 
+double fConstant(const double t, const std::vector<double> &pos, const std::vector<double> &par)
+{
+  return par[0];
+}
+
 // double fOne(const double t, const std::vector<double> x, const std::vector<double> par)
 // {
 //   double c = par[0];
@@ -77,6 +82,7 @@ int main(int argc, char **argv)
   feFunction *funSol = new feFunction(fSol, {});
   feFunction *funSource = new feFunction(fSource, {k});
   feFunction *funZero = new feFunction(fZero, {});
+  feFunction *kDiffusivity = new feFunction(fConstant, {1.0});
   // feFunction *funNeumann = new feFunction(fNeumannBC, {});
   // feFunction *funNeumannY = new feFunction(fNeumannYBC, {});
   // feFunction *funOne = new feFunction(fOne, {1.0});
@@ -119,10 +125,10 @@ int main(int argc, char **argv)
     std::vector<feSpace *> essentialSpaces = {uBord};
 
     feMetaNumber metaNumber(&mesh, spaces, essentialSpaces);
-    feSolution sol(&mesh, spaces, essentialSpaces, &metaNumber);
+    feSolution sol(metaNumber.getNbDOFs(), spaces, essentialSpaces);
 
-    feBilinearForm diffU({uDomaine}, &mesh, degreeQuadrature, new feSysElm_2D_Diffusion(k, nullptr));
-    feBilinearForm sourceU({uDomaine}, &mesh, degreeQuadrature, new feSysElm_2D_Source(1.0, funSource));
+    feBilinearForm diffU({uDomaine}, new feSysElm_2D_Diffusion(k, nullptr));
+    feBilinearForm sourceU({uDomaine}, new feSysElm_2D_Source(1.0, funSource));
 
     feLinearSystem *system;
     feCheck(createLinearSystem(system, PETSC, spaces, {&diffU, &sourceU}, &metaNumber, &mesh, argc, argv));

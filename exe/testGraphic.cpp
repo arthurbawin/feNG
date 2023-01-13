@@ -24,7 +24,7 @@ int main(int argc, char **argv)
 
   feMetaNumber numbering(&mesh, spaces, essentialSpaces);
 
-  feSolution sol(&mesh, spaces, essentialSpaces, &numbering);
+  feSolution sol(numbering.getNbDOFs(), spaces, essentialSpaces);
   sol.initializeUnknowns(&mesh, &numbering);
 
   int nInteriorPlotNodes = 40;

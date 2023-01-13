@@ -50,7 +50,7 @@ double fSol(const double t, const std::vector<double> &pos, const std::vector<do
 // The source term f(x)
 double fSource(const double t, const std::vector<double> &pos, const std::vector<double> &par)
 {
-  return -1.;
+  return -1;
 }
 
 // A zero function to initialize the values of the degrees of freedom
@@ -70,10 +70,11 @@ int main(int argc, char **argv)
 
   double c = 5.0;
   double k = 1.0;
-  feFunction *funSol    = new feFunction(fSol,    {c, k});
-  feFunction *funSource = new feFunction(fSource, {});
-  feFunction *funZero   = new feFunction(fZero,   {});
-  feFunction *cVelocity = new feFunction(fConstant, {c});
+  feFunction *funSol       = new feFunction(fSol,    {c, k});
+  feFunction *funSource    = new feFunction(fSource, {});
+  feFunction *funZero      = new feFunction(fZero,   {});
+  feFunction *cVelocity    = new feFunction(fConstant, {c});
+  feFunction *kDiffusivity = new feFunction(fConstant, {k});
 
   int dim, deg = 1, degreeQuadrature = 10;
   double xa = 0.;
@@ -91,13 +92,13 @@ int main(int argc, char **argv)
 
   feMetaNumber numbering(&mesh, spaces, essentialSpaces);
 
-  feSolution sol(&mesh, spaces, essentialSpaces, &numbering);
+  feSolution sol(numbering.getNbDOFs(), spaces, essentialSpaces);
   sol.initializeUnknowns(&mesh, &numbering);
 
   feBilinearForm *adv, *diff, *source;
-  feCheck(createBilinearForm(    adv, {uDomaine}, &mesh, degreeQuadrature, new feSysElm_1D_Advection(1.0, cVelocity)) );
-  feCheck(createBilinearForm(   diff, {uDomaine}, &mesh, degreeQuadrature, new feSysElm_1D_Diffusion(k, nullptr))     );
-  feCheck(createBilinearForm( source, {uDomaine}, &mesh, degreeQuadrature, new feSysElm_1D_Source(1.0, funSource))    );
+  feCheck(createBilinearForm(    adv, {uDomaine}, new feSysElm_1D_Advection(cVelocity)) );
+  feCheck(createBilinearForm(   diff, {uDomaine}, new feSysElm_1D_Diffusion(kDiffusivity))     );
+  feCheck(createBilinearForm( source, {uDomaine}, new feSysElm_1D_Source(funSource))    );
 
   feLinearSystem *system;
   feCheck(createLinearSystem(system, PETSC, spaces, {adv, diff, source}, &numbering, &mesh, argc, argv));

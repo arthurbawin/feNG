@@ -53,19 +53,25 @@ double fZero(const double t, const std::vector<double> &pos, const std::vector<d
   return 0.;
 }
 
+double fConstant(const double t, const std::vector<double> &pos, const std::vector<double> &par)
+{
+  return par[0];
+}
+
 int main(int argc, char **argv)
 {
   petscInitialize(argc, argv);
 
   double x0 = 0.;
   double k = 0.1;
-  feFunction *funSol    = new feFunction(fSol,  {x0, k});
-  feFunction *funZero   = new feFunction(fZero, {});
+  feFunction *funSol       = new feFunction(fSol,  {x0, k});
+  feFunction *funZero      = new feFunction(fZero, {});
+  feFunction *kDiffusivity = new feFunction(fConstant, {k});
 
-  int dim, deg = 1, degreeQuadrature = 10;
+  int dim, deg = 2, degreeQuadrature = 10;
   double xa = -2.;
   double xb = 1.;
-  int nElm = 30;
+  int nElm = 10;
   feMesh1DP1 mesh(xa, xb, nElm, "BXA", "BXB", "Domaine");
   feMesh2DP1 mesh2;
 
@@ -79,12 +85,12 @@ int main(int argc, char **argv)
 
   feMetaNumber numbering(&mesh, spaces, essentialSpaces);
 
-  feSolution sol(&mesh, spaces, essentialSpaces, &numbering);
+  feSolution sol(numbering.getNbDOFs(), spaces, essentialSpaces);
   sol.initializeUnknowns(&mesh, &numbering);
 
   feBilinearForm *mass, *diff;
-  feCheck(createBilinearForm( mass, {uDomaine}, &mesh, degreeQuadrature, new feSysElm_1D_Masse(1.0, nullptr))   );
-  feCheck(createBilinearForm( diff, {uDomaine}, &mesh, degreeQuadrature, new feSysElm_1D_Diffusion(k, nullptr)) );
+  feCheck(createBilinearForm( mass, {uDomaine}, new feSysElm_1D_Masse(1.0, nullptr))   );
+  feCheck(createBilinearForm( diff, {uDomaine}, new feSysElm_1D_Diffusion(kDiffusivity)) );
 
   feLinearSystem *system;
   feCheck(createLinearSystem(system, PETSC, spaces, {mass, diff}, &numbering, &mesh, argc, argv));
@@ -101,7 +107,7 @@ int main(int argc, char **argv)
   double nSteps = 500;
   feCheck(createTimeIntegrator(solver, BDF1, tol, system, &numbering, &sol, &mesh, norms, exportData, t0, tEnd, nSteps));
 
-  int nInteriorPlotNodes = 25;
+  int nInteriorPlotNodes = 10;
   feBasicViewer viewer("test", mesh.getNbInteriorElems(), nInteriorPlotNodes);
 
   double xLim[2] = {xa, xb};

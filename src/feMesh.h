@@ -16,6 +16,13 @@
 #include "feTriangle.h"
 #include "rtree.h"
 
+//
+// Abstract mesh class. Meshes are defined through the derived 
+// classes according to their highest space dimension:
+//  0D mesh: feMesh0DP0
+//  1D mesh: feMesh1DP1
+//  2D mesh: feMesh2DP1
+//
 class feMesh
 {
 protected:
@@ -214,7 +221,7 @@ typedef struct rtreeSearchCtxStruct {
 } rtreeSearchCtx;
 
 //
-// 2-dimensional space discretization
+// 2-dimensional mesh
 //
 class feMesh2DP1 : public feMesh
 {

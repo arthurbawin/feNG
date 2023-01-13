@@ -312,7 +312,7 @@ void glfemMessage(char *message)
 }
 
 #if defined(HAVE_GLFW)
-GLFWwindow* glfemInit(char *theWindowName)
+GLFWwindow* glfemInit(const char *theWindowName)
 {
     glfwInit();
     GLFWwindow* window = glfwCreateWindow(480,480,"Simple example with graphics",NULL,NULL);    

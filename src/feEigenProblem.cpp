@@ -48,7 +48,7 @@ feStatus createEigenProblem(feEigenProblem *&eigenProblem,
       return feErrorMsg(
         FE_STATUS_ERROR,
         "Bilinear form %s is not defined on any known geometric connectivity (named subdomain).",
-        form->getIDName().c_str());
+        form->getWeakFormName().c_str());
     }
   }
   for(feBilinearForm *form : rhsForms) {
@@ -60,7 +60,7 @@ feStatus createEigenProblem(feEigenProblem *&eigenProblem,
       return feErrorMsg(
         FE_STATUS_ERROR,
         "Bilinear form %s is not defined on any known geometric connectivity (named subdomain).",
-        form->getIDName().c_str());
+        form->getWeakFormName().c_str());
     }
   }
 

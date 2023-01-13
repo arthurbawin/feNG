@@ -28,7 +28,7 @@ void glfemDrawMessage(int h, int v, char *message);
 void glfemSetRasterSize(int width, int height);
 
 #if defined(HAVE_GLFW)
-GLFWwindow* glfemInit(char *windowName);
+GLFWwindow* glfemInit(const char *windowName);
 #endif
 
 #endif

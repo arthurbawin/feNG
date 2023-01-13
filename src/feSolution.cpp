@@ -3,13 +3,17 @@
 #include <iostream>
 #include <fstream>
 
-feSolution::feSolution(feMesh *mesh, const std::vector<feSpace *> &space,
-                       const std::vector<feSpace *> &essBC, feMetaNumber *metaNumber)
-  : _dim(mesh->getDim()), _space(space), _essBC(essBC), _c0(0.), _tn(0.)
+feSolution::feSolution(int numDOF, const std::vector<feSpace *> &space,
+                       const std::vector<feSpace *> &essentialSpaces)
+  : _spaces(space)
+  , _essentialSpaces(essentialSpaces)
+  , _nDOF(numDOF)
+  , _c0(0.)
+  , _tn(0.)
 {
-  _sol.resize(metaNumber->getNbDOFs());
-  _dsoldt.resize(metaNumber->getNbDOFs());
-  for(int i = 0; i < metaNumber->getNbDOFs(); ++i) {
+  _sol.resize(numDOF);
+  _dsoldt.resize(numDOF);
+  for(int i = 0; i < numDOF; ++i) {
     _sol[i] = 0.0;
     _dsoldt[i] = 0.0;
   }
@@ -17,31 +21,32 @@ feSolution::feSolution(feMesh *mesh, const std::vector<feSpace *> &space,
 
 /* Constructs an feSolution from a file created by feSolution::printSol. */
 feSolution::feSolution(std::string solutionFile)
-  : _dim(0), _space(std::vector<feSpace *>()), _essBC(std::vector<feSpace *>()), _c0(0.)
+  : _spaces(std::vector<feSpace *>()), 
+  _essentialSpaces(std::vector<feSpace *>()),
+  _c0(0.)
 {
-  printf("Info feSolution::feSolution : Reading solution file : %s\n", solutionFile.c_str());
+  feInfo("Reading solution file : %s\n", solutionFile.c_str());
   std::filebuf fb;
   if(fb.open(solutionFile, std::ios::in)) {
     std::istream input(&fb);
     std::string buffer;
     double solutionTime;
-    int solutionNDOFs;
     input >> solutionTime;
     getline(input, buffer);
-    input >> solutionNDOFs;
+    input >> _nDOF;
 
     _tn = solutionTime;
 
-    _sol.resize(solutionNDOFs);
-    _dsoldt.resize(solutionNDOFs);
+    _sol.resize(_nDOF);
+    _dsoldt.resize(_nDOF);
 
     double val;
-    for(int i = 0; i < solutionNDOFs; ++i) {
+    for(int i = 0; i < _nDOF; ++i) {
       getline(input, buffer);
       input >> val;
       _sol[i] = val;
     }
-    for(int i = 0; i < solutionNDOFs; ++i) {
+    for(int i = 0; i < _nDOF; ++i) {
       getline(input, buffer);
       input >> val;
       _dsoldt[i] = val;
@@ -49,7 +54,8 @@ feSolution::feSolution(std::string solutionFile)
 
     fb.close();
   } else {
-    printf("In feSolution::feSolution : Error - Solution could not be opened.\n");
+    feErrorMsg(FE_STATUS_ERROR, "Solution file could not be opened.\n");
+    exit(-1);
   }
 }
 
@@ -64,7 +70,7 @@ void feSolution::initializeTemporalSolution(double t0, double t1, int nTimeSteps
 
 void feSolution::initializeUnknowns(feMesh *mesh, feMetaNumber *metaNumber)
 {
-  for(feSpace *const &fS : _space) {
+  for(feSpace *const &fS : _spaces) {
 
     int nElm = mesh->getNbElm(fS->getCncGeoID()); // On pourrait donner un _nElm au feSpace
     std::vector<feInt> adr(fS->getNbFunctions());
@@ -161,7 +167,7 @@ void feSolution::initializeUnknowns(feMesh *mesh, feMetaNumber *metaNumber)
 void feSolution::initializeEssentialBC(feMesh *mesh, feMetaNumber *metaNumber,
                                        feSolutionContainer *solContainer)
 {
-  for(feSpace *const &fS : _essBC) {
+  for(feSpace *const &fS : _essentialSpaces) {
     std::vector<feInt> adrS(fS->getNbFunctions());
     int nElm = mesh->getNbElm(fS->getCncGeoID());
     std::vector<double> coor = fS->getLcoor();

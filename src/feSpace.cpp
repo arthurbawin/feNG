@@ -27,6 +27,11 @@ feStatus createFiniteElementSpace(feSpace *&space,
   if(mesh == nullptr) return feErrorMsg(FE_STATUS_ERROR, "Null mesh pointer.");
   if(fct == nullptr) return feErrorMsg(FE_STATUS_ERROR, "Null function pointer.");
 
+  if(mesh->getCncGeoTag(cncGeoID) == -1){
+    return feErrorMsg(FE_STATUS_ERROR, "Geometric connectivity \"%s\" does not exist in the mesh.",
+               cncGeoID.c_str());
+  }
+
   switch(dimension) {
 
     case 0:
@@ -151,6 +156,8 @@ feStatus createFiniteElementSpace(feSpace *&space,
 
   // Set the quadrature rule on this space and the corresponding geometric interpolation space
   feQuadrature rule(degreeQuadrature, dimension, mesh->getCncGeoByName(cncGeoID)->getForme());
+  
+  // FIXME: the FE space of the geometric connectivity is the one of the last created space...
   feCheck(space->getCncGeo()->getFeSpace()->setQuadratureRule(&rule));
   feCheck(space->setQuadratureRule(&rule));
 
@@ -169,13 +176,9 @@ feSpace::feSpace(feMesh *mesh, const std::string &fieldID, const std::string &cn
   , _fct(fct)
   , _useGlobalShapeFunctions(useGlobalShapeFunctions)
 {
-  if(mesh != nullptr) {
+  // Called with mesh = nullptr when creating the geometric interpolation space
+  if(mesh != nullptr){
     _cncGeoTag = mesh->getCncGeoTag(cncGeoID);
-    if(_cncGeoTag == -1) {
-      feErrorMsg(FE_STATUS_ERROR, "Geometric connectivity \"%s\" does not exist in the mesh.",
-                 cncGeoID.c_str());
-      std::exit(1);
-    }
   }
 }
 

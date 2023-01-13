@@ -29,7 +29,7 @@ feNumber::feNumber(feMesh *mesh) : _nNod(mesh->getNbNodes()), _nEdg(mesh->getNbE
   // TODO : Ajouter une b-rep et verifier la compatibilite des feSpace frontieres
 }
 
-void feNumber::defDDLSommet(feMesh *mesh, std::string const &cncGeoID, int numElem, int numVertex, int numDOF)
+void feNumber::setUnknownVertexDOF(feMesh *mesh, std::string const &cncGeoID, int numElem, int numVertex, int numDOF)
 {
   int vert = mesh->getVertex(cncGeoID, numElem, numVertex);
   // printf("Assigning DOF_UNKNOWN and 1 dof at vertex %d on cnc %s on elem %d at vertex %d\n", vert,
@@ -38,7 +38,7 @@ void feNumber::defDDLSommet(feMesh *mesh, std::string const &cncGeoID, int numEl
   _codeDOFVertices[vert] = DOF_UNKNOWN;
 }
 
-void feNumber::defDDLElement(feMesh *mesh, std::string const &cncGeoID, int numElem, int numDOF)
+void feNumber::setUnknownElementDOF(feMesh *mesh, std::string const &cncGeoID, int numElem, int numDOF)
 {
   int elem = mesh->getElement(cncGeoID, numElem);
   // printf("Assigning DOF_UNKNOWN and %d dof(s) at elem %d on cnc %s on elem %d\n", numDOF, elem,
@@ -47,7 +47,7 @@ void feNumber::defDDLElement(feMesh *mesh, std::string const &cncGeoID, int numE
   _codeDOFElements[elem] = DOF_UNKNOWN;
 }
 
-void feNumber::defDDLEdge(feMesh *mesh, std::string const &cncGeoID, int numElem, int numEdge,
+void feNumber::setUnknownEdgeDOF(feMesh *mesh, std::string const &cncGeoID, int numElem, int numEdge,
                           int numDOF)
 {
   int edge = fabs(mesh->getEdge(cncGeoID, numElem, numEdge)) - 1;
@@ -57,7 +57,7 @@ void feNumber::defDDLEdge(feMesh *mesh, std::string const &cncGeoID, int numElem
   _codeDOFEdges[edge] = DOF_UNKNOWN;
 }
 
-void feNumber::defDDLSommet_essentialBC(feMesh *mesh, std::string const &cncGeoID, int numElem,
+void feNumber::setEssentialVertexDOF(feMesh *mesh, std::string const &cncGeoID, int numElem,
                                         int numVertex)
 {
   int vert = mesh->getVertex(cncGeoID, numElem, numVertex);
@@ -66,7 +66,7 @@ void feNumber::defDDLSommet_essentialBC(feMesh *mesh, std::string const &cncGeoI
   _codeDOFVertices[vert] = DOF_ESSENTIAL;
 }
 
-void feNumber::defDDLElement_essentialBC(feMesh *mesh, std::string const &cncGeoID, int numElem)
+void feNumber::setEssentialElementDOF(feMesh *mesh, std::string const &cncGeoID, int numElem)
 {
   int elem = mesh->getElement(cncGeoID, numElem);
   // printf("Setting global element %d as DOF_ESSENTIAL - on cnc %s on elem %d\n", elem, cncGeoID.c_str(),
@@ -74,7 +74,7 @@ void feNumber::defDDLElement_essentialBC(feMesh *mesh, std::string const &cncGeo
   _codeDOFElements[elem] = DOF_ESSENTIAL;
 }
 
-void feNumber::defDDLEdge_essentialBC(feMesh *mesh, std::string const &cncGeoID, int numElem,
+void feNumber::setEssentialEdgeDOF(feMesh *mesh, std::string const &cncGeoID, int numElem,
                                       int numEdge)
 {
   int edge = fabs(mesh->getEdge(cncGeoID, numElem, numEdge)) - 1;
@@ -83,20 +83,20 @@ void feNumber::defDDLEdge_essentialBC(feMesh *mesh, std::string const &cncGeoID,
   _codeDOFEdges[edge] = DOF_ESSENTIAL;
 }
 
-int feNumber::getDDLSommet(feMesh *mesh, std::string const &cncGeoID, int numElem, int numVertex, int numDOF)
+int feNumber::getVertexDOF(feMesh *mesh, std::string const &cncGeoID, int numElem, int numVertex, int numDOF)
 {
   int vert = mesh->getVertex(cncGeoID, numElem, numVertex);
   // return _numberingVertices[vert];
   return _numberingVertices[_maxDOFperVertex * vert + numDOF];
 }
 
-int feNumber::getDDLElement(feMesh *mesh, std::string const &cncGeoID, int numElem, int numDOF)
+int feNumber::getElementDOF(feMesh *mesh, std::string const &cncGeoID, int numElem, int numDOF)
 {
   int elem = mesh->getElement(cncGeoID, numElem);
   return _numberingElements[_maxDOFperElem * elem + numDOF];
 }
 
-int feNumber::getDDLEdge(feMesh *mesh, std::string const &cncGeoID, int numElem, int numEdge,
+int feNumber::getEdgeDOF(feMesh *mesh, std::string const &cncGeoID, int numElem, int numEdge,
                          int numDOF)
 {
   // In connecEdges, edges are numbered starting from 1 and can be negative
