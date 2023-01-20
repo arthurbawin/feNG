@@ -110,10 +110,9 @@ feBilinearForm::feBilinearForm(std::vector<feSpace *> spaces, feSysElm *elementa
   , _cncGeoID(spaces[0]->getCncGeoID())
   , _cncGeoTag(spaces[0]->getCncGeoTag())
   , _geoSpace(_cnc->getFeSpace())
+  , _J(_cnc->getJacobians())
 {
   _geoCoord.resize(3 * _cnc->getNbNodePerElem());
-
-  _J = _cnc->getJacobians();
 
   // Initialize the elementary system
   _sysElm->createElementarySystem(_intSpaces);
@@ -183,6 +182,7 @@ feBilinearForm::feBilinearForm(const feBilinearForm &f)
   , _fieldsLayoutJ(f._fieldsLayoutJ)
   , _M(f._M)
   , _N(f._N)
+  , _J(f._J)
   , _adr(f._adr)
   , _adrI(f._adrI)
   , _adrJ(f._adrJ)
@@ -288,12 +288,12 @@ feBilinearForm::~feBilinearForm()
   delete _sysElm;
 }
 
-void feBilinearForm::initializeAddressingVectors(feMetaNumber *metaNumber, int numElem)
+void feBilinearForm::initializeAddressingVectors(int numElem)
 {
   // Initialize _adr for all FE spaces
   for(size_t i = 0; i < _intSpaces.size(); i++) {
     feSpace *fS = _intSpaces[i];
-    fS->initializeAddressingVector(metaNumber->getNumbering(fS->getFieldID()), numElem, _adr[i]);
+    fS->initializeAddressingVector(numElem, _adr[i]);
   }
 
   // Initialize continuous addressing vectors in I and J
@@ -312,18 +312,18 @@ void feBilinearForm::initializeAddressingVectors(feMetaNumber *metaNumber, int n
   }
 }
 
-void feBilinearForm::initialize(feMetaNumber *metaNumber, feMesh *mesh, feSolution *sol, int numElem)
+void feBilinearForm::initialize(feSolution *sol, int numElem)
 {
-  for(size_t i = 0; i<_intSpaces.size(); i++) {
+  for(size_t i = 0; i < _intSpaces.size(); i++) {
     feSpace *fS = _intSpaces[i];
     std::vector<double> &solRef = sol->getSolutionReference();
 
     // Initialize solution on neighbouring elements (for e.g. DG fluxes)
     // if(numElem > 0){
-    //   fS->initializeAddressingVector(metaNumber->getNumbering(fS->getFieldID()), numElem - 1, _adr[i]);
+    //   fS->initializeAddressingVector(numElem - 1, _adr[i]);
     // } else{
     //   // Periodicity:
-    //   fS->initializeAddressingVector(metaNumber->getNumbering(fS->getFieldID()), _cnc->getNbElm() - 1, _adr[i]);
+    //   fS->initializeAddressingVector(_cnc->getNbElm() - 1, _adr[i]);
     // }
 
     // for(size_t k = 0; k < _adr[i].size(); ++k) {
@@ -331,10 +331,10 @@ void feBilinearForm::initialize(feMetaNumber *metaNumber, feMesh *mesh, feSoluti
     // }
 
     // if(numElem < _cnc->getNbElm() - 1){
-    //   fS->initializeAddressingVector(metaNumber->getNumbering(fS->getFieldID()), numElem + 1, _adr[i]);
+    //   fS->initializeAddressingVector(numElem + 1, _adr[i]);
     // } else{
     //   // Periodicity:
-    //   fS->initializeAddressingVector(metaNumber->getNumbering(fS->getFieldID()), 0, _adr[i]);
+    //   fS->initializeAddressingVector(0, _adr[i]);
     // }
 
     // for(size_t k = 0; k < _adr[i].size(); ++k) {
@@ -342,14 +342,14 @@ void feBilinearForm::initialize(feMetaNumber *metaNumber, feMesh *mesh, feSoluti
     // }
 
     // Initialize solution and its time derivative on current element
-    fS->initializeAddressingVector(metaNumber->getNumbering(fS->getFieldID()), numElem, _adr[i]);
+    fS->initializeAddressingVector(numElem, _adr[i]);
     for(size_t k = 0; k < _adr[i].size(); ++k) {
       _sol[i][k] = solRef[_adr[i][k]];
       _solDot[i][k] = sol->getSolDotAtDOF(_adr[i][k]);
     }
   }
 
-  mesh->getCoord(_cncGeoTag, numElem, _geoCoord);
+  _intSpaces[0]->_mesh->getCoord(_cncGeoTag, numElem, _geoCoord);
 
   // INITIALISERVADIJ
   for(size_t i = 0, count = 0; i < _fieldsLayoutI.size(); ++i) {
@@ -366,16 +366,14 @@ void feBilinearForm::initialize(feMetaNumber *metaNumber, feMesh *mesh, feSoluti
   }
 }
 
-void feBilinearForm::computeMatrix(feMetaNumber *metaNumber, feMesh *mesh, feSolution *sol,
-                                   int numElem)
+void feBilinearForm::computeMatrix(feSolution *sol, int numElem)
 {
-  (this->*feBilinearForm::ptrComputeMatrix)(metaNumber, mesh, sol, numElem);
+  (this->*feBilinearForm::ptrComputeMatrix)(sol, numElem);
 }
 
-void feBilinearForm::computeResidual(feMetaNumber *metaNumber, feMesh *mesh, feSolution *sol,
-                                     int numElem)
+void feBilinearForm::computeResidual(feSolution *sol, int numElem)
 {
-  this->initialize(metaNumber, mesh, sol, numElem);
+  this->initialize(sol, numElem);
   setResidualToZero(_M, &_Be);
   _numElem = numElem;
   _c0 = sol->getC0();
@@ -384,10 +382,9 @@ void feBilinearForm::computeResidual(feMetaNumber *metaNumber, feMesh *mesh, feS
   _sysElm->computeBe(this);
 }
 
-void feBilinearForm::computeMatrixAnalytical(feMetaNumber *metaNumber, feMesh *mesh,
-                                             feSolution *sol, int numElem)
+void feBilinearForm::computeMatrixAnalytical(feSolution *sol, int numElem)
 {
-  this->initialize(metaNumber, mesh, sol, numElem);
+  this->initialize(sol, numElem);
   setMatrixToZero(_M, _N, _Ae);
   _numElem = numElem;
   _c0 = sol->getC0();
@@ -397,10 +394,9 @@ void feBilinearForm::computeMatrixAnalytical(feMetaNumber *metaNumber, feMesh *m
   _sysElm->computeAe(this);
 }
 
-void feBilinearForm::computeMatrixFiniteDifference(feMetaNumber *metaNumber, feMesh *mesh,
-                                                   feSolution *sol, int numElem)
+void feBilinearForm::computeMatrixFiniteDifference(feSolution *sol, int numElem)
 {
-  this->initialize(metaNumber, mesh, sol, numElem);
+  this->initialize(sol, numElem);
   setMatrixToZero(_M, _N, _Ae);
 
   _numElem = numElem;

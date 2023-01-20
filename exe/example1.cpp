@@ -135,10 +135,10 @@ int main(int argc, char **argv)
   // performed in the solve step below ("makeSteps"). Two linear solvers are available:
   // MKL Pardiso (direct solver) and PETSc (collection of iterative solvers).
   feLinearSystem *system;
-  feCheck(createLinearSystem(system, PETSC, spaces, {diff, source}, &numbering, &mesh, argc, argv));
+  feCheck(createLinearSystem(system, PETSC, {diff, source}, numbering.getNbUnknowns(), argc, argv));
 
   // Post-processing tools to compute norms and whatnot
-  feNorm normU(uDomaine, &mesh, degreeQuadrature, funSol);
+  feNorm normU({uDomaine}, &mesh, degreeQuadrature, funSol);
   std::vector<feNorm *> norms = {&normU};
 
   // Create an exporter structure to write the solution for visualization. Currently the only
@@ -162,8 +162,14 @@ int main(int argc, char **argv)
   feCheck(solver->makeSteps(0));
 
   // Compute L2 norm of the error u-uh
+  feNorm norm({uDomaine}, &mesh, degreeQuadrature, funSol);
   fePostProc post(uDomaine, &mesh, &numbering, funSol);
+  norm.computeL2Norm(&sol, &mesh);
+  feInfo("L2 error = %10.10f", norm.getNorm());
   feInfo("L2 error = %10.10f", post.computeL2ErrorNorm(&sol));
+  norm.computeArea();
+  feInfo("Area = %10.10f", norm.getNorm());
+  feInfo("Area = %10.10f", post.computeMeasure());
 
   // Free the used memory
   delete diff;

@@ -302,7 +302,7 @@ void feSysElm_1D_SUPGStab::computeBe(feBilinearForm *form)
   int nG = form->_geoSpace->getNbQuadPoints();
   std::vector<double> w = form->_geoSpace->getQuadratureWeights();
   int nFunctions = form->_intSpaces[_idU]->getNbFunctions();
-  std::vector<double> &J = form->_cnc->getJacobians();
+  const std::vector<double> &J = form->_cnc->getJacobians();
 
   double kDiffusivity = _par[0];
 
@@ -345,7 +345,7 @@ void feSysElm_1D_DG_Advection::computeAe(feBilinearForm *form)
   std::vector<double> w = form->_geoSpace->getQuadratureWeights();
   double jac;
   int nFunctions = form->_intSpaces[_idU]->getNbFunctions();
-  std::vector<double> &J = form->_cnc->getJacobians();
+  const std::vector<double> &J = form->_cnc->getJacobians();
   std::vector<double> x(3, 0.0);
 
   // Element term: integral of c * dphi_i/dx * phi_j
@@ -374,7 +374,7 @@ void feSysElm_1D_DG_Advection::computeBe(feBilinearForm *form)
   int nG = form->_geoSpace->getNbQuadPoints();
   std::vector<double> w = form->_geoSpace->getQuadratureWeights();
   int nFunctions = form->_intSpaces[_idU]->getNbFunctions();
-  std::vector<double> &J = form->_cnc->getJacobians();
+  const std::vector<double> &J = form->_cnc->getJacobians();
 
   double u, jac, cVelocity;
   std::vector<double> x(3, 0.0);

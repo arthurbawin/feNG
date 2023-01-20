@@ -454,7 +454,7 @@ public:
     _dim = 1;
     _nFields = 1;
     _ID = DIFFUSION_1D;
-    _computeMatrixWithFD = true;
+     _computeMatrixWithFD = false;
   };
   ~feSysElm_1D_Diffusion() {}
   void createElementarySystem(std::vector<feSpace *> &space);

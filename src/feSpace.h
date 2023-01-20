@@ -102,7 +102,14 @@ protected:
   // Scalar field used to initialize the DOFs
   feFunction *_fct;
 
+  // Ptr to the numbering of the field associated to this space
+  feNumber *_numbering;
+
 public:
+
+  friend class feBilinearForm;
+  friend class feNorm;
+  
   // Do not use the abstract class constructor directly, call the derived classes.
   feSpace(feMesh *mesh = nullptr, const std::string &fieldID = "", const std::string &cncGeoID = "",
     feFunction *fct = nullptr, const bool useGlobalShapeFunctions = false);
@@ -118,6 +125,8 @@ public:
   void setCncGeoTag(int tag){ _cncGeoTag = tag; }
   // Assign the mesh pointer of a geometric space after the mesh has been created
   void setMeshPtr(feMesh *mesh){ _mesh = mesh; }
+  // Assign the pointer to the field numbering after the numbering has been created
+  void setNumberingPtr(feNumber *numbering){ _numbering = numbering; }
 
   // Return the attributes of the geometric connectivity on which the space is defined
   int getDim();
@@ -183,9 +192,9 @@ public:
   std::vector<double> &getSQuadraturePoints() { return _yQuad; }
   std::vector<double> &getTQuadraturePoints() { return _zQuad; }
 
-  virtual void initializeNumberingUnknowns(feNumber *number) = 0;
-  virtual void initializeNumberingEssential(feNumber *number) = 0;
-  virtual void initializeAddressingVector(feNumber *number, int numElem, std::vector<feInt> &adr) = 0;
+  virtual void initializeNumberingUnknowns() = 0;
+  virtual void initializeNumberingEssential() = 0;
+  virtual void initializeAddressingVector(int numElem, std::vector<feInt> &adr) = 0;
 
   // Evaluate prescribed scalar field
   double evalFun(const double t, const std::vector<double> &x) { return _fct->eval(t, x); }
@@ -212,8 +221,8 @@ public:
   // The result of the interpolation is stored in res.
   void interpolateField(double *field, int fieldSize, double *r, double *shape, double &res);
 
-  double interpolateField(feNumber *number, feSolution *sol, std::vector<double> &x);
-  void interpolateField_gradrs(feNumber *number, feSolution *sol, std::vector<double> &x,
+  double interpolateField(feSolution *sol, std::vector<double> &x);
+  void interpolateField_gradrs(feSolution *sol, std::vector<double> &x,
                                std::vector<double> &grad);
 
   // Interpolate vector field or derivatives at reference node r = [r,s,t]
@@ -266,9 +275,9 @@ public:
   feStatus Lphys(int iElm, std::vector<double> &x, std::vector<double> &L,
     std::vector<double> &dLdx, std::vector<double> &dLdy);
 
-  void initializeNumberingUnknowns(feNumber *number);
-  void initializeNumberingEssential(feNumber *number);
-  void initializeAddressingVector(feNumber *number, int numElem, std::vector<feInt> &adr);
+  void initializeNumberingUnknowns();
+  void initializeNumberingEssential();
+  void initializeAddressingVector(int numElem, std::vector<feInt> &adr);
 };
 
 //
@@ -294,9 +303,9 @@ public:
   feStatus Lphys(int iElm, std::vector<double> &x, std::vector<double> &L,
                          std::vector<double> &dLdx, std::vector<double> &dLdy);
 
-  void initializeNumberingUnknowns(feNumber *number);
-  void initializeNumberingEssential(feNumber *number);
-  void initializeAddressingVector(feNumber *number, int numElem, std::vector<feInt> &adr);
+  void initializeNumberingUnknowns();
+  void initializeNumberingEssential();
+  void initializeAddressingVector(int numElem, std::vector<feInt> &adr);
 };
 
 //
@@ -322,9 +331,9 @@ public:
   feStatus Lphys(int iElm, std::vector<double> &x, std::vector<double> &L,
                          std::vector<double> &dLdx, std::vector<double> &dLdy);
 
-  void initializeNumberingUnknowns(feNumber *number);
-  void initializeNumberingEssential(feNumber *number);
-  void initializeAddressingVector(feNumber *number, int numElem, std::vector<feInt> &adr);
+  void initializeNumberingUnknowns();
+  void initializeNumberingEssential();
+  void initializeAddressingVector(int numElem, std::vector<feInt> &adr);
 };
 
 //
@@ -350,9 +359,9 @@ public:
   feStatus Lphys(int iElm, std::vector<double> &x, std::vector<double> &L,
     std::vector<double> &dLdx, std::vector<double> &dLdy);
 
-  void initializeNumberingUnknowns(feNumber *number);
-  void initializeNumberingEssential(feNumber *number);
-  void initializeAddressingVector(feNumber *number, int numElem, std::vector<feInt> &adr);
+  void initializeNumberingUnknowns();
+  void initializeNumberingEssential();
+  void initializeAddressingVector(int numElem, std::vector<feInt> &adr);
 };
 
 //
@@ -378,9 +387,9 @@ public:
   feStatus Lphys(int iElm, std::vector<double> &x, std::vector<double> &L,
                          std::vector<double> &dLdx, std::vector<double> &dLdy);
 
-  void initializeNumberingUnknowns(feNumber *number);
-  void initializeNumberingEssential(feNumber *number);
-  void initializeAddressingVector(feNumber *number, int numElem, std::vector<feInt> &adr);
+  void initializeNumberingUnknowns();
+  void initializeNumberingEssential();
+  void initializeAddressingVector(int numElem, std::vector<feInt> &adr);
 };
 
 //
@@ -406,9 +415,9 @@ public:
   feStatus Lphys(int iElm, std::vector<double> &x, std::vector<double> &L,
                          std::vector<double> &dLdx, std::vector<double> &dLdy);
 
-  void initializeNumberingUnknowns(feNumber *number);
-  void initializeNumberingEssential(feNumber *number);
-  void initializeAddressingVector(feNumber *number, int numElem, std::vector<feInt> &adr);
+  void initializeNumberingUnknowns();
+  void initializeNumberingEssential();
+  void initializeAddressingVector(int numElem, std::vector<feInt> &adr);
 };
 
 //
@@ -435,9 +444,9 @@ public:
   feStatus Lphys(int iElm, std::vector<double> &x, std::vector<double> &L,
                          std::vector<double> &dLdx, std::vector<double> &dLdy);
 
-  void initializeNumberingUnknowns(feNumber *number);
-  void initializeNumberingEssential(feNumber *number);
-  void initializeAddressingVector(feNumber *number, int numElem, std::vector<feInt> &adr);
+  void initializeNumberingUnknowns();
+  void initializeNumberingEssential();
+  void initializeAddressingVector(int numElem, std::vector<feInt> &adr);
 };
 
 //
@@ -466,9 +475,9 @@ public:
   std::vector<double> dLds(double *r);
   std::vector<double> dLdt(double *r);
 
-  void initializeNumberingUnknowns(feNumber *number);
-  void initializeNumberingEssential(feNumber *number);
-  void initializeAddressingVector(feNumber *number, int numElem, std::vector<feInt> &adr);
+  void initializeNumberingUnknowns();
+  void initializeNumberingEssential();
+  void initializeAddressingVector(int numElem, std::vector<feInt> &adr);
 };
 
 //
@@ -499,9 +508,9 @@ public:
     exit(-1);
   };
 
-  void initializeNumberingUnknowns(feNumber *number);
-  void initializeNumberingEssential(feNumber *number);
-  void initializeAddressingVector(feNumber *number, int numElem, std::vector<feInt> &adr);
+  void initializeNumberingUnknowns();
+  void initializeNumberingEssential();
+  void initializeAddressingVector(int numElem, std::vector<feInt> &adr);
 };
 
 //
@@ -528,9 +537,9 @@ public:
   feStatus Lphys(int iElm, std::vector<double> &x, std::vector<double> &L,
                          std::vector<double> &dLdx, std::vector<double> &dLdy);
 
-  void initializeNumberingUnknowns(feNumber *number);
-  void initializeNumberingEssential(feNumber *number);
-  void initializeAddressingVector(feNumber *number, int numElem, std::vector<feInt> &adr);
+  void initializeNumberingUnknowns();
+  void initializeNumberingEssential();
+  void initializeAddressingVector(int numElem, std::vector<feInt> &adr);
 };
 
 //
@@ -561,9 +570,9 @@ public:
     exit(-1);
   };
 
-  void initializeNumberingUnknowns(feNumber *number);
-  void initializeNumberingEssential(feNumber *number);
-  void initializeAddressingVector(feNumber *number, int numElem, std::vector<feInt> &adr);
+  void initializeNumberingUnknowns();
+  void initializeNumberingEssential();
+  void initializeAddressingVector(int numElem, std::vector<feInt> &adr);
 };
 
 //
@@ -594,9 +603,9 @@ public:
     exit(-1);
   };
 
-  void initializeNumberingUnknowns(feNumber *number);
-  void initializeNumberingEssential(feNumber *number);
-  void initializeAddressingVector(feNumber *number, int numElem, std::vector<feInt> &adr);
+  void initializeNumberingUnknowns();
+  void initializeNumberingEssential();
+  void initializeAddressingVector(int numElem, std::vector<feInt> &adr);
 };
 
 //
@@ -627,9 +636,9 @@ public:
     exit(-1);
   };
 
-  void initializeNumberingUnknowns(feNumber *number);
-  void initializeNumberingEssential(feNumber *number);
-  void initializeAddressingVector(feNumber *number, int numElem, std::vector<feInt> &adr);
+  void initializeNumberingUnknowns();
+  void initializeNumberingEssential();
+  void initializeAddressingVector(int numElem, std::vector<feInt> &adr);
 };
 
 #endif

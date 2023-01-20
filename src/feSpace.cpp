@@ -1,6 +1,5 @@
 #include "feSpace.h"
 #include "feMesh.h"
-#include "feNumber.h"
 #include "feSolution.h"
 
 extern int FE_VERBOSE;
@@ -278,7 +277,7 @@ EigenMat feSpace::innerProductBasisFunctions(int iElm)
       case 2: {
         EigenMat m = EigenMat::Zero(6, 6);
 
-        std::vector<double> &J = this->getCncGeo()->getJacobians();
+        const std::vector<double> &J = this->getCncGeo()->getJacobians();
 
         int n = 6;
         int ex[6] = {0, 1, 0, 2, 1, 0};
@@ -310,7 +309,7 @@ EigenMat feSpace::innerProductBasisFunctions(int iElm)
 
 double feSpace::innerProductBasisFunctions(int iElm, int ex, int ey)
 {
-  std::vector<double> &J = this->getCncGeo()->getJacobians();
+  const std::vector<double> &J = this->getCncGeo()->getJacobians();
 
   double res = 0.0;
   for(int k = 0; k < _nQuad; ++k) {
@@ -358,7 +357,7 @@ double feSpace::interpolateField(std::vector<double> &field, int iElm, std::vect
   return res;
 }
 
-double feSpace::interpolateField(feNumber *number, feSolution *sol, std::vector<double> &x)
+double feSpace::interpolateField(feSolution *sol, std::vector<double> &x)
 {
   double u[3];
   int elm = -1;
@@ -376,7 +375,7 @@ double feSpace::interpolateField(feNumber *number, feSolution *sol, std::vector<
   std::vector<feInt> adr(this->getNbFunctions());
   std::vector<double> solution(adr.size());
   std::vector<double> &solVec = sol->getSolutionReference();
-  this->initializeAddressingVector(number, elm, adr);
+  this->initializeAddressingVector(elm, adr);
   for(size_t i = 0; i < adr.size(); ++i) {
     solution[i] = solVec[adr[i]];
   }
@@ -449,7 +448,7 @@ double feSpace::interpolateField_yDerivative(std::vector<double> &field, int iEl
   return res;
 }
 
-void feSpace::interpolateField_gradrs(feNumber *number, feSolution *sol, std::vector<double> &x,
+void feSpace::interpolateField_gradrs(feSolution *sol, std::vector<double> &x,
                                       std::vector<double> &grad)
 {
   double u[3];
@@ -464,7 +463,7 @@ void feSpace::interpolateField_gradrs(feNumber *number, feSolution *sol, std::ve
     std::vector<feInt> adr(this->getNbFunctions());
     std::vector<double> solution(adr.size());
     std::vector<double> &solVec = sol->getSolutionReference();
-    this->initializeAddressingVector(number, elm, adr);
+    this->initializeAddressingVector(elm, adr);
     for(size_t i = 0; i < adr.size(); ++i) {
       solution[i] = solVec[adr[i]];
     }

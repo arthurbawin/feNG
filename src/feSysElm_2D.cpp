@@ -17,7 +17,7 @@ void feSysElm_2D_Source::computeBe(feBilinearForm *form)
   int nG = form->_geoSpace->getNbQuadPoints();
   std::vector<double> &w = form->_geoSpace->getQuadratureWeights();
   int nFunctions = form->_intSpaces[_idU]->getNbFunctions();
-  std::vector<double> &J = form->_cnc->getJacobians();
+  const std::vector<double> &J = form->_cnc->getJacobians();
   bool globalFunctions = form->_intSpaces[_idU]->useGlobalFunctions();
 
   double jac;
@@ -60,7 +60,7 @@ void feSysElm_2D_Diffusion::computeAe(feBilinearForm *form)
   std::vector<double> &w = form->_geoSpace->getQuadratureWeights();
   double kD = _par;
   int nFunctions = form->_intSpaces[_idU]->getNbFunctions();
-  std::vector<double> &J = form->_cnc->getJacobians();
+  const std::vector<double> &J = form->_cnc->getJacobians();
   // bool globalFunctions = form->_intSpaces[_idU]->useGlobalFunctions();
 
   double jac;

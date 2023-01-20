@@ -68,7 +68,7 @@ double Polynomial::integrate(feMesh *mesh, std::string cncGeoID, int iElm)
   feSpace *geoSpace = mesh->getGeometricSpace(cncGeoID);
 
   int n = geoSpace->getNbQuadPoints();
-  std::vector<double> &J = geoSpace->getCncGeo()->getJacobians();
+  const std::vector<double> &J = geoSpace->getCncGeo()->getJacobians();
   std::vector<double> &w = geoSpace->getQuadratureWeights();
   std::vector<double> x(3, 0.0);
   for(int i = 0; i < n; ++i) {
@@ -97,7 +97,7 @@ double Polynomial::innerProduct(Polynomial &other, feMesh *mesh, std::string cnc
 
   int n = geoSpace->getNbQuadPoints();
   // printf("looping on n = %d\n", n);
-  std::vector<double> &J = geoSpace->getCncGeo()->getJacobians();
+  const std::vector<double> &J = geoSpace->getCncGeo()->getJacobians();
   std::vector<double> &w = geoSpace->getQuadratureWeights();
   // printf("Jsize = %d\n", J.size());
   // printf("wsize = %d\n", w.size());

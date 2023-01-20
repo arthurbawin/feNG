@@ -64,6 +64,7 @@ public:
   std::vector<double> &getSolutionReferenceDot() { return _dsoldt; }
 
   double getSolAtDOF(int iDOF) { return _sol[iDOF]; }
+  void getSolAtDOF(const std::vector<feInt> &addressing, std::vector<double> &sol);
   void setSolAtDOF(int iDOF, double val) { _sol[iDOF] = val; }
   void incrementSolAtDOF(int iDOF, double val) { _sol[iDOF] += val; }
   void setSolFromContainer(feSolutionContainer *solContainer, int iSol = 0);
@@ -74,13 +75,13 @@ public:
   void setSolDotToZero();
 
   // Initialize the unknown and essential DOFs
-  void initializeUnknowns(feMesh *mesh, feMetaNumber *metaNumber);
-  void initializeEssentialBC(feMesh *mesh, feMetaNumber *metaNumber,
-                             feSolutionContainer *solContainer = nullptr);
+  void initializeUnknowns(feMesh *mesh);
+  void initializeEssentialBC(feMesh *mesh, feSolutionContainer *solContainer = nullptr);
+
   // Should be moved elsewhere
   void initializeTemporalSolution(double t0, double t1, int nTimeSteps);
 
-  void copySpace(feMesh *mesh, feMetaNumber *metaNumber, feSpace *s1, feSpace *s2);
+  void copySpace(feMesh *mesh, feSpace *s1, feSpace *s2);
 
   void printSol(std::string file = "");
 };

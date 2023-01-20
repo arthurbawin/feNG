@@ -14,7 +14,6 @@ protected:
   char **_argv;
 #if defined(HAVE_PETSC)
   PetscInt _nInc;
-  PetscInt _nDofs;
   Mat _A;
   Vec _res; // True residual
   Vec _dx;
@@ -25,28 +24,26 @@ protected:
 #endif
 
 public:
-  feLinearSystemPETSc(int argc, char **argv, std::vector<feBilinearForm *> bilinearForms,
-                      feMetaNumber *metaNumber, feMesh *mesh);
-  virtual ~feLinearSystemPETSc();
+  feLinearSystemPETSc(int argc, char **argv, std::vector<feBilinearForm *> bilinearForms, int numUnknowns);
+  ~feLinearSystemPETSc();
 
-  virtual void initialize();
-  virtual void finalize();
-  virtual void setToZero();
-  virtual void setMatrixToZero();
-  virtual void setResidualToZero();
-  virtual void assembleMatrices(feSolution *sol);
-  virtual void assembleResiduals(feSolution *sol);
-  virtual void assemble(feSolution *sol);
-  virtual void solve(double *normDx, double *normResidual, double *normAxb, int *nIter);
-  virtual void correctSolution(feSolution *sol);
-  virtual void assignResidualToDCResidual(feSolutionContainer *solContainer);
-  virtual void applyCorrectionToResidual(double coeff, std::vector<double> &d);
-  virtual void viewMatrix();
-  virtual void printResidual();
+  void setToZero();
+  void setMatrixToZero();
+  void setResidualToZero();
+  void assemble(feSolution *sol);
+  void assembleMatrices(feSolution *sol);
+  void assembleResiduals(feSolution *sol);
+  void solve(double *normDx, double *normResidual, double *normAxb, int *nIter);
+  void correctSolution(feSolution *sol);
+  void assignResidualToDCResidual(feSolutionContainer *solContainer);
+  void applyCorrectionToResidual(double coeff, std::vector<double> &d);
+  void viewMatrix();
+  void printRHS();
+
+private:
+  void initialize();
+  void finalize();
+  
 };
-
-// To call at the very beginning and the very end of the program
-void petscInitialize(int argc, char **argv);
-void petscFinalize();
 
 #endif

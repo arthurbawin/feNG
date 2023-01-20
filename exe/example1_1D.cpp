@@ -93,7 +93,7 @@ int main(int argc, char **argv)
   feMetaNumber numbering(&mesh, spaces, essentialSpaces);
 
   feSolution sol(numbering.getNbDOFs(), spaces, essentialSpaces);
-  sol.initializeUnknowns(&mesh, &numbering);
+  sol.initializeUnknowns(&mesh);
 
   feBilinearForm *adv, *diff, *source;
   feCheck(createBilinearForm(    adv, {uDomaine}, new feSysElm_1D_Advection(cVelocity)) );
@@ -101,9 +101,9 @@ int main(int argc, char **argv)
   feCheck(createBilinearForm( source, {uDomaine}, new feSysElm_1D_Source(funSource))    );
 
   feLinearSystem *system;
-  feCheck(createLinearSystem(system, PETSC, spaces, {adv, diff, source}, &numbering, &mesh, argc, argv));
+  feCheck(createLinearSystem(system, PETSC, {adv, diff, source}, numbering.getNbUnknowns(), argc, argv));
 
-  feNorm normU(uDomaine, &mesh, degreeQuadrature, funSol);
+  feNorm normU({uDomaine}, &mesh, degreeQuadrature, funSol);
   std::vector<feNorm *> norms = {&normU};
 
   feExporter *exporter;

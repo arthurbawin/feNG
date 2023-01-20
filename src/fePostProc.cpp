@@ -42,8 +42,7 @@ double fePostProc::computeSolutionIntegral(feSolution *sol)
 #endif
   for(int iElm = 0; iElm < nElm; ++iElm) {
     adr.resize(_intSpace->getNbFunctions());
-    _intSpace->initializeAddressingVector(_metaNumber->getNumbering(_intSpace->getFieldID()), iElm,
-                                          adr);
+    _intSpace->initializeAddressingVector(iElm, adr);
 
     solution.resize(adr.size());    
     for(size_t i = 0; i < adr.size(); ++i) {
@@ -107,8 +106,7 @@ double fePostProc::computeL2ErrorNorm(feSolution *sol)
 #endif
   for(int iElm = 0; iElm < nElm; ++iElm) {
     adr.resize(_intSpace->getNbFunctions());
-    _intSpace->initializeAddressingVector(_metaNumber->getNumbering(_intSpace->getFieldID()), iElm,
-                                          adr);
+    _intSpace->initializeAddressingVector(iElm, adr);
     solution.resize(adr.size());
     for(size_t i = 0; i < adr.size(); ++i) {
       solution[i] = solVec[adr[i]];

@@ -362,7 +362,6 @@ void feNumber::printCodeEdges()
 feMetaNumber::feMetaNumber(feMesh *mesh, const std::vector<feSpace *> &spaces,
                            const std::vector<feSpace *> &essentialSpaces)
 {
-  // AJOUTECHAMP
   for(feSpace *fS : spaces) {
     if(std::find(_fieldIDs.begin(), _fieldIDs.end(), fS->getFieldID()) == _fieldIDs.end())
       _fieldIDs.push_back(fS->getFieldID());
@@ -377,24 +376,29 @@ feMetaNumber::feMetaNumber(feMesh *mesh, const std::vector<feSpace *> &spaces,
     if(err)
       feWarning("Condition essentielle imposée sur un champ ou une connectivité non présent(e).");
   }
-  // Une numerotation pour chaque champ
+
+  // Create one numbering for each field
   for(int i = 0; i < _nFields; ++i) {
     _numberings[_fieldIDs[i]] = new feNumber(mesh);
   }
 
-  // INITIALISE_FENUMER
   for(feSpace *fS : spaces) {
-    fS->initializeNumberingUnknowns(_numberings[fS->getFieldID()]);
+    fS->setNumberingPtr(_numberings[fS->getFieldID()]);
   }
-  // INITIALISE_FENUMER_CLMDOF_ESSENTIAL
+
+  // Initialize the numbering through the FE spaces
+  for(feSpace *fS : spaces) {
+    fS->initializeNumberingUnknowns();
+  }
   for(feSpace *fSBC : essentialSpaces) {
-    fSBC->initializeNumberingEssential(_numberings[fSBC->getFieldID()]);
+    fSBC->initializeNumberingEssential();
   }
-  // PREPARER_NUMEROTATION
+
   for(int i = 0; i < _nFields; ++i) {
     _numberings[_fieldIDs[i]]->prepareNumbering();
   }
-  // NUMEROTER
+  
+  // Number the DOFs
   int globalNum = 0;
   for(int i = 0; i < _nFields; ++i) {
     globalNum = _numberings[_fieldIDs[i]]->numberUnknowns(globalNum);

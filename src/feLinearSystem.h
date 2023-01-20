@@ -11,72 +11,89 @@
 /* Supported linear solvers */
 typedef enum { MKLPARDISO, PETSC } linearSolverType;
 
+// To call at the very beginning and the very end of the program
+void petscInitialize(int argc, char **argv);
+void petscFinalize();
+
+// Create a linear system and perform safety checks.
+// This is the recommended way of creating a linear system.
+// Call within feCheck( ... ) to safely exit if a problem arises.
+//
+//        system: pointer to the linear system, initially undefined and assigned
+//                during the call.
+// bilinearForms: vector of (bi-)linear forms to assemble
+//   numUnknowns: total number of unknowns (dimension of the system)
+
+// argc and argv are provided for PETSc command line options
+feStatus createLinearSystem(feLinearSystem *&system,
+  linearSolverType type,
+  std::vector<feBilinearForm *> bilinearForms,
+  int numUnknowns,
+  int argc = 0, char **argv = nullptr);
+
+//
+// Abstract class handling the linear system to be solved at each step
+// of the nonlinear solver.
+//
 class feLinearSystem
 {
 protected:
+  // The number of (bi-)linear forms that require to 
+  // assemble a residual or a residual and a matrix
   int _numMatrixForms;
   int _numResidualForms;
-  std::vector<feBilinearForm *> _formMatrices;
-  std::vector<feBilinearForm *> _formResiduals;
-  feMetaNumber *_metaNumber;
-  feMesh *_mesh;
 
+  // The linear forms with a residual and a matrix
+  std::vector<feBilinearForm *> _formMatrices;
+  // The linear forms with only a residual
+  std::vector<feBilinearForm *> _formResiduals;
+
+  // Recompute the jacobian matrix?
   bool recomputeMatrix;
 
 public:
-  feLinearSystem(std::vector<feBilinearForm *> bilinearForms, feMetaNumber *metaNumber,
-                 feMesh *mesh)
-    : _metaNumber(metaNumber), _mesh(mesh), recomputeMatrix(false)
-  {
-    _numMatrixForms = 0;
-    _numResidualForms = bilinearForms.size();
-
-#if defined(HAVE_OMP)
-    int nThreads = omp_get_max_threads();
-#else
-    int nThreads = 1;
-#endif
-
-    for(int i = 0; i < nThreads; ++i) {
-      for(feBilinearForm *f : bilinearForms) {
-        #if defined(HAVE_OMP)
-            feBilinearForm *fCpy = new feBilinearForm(*f);
-            _formResiduals.push_back(fCpy);
-            if(f->hasMatrix()) _formMatrices.push_back(fCpy);
-        #else
-            _formResiduals.push_back(f);
-            if(f->hasMatrix()) _formMatrices.push_back(f);
-        #endif
-        if(f->hasMatrix() && i == 0) _numMatrixForms++;
-      }
-    }
-  };
-
+  // Create an abstract linear system. Do not call directly, 
+  // call the derived constructors instead.
+  feLinearSystem(std::vector<feBilinearForm *> bilinearForms);
   virtual ~feLinearSystem() {}
 
   bool getRecomputeStatus() { return recomputeMatrix; }
   void setRecomputeStatus(bool status) { recomputeMatrix = status; }
 
-  virtual void initialize(){};
+  // Reset the matrix and/or the right-hand side
   virtual void setToZero() = 0;
-  virtual void setMatrixToZero(){};
-  virtual void setResidualToZero(){};
-  virtual void assembleMatrices(feSolution *sol){};
-  virtual void assembleResiduals(feSolution *sol){};
-  virtual void assemble(feSolution *sol){};
-  virtual void solve(double *normDx, double *normResidual, double *normAxb, int *nIter){};
-  virtual void correctSolution(feSolution *sol){};
-  virtual void assignResidualToDCResidual(feSolutionContainer *solContainer){};
-  virtual void applyCorrectionToResidual(double coeff, std::vector<double> &d){};
-  virtual void viewMatrix(){};
-  virtual void printResidual(){};
-  virtual std::vector<feBilinearForm *> getformMatrices() { return _formMatrices; };
-  virtual std::vector<feBilinearForm *> getformResiduals() { return _formResiduals; };
-};
+  virtual void setMatrixToZero() = 0;
+  virtual void setResidualToZero() = 0;
 
-feStatus createLinearSystem(feLinearSystem *&system, linearSolverType type,
-                            std::vector<feSpace *> allFESpaces,
-                            std::vector<feBilinearForm *> bilinearForms, feMetaNumber *metaNumber,
-                            feMesh *mesh, int argc = 0, char **argv = nullptr);
+  // Assemble the matrix and/or the right-hand side
+  virtual void assemble(feSolution *sol) = 0;
+  virtual void assembleMatrices(feSolution *sol) = 0;
+  virtual void assembleResiduals(feSolution *sol) = 0;
+
+  // Solve the linear system Ax-b
+  //
+  //       normDx: norm of the solution vector x (correction in the Newton-Rapshon iteration)
+  // normResidual: norm of the RHS b (residual in the Newton-Raphson iteration)
+  //      normAxb: norm of the residual Ax-b
+  //        nIter: number of iteration used to solve (0 for direct solver)
+  virtual void solve(double *normDx, double *normResidual, double *normAxb, int *nIter) = 0;
+
+  // Apply the Newton-Raphson correction u_new = u_old + du
+  virtual void correctSolution(feSolution *sol) = 0;
+
+  // Assign the RHS to the residual vector of the solution container.
+  // Used in DC (deferred correction) time integration schemes to
+  // improve the time derivative.
+  virtual void assignResidualToDCResidual(feSolutionContainer *solContainer) = 0;
+
+  // Perform RHS += coeff * d
+  // Used in DC schemes.
+  virtual void applyCorrectionToResidual(double coeff, std::vector<double> &d) = 0;
+
+  // Print the matrix to the console or PETSc viewer
+  virtual void viewMatrix() = 0;
+  // Print the RHS to the console
+  virtual void printRHS() = 0;
+};
 
 #endif

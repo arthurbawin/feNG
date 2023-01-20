@@ -25,7 +25,7 @@ int main(int argc, char **argv)
   feMetaNumber numbering(&mesh, spaces, essentialSpaces);
 
   feSolution sol(numbering.getNbDOFs(), spaces, essentialSpaces);
-  sol.initializeUnknowns(&mesh, &numbering);
+  sol.initializeUnknowns(&mesh);
 
   int nInteriorPlotNodes = 40;
   feBasicViewer viewer("Testing the graphic window", mesh.getNbInteriorElems(), nInteriorPlotNodes);

@@ -2,15 +2,12 @@
 #define _FECOMPRESSEDROWSTORAGE_
 
 #include "feNG.h"
-#include "feMesh.h"
-#include "feNumber.h"
 #include "feBilinearForm.h"
 
 class feCompressedRowStorage
 {
 public:
-  feCompressedRowStorage(feMetaNumber *metaNumber, feMesh *mesh,
-                         std::vector<feBilinearForm *> &formMatrices, int numMatrixForms);
+  feCompressedRowStorage(int numUnknowns, std::vector<feBilinearForm *> &formMatrices, int numMatrixForms);
   ~feCompressedRowStorage()
   {
     if(nnz != NULL) delete[] nnz;
@@ -70,8 +67,7 @@ private:
 class feCompressedRowStorageMklPardiso : public feCompressedRowStorage
 {
 public:
-  feCompressedRowStorageMklPardiso(feMetaNumber *metaNumber, feMesh *mesh,
-                                   std::vector<feBilinearForm *> &formMatrices, int numMatrixForms);
+  feCompressedRowStorageMklPardiso(int numUnknowns, std::vector<feBilinearForm *> &formMatrices, int numMatrixForms);
   ~feCompressedRowStorageMklPardiso()
   {
     if(rangee != NULL) delete[] rangee;

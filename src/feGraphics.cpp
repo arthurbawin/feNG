@@ -125,8 +125,6 @@ void feBasicViewer::draw1DCurve(feMesh &mesh,
   std::vector<double> xloc;
   std::vector<feInt> adr(space->getNbFunctions());
 
-  feNumber *n = numbering.getNumbering(space->getFieldID());
-
   int elm, cnt = 0;
   double r[3], eps = 1e-4;
   for(int iElm = 0; iElm < _nElm; ++iElm) {
@@ -149,7 +147,7 @@ void feBasicViewer::draw1DCurve(feMesh &mesh,
       // FE solution uh at plot point x
       xloc = {_x[cnt], 0., 0.};
       if(mesh.locateVertex(xloc.data(), elm, r)){
-        space->initializeAddressingVector(n, elm, adr);
+        space->initializeAddressingVector(elm, adr);
         for(size_t i = 0; i < adr.size(); ++i) {
           elmSolution[i] = sol[adr[i]];
         }

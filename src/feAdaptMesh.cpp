@@ -21,7 +21,7 @@ double pointwiseErrorCallback(double *x)
   // double recovery = activeRecovery->evalDerivative(0, pos);
   double recovery = exactSolution->eval(0, pos);
   // The finite element solution interpolated at x
-  double uh = activeIntSpace->interpolateField(activeNumbering, activeSolution, pos);
+  double uh = activeIntSpace->interpolateField(activeSolution, pos);
 
   return recovery - uh;
 }
@@ -71,7 +71,7 @@ double errorSquaredCallback(double *xa, double *xb, double *xc, double *xab, dou
     // double recovery = activeRecovery->evalDerivative(0, pos);
     double recovery = exactSolution->eval(0, pos);
     // The finite element solution interpolated at x
-    double uh = activeIntSpace->interpolateField(activeNumbering, activeSolution, pos);
+    double uh = activeIntSpace->interpolateField(activeSolution, pos);
 
     e2 += weights[i] * (recovery - uh) * (recovery - uh) * detJ;
   }

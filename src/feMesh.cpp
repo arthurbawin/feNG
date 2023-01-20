@@ -30,6 +30,17 @@ feCncGeo *feMesh::getCncGeoByTag(int cncGeoTag) const
   return _cncGeo[cncGeoTag];
 }
 
+void feMesh::getCoord(const feCncGeo *cnc, const int numElem, std::vector<double> &geoCoord)
+{
+  int nNodePerElem = cnc->getNbNodePerElem();
+  for(int i = 0; i < nNodePerElem; ++i) {
+    Vertex V = _vertices[cnc->getNodeConnectivity(numElem, i)];
+    geoCoord[3 * i + 0] = V.x();
+    geoCoord[3 * i + 1] = V.y();
+    geoCoord[3 * i + 2] = V.z();
+  }
+}
+
 void feMesh::getCoord(std::string const &cncGeoID, const int numElem, std::vector<double> &geoCoord)
 {
   feCncGeo *cnc = getCncGeoByName(cncGeoID);
@@ -433,8 +444,8 @@ void feMesh2DP1::transfer(feMesh2DP1 *otherMesh, feMetaNumber *myMN, feMetaNumbe
           int nDOFPerElem = fS2->getNbFunctions();
           int cncGeoTag = fS2->getCncGeoTag();
           const std::vector<double> &Lcoor = fS2->getLcoor();
-          feNumber *number1 = myMN->getNumbering(fS1->getFieldID());
-          feNumber *number2 = otherMN->getNumbering(fS2->getFieldID());
+          // feNumber *number1 = myMN->getNumbering(fS1->getFieldID());
+          // feNumber *number2 = otherMN->getNumbering(fS2->getFieldID());
           feSpace *geoSpace2 = fS2->getCncGeo()->getFeSpace();
 
           std::vector<feInt> adr1(fS1->getNbFunctions());
@@ -442,7 +453,7 @@ void feMesh2DP1::transfer(feMesh2DP1 *otherMesh, feMetaNumber *myMN, feMetaNumbe
           feInfo("taille %d", 3 * fS2->getCncGeo()->getNbNodePerElem());
           std::vector<double> geoCoord(3 * fS2->getCncGeo()->getNbNodePerElem(),0.);
           for(int iElm = 0; iElm < nElm; ++iElm) {
-            fS2->initializeAddressingVector(number2, iElm, adr2);
+            fS2->initializeAddressingVector(iElm, adr2);
             otherMesh->getCoord(cncGeoTag, iElm, geoCoord);
             // Loop over the DOFs of the element of the new mesh
             for(int j = 0; j < nDOFPerElem; ++j) {
@@ -464,10 +475,10 @@ void feMesh2DP1::transfer(feMesh2DP1 *otherMesh, feMetaNumber *myMN, feMetaNumbe
                 t->xyz2uvw(x.data(), r2);
                 bool isInside = t->isInside(r2[0], r2[1], r2[2]);
                 if(isInside) {
-                  fS1->initializeAddressingVector(
-                    number1, t->getTag(),
-                    adr1); // ATTENTION : I give the triangle tag as element number.
-                           // Only works on triangles, not on 1D boundary elements.
+                  // ATTENTION : I give the triangle tag as element number.
+                  // Only works on triangles, not on 1D boundary elements.
+                  fS1->initializeAddressingVector(t->getTag(), adr1); 
+                  
                   for(int iSol = 0; iSol < nSol; ++iSol) {
                     std::vector<double> sol1(adr1.size());
                     std::vector<double> &solVec1 = solutionContainer->getSolution(iSol);

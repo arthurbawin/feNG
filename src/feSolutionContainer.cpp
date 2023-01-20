@@ -15,8 +15,8 @@ feSolutionContainer::feSolutionContainer(int nSol, double tn, feMetaNumber *meta
 void feSolutionContainer::initialize(feSolution *sol, feMesh *mesh, feMetaNumber *metaNumber)
 {
   sol->setCurrentTime(_t[0]);
-  sol->initializeUnknowns(mesh, metaNumber);
-  sol->initializeEssentialBC(mesh, metaNumber);
+  sol->initializeUnknowns(mesh);
+  sol->initializeEssentialBC(mesh);
   _sol[0] = sol->getSolutionCopy();
   _fResidual[0].resize(_nDofs);
   // if(_nSol>1){
@@ -144,8 +144,8 @@ void initializeBDF2(feSolution *sol, feMetaNumber *metaNumber, feMesh *mesh,
   solBDF2->_cn[0] = cn[0];
   solBDF2->_cn[1] = cn[1];
   solBDF2->_cn[2] = cn[2];
-  sol->initializeEssentialBC(mesh, metaNumber);
-  sol->initializeEssentialBC(mesh, metaNumber, solBDF2);
+  sol->initializeEssentialBC(mesh);
+  sol->initializeEssentialBC(mesh, solBDF2);
   for(int i = 0; i < nDOF; ++i) {
   }
 }
@@ -194,8 +194,8 @@ void initializeDC2F(feSolution *sol, feMetaNumber *metaNumber, feMesh *mesh,
   sol->setCurrentTime(tn);
   solDC2F->_cn[0] = cn[0];
   solDC2F->_cn[1] = cn[1];
-  sol->initializeEssentialBC(mesh, metaNumber);
-  sol->initializeEssentialBC(mesh, metaNumber, solDC2F);
+  sol->initializeEssentialBC(mesh);
+  sol->initializeEssentialBC(mesh, solDC2F);
 }
 
 void initializeBDF1(feSolution *sol, feMetaNumber *metaNumber, feMesh *mesh,
@@ -228,8 +228,8 @@ void initializeBDF1(feSolution *sol, feMetaNumber *metaNumber, feMesh *mesh,
   sol->setCurrentTime(tn);
   solBDF1->_cn[0] = cn[0];
   solBDF1->_cn[1] = cn[1];
-  sol->initializeEssentialBC(mesh, metaNumber);
-  sol->initializeEssentialBC(mesh, metaNumber, solBDF1);
+  sol->initializeEssentialBC(mesh);
+  sol->initializeEssentialBC(mesh, solBDF1);
 }
 
 void initializeDC3(feSolution *sol, feMetaNumber *metaNumber, feMesh *mesh, feSolutionBDF2 *solBDF2,
@@ -280,8 +280,8 @@ void initializeDC3(feSolution *sol, feMetaNumber *metaNumber, feMesh *mesh, feSo
   solDC3->_cn[0] = cn[0];
   solDC3->_cn[1] = cn[1];
   solDC3->_cn[2] = cn[2];
-  sol->initializeEssentialBC(mesh, metaNumber);
-  sol->initializeEssentialBC(mesh, metaNumber, solDC3);
+  sol->initializeEssentialBC(mesh);
+  sol->initializeEssentialBC(mesh, solDC3);
 }
 
 void initializeDC3F_centered(feSolution *sol, feMetaNumber *metaNumber, feMesh *mesh,
@@ -337,8 +337,8 @@ void initializeDC3F_centered(feSolution *sol, feMetaNumber *metaNumber, feMesh *
   solDC3->_cn[0] = cn[0];
   solDC3->_cn[1] = cn[1];
   // solDC3->_cn[2] = cn[2];
-  sol->initializeEssentialBC(mesh, metaNumber);
-  sol->initializeEssentialBC(mesh, metaNumber, solDC3);
+  sol->initializeEssentialBC(mesh);
+  sol->initializeEssentialBC(mesh, solDC3);
 }
 
 void initializeDC3F(feSolution *sol, feMetaNumber *metaNumber, feMesh *mesh,
@@ -394,8 +394,8 @@ void initializeDC3F(feSolution *sol, feMetaNumber *metaNumber, feMesh *mesh,
   sol->setCurrentTime(tn);
   solDC3->_cn[0] = cn[0];
   solDC3->_cn[1] = cn[1];
-  sol->initializeEssentialBC(mesh, metaNumber);
-  sol->initializeEssentialBC(mesh, metaNumber, solDC3);
+  sol->initializeEssentialBC(mesh);
+  sol->initializeEssentialBC(mesh, solDC3);
 }
 
 void initializeDC4F(feSolution *sol, feMetaNumber *metaNumber, feMesh *mesh,

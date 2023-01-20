@@ -175,7 +175,7 @@ void feExporterVTK::writeField(std::ostream &output, feCncGeo *cnc, feSpace *int
       v = _mesh->getVertex(iVertex);
       x = {v->x(), v->y(), v->z()};
       _mesh->locateVertex(x.data(), elm, r);
-      intSpace->initializeAddressingVector(n, elm, adr);
+      intSpace->initializeAddressingVector(elm, adr);
 
       // initialise Solution
       for(size_t i = 0; i < adr.size(); ++i) {
@@ -211,7 +211,7 @@ void feExporterVTK::writeField(std::ostream &output, feCncGeo *cnc, feSpace *int
       x = {(v0->x() + v1->x()) / 2., (v0->y() + v1->y()) / 2.,
                                (v0->z() + v1->z()) / 2.};
       _mesh->locateVertex(x.data(), elm, r);
-      intSpace->initializeAddressingVector(n, elm, adr);
+      intSpace->initializeAddressingVector(elm, adr);
       for(size_t i = 0; i < adr.size(); ++i) sol[i] = solVec[adr[i]];
       if(intSpace->useGlobalFunctions()) {
         val = intSpace->interpolateField(sol, elm, x);
@@ -362,7 +362,7 @@ void feExporterVTK::writeEigenvector(std::ostream &output, feCncGeo *cnc, feSpac
       v = _mesh->getVertex(iVertex);
       x = {v->x(), v->y(), v->z()};
       _mesh->locateVertex(x.data(), elm, r);
-      intSpace->initializeAddressingVector(n, elm, adr);
+      intSpace->initializeAddressingVector(elm, adr);
 
       // // Initialize solution
       // for(size_t i = 0; i < adr.size(); ++i) {
@@ -395,7 +395,7 @@ void feExporterVTK::writeEigenvector(std::ostream &output, feCncGeo *cnc, feSpac
       v1 = e.getVertex(1);
       x = {(v0->x() + v1->x()) / 2., (v0->y() + v1->y()) / 2., (v0->z() + v1->z()) / 2.};
       _mesh->locateVertex(x.data(), elm, r);
-      intSpace->initializeAddressingVector(n, elm, adr);
+      intSpace->initializeAddressingVector(elm, adr);
       for(size_t i = 0; i < adr.size(); ++i) sol[i] = vecRealArray[adr[i]];
       if(intSpace->useGlobalFunctions()) {
         val = intSpace->interpolateField(sol, elm, x);

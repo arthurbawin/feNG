@@ -6,36 +6,22 @@ extern int FE_VERBOSE;
 
 extern bool petscWasInitialized;
 
-feStatus createLinearSystem(feLinearSystem *&system, linearSolverType type,
-                            std::vector<feSpace *> allFESpaces,
-                            std::vector<feBilinearForm *> bilinearForms, feMetaNumber *metaNumber,
-                            feMesh *mesh, int argc, char **argv)
+feStatus createLinearSystem(feLinearSystem *&system,
+  linearSolverType type, 
+  std::vector<feBilinearForm *> bilinearForms,
+  int numUnknowns,
+  int argc, char **argv)
 {
   feInfoCond(FE_VERBOSE > 0, "");
   feInfoCond(FE_VERBOSE > 0, "LINEAR SYSTEM:");
 
-  if(metaNumber->getNbUnknowns() == 0)
+  if(numUnknowns == 0)
     return feErrorMsg(FE_STATUS_ERROR, "0 unknowns : attempting to create a linear system of size 0.");
-
-  // Check that all (bi-)linear forms are defined on existing connectivities.
-  // The finite element spaces of a single form must be defined on the same geometric connectivity.
-  for(feBilinearForm *form : bilinearForms) {
-    bool OK = false;
-    for(feSpace *space : allFESpaces) {
-      if(space->getCncGeoTag() == form->getCncGeoTag()) OK = true;
-    }
-    if(!OK) {
-      return feErrorMsg(
-        FE_STATUS_ERROR,
-        "(Bi-)linear form %s is not defined on any known geometric connectivity (named subdomain).",
-        form->getWeakFormName().c_str());
-    }
-  }
 
   switch(type) {
     case MKLPARDISO:
 #if defined(HAVE_MKL)
-      system = new feLinearSystemMklPardiso(bilinearForms, metaNumber, mesh);
+      system = new feLinearSystemMklPardiso(bilinearForms, numUnknowns);
       break;
 #else
       return feErrorMsg(FE_STATUS_ERROR,
@@ -52,7 +38,7 @@ feStatus createLinearSystem(feLinearSystem *&system, linearSolverType type,
                           "PETSc was not initialized : please initialize PETSc first by calling "
                           "petscInitialize(argc, argv) as the very first line of your program.");
       }
-      system = new feLinearSystemPETSc(argc, argv, bilinearForms, metaNumber, mesh);
+      system = new feLinearSystemPETSc(argc, argv, bilinearForms, numUnknowns);
       break;
 #else
       return feErrorMsg(FE_STATUS_ERROR,
@@ -64,3 +50,30 @@ feStatus createLinearSystem(feLinearSystem *&system, linearSolverType type,
 
   return FE_STATUS_OK;
 }
+
+feLinearSystem::feLinearSystem(std::vector<feBilinearForm *> bilinearForms)
+  : recomputeMatrix(false)
+{
+  _numMatrixForms = 0;
+  _numResidualForms = bilinearForms.size();
+
+#if defined(HAVE_OMP)
+  int nThreads = omp_get_max_threads();
+#else
+  int nThreads = 1;
+#endif
+
+  for(int i = 0; i < nThreads; ++i) {
+    for(feBilinearForm *f : bilinearForms) {
+      #if defined(HAVE_OMP)
+          feBilinearForm *fCpy = new feBilinearForm(*f);
+          _formResiduals.push_back(fCpy);
+          if(f->hasMatrix()) _formMatrices.push_back(fCpy);
+      #else
+          _formResiduals.push_back(f);
+          if(f->hasMatrix()) _formMatrices.push_back(f);
+      #endif
+      if(f->hasMatrix() && i == 0) _numMatrixForms++;
+    }
+  }
+};

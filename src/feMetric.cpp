@@ -36,7 +36,7 @@ feMetric::feMetric(feRecovery *recovery, feMetricOptions metricOptions)
 void feMetric::metricScaling()
 {
   std::vector<double> &w = _recovery->_geoSpace->getQuadratureWeights();
-  std::vector<double> &J = _recovery->_cnc->getJacobians();
+  const std::vector<double> &J = _recovery->_cnc->getJacobians();
 
   int nQuad = w.size();
   double N = (double)_options.nTargetVertices;

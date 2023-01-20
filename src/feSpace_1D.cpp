@@ -53,20 +53,20 @@ feStatus feSpace1DP0::Lphys(int iElm, std::vector<double> &x, std::vector<double
   exit(-1);
 };
 
-void feSpace1DP0::initializeNumberingUnknowns(feNumber *number)
+void feSpace1DP0::initializeNumberingUnknowns()
 {
-  for(int i = 0; i < _mesh->getNbElm(_cncGeoID); ++i) number->setUnknownVertexDOF(_mesh, _cncGeoID, i, 0);
+  for(int i = 0; i < _mesh->getNbElm(_cncGeoID); ++i) _numbering->setUnknownVertexDOF(_mesh, _cncGeoID, i, 0);
 }
 
-void feSpace1DP0::initializeNumberingEssential(feNumber *number)
+void feSpace1DP0::initializeNumberingEssential()
 {
   for(int i = 0; i < _mesh->getNbElm(_cncGeoID); ++i)
-    number->setEssentialVertexDOF(_mesh, _cncGeoID, i, 0);
+    _numbering->setEssentialVertexDOF(_mesh, _cncGeoID, i, 0);
 }
 
-void feSpace1DP0::initializeAddressingVector(feNumber *number, int numElem, std::vector<feInt> &adr)
+void feSpace1DP0::initializeAddressingVector(int numElem, std::vector<feInt> &adr)
 {
-  adr[0] = number->getVertexDOF(_mesh, _cncGeoID, numElem, 0);
+  adr[0] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 0);
 }
 
 //
@@ -118,26 +118,26 @@ feStatus feSpace1DP1::Lphys(int iElm, std::vector<double> &x, std::vector<double
   exit(-1);
 };
 
-void feSpace1DP1::initializeNumberingUnknowns(feNumber *number)
+void feSpace1DP1::initializeNumberingUnknowns()
 {
   for(int i = 0; i < _mesh->getNbElm(_cncGeoID); ++i) {
-    number->setUnknownVertexDOF(_mesh, _cncGeoID, i, 0);
-    number->setUnknownVertexDOF(_mesh, _cncGeoID, i, 1);
+    _numbering->setUnknownVertexDOF(_mesh, _cncGeoID, i, 0);
+    _numbering->setUnknownVertexDOF(_mesh, _cncGeoID, i, 1);
   }
 }
 
-void feSpace1DP1::initializeNumberingEssential(feNumber *number)
+void feSpace1DP1::initializeNumberingEssential()
 {
   for(int i = 0; i < _mesh->getNbElm(_cncGeoID); ++i) {
-    number->setEssentialVertexDOF(_mesh, _cncGeoID, i, 0);
-    number->setEssentialVertexDOF(_mesh, _cncGeoID, i, 1);
+    _numbering->setEssentialVertexDOF(_mesh, _cncGeoID, i, 0);
+    _numbering->setEssentialVertexDOF(_mesh, _cncGeoID, i, 1);
   }
 }
 
-void feSpace1DP1::initializeAddressingVector(feNumber *number, int numElem, std::vector<feInt> &adr)
+void feSpace1DP1::initializeAddressingVector(int numElem, std::vector<feInt> &adr)
 {
-  adr[0] = number->getVertexDOF(_mesh, _cncGeoID, numElem, 0);
-  adr[1] = number->getVertexDOF(_mesh, _cncGeoID, numElem, 1);
+  adr[0] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 0);
+  adr[1] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 1);
 }
 
 //
@@ -190,29 +190,29 @@ feStatus feSpace1DP1_nonConsistant::Lphys(int iElm, std::vector<double> &x,
   exit(-1);
 };
 
-void feSpace1DP1_nonConsistant::initializeNumberingUnknowns(feNumber *number)
+void feSpace1DP1_nonConsistant::initializeNumberingUnknowns()
 {
   for(int i = 0; i < _mesh->getNbElm(_cncGeoID); ++i) {
-    number->setUnknownElementDOF(_mesh, _cncGeoID, i, 1);
+    _numbering->setUnknownElementDOF(_mesh, _cncGeoID, i, 1);
     // If the line is a boundary element, the edge should be set by the interior element
-    number->setUnknownEdgeDOF(_mesh, _cncGeoID, i, 0, 1);
+    _numbering->setUnknownEdgeDOF(_mesh, _cncGeoID, i, 0, 1);
   }
 }
 
-void feSpace1DP1_nonConsistant::initializeNumberingEssential(feNumber *number)
+void feSpace1DP1_nonConsistant::initializeNumberingEssential()
 {
   for(int i = 0; i < _mesh->getNbElm(_cncGeoID); ++i) {
-    number->setEssentialElementDOF(_mesh, _cncGeoID, i);
+    _numbering->setEssentialElementDOF(_mesh, _cncGeoID, i);
     // Set essential BC on the edge if the line is a boundary element
     // If the line is an interior element, there is nothing in cncGeo->connecEdges
-    number->setEssentialEdgeDOF(_mesh, _cncGeoID, i, 0);
+    _numbering->setEssentialEdgeDOF(_mesh, _cncGeoID, i, 0);
   }
 }
 
-void feSpace1DP1_nonConsistant::initializeAddressingVector(feNumber *number, int numElem,
+void feSpace1DP1_nonConsistant::initializeAddressingVector(int numElem,
                                                            std::vector<feInt> &adr)
 {
-  adr[0] = number->getElementDOF(_mesh, _cncGeoID, numElem, 0);
+  adr[0] = _numbering->getElementDOF(_mesh, _cncGeoID, numElem, 0);
 }
 
 //
@@ -267,50 +267,50 @@ feStatus feSpace1DP2::Lphys(int iElm, std::vector<double> &x, std::vector<double
   exit(-1);
 };
 
-void feSpace1DP2::initializeNumberingUnknowns(feNumber *number)
+void feSpace1DP2::initializeNumberingUnknowns()
 {
   for(int i = 0; i < _mesh->getNbElm(_cncGeoID); ++i) {
     // Loop over the elements nodes on geometric interpolant (> 2 if curved)
     for(int j = 0; j < this->getCncGeo()->getNbNodePerElem(); ++j) {
-      number->setUnknownVertexDOF(_mesh, _cncGeoID, i, j);
+      _numbering->setUnknownVertexDOF(_mesh, _cncGeoID, i, j);
     }
     // If the edge is curved (P2), the middle vertex is already numbered.
     // This is true for Pn geometries with n even, where the middle vertex matches
     // the middle node of the interpolant, but so far we will limit to P2 geometries.
     if(this->getCncGeo()->getFeSpace()->getPolynomialDegree() != 2) {
-      number->setUnknownElementDOF(_mesh, _cncGeoID, i, 1);
+      _numbering->setUnknownElementDOF(_mesh, _cncGeoID, i, 1);
       // If the line is a boundary element, the edge should be set by the interior element
 
       // FIXME : When should this be commented ? :/
-      number->setUnknownEdgeDOF(_mesh, _cncGeoID, i, 0, 1);
+      _numbering->setUnknownEdgeDOF(_mesh, _cncGeoID, i, 0, 1);
     }
   }
 }
 
-void feSpace1DP2::initializeNumberingEssential(feNumber *number)
+void feSpace1DP2::initializeNumberingEssential()
 {
   for(int i = 0; i < _mesh->getNbElm(_cncGeoID); ++i) {
     for(int j = 0; j < this->getCncGeo()->getNbNodePerElem(); ++j) {
-      number->setEssentialVertexDOF(_mesh, _cncGeoID, i, j);
+      _numbering->setEssentialVertexDOF(_mesh, _cncGeoID, i, j);
     }
     if(this->getCncGeo()->getFeSpace()->getPolynomialDegree() != 2) {
-      number->setEssentialElementDOF(_mesh, _cncGeoID, i);
+      _numbering->setEssentialElementDOF(_mesh, _cncGeoID, i);
       // Set essential BC on the edge if the line is a boundary element
       // If the line is an interior element, there is nothing in cncGeo->connecEdges
       // This is only true is there is a surface feSpace associated with the current feSpace !
-      number->setEssentialEdgeDOF(_mesh, _cncGeoID, i, 0);
+      _numbering->setEssentialEdgeDOF(_mesh, _cncGeoID, i, 0);
     }
   }
 }
 
-void feSpace1DP2::initializeAddressingVector(feNumber *number, int numElem, std::vector<feInt> &adr)
+void feSpace1DP2::initializeAddressingVector(int numElem, std::vector<feInt> &adr)
 {
-  adr[0] = number->getVertexDOF(_mesh, _cncGeoID, numElem, 0);
-  adr[1] = number->getVertexDOF(_mesh, _cncGeoID, numElem, 1);
+  adr[0] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 0);
+  adr[1] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 1);
   if(this->getCncGeo()->getFeSpace()->getPolynomialDegree() == 2) {
-    adr[2] = number->getVertexDOF(_mesh, _cncGeoID, numElem, 2);
+    adr[2] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 2);
   } else {
-    adr[2] = number->getElementDOF(_mesh, _cncGeoID, numElem, 0);
+    adr[2] = _numbering->getElementDOF(_mesh, _cncGeoID, numElem, 0);
   }
 }
 
@@ -373,41 +373,41 @@ feStatus feSpace1DP3::Lphys(int iElm, std::vector<double> &x, std::vector<double
   exit(-1);
 };
 
-void feSpace1DP3::initializeNumberingUnknowns(feNumber *number)
+void feSpace1DP3::initializeNumberingUnknowns()
 {
   for(int i = 0; i < _mesh->getNbElm(_cncGeoID); ++i) {
     // Do not loop over all geometric vertices : only 0 and 1
-    number->setUnknownVertexDOF(_mesh, _cncGeoID, i, 0);
-    number->setUnknownVertexDOF(_mesh, _cncGeoID, i, 1);
+    _numbering->setUnknownVertexDOF(_mesh, _cncGeoID, i, 0);
+    _numbering->setUnknownVertexDOF(_mesh, _cncGeoID, i, 1);
     /* The mid-edge vertex does not match any of the element dofs,
     so they must both be added. */
-    number->setUnknownElementDOF(_mesh, _cncGeoID, i, 2);
+    _numbering->setUnknownElementDOF(_mesh, _cncGeoID, i, 2);
     // TODO : add a test to check if it is in the situation of Verwer
-    number->setUnknownEdgeDOF(_mesh, _cncGeoID, i, 0, 2);
+    _numbering->setUnknownEdgeDOF(_mesh, _cncGeoID, i, 0, 2);
   }
 }
 
-void feSpace1DP3::initializeNumberingEssential(feNumber *number)
+void feSpace1DP3::initializeNumberingEssential()
 {
   for(int i = 0; i < _mesh->getNbElm(_cncGeoID); ++i) {
-    number->setEssentialVertexDOF(_mesh, _cncGeoID, i, 0);
-    number->setEssentialVertexDOF(_mesh, _cncGeoID, i, 1);
-    number->setEssentialElementDOF(_mesh, _cncGeoID, i);
-    number->setEssentialEdgeDOF(_mesh, _cncGeoID, i, 0);
+    _numbering->setEssentialVertexDOF(_mesh, _cncGeoID, i, 0);
+    _numbering->setEssentialVertexDOF(_mesh, _cncGeoID, i, 1);
+    _numbering->setEssentialElementDOF(_mesh, _cncGeoID, i);
+    _numbering->setEssentialEdgeDOF(_mesh, _cncGeoID, i, 0);
   }
 }
 
-void feSpace1DP3::initializeAddressingVector(feNumber *number, int numElem, std::vector<feInt> &adr)
+void feSpace1DP3::initializeAddressingVector(int numElem, std::vector<feInt> &adr)
 {
-  adr[0] = number->getVertexDOF(_mesh, _cncGeoID, numElem, 0);
-  adr[1] = number->getVertexDOF(_mesh, _cncGeoID, numElem, 1);
+  adr[0] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 0);
+  adr[1] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 1);
   int e = _mesh->getEdge(_cncGeoID, numElem, 0);
   if(e > 0) {
-    adr[2] = number->getElementDOF(_mesh, _cncGeoID, numElem, 0);
-    adr[3] = number->getElementDOF(_mesh, _cncGeoID, numElem, 1);
+    adr[2] = _numbering->getElementDOF(_mesh, _cncGeoID, numElem, 0);
+    adr[3] = _numbering->getElementDOF(_mesh, _cncGeoID, numElem, 1);
   } else {
-    adr[2] = number->getElementDOF(_mesh, _cncGeoID, numElem, 1);
-    adr[3] = number->getElementDOF(_mesh, _cncGeoID, numElem, 0);
+    adr[2] = _numbering->getElementDOF(_mesh, _cncGeoID, numElem, 1);
+    adr[3] = _numbering->getElementDOF(_mesh, _cncGeoID, numElem, 0);
   }
 }
 
@@ -487,44 +487,44 @@ feStatus feSpace1DP4::Lphys(int iElm, std::vector<double> &x, std::vector<double
   exit(-1);
 };
 
-void feSpace1DP4::initializeNumberingUnknowns(feNumber *number)
+void feSpace1DP4::initializeNumberingUnknowns()
 {
   for(int i = 0; i < _mesh->getNbElm(_cncGeoID); ++i) {
     // TODO : Modifier pour elements courbes
-    number->setUnknownVertexDOF(_mesh, _cncGeoID, i, 0);
-    number->setUnknownVertexDOF(_mesh, _cncGeoID, i, 1);
-    number->setUnknownElementDOF(_mesh, _cncGeoID, i, 3);
+    _numbering->setUnknownVertexDOF(_mesh, _cncGeoID, i, 0);
+    _numbering->setUnknownVertexDOF(_mesh, _cncGeoID, i, 1);
+    _numbering->setUnknownElementDOF(_mesh, _cncGeoID, i, 3);
     // TODO : add a test to check if it is in the situation of Verwer
-    number->setUnknownEdgeDOF(_mesh, _cncGeoID, i, 0, 1);
-    number->setUnknownEdgeDOF(_mesh, _cncGeoID, i, 0, 2);
-    number->setUnknownEdgeDOF(_mesh, _cncGeoID, i, 0, 3);
+    _numbering->setUnknownEdgeDOF(_mesh, _cncGeoID, i, 0, 1);
+    _numbering->setUnknownEdgeDOF(_mesh, _cncGeoID, i, 0, 2);
+    _numbering->setUnknownEdgeDOF(_mesh, _cncGeoID, i, 0, 3);
   }
 }
 
-void feSpace1DP4::initializeNumberingEssential(feNumber *number)
+void feSpace1DP4::initializeNumberingEssential()
 {
   for(int i = 0; i < _mesh->getNbElm(_cncGeoID); ++i) {
     // TODO : Modifier pour elements courbes
-    number->setEssentialVertexDOF(_mesh, _cncGeoID, i, 0);
-    number->setEssentialVertexDOF(_mesh, _cncGeoID, i, 1);
-    number->setEssentialElementDOF(_mesh, _cncGeoID, i);
-    number->setEssentialEdgeDOF(_mesh, _cncGeoID, i, 0);
+    _numbering->setEssentialVertexDOF(_mesh, _cncGeoID, i, 0);
+    _numbering->setEssentialVertexDOF(_mesh, _cncGeoID, i, 1);
+    _numbering->setEssentialElementDOF(_mesh, _cncGeoID, i);
+    _numbering->setEssentialEdgeDOF(_mesh, _cncGeoID, i, 0);
   }
 }
 
-void feSpace1DP4::initializeAddressingVector(feNumber *number, int numElem, std::vector<feInt> &adr)
+void feSpace1DP4::initializeAddressingVector(int numElem, std::vector<feInt> &adr)
 {
-  adr[0] = number->getVertexDOF(_mesh, _cncGeoID, numElem, 0);
-  adr[1] = number->getVertexDOF(_mesh, _cncGeoID, numElem, 1);
+  adr[0] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 0);
+  adr[1] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 1);
   int e = _mesh->getEdge(_cncGeoID, numElem, 0);
   if(e > 0) {
-    adr[2] = number->getElementDOF(_mesh, _cncGeoID, numElem, 0);
-    adr[3] = number->getElementDOF(_mesh, _cncGeoID, numElem, 1);
-    adr[4] = number->getElementDOF(_mesh, _cncGeoID, numElem, 2);
+    adr[2] = _numbering->getElementDOF(_mesh, _cncGeoID, numElem, 0);
+    adr[3] = _numbering->getElementDOF(_mesh, _cncGeoID, numElem, 1);
+    adr[4] = _numbering->getElementDOF(_mesh, _cncGeoID, numElem, 2);
   } else {
-    adr[4] = number->getElementDOF(_mesh, _cncGeoID, numElem, 0);
-    adr[3] = number->getElementDOF(_mesh, _cncGeoID, numElem, 1);
-    adr[2] = number->getElementDOF(_mesh, _cncGeoID, numElem, 2);
+    adr[4] = _numbering->getElementDOF(_mesh, _cncGeoID, numElem, 0);
+    adr[3] = _numbering->getElementDOF(_mesh, _cncGeoID, numElem, 1);
+    adr[2] = _numbering->getElementDOF(_mesh, _cncGeoID, numElem, 2);
   }
 }
 
@@ -585,38 +585,38 @@ std::vector<double> feSpace1D_Legendre::dLdt(double *r)
   return {0., 0.};
 };
 
-void feSpace1D_Legendre::initializeNumberingUnknowns(feNumber *number)
+void feSpace1D_Legendre::initializeNumberingUnknowns()
 {
   for(int i = 0; i < _mesh->getNbElm(_cncGeoID); ++i) {
-    // number->setUnknownVertexDOF(_mesh, _cncGeoID, i, 0, 2);
-    // number->setUnknownVertexDOF(_mesh, _cncGeoID, i, 1, 2);
-    // number->setUnknownElementDOF(_mesh, _cncGeoID, i, _degree - 1);
-    number->setUnknownElementDOF(_mesh, _cncGeoID, i, _degree + 1);
-    number->setUnknownEdgeDOF(_mesh, _cncGeoID, i, 0, _degree + 1);
+    // _numbering->setUnknownVertexDOF(_mesh, _cncGeoID, i, 0, 2);
+    // _numbering->setUnknownVertexDOF(_mesh, _cncGeoID, i, 1, 2);
+    // _numbering->setUnknownElementDOF(_mesh, _cncGeoID, i, _degree - 1);
+    _numbering->setUnknownElementDOF(_mesh, _cncGeoID, i, _degree + 1);
+    _numbering->setUnknownEdgeDOF(_mesh, _cncGeoID, i, 0, _degree + 1);
 
     // Autre option: 2 aux sommets et le reste sur l'élément?
   }
 }
 
-void feSpace1D_Legendre::initializeNumberingEssential(feNumber *number)
+void feSpace1D_Legendre::initializeNumberingEssential()
 {
   for(int i = 0; i < _mesh->getNbElm(_cncGeoID); ++i) {
-    // number->setEssentialVertexDOF(_mesh, _cncGeoID, i, 0);
-    // number->setEssentialVertexDOF(_mesh, _cncGeoID, i, 1);
-    number->setEssentialElementDOF(_mesh, _cncGeoID, i);
+    // _numbering->setEssentialVertexDOF(_mesh, _cncGeoID, i, 0);
+    // _numbering->setEssentialVertexDOF(_mesh, _cncGeoID, i, 1);
+    _numbering->setEssentialElementDOF(_mesh, _cncGeoID, i);
   }
 }
 
-void feSpace1D_Legendre::initializeAddressingVector(feNumber *number, int numElem, std::vector<feInt> &adr)
+void feSpace1D_Legendre::initializeAddressingVector(int numElem, std::vector<feInt> &adr)
 {
-  // adr[0] = number->getVertexDOF(_mesh, _cncGeoID, numElem, 0, 1); // DOF^+ (right) on first vertex
-  // adr[1] = number->getVertexDOF(_mesh, _cncGeoID, numElem, 1, 0); // DOF^- (left)  on end   vertex
+  // adr[0] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 0, 1); // DOF^+ (right) on first vertex
+  // adr[1] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 1, 0); // DOF^- (left)  on end   vertex
   // for(int i = 0; i < _degree - 1; ++i){
-  //   adr[i+2] = number->getElementDOF(_mesh, _cncGeoID, numElem, i);
+  //   adr[i+2] = _numbering->getElementDOF(_mesh, _cncGeoID, numElem, i);
   // }
   for(int i = 0; i < _degree + 1; ++i){
-    adr[i] = number->getElementDOF(_mesh, _cncGeoID, numElem, i);
+    adr[i] = _numbering->getElementDOF(_mesh, _cncGeoID, numElem, i);
   }
-  // adr[0] = number->getVertexDOF(_mesh, _cncGeoID, numElem, 0, 1); // DOF^+ (right) on first vertex
-  // adr[1] = number->getVertexDOF(_mesh, _cncGeoID, numElem, 1, 0); // DOF^- (left)  on end   vertex
+  // adr[0] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 0, 1); // DOF^+ (right) on first vertex
+  // adr[1] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 1, 0); // DOF^- (left)  on end   vertex
 }

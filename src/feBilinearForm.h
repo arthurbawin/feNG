@@ -62,7 +62,7 @@ public:
   std::vector<double> _geoCoord;
 
   // Elements jacobians
-  std::vector<double> _J;
+  const std::vector<double> &_J;
 
   // First coefficient of the BDF expansion
   double _c0;
@@ -115,7 +115,7 @@ protected:
   double *_Rh;
   double _h0;
   // Function pointer to the matrix computation method
-  void (feBilinearForm::*ptrComputeMatrix)(feMetaNumber *metaNumber, feMesh *mesh, feSolution *sol,
+  void (feBilinearForm::*ptrComputeMatrix)(feSolution *sol,
                                            int numElem);
 
 public:
@@ -154,11 +154,11 @@ public:
   bool hasMatrix() { return _sysElm->hasMatrix(); }
 
   // Compute element-wise matrix and residual on element numElem
-  void computeMatrix(feMetaNumber *metaNumber, feMesh *mesh, feSolution *sol, int numElem);
-  void computeResidual(feMetaNumber *metaNumber, feMesh *mesh, feSolution *sol, int numElem);
+  void computeMatrix(feSolution *sol, int numElem);
+  void computeResidual(feSolution *sol, int numElem);
 
   // Initialize the addressing vectors _adrI and _adrJ on element numElem
-  void initializeAddressingVectors(feMetaNumber *metaNumber, int numElem);
+  void initializeAddressingVectors(int numElem);
 
   double getMatrixNorm();
   double getResidualNorm();
@@ -166,11 +166,11 @@ public:
 private:
   // Initialize the form on element numElem.
   // Initializes _adr and the local solutions _sol, _solDot, _solPrev, _solNext
-  void initialize(feMetaNumber *metaNumber, feMesh *mesh, feSolution *sol, int numElem);
+  void initialize(feSolution *sol, int numElem);
 
-  void computeMatrixAnalytical(feMetaNumber *metaNumber, feMesh *mesh, feSolution *sol,
+  void computeMatrixAnalytical(feSolution *sol,
                                int numElem);
-  void computeMatrixFiniteDifference(feMetaNumber *metaNumber, feMesh *mesh, feSolution *sol,
+  void computeMatrixFiniteDifference(feSolution *sol,
                                      int numElem);
 };
 

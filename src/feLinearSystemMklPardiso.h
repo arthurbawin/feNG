@@ -14,9 +14,8 @@
 class feLinearSystemMklPardiso : public feLinearSystem
 {
 public:
-  feLinearSystemMklPardiso(std::vector<feBilinearForm *> bilinearForms, feMetaNumber *metaNumber,
-                           feMesh *mesh);
-  virtual ~feLinearSystemMklPardiso();
+  feLinearSystemMklPardiso(std::vector<feBilinearForm *> bilinearForms, int numUnknowns);
+  ~feLinearSystemMklPardiso();
 
   // ====================================================================
   // Pour modifier les paramètres de Pardiso
@@ -50,18 +49,20 @@ public:
   // correctSolution    : somme de la correction dans le vecteur solution
   //                      ou dans la structure solution
   // ====================================================================
-  virtual void solve(double *normDx, double *normResidual, double *normAxb,
+  void solve(double *normDx, double *normResidual, double *normAxb,
                      int *nIter); // MATLAB : RESOUDRE
-  virtual void setToZero(); // MATLAB : INITIALISE
-  virtual void setMatrixToZero(); // MATLAB : INITIALISE_LA_MATRICE
-  virtual void setResidualToZero(); // MATLAB : INITIALISE_LE_RESIDU
-  virtual void assembleMatrices(feSolution *sol); // MATLAB : SOMME_LA_MATRICE
-  virtual void assembleResiduals(feSolution *sol); // MATLAB : SOMME_LE RESIDU
-  virtual void assemble(feSolution *sol); // MATLAB : SOMME MATRICE ET RESIDU
-  virtual void assignResidualToDCResidual(feSolutionContainer *solContainer);
-  virtual void applyCorrectionToResidual(double coeff, std::vector<double> &d);
-  virtual void correctSolution(feSolution *sol); // MATLAB : ------
-  virtual void correctSolution(double *sol); // MATLAB : ------
+  void setToZero(); // MATLAB : INITIALISE
+  void setMatrixToZero(); // MATLAB : INITIALISE_LA_MATRICE
+  void setResidualToZero(); // MATLAB : INITIALISE_LE_RESIDU
+  void assembleMatrices(feSolution *sol); // MATLAB : SOMME_LA_MATRICE
+  void assembleResiduals(feSolution *sol); // MATLAB : SOMME_LE RESIDU
+  void assemble(feSolution *sol); // MATLAB : SOMME MATRICE ET RESIDU
+  void assignResidualToDCResidual(feSolutionContainer *solContainer);
+  void applyCorrectionToResidual(double coeff, std::vector<double> &d);
+  void correctSolution(feSolution *sol); // MATLAB : ------
+  void correctSolution(double *sol); // MATLAB : ------
+private:
+  
 protected:
   //=====================================================================
   // Structure Creuse CSR de MKL

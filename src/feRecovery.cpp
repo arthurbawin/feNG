@@ -551,7 +551,7 @@ void feRecovery::matrixInverseEigen1D()
     printf("Error : mismatch in number of quadrature points\n");
   }
   std::vector<double> &w = _geoSpace->getQuadratureWeights();
-  std::vector<double> &J = _cnc->getJacobians();
+  const std::vector<double> &J = _cnc->getJacobians();
 
   std::vector<double> geoCoord(9, 0.), x(3, 0.0), monomials(_dimRecovery, 0.);
 
@@ -573,8 +573,7 @@ void feRecovery::matrixInverseEigen1D()
     std::set<int> &elemPatch = _patch->getPatch(v);
 
     for(auto elem : elemPatch) {
-      _intSpace->initializeAddressingVector(_metaNumber->getNumbering(_intSpace->getFieldID()),
-                                            elem, _adr);
+      _intSpace->initializeAddressingVector(elem, _adr);
       for(size_t i = 0; i < _adr.size(); ++i) {
         _solution[i] = solVec[_adr[i]];
       }
@@ -656,8 +655,7 @@ void feRecovery::matrixInverseEigen1D()
     std::set<int> &elemPatch = _patch->getEdgePatch(e.getTag());
 
     for(auto elem : elemPatch) {
-      _intSpace->initializeAddressingVector(_metaNumber->getNumbering(_intSpace->getFieldID()),
-                                            elem, _adr);
+      _intSpace->initializeAddressingVector(elem, _adr);
       for(size_t i = 0; i < _adr.size(); ++i) {
         _solution[i] = solVec[_adr[i]];
       }
@@ -722,7 +720,7 @@ void feRecovery::matrixInverseEigen2D()
     printf("Error : mismatch in number of quadrature points\n");
   }
   std::vector<double> &w = _geoSpace->getQuadratureWeights();
-  std::vector<double> &J = _cnc->getJacobians();
+  const std::vector<double> &J = _cnc->getJacobians();
 
   std::vector<double> geoCoord(9, 0.), x(3, 0.0), xLoc(3, 0.0), monomials(_dimRecovery, 0.);
 
@@ -745,8 +743,7 @@ void feRecovery::matrixInverseEigen2D()
 
     for(auto elem : elemPatch) {
       // std::cout<<elem<<std::endl;
-      _intSpace->initializeAddressingVector(_metaNumber->getNumbering(_intSpace->getFieldID()),
-                                            elem, _adr);
+      _intSpace->initializeAddressingVector(elem, _adr);
       for(size_t i = 0; i < _adr.size(); ++i) {
         _solution[i] = solVec[_adr[i]];
       }
@@ -821,8 +818,7 @@ void feRecovery::matrixInverseEigen2D()
     std::set<int> &elemPatch = _patch->getEdgePatch(e.getTag());
 
     for(auto elem : elemPatch) {
-      _intSpace->initializeAddressingVector(_metaNumber->getNumbering(_intSpace->getFieldID()),
-                                            elem, _adr);
+      _intSpace->initializeAddressingVector(elem, _adr);
       for(size_t i = 0; i < _adr.size(); ++i) {
         _solution[i] = solVec[_adr[i]];
       }
@@ -882,7 +878,7 @@ void feRecovery::matrixInverseEigen2D()
 void feRecovery::solveLeastSquareEigen1D(int indRecovery, int iDerivative)
 {
   std::vector<double> &w = _geoSpace->getQuadratureWeights();
-  std::vector<double> &J = _cnc->getJacobians();
+  const std::vector<double> &J = _cnc->getJacobians();
   std::vector<double> geoCoord(9, 0.);
   std::vector<double> x(3, 0.0);
   std::vector<double> monomials(_dimRecovery, 0.);
@@ -907,8 +903,7 @@ void feRecovery::solveLeastSquareEigen1D(int indRecovery, int iDerivative)
     std::set<int> &elemPatch = _patch->getPatch(v);
 
     for(auto elem : elemPatch) {
-      _intSpace->initializeAddressingVector(_metaNumber->getNumbering(_intSpace->getFieldID()),
-                                            elem, _adr);
+      _intSpace->initializeAddressingVector(elem, _adr);
       for(size_t i = 0; i < _adr.size(); ++i) {
         _solution[i] = solVec[_adr[i]];
       }
@@ -1051,8 +1046,7 @@ void feRecovery::solveLeastSquareEigen1D(int indRecovery, int iDerivative)
     std::set<int> &elemPatch = _patch->getEdgePatch(e.getTag());
 
     for(auto elem : elemPatch) {
-      _intSpace->initializeAddressingVector(_metaNumber->getNumbering(_intSpace->getFieldID()),
-                                            elem, _adr);
+      _intSpace->initializeAddressingVector(elem, _adr);
       for(size_t i = 0; i < _adr.size(); ++i) {
         _solution[i] = solVec[_adr[i]];
       }
@@ -1169,7 +1163,7 @@ void feRecovery::solveLeastSquareEigen2D(int indRecovery, int iDerivative)
     printf("Error : mismatch in number of quadrature points\n");
   }
   std::vector<double> &w = _geoSpace->getQuadratureWeights();
-  std::vector<double> &J = _cnc->getJacobians();
+  const std::vector<double> &J = _cnc->getJacobians();
 
   std::vector<double> geoCoord(9, 0.);
   std::vector<double> x(3, 0.0);
@@ -1211,8 +1205,7 @@ void feRecovery::solveLeastSquareEigen2D(int indRecovery, int iDerivative)
     std::set<int> &elemPatch = _patch->getPatch(v);
 
     for(auto elem : elemPatch) {
-      _intSpace->initializeAddressingVector(_metaNumber->getNumbering(_intSpace->getFieldID()),
-                                            elem, _adr);
+      _intSpace->initializeAddressingVector(elem, _adr);
       for(size_t i = 0; i < _adr.size(); ++i) {
         _solution[i] = solVec[_adr[i]];
       }
@@ -1388,8 +1381,7 @@ void feRecovery::solveLeastSquareEigen2D(int indRecovery, int iDerivative)
     std::set<int> &elemPatch = _patch->getEdgePatch(e.getTag());
 
     for(auto elem : elemPatch) {
-      _intSpace->initializeAddressingVector(_metaNumber->getNumbering(_intSpace->getFieldID()),
-                                            elem, _adr);
+      _intSpace->initializeAddressingVector(elem, _adr);
       for(size_t i = 0; i < _adr.size(); ++i) {
         _solution[i] = solVec[_adr[i]];
       }
@@ -1573,7 +1565,7 @@ void feRecovery::solveLeastSquareEigen2D(int indRecovery, int iDerivative)
 //     printf("Error : mismatch in number of quadrature points\n");
 //   }
 //   std::vector<double> &w = _geoSpace->getQuadratureWeights();
-//   std::vector<double> &J = _cnc->getJacobians();
+//   const std::vector<double> &J = _cnc->getJacobians();
 
 //   std::vector<double> geoCoord;
 //   std::vector<double> x(3, 0.0);
@@ -1986,7 +1978,7 @@ void feRecovery::estimateError(std::vector<double> &norm, feFunction *solRef)
 
   int nQuad = _geoSpace->getNbQuadPoints();
   std::vector<double> &w = _geoSpace->getQuadratureWeights();
-  std::vector<double> &J = _cnc->getJacobians();
+  const std::vector<double> &J = _cnc->getJacobians();
 
   int _nVertPerElm = _nNodePerElm;
   int _nEdgePerElm = _cnc->getNbEdgePerElem();
@@ -1997,7 +1989,7 @@ void feRecovery::estimateError(std::vector<double> &norm, feFunction *solRef)
 
   for(int iElm = 0; iElm < _nElm; ++iElm) {
     // for(auto iElm : elemPatch) {
-    _intSpace->initializeAddressingVector(_metaNumber->getNumbering(_intSpace->getFieldID()), iElm,
+    _intSpace->initializeAddressingVector(iElm,
                                           _adr);
     for(size_t i = 0; i < _adr.size(); ++i) {
       _solution[i] = solVec[_adr[i]];
@@ -2133,7 +2125,7 @@ void feRecovery::estimateDudxError(std::vector<double> &norm, feVectorFunction *
 
   int nQuad = _geoSpace->getNbQuadPoints();
   std::vector<double> &w = _geoSpace->getQuadratureWeights();
-  std::vector<double> &J = _cnc->getJacobians();
+  const std::vector<double> &J = _cnc->getJacobians();
 
   int _nVertPerElm = _nNodePerElm;
   int _nEdgePerElm = _cnc->getNbEdgePerElem();
@@ -2146,7 +2138,7 @@ void feRecovery::estimateDudxError(std::vector<double> &norm, feVectorFunction *
 
   // for(int iElm = 0; iElm < _nElm; ++iElm) {
   for(auto iElm : elemPatch) {
-    _intSpace->initializeAddressingVector(_metaNumber->getNumbering(_intSpace->getFieldID()), iElm,
+    _intSpace->initializeAddressingVector(iElm,
                                           _adr);
     for(size_t i = 0; i < _adr.size(); ++i) {
       _solution[i] = solVec[_adr[i]];
@@ -2262,7 +2254,7 @@ void feRecovery::estimateH1Error(std::vector<double> &norm, feVectorFunction *so
 
   int nQuad = _geoSpace->getNbQuadPoints();
   std::vector<double> &w = _geoSpace->getQuadratureWeights();
-  std::vector<double> &J = _cnc->getJacobians();
+  const std::vector<double> &J = _cnc->getJacobians();
 
   int _nVertPerElm = _nNodePerElm;
   int _nEdgePerElm = _cnc->getNbEdgePerElem();
@@ -2275,7 +2267,7 @@ void feRecovery::estimateH1Error(std::vector<double> &norm, feVectorFunction *so
 
   for(int iElm = 0; iElm < _nElm; ++iElm) {
     // for(auto iElm : elemPatch) {
-    _intSpace->initializeAddressingVector(_metaNumber->getNumbering(_intSpace->getFieldID()), iElm,
+    _intSpace->initializeAddressingVector(iElm,
                                           _adr);
     for(size_t i = 0; i < _adr.size(); ++i) {
       _solution[i] = solVec[_adr[i]];
@@ -2449,7 +2441,7 @@ void feRecovery::estimateHessError(std::vector<double> &norm, feVectorFunction *
 
   int nQuad = _geoSpace->getNbQuadPoints();
   std::vector<double> &w = _geoSpace->getQuadratureWeights();
-  std::vector<double> &J = _cnc->getJacobians();
+  const std::vector<double> &J = _cnc->getJacobians();
 
   int _nVertPerElm = _nNodePerElm;
   int _nEdgePerElm = _cnc->getNbEdgePerElem();
@@ -2464,7 +2456,7 @@ void feRecovery::estimateHessError(std::vector<double> &norm, feVectorFunction *
 
   for(int iElm = 0; iElm < _nElm; ++iElm) {
     // for(auto iElm : elemPatch) {
-    _intSpace->initializeAddressingVector(_metaNumber->getNumbering(_intSpace->getFieldID()), iElm,
+    _intSpace->initializeAddressingVector(iElm,
                                           _adr);
     for(size_t i = 0; i < _adr.size(); ++i) {
       _solution[i] = solVec[_adr[i]];
@@ -2630,7 +2622,7 @@ void feRecovery::estimated3Error(std::vector<double> &norm, feFunction *fund3udx
 
   int nQuad = _geoSpace->getNbQuadPoints();
   std::vector<double> &w = _geoSpace->getQuadratureWeights();
-  std::vector<double> &J = _cnc->getJacobians();
+  const std::vector<double> &J = _cnc->getJacobians();
 
   int _nVertPerElm = _nNodePerElm;
   int _nEdgePerElm = _cnc->getNbEdgePerElem();
@@ -2648,7 +2640,7 @@ void feRecovery::estimated3Error(std::vector<double> &norm, feFunction *fund3udx
     // std::set<int> &elemPatch = _patch->getPatch(v);
     // norm[21] = 0.0;
     // for(auto iElm : elemPatch) {
-    _intSpace->initializeAddressingVector(_metaNumber->getNumbering(_intSpace->getFieldID()), iElm,
+    _intSpace->initializeAddressingVector(iElm,
                                           _adr);
     for(size_t i = 0; i < _adr.size(); ++i) {
       _solution[i] = solVec[_adr[i]];
@@ -2690,7 +2682,7 @@ void feRecovery::estimated3Error(std::vector<double> &norm, feFunction *fund3udx
 
   // Last N elements : interpolate based on previous element
   for(int iElm = _nElm - 3; iElm < _nElm; ++iElm) {
-    _intSpace->initializeAddressingVector(_metaNumber->getNumbering(_intSpace->getFieldID()), iElm,
+    _intSpace->initializeAddressingVector(iElm,
                                           _adr);
     for(size_t i = 0; i < _adr.size(); ++i) {
       _solution[i] = solVec[_adr[i]];

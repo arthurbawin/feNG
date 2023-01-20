@@ -33,30 +33,30 @@ std::vector<double> feSpaceTriP1::dLdr(double *r) { return {-1.0, 1.0, 0.0}; }
 std::vector<double> feSpaceTriP1::dLds(double *r) { return {-1.0, 0.0, 1.0}; }
 std::vector<double> feSpaceTriP1::dLdt(double *r) { return {0., 0., 0.}; }
 
-void feSpaceTriP1::initializeNumberingUnknowns(feNumber *number)
+void feSpaceTriP1::initializeNumberingUnknowns()
 {
   for(int i = 0; i < _mesh->getNbElm(_cncGeoID); ++i) {
-    number->setUnknownVertexDOF(_mesh, _cncGeoID, i, 0);
-    number->setUnknownVertexDOF(_mesh, _cncGeoID, i, 1);
-    number->setUnknownVertexDOF(_mesh, _cncGeoID, i, 2);
+    _numbering->setUnknownVertexDOF(_mesh, _cncGeoID, i, 0);
+    _numbering->setUnknownVertexDOF(_mesh, _cncGeoID, i, 1);
+    _numbering->setUnknownVertexDOF(_mesh, _cncGeoID, i, 2);
   }
 }
 
-void feSpaceTriP1::initializeNumberingEssential(feNumber *number)
+void feSpaceTriP1::initializeNumberingEssential()
 {
   for(int i = 0; i < _mesh->getNbElm(_cncGeoID); ++i) {
-    number->setEssentialVertexDOF(_mesh, _cncGeoID, i, 0);
-    number->setEssentialVertexDOF(_mesh, _cncGeoID, i, 1);
-    number->setEssentialVertexDOF(_mesh, _cncGeoID, i, 2);
+    _numbering->setEssentialVertexDOF(_mesh, _cncGeoID, i, 0);
+    _numbering->setEssentialVertexDOF(_mesh, _cncGeoID, i, 1);
+    _numbering->setEssentialVertexDOF(_mesh, _cncGeoID, i, 2);
   }
 }
 
-void feSpaceTriP1::initializeAddressingVector(feNumber *number, int numElem, std::vector<feInt> &adr)
+void feSpaceTriP1::initializeAddressingVector(int numElem, std::vector<feInt> &adr)
 {
   adr.resize(3);
-  adr[0] = number->getVertexDOF(_mesh, _cncGeoID, numElem, 0);
-  adr[1] = number->getVertexDOF(_mesh, _cncGeoID, numElem, 1);
-  adr[2] = number->getVertexDOF(_mesh, _cncGeoID, numElem, 2);
+  adr[0] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 0);
+  adr[1] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 1);
+  adr[2] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 2);
 }
 
 // feSpace used to interpolate on a geometric connectivity
@@ -91,31 +91,31 @@ std::vector<double> feSpaceTriP1_nonConsistant::dLdr(double *r) { return {0.0, 2
 std::vector<double> feSpaceTriP1_nonConsistant::dLds(double *r) { return {-2.0, 2.0, 0.0}; }
 std::vector<double> feSpaceTriP1_nonConsistant::dLdt(double *r) { return {0., 0., 0.}; }
 
-void feSpaceTriP1_nonConsistant::initializeNumberingUnknowns(feNumber *number)
+void feSpaceTriP1_nonConsistant::initializeNumberingUnknowns()
 {
   int nDOFPerEdge = 1;
   for(int i = 0; i < _mesh->getNbElm(_cncGeoID); ++i) {
-    number->setUnknownEdgeDOF(_mesh, _cncGeoID, i, 0, nDOFPerEdge);
-    number->setUnknownEdgeDOF(_mesh, _cncGeoID, i, 1, nDOFPerEdge);
-    number->setUnknownEdgeDOF(_mesh, _cncGeoID, i, 2, nDOFPerEdge);
+    _numbering->setUnknownEdgeDOF(_mesh, _cncGeoID, i, 0, nDOFPerEdge);
+    _numbering->setUnknownEdgeDOF(_mesh, _cncGeoID, i, 1, nDOFPerEdge);
+    _numbering->setUnknownEdgeDOF(_mesh, _cncGeoID, i, 2, nDOFPerEdge);
   }
 }
 
-void feSpaceTriP1_nonConsistant::initializeNumberingEssential(feNumber *number)
+void feSpaceTriP1_nonConsistant::initializeNumberingEssential()
 {
   for(int i = 0; i < _mesh->getNbElm(_cncGeoID); ++i) {
-    number->setEssentialEdgeDOF(_mesh, _cncGeoID, i, 0);
-    number->setEssentialEdgeDOF(_mesh, _cncGeoID, i, 1);
-    number->setEssentialEdgeDOF(_mesh, _cncGeoID, i, 2);
+    _numbering->setEssentialEdgeDOF(_mesh, _cncGeoID, i, 0);
+    _numbering->setEssentialEdgeDOF(_mesh, _cncGeoID, i, 1);
+    _numbering->setEssentialEdgeDOF(_mesh, _cncGeoID, i, 2);
   }
 }
 
-void feSpaceTriP1_nonConsistant::initializeAddressingVector(feNumber *number, int numElem,
+void feSpaceTriP1_nonConsistant::initializeAddressingVector(int numElem,
                                                             std::vector<feInt> &adr)
 {
-  adr[0] = number->getEdgeDOF(_mesh, _cncGeoID, numElem, 0, 0);
-  adr[1] = number->getEdgeDOF(_mesh, _cncGeoID, numElem, 1, 0);
-  adr[2] = number->getEdgeDOF(_mesh, _cncGeoID, numElem, 2, 0);
+  adr[0] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 0, 0);
+  adr[1] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 1, 0);
+  adr[2] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 2, 0);
 }
 
 // feSpace used to interpolate on a geometric connectivity
@@ -340,49 +340,49 @@ std::vector<double> feSpaceTriP2::dLds(double *r)
 
 std::vector<double> feSpaceTriP2::dLdt(double *r) { return {0., 0., 0., 0., 0., 0.}; }
 
-void feSpaceTriP2::initializeNumberingUnknowns(feNumber *number)
+void feSpaceTriP2::initializeNumberingUnknowns()
 {
   int nDOFPerEdge = 1;
   for(int i = 0; i < _mesh->getNbElm(_cncGeoID); ++i) {
     for(int j = 0; j < this->getCncGeo()->getNbNodePerElem(); ++j) {
-      number->setUnknownVertexDOF(_mesh, _cncGeoID, i, j);
+      _numbering->setUnknownVertexDOF(_mesh, _cncGeoID, i, j);
     }
     if(this->getCncGeo()->getFeSpace()->getPolynomialDegree() != 2) {
-      number->setUnknownEdgeDOF(_mesh, _cncGeoID, i, 0, nDOFPerEdge);
-      number->setUnknownEdgeDOF(_mesh, _cncGeoID, i, 1, nDOFPerEdge);
-      number->setUnknownEdgeDOF(_mesh, _cncGeoID, i, 2, nDOFPerEdge);
+      _numbering->setUnknownEdgeDOF(_mesh, _cncGeoID, i, 0, nDOFPerEdge);
+      _numbering->setUnknownEdgeDOF(_mesh, _cncGeoID, i, 1, nDOFPerEdge);
+      _numbering->setUnknownEdgeDOF(_mesh, _cncGeoID, i, 2, nDOFPerEdge);
     }
   }
 }
 
-void feSpaceTriP2::initializeNumberingEssential(feNumber *number)
+void feSpaceTriP2::initializeNumberingEssential()
 {
   for(int i = 0; i < _mesh->getNbElm(_cncGeoID); ++i) {
     for(int j = 0; j < this->getCncGeo()->getNbNodePerElem(); ++j) {
-      number->setEssentialVertexDOF(_mesh, _cncGeoID, i, j);
+      _numbering->setEssentialVertexDOF(_mesh, _cncGeoID, i, j);
     }
     if(this->getCncGeo()->getFeSpace()->getPolynomialDegree() != 2) {
-      number->setEssentialEdgeDOF(_mesh, _cncGeoID, i, 0);
-      number->setEssentialEdgeDOF(_mesh, _cncGeoID, i, 1);
-      number->setEssentialEdgeDOF(_mesh, _cncGeoID, i, 2);
+      _numbering->setEssentialEdgeDOF(_mesh, _cncGeoID, i, 0);
+      _numbering->setEssentialEdgeDOF(_mesh, _cncGeoID, i, 1);
+      _numbering->setEssentialEdgeDOF(_mesh, _cncGeoID, i, 2);
     }
   }
 }
 
-void feSpaceTriP2::initializeAddressingVector(feNumber *number, int numElem, std::vector<feInt> &adr)
+void feSpaceTriP2::initializeAddressingVector(int numElem, std::vector<feInt> &adr)
 {
   // adr.resize(6);
-  adr[0] = number->getVertexDOF(_mesh, _cncGeoID, numElem, 0);
-  adr[1] = number->getVertexDOF(_mesh, _cncGeoID, numElem, 1);
-  adr[2] = number->getVertexDOF(_mesh, _cncGeoID, numElem, 2);
+  adr[0] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 0);
+  adr[1] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 1);
+  adr[2] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 2);
   if(this->getCncGeo()->getFeSpace()->getPolynomialDegree() == 2) {
-    adr[3] = number->getVertexDOF(_mesh, _cncGeoID, numElem, 3);
-    adr[4] = number->getVertexDOF(_mesh, _cncGeoID, numElem, 4);
-    adr[5] = number->getVertexDOF(_mesh, _cncGeoID, numElem, 5);
+    adr[3] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 3);
+    adr[4] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 4);
+    adr[5] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 5);
   } else {
-    adr[3] = number->getEdgeDOF(_mesh, _cncGeoID, numElem, 0, 0);
-    adr[4] = number->getEdgeDOF(_mesh, _cncGeoID, numElem, 1, 0);
-    adr[5] = number->getEdgeDOF(_mesh, _cncGeoID, numElem, 2, 0);
+    adr[3] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 0, 0);
+    adr[4] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 1, 0);
+    adr[5] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 2, 0);
   }
 }
 
@@ -450,54 +450,54 @@ std::vector<double> feSpaceTriP2_nonConsistant::dLdt(double *r)
   return {0., 0., 0., 0., 0., 0., 0.};
 }
 
-void feSpaceTriP2_nonConsistant::initializeNumberingUnknowns(feNumber *number)
+void feSpaceTriP2_nonConsistant::initializeNumberingUnknowns()
 {
   int nDOFPerEdge = 1;
   int nDOFPerElem = 1;
   for(int i = 0; i < _mesh->getNbElm(_cncGeoID); ++i) {
     for(int j = 0; j < this->getCncGeo()->getNbNodePerElem(); ++j) {
-      number->setUnknownVertexDOF(_mesh, _cncGeoID, i, j);
+      _numbering->setUnknownVertexDOF(_mesh, _cncGeoID, i, j);
     }
     if(this->getCncGeo()->getFeSpace()->getPolynomialDegree() != 2) {
-      number->setUnknownEdgeDOF(_mesh, _cncGeoID, i, 0, nDOFPerEdge);
-      number->setUnknownEdgeDOF(_mesh, _cncGeoID, i, 1, nDOFPerEdge);
-      number->setUnknownEdgeDOF(_mesh, _cncGeoID, i, 2, nDOFPerEdge);
-      number->setUnknownElementDOF(_mesh, _cncGeoID, i, nDOFPerElem);
+      _numbering->setUnknownEdgeDOF(_mesh, _cncGeoID, i, 0, nDOFPerEdge);
+      _numbering->setUnknownEdgeDOF(_mesh, _cncGeoID, i, 1, nDOFPerEdge);
+      _numbering->setUnknownEdgeDOF(_mesh, _cncGeoID, i, 2, nDOFPerEdge);
+      _numbering->setUnknownElementDOF(_mesh, _cncGeoID, i, nDOFPerElem);
     }
   }
 }
 
-void feSpaceTriP2_nonConsistant::initializeNumberingEssential(feNumber *number)
+void feSpaceTriP2_nonConsistant::initializeNumberingEssential()
 {
   for(int i = 0; i < _mesh->getNbElm(_cncGeoID); ++i) {
     for(int j = 0; j < this->getCncGeo()->getNbNodePerElem(); ++j) {
-      number->setEssentialVertexDOF(_mesh, _cncGeoID, i, j);
+      _numbering->setEssentialVertexDOF(_mesh, _cncGeoID, i, j);
     }
     if(this->getCncGeo()->getFeSpace()->getPolynomialDegree() != 2) {
-      number->setEssentialEdgeDOF(_mesh, _cncGeoID, i, 0);
-      number->setEssentialEdgeDOF(_mesh, _cncGeoID, i, 1);
-      number->setEssentialEdgeDOF(_mesh, _cncGeoID, i, 2);
-      number->setEssentialElementDOF(_mesh, _cncGeoID, i);
+      _numbering->setEssentialEdgeDOF(_mesh, _cncGeoID, i, 0);
+      _numbering->setEssentialEdgeDOF(_mesh, _cncGeoID, i, 1);
+      _numbering->setEssentialEdgeDOF(_mesh, _cncGeoID, i, 2);
+      _numbering->setEssentialElementDOF(_mesh, _cncGeoID, i);
     }
   }
 }
 
-void feSpaceTriP2_nonConsistant::initializeAddressingVector(feNumber *number, int numElem,
+void feSpaceTriP2_nonConsistant::initializeAddressingVector(int numElem,
                                                             std::vector<feInt> &adr)
 {
-  adr[0] = number->getVertexDOF(_mesh, _cncGeoID, numElem, 0);
-  adr[1] = number->getVertexDOF(_mesh, _cncGeoID, numElem, 1);
-  adr[2] = number->getVertexDOF(_mesh, _cncGeoID, numElem, 2);
+  adr[0] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 0);
+  adr[1] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 1);
+  adr[2] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 2);
   if(this->getCncGeo()->getFeSpace()->getPolynomialDegree() == 2) {
-    adr[3] = number->getVertexDOF(_mesh, _cncGeoID, numElem, 3);
-    adr[4] = number->getVertexDOF(_mesh, _cncGeoID, numElem, 4);
-    adr[5] = number->getVertexDOF(_mesh, _cncGeoID, numElem, 5);
+    adr[3] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 3);
+    adr[4] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 4);
+    adr[5] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 5);
   } else {
-    adr[3] = number->getEdgeDOF(_mesh, _cncGeoID, numElem, 0, 0);
-    adr[4] = number->getEdgeDOF(_mesh, _cncGeoID, numElem, 1, 0);
-    adr[5] = number->getEdgeDOF(_mesh, _cncGeoID, numElem, 2, 0);
+    adr[3] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 0, 0);
+    adr[4] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 1, 0);
+    adr[5] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 2, 0);
   }
-  adr[6] = number->getElementDOF(_mesh, _cncGeoID, numElem, 0);
+  adr[6] = _numbering->getElementDOF(_mesh, _cncGeoID, numElem, 0);
 }
 
 // feSpace used to interpolate on a geometric connectivity
@@ -604,64 +604,64 @@ std::vector<double> feSpaceTriP3::dLdt(double *r)
   return {0., 0., 0., 0., 0., 0., 0., 0., 0., 0.};
 }
 
-void feSpaceTriP3::initializeNumberingUnknowns(feNumber *number)
+void feSpaceTriP3::initializeNumberingUnknowns()
 {
   int nDOFPerEdge = 2;
   int nDOFPerElem = 1;
   for(int i = 0; i < _mesh->getNbElm(_cncGeoID); ++i) {
-    number->setUnknownVertexDOF(_mesh, _cncGeoID, i, 0);
-    number->setUnknownVertexDOF(_mesh, _cncGeoID, i, 1);
-    number->setUnknownVertexDOF(_mesh, _cncGeoID, i, 2);
-    number->setUnknownElementDOF(_mesh, _cncGeoID, i, nDOFPerElem);
-    number->setUnknownEdgeDOF(_mesh, _cncGeoID, i, 0, nDOFPerEdge);
-    number->setUnknownEdgeDOF(_mesh, _cncGeoID, i, 1, nDOFPerEdge);
-    number->setUnknownEdgeDOF(_mesh, _cncGeoID, i, 2, nDOFPerEdge);
+    _numbering->setUnknownVertexDOF(_mesh, _cncGeoID, i, 0);
+    _numbering->setUnknownVertexDOF(_mesh, _cncGeoID, i, 1);
+    _numbering->setUnknownVertexDOF(_mesh, _cncGeoID, i, 2);
+    _numbering->setUnknownElementDOF(_mesh, _cncGeoID, i, nDOFPerElem);
+    _numbering->setUnknownEdgeDOF(_mesh, _cncGeoID, i, 0, nDOFPerEdge);
+    _numbering->setUnknownEdgeDOF(_mesh, _cncGeoID, i, 1, nDOFPerEdge);
+    _numbering->setUnknownEdgeDOF(_mesh, _cncGeoID, i, 2, nDOFPerEdge);
   }
 }
 
-void feSpaceTriP3::initializeNumberingEssential(feNumber *number)
+void feSpaceTriP3::initializeNumberingEssential()
 {
   for(int i = 0; i < _mesh->getNbElm(_cncGeoID); ++i) {
-    number->setEssentialVertexDOF(_mesh, _cncGeoID, i, 0);
-    number->setEssentialVertexDOF(_mesh, _cncGeoID, i, 1);
-    number->setEssentialVertexDOF(_mesh, _cncGeoID, i, 2);
-    number->setEssentialElementDOF(_mesh, _cncGeoID, i);
-    number->setEssentialEdgeDOF(_mesh, _cncGeoID, i, 0);
-    number->setEssentialEdgeDOF(_mesh, _cncGeoID, i, 1);
-    number->setEssentialEdgeDOF(_mesh, _cncGeoID, i, 2);
+    _numbering->setEssentialVertexDOF(_mesh, _cncGeoID, i, 0);
+    _numbering->setEssentialVertexDOF(_mesh, _cncGeoID, i, 1);
+    _numbering->setEssentialVertexDOF(_mesh, _cncGeoID, i, 2);
+    _numbering->setEssentialElementDOF(_mesh, _cncGeoID, i);
+    _numbering->setEssentialEdgeDOF(_mesh, _cncGeoID, i, 0);
+    _numbering->setEssentialEdgeDOF(_mesh, _cncGeoID, i, 1);
+    _numbering->setEssentialEdgeDOF(_mesh, _cncGeoID, i, 2);
   }
 }
 
-void feSpaceTriP3::initializeAddressingVector(feNumber *number, int numElem, std::vector<feInt> &adr)
+void feSpaceTriP3::initializeAddressingVector(int numElem, std::vector<feInt> &adr)
 {
-  adr[0] = number->getVertexDOF(_mesh, _cncGeoID, numElem, 0);
-  adr[1] = number->getVertexDOF(_mesh, _cncGeoID, numElem, 1);
-  adr[2] = number->getVertexDOF(_mesh, _cncGeoID, numElem, 2);
+  adr[0] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 0);
+  adr[1] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 1);
+  adr[2] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 2);
   int e0 = _mesh->getEdge(_cncGeoID, numElem, 0);
   if(e0 > 0) {
-    adr[3] = number->getEdgeDOF(_mesh, _cncGeoID, numElem, 0, 0);
-    adr[4] = number->getEdgeDOF(_mesh, _cncGeoID, numElem, 0, 1);
+    adr[3] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 0, 0);
+    adr[4] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 0, 1);
   } else {
-    adr[3] = number->getEdgeDOF(_mesh, _cncGeoID, numElem, 0, 1);
-    adr[4] = number->getEdgeDOF(_mesh, _cncGeoID, numElem, 0, 0);
+    adr[3] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 0, 1);
+    adr[4] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 0, 0);
   }
   int e1 = _mesh->getEdge(_cncGeoID, numElem, 1);
   if(e1 > 0) {
-    adr[5] = number->getEdgeDOF(_mesh, _cncGeoID, numElem, 1, 0);
-    adr[6] = number->getEdgeDOF(_mesh, _cncGeoID, numElem, 1, 1);
+    adr[5] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 1, 0);
+    adr[6] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 1, 1);
   } else {
-    adr[5] = number->getEdgeDOF(_mesh, _cncGeoID, numElem, 1, 1);
-    adr[6] = number->getEdgeDOF(_mesh, _cncGeoID, numElem, 1, 0);
+    adr[5] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 1, 1);
+    adr[6] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 1, 0);
   }
   int e2 = _mesh->getEdge(_cncGeoID, numElem, 2);
   if(e2 > 0) {
-    adr[7] = number->getEdgeDOF(_mesh, _cncGeoID, numElem, 2, 0);
-    adr[8] = number->getEdgeDOF(_mesh, _cncGeoID, numElem, 2, 1);
+    adr[7] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 2, 0);
+    adr[8] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 2, 1);
   } else {
-    adr[7] = number->getEdgeDOF(_mesh, _cncGeoID, numElem, 2, 1);
-    adr[8] = number->getEdgeDOF(_mesh, _cncGeoID, numElem, 2, 0);
+    adr[7] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 2, 1);
+    adr[8] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 2, 0);
   }
-  adr[9] = number->getElementDOF(_mesh, _cncGeoID, numElem, 0);
+  adr[9] = _numbering->getElementDOF(_mesh, _cncGeoID, numElem, 0);
 }
 
 /* P4 Lagrange interpolant on triangle :
@@ -814,70 +814,70 @@ std::vector<double> feSpaceTriP4::dLdt(double *r)
   return {0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.};
 }
 
-void feSpaceTriP4::initializeNumberingUnknowns(feNumber *number)
+void feSpaceTriP4::initializeNumberingUnknowns()
 {
   int nDOFPerEdge = 3;
   int nDOFPerElem = 3;
   for(int i = 0; i < _mesh->getNbElm(_cncGeoID); ++i) {
-    number->setUnknownVertexDOF(_mesh, _cncGeoID, i, 0);
-    number->setUnknownVertexDOF(_mesh, _cncGeoID, i, 1);
-    number->setUnknownVertexDOF(_mesh, _cncGeoID, i, 2);
-    number->setUnknownElementDOF(_mesh, _cncGeoID, i, nDOFPerElem);
-    number->setUnknownEdgeDOF(_mesh, _cncGeoID, i, 0, nDOFPerEdge);
-    number->setUnknownEdgeDOF(_mesh, _cncGeoID, i, 1, nDOFPerEdge);
-    number->setUnknownEdgeDOF(_mesh, _cncGeoID, i, 2, nDOFPerEdge);
+    _numbering->setUnknownVertexDOF(_mesh, _cncGeoID, i, 0);
+    _numbering->setUnknownVertexDOF(_mesh, _cncGeoID, i, 1);
+    _numbering->setUnknownVertexDOF(_mesh, _cncGeoID, i, 2);
+    _numbering->setUnknownElementDOF(_mesh, _cncGeoID, i, nDOFPerElem);
+    _numbering->setUnknownEdgeDOF(_mesh, _cncGeoID, i, 0, nDOFPerEdge);
+    _numbering->setUnknownEdgeDOF(_mesh, _cncGeoID, i, 1, nDOFPerEdge);
+    _numbering->setUnknownEdgeDOF(_mesh, _cncGeoID, i, 2, nDOFPerEdge);
   }
 }
 
-void feSpaceTriP4::initializeNumberingEssential(feNumber *number)
+void feSpaceTriP4::initializeNumberingEssential()
 {
   for(int i = 0; i < _mesh->getNbElm(_cncGeoID); ++i) {
-    number->setEssentialVertexDOF(_mesh, _cncGeoID, i, 0);
-    number->setEssentialVertexDOF(_mesh, _cncGeoID, i, 1);
-    number->setEssentialVertexDOF(_mesh, _cncGeoID, i, 2);
-    number->setEssentialElementDOF(_mesh, _cncGeoID, i);
-    number->setEssentialEdgeDOF(_mesh, _cncGeoID, i, 0);
-    number->setEssentialEdgeDOF(_mesh, _cncGeoID, i, 1);
-    number->setEssentialEdgeDOF(_mesh, _cncGeoID, i, 2);
+    _numbering->setEssentialVertexDOF(_mesh, _cncGeoID, i, 0);
+    _numbering->setEssentialVertexDOF(_mesh, _cncGeoID, i, 1);
+    _numbering->setEssentialVertexDOF(_mesh, _cncGeoID, i, 2);
+    _numbering->setEssentialElementDOF(_mesh, _cncGeoID, i);
+    _numbering->setEssentialEdgeDOF(_mesh, _cncGeoID, i, 0);
+    _numbering->setEssentialEdgeDOF(_mesh, _cncGeoID, i, 1);
+    _numbering->setEssentialEdgeDOF(_mesh, _cncGeoID, i, 2);
   }
 }
 
-void feSpaceTriP4::initializeAddressingVector(feNumber *number, int numElem, std::vector<feInt> &adr)
+void feSpaceTriP4::initializeAddressingVector(int numElem, std::vector<feInt> &adr)
 {
-  adr[0] = number->getVertexDOF(_mesh, _cncGeoID, numElem, 0);
-  adr[1] = number->getVertexDOF(_mesh, _cncGeoID, numElem, 1);
-  adr[2] = number->getVertexDOF(_mesh, _cncGeoID, numElem, 2);
+  adr[0] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 0);
+  adr[1] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 1);
+  adr[2] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 2);
   int e0 = _mesh->getEdge(_cncGeoID, numElem, 0);
   if(e0 > 0) {
-    adr[3] = number->getEdgeDOF(_mesh, _cncGeoID, numElem, 0, 0);
-    adr[4] = number->getEdgeDOF(_mesh, _cncGeoID, numElem, 0, 1);
-    adr[5] = number->getEdgeDOF(_mesh, _cncGeoID, numElem, 0, 2);
+    adr[3] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 0, 0);
+    adr[4] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 0, 1);
+    adr[5] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 0, 2);
   } else {
-    adr[3] = number->getEdgeDOF(_mesh, _cncGeoID, numElem, 0, 2);
-    adr[4] = number->getEdgeDOF(_mesh, _cncGeoID, numElem, 0, 1);
-    adr[5] = number->getEdgeDOF(_mesh, _cncGeoID, numElem, 0, 0);
+    adr[3] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 0, 2);
+    adr[4] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 0, 1);
+    adr[5] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 0, 0);
   }
   int e1 = _mesh->getEdge(_cncGeoID, numElem, 1);
   if(e1 > 0) {
-    adr[6] = number->getEdgeDOF(_mesh, _cncGeoID, numElem, 1, 0);
-    adr[7] = number->getEdgeDOF(_mesh, _cncGeoID, numElem, 1, 1);
-    adr[8] = number->getEdgeDOF(_mesh, _cncGeoID, numElem, 1, 2);
+    adr[6] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 1, 0);
+    adr[7] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 1, 1);
+    adr[8] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 1, 2);
   } else {
-    adr[6] = number->getEdgeDOF(_mesh, _cncGeoID, numElem, 1, 2);
-    adr[7] = number->getEdgeDOF(_mesh, _cncGeoID, numElem, 1, 1);
-    adr[8] = number->getEdgeDOF(_mesh, _cncGeoID, numElem, 1, 0);
+    adr[6] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 1, 2);
+    adr[7] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 1, 1);
+    adr[8] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 1, 0);
   }
   int e2 = _mesh->getEdge(_cncGeoID, numElem, 2);
   if(e2 > 0) {
-    adr[9] = number->getEdgeDOF(_mesh, _cncGeoID, numElem, 2, 0);
-    adr[10] = number->getEdgeDOF(_mesh, _cncGeoID, numElem, 2, 1);
-    adr[11] = number->getEdgeDOF(_mesh, _cncGeoID, numElem, 2, 2);
+    adr[9] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 2, 0);
+    adr[10] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 2, 1);
+    adr[11] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 2, 2);
   } else {
-    adr[9] = number->getEdgeDOF(_mesh, _cncGeoID, numElem, 2, 2);
-    adr[10] = number->getEdgeDOF(_mesh, _cncGeoID, numElem, 2, 1);
-    adr[11] = number->getEdgeDOF(_mesh, _cncGeoID, numElem, 2, 0);
+    adr[9] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 2, 2);
+    adr[10] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 2, 1);
+    adr[11] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 2, 0);
   }
-  adr[12] = number->getElementDOF(_mesh, _cncGeoID, numElem, 0);
-  adr[13] = number->getElementDOF(_mesh, _cncGeoID, numElem, 1);
-  adr[14] = number->getElementDOF(_mesh, _cncGeoID, numElem, 2);
+  adr[12] = _numbering->getElementDOF(_mesh, _cncGeoID, numElem, 0);
+  adr[13] = _numbering->getElementDOF(_mesh, _cncGeoID, numElem, 1);
+  adr[14] = _numbering->getElementDOF(_mesh, _cncGeoID, numElem, 2);
 }

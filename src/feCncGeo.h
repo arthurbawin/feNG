@@ -72,10 +72,10 @@ public:
   int getDim() { return _dim; }
   std::string getForme() {return _forme;}
   int getNbNodes() { return _nNod; }
-  int getNbNodePerElem() { return _nNodPerElm; }
+  int getNbNodePerElem() const { return _nNodPerElm; }
   int getNbElm() { return _nElm; }
   int getNbEdgePerElem() { return _nEdg; }
-  feSpace *getFeSpace() { return _space; } // Interpolant geometrique
+  feSpace *getFeSpace() const { return _space; } // Interpolant geometrique
 
   void setMeshPtr(feMesh *mesh) { _mesh = mesh; }
 
@@ -85,7 +85,7 @@ public:
   std::vector<int> &getElemConnectivityRef() { return _connecElem; }
 
   int getNodeConnectivity(int iNode) { return _connecNodes[iNode]; }
-  int getNodeConnectivity(int numElem, int iNode)
+  int getNodeConnectivity(int numElem, int iNode) const
   {
     return _connecNodes[_nNodPerElm * numElem + iNode];
   }
@@ -104,7 +104,7 @@ public:
 
   feStatus computeJacobians();
   // double getJacobianAtQuadNode(int numElem, int iQuadNode){ return _J; }
-  std::vector<double> &getJacobians() { return _J; }
+  const std::vector<double> &getJacobians() const { return _J; }
 
   // void createPatchNode(int nbElm, int nbNodePerElm, std::vector<int> &cncNodes);
   // void createPatchElm(int nbElm, int nbNodePerElm, std::vector<int> &cncNodes);

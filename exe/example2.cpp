@@ -131,14 +131,14 @@ int main(int argc, char **argv)
     feBilinearForm sourceU({uDomaine}, new feSysElm_2D_Source(1.0, funSource));
 
     feLinearSystem *system;
-    feCheck(createLinearSystem(system, PETSC, spaces, {&diffU, &sourceU}, &metaNumber, &mesh, argc, argv));
+    feCheck(createLinearSystem(system, PETSC, {&diffU, &sourceU}, metaNumber.getNbUnknowns(), argc, argv));
     // feCheck(createLinearSystem(system, MKLPARDISO, spaces, {&diffU, &sourceU}, &metaNumber, &mesh, argc, argv));
     // feCheck(createLinearSystem(system, MKLPARDISO, spaces, {&diffU, &n1, &n2}, &metaNumber, &mesh, argc, argv));
     // feCheck(createLinearSystem(system, MKLPARDISO, spaces, {&diffU, &sautU}, &metaNumber, &mesh, argc, argv));
     // feCheck(createLinearSystem(system, MKLPARDISO, spaces, {&diffU, &n5}, &metaNumber, &mesh, argc, argv));
 
     // Norms will be replaced by postproc
-    feNorm normU(uDomaine, &mesh, degreeQuadrature, funSol);
+    feNorm normU({uDomaine}, &mesh, degreeQuadrature, funSol);
     std::vector<feNorm *> norms = {&normU};
 
     feExporter *exporter;
@@ -208,7 +208,7 @@ int main(int argc, char **argv)
       feMetaNumber metaNumber2(&mesh2, spaces2, essentialSpaces2);
 
       // fePostProc post(uDomaine1, &mesh1, &metaNumber1, funSol);
-      feNorm norm(uDomaine1, &mesh1, degreeQuadrature);
+      feNorm norm({uDomaine1}, &mesh1, degreeQuadrature);
       norm.computeErrorNormFromExternalSolution(&metaNumber1, sol1, &mesh1, 
         &metaNumber2, sol2, &mesh2, spaces2);
       L2errorU[2*i] = norm.getNorm();

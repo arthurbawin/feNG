@@ -4,11 +4,10 @@
 // Constructeur de la classe de base CSR
 // ====================================================================
 
-feCompressedRowStorage::feCompressedRowStorage(feMetaNumber *metaNumber, feMesh *mesh,
-                                               std::vector<feBilinearForm *> &formMatrices,
+feCompressedRowStorage::feCompressedRowStorage(int numUnknowns, std::vector<feBilinearForm *> &formMatrices,
                                                int numMatrixForms)
 {
-  ordre = (feInt) metaNumber->getNbUnknowns();
+  ordre = (feInt) numUnknowns;
   nnz = new feInt[ordre];
 
   ddlNumberOfElements = new feInt[ordre]; // à initialiser à zéro
@@ -23,15 +22,15 @@ feCompressedRowStorage::feCompressedRowStorage(feMetaNumber *metaNumber, feMesh 
   // feInfo("Building a CRS with %d matrix forms (check = %d)", numMatrixForms, formMatrices.size());
   // std::vector<double> coord(9, 0.);
 
-  for(int eq = 0; eq < numMatrixForms; eq++) {
-    feBilinearForm *f = formMatrices[eq];
-    feInt cncGeoTag = f->getCncGeoTag();
-    feInt nbElems = mesh->getNbElm(cncGeoTag);
+  for(feBilinearForm *f : formMatrices) {
+
+    feInt nbElems = f->getCncGeo()->getNbElm();
+
     // #pragma omp parallel for
     for(feInt iElm = 0; iElm < nbElems; iElm++) {
       // printf("Assembling element %8d on thread %d/%d\n", e, omp_get_thread_num(),
       // omp_get_num_threads());
-      f->initializeAddressingVectors(metaNumber, iElm);
+      f->initializeAddressingVectors(iElm);
       feInt NBRI = f->getLocalMatrixM();
       std::vector<feInt> VADI = f->getAdrI(); // &VADI ????
 
@@ -84,11 +83,10 @@ feCompressedRowStorage::feCompressedRowStorage(feMetaNumber *metaNumber, feMesh 
   for(feInt i = 0; i < ordre; i++) ddlNumberOfElements[i] = 0;
   for(int eq = 0; eq < numMatrixForms; eq++) {
     feBilinearForm *equelm = formMatrices[eq];
-    feInt cncGeoTag = equelm->getCncGeoTag();
-    feInt nbElems = mesh->getNbElm(cncGeoTag);
+    feInt nbElems = equelm->getCncGeo()->getNbElm();
 
     for(feInt el = 0; el < nbElems; el++) {
-      equelm->initializeAddressingVectors(metaNumber, el);
+      equelm->initializeAddressingVectors(el);
       feInt NBRI = equelm->getLocalMatrixM();
       std::vector<feInt> VADI = equelm->getAdrI();
 
@@ -137,7 +135,7 @@ feCompressedRowStorage::feCompressedRowStorage(feMetaNumber *metaNumber, feMesh 
 
       feBilinearForm *equelm = formMatrices[eq];
       // feInt cncGeoTag = equelm->getCncGeoTag();
-      equelm->initializeAddressingVectors(metaNumber, el);
+      equelm->initializeAddressingVectors(el);
       feInt NBRJ = equelm->getLocalMatrixM();
       std::vector<feInt> VADJ = equelm->getAdrJ();
 
@@ -204,9 +202,9 @@ int compint(const void *a, const void *b)
 }
 
 feCompressedRowStorageMklPardiso::feCompressedRowStorageMklPardiso(
-  feMetaNumber *metaNumber, feMesh *mesh, std::vector<feBilinearForm *> &formMatrices,
+  int numUnknowns, std::vector<feBilinearForm *> &formMatrices,
   int numMatrixForms)
-  : feCompressedRowStorage(metaNumber, mesh, formMatrices, numMatrixForms)
+  : feCompressedRowStorage(numUnknowns, formMatrices, numMatrixForms)
 {
   // ================================================================
   // ALLOUER LA STRUCTURE CSR DE MKL PARDISO
@@ -267,7 +265,7 @@ feCompressedRowStorageMklPardiso::feCompressedRowStorageMklPardiso(
 
       feBilinearForm *equelm = formMatrices[eq];
       // feInt cncGeoTag = equelm->getCncGeoTag();
-      equelm->initializeAddressingVectors(metaNumber, el);
+      equelm->initializeAddressingVectors(el);
       feInt NBRJ = equelm->getLocalMatrixM();
       std::vector<feInt> VADJ = equelm->getAdrJ();
 

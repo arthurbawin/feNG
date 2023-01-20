@@ -94,6 +94,7 @@ public:
   //
   // The coordinates are structured as follows:
   //   [x1 y1 z1 x2 y2 z2 ... xn yn zn]
+  void getCoord(const feCncGeo *cnc, const int numElem, std::vector<double> &geoCoord);
   void getCoord(std::string const &cncGeoID, const int numElm, std::vector<double> &geoCoord);
   void getCoord(const int cncGeoTag, const int numElm, std::vector<double> &geoCoord);
 

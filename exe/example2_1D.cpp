@@ -86,16 +86,16 @@ int main(int argc, char **argv)
   feMetaNumber numbering(&mesh, spaces, essentialSpaces);
 
   feSolution sol(numbering.getNbDOFs(), spaces, essentialSpaces);
-  sol.initializeUnknowns(&mesh, &numbering);
+  sol.initializeUnknowns(&mesh);
 
   feBilinearForm *mass, *diff;
   feCheck(createBilinearForm( mass, {uDomaine}, new feSysElm_1D_Masse(1.0, nullptr))   );
   feCheck(createBilinearForm( diff, {uDomaine}, new feSysElm_1D_Diffusion(kDiffusivity)) );
 
   feLinearSystem *system;
-  feCheck(createLinearSystem(system, PETSC, spaces, {mass, diff}, &numbering, &mesh, argc, argv));
+  feCheck(createLinearSystem(system, PETSC, {mass, diff}, numbering.getNbUnknowns(), argc, argv));
 
-  feNorm normU(uDomaine, &mesh, degreeQuadrature, funSol);
+  feNorm normU({uDomaine}, &mesh, degreeQuadrature, funSol);
   std::vector<feNorm *> norms = {&normU};
 
   feExportData exportData = {nullptr, 1, ""};
