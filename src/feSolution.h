@@ -49,7 +49,7 @@ public:
 
   double getC0() { return _c0; }
   void setC0(double c0) { _c0 = c0; }
-  double getCurrentTime() { return _tn; }
+  double getCurrentTime() const { return _tn; }
   void setCurrentTime(double t) { _tn = t; }
   double getTimeStep() { return _dt; }
   double getNbTimeSteps() { return _nTimeSteps; }
@@ -64,7 +64,7 @@ public:
   std::vector<double> &getSolutionReferenceDot() { return _dsoldt; }
 
   double getSolAtDOF(int iDOF) { return _sol[iDOF]; }
-  void getSolAtDOF(const std::vector<feInt> &addressing, std::vector<double> &sol);
+  void getSolAtDOF(const std::vector<feInt> &addressing, std::vector<double> &sol) const;
   void setSolAtDOF(int iDOF, double val) { _sol[iDOF] = val; }
   void incrementSolAtDOF(int iDOF, double val) { _sol[iDOF] += val; }
   void setSolFromContainer(feSolutionContainer *solContainer, int iSol = 0);

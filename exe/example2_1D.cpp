@@ -95,7 +95,7 @@ int main(int argc, char **argv)
   feLinearSystem *system;
   feCheck(createLinearSystem(system, PETSC, {mass, diff}, numbering.getNbUnknowns(), argc, argv));
 
-  feNorm normU({uDomaine}, &mesh, degreeQuadrature, funSol);
+  feNorm normU(L2_ERROR, {uDomaine}, &sol, funSol);
   std::vector<feNorm *> norms = {&normU};
 
   feExportData exportData = {nullptr, 1, ""};

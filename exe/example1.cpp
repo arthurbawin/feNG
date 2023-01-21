@@ -138,7 +138,7 @@ int main(int argc, char **argv)
   feCheck(createLinearSystem(system, PETSC, {diff, source}, numbering.getNbUnknowns(), argc, argv));
 
   // Post-processing tools to compute norms and whatnot
-  feNorm normU({uDomaine}, &mesh, degreeQuadrature, funSol);
+  feNorm normU(L2_ERROR, {uDomaine}, &sol, funSol);
   std::vector<feNorm *> norms = {&normU};
 
   // Create an exporter structure to write the solution for visualization. Currently the only
@@ -162,14 +162,21 @@ int main(int argc, char **argv)
   feCheck(solver->makeSteps(0));
 
   // Compute L2 norm of the error u-uh
-  feNorm norm({uDomaine}, &mesh, degreeQuadrature, funSol);
+  feNorm *norm;
+  feCheck(createNorm(norm, L2_ERROR, {uDomaine}, &sol, funSol));
+
   fePostProc post(uDomaine, &mesh, &numbering, funSol);
-  norm.computeL2Norm(&sol, &mesh);
-  feInfo("L2 error = %10.10f", norm.getNorm());
+  feInfo("L2 error = %10.10f", norm->compute(L2_ERROR));
   feInfo("L2 error = %10.10f", post.computeL2ErrorNorm(&sol));
-  norm.computeArea();
-  feInfo("Area = %10.10f", norm.getNorm());
+
+  feInfo("L1   error = %10.10f", norm->compute(L1_ERROR));
+  feInfo("Linf error = %10.10f", norm->compute(LINF_ERROR));
+
+  feInfo("Area = %10.10f", norm->compute(AREA));
   feInfo("Area = %10.10f", post.computeMeasure());
+
+  feInfo("Integral = %10.10f", norm->compute(INTEGRAL));
+  feInfo("Integral = %10.10f", post.computeSolutionIntegral(&sol));
 
   // Free the used memory
   delete diff;
@@ -181,6 +188,7 @@ int main(int argc, char **argv)
   delete funZero;
   delete funSol;
   delete funSource;
+  delete norm;
 
   petscFinalize();
   return 0;

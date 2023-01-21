@@ -138,7 +138,7 @@ int main(int argc, char **argv)
     // feCheck(createLinearSystem(system, MKLPARDISO, spaces, {&diffU, &n5}, &metaNumber, &mesh, argc, argv));
 
     // Norms will be replaced by postproc
-    feNorm normU({uDomaine}, &mesh, degreeQuadrature, funSol);
+    feNorm normU(L2_ERROR, {uDomaine}, &sol, funSol);
     std::vector<feNorm *> norms = {&normU};
 
     feExporter *exporter;
@@ -169,54 +169,54 @@ int main(int argc, char **argv)
   }
 
   // Error estimation if the analytic solution is not available
-  if(!hasAnalyticSolution){
-    for(int i = 0; i < nMesh-1; ++i){
-      // Load current and next solution files
-      std::string solFile1 = "solution_" + std::to_string(i+1) + ".txt";
-      std::string solFile2 = "solution_" + std::to_string(i+2) + ".txt";
-      feSolution *sol1 = new feSolution(solFile1);
-      feSolution *sol2 = new feSolution(solFile2);
+  // if(!hasAnalyticSolution){
+  //   for(int i = 0; i < nMesh-1; ++i){
+  //     // Load current and next solution files
+  //     std::string solFile1 = "solution_" + std::to_string(i+1) + ".txt";
+  //     std::string solFile2 = "solution_" + std::to_string(i+2) + ".txt";
+  //     feSolution *sol1 = new feSolution(solFile1);
+  //     feSolution *sol2 = new feSolution(solFile2);
 
-      // Create meshes, spaces and numberings for interpolation
-      std::string mshFile1 = "m" + std::to_string(i+1) + ".msh";
-      std::string mshFile2 = "m" + std::to_string(i+2) + ".msh";
-      feMesh2DP1 mesh1(mshFile1);
-      feMesh2DP1 mesh2(mshFile2);
+  //     // Create meshes, spaces and numberings for interpolation
+  //     std::string mshFile1 = "m" + std::to_string(i+1) + ".msh";
+  //     std::string mshFile2 = "m" + std::to_string(i+2) + ".msh";
+  //     feMesh2DP1 mesh1(mshFile1);
+  //     feMesh2DP1 mesh2(mshFile2);
 
-      int dim, degreeQuadrature = 30;
-      feSpace *uSaut1, *uHaut1, *uBas1, *uDroite1, *uGauche1, *uDomaine1;
-      feSpace *uSaut2, *uHaut2, *uBas2, *uDroite2, *uGauche2, *uDomaine2;
-      feCheck(createFiniteElementSpace(uHaut1,    &mesh1, dim = 1, LINE, LAGRANGE, order, "U", "Haut",    degreeQuadrature, funZero));
-      feCheck(createFiniteElementSpace(uBas1,     &mesh1, dim = 1, LINE, LAGRANGE, order, "U", "Bas",     degreeQuadrature, funZero));
-      feCheck(createFiniteElementSpace(uDroite1,  &mesh1, dim = 1, LINE, LAGRANGE, order, "U", "Droite",  degreeQuadrature, funZero));
-      feCheck(createFiniteElementSpace(uGauche1,  &mesh1, dim = 1, LINE, LAGRANGE, order, "U", "Gauche",  degreeQuadrature, funZero));
-      feCheck(createFiniteElementSpace(uDomaine1, &mesh1, dim = 2, TRI,  LAGRANGE, order, "U", "Domaine", degreeQuadrature, funZero));
-      feCheck(createFiniteElementSpace(uSaut1,    &mesh1, dim = 1, LINE, LAGRANGE, order, "U", "Saut",    degreeQuadrature, funZero));
-      feCheck(createFiniteElementSpace(uHaut2,    &mesh2, dim = 1, LINE, LAGRANGE, order, "U", "Haut",    degreeQuadrature, funZero));
-      feCheck(createFiniteElementSpace(uBas2,     &mesh2, dim = 1, LINE, LAGRANGE, order, "U", "Bas",     degreeQuadrature, funZero));
-      feCheck(createFiniteElementSpace(uDroite2,  &mesh2, dim = 1, LINE, LAGRANGE, order, "U", "Droite",  degreeQuadrature, funZero));
-      feCheck(createFiniteElementSpace(uGauche2,  &mesh2, dim = 1, LINE, LAGRANGE, order, "U", "Gauche",  degreeQuadrature, funZero));
-      feCheck(createFiniteElementSpace(uDomaine2, &mesh2, dim = 2, TRI,  LAGRANGE, order, "U", "Domaine", degreeQuadrature, funZero));
-      feCheck(createFiniteElementSpace(uSaut2,    &mesh2, dim = 1, LINE, LAGRANGE, order, "U", "Saut",    degreeQuadrature, funZero));
+  //     int dim, degreeQuadrature = 30;
+  //     feSpace *uSaut1, *uHaut1, *uBas1, *uDroite1, *uGauche1, *uDomaine1;
+  //     feSpace *uSaut2, *uHaut2, *uBas2, *uDroite2, *uGauche2, *uDomaine2;
+  //     feCheck(createFiniteElementSpace(uHaut1,    &mesh1, dim = 1, LINE, LAGRANGE, order, "U", "Haut",    degreeQuadrature, funZero));
+  //     feCheck(createFiniteElementSpace(uBas1,     &mesh1, dim = 1, LINE, LAGRANGE, order, "U", "Bas",     degreeQuadrature, funZero));
+  //     feCheck(createFiniteElementSpace(uDroite1,  &mesh1, dim = 1, LINE, LAGRANGE, order, "U", "Droite",  degreeQuadrature, funZero));
+  //     feCheck(createFiniteElementSpace(uGauche1,  &mesh1, dim = 1, LINE, LAGRANGE, order, "U", "Gauche",  degreeQuadrature, funZero));
+  //     feCheck(createFiniteElementSpace(uDomaine1, &mesh1, dim = 2, TRI,  LAGRANGE, order, "U", "Domaine", degreeQuadrature, funZero));
+  //     feCheck(createFiniteElementSpace(uSaut1,    &mesh1, dim = 1, LINE, LAGRANGE, order, "U", "Saut",    degreeQuadrature, funZero));
+  //     feCheck(createFiniteElementSpace(uHaut2,    &mesh2, dim = 1, LINE, LAGRANGE, order, "U", "Haut",    degreeQuadrature, funZero));
+  //     feCheck(createFiniteElementSpace(uBas2,     &mesh2, dim = 1, LINE, LAGRANGE, order, "U", "Bas",     degreeQuadrature, funZero));
+  //     feCheck(createFiniteElementSpace(uDroite2,  &mesh2, dim = 1, LINE, LAGRANGE, order, "U", "Droite",  degreeQuadrature, funZero));
+  //     feCheck(createFiniteElementSpace(uGauche2,  &mesh2, dim = 1, LINE, LAGRANGE, order, "U", "Gauche",  degreeQuadrature, funZero));
+  //     feCheck(createFiniteElementSpace(uDomaine2, &mesh2, dim = 2, TRI,  LAGRANGE, order, "U", "Domaine", degreeQuadrature, funZero));
+  //     feCheck(createFiniteElementSpace(uSaut2,    &mesh2, dim = 1, LINE, LAGRANGE, order, "U", "Saut",    degreeQuadrature, funZero));
 
-      std::vector<feSpace *> spaces1 = {uSaut1, uHaut1, uBas1, uDroite1, uGauche1, uDomaine1};
-      std::vector<feSpace *> spaces2 = {uSaut2, uHaut2, uBas2, uDroite2, uGauche2, uDomaine2};
-      std::vector<feSpace *> essentialSpaces1 = {uHaut1, uBas1, uGauche1, uDroite1};
-      std::vector<feSpace *> essentialSpaces2 = {uHaut2, uBas2, uGauche2, uDroite2};
+  //     std::vector<feSpace *> spaces1 = {uSaut1, uHaut1, uBas1, uDroite1, uGauche1, uDomaine1};
+  //     std::vector<feSpace *> spaces2 = {uSaut2, uHaut2, uBas2, uDroite2, uGauche2, uDomaine2};
+  //     std::vector<feSpace *> essentialSpaces1 = {uHaut1, uBas1, uGauche1, uDroite1};
+  //     std::vector<feSpace *> essentialSpaces2 = {uHaut2, uBas2, uGauche2, uDroite2};
 
-      feMetaNumber metaNumber1(&mesh1, spaces1, essentialSpaces1);
-      feMetaNumber metaNumber2(&mesh2, spaces2, essentialSpaces2);
+  //     feMetaNumber metaNumber1(&mesh1, spaces1, essentialSpaces1);
+  //     feMetaNumber metaNumber2(&mesh2, spaces2, essentialSpaces2);
 
-      // fePostProc post(uDomaine1, &mesh1, &metaNumber1, funSol);
-      feNorm norm({uDomaine1}, &mesh1, degreeQuadrature);
-      norm.computeErrorNormFromExternalSolution(&metaNumber1, sol1, &mesh1, 
-        &metaNumber2, sol2, &mesh2, spaces2);
-      L2errorU[2*i] = norm.getNorm();
+  //     // fePostProc post(uDomaine1, &mesh1, &metaNumber1, funSol);
+  //     feNorm norm({uDomaine1}, sol1, funSol);
+  //     norm.computeErrorNormFromExternalSolution(&metaNumber1, sol1, &mesh1, 
+  //       &metaNumber2, sol2, &mesh2, spaces2);
+  //     L2errorU[2*i] = norm.getNorm();
 
-      delete sol1;
-      delete sol2;
-    }
-  }
+  //     delete sol1;
+  //     delete sol2;
+  //   }
+  // }
 
   for(auto val : L2errorU){
     feInfo("val = %f", val);

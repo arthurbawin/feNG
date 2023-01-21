@@ -59,7 +59,7 @@ feSolution::feSolution(std::string solutionFile)
   }
 }
 
-void feSolution::getSolAtDOF(const std::vector<feInt> &addressing, std::vector<double> &sol)
+void feSolution::getSolAtDOF(const std::vector<feInt> &addressing, std::vector<double> &sol) const
 {
   for(size_t i = 0; i < addressing.size(); ++i)
   {
