@@ -1,5 +1,6 @@
 #include "feExporter.h"
 #include "feVertex.h"
+#include "feCncGeo.h"
 
 #include <iostream>
 #include <fstream>
@@ -21,11 +22,11 @@ static int VTK_QUADRATIC_TRIANGLE = 22;
 // static int VTK_QUADRATIC_HEXAHEDRON = 25;
 
 // A etoffer au fur et a mesure
-std::map<std::string, int> cncToVTKmap = {{"Point0D", VTK_VERTEX},
-                                          {"LineP1", VTK_LINE},
-                                          {"TriP1", VTK_TRIANGLE},
-                                          {"LineP2", VTK_QUADRATIC_EDGE},
-                                          {"TriP2", VTK_QUADRATIC_TRIANGLE}};
+std::map<geometricInterpolant, int> cncToVTKmap = {{geometricInterpolant::POINTP0, VTK_VERTEX},
+                                                   {geometricInterpolant::LINEP1, VTK_LINE},
+                                                   {geometricInterpolant::TRIP1, VTK_TRIANGLE},
+                                                   {geometricInterpolant::LINEP2, VTK_QUADRATIC_EDGE},
+                                                   {geometricInterpolant::TRIP2, VTK_QUADRATIC_TRIANGLE}};
 
 feStatus createVisualizationExporter(feExporter *&exporter, visualizationFormat format,
                                      feMetaNumber *metaNumber, feSolution *solution, feMesh *mesh,
@@ -127,7 +128,7 @@ void feExporterVTK::writeElementsConnectivity(std::ostream &output, feCncGeo *cn
     output << std::endl;
   }
   output << "CELL_TYPES " << nElm << std::endl;
-  int vtkElem = cncToVTKmap[cnc->getForme()];
+  int vtkElem = cncToVTKmap[cnc->getInterpolant()];
   for(int iElm = 0; iElm < nElm; ++iElm) {
     if(_addP2Nodes)
       output << VTK_QUADRATIC_TRIANGLE << std::endl;
@@ -269,9 +270,9 @@ feStatus feExporterVTK::writeStep(std::string fileName)
     In the second case, the mesh is not made of 6-node triangles, so we need to create them
     and evaluate the fields at those mid-edge nodes. */
     int geometryPolynomialDegree;
-    if(cnc->getForme() == "TriP1") {
+    if(cnc->getInterpolant() == geometricInterpolant::TRIP1) {
       geometryPolynomialDegree = 1;
-    } else if(cnc->getForme() == "TriP2") {
+    } else if(cnc->getInterpolant() == geometricInterpolant::TRIP2) {
       geometryPolynomialDegree = 2;
     } else {
       return feErrorMsg(FE_STATUS_WRITE_ERROR,
@@ -446,9 +447,9 @@ feStatus feExporterVTK::writeEigenvectors(std::string fileName)
                cnc->getID().c_str(), fileName.c_str());
 
     int geometryPolynomialDegree;
-    if(cnc->getForme() == "TriP1") {
+    if(cnc->getInterpolant() == geometricInterpolant::TRIP1) {
       geometryPolynomialDegree = 1;
-    } else if(cnc->getForme() == "TriP2") {
+    } else if(cnc->getInterpolant() == geometricInterpolant::TRIP2) {
       geometryPolynomialDegree = 2;
     } else {
       return feErrorMsg(FE_STATUS_WRITE_ERROR,

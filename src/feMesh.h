@@ -43,8 +43,6 @@ protected:
   // Number of boundary elements
   int _nBoundaryElm;
 
-  // std::vector<double> _coord;
-
   // Mesh vertices
   std::vector<Vertex> _vertices;
   // Map from non-sequential Gmsh vertices tag to sequential tag
@@ -241,7 +239,7 @@ private:
     int numPhysicalTags;
     std::vector<int> physicalTags;
     int gmshType; // Element type in Gmsh
-    std::string cncID;
+    geometricInterpolant interp;
     int nElm;
     int nNodePerElem = 0;
     int nEdgePerElem;
@@ -262,7 +260,8 @@ private:
     int dim;
     int tag;
     std::vector<int> listEntities; // Tag des entities
-    std::string cncID;
+    geometryType geometry;
+    geometricInterpolant interp;
     feSpace *geoSpace;
     int nElm;
     int nNodePerElem;

@@ -60,7 +60,7 @@ void feSpaceTriP1::initializeAddressingVector(int numElem, std::vector<feInt> &a
 }
 
 // feSpace used to interpolate on a geometric connectivity
-feSpaceTriP1_nonConsistant::feSpaceTriP1_nonConsistant(std::string cncGeoID)
+feSpaceTri_CR1::feSpaceTri_CR1(std::string cncGeoID)
   : feSpace(nullptr, "GEO", cncGeoID, nullptr)
 {
   _nFunctions = 3;
@@ -68,7 +68,7 @@ feSpaceTriP1_nonConsistant::feSpaceTriP1_nonConsistant(std::string cncGeoID)
 }
 
 // feSpace used to compute (bi-)linear forms
-feSpaceTriP1_nonConsistant::feSpaceTriP1_nonConsistant(feMesh *mesh, std::string fieldID,
+feSpaceTri_CR1::feSpaceTri_CR1(feMesh *mesh, std::string fieldID,
                                                        std::string cncGeoID, feFunction *fct)
   : feSpace(mesh, fieldID, cncGeoID, fct)
 {
@@ -77,21 +77,21 @@ feSpaceTriP1_nonConsistant::feSpaceTriP1_nonConsistant(feMesh *mesh, std::string
   // _adr.resize(_nFunctions);
 }
 
-std::vector<double> feSpaceTriP1_nonConsistant::L(double *r)
+std::vector<double> feSpaceTri_CR1::L(double *r)
 {
   return {1 - 2.0 * r[1], -1.0 + 2.0 * r[0] + 2.0 * r[1], 1 - 2.0 * r[0]};
 }
-void feSpaceTriP1_nonConsistant::L(double *r, double *L)
+void feSpaceTri_CR1::L(double *r, double *L)
 {
   L[0] = 1 - 2.0 * r[1];
   L[1] = -1.0 + 2.0 * r[0] + 2.0 * r[1];
   L[2] = 1 - 2.0 * r[0];
 }
-std::vector<double> feSpaceTriP1_nonConsistant::dLdr(double *r) { return {0.0, 2.0, -2.0}; }
-std::vector<double> feSpaceTriP1_nonConsistant::dLds(double *r) { return {-2.0, 2.0, 0.0}; }
-std::vector<double> feSpaceTriP1_nonConsistant::dLdt(double *r) { return {0., 0., 0.}; }
+std::vector<double> feSpaceTri_CR1::dLdr(double *r) { return {0.0, 2.0, -2.0}; }
+std::vector<double> feSpaceTri_CR1::dLds(double *r) { return {-2.0, 2.0, 0.0}; }
+std::vector<double> feSpaceTri_CR1::dLdt(double *r) { return {0., 0., 0.}; }
 
-void feSpaceTriP1_nonConsistant::initializeNumberingUnknowns()
+void feSpaceTri_CR1::initializeNumberingUnknowns()
 {
   int nDOFPerEdge = 1;
   for(int i = 0; i < _mesh->getNbElm(_cncGeoID); ++i) {
@@ -101,7 +101,7 @@ void feSpaceTriP1_nonConsistant::initializeNumberingUnknowns()
   }
 }
 
-void feSpaceTriP1_nonConsistant::initializeNumberingEssential()
+void feSpaceTri_CR1::initializeNumberingEssential()
 {
   for(int i = 0; i < _mesh->getNbElm(_cncGeoID); ++i) {
     _numbering->setEssentialEdgeDOF(_mesh, _cncGeoID, i, 0);
@@ -110,7 +110,7 @@ void feSpaceTriP1_nonConsistant::initializeNumberingEssential()
   }
 }
 
-void feSpaceTriP1_nonConsistant::initializeAddressingVector(int numElem,
+void feSpaceTri_CR1::initializeAddressingVector(int numElem,
                                                             std::vector<feInt> &adr)
 {
   adr[0] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 0, 0);
@@ -387,7 +387,7 @@ void feSpaceTriP2::initializeAddressingVector(int numElem, std::vector<feInt> &a
 }
 
 // feSpace used to interpolate on a geometric connectivity
-feSpaceTriP2_nonConsistant::feSpaceTriP2_nonConsistant(std::string cncGeoID)
+feSpaceTri_CR2::feSpaceTri_CR2(std::string cncGeoID)
   : feSpace(nullptr, "GEO", cncGeoID, nullptr)
 {
   _nFunctions = 7;
@@ -396,7 +396,7 @@ feSpaceTriP2_nonConsistant::feSpaceTriP2_nonConsistant(std::string cncGeoID)
 }
 
 // feSpace used to compute (bi-)linear forms
-feSpaceTriP2_nonConsistant::feSpaceTriP2_nonConsistant(feMesh *mesh, std::string fieldID,
+feSpaceTri_CR2::feSpaceTri_CR2(feMesh *mesh, std::string fieldID,
                                                        std::string cncGeoID, feFunction *fct)
   : feSpace(mesh, fieldID, cncGeoID, fct)
 {
@@ -406,7 +406,7 @@ feSpaceTriP2_nonConsistant::feSpaceTriP2_nonConsistant(feMesh *mesh, std::string
   // _adr.resize(_nFunctions);
 }
 
-std::vector<double> feSpaceTriP2_nonConsistant::L(double *r)
+std::vector<double> feSpaceTri_CR2::L(double *r)
 {
   return {(1. - r[0] - r[1]) * (1. - 2. * r[0] - 2. * r[1]),
           r[0] * (2. * r[0] - 1.),
@@ -416,7 +416,7 @@ std::vector<double> feSpaceTriP2_nonConsistant::L(double *r)
           4. * r[1] * (1. - r[0] - r[1]),
           2. - 3. * (r[0] * r[0] + r[1] * r[1] + (1. - r[0] - r[1]) * (1. - r[0] - r[1]))};
 }
-void feSpaceTriP2_nonConsistant::L(double *r, double *L)
+void feSpaceTri_CR2::L(double *r, double *L)
 {
   L[0] = (1. - r[0] - r[1]) * (1. - 2. * r[0] - 2. * r[1]);
   L[1] = r[0] * (2. * r[0] - 1.);
@@ -427,14 +427,14 @@ void feSpaceTriP2_nonConsistant::L(double *r, double *L)
   L[6] = 2. - 3. * (r[0] * r[0] + r[1] * r[1] + (1. - r[0] - r[1]) * (1. - r[0] - r[1]));
 }
 
-std::vector<double> feSpaceTriP2_nonConsistant::dLdr(double *r)
+std::vector<double> feSpaceTri_CR2::dLdr(double *r)
 {
   return {4. * (r[0] + r[1]) - 3.,      4. * r[0] - 1., 0.,
           4. * (1. - 2. * r[0] - r[1]), 4. * r[1],      -4. * r[1],
           6. * (1. - r[1] - 2. * r[0])};
 }
 
-std::vector<double> feSpaceTriP2_nonConsistant::dLds(double *r)
+std::vector<double> feSpaceTri_CR2::dLds(double *r)
 {
   return {4. * (r[0] + r[1]) - 3.,
           0.,
@@ -445,12 +445,12 @@ std::vector<double> feSpaceTriP2_nonConsistant::dLds(double *r)
           6. * (1. - r[0] - 2. * r[1])};
 }
 
-std::vector<double> feSpaceTriP2_nonConsistant::dLdt(double *r)
+std::vector<double> feSpaceTri_CR2::dLdt(double *r)
 {
   return {0., 0., 0., 0., 0., 0., 0.};
 }
 
-void feSpaceTriP2_nonConsistant::initializeNumberingUnknowns()
+void feSpaceTri_CR2::initializeNumberingUnknowns()
 {
   int nDOFPerEdge = 1;
   int nDOFPerElem = 1;
@@ -467,7 +467,7 @@ void feSpaceTriP2_nonConsistant::initializeNumberingUnknowns()
   }
 }
 
-void feSpaceTriP2_nonConsistant::initializeNumberingEssential()
+void feSpaceTri_CR2::initializeNumberingEssential()
 {
   for(int i = 0; i < _mesh->getNbElm(_cncGeoID); ++i) {
     for(int j = 0; j < this->getCncGeo()->getNbNodePerElem(); ++j) {
@@ -482,7 +482,7 @@ void feSpaceTriP2_nonConsistant::initializeNumberingEssential()
   }
 }
 
-void feSpaceTriP2_nonConsistant::initializeAddressingVector(int numElem,
+void feSpaceTri_CR2::initializeAddressingVector(int numElem,
                                                             std::vector<feInt> &adr)
 {
   adr[0] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 0);
@@ -724,35 +724,6 @@ std::vector<double> feSpaceTriP4::L(double *r)
           R * S * f3 * f4 * 128.,       R * S * r1 * f4 * 128.,      R * S * s1 * f4 * 128.};
 }
 
-std::vector<double> feSpaceTriP4::dLdr(double *r)
-{
-  feWarning("BASIS FUNCTIONS MAY BE WRONG : There is a 0 shape function...");
-  double R = r[0];
-  double S = r[1];
-  return {32. / 3. *
-            (4. * R * R * R + 12. * R * R * S - (15. * R * R) / 2. + 12. * R * S * S - 15. * R * S +
-             (35. * R) / 8. + 4. * S * S * S - (15. * S * S) / 2. + (35. * S) / 8. - 25. / 32.),
-          32. / 3. * (4. * R * R * R - (9. * R * R) / 2. + (11. * R) / 8. - 3. / 32.),
-          32. / 3. * (0.0),
-          128. / 3. *
-            (-4. * R * R * R - 9. * R * R * S + (27. * R * R) / 4. - 6. * R * S * S + 9. * R * S -
-             (13. * R) / 4. - S * S * S + (9. * S * S) / 4. - (13. * S) / 8. + 3. / 8.),
-          64. * (4. * R * R * R + 6. * R * R * S - 6. * R * R + 2. * R * S * S - (9. * R * S) / 2. +
-                 (19. * R) / 8. - S * S / 4. + (7. * S) / 16. - 3. / 16.),
-          128. / 3. *
-            ((3. * R * S) / 2. - S / 8. - (7. * R) / 4. - 3. * R * R * S + (21. * R * R) / 4. -
-             4. * R * R * R + 1. / 8.),
-          128. / 3. * ((S * (24. * R * R - 12. * R + 1.)) / 8.),
-          64. * ((S * (8. * R - 1.) * (4. * S - 1.)) / 16.),
-          128. / 3. * (S * (S - 1. / 2.) * (S - 1. / 4.)),
-          128. / 3. * (-S * (S - 1. / 2.) * (S - 1. / 4.)),
-          64. * ((S * (4. * S - 1.) * (8. * R + 8. * S - 7.)) / 16.),
-          128. / 3. *
-            (-(S * (24. * R * R + 48. * R * S - 36. * R + 24. * S * S - 36. * S + 13.)) / 8.),
-          128. * ((S * (12. * R * R + 16. * R * S - 14. * R + 4. * S * S - 7. * S + 3.)) / 4.),
-          128. * (-(S * (8. * R * S - S - 10. * R + 12. * R * R + 1.)) / 4.),
-          128. * (-(S * (4. * S - 1.) * (2. * R + S - 1.)) / 4.)};
-}
 void feSpaceTriP4::L(double *r, double *L)
 {
   double R = r[0];
@@ -776,6 +747,35 @@ void feSpaceTriP4::L(double *r, double *L)
   L[12] = 128. * ((S * (12. * R * R + 16. * R * S - 14. * R + 4. * S * S - 7. * S + 3.)) / 4.);
   L[13] = 128. * (-(S * (8. * R * S - S - 10. * R + 12. * R * R + 1.)) / 4.);
   L[14] = 128. * (-(S * (4. * S - 1.) * (2. * R + S - 1.)) / 4.);
+}
+
+std::vector<double> feSpaceTriP4::dLdr(double *r)
+{
+  double R = r[0];
+  double S = r[1];
+  return {32. / 3. *
+            (4. * R * R * R + 12. * R * R * S - (15. * R * R) / 2. + 12. * R * S * S - 15. * R * S +
+             (35. * R) / 8. + 4. * S * S * S - (15. * S * S) / 2. + (35. * S) / 8. - 25. / 32.),
+          32. / 3. * (4. * R * R * R - (9. * R * R) / 2. + (11. * R) / 8. - 3. / 32.),
+          0.,
+          128. / 3. *
+            (-4. * R * R * R - 9. * R * R * S + (27. * R * R) / 4. - 6. * R * S * S + 9. * R * S -
+             (13. * R) / 4. - S * S * S + (9. * S * S) / 4. - (13. * S) / 8. + 3. / 8.),
+          64. * (4. * R * R * R + 6. * R * R * S - 6. * R * R + 2. * R * S * S - (9. * R * S) / 2. +
+                 (19. * R) / 8. - S * S / 4. + (7. * S) / 16. - 3. / 16.),
+          128. / 3. *
+            ((3. * R * S) / 2. - S / 8. - (7. * R) / 4. - 3. * R * R * S + (21. * R * R) / 4. -
+             4. * R * R * R + 1. / 8.),
+          128. / 3. * ((S * (24. * R * R - 12. * R + 1.)) / 8.),
+          64. * ((S * (8. * R - 1.) * (4. * S - 1.)) / 16.),
+          128. / 3. * (S * (S - 1. / 2.) * (S - 1. / 4.)),
+          128. / 3. * (-S * (S - 1. / 2.) * (S - 1. / 4.)),
+          64. * ((S * (4. * S - 1.) * (8. * R + 8. * S - 7.)) / 16.),
+          128. / 3. *
+            (-(S * (24. * R * R + 48. * R * S - 36. * R + 24. * S * S - 36. * S + 13.)) / 8.),
+          128. * ((S * (12. * R * R + 16. * R * S - 14. * R + 4. * S * S - 7. * S + 3.)) / 4.),
+          128. * (-(S * (8. * R * S - S - 10. * R + 12. * R * R + 1.)) / 4.),
+          128. * (-(S * (4. * S - 1.) * (2. * R + S - 1.)) / 4.)};
 }
 
 std::vector<double> feSpaceTriP4::dLds(double *r)

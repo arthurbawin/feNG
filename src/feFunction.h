@@ -26,7 +26,15 @@ public:
   ~feFunction() {}
 
   // Evaluate the ScalarField at time t and position x
-  double eval(const double t, const std::vector<double> &x) { return _fct(t, x, _par); }
+  // Can use 'eval' or operator() overloading
+  double eval(const double t, const std::vector<double> &x)
+  {
+    return _fct(t, x, _par);
+  }
+  double operator()(const double t, const std::vector<double> &x)
+  {
+    return _fct(t, x, _par);
+  }
 };
 
 class feVectorFunction
@@ -43,7 +51,7 @@ public:
   // Evaluate the VectorField at time t and position x
   void eval(const double t, const std::vector<double> &x, std::vector<double> &res)
   {
-    return _fct(t, x, _par, res);
+    _fct(t, x, _par, res);
   }
   std::vector<double> getParam() { return _par; }
 };

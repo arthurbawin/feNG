@@ -43,10 +43,36 @@ feNorm::feNorm(normType type, const std::vector<feSpace*> &spaces, feSolution *s
   _localSol.resize(spaces.size());
   for(size_t k = 0; k < spaces.size(); ++k)
     _localSol[k].resize(spaces[k]->getNbFunctions());
+
+  _cncOnly = false;
+}
+
+feNorm::feNorm(feCncGeo *cnc, feFunction *scalarSolution, feVectorFunction *vectorSolution)
+  : _cnc(cnc)
+  , _scalarSolution(scalarSolution)
+  , _vectorSolution(vectorSolution)
+  , _J(_cnc->getJacobians())
+{
+  _nQuad = cnc->getFeSpace()->getNbQuadPoints();
+  _w = cnc->getFeSpace()->getQuadratureWeights();
+  _geoSpace = cnc->getFeSpace();
+  _nElm = cnc->getNbElm();
+  _pos.resize(3);
+  _geoCoord.resize(3 * cnc->getNbNodePerElem());
+
+  _cncOnly = true;
 }
 
 double feNorm::compute(normType type)
 {
+  if( _cncOnly && !(type == AREA || type == INTEGRAL_F) )
+  {
+    feErrorMsg(FE_STATUS_ERROR, "This norm was created with a geometric"
+      " connectivity only. Cannot compute this norm without"
+      " providing solution and finite element space.");
+    exit(-1);
+  }
+
   double res;
   switch(type)
   {
@@ -73,6 +99,9 @@ double feNorm::compute(normType type)
       break;
     case INTEGRAL:
       return this->computeIntegral();
+      break;
+    case INTEGRAL_F:
+      return this->computeIntegralUserFunction();
       break;
     case DOT_PRODUCT:
       return this->computeIntegralDotProduct();
@@ -215,6 +244,26 @@ double feNorm::computeIntegral()
     for(int k = 0; k < _nQuad; ++k) {
       uh = _spaces[0]->interpolateFieldAtQuadNode(_localSol[0], k);
       res += uh * _J[_nQuad * iElm + k] * _w[k];
+    }
+  }
+  return res;
+}
+
+double feNorm::computeIntegralUserFunction()
+{
+  double res = 0.0, u, t = 0.;
+
+  #if defined(HAVE_OMP)
+  #pragma omp parallel for private(_geoCoord, u) reduction(+ : res) schedule(dynamic)
+  #endif
+  for(int iElm = 0; iElm < _nElm; ++iElm) {
+
+    _geoSpace->_mesh->getCoord(_cnc, iElm, _geoCoord);
+
+    for(int k = 0; k < _nQuad; ++k) {
+      _geoSpace->interpolateVectorFieldAtQuadNode(_geoCoord, k, _pos);
+      u = (*_scalarSolution)(t, _pos);
+      res += u * _J[_nQuad * iElm + k] * _w[k];
     }
   }
   return res;

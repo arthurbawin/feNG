@@ -78,37 +78,49 @@ void feSolution::initializeTemporalSolution(double t0, double t1, int nTimeSteps
 
 void feSolution::initializeUnknowns(feMesh *mesh)
 {
-  for(feSpace *const &fS : _spaces) {
+  std::vector<double> x(3);
 
-    int nElm = mesh->getNbElm(fS->getCncGeoID()); // On pourrait donner un _nElm au feSpace
+  for(feSpace *fS : _spaces) {
+
+    if(fS->getDOFInitialization() == dofInitialization::PREVIOUS_SOL){
+      continue;
+    }
+
+    int nElm = fS->getNbElm();
     std::vector<feInt> adr(fS->getNbFunctions());
     std::vector<double> coor = fS->getLcoor();
     int nbNodePerElem = mesh->getCncGeoByName(fS->getCncGeoID())->getNbNodePerElem();
-    std::vector<double> localCoord(3*nbNodePerElem);
-    std::vector<double> x(3);
+    std::vector<double> localCoord(3 * nbNodePerElem);
+    
     feSpace *geoSpace = mesh->getGeometricSpace(fS->getCncGeoID());
     
-    if(true){
+    if(fS->getDOFInitialization() == dofInitialization::NODEWISE)
+    {
       // Node based: the initial condition is imposed at the vertices DOF
       for(int iElm = 0; iElm < nElm; ++iElm) {
+
         fS->initializeAddressingVector(iElm, adr);
         mesh->getCoord(fS->getCncGeoID(), iElm, localCoord);
         
         for(int j = 0; j < fS->getNbFunctions(); ++j) {
           double r[3] = {coor[3 * j], coor[3 * j + 1], coor[3 * j + 2]};
-          // x[0] = geoSpace->interpolateField(localCoord, r);
           geoSpace->interpolateVectorField(localCoord, r, x);
+          _sol[adr[j]] = fS->evalFun(_tn, x);
 
-          // If the function given to the feSpace is null, the solution is not changed,
-          // i.e. we continue with the value from a previous computation.
-          if(fS->isFctDefined()) {
-            double val = fS->evalFun(_tn, x);
-            _sol[adr[j]] = val;
-          }
+          feInfo("Setting unknown at %d to %f", adr[j], fS->evalFun(_tn, x));
         }
       }
-    } else{
-      // Cell based 1D Legendre polynomials: the initial condition is satisfied on each element in the least-square sense:
+    }
+
+    else if(fS->getDOFInitialization() == dofInitialization::LEAST_SQUARES)
+    {
+      // Temporary test
+      if(fS->getElementType() != elementType::LEGENDRE){
+        feErrorMsg(FE_STATUS_ERROR, "LEAST_SQUARES dof initialization available only for 1D Legendre elements.");
+        exit(-1);
+      }
+
+      // Assuming 1D Legendre polynomials: the initial condition is satisfied on each element in the least-square sense:
       //
       //  <phi_i, phi_j> U_j^e = <phi_i, funSol> ==> A_ij^e U_j^e = B_j^e
       //
@@ -125,8 +137,6 @@ void feSolution::initializeUnknowns(feMesh *mesh)
       std::vector<double> wQuad = geoSpace->getQuadratureWeights();
       std::vector<double> xQuad = geoSpace->getRQuadraturePoints();
 
-      // std::vector<double> &J = mesh->getCncGeoByName(fS->getCncGeoID())->getJacobians();
-
       double uQuad = 0.;
       std::vector<double> phi(fS->getNbFunctions(), 0.);
       for(int iElm = 0; iElm < nElm; ++iElm){
@@ -138,77 +148,72 @@ void feSolution::initializeUnknowns(feMesh *mesh)
         for(int i = 0; i < fS->getNbFunctions(); ++i){
 
           B[i] = 0.;
-
           for(int k = 0; k < nQuad; ++k){
-
             // Evaluate analytic solution at quad points
             double r[3] = {xQuad[k], 0., 0.};
             geoSpace->interpolateVectorField(localCoord, r, x);
             uQuad = fS->evalFun(_tn, x);
             // Evaluate Legendre polynomials at quad points
             fS->L(r, phi.data());
-
-            // feInfo("u = %f - phi(%f) = (%f - %f - %f vs %f)", uQuad, r[0], phi[0], phi[1], phi[2], 3./2.*r[0]*r[0] - 0.5);
-
             B[i] += wQuad[k] * phi[i] * uQuad;
           }
         }
 
         // Solve Aij Uj = Bj on the element
-        std::vector<double> elmSolution(adr.size());
         for(int i = 0; i < fS->getNbFunctions(); ++i){
           _sol[adr[i]] = B[i] / A[i];
-          elmSolution[i] = _sol[adr[i]];
-          // feInfo("elm %d - %d - dof %d: Bi = %f Ai = %f - Computed initial condition %f", iElm, i, adr[i], B[i], A[i], B[i] / A[i];
         }
-
-        double rr[3] = {-1., 0., 0.};
-        geoSpace->interpolateVectorField(localCoord, rr, x);
-        double myVal = fS->interpolateField(elmSolution, rr);
-        feInfo("Interpolation en x = %f : uh = %f - u = %f - adr = %d %d %d", x[0], myVal, fS->evalFun(_tn, x), adr[0], adr[1], adr[2]);
-
       }
     }
   }
 }
 
-void feSolution::initializeEssentialBC(feMesh *mesh,
-                                       feSolutionContainer *solContainer)
+void feSolution::initializeEssentialBC(feMesh *mesh, feSolutionContainer *solContainer)
 {
-  for(feSpace *const &fS : _essentialSpaces) {
-    std::vector<feInt> adrS(fS->getNbFunctions());
-    int nElm = mesh->getNbElm(fS->getCncGeoID());
+  std::vector<double> x(3);
+
+  for(feSpace *fS : _essentialSpaces) {
+
+    if(fS->getDOFInitialization() == dofInitialization::PREVIOUS_SOL){
+      continue;
+    }
+
+    int nElm = fS->getNbElm();
+    std::vector<feInt> adr(fS->getNbFunctions());
     std::vector<double> coor = fS->getLcoor();
     int nbNodePerElem = mesh->getCncGeoByName(fS->getCncGeoID())->getNbNodePerElem();
-    std::vector<double> localCoord(3*nbNodePerElem); 
-    std::vector<double> x(3);
+    std::vector<double> localCoord(3 * nbNodePerElem); 
+    
     feSpace *geoSpace = mesh->getGeometricSpace(fS->getCncGeoID());
     
-    for(int iElm = 0; iElm < nElm; ++iElm) {
-      fS->initializeAddressingVector(iElm, adrS);
-      mesh->getCoord(fS->getCncGeoID(), iElm, localCoord);
-      for(int j = 0; j < fS->getNbFunctions(); ++j) {
-        double r[3] = {coor[3 * j], coor[3 * j + 1], coor[3 * j + 2]};
-        geoSpace->interpolateVectorField(localCoord, r, x);
-        
-        if(fS->isFctDefined()) {
-          _sol[adrS[j]] = fS->evalFun(_tn, x);
-          // fS->getAddressingVectorAt(j), _sol[fS->getAddressingVectorAt(j)], x[0], x[1]);
-        } else {
-          printf("BC Sol un changed in field %s - %s\n", fS->getFieldID().c_str(),
-                 fS->getCncGeoID().c_str());
+    if(fS->getDOFInitialization() == dofInitialization::NODEWISE)
+    {
+      // Node based: the initial condition is imposed at the vertices DOF
+      for(int iElm = 0; iElm < nElm; ++iElm) {
+
+        fS->initializeAddressingVector(iElm, adr);
+        mesh->getCoord(fS->getCncGeoID(), iElm, localCoord);
+
+        for(int j = 0; j < fS->getNbFunctions(); ++j) {
+          double r[3] = {coor[3 * j], coor[3 * j + 1], coor[3 * j + 2]};
+          geoSpace->interpolateVectorField(localCoord, r, x);
+          double val = fS->evalFun(_tn, x);
+          _sol[adr[j]] = val;
+
+          feInfo("Setting Essential BC at %d to %f", adr[j], val);
+
+          if(solContainer != nullptr) {
+            solContainer->_sol[0][adr[j]] = val;
+          };
+
         }
-        // printf("_sol[%d] = %f\n", fS->getAddressingVectorAt(j),
-        // _sol[fS->getAddressingVectorAt(j)]);
-        if(solContainer != nullptr) {
-          if(fS->isFctDefined()) {
-            solContainer->_sol[0][adrS[j]] = fS->evalFun(_tn, x);
-          } else {
-            // printf("BC Sol un changed in field %s - %s\n", fS->getFieldID().c_str(),
-            // fS->getCncGeoID().c_str());
-          }
-        };
       }
+    }
+    else if(fS->getDOFInitialization() == dofInitialization::LEAST_SQUARES)
+    {
+      // Not yet implemented
+      feErrorMsg(FE_STATUS_ERROR, "Cannot initialize essential DOF in the LEAST_SQUARES sense.");
+      exit(-1);
     }
   }
 }

@@ -27,6 +27,7 @@ typedef enum {
   ADVECTION_1D,
   DG_ADVECTION_1D,
   SUPG_STABILIZATION_1D,
+  BEAM_1D,
 
   // 2D weak forms
   MASS_2D,
@@ -60,6 +61,8 @@ inline const std::string toString(elementSystemType t)
       return "DG_ADVECTION_1D";
     case SUPG_STABILIZATION_1D:
       return "SUPG_STABILIZATION_1D";
+    case BEAM_1D:
+      return "BEAM_1D";
     
 
     case MASS_2D:
@@ -608,6 +611,30 @@ public:
     _computeMatrixWithFD = false;
   };
   ~feSysElm_1D_DG_Advection() {}
+
+  void createElementarySystem(std::vector<feSpace *> &space);
+  void computeAe(feBilinearForm *form);
+  void computeBe(feBilinearForm *form);
+};
+
+class feSysElm_1D_Beam : public feSysElm
+{
+protected:
+  feFunction *_fct;
+  double _par;
+  int _idU;
+  std::vector<double> _feU;
+  std::vector<double> _feUdx2;
+
+public:
+  feSysElm_1D_Beam(double EI) : feSysElm(true), _par(EI)
+  {
+    _dim = 1;
+    _nFields = 1;
+    _ID = BEAM_1D;
+    _computeMatrixWithFD = true;
+  };
+  ~feSysElm_1D_Beam() {}
 
   void createElementarySystem(std::vector<feSpace *> &space);
   void computeAe(feBilinearForm *form);

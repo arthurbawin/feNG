@@ -57,6 +57,9 @@ public:
   feLinearSystem(std::vector<feBilinearForm *> bilinearForms);
   virtual ~feLinearSystem() {}
 
+  // Return the size m of the linear system (dimension of the square matrix m x m)
+  virtual feInt getSystemSize() = 0;
+
   bool getRecomputeStatus() { return recomputeMatrix; }
   void setRecomputeStatus(bool status) { recomputeMatrix = status; }
 

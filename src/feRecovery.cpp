@@ -202,23 +202,23 @@ feRecovery::feRecovery(feMetaNumber *metaNumber, feSpace *space, feMesh *mesh, f
     _dimDerivation = _degSol + 1;
     _dim2Derivation = _degSol;
   } else if(_dim == 2) {
-    if(_cnc->getForme() == "TriP1" || _cnc->getForme() == "TriP2") {
+    if(_cnc->getInterpolant() == geometricInterpolant::TRIP1 || _cnc->getInterpolant() == geometricInterpolant::TRIP2) {
       _dimRecovery = (_degSol + 2) * (_degSol + 3) / 2;
       _dimDerivation = (_degSol + 1) * (_degSol + 2) / 2;
-    } else if(_cnc->getForme() == "QuadP1" || _cnc->getForme() == "QuadP2") {
+    } else if(_cnc->getInterpolant() == geometricInterpolant::QUADP1 || _cnc->getInterpolant() == geometricInterpolant::QUADP2) {
       _dimRecovery = (_degSol + 2) * (_degSol + 2);
       _dimDerivation = (_degSol + 1) * (_degSol + 1);
     } else {
       printf("Error : Mesh connectivity \"%s\" not available for polynomial recovery.\n",
-             _cnc->getForme().c_str());
+             toString(_cnc->getInterpolant()).data());
     }
   } else if(_dim == 3) {
-    if(_cnc->getForme() == "TetP1" || _cnc->getForme() == "TetP2") {
+    if(_cnc->getInterpolant() == geometricInterpolant::TETP1 || _cnc->getInterpolant() == geometricInterpolant::TETP2) {
       _dimRecovery = (_degSol + 2) * (_degSol + 3) * (_degSol + 4) / 6;
       _dimDerivation = (_degSol + 1) * (_degSol + 2) * (_degSol + 3) / 6;
     } else {
       printf("Error : Mesh connectivity \"%s\" not available for polynomial recovery.\n",
-             _cnc->getForme().c_str());
+             toString(_cnc->getInterpolant()).data());
     }
   }
 
@@ -270,7 +270,9 @@ feRecovery::feRecovery(feMetaNumber *metaNumber, feSpace *space, feMesh *mesh, f
     //   std::cout<<val<<std::endl;
     // std::cout<<std::endl;
 
-  } else if(_dim == 2 && (_cnc->getForme() == "TriP1" || _cnc->getForme() == "TriP2")) {
+  } else if(_dim == 2 && (_cnc->getInterpolant() == geometricInterpolant::TRIP1
+      || _cnc->getInterpolant() == geometricInterpolant::TRIP2))
+  {
     for(int j = 0; j <= n; ++j) {
       for(int i = 0; i <= n - j; ++i) {
         _expXRecovery[ind] = i;

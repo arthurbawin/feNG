@@ -17,7 +17,7 @@ int main(int argc, char **argv)
   feMesh1DP1 mesh(xa, xb, nElm, "BXA", "BXB", "Domaine");
 
   feSpace *uDomaine;
-  feCheck(createFiniteElementSpace(uDomaine, &mesh, dim = 1, LINE, LAGRANGE, deg, "U", "Domaine", degreeQuadrature, funTest));
+  feCheck(createFiniteElementSpace(uDomaine, &mesh, elementType::LAGRANGE, deg, "U", "Domaine", degreeQuadrature, funTest));
 
   std::vector<feSpace*> spaces = {uDomaine};
   std::vector<feSpace*> essentialSpaces = {};

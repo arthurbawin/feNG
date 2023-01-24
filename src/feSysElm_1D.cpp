@@ -436,3 +436,54 @@ void feSysElm_1D_DG_Advection::computeBe(feBilinearForm *form)
     //   uPlus - uMinus);
   }
 }
+
+void feSysElm_1D_Beam::createElementarySystem(std::vector<feSpace *> &space)
+{
+  _idU = 0;
+  _fieldsLayoutI[0] = _idU;
+  _fieldsLayoutJ[0] = _idU;
+  _nFunctions = space[_idU]->getNbFunctions();
+  _feU.resize(_nFunctions);
+  _feUdx2.resize(_nFunctions);
+}
+
+void feSysElm_1D_Beam::computeAe(feBilinearForm *form)
+{
+  // for(int k = 0; k < _nQuad; ++k) {
+  //   double jac = form->_J[_nQuad * form->_numElem + k];
+
+  //   for(int i = 0; i < _nFunctions; ++i)
+  //     _feUdx[i] = form->_intSpaces[_idU]->getdFunctiondrAtQuadNode(i, k) / jac;
+
+  //   form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, _pos);
+  //   double kD = _diffusivityFun->eval(form->_tn, _pos);
+
+  //   for(int i = 0; i < _nFunctions; ++i) {
+  //     for(int j = 0; j < _nFunctions; ++j) {
+  //       form->_Ae[i][j] += _feUdx[i] * kD * _feUdx[j] * jac * _wQuad[k];
+  //     }
+  //   }
+  // }
+}
+
+void feSysElm_1D_Beam::computeBe(feBilinearForm *form)
+{
+  double jac, d2udx2;
+  for(int k = 0; k < _nQuad; ++k) {
+    jac = form->_J[_nQuad * form->_numElem + k];
+
+    d2udx2 = form->_intSpaces[_idU]->interpolateFieldAtQuadNode_rrDerivative(form->_sol[_idU], k);
+    d2udx2 /= jac*jac;
+
+    form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, _pos);
+    // double kD = _diffusivityFun->eval(form->_tn, _pos);
+    double EI = _par;
+
+    for(int i = 0; i < _nFunctions; ++i) {
+      _feUdx2[i] = form->_intSpaces[_idU]->getd2Functiondr2AtQuadNode(i, k);
+      _feUdx2[i] /= jac*jac;
+      feInfo("Adding %f and %f", _feUdx2[i], d2udx2);
+      form->_Be[i] -= _feUdx2[i] * EI * d2udx2 * jac * _wQuad[k];
+    }
+  }
+}

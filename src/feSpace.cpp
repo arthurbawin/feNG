@@ -6,9 +6,7 @@ extern int FE_VERBOSE;
 
 feStatus createFiniteElementSpace(feSpace *&space,
   feMesh *mesh,
-  const int dimension,
-  const geometryType geometry,
-  const shapeType shape,
+  const elementType element,
   const int degree,
   const std::string fieldName,
   const std::string cncGeoID,
@@ -16,6 +14,10 @@ feStatus createFiniteElementSpace(feSpace *&space,
   feFunction *fct,
   const bool useGlobalShapeFunctions)
 {
+  const feCncGeo *cnc = mesh->getCncGeoByName(cncGeoID);
+  int dimension = cnc->getDim();
+  geometryType geometry = cnc->getGeometry();
+
   feInfoCond(FE_VERBOSE > 0, "");
   feInfoCond(FE_VERBOSE > 0, "FINITE ELEMENT SPACE:");
   feInfoCond(FE_VERBOSE > 0, "\t\tCreating FE space for field \"%s\" on entity \"%s\"",
@@ -34,22 +36,34 @@ feStatus createFiniteElementSpace(feSpace *&space,
   switch(dimension) {
 
     case 0:
-      if(geometry != POINT)
+      if(geometry != geometryType::POINT)
         return feErrorMsg(FE_STATUS_ERROR, "Unsupported geometry.");
+
       feInfoCond(FE_VERBOSE > 0, "\t\t\tGeometry: Point");
-      feInfoCond(FE_VERBOSE > 0, "\t\t\tShape functions: Lagrange polynomials");
-      space = new feSpace1DP0(mesh, fieldName, cncGeoID, fct);
+
+      if(element == elementType::LAGRANGE){
+
+        feInfoCond(FE_VERBOSE > 0, "\t\t\tFinite element: Lagrange");
+        space = new feSpace1DP0(mesh, fieldName, cncGeoID, fct);
+
+      } else if(element == elementType::HERMITE){
+
+        feInfoCond(FE_VERBOSE > 0, "\t\t\tFinite element: Hermite");
+        space = new feSpace0D_Hermite(mesh, fieldName, cncGeoID, fct);
+
+      }
+      
       break;
 
     case 1:
-      if(geometry != LINE)
+      if(geometry != geometryType::LINE)
         return feErrorMsg(FE_STATUS_ERROR, "Unsupported geometry.");
 
       feInfoCond(FE_VERBOSE > 0, "\t\t\tGeometry: Line");
 
-      if(shape == LAGRANGE) {
+      if(element == elementType::LAGRANGE) {
 
-        feInfoCond(FE_VERBOSE > 0, "\t\t\tShape functions: Lagrange polynomials");
+        feInfoCond(FE_VERBOSE > 0, "\t\t\tFinite element: Lagrange");
         switch(degree) {
           case 0:
             space = new feSpace1DP0(mesh, fieldName, cncGeoID, fct);
@@ -71,39 +85,42 @@ feStatus createFiniteElementSpace(feSpace *&space,
             "No LAGRANGE 1D finite element space implemented for deg > 4.");
         }
 
-      } else if(shape == LEGENDRE) {
+      } else if(element == elementType::LEGENDRE) {
 
-        feInfoCond(FE_VERBOSE > 0, "\t\t\tShape functions: Legendre polynomials");
+        feInfoCond(FE_VERBOSE > 0, "\t\t\tFinite element: Legendre");
         space = new feSpace1D_Legendre(degree, mesh, fieldName, cncGeoID, fct);
 
-      } else if(shape == NONCONFORMAL) {
+      } else if(element == elementType::CROUZEIX_RAVIART) {
 
         switch(degree) {
           case 1:
-            feInfoCond(FE_VERBOSE > 0, "\t\t\tShape functions: Non-conformal polynomials");
-            space = new feSpace1DP1_nonConsistant(mesh, fieldName, cncGeoID, fct);
+            feInfoCond(FE_VERBOSE > 0, "\t\t\tFinite element: Crouzeix-Raviart");
+            space = new feSpace1D_CR0(mesh, fieldName, cncGeoID, fct);
             break;
           default:
             return feErrorMsg(FE_STATUS_ERROR,
-              "No NONCONFORMAL 1D finite element space implemented for deg > 1.");
+              "No CROUZEIX_RAVIART 1D finite element space implemented for deg > 1.");
         }
 
+      } else if(element == elementType::HERMITE) {
+
+        feInfoCond(FE_VERBOSE > 0, "\t\t\tFinite element: Hermite");
+        space = new feSpace1D_H3(mesh, fieldName, cncGeoID, fct);
+
       } else {
-
-        return feErrorMsg(FE_STATUS_ERROR, "Unsupported shape functions.");
-
+        return feErrorMsg(FE_STATUS_ERROR, "Unsupported finite element.");
       }
       break;
 
     case 2:
-      if(geometry != TRI)
+      if(geometry != geometryType::TRI)
         return feErrorMsg(FE_STATUS_ERROR, "Unsupported geometry.");
 
       feInfoCond(FE_VERBOSE > 0, "\t\t\tGeometry: Triangle");
 
-      if(shape == LAGRANGE) {
+      if(element == elementType::LAGRANGE) {
   
-        feInfoCond(FE_VERBOSE > 0, "\t\t\tShape functions: Lagrange polynomials");
+        feInfoCond(FE_VERBOSE > 0, "\t\t\tFinite element: Lagrange");
 
         switch(degree) {
           case 1:
@@ -123,21 +140,23 @@ feStatus createFiniteElementSpace(feSpace *&space,
               "No LAGRANGE 2D finite element space implemented on triangles for deg > 4 or = 0.");
         }
 
-      } else if(shape == NONCONFORMAL) {
+      } else if(element == elementType::CROUZEIX_RAVIART) {
 
-        feInfoCond(FE_VERBOSE > 0, "\t\t\tShape functions: Non-conformal Crouzeix-Raviart polynomials");
+        feInfoCond(FE_VERBOSE > 0, "\t\t\tFinite element: non-conforming Crouzeix-Raviart");
 
         switch(degree) {
           case 1:
-            space = new feSpaceTriP1_nonConsistant(mesh, fieldName, cncGeoID, fct);
+            space = new feSpaceTri_CR1(mesh, fieldName, cncGeoID, fct);
             break;
           case 2:
-            space = new feSpaceTriP2_nonConsistant(mesh, fieldName, cncGeoID, fct);
+            space = new feSpaceTri_CR2(mesh, fieldName, cncGeoID, fct);
             break;
           default:
             return feErrorMsg(FE_STATUS_ERROR,
-                              "No TRI_CR finite element space implemented for deg > 2 or = 0.");
+                              "No Crouzeix-Raviart finite element space implemented for deg > 2 or = 0.");
         }
+      } else {
+        return feErrorMsg(FE_STATUS_ERROR, "Unsupported finite element.");
       }
       break;
 
@@ -154,7 +173,8 @@ feStatus createFiniteElementSpace(feSpace *&space,
   // space->useGlobalFunctions(useGlobalShapeFunctions);
 
   // Set the quadrature rule on this space and the corresponding geometric interpolation space
-  feQuadrature rule(degreeQuadrature, dimension, mesh->getCncGeoByName(cncGeoID)->getForme());
+  // feQuadrature rule(degreeQuadrature, dimension, mesh->getCncGeoByName(cncGeoID)->getForme());
+  feQuadrature rule(degreeQuadrature, mesh->getCncGeoByName(cncGeoID)->getGeometry());
   
   // FIXME: the FE space of the geometric connectivity is the one of the last created space...
   feCheck(space->getCncGeo()->getFeSpace()->setQuadratureRule(&rule));
@@ -189,7 +209,7 @@ int feSpace::getNbNodePerElem() { return _mesh->getNbNodePerElem(_cncGeoTag); }
 
 feStatus feSpace::setQuadratureRule(feQuadrature *rule)
 {
-  _nQuad = rule->getNQuad();
+  _nQuad = rule->getNumQuadPoints();
   _wQuad = rule->getWeights();
   _xQuad = rule->getXPoints();
   _yQuad = rule->getYPoints();
@@ -199,6 +219,9 @@ feStatus feSpace::setQuadratureRule(feQuadrature *rule)
   _dLdr.resize(_nFunctions * _nQuad, 0.0);
   _dLds.resize(_nFunctions * _nQuad, 0.0);
   _dLdt.resize(_nFunctions * _nQuad, 0.0);
+  _d2Ldr2.resize(_nFunctions * _nQuad, 0.0);
+  _d2Lds2.resize(_nFunctions * _nQuad, 0.0);
+  _d2Ldt2.resize(_nFunctions * _nQuad, 0.0);
 
   /* Reference frame discretization : shape functions are computed once on the reference element,
   then evaluated at the quadrature nodes. */
@@ -208,10 +231,16 @@ feStatus feSpace::setQuadratureRule(feQuadrature *rule)
     std::vector<double> dldr = dLdr(r);
     std::vector<double> dlds = dLds(r);
     std::vector<double> dldt = dLdt(r);
+    std::vector<double> d2ldr2 = d2Ldr2(r);
+    std::vector<double> d2lds2 = d2Lds2(r);
+    std::vector<double> d2ldt2 = d2Ldt2(r);
     for(int j = 0; j < _nFunctions; ++j) _L[_nFunctions * i + j] = l[j];
     for(int j = 0; j < _nFunctions; ++j) _dLdr[_nFunctions * i + j] = dldr[j];
     for(int j = 0; j < _nFunctions; ++j) _dLds[_nFunctions * i + j] = dlds[j];
     for(int j = 0; j < _nFunctions; ++j) _dLdt[_nFunctions * i + j] = dldt[j];
+    for(int j = 0; j < _nFunctions; ++j) _d2Ldr2[_nFunctions * i + j] = d2ldr2[j];
+    for(int j = 0; j < _nFunctions; ++j) _d2Lds2[_nFunctions * i + j] = d2lds2[j];
+    for(int j = 0; j < _nFunctions; ++j) _d2Ldt2[_nFunctions * i + j] = d2ldt2[j];  
   }
 
   if(_fieldID != "GEO" && _useGlobalShapeFunctions) {
@@ -256,7 +285,7 @@ feStatus feSpace::setQuadratureRule(feQuadrature *rule)
     }
   }
 
-  // If the space is a geometric interpolant, precompute jacobians of the elements
+  // If the space is a geometric interpolant, compute elements' jacobian
   if(_fieldID == "GEO") {
     feStatus s = this->getCncGeo()->computeJacobians();
     if(s != FE_STATUS_OK){
@@ -531,6 +560,38 @@ double feSpace::interpolateFieldAtQuadNode_sDerivative(std::vector<double> &fiel
   }
 #endif
   for(int i = 0; i < _nFunctions; ++i) res += field[i] * _dLds[_nFunctions * iNode + i];
+  return res;
+}
+
+double feSpace::interpolateFieldAtQuadNode_rrDerivative(std::vector<double> &field,
+                                                       int iNode) 
+{
+  double res = 0.0;
+#ifdef FENG_DEBUG
+  if(field.size() != (unsigned)_nFunctions) {
+    printf(" In feSpace::interpolateFieldAtQuadNode : Erreur - Nombre de valeurs nodales (%ld) non "
+           "compatible avec le nombre d'interpolants de l'espace (%d).\n",
+           field.size(), (unsigned)_nFunctions);
+    return res;
+  }
+#endif
+  for(int i = 0; i < _nFunctions; ++i) res += field[i] * _d2Ldr2[_nFunctions * iNode + i];
+  return res;
+}
+
+double feSpace::interpolateFieldAtQuadNode_ssDerivative(std::vector<double> &field,
+                                                       int iNode) 
+{
+  double res = 0.0;
+#ifdef FENG_DEBUG
+  if(field.size() != (unsigned)_nFunctions) {
+    printf(" In feSpace::interpolateFieldAtQuadNode : Erreur - Nombre de valeurs nodales (%ld) non "
+           "compatible avec le nombre d'interpolants de l'espace (%d).\n",
+           field.size(), (unsigned)_nFunctions);
+    return res;
+  }
+#endif
+  for(int i = 0; i < _nFunctions; ++i) res += field[i] * _d2Lds2[_nFunctions * iNode + i];
   return res;
 }
 

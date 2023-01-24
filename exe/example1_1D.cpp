@@ -83,9 +83,9 @@ int main(int argc, char **argv)
   feMesh1DP1 mesh(xa, xb, nElm, "BXA", "BXB", "Domaine");
 
   feSpace *uG, *uD, *uDomaine;
-  feCheck(createFiniteElementSpace(uG, &mesh, dim = 0, POINT, LAGRANGE, deg, "U", "BXA", degreeQuadrature, funSol));
-  feCheck(createFiniteElementSpace(uD, &mesh, dim = 0, POINT, LAGRANGE, deg, "U", "BXB", degreeQuadrature, funSol));
-  feCheck(createFiniteElementSpace(uDomaine, &mesh, dim = 1, LINE, LAGRANGE, deg, "U", "Domaine", degreeQuadrature, funZero));
+  feCheck(createFiniteElementSpace(uG, &mesh, elementType::LAGRANGE, deg, "U", "BXA", degreeQuadrature, funSol));
+  feCheck(createFiniteElementSpace(uD, &mesh, elementType::LAGRANGE, deg, "U", "BXB", degreeQuadrature, funSol));
+  feCheck(createFiniteElementSpace(uDomaine, &mesh, elementType::LAGRANGE, deg, "U", "Domaine", degreeQuadrature, funZero));
 
   std::vector<feSpace*> spaces = {uG, uD, uDomaine};
   std::vector<feSpace*> essentialSpaces = {uG, uD};

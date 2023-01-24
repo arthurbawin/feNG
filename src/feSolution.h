@@ -17,16 +17,16 @@ class feSolution
 {
 protected:
   
-  // The number of DOFs
+  // The number of DOFs (size of the arrays)
   int _nDOF;
 
   // The FE solution and its time derivative in DOF number order.
   std::vector<double> _sol;
   std::vector<double> _dsoldt;
 
-  // Convenience references to the FE spaces
-  const std::vector<feSpace *> &_spaces;
-  const std::vector<feSpace *> &_essentialSpaces;
+  // Copy of the FE spaces ptrs
+  std::vector<feSpace *> _spaces;
+  std::vector<feSpace *> _essentialSpaces;
 
   // Time integration info will be moved to the solver later
   // First coefficient of the BDF approximation, multiplying the
@@ -41,20 +41,21 @@ protected:
   double _dt;
 
 public:
-  // Create a solution wrapper
+  // Create a solution wrapper holding numDOF degrees of freedom and their time derivative.
   feSolution(int numDOF, const std::vector<feSpace *> &spaces, const std::vector<feSpace *> &essentialSpaces);
-  // Create 
+  // Create a solution wrapper from a solution file. See printSol function for parsing.
   feSolution(std::string solutionFile);
   ~feSolution() {}
 
-  double getC0() { return _c0; }
+  // Trivial getters and setters
+  double getC0() const { return _c0; }
   void setC0(double c0) { _c0 = c0; }
   double getCurrentTime() const { return _tn; }
   void setCurrentTime(double t) { _tn = t; }
-  double getTimeStep() { return _dt; }
-  double getNbTimeSteps() { return _nTimeSteps; }
-  double getInitialTime() { return _t0; }
-  double getFinalTime() { return _t1; }
+  double getTimeStep() const { return _dt; }
+  double getNbTimeSteps() const { return _nTimeSteps; }
+  double getInitialTime() const { return _t0; }
+  double getFinalTime() const { return _t1; }
 
   // Return a copy of the solution vector
   std::vector<double> getSolutionCopy() { return _sol; }
@@ -63,18 +64,25 @@ public:
   // Return a reference to the time derivative of the solution
   std::vector<double> &getSolutionReferenceDot() { return _dsoldt; }
 
-  double getSolAtDOF(int iDOF) { return _sol[iDOF]; }
+  // Get the solution (or time derivative) at dof with number 'iDOF'
+  double getSolAtDOF(int iDOF) const { return _sol[iDOF]; }
+  double getSolDotAtDOF(int iDOF) const { return _dsoldt[iDOF]; }
+  // Fill 'sol' with the solution at dofs with numbers stored in 'addressing'.
+  // Sizes of the vector arguments must match.
   void getSolAtDOF(const std::vector<feInt> &addressing, std::vector<double> &sol) const;
   void setSolAtDOF(int iDOF, double val) { _sol[iDOF] = val; }
-  void incrementSolAtDOF(int iDOF, double val) { _sol[iDOF] += val; }
-  void setSolFromContainer(feSolutionContainer *solContainer, int iSol = 0);
-  double getSolDotAtDOF(int iDOF) { return _dsoldt[iDOF]; }
   void setSolDotAtDOF(int iDOF, double val) { _dsoldt[iDOF] = val; }
+
+  void incrementSolAtDOF(int iDOF, double val) { _sol[iDOF] += val; }
+
+  // Set the solution array to the iSol-th solution stored in solContainer
+  void setSolFromContainer(feSolutionContainer *solContainer, int iSol = 0);
 
   // Reset the time derivative of the solution
   void setSolDotToZero();
 
-  // Initialize the unknown and essential DOFs
+  // Initialize the unknown and essential DOFs using each FE space's feFunction
+  // and dof initialization mode.
   void initializeUnknowns(feMesh *mesh);
   void initializeEssentialBC(feMesh *mesh, feSolutionContainer *solContainer = nullptr);
 

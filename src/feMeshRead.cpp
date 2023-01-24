@@ -284,7 +284,7 @@ feStatus feMesh2DP1::readMsh2(std::istream &input, const bool curved, const bool
       pE.nElm = 0;
       pE.nNodePerElem = -1;
       pE.nEdgePerElem = -1;
-      pE.cncID = "";
+      pE.interp = geometricInterpolant::NONE;
       _physicalEntities[pair.first] = pE;
     }
   }
@@ -305,7 +305,7 @@ feStatus feMesh2DP1::readMsh2(std::istream &input, const bool curved, const bool
         pE.nElm = 0;
         pE.nNodePerElem = -1;
         pE.nEdgePerElem = -1;
-        pE.cncID = "";
+        pE.interp = geometricInterpolant::NONE;
         _physicalEntities[{pE.dim, pE.tag}] = pE;
       }
 
@@ -449,12 +449,12 @@ feStatus feMesh2DP1::readMsh2(std::istream &input, const bool curved, const bool
             [[gnu::fallthrough]]; //  2-node line
           case 8:
             if(curved) {
-              _entities[p].cncID = "LineP2";
+              _entities[p].interp = geometricInterpolant::LINEP2;
             }
             [[gnu::fallthrough]]; //  3-node line (2nd order)
           case 26:
             if(curved) {
-              _entities[p].cncID = "LineP3";
+              _entities[p].interp = geometricInterpolant::LINEP3;
             }
             [[gnu::fallthrough]]; //  4-node line (3rd order)
           case 27:
@@ -487,7 +487,7 @@ feStatus feMesh2DP1::readMsh2(std::istream &input, const bool curved, const bool
             {
               // Default is linear interpolation for the geometry
               if(!curved) {
-                _entities[p].cncID = "LineP1";
+                _entities[p].interp = geometricInterpolant::LINEP1;
               }
               _entities[p].nNodePerElem = (curved) ? nNodePerElem : 2;
               _entities[p].nEdgePerElem = 0;
@@ -497,12 +497,12 @@ feStatus feMesh2DP1::readMsh2(std::istream &input, const bool curved, const bool
             [[gnu::fallthrough]]; //  3-node triangle
           case 9:
             if(curved) {
-              _entities[p].cncID = "TriP2";
+              _entities[p].interp = geometricInterpolant::TRIP2;
             }
             [[gnu::fallthrough]]; //  6-node triangle (2nd order)
           case 21:
             if(curved) {
-              _entities[p].cncID = "TriP3";
+              _entities[p].interp = geometricInterpolant::TRIP3;
             }
             [[gnu::fallthrough]]; // 10-node triangle (3rd order)
           case 23:
@@ -520,10 +520,11 @@ feStatus feMesh2DP1::readMsh2(std::istream &input, const bool curved, const bool
           case 46: // 66-node triangle (10th order)
           {
             if(!curved) {
-              _entities[p].cncID = "TriP1";
+              _entities[p].interp = geometricInterpolant::TRIP1;
             }
             _entities[p].nNodePerElem = (curved) ? nNodePerElem : 3;
             _entities[p].nEdgePerElem = 3;
+
             // Construct the triangle edges :
             Vertex *v0, *v1;
             for(int k = 0; k < 3; ++k) {
@@ -624,7 +625,7 @@ feStatus feMesh2DP1::readMsh2(std::istream &input, const bool curved, const bool
           }
           case 15: // 1-node point
           {
-            _entities[p].cncID = "Point0D";
+            _entities[p].interp = geometricInterpolant::POINTP0;
             _entities[p].nNodePerElem = 1;
             _entities[p].nEdgePerElem = 0;
             break;
@@ -659,7 +660,7 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, const bool curved, const bool
       pE.nElm = 0;
       pE.nNodePerElem = -1;
       pE.nEdgePerElem = -1;
-      pE.cncID = "";
+      pE.interp = geometricInterpolant::NONE;
       _physicalEntities[pair.first] = pE;
       feInfoCond(FE_VERBOSE > 1, "Created physical entity \"%s\"", pE.name.c_str());
     }
@@ -681,7 +682,7 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, const bool curved, const bool
         pE.nElm = 0;
         pE.nNodePerElem = -1;
         pE.nEdgePerElem = -1;
-        pE.cncID = "";
+        pE.interp = geometricInterpolant::NONE;
 
         _physicalEntities[{pE.dim, pE.tag}] = pE;
         feInfoCond(FE_VERBOSE > 1,
@@ -978,13 +979,13 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, const bool curved, const bool
           case 1:
             [[gnu::fallthrough]]; //  2-node line
           case 8:
-            if(curved && _entities[p].cncID == "") {
-              _entities[p].cncID = "LineP2";
+            if(curved && _entities[p].interp == geometricInterpolant::NONE) {
+              _entities[p].interp = geometricInterpolant::LINEP2;
             }
             [[gnu::fallthrough]]; //  3-node line (2nd order)
           case 26:
-            if(curved && _entities[p].cncID == "") {
-              _entities[p].cncID = "LineP3";
+            if(curved && _entities[p].interp == geometricInterpolant::NONE) {
+              _entities[p].interp = geometricInterpolant::LINEP3;
             }
             [[gnu::fallthrough]]; //  4-node line (3rd order)
           case 27:
@@ -1017,7 +1018,7 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, const bool curved, const bool
             {
               // Default is linear interpolation for the geometry
               if(!curved) {
-                _entities[p].cncID = "LineP1";
+                _entities[p].interp = geometricInterpolant::LINEP1;
               }
               _entities[p].nNodePerElem = (curved) ? nodes_of_gmsh_element[elemType - 1] : 2;
               _entities[p].nEdgePerElem = 0;
@@ -1027,8 +1028,8 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, const bool curved, const bool
           case 2:
             [[gnu::fallthrough]]; //  3-node triangle
           case 9:
-            if(curved && _entities[p].cncID == "") {
-              _entities[p].cncID = "TriP2";
+            if(curved && _entities[p].interp == geometricInterpolant::NONE) {
+              _entities[p].interp = geometricInterpolant::TRIP2;
             }
             [[gnu::fallthrough]]; //  6-node triangle (2nd order)
           case 21:
@@ -1048,7 +1049,7 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, const bool curved, const bool
           case 46: // 66-node triangle (10th order)
           {
             if(!curved) {
-              _entities[p].cncID = "TriP1";
+              _entities[p].interp = geometricInterpolant::TRIP1;
             }
             _entities[p].nNodePerElem = (curved) ? nodes_of_gmsh_element[elemType - 1] : 3;
             _entities[p].nEdgePerElem = 3;
@@ -1143,7 +1144,7 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, const bool curved, const bool
             //     "Only the first node was added, the others were discarded.\n", _entities[p].dim,
             //     _entities[p].tagGmsh);
             // }
-            _entities[p].cncID = "Point0D";
+            _entities[p].interp = geometricInterpolant::POINTP0;
             _entities[p].nNodePerElem = 1;
             _entities[p].nEdgePerElem = 0;
             _entities[p].connecNodes.resize(1);
@@ -1506,7 +1507,7 @@ feStatus feMesh2DP1::readGmsh(const std::string meshName, const bool curved, con
       feInfo("Entity #%2d : dim = %1d - gmshTag = %3d - nElm = %6d - nNodePerElem = %2d - "
              "geometric interpolant : %10s "
              "- part of physical groups : %2d",
-             e.tag, e.dim, e.tagGmsh, e.nElm, e.nNodePerElem, e.cncID.c_str(),
+             e.tag, e.dim, e.tagGmsh, e.nElm, e.nNodePerElem, toString(e.interp).data(),
              (e.numPhysicalTags > 0) ? e.physicalTags[0] : -1);
       // std::cout<<"elems : "<<std::endl;
       // for(auto val : e.connecElem)
@@ -1554,10 +1555,10 @@ feStatus feMesh2DP1::readGmsh(const std::string meshName, const bool curved, con
             if(pE.nEdgePerElem != e.nEdgePerElem) error = true;
           }
           // Assign and check geoSpace and cncID
-          if(pE.cncID == "")
-            pE.cncID = e.cncID;
-          else {
-            if(pE.cncID != e.cncID) error = true;
+          if(pE.interp == geometricInterpolant::NONE){
+            pE.interp = e.interp;
+          } else {
+            if(pE.interp != e.interp) error = true;
           }
         }
       }
@@ -1579,7 +1580,7 @@ feStatus feMesh2DP1::readGmsh(const std::string meshName, const bool curved, con
              "nEdgePerElem = %1d - "
              "geometric interpolant : %10s",
              pE.name.c_str(), pE.dim, pE.listEntities.size(), pE.nElm, pE.nNodePerElem,
-             pE.nEdgePerElem, pE.cncID.c_str());
+             pE.nEdgePerElem, toString(pE.interp).data());
     }
   }
 
@@ -1701,21 +1702,30 @@ feStatus feMesh2DP1::readGmsh(const std::string meshName, const bool curved, con
   // Assign pointer to geometric interpolation space
   for(auto &p : _physicalEntities) {
     physicalEntity &pE = p.second;
-    if(pE.cncID == "Point0D") {
+    if(pE.interp == geometricInterpolant::POINTP0) {
+      pE.geometry = geometryType::POINT;
       pE.geoSpace = new feSpace1DP0("xyz");
-    } else if(pE.cncID == "LineP1") {
+    } else if(pE.interp == geometricInterpolant::LINEP1) {
+      pE.geometry = geometryType::LINE;
       pE.geoSpace = new feSpace1DP1("xyz");
-    } else if(pE.cncID == "LineP2") {
+    } else if(pE.interp == geometricInterpolant::LINEP2) {
+      pE.geometry = geometryType::LINE;
       pE.geoSpace = new feSpace1DP2("xyz");
-    } else if(pE.cncID == "LineP3") {
+    } else if(pE.interp == geometricInterpolant::LINEP3) {
+      pE.geometry = geometryType::LINE;
       pE.geoSpace = new feSpace1DP3("xyz");
-    } else if(pE.cncID == "TriP1") {
+    } else if(pE.interp == geometricInterpolant::TRIP1) {
+      pE.geometry = geometryType::TRI;
       pE.geoSpace = new feSpaceTriP1("xyz");
-    } else if(pE.cncID == "TriP2") {
+    } else if(pE.interp == geometricInterpolant::TRIP2) {
+      pE.geometry = geometryType::TRI;
       pE.geoSpace = new feSpaceTriP2("xyz");
+    } else if(pE.interp == geometricInterpolant::TRIP3) {
+      pE.geometry = geometryType::TRI;
+      pE.geoSpace = new feSpaceTriP3("xyz");
     } else {
       return feErrorMsg(FE_STATUS_ERROR, "Unknown geometric connectivity \"%s\" on domain \"%s\".",
-                        pE.cncID.c_str(), pE.name.c_str());
+                        toString(pE.interp).data(), pE.name.data());
     }
   }
 
@@ -1725,8 +1735,8 @@ feStatus feMesh2DP1::readGmsh(const std::string meshName, const bool curved, con
     physicalEntity &pE = p.second;
 
     feCncGeo *cnc =
-      new feCncGeo(nCncGeo, pE.dim, pE.nNodePerElem, pE.nElm, pE.nEdgePerElem, pE.name, pE.cncID,
-                   pE.geoSpace, pE.connecNodes, pE.connecElem, pE.connecEdges);
+      new feCncGeo(nCncGeo, pE.dim, pE.nNodePerElem, pE.nElm, pE.nEdgePerElem, pE.name, pE.geometry,
+        pE.interp, pE.geoSpace, pE.connecNodes, pE.connecElem, pE.connecEdges);
 
     _cncGeo.push_back(cnc);
     _cncGeoMap[pE.name] = nCncGeo;

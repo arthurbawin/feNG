@@ -1,6 +1,59 @@
 #include "feSpace.h"
-// #include "feMesh.h"
 #include "feNumber.h"
+
+//
+// 0D Hermite point to fix boundary conditions
+//
+feSpace0D_Hermite::feSpace0D_Hermite(const std::string &cncGeoID)
+  : feSpace(nullptr, "GEO", cncGeoID, nullptr)
+{
+  _nFunctions = 2;
+  _nQuad = 1;
+  _Lcoor = {1., 0., 0., 1., 0., 0.};
+};
+
+feSpace0D_Hermite::feSpace0D_Hermite(feMesh *mesh, const std::string fieldID, const std::string cncGeoID, feFunction *fct)
+  : feSpace(mesh, fieldID, cncGeoID, fct)
+{
+  _nFunctions = 2;
+  _nQuad = 1;
+  _Lcoor = {1., 0., 0., 1., 0., 0.};
+};
+
+std::vector<double> feSpace0D_Hermite::L(double *r)
+{
+  return {1., 1.};
+};
+
+void feSpace0D_Hermite::L(double *r, double *L)
+{ 
+  L[0] = 1.;
+  L[1] = 1.;
+};
+
+void feSpace0D_Hermite::initializeNumberingUnknowns()
+{
+  for(int i = 0; i < _mesh->getNbElm(_cncGeoID); ++i){
+    _numbering->setUnknownVertexDOF(_mesh, _cncGeoID, i, 0, 2);
+    // _numbering->setUnknownElementDOF(_mesh, _cncGeoID, i, 1);
+  }
+}
+
+void feSpace0D_Hermite::initializeNumberingEssential()
+{
+  for(int i = 0; i < _mesh->getNbElm(_cncGeoID); ++i){
+    _numbering->setEssentialVertexDOF(_mesh, _cncGeoID, i, 0);
+    // _numbering->setEssentialElementDOF(_mesh, _cncGeoID, i);
+  }
+}
+
+void feSpace0D_Hermite::initializeAddressingVector(int numElem, std::vector<feInt> &adr)
+{
+  adr[0] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 0, 0);
+  adr[1] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 0, 1);
+  // adr[1] = _numbering->getElementDOF(_mesh, _cncGeoID, numElem, 0);
+  feInfo("Adressage elm %d: %d | %d", numElem, adr[0], adr[1]);
+}
 
 //
 // Lagrange interpolation functions of degree 0 on 1D reference element [-1,1]
@@ -141,16 +194,16 @@ void feSpace1DP1::initializeAddressingVector(int numElem, std::vector<feInt> &ad
 }
 
 //
-// Non-conformal interpolation functions of degree 1
+// Crouzeiv_raviart element of degree 0 on line
 //
-feSpace1DP1_nonConsistant::feSpace1DP1_nonConsistant(std::string cncGeoID)
+feSpace1D_CR0::feSpace1D_CR0(std::string cncGeoID)
   : feSpace(nullptr, "GEO", cncGeoID, nullptr)
 {
   _nFunctions = 1;
   _Lcoor = {0., 0., 0.};
 };
 
-feSpace1DP1_nonConsistant::feSpace1DP1_nonConsistant(feMesh *mesh, 
+feSpace1D_CR0::feSpace1D_CR0(feMesh *mesh, 
   const std::string fieldID, const std::string cncGeoID, feFunction *fct)
   : feSpace(mesh, fieldID, cncGeoID, fct)
 {
@@ -158,39 +211,39 @@ feSpace1DP1_nonConsistant::feSpace1DP1_nonConsistant(feMesh *mesh,
   _Lcoor = {0., 0., 0.};
 };
 
-std::vector<double> feSpace1DP1_nonConsistant::L(double *r)
+std::vector<double> feSpace1D_CR0::L(double *r)
 {
   return {1.};
 };
 
-void feSpace1DP1_nonConsistant::L(double *r, double *L)
+void feSpace1D_CR0::L(double *r, double *L)
 {
   L[0] = 1.;
 };
 
-std::vector<double> feSpace1DP1_nonConsistant::dLdr(double *r)
+std::vector<double> feSpace1D_CR0::dLdr(double *r)
 {
   return {0.};
 };
 
-std::vector<double> feSpace1DP1_nonConsistant::dLds(double *r)
+std::vector<double> feSpace1D_CR0::dLds(double *r)
 {
   return {0.};
 };
 
-std::vector<double> feSpace1DP1_nonConsistant::dLdt(double *r)
+std::vector<double> feSpace1D_CR0::dLdt(double *r)
 {
   return {0.};
 };
 
-feStatus feSpace1DP1_nonConsistant::Lphys(int iElm, std::vector<double> &x,
+feStatus feSpace1D_CR0::Lphys(int iElm, std::vector<double> &x,
   std::vector<double> &L, std::vector<double> &dLdx, std::vector<double> &dLdy)
 {
   printf("Not implemented\n");
   exit(-1);
 };
 
-void feSpace1DP1_nonConsistant::initializeNumberingUnknowns()
+void feSpace1D_CR0::initializeNumberingUnknowns()
 {
   for(int i = 0; i < _mesh->getNbElm(_cncGeoID); ++i) {
     _numbering->setUnknownElementDOF(_mesh, _cncGeoID, i, 1);
@@ -199,7 +252,7 @@ void feSpace1DP1_nonConsistant::initializeNumberingUnknowns()
   }
 }
 
-void feSpace1DP1_nonConsistant::initializeNumberingEssential()
+void feSpace1D_CR0::initializeNumberingEssential()
 {
   for(int i = 0; i < _mesh->getNbElm(_cncGeoID); ++i) {
     _numbering->setEssentialElementDOF(_mesh, _cncGeoID, i);
@@ -209,7 +262,7 @@ void feSpace1DP1_nonConsistant::initializeNumberingEssential()
   }
 }
 
-void feSpace1DP1_nonConsistant::initializeAddressingVector(int numElem,
+void feSpace1D_CR0::initializeAddressingVector(int numElem,
                                                            std::vector<feInt> &adr)
 {
   adr[0] = _numbering->getElementDOF(_mesh, _cncGeoID, numElem, 0);
@@ -409,6 +462,117 @@ void feSpace1DP3::initializeAddressingVector(int numElem, std::vector<feInt> &ad
     adr[2] = _numbering->getElementDOF(_mesh, _cncGeoID, numElem, 1);
     adr[3] = _numbering->getElementDOF(_mesh, _cncGeoID, numElem, 0);
   }
+}
+
+//
+// Hermite interpolation functions of degree 3 on 1D reference element [-1,1]
+//
+feSpace1D_H3::feSpace1D_H3(std::string cncGeoID)
+  : feSpace(nullptr, "GEO", cncGeoID, nullptr)
+{
+  _nFunctions = 4;
+  _Lcoor = {-1., 0., 0.,
+            -1., 0., 0.,
+             1., 0., 0.,
+             1., 0., 0.};
+};
+
+feSpace1D_H3::feSpace1D_H3(feMesh *mesh, const std::string fieldID,
+  const std::string cncGeoID, feFunction *fct)
+  : feSpace(mesh, fieldID, cncGeoID, fct)
+{
+  _nFunctions = 4;
+  _Lcoor = {-1., 0., 0.,
+            -1., 0., 0.,
+             1., 0., 0.,
+             1., 0., 0.};
+};
+
+std::vector<double> feSpace1D_H3::L(double *r)
+{
+  double x = r[0];
+  return {
+    x*(-3.0/4.0)+(x*x*x)/4.0+1.0/2.0,
+    x*(-1.0/4.0)-(x*x)/4.0+(x*x*x)/4.0+1.0/4.0,
+    x*(3.0/4.0)-(x*x*x)/4.0+1.0/2.0,
+    x*(-1.0/4.0)+(x*x)/4.0+(x*x*x)/4.0-1.0/4.0
+  };
+};
+
+void feSpace1D_H3::L(double *r, double *L)
+{
+  double x = r[0];
+  L[0] = x*(-3.0/4.0)+(x*x*x)/4.0+1.0/2.0;
+  L[1] = x*(-1.0/4.0)-(x*x)/4.0+(x*x*x)/4.0+1.0/4.0;
+  L[2] = x*(3.0/4.0)-(x*x*x)/4.0+1.0/2.0;
+  L[3] = x*(-1.0/4.0)+(x*x)/4.0+(x*x*x)/4.0-1.0/4.0;
+};
+
+std::vector<double> feSpace1D_H3::dLdr(double *r)
+{
+  double x = r[0];
+  return {
+    (x*x)*(3.0/4.0)-3.0/4.0,
+    x*(-1.0/2.0)+(x*x)*(3.0/4.0)-1.0/4.0,
+    (x*x)*(-3.0/4.0)+3.0/4.0,
+    x/2.0+(x*x)*(3.0/4.0)-1.0/4.0};
+};
+
+std::vector<double> feSpace1D_H3::dLds(double *r)
+{
+  return {0., 0., 0., 0.};
+};
+
+std::vector<double> feSpace1D_H3::dLdt(double *r)
+{
+  return {0., 0., 0., 0.};
+};
+
+std::vector<double> feSpace1D_H3::d2Ldr2(double *r)
+{
+  double x = r[0];
+  return {
+    x*(3.0/2.0),
+    x*(3.0/2.0)-1.0/2.0,
+    x*(-3.0/2.0),
+    x*(3.0/2.0)+1.0/2.0};
+};
+
+feStatus feSpace1D_H3::Lphys(int iElm, std::vector<double> &x, std::vector<double> &L,
+                       std::vector<double> &dLdx, std::vector<double> &dLdy)
+{
+  printf("Not implemented\n");
+  exit(-1);
+};
+
+void feSpace1D_H3::initializeNumberingUnknowns()
+{
+  for(int i = 0; i < _mesh->getNbElm(_cncGeoID); ++i) {
+    _numbering->setUnknownVertexDOF(_mesh, _cncGeoID, i, 0, 2);
+    _numbering->setUnknownVertexDOF(_mesh, _cncGeoID, i, 1, 2);
+    // _numbering->setUnknownElementDOF(_mesh, _cncGeoID, i, 2);
+    // _numbering->setUnknownEdgeDOF(_mesh, _cncGeoID, i, 0, 2);
+  }
+}
+
+void feSpace1D_H3::initializeNumberingEssential()
+{
+  for(int i = 0; i < _mesh->getNbElm(_cncGeoID); ++i) {
+    _numbering->setEssentialVertexDOF(_mesh, _cncGeoID, i, 0);
+    _numbering->setEssentialVertexDOF(_mesh, _cncGeoID, i, 1);
+    // _numbering->setEssentialElementDOF(_mesh, _cncGeoID, i);
+    // _numbering->setEssentialEdgeDOF(_mesh, _cncGeoID, i, 0);
+  }
+}
+
+void feSpace1D_H3::initializeAddressingVector(int numElem, std::vector<feInt> &adr)
+{
+  adr[0] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 0, 0);
+  adr[1] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 0, 1);
+  // adr[1] = _numbering->getElementDOF(_mesh, _cncGeoID, numElem, 0);
+  adr[2] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 1, 0);
+  adr[3] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 1, 1);
+  // adr[3] = _numbering->getElementDOF(_mesh, _cncGeoID, numElem, 1);
 }
 
 //

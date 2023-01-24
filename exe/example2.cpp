@@ -105,10 +105,10 @@ int main(int argc, char **argv)
     nElm[i] = mesh.getNbInteriorElems();
 
     feSpace *uBord, *uDomaine;
-    int degreeQuadrature = 12;
+    int degreeQuadrature = 10;
     int dim;
-    feCheck(createFiniteElementSpace(uBord, &mesh, dim = 1, LINE, LAGRANGE, order, "U", "Bord", degreeQuadrature, funSol));
-    feCheck(createFiniteElementSpace(uDomaine, &mesh, dim = 2, TRI, LAGRANGE, order, "U", "Domaine", degreeQuadrature, funZero));
+    feCheck(createFiniteElementSpace(uBord, &mesh, elementType::LAGRANGE, order, "U", "Bord", degreeQuadrature, funSol));
+    feCheck(createFiniteElementSpace(uDomaine, &mesh, elementType::LAGRANGE, order, "U", "Domaine", degreeQuadrature, funZero));
     // feSpace *uSaut, *uHaut, *uBas, *uDroite, *uGauche, *uDomaine;
     // feCheck(createFiniteElementSpace(uHaut,    &mesh, dim = 1, LINE, order, "U", "Haut",    degreeQuadrature, funZero));
     // feCheck(createFiniteElementSpace(uBas,     &mesh, dim = 1, LINE, order, "U", "Bas",     degreeQuadrature, funZero));

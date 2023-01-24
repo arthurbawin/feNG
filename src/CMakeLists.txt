@@ -23,6 +23,7 @@ set(feNG_SRC
     fePolynomial.cpp
     fePostProc.cpp
     feRecovery.cpp
+    feQuadratureTri.cpp
     feQuadrature.cpp
     feSimplex.cpp
     feSolution.cpp

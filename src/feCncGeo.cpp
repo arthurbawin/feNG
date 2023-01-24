@@ -2,17 +2,24 @@
 #include "feCncGeo.h"
 #include "feSpace.h"
 #include "feMesh.h"
+#include "feQuadrature.h"
 
 extern int FE_VERBOSE;
+
+feStatus feCncGeo::setQuadratureRule(feQuadrature *rule)
+{
+  return _space->setQuadratureRule(rule);
+}
 
 feStatus feCncGeo::computeJacobians()
 {
   int nQuad = _space->getNbQuadPoints();
   _J.resize(_nElm * nQuad);
 
-  std::vector<double> geoCoord(_nNodPerElm*3);
+  std::vector<double> geoCoord(3 * _nNodPerElm);
 
-  if(_space->getDim() == 0) {
+  if(_space->getDim() == 0)
+  {
     _J[0] = 1.0;
   }
   else if(_space->getDim() == 1) {
@@ -34,6 +41,7 @@ feStatus feCncGeo::computeJacobians()
         _space->interpolateVectorFieldAtQuadNode_rDerivative(geoCoord, k, dxdr);
         _space->interpolateVectorFieldAtQuadNode_sDerivative(geoCoord, k, dxds);
         _J[nQuad * iElm + k] = dxdr[0] * dxds[1] - dxdr[1] * dxds[0];
+
         if(_J[nQuad * iElm + k] <= 0) {
           return feErrorMsg(FE_STATUS_ERROR, 
             "Negative or zero jacobian = %+-12.12e on elm %d with coordinates (%+-1.4e - %+-1.4e) - (%+-1.4e - %+-1.4e) - (%+-1.4e - %+-1.4e)\n",
@@ -42,6 +50,7 @@ feStatus feCncGeo::computeJacobians()
             geoCoord[3*1+0], geoCoord[3*1+1], 
             geoCoord[3*2+0], geoCoord[3*2+1]);
         }
+
       }
     }
   }

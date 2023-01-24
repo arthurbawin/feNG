@@ -9,8 +9,70 @@
 
 #include "feMessage.h"
 
+// Supported geometries are only POINT, LINE and TRI so far
+// typedef enum { POINT, LINE, TRI, QUAD, TET, HEX } geometryType;
+
+enum class geometryType {
+  POINT, LINE, TRI, QUAD, TET, HEX
+};
+
+// Supported geometric interpolants (Lagrange interpolation only)
+// Somewhat redundant
+enum class geometricInterpolant {
+  NONE,
+  POINTP0,
+  LINEP1,
+  LINEP2,
+  LINEP3,
+  TRIP1,
+  TRIP2,
+  TRIP3,
+  QUADP1,
+  QUADP2,
+  TETP1,
+  TETP2
+};
+
+inline std::string toString(geometryType t)
+{
+  switch(t) {
+    case geometryType::POINT: return "POINT";
+    case geometryType::LINE: return "LINE";
+    case geometryType::TRI: return "TRI";
+    case geometryType::QUAD: return "QUAD";
+    case geometryType::TET: return "TET";
+    case geometryType::HEX: return "HEX";
+    default: return "Unknown geometry";
+  }
+}
+
+inline std::string toString(geometricInterpolant t)
+{
+  switch(t) {
+    case geometricInterpolant::NONE:
+      return "NONE";
+    case geometricInterpolant::POINTP0:
+      return "POINTP0";
+    case geometricInterpolant::LINEP1:
+      return "LINEP1";
+    case geometricInterpolant::LINEP2:
+      return "LINEP2";
+    case geometricInterpolant::LINEP3:
+      return "LINEP3";
+    case geometricInterpolant::TRIP1:
+      return "TRIP1";
+    case geometricInterpolant::TRIP2:
+      return "TRIP2";
+    case geometricInterpolant::TRIP3:
+      return "TRIP3";
+    default:
+      return "Unknown geometric interpolant";
+  }
+}
+
 class feSpace;
 class feMesh;
+class feQuadrature;
 
 class feCncGeo
 {
@@ -18,7 +80,11 @@ protected:
   std::string _ID;
   int _tag;
   int _dim;
-  std::string _forme;
+
+  geometryType _geometry;
+
+  geometricInterpolant _interpolant;
+
   int _nNod;
   int _nNodPerElm; // Nombre de noeuds par element
   int _nElm; // Nombre d'elements dans cette connectivite
@@ -45,12 +111,13 @@ protected:
   std::vector<std::vector<int> > _listElmPerColor;
 
 public:
-  feCncGeo(int tag, int dim, int nNod, int nElm, int nEdg, std::string ID, std::string forme,
+  feCncGeo(int tag, int dim, int nNod, int nElm, int nEdg, std::string ID, 
+    geometryType geometry, geometricInterpolant interpolant,
            feSpace *space, std::vector<int> connecNodes,
            std::vector<int> connecElem = std::vector<int>(),
            std::vector<int> connecEdges = std::vector<int>(),
            std::vector<int> connecFaces = std::vector<int>())
-    : _ID(ID), _tag(tag), _dim(dim), _forme(forme), _nNodPerElm(nNod), _nElm(nElm), _nEdg(nEdg),
+    : _ID(ID), _tag(tag), _dim(dim), _geometry(geometry), _interpolant(interpolant), _nNodPerElm(nNod), _nElm(nElm), _nEdg(nEdg),
       _connecNodes(connecNodes), _connecElem(connecElem), _connecEdges(connecEdges),
       _connecFaces(connecFaces), _space(space)
   {
@@ -67,15 +134,20 @@ public:
   };
   ~feCncGeo(){ }
 
-  std::string &getID() { return _ID; }
-  int getTag() { return _tag; }
-  int getDim() { return _dim; }
-  std::string getForme() {return _forme;}
+  const std::string &getID() const { return _ID; }
+  int getTag() const { return _tag; }
+  int getDim() const { return _dim; }
+
+  geometryType getGeometry() const { return _geometry; };
+  geometricInterpolant getInterpolant() const { return _interpolant; };
+
   int getNbNodes() { return _nNod; }
   int getNbNodePerElem() const { return _nNodPerElm; }
   int getNbElm() { return _nElm; }
   int getNbEdgePerElem() { return _nEdg; }
+
   feSpace *getFeSpace() const { return _space; } // Interpolant geometrique
+  feStatus setQuadratureRule(feQuadrature *rule);
 
   void setMeshPtr(feMesh *mesh) { _mesh = mesh; }
 

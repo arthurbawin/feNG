@@ -27,6 +27,8 @@ public:
   feLinearSystemPETSc(int argc, char **argv, std::vector<feBilinearForm *> bilinearForms, int numUnknowns);
   ~feLinearSystemPETSc();
 
+  feInt getSystemSize() {return (feInt) _nInc; };
+
   void setToZero();
   void setMatrixToZero();
   void setResidualToZero();

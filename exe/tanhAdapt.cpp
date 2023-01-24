@@ -106,8 +106,8 @@ int main(int argc, char **argv)
   {
     // bool reversed = iAdapt
     feMesh2DP1 mesh(meshFile);
-    feCheck(createFiniteElementSpace(uBord, &mesh, 1, LINE, LAGRANGE, order, "U", "Bord", degreeQuadrature, &funSol));
-    feCheck(createFiniteElementSpace(uDomaine, &mesh, 2, TRI, LAGRANGE, order, "U", "Domaine", degreeQuadrature, &funSol));
+    feCheck(createFiniteElementSpace(uBord, &mesh, elementType::LAGRANGE, order, "U", "Bord", degreeQuadrature, &funSol));
+    feCheck(createFiniteElementSpace(uDomaine, &mesh, elementType::LAGRANGE, order, "U", "Domaine", degreeQuadrature, &funSol));
     std::vector<feSpace *> spaces = {uBord, uDomaine};
     std::vector<feSpace *> essentialSpaces = {uBord, uDomaine};
 

@@ -5,7 +5,9 @@ extern int FE_VERBOSE;
 feNumber::feNumber(feMesh *mesh) : _nNod(mesh->getNbNodes()), _nEdg(mesh->getNbEdges())
 {
   _nElm = 0;
-  for(size_t i = 0; i < mesh->getCncGeo().size(); ++i) _nElm += mesh->getCncGeo()[i]->getNbElm();
+  for(auto *cnc : mesh->getCncGeo()){
+    _nElm += cnc->getNbElm();
+  }
 
   // A global elem to edge map : if the global (line) elem is also an edge.
   // Edges are numbered starting from 1, so a 0 value means the element is not an edge.
@@ -41,8 +43,8 @@ void feNumber::setUnknownVertexDOF(feMesh *mesh, std::string const &cncGeoID, in
 void feNumber::setUnknownElementDOF(feMesh *mesh, std::string const &cncGeoID, int numElem, int numDOF)
 {
   int elem = mesh->getElement(cncGeoID, numElem);
-  // printf("Assigning DOF_UNKNOWN and %d dof(s) at elem %d on cnc %s on elem %d\n", numDOF, elem,
-  // cncGeoID.c_str(), numElem);
+  printf("Assigning DOF_UNKNOWN and %d dof(s) at elem %d on cnc %s on elem %d\n", numDOF, elem,
+  cncGeoID.data(), numElem);
   _nDOFElements[elem] = numDOF;
   _codeDOFElements[elem] = DOF_UNKNOWN;
 }

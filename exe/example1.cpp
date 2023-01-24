@@ -56,7 +56,7 @@ int main(int argc, char **argv)
   const char *meshFile = "../data/square1.msh";
   int verbosity = 2;
   int order = 1;
-  int degreeQuadrature = 10;
+  int degreeQuadrature = 15;
 
   // Create an option parser and parse the command line arguments.
   // Returns an error if a command line argument is ill-formed.
@@ -97,10 +97,9 @@ int main(int argc, char **argv)
   // and we give the name "U" to the solution. Quadrature rules are defined on the finite
   // element space, with parameter "degreeQuadrature" governing the number of quadrature nodes.
   // The feFunction provided is used to initialize the degrees of freedom on the feSpace.
-  int dim;
   feSpace *uBord, *uDomaine;
-  feCheck(createFiniteElementSpace(uBord, &mesh, dim = 1, LINE, LAGRANGE, order, "U", "Bord", degreeQuadrature, funSol));
-  feCheck(createFiniteElementSpace(uDomaine, &mesh, dim = 2, TRI, LAGRANGE, order, "U", "Domaine", degreeQuadrature, funZero));
+  feCheck(createFiniteElementSpace(uBord, &mesh, elementType::LAGRANGE, order, "U", "Bord", degreeQuadrature, funSol));
+  feCheck(createFiniteElementSpace(uDomaine, &mesh, elementType::LAGRANGE, order, "U", "Domaine", degreeQuadrature, funZero));
 
   // Define the set of all finite elements spaces and the set of FE spaces
   // forming the essential (Dirichlet) boundary conditions. The second set must always be
@@ -177,6 +176,9 @@ int main(int argc, char **argv)
 
   feInfo("Integral = %10.10f", norm->compute(INTEGRAL));
   feInfo("Integral = %10.10f", post.computeSolutionIntegral(&sol));
+
+
+  feInfo("System size = %u", system->getSystemSize());
 
   // Free the used memory
   delete diff;
