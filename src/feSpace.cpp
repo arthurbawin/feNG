@@ -44,7 +44,7 @@ feStatus createFiniteElementSpace(feSpace *&space,
       if(element == elementType::LAGRANGE){
 
         feInfoCond(FE_VERBOSE > 0, "\t\t\tFinite element: Lagrange");
-        space = new feSpace1DP0(mesh, fieldName, cncGeoID, fct);
+        space = new feSpace0DP0(mesh, fieldName, cncGeoID, fct);
 
       } else if(element == elementType::HERMITE){
 
@@ -170,10 +170,7 @@ feStatus createFiniteElementSpace(feSpace *&space,
 
   feInfoCond(FE_VERBOSE > 0, "\t\t\tPolynomial degree: %d", degree);
 
-  // space->useGlobalFunctions(useGlobalShapeFunctions);
-
   // Set the quadrature rule on this space and the corresponding geometric interpolation space
-  // feQuadrature rule(degreeQuadrature, dimension, mesh->getCncGeoByName(cncGeoID)->getForme());
   feQuadrature rule(degreeQuadrature, mesh->getCncGeoByName(cncGeoID)->getGeometry());
   
   // FIXME: the FE space of the geometric connectivity is the one of the last created space...
@@ -183,9 +180,10 @@ feStatus createFiniteElementSpace(feSpace *&space,
   return FE_STATUS_OK;
 }
 
-feSpace::feSpace(feMesh *mesh, const std::string &fieldID, const std::string &cncGeoID, 
+feSpace::feSpace(const int dimension, feMesh *mesh, const std::string &fieldID, const std::string &cncGeoID, 
   feFunction *fct, bool useGlobalShapeFunctions)
-  : _mesh(mesh)
+  : _dim(dimension)
+  , _mesh(mesh)
   , _fieldID(fieldID)
   , _fieldTag(-1)
   , _cncGeoID(cncGeoID)
@@ -197,15 +195,13 @@ feSpace::feSpace(feMesh *mesh, const std::string &fieldID, const std::string &cn
 {
   // Called with mesh = nullptr when creating the geometric interpolation space
   if(mesh != nullptr){
+    _cnc = mesh->getCncGeoByName(cncGeoID);
     _cncGeoTag = mesh->getCncGeoTag(cncGeoID);
   }
 }
 
-feCncGeo *feSpace::getCncGeo() {return _mesh->getCncGeoByTag(_cncGeoTag); }
-
-int feSpace::getDim() { return this->getCncGeo()->getDim(); }
-int feSpace::getNbElm() { return _mesh->getNbElm(_cncGeoTag); }
-int feSpace::getNbNodePerElem() { return _mesh->getNbNodePerElem(_cncGeoTag); }
+int feSpace::getNumElements() { return _mesh->getNumElements(_cncGeoTag); }
+int feSpace::getNumVerticesPerElem() { return _mesh->getNumVerticesPerElem(_cncGeoTag); }
 
 feStatus feSpace::setQuadratureRule(feQuadrature *rule)
 {
@@ -250,7 +246,7 @@ feStatus feSpace::setQuadratureRule(feQuadrature *rule)
     feInfo("USING GLOBAL FUNCTIONS");
     /* Physical frame discretization : shape functions are computed on the physical element. */
     feCncGeo *cnc = this->getCncGeo();
-    int nElm = cnc->getNbElm();
+    int nElm = cnc->getNumElements();
     _Lglob.resize(nElm);
     _dLdxglob.resize(nElm);
     _dLdyglob.resize(nElm);
@@ -285,8 +281,7 @@ feStatus feSpace::setQuadratureRule(feQuadrature *rule)
     }
   }
 
-  // If the space is a geometric interpolant, compute elements' jacobian
-  if(_fieldID == "GEO") {
+  if(_isGeometricInterpolant) {
     feStatus s = this->getCncGeo()->computeJacobians();
     if(s != FE_STATUS_OK){
       return s;
@@ -347,6 +342,72 @@ double feSpace::innerProductBasisFunctions(int iElm, int ex, int ey)
   return res;
 }
 
+// dxdr[3] = {dxdr, dydr, dzdr}, etc.
+// drdx[3] = {drdx, dsdx, dtdx}, etc.
+inline void invertTransformation(const int dim, const double jac,
+  const double dxdr[3], const double dxds[3], const double dxdt[3],
+  double drdx[3], double drdy[3], double drdz[3])
+{
+  switch(dim){
+
+    case 0:
+      drdx[0] = 1.; drdx[1] = 0.; drdx[2] = 0.;
+      drdy[0] = 0.; drdy[1] = 1.; drdy[2] = 0.;
+      drdz[0] = 0.; drdz[1] = 0.; drdz[2] = 1.;
+      break;
+
+    case 1:
+      drdx[0] =  1. / dxdr[0]; drdx[1] = 0.; drdx[2] = 0.;
+      drdy[0] =            0.; drdy[1] = 1.; drdy[2] = 0.;
+      drdz[0] =            0.; drdz[1] = 0.; drdz[2] = 1.;
+      break;
+
+    case 2:
+      drdx[0] =  dxds[1] / jac; drdx[1] = -dxdr[1] / jac; drdx[2] = 0.;
+      drdy[0] = -dxds[0] / jac; drdy[1] =  dxdr[0] / jac; drdy[2] = 0.;
+      drdz[0] =             0.; drdz[1] =             0.; drdz[2] = 1.;
+      break;
+
+    default:
+      feErrorMsg(FE_STATUS_ERROR, "Inversion of the reference to physical "
+        "transformation not implemented for this dimension.\n");
+      exit(-1);
+  }
+}
+
+void feSpace::getFunctionsPhysicalGradientAtQuadNode(const int iQuadNode, const double jac, 
+  std::vector<double> & geoCoord,
+  double *gradPhi)
+{
+  // Inverse of the jacobian of the transformation dx/dr:
+  feSpace *geometricInterpolant = this->getCncGeo()->getFeSpace();
+
+  std::vector<double> dxdr(3, 0.);
+  std::vector<double> dxds(3, 0.);
+  std::vector<double> dxdt(3, 0.);
+  double drdx[3], drdy[3], drdz[3];
+
+  geometricInterpolant->interpolateVectorFieldAtQuadNode_rDerivative(geoCoord, iQuadNode, dxdr);
+  geometricInterpolant->interpolateVectorFieldAtQuadNode_sDerivative(geoCoord, iQuadNode, dxds);
+  geometricInterpolant->interpolateVectorFieldAtQuadNode_tDerivative(geoCoord, iQuadNode, dxdt);
+
+  invertTransformation(_dim, jac, dxdr.data(), dxds.data(), dxdt.data(), drdx, drdy, drdz);
+
+  for(int i = 0; i < _nFunctions; ++i){
+    gradPhi[0*_nFunctions+i] = _dLdr[_nFunctions * iQuadNode + i] * drdx[0] +
+                               _dLds[_nFunctions * iQuadNode + i] * drdx[1] +
+                               _dLdt[_nFunctions * iQuadNode + i] * drdx[2];
+
+    gradPhi[1*_nFunctions+i] = _dLdr[_nFunctions * iQuadNode + i] * drdy[0] +
+                               _dLds[_nFunctions * iQuadNode + i] * drdy[1] +
+                               _dLdt[_nFunctions * iQuadNode + i] * drdy[2];
+
+    gradPhi[2*_nFunctions+i] = _dLdr[_nFunctions * iQuadNode + i] * drdz[0] +
+                               _dLds[_nFunctions * iQuadNode + i] * drdz[1] +
+                               _dLdt[_nFunctions * iQuadNode + i] * drdz[2];
+  }
+}
+
 void feSpace::interpolateField(double *field, int fieldSize, double *r, double *shape, double &res)
 {
   res = 0.0;
@@ -401,7 +462,7 @@ double feSpace::interpolateField(feSolution *sol, std::vector<double> &x)
 #else
   static_cast<feMesh2DP1 *>(_mesh)->locateVertex(x.data(), elm, u);
 #endif
-  std::vector<feInt> adr(this->getNbFunctions());
+  std::vector<feInt> adr(this->getNumFunctions());
   std::vector<double> solution(adr.size());
   std::vector<double> &solVec = sol->getSolutionReference();
   this->initializeAddressingVector(elm, adr);
@@ -489,7 +550,7 @@ void feSpace::interpolateField_gradrs(feSolution *sol, std::vector<double> &x,
            x[0], x[1], x[2]);
     return;
   } else {
-    std::vector<feInt> adr(this->getNbFunctions());
+    std::vector<feInt> adr(this->getNumFunctions());
     std::vector<double> solution(adr.size());
     std::vector<double> &solVec = sol->getSolutionReference();
     this->initializeAddressingVector(elm, adr);
@@ -593,6 +654,39 @@ double feSpace::interpolateFieldAtQuadNode_ssDerivative(std::vector<double> &fie
 #endif
   for(int i = 0; i < _nFunctions; ++i) res += field[i] * _d2Lds2[_nFunctions * iNode + i];
   return res;
+}
+
+void feSpace::interpolateFieldAtQuadNode_physicalGradient(std::vector<double> &field,
+  const int iQuadNode, const double jac, std::vector<double> &geoCoord, double *grad)
+{
+  feSpace *geometricInterpolant = this->getCncGeo()->getFeSpace();
+
+  std::vector<double> dxdr(3, 0.);
+  std::vector<double> dxds(3, 0.);
+  std::vector<double> dxdt(3, 0.);
+  double drdx[3], drdy[3], drdz[3];
+
+  geometricInterpolant->interpolateVectorFieldAtQuadNode_rDerivative(geoCoord, iQuadNode, dxdr);
+  geometricInterpolant->interpolateVectorFieldAtQuadNode_sDerivative(geoCoord, iQuadNode, dxds);
+  geometricInterpolant->interpolateVectorFieldAtQuadNode_tDerivative(geoCoord, iQuadNode, dxdt);
+
+  // Inverse of the jacobian of the transformation dx/dr:
+  invertTransformation(_dim, jac, dxdr.data(), dxds.data(), dxdt.data(), drdx, drdy, drdz);
+
+  grad[0] = grad[1] = grad[2] = 0.;
+  for(int i = 0; i < _nFunctions; ++i){
+    grad[0] += field[i] * (_dLdr[_nFunctions * iQuadNode + i] * drdx[0] +
+                           _dLds[_nFunctions * iQuadNode + i] * drdx[1] +
+                           _dLdt[_nFunctions * iQuadNode + i] * drdx[2]);
+
+    grad[1] += field[i] * (_dLdr[_nFunctions * iQuadNode + i] * drdy[0] +
+                           _dLds[_nFunctions * iQuadNode + i] * drdy[1] +
+                           _dLdt[_nFunctions * iQuadNode + i] * drdy[2]);
+
+    grad[2] += field[i] * (_dLdr[_nFunctions * iQuadNode + i] * drdz[0] +
+                           _dLds[_nFunctions * iQuadNode + i] * drdz[1] +
+                           _dLdt[_nFunctions * iQuadNode + i] * drdz[2]);
+  }
 }
 
 double feSpace::interpolateFieldAtQuadNode_xDerivative(std::vector<double> &field, int iElm,
@@ -718,14 +812,14 @@ void feSpace::interpolateVectorFieldAtQuadNode_rDerivative(std::vector<double> &
   // Field structure :
   // [fx0 fy0 fz0 fx1 fy1 fz1 ... fxn fyn fzn]
   res[0] = res[1] = res[2] = 0.0;
-#ifdef FENG_DEBUG
+  #ifdef FENG_DEBUG
   if(field.size() != 3 * (unsigned)_nFunctions) {
     printf(" In feSpace::interpolateVectorFieldAtQuadNode_rDerivative : Erreur - Nombre de valeurs "
            "nodales (%ld) non compatible avec le nombre d'interpolants de l'espace (%d).\n",
            field.size(), (unsigned)_nFunctions);
     return;
   }
-#endif
+  #endif
   for(int i = 0; i < 3; ++i) {
     for(int j = 0; j < _nFunctions; ++j) {
       // res[i] += field[3*i+j]*_dLdr[_nFunctions*iNode+j];
@@ -740,18 +834,39 @@ void feSpace::interpolateVectorFieldAtQuadNode_sDerivative(std::vector<double> &
   // Field structure :
   // [fx0 fy0 fz0 fx1 fy1 fz1 ... fxn fyn fzn]
   res[0] = res[1] = res[2] = 0.0;
-#ifdef FENG_DEBUG
+  #ifdef FENG_DEBUG
   if(field.size() != 3 * (unsigned)_nFunctions) {
     printf(" In feSpace::interpolateVectorFieldAtQuadNode_sDerivative : Erreur - Nombre de valeurs "
            "nodales (%ld) non compatible avec le nombre d'interpolants de l'espace (%d).\n",
            field.size(), (unsigned)_nFunctions);
     return;
   }
-#endif
+  #endif
   for(int i = 0; i < 3; ++i) {
     for(int j = 0; j < _nFunctions; ++j) {
       // res[i] += field[3*i+j]*_dLdr[_nFunctions*iNode+j];
       res[i] += field[3 * j + i] * _dLds[_nFunctions * iNode + j];
+    }
+  }
+}
+
+void feSpace::interpolateVectorFieldAtQuadNode_tDerivative(std::vector<double> &field, int iNode,
+                                                           std::vector<double> &res)
+{
+  // Field structure :
+  // [fx0 fy0 fz0 fx1 fy1 fz1 ... fxn fyn fzn]
+  res[0] = res[1] = res[2] = 0.0;
+  #ifdef FENG_DEBUG
+  if(field.size() != 3 * (unsigned)_nFunctions) {
+    feErrorMsg(FE_STATUS_ERROR, "Nombre de valeurs nodales (%ld) non compatible "
+      "avec le nombre d'interpolants de l'espace (%d).\n",
+           field.size(), (unsigned)_nFunctions);
+    exit(-1);
+  }
+  #endif
+  for(int i = 0; i < 3; ++i) {
+    for(int j = 0; j < _nFunctions; ++j) {
+      res[i] += field[3 * j + i] * _dLdt[_nFunctions * iNode + j];
     }
   }
 }

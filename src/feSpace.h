@@ -82,6 +82,10 @@ protected:
   // Number (tag) of the geometric connectivity
   int _cncGeoTag;
 
+  bool _isGeometricInterpolant = false;
+
+  int _dim;
+
   // Quadrature rule on the reference element:
   // number of quadrature nodes, weights and coordinates
   int _nQuad;
@@ -92,7 +96,8 @@ protected:
 
   // Number of interpolation functions (i.e. number of DOFs)
   int _nFunctions;
-  // Coordinates of the collocation nodes on the reference element
+  // rst-Coordinates of the collocation nodes on the reference element
+  // Layout: [r1 s1 t1 r2 s2 t2 ... rn sn tn]
   std::vector<double> _Lcoor;
   // Evaluation of the (local) shape functions and their derivatives at
   // the quadrature nodes.
@@ -118,14 +123,17 @@ protected:
 
   // Ptr to the numbering of the field associated to this space
   feNumber *_numbering;
+  // Ptr to the connectivity on which the space is defined
+  feCncGeo *_cnc;
 
 public:
 
   friend class feBilinearForm;
   friend class feNorm;
+  friend class feCncGeo;
   
   // Do not use the abstract class constructor directly, call the derived classes.
-  feSpace(feMesh *mesh = nullptr, const std::string &fieldID = "", const std::string &cncGeoID = "",
+  feSpace(const int dimension, feMesh *mesh = nullptr, const std::string &fieldID = "", const std::string &cncGeoID = "",
     feFunction *fct = nullptr, const bool useGlobalShapeFunctions = false);
   virtual ~feSpace(){};
 
@@ -133,19 +141,21 @@ public:
   int getFieldTag() { return _fieldTag; }
   const std::string &getCncGeoID() { return _cncGeoID; }
   int getCncGeoTag() { return _cncGeoTag; }
-  feCncGeo *getCncGeo();
 
   // Assign the tag of a geometric space after the mesh has been created
   void setCncGeoTag(int tag){ _cncGeoTag = tag; }
+  // Assign the pointer to the connectivity after it has been created
+  void setCncPtr(feCncGeo *cnc){ _cnc = cnc; }
   // Assign the mesh pointer of a geometric space after the mesh has been created
   void setMeshPtr(feMesh *mesh){ _mesh = mesh; }
   // Assign the pointer to the field numbering after the numbering has been created
   void setNumberingPtr(feNumber *numbering){ _numbering = numbering; }
 
   // Return the attributes of the geometric connectivity on which the space is defined
-  int getDim();
-  int getNbElm();
-  int getNbNodePerElem();
+  feCncGeo *getCncGeo() { return _cnc; }
+  int getDim() { return _dim; };
+  int getNumElements();
+  int getNumVerticesPerElem();
 
   elementType getElementType() { return _elementType; };
   dofInitialization getDOFInitialization() { return _DOFinitialization; };
@@ -155,7 +165,7 @@ public:
   void useGlobalFunctions(bool flag) { _useGlobalShapeFunctions = flag; }
 
   // Return the number of shape functions (DOF) on an element
-  virtual int getNbFunctions() = 0;
+  virtual int getNumFunctions() = 0;
   // Return highest degree of the polynomial basis
   virtual int getPolynomialDegree() = 0;
 
@@ -183,42 +193,50 @@ public:
   };
 
   // Return value of shape function (or derivatives) at quadrature node
-  double getFunctionAtQuadNode(int iFun, int iQuadNode)
+  double getFunctionAtQuadNode(const int iFun, const int iQuadNode)
   {
     return _L[_nFunctions * iQuadNode + iFun];
   }
-  double getdFunctiondrAtQuadNode(int iFun, int iQuadNode)
+  double getdFunctiondrAtQuadNode(const int iFun, const int iQuadNode)
   {
     return _dLdr[_nFunctions * iQuadNode + iFun];
   }
-  double getdFunctiondsAtQuadNode(int iFun, int iQuadNode)
+  double getdFunctiondsAtQuadNode(const int iFun, const int iQuadNode)
   {
     return _dLds[_nFunctions * iQuadNode + iFun];
   }
-  double getd2Functiondr2AtQuadNode(int iFun, int iQuadNode)
+  double getdFunctiondtAtQuadNode(const int iFun, const int iQuadNode)
+  {
+    return _dLdt[_nFunctions * iQuadNode + iFun];
+  }
+  double getd2Functiondr2AtQuadNode(const int iFun, const int iQuadNode)
   {
     return _d2Ldr2[_nFunctions * iQuadNode + iFun];
   }
-  double getd2Functionds2AtQuadNode(int iFun, int iQuadNode)
+  double getd2Functionds2AtQuadNode(const int iFun, const int iQuadNode)
   {
     return _d2Lds2[_nFunctions * iQuadNode + iFun];
   }
-  double getGlobalFunctionAtQuadNode(int iElm, int iFun, int iQuadNode)
+
+  void getFunctionsPhysicalGradientAtQuadNode(const int iQuadNode, const double jac,
+    std::vector<double> & geoCoord, double *gradPhi);
+
+  double getGlobalFunctionAtQuadNode(const int iElm, const int iFun, const int iQuadNode)
   {
     return _Lglob[iElm][_nFunctions * iQuadNode + iFun];
   }
-  double getdGlobalFunctiondxAtQuadNode(int iElm, int iFun, int iQuadNode)
+  double getdGlobalFunctiondxAtQuadNode(const int iElm, const int iFun, const int iQuadNode)
   {
     return _dLdxglob[iElm][_nFunctions * iQuadNode + iFun];
   }
-  double getdGlobalFunctiondyAtQuadNode(int iElm, int iFun, int iQuadNode)
+  double getdGlobalFunctiondyAtQuadNode(const int iElm, const int iFun, const int iQuadNode)
   {
     return _dLdyglob[iElm][_nFunctions * iQuadNode + iFun];
   }
 
   // Set and get quadrature rule
   feStatus setQuadratureRule(feQuadrature *quadratureRule);
-  int getNbQuadPoints() { return _nQuad; }
+  int getNumQuadPoints() { return _nQuad; }
   std::vector<double> &getQuadratureWeights() { return _wQuad; }
   std::vector<double> &getRQuadraturePoints() { return _xQuad; }
   std::vector<double> &getSQuadraturePoints() { return _yQuad; }
@@ -273,6 +291,10 @@ public:
   double interpolateFieldAtQuadNode_sDerivative(std::vector<double> &field, int iNode);
   double interpolateFieldAtQuadNode_rrDerivative(std::vector<double> &field, int iNode);
   double interpolateFieldAtQuadNode_ssDerivative(std::vector<double> &field, int iNode);
+
+  void interpolateFieldAtQuadNode_physicalGradient(std::vector<double> &field, 
+    const int iQuadNode, const double jac, std::vector<double> & geoCoord, double *grad);
+
   // Interpolate scalar field or derivatives at iNode-th quadrature node using global shape functions
   double interpolateFieldAtQuadNode(std::vector<double> &field, int iElm, int iNode);
   double interpolateFieldAtQuadNode_xDerivative(std::vector<double> &field, int iElm, int iNode);
@@ -285,11 +307,34 @@ public:
     int iNode, std::vector<double> &res);
   void interpolateVectorFieldAtQuadNode_sDerivative(std::vector<double> &field,
     int iNode, std::vector<double> &res);
+  void interpolateVectorFieldAtQuadNode_tDerivative(std::vector<double> &field,
+    int iNode, std::vector<double> &res);
 };
 
-//
+// -----------------------------------------------------------------------------
+// Lagrange element of degree 0 on 0D point
+// -----------------------------------------------------------------------------
+class feSpace0DP0 : public feSpace
+{
+public:
+  feSpace0DP0(const std::string &cncGeoID);
+  feSpace0DP0(feMesh *mesh, const std::string fieldID, const std::string cncGeoID, feFunction *fct);
+  ~feSpace0DP0(){};
+
+  int getNumFunctions() { return 1; }
+  int getPolynomialDegree() { return 0; }
+
+  std::vector<double> L(double *r);
+  void L(double *r, double *L);
+
+  void initializeNumberingUnknowns();
+  void initializeNumberingEssential();
+  void initializeAddressingVector(int numElem, std::vector<feInt> &adr);
+};
+
+// -----------------------------------------------------------------------------
 // 0D Hermite point to fix boundary conditions
-//
+// -----------------------------------------------------------------------------
 class feSpace0D_Hermite : public feSpace
 {
 public:
@@ -297,7 +342,7 @@ public:
   feSpace0D_Hermite(feMesh *mesh, const std::string fieldID, const std::string cncGeoID, feFunction *fct);
   ~feSpace0D_Hermite(){};
 
-  int getNbFunctions() { return 2; }
+  int getNumFunctions() { return 2; }
   int getPolynomialDegree() { return 0; }
 
   std::vector<double> L(double *r);
@@ -308,9 +353,9 @@ public:
   void initializeAddressingVector(int numElem, std::vector<feInt> &adr);
 };
 
-//
+// -----------------------------------------------------------------------------
 // Lagrange element of degree 0 on 1D reference element [-1,1]
-//
+// -----------------------------------------------------------------------------
 class feSpace1DP0 : public feSpace
 {
 public:
@@ -318,26 +363,20 @@ public:
   feSpace1DP0(feMesh *mesh, const std::string fieldID, const std::string cncGeoID, feFunction *fct);
   ~feSpace1DP0(){};
 
-  int getNbFunctions() { return 1; }
+  int getNumFunctions() { return 1; }
   int getPolynomialDegree() { return 0; }
 
   std::vector<double> L(double *r);
   void L(double *r, double *L);
-  std::vector<double> dLdr(double *r);
-  std::vector<double> dLds(double *r);
-  std::vector<double> dLdt(double *r);
-
-  feStatus Lphys(int iElm, std::vector<double> &x, std::vector<double> &L,
-    std::vector<double> &dLdx, std::vector<double> &dLdy);
 
   void initializeNumberingUnknowns();
   void initializeNumberingEssential();
   void initializeAddressingVector(int numElem, std::vector<feInt> &adr);
 };
 
-//
+// -----------------------------------------------------------------------------
 // Lagrange element of degree 1 on 1D reference element [-1,1]
-//
+// -----------------------------------------------------------------------------
 class feSpace1DP1 : public feSpace
 {
 protected:
@@ -346,27 +385,22 @@ public:
   feSpace1DP1(feMesh *mesh, const std::string fieldID, const std::string cncGeoID, feFunction *fct);
   ~feSpace1DP1(){};
 
-  int getNbFunctions() { return 2; }
+  int getNumFunctions() { return 2; }
   int getPolynomialDegree() { return 1; }
 
   std::vector<double> L(double *r);
   void L(double *r, double *L);
   std::vector<double> dLdr(double *r);
-  std::vector<double> dLds(double *r);
-  std::vector<double> dLdt(double *r);
-
-  feStatus Lphys(int iElm, std::vector<double> &x, std::vector<double> &L,
-                         std::vector<double> &dLdx, std::vector<double> &dLdy);
 
   void initializeNumberingUnknowns();
   void initializeNumberingEssential();
   void initializeAddressingVector(int numElem, std::vector<feInt> &adr);
 };
 
-//
-// Crouzeiv_raviart element of degree 0 on line
+// -----------------------------------------------------------------------------
+// Crouzeix-Raviart element of degree 0 on line
 // Trivial constant function L = 1
-//
+// -----------------------------------------------------------------------------
 class feSpace1D_CR0 : public feSpace
 {
 protected:
@@ -375,26 +409,20 @@ public:
   feSpace1D_CR0(feMesh *mesh, const std::string fieldID, const std::string cncGeoID, feFunction *fct);
   ~feSpace1D_CR0() {}
 
-  int getNbFunctions() { return 1; }
+  int getNumFunctions() { return 1; }
   int getPolynomialDegree() { return 0; }
 
   std::vector<double> L(double *r);
   void L(double *r, double *L);
-  std::vector<double> dLdr(double *r);
-  std::vector<double> dLds(double *r);
-  std::vector<double> dLdt(double *r);
-
-  feStatus Lphys(int iElm, std::vector<double> &x, std::vector<double> &L,
-                         std::vector<double> &dLdx, std::vector<double> &dLdy);
 
   void initializeNumberingUnknowns();
   void initializeNumberingEssential();
   void initializeAddressingVector(int numElem, std::vector<feInt> &adr);
 };
 
-//
+// -----------------------------------------------------------------------------
 // Lagrange element of degree 2 on 1D reference element [-1,1]
-//
+// -----------------------------------------------------------------------------
 class feSpace1DP2 : public feSpace
 {
 protected:
@@ -403,26 +431,21 @@ public:
   feSpace1DP2(feMesh *mesh, const std::string fieldID, const std::string cncGeoID, feFunction *fct);
   ~feSpace1DP2() {}
 
-  int getNbFunctions() { return 3; }
+  int getNumFunctions() { return 3; }
   int getPolynomialDegree() { return 2; }
 
   std::vector<double> L(double *r);
   void L(double *r, double *L);
   std::vector<double> dLdr(double *r);
-  std::vector<double> dLds(double *r);
-  std::vector<double> dLdt(double *r);
-
-  feStatus Lphys(int iElm, std::vector<double> &x, std::vector<double> &L,
-    std::vector<double> &dLdx, std::vector<double> &dLdy);
 
   void initializeNumberingUnknowns();
   void initializeNumberingEssential();
   void initializeAddressingVector(int numElem, std::vector<feInt> &adr);
 };
 
-//
+// -----------------------------------------------------------------------------
 // Lagrange element of degree 3 on 1D reference element [-1,1]
-//
+// -----------------------------------------------------------------------------
 class feSpace1DP3 : public feSpace
 {
 protected:
@@ -431,26 +454,21 @@ public:
   feSpace1DP3(feMesh *mesh, const std::string fieldID, const std::string cncGeoID, feFunction *fct);
   ~feSpace1DP3() {}
 
-  int getNbFunctions() { return 4; }
+  int getNumFunctions() { return 4; }
   int getPolynomialDegree() { return 3; }
 
   std::vector<double> L(double *r);
   void L(double *r, double *L);
   std::vector<double> dLdr(double *r);
-  std::vector<double> dLds(double *r);
-  std::vector<double> dLdt(double *r);
-
-  feStatus Lphys(int iElm, std::vector<double> &x, std::vector<double> &L,
-                         std::vector<double> &dLdx, std::vector<double> &dLdy);
 
   void initializeNumberingUnknowns();
   void initializeNumberingEssential();
   void initializeAddressingVector(int numElem, std::vector<feInt> &adr);
 };
 
-//
+// -----------------------------------------------------------------------------
 // Hermite element of degree 3 on 1D reference element [-1,1]
-//
+// -----------------------------------------------------------------------------
 class feSpace1D_H3 : public feSpace
 {
 protected:
@@ -459,27 +477,22 @@ public:
   feSpace1D_H3(feMesh *mesh, const std::string fieldID, const std::string cncGeoID, feFunction *fct);
   ~feSpace1D_H3() {}
 
-  int getNbFunctions() { return 4; }
+  int getNumFunctions() { return 4; }
   int getPolynomialDegree() { return 3; }
 
   std::vector<double> L(double *r);
   void L(double *r, double *L);
   std::vector<double> dLdr(double *r);
-  std::vector<double> dLds(double *r);
-  std::vector<double> dLdt(double *r);
   std::vector<double> d2Ldr2(double *r);
-
-  feStatus Lphys(int iElm, std::vector<double> &x, std::vector<double> &L,
-                         std::vector<double> &dLdx, std::vector<double> &dLdy);
 
   void initializeNumberingUnknowns();
   void initializeNumberingEssential();
   void initializeAddressingVector(int numElem, std::vector<feInt> &adr);
 };
 
-//
+// -----------------------------------------------------------------------------
 // Lagrange element of degree 4 on 1D reference element [-1,1]
-//
+// -----------------------------------------------------------------------------
 class feSpace1DP4 : public feSpace
 {
 protected:
@@ -488,26 +501,21 @@ public:
   feSpace1DP4(feMesh *mesh, const std::string fieldID, const std::string cncGeoID, feFunction *fct);
   ~feSpace1DP4() {}
 
-  int getNbFunctions() { return 5; }
+  int getNumFunctions() { return 5; }
   int getPolynomialDegree() { return 4; }
 
   std::vector<double> L(double *r);
   void L(double *r, double *L);
   std::vector<double> dLdr(double *r);
-  std::vector<double> dLds(double *r);
-  std::vector<double> dLdt(double *r);
-
-  feStatus Lphys(int iElm, std::vector<double> &x, std::vector<double> &L,
-                         std::vector<double> &dLdx, std::vector<double> &dLdy);
 
   void initializeNumberingUnknowns();
   void initializeNumberingEssential();
   void initializeAddressingVector(int numElem, std::vector<feInt> &adr);
 };
 
-//
+// -----------------------------------------------------------------------------
 // Legendre interpolation functions of arbitrary degree on 1D reference element [-1,1]
-//
+// -----------------------------------------------------------------------------
 class feSpace1D_Legendre : public feSpace
 {
 protected:
@@ -517,26 +525,21 @@ public:
     const std::string fieldID, const std::string cncGeoID, feFunction *fct);
   ~feSpace1D_Legendre() {}
 
-  int getNbFunctions() { return _nFunctions; }
+  int getNumFunctions() { return _nFunctions; }
   int getPolynomialDegree() { return _degree; }
 
   std::vector<double> L(double *r);
   void L(double *r, double *L);
   std::vector<double> dLdr(double *r);
-  std::vector<double> dLds(double *r);
-  std::vector<double> dLdt(double *r);
-
-  feStatus Lphys(int iElm, std::vector<double> &x, std::vector<double> &L,
-                         std::vector<double> &dLdx, std::vector<double> &dLdy);
 
   void initializeNumberingUnknowns();
   void initializeNumberingEssential();
   void initializeAddressingVector(int numElem, std::vector<feInt> &adr);
 };
 
-//
+// -----------------------------------------------------------------------------
 // Lagrange element of degree 1 on reference triangle r = [0,1], s = [0,1-r]
-//
+// -----------------------------------------------------------------------------
 class feSpaceTriP1 : public feSpace
 {
 protected:
@@ -546,28 +549,23 @@ public:
                const bool useGlobalShapeFunctions = false);
   ~feSpaceTriP1() {}
 
-  int getNbFunctions() { return 3; }
+  int getNumFunctions() { return 3; }
   int getPolynomialDegree() { return 1; }
+
   std::vector<double> L(double *r);
   void L(double *r, double *L);
-  feStatus Lphys(int iElm, std::vector<double> &x, std::vector<double> &L,
-                         std::vector<double> &dLdx, std::vector<double> &dLdy)
-  {
-    printf("Not implemented\n");
-    exit(-1);
-  };
+
   std::vector<double> dLdr(double *r);
   std::vector<double> dLds(double *r);
-  std::vector<double> dLdt(double *r);
 
   void initializeNumberingUnknowns();
   void initializeNumberingEssential();
   void initializeAddressingVector(int numElem, std::vector<feInt> &adr);
 };
 
-//
-// Non-conformal Crouzeix-Raviart element of degree 1 on reference triangle r = [0,1], s = [0,1-r]
-//
+// -----------------------------------------------------------------------------
+// Non-conforming Crouzeix-Raviart element of degree 1 on reference triangle r = [0,1], s = [0,1-r]
+// -----------------------------------------------------------------------------
 class feSpaceTri_CR1 : public feSpace
 {
 protected:
@@ -577,30 +575,22 @@ public:
                              feFunction *fct);
   ~feSpaceTri_CR1() {}
 
-  int getNbFunctions() { return 3; }
+  int getNumFunctions() { return 3; }
   int getPolynomialDegree() { return 1; }
 
   std::vector<double> L(double *r);
   void L(double *r, double *L);
   std::vector<double> dLdr(double *r);
   std::vector<double> dLds(double *r);
-  std::vector<double> dLdt(double *r);
-
-  feStatus Lphys(int iElm, std::vector<double> &x, std::vector<double> &L,
-                         std::vector<double> &dLdx, std::vector<double> &dLdy)
-  {
-    printf("Not implemented\n");
-    exit(-1);
-  };
 
   void initializeNumberingUnknowns();
   void initializeNumberingEssential();
   void initializeAddressingVector(int numElem, std::vector<feInt> &adr);
 };
 
-//
+// -----------------------------------------------------------------------------
 // Lagrange element of degree 2 on reference triangle r = [0,1], s = [0,1-r]
-//
+// -----------------------------------------------------------------------------
 class feSpaceTriP2 : public feSpace
 {
 protected:
@@ -610,16 +600,15 @@ public:
                const bool useGlobalShapeFunctions = false);
   ~feSpaceTriP2() {}
 
-  int getNbFunctions() { return 6; }
+  int getNumFunctions() { return 6; }
   int getPolynomialDegree() { return 2; }
 
   std::vector<double> L(double *r);
   void L(double *r, double *L);
   std::vector<double> dLdr(double *r);
   std::vector<double> dLds(double *r);
-  std::vector<double> dLdt(double *r);
 
-  feStatus Lphys(int iElm, std::vector<double> &x, std::vector<double> &L,
+  virtual feStatus Lphys(int iElm, std::vector<double> &x, std::vector<double> &L,
                          std::vector<double> &dLdx, std::vector<double> &dLdy);
 
   void initializeNumberingUnknowns();
@@ -627,9 +616,9 @@ public:
   void initializeAddressingVector(int numElem, std::vector<feInt> &adr);
 };
 
-//
-// Non-conformal Crouzeix-Raviart element of degree 2 on reference triangle r = [0,1], s = [0,1-r]
-//
+// -----------------------------------------------------------------------------
+// Non-conforming Crouzeix-Raviart element of degree 2 on reference triangle r = [0,1], s = [0,1-r]
+// -----------------------------------------------------------------------------
 class feSpaceTri_CR2 : public feSpace
 {
 protected:
@@ -639,30 +628,22 @@ public:
                              feFunction *fct);
   ~feSpaceTri_CR2() {}
 
-  int getNbFunctions() { return 7; }
+  int getNumFunctions() { return 7; }
   int getPolynomialDegree() { return 2; }
 
   std::vector<double> L(double *r);
   void L(double *r, double *L);
   std::vector<double> dLdr(double *r);
   std::vector<double> dLds(double *r);
-  std::vector<double> dLdt(double *r);
-
-  feStatus Lphys(int iElm, std::vector<double> &x, std::vector<double> &L,
-                         std::vector<double> &dLdx, std::vector<double> &dLdy)
-  {
-    printf("Not implemented\n");
-    exit(-1);
-  };
 
   void initializeNumberingUnknowns();
   void initializeNumberingEssential();
   void initializeAddressingVector(int numElem, std::vector<feInt> &adr);
 };
 
-//
+// -----------------------------------------------------------------------------
 // Lagrange element of degree 3 on reference triangle r = [0,1], s = [0,1-r]
-//
+// -----------------------------------------------------------------------------
 class feSpaceTriP3 : public feSpace
 {
 protected:
@@ -672,30 +653,22 @@ public:
                const bool useGlobalShapeFunctions = false);
   ~feSpaceTriP3() {}
 
-  int getNbFunctions() { return 10; }
+  int getNumFunctions() { return 10; }
   int getPolynomialDegree() { return 3; }
 
   std::vector<double> L(double *r);
   void L(double *r, double *L);
   std::vector<double> dLdr(double *r);
   std::vector<double> dLds(double *r);
-  std::vector<double> dLdt(double *r);
-
-  feStatus Lphys(int iElm, std::vector<double> &x, std::vector<double> &L,
-                         std::vector<double> &dLdx, std::vector<double> &dLdy)
-  {
-    printf("Not implemented\n");
-    exit(-1);
-  };
 
   void initializeNumberingUnknowns();
   void initializeNumberingEssential();
   void initializeAddressingVector(int numElem, std::vector<feInt> &adr);
 };
 
-//
+// -----------------------------------------------------------------------------
 // Lagrange element of degree 4 on reference triangle r = [0,1], s = [0,1-r]
-//
+// -----------------------------------------------------------------------------
 class feSpaceTriP4 : public feSpace
 {
 protected:
@@ -705,21 +678,13 @@ public:
                const bool useGlobalShapeFunctions = false);
   ~feSpaceTriP4() {}
 
-  int getNbFunctions() { return 15; }
+  int getNumFunctions() { return 15; }
   int getPolynomialDegree() { return 4; }
 
   std::vector<double> L(double *r);
   void L(double *r, double *L);
   std::vector<double> dLdr(double *r);
   std::vector<double> dLds(double *r);
-  std::vector<double> dLdt(double *r);
-
-  feStatus Lphys(int iElm, std::vector<double> &x, std::vector<double> &L,
-                         std::vector<double> &dLdx, std::vector<double> &dLdy)
-  {
-    printf("Not implemented\n");
-    exit(-1);
-  };
 
   void initializeNumberingUnknowns();
   void initializeNumberingEssential();

@@ -327,17 +327,17 @@ feStatus feMesh2DP1::readMsh2(std::istream &input, const bool curved, const bool
 
       int gmshNumber, countVertex = 0;
       double x, y, z;
-      input >> _nNod;
-      _vertices.resize(_nNod);
+      input >> _nVertices;
+      _vertices.resize(_nVertices);
       getline(input, buffer);
-      for(int iNode = 0; iNode < _nNod; ++iNode) {
+      for(int iNode = 0; iNode < _nVertices; ++iNode) {
         // node-number x-coord y-coord z-coord
         input >> gmshNumber >> x >> y >> z;
         _verticesMap[gmshNumber] = countVertex;
         _vertices[countVertex++] = Vertex(x, y, z, gmshNumber);
       }
 
-      if((int)_verticesMap.size() != _nNod) {
+      if((int)_verticesMap.size() != _nVertices) {
         return feErrorMsg(FE_STATUS_ERROR, "Vertices indices are not unique.");
       }
     }
@@ -921,10 +921,10 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, const bool curved, const bool
       int numEntityBlocks, countVertex = 0;
       double x, y, z;
       // numEntityBlocks(size_t) numNodes(size_t) minNodeTag(size_t) maxNodeTag(size_t)
-      input >> numEntityBlocks >> _nNod; // != nVertices, mais alloue _vertices : ambigu (:
+      input >> numEntityBlocks >> _nVertices;
       getline(input, buffer);
-      _vertices.resize(_nNod);
-      _sequentialNodeToGmshNode.resize(_nNod);
+      _vertices.resize(_nVertices);
+      _sequentialNodeToGmshNode.resize(_nVertices);
       // A counter for the dim > 0 entities
       int entityCount = 0;
       for(int i = 0; i < numEntityBlocks; ++i) {
@@ -945,7 +945,7 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, const bool curved, const bool
           _vertices[countVertex++] = Vertex(x, y, z, gmshNodeTag[iNode]);
         }
       }
-      if((int)_verticesMap.size() != _nNod) {
+      if((int)_verticesMap.size() != _nVertices) {
         return feErrorMsg(FE_STATUS_ERROR, "Vertices indices are not unique.");
       }
     }
@@ -957,7 +957,7 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, const bool curved, const bool
       _nTotalElm = _nElm;
 
       int countElems = 0;
-      _nNodesWithNoPhysical = 0;
+      _nVerticesWithNoPhysical = 0;
 
       getline(input, buffer);
       int nEdges = 1; // Starting edge numbering at 0 to distinguish + or - in the connectivity
@@ -1415,7 +1415,7 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, const bool curved, const bool
                 _entities[p].connecNodes[0] = elemNodes[0];
                 printNodeWarning = true;
               } else{
-                _nNodesWithNoPhysical++;
+                _nVerticesWithNoPhysical++;
                 feWarning(
                   "More than one node are present in geometric entity (dim = %d, gmshTag = %d). "
                   "Only the first node was added, the others were discarded.",
@@ -1424,7 +1424,7 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, const bool curved, const bool
 
               // // We only allow a geometric Point to have a single node
               // if(_entities[p].nElm == 1) {
-              //   _nNodesWithNoPhysical++;
+              //   _nVerticesWithNoPhysical++;
               //   if(printNodeWarning) {
               //     feWarning(
               //       "More than one node are present in geometric entity (dim = %d, gmshTag = %d). "
@@ -1743,7 +1743,7 @@ feStatus feMesh2DP1::readGmsh(const std::string meshName, const bool curved, con
     cnc->getFeSpace()->setCncGeoTag(nCncGeo++);
   }
 
-  _nEdg = _edges.size();
+  _nEdges = _edges.size();
   _dim = maxDim;
 
   _nInteriorElm = 0;
@@ -1779,6 +1779,10 @@ feStatus feMesh2DP1::readGmsh(const std::string meshName, const bool curved, con
   for(feCncGeo *cnc : _cncGeo) {
     cnc->setMeshPtr(this);
     cnc->getFeSpace()->setMeshPtr(this);
+  }
+  // Assign to each geometric FE space a pointer to its connectivity
+  for(feCncGeo *cnc : _cncGeo) {
+    cnc->getFeSpace()->setCncPtr(cnc);
   }
   _nCncGeo = _cncGeo.size();
 

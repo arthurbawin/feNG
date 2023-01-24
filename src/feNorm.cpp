@@ -30,19 +30,19 @@ feNorm::feNorm(normType type, const std::vector<feSpace*> &spaces, feSolution *s
   , _vectorSolution(vectorSolution)
   , _J(_cnc->getJacobians())
 {
-  _nQuad = spaces[0]->getNbQuadPoints();
+  _nQuad = spaces[0]->getNumQuadPoints();
   _w = spaces[0]->getQuadratureWeights();
   _geoSpace = _cnc->getFeSpace();
-  _nElm = _spaces[0]->getNbElm();
+  _nElm = _spaces[0]->getNumElements();
   _pos.resize(3);
-  _geoCoord.resize(3 * _cnc->getNbNodePerElem());
+  _geoCoord.resize(3 * _cnc->getNumVerticesPerElem());
 
   _adr.resize(spaces.size());
   for(size_t k = 0; k < spaces.size(); ++k)
-    _adr[k].resize(spaces[k]->getNbFunctions());
+    _adr[k].resize(spaces[k]->getNumFunctions());
   _localSol.resize(spaces.size());
   for(size_t k = 0; k < spaces.size(); ++k)
-    _localSol[k].resize(spaces[k]->getNbFunctions());
+    _localSol[k].resize(spaces[k]->getNumFunctions());
 
   _cncOnly = false;
 }
@@ -53,12 +53,12 @@ feNorm::feNorm(feCncGeo *cnc, feFunction *scalarSolution, feVectorFunction *vect
   , _vectorSolution(vectorSolution)
   , _J(_cnc->getJacobians())
 {
-  _nQuad = cnc->getFeSpace()->getNbQuadPoints();
+  _nQuad = cnc->getFeSpace()->getNumQuadPoints();
   _w = cnc->getFeSpace()->getQuadratureWeights();
   _geoSpace = cnc->getFeSpace();
-  _nElm = cnc->getNbElm();
+  _nElm = cnc->getNumElements();
   _pos.resize(3);
-  _geoCoord.resize(3 * cnc->getNbNodePerElem());
+  _geoCoord.resize(3 * cnc->getNumVerticesPerElem());
 
   _cncOnly = true;
 }
@@ -274,7 +274,7 @@ double feNorm::computeIntegralDotProduct()
 {
   // double I = 0.0, solInt, J, t = _solution->getCurrentTime();
   
-  // // std::vector<feInt> adr0(_spaces[0]->getNbFunctions());
+  // // std::vector<feInt> adr0(_spaces[0]->getNumFunctions());
   // // std::vector<double> sol0(adr0.size());
   // // std::vector<double> &solVec = _solution->getSolutionReference();
 
@@ -310,7 +310,7 @@ feStatus feNorm::computeErrorNormFromExternalSolution(feMetaNumber *metaNumber, 
                                                       double &res)
 {
   double normL2 = 0.0, solInt, solRef;
-  std::vector<feInt> adr(_spaces[0]->getNbFunctions());
+  std::vector<feInt> adr(_spaces[0]->getNumFunctions());
   std::vector<double> sol0(adr.size());
   std::vector<double> &solVec = sol->getSolutionReference();
   std::vector<double> &solVecS = refSol->getSolutionReference();
@@ -332,7 +332,7 @@ feStatus feNorm::computeErrorNormFromExternalSolution(feMetaNumber *metaNumber, 
   // autre simulation, ce qui semble hasardeux.
   bool matchingSpace = false;
   for(feSpace *fS : refSpaces) {
-    std::vector<feInt> adrS(fS->getNbFunctions());
+    std::vector<feInt> adrS(fS->getNumFunctions());
     std::vector<double> solS(adrS.size());
     if(fS->getFieldID() == _spaces[0]->getFieldID() &&
        fS->getCncGeoID() == _spaces[0]->getCncGeoID()) {

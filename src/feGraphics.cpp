@@ -121,9 +121,9 @@ void feBasicViewer::draw1DCurve(feMesh &mesh,
 {
 #if defined(HAVE_GLFW)
   std::vector<double> &sol = solution.getSolutionReference();
-  std::vector<double> elmSolution(space->getNbFunctions());
+  std::vector<double> elmSolution(space->getNumFunctions());
   std::vector<double> xloc;
-  std::vector<feInt> adr(space->getNbFunctions());
+  std::vector<feInt> adr(space->getNumFunctions());
 
   int elm, cnt = 0;
   double r[3], eps = 1e-4;

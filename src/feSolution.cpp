@@ -86,11 +86,11 @@ void feSolution::initializeUnknowns(feMesh *mesh)
       continue;
     }
 
-    int nElm = fS->getNbElm();
-    std::vector<feInt> adr(fS->getNbFunctions());
+    int nElm = fS->getNumElements();
+    std::vector<feInt> adr(fS->getNumFunctions());
     std::vector<double> coor = fS->getLcoor();
-    int nbNodePerElem = mesh->getCncGeoByName(fS->getCncGeoID())->getNbNodePerElem();
-    std::vector<double> localCoord(3 * nbNodePerElem);
+    int numVerticesPerElem = mesh->getCncGeoByName(fS->getCncGeoID())->getNumVerticesPerElem();
+    std::vector<double> localCoord(3 * numVerticesPerElem);
     
     feSpace *geoSpace = mesh->getGeometricSpace(fS->getCncGeoID());
     
@@ -102,12 +102,10 @@ void feSolution::initializeUnknowns(feMesh *mesh)
         fS->initializeAddressingVector(iElm, adr);
         mesh->getCoord(fS->getCncGeoID(), iElm, localCoord);
         
-        for(int j = 0; j < fS->getNbFunctions(); ++j) {
+        for(int j = 0; j < fS->getNumFunctions(); ++j) {
           double r[3] = {coor[3 * j], coor[3 * j + 1], coor[3 * j + 2]};
           geoSpace->interpolateVectorField(localCoord, r, x);
           _sol[adr[j]] = fS->evalFun(_tn, x);
-
-          feInfo("Setting unknown at %d to %f", adr[j], fS->evalFun(_tn, x));
         }
       }
     }
@@ -127,25 +125,25 @@ void feSolution::initializeUnknowns(feMesh *mesh)
       // !!! We assume that the jacobian cancels out from both side, which is true only for P1 line geometry !!!
 
       // The analytic diagonal mass matrix A_ii = 2/(2*i+1)
-      std::vector<double> A(fS->getNbFunctions(), 0.);
-      std::vector<double> B(fS->getNbFunctions(), 0.);
-      for(int i = 0; i < fS->getNbFunctions(); ++i){
+      std::vector<double> A(fS->getNumFunctions(), 0.);
+      std::vector<double> B(fS->getNumFunctions(), 0.);
+      for(int i = 0; i < fS->getNumFunctions(); ++i){
         A[i] = 2./(2. * i + 1.);
       }
 
-      int nQuad = geoSpace->getNbQuadPoints();
+      int nQuad = geoSpace->getNumQuadPoints();
       std::vector<double> wQuad = geoSpace->getQuadratureWeights();
       std::vector<double> xQuad = geoSpace->getRQuadraturePoints();
 
       double uQuad = 0.;
-      std::vector<double> phi(fS->getNbFunctions(), 0.);
+      std::vector<double> phi(fS->getNumFunctions(), 0.);
       for(int iElm = 0; iElm < nElm; ++iElm){
 
         fS->initializeAddressingVector(iElm, adr);
         mesh->getCoord(fS->getCncGeoID(), iElm, localCoord);
 
         // Compute the RHS
-        for(int i = 0; i < fS->getNbFunctions(); ++i){
+        for(int i = 0; i < fS->getNumFunctions(); ++i){
 
           B[i] = 0.;
           for(int k = 0; k < nQuad; ++k){
@@ -160,7 +158,7 @@ void feSolution::initializeUnknowns(feMesh *mesh)
         }
 
         // Solve Aij Uj = Bj on the element
-        for(int i = 0; i < fS->getNbFunctions(); ++i){
+        for(int i = 0; i < fS->getNumFunctions(); ++i){
           _sol[adr[i]] = B[i] / A[i];
         }
       }
@@ -178,11 +176,11 @@ void feSolution::initializeEssentialBC(feMesh *mesh, feSolutionContainer *solCon
       continue;
     }
 
-    int nElm = fS->getNbElm();
-    std::vector<feInt> adr(fS->getNbFunctions());
+    int nElm = fS->getNumElements();
+    std::vector<feInt> adr(fS->getNumFunctions());
     std::vector<double> coor = fS->getLcoor();
-    int nbNodePerElem = mesh->getCncGeoByName(fS->getCncGeoID())->getNbNodePerElem();
-    std::vector<double> localCoord(3 * nbNodePerElem); 
+    int numVerticesPerElem = mesh->getCncGeoByName(fS->getCncGeoID())->getNumVerticesPerElem();
+    std::vector<double> localCoord(3 * numVerticesPerElem); 
     
     feSpace *geoSpace = mesh->getGeometricSpace(fS->getCncGeoID());
     
@@ -194,13 +192,11 @@ void feSolution::initializeEssentialBC(feMesh *mesh, feSolutionContainer *solCon
         fS->initializeAddressingVector(iElm, adr);
         mesh->getCoord(fS->getCncGeoID(), iElm, localCoord);
 
-        for(int j = 0; j < fS->getNbFunctions(); ++j) {
+        for(int j = 0; j < fS->getNumFunctions(); ++j) {
           double r[3] = {coor[3 * j], coor[3 * j + 1], coor[3 * j + 2]};
           geoSpace->interpolateVectorField(localCoord, r, x);
           double val = fS->evalFun(_tn, x);
           _sol[adr[j]] = val;
-
-          feInfo("Setting Essential BC at %d to %f", adr[j], val);
 
           if(solContainer != nullptr) {
             solContainer->_sol[0][adr[j]] = val;
@@ -220,18 +216,18 @@ void feSolution::initializeEssentialBC(feMesh *mesh, feSolutionContainer *solCon
 
 void feSolution::copySpace(feMesh *mesh, feSpace *s1, feSpace *s2)
 {
-  int nElm = mesh->getNbElm(s1->getCncGeoID());
-  std::vector<feInt> adr1(s1->getNbFunctions());
-  std::vector<feInt> adr2(s2->getNbFunctions());
+  int nElm = mesh->getNumElements(s1->getCncGeoID());
+  std::vector<feInt> adr1(s1->getNumFunctions());
+  std::vector<feInt> adr2(s2->getNumFunctions());
   std::vector<double> coor = s1->getLcoor();
-  int nbNodePerElem = mesh->getCncGeoByName(s1->getCncGeoID())->getNbNodePerElem();
-  std::vector<double> localCoord(3*nbNodePerElem);
+  int numVerticesPerElem = mesh->getCncGeoByName(s1->getCncGeoID())->getNumVerticesPerElem();
+  std::vector<double> localCoord(3*numVerticesPerElem);
   std::vector<double> x(3);
   
   for(int iElm = 0; iElm < nElm; ++iElm) {
     s1->initializeAddressingVector(iElm, adr1);
     s2->initializeAddressingVector(iElm, adr2);    
-    for(int j = 0; j < s1->getNbFunctions(); ++j) {
+    for(int j = 0; j < s1->getNumFunctions(); ++j) {
         _sol[adr2[j]] = _sol[adr1[j]];
     }
   }

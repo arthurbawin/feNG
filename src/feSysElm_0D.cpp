@@ -1,4 +1,5 @@
 #include "feSysElm.h"
+#include "feSysElm_Ext.h"
 #include "feBilinearForm.h"
 
 void feSysElm_0D_StiffSpring::createElementarySystem(std::vector<feSpace *> &space)
@@ -286,7 +287,7 @@ void feSysElm_0D_Masse::computeAe(feBilinearForm *form)
   // int                nG = form->_geoSpace->getNbQuadPoints();
   std::vector<double> w = form->_geoSpace->getQuadratureWeights();
   double rho = _par;
-  // int        nFunctions = form->_intSpaces[_idU]->getNbFunctions();
+  // int        nFunctions = form->_intSpaces[_idU]->getNumFunctions();
 
   for(int i = 0; i < form->_intSpaces.size(); ++i) {
     form->_Ae[i][i] = rho * form->_c0;
@@ -298,7 +299,7 @@ void feSysElm_0D_Masse::computeBe(feBilinearForm *form)
   // int                nG = form->_geoSpace->getNbQuadPoints();
   std::vector<double> w = form->_geoSpace->getQuadratureWeights();
   double rho = _par;
-  // int        nFunctions = form->_intSpaces[_idU]->getNbFunctions();
+  // int        nFunctions = form->_intSpaces[_idU]->getNumFunctions();
 
   double uDot;
 
@@ -311,7 +312,7 @@ void feSysElm_0D_Masse::computeBe(feBilinearForm *form)
 void feSysElm_0D_Source::createElementarySystem(std::vector<feSpace *> &space)
 {
   _idU = 0;
-  _feU.resize(space[_idU]->getNbFunctions());
+  _feU.resize(space[_idU]->getNumFunctions());
 }
 
 void feSysElm_0D_Source::computeBe(feBilinearForm *form)
@@ -335,7 +336,7 @@ void feSysElm_0D_Source_crossed::computeBe(feBilinearForm *form)
 {
   // int                nG = form->_geoSpace->getNbQuadPoints();
   std::vector<double> w = form->_geoSpace->getQuadratureWeights();
-  // int        nFunctions = form->_intSpaces[_idU]->getNbFunctions();
+  // int        nFunctions = form->_intSpaces[_idU]->getNumFunctions();
   std::vector<double> x(3, 0.0);
   std::vector<double> f(form->_intSpaces.size(), 0);
   if(_fct != nullptr) _fct->eval(form->_tn, x, f);

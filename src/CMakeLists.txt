@@ -21,7 +21,6 @@ set(feNG_SRC
     feNumber.cpp
     feOptionsParser.cpp
     fePolynomial.cpp
-    fePostProc.cpp
     feRecovery.cpp
     feQuadratureTri.cpp
     feQuadrature.cpp
@@ -32,7 +31,7 @@ set(feNG_SRC
     feSpace.cpp
     feSpace_1D.cpp
     feSpace_2D.cpp
-    # feSysElm.cpp
+    feSysElm.cpp
     feSysElm_0D.cpp
     feSysElm_1D.cpp
     feSysElm_2D.cpp
@@ -64,7 +63,6 @@ set(feNG_API
     feExporter.h
     feGraphics.h
     feFunction.h
-    # feLine.h
     feLinearSystem.h
     feLinearSystemMklPardiso.h
     feLinearSystemPETSc.h
@@ -77,7 +75,6 @@ set(feNG_API
     feNumber.h
     feOptionsParser.h
     fePolynomial.h
-    fePostProc.h
     feQuadrature.h
     feRecovery.h
     feSimplex.h
@@ -86,6 +83,7 @@ set(feNG_API
     feSolver.h
     feSpace.h
     feSysElm.h
+    feSysElm_Ext.h
     feTriangle.h
     feVertex.h
     glfem.h)

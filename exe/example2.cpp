@@ -76,7 +76,7 @@ int main(int argc, char **argv)
   options.addOption(&nMesh, "-n", "--nMeshes", "Number of meshes for the convergence study");
   feCheck(options.parse());
 
-  setVerbose(2);
+  setVerbose(1);
 
   double k = 1.0;
   feFunction *funSol = new feFunction(fSol, {});
@@ -102,7 +102,7 @@ int main(int argc, char **argv)
     // std::string meshFile = "transfinite" + std::to_string(i+1) + "_P2.msh";
 
     feMesh2DP1 mesh(meshFile);
-    nElm[i] = mesh.getNbInteriorElems();
+    nElm[i] = mesh.getNumInteriorElements();
 
     feSpace *uBord, *uDomaine;
     int degreeQuadrature = 10;
@@ -127,8 +127,8 @@ int main(int argc, char **argv)
     feMetaNumber metaNumber(&mesh, spaces, essentialSpaces);
     feSolution sol(metaNumber.getNbDOFs(), spaces, essentialSpaces);
 
-    feBilinearForm diffU({uDomaine}, new feSysElm_2D_Diffusion(k, nullptr));
-    feBilinearForm sourceU({uDomaine}, new feSysElm_2D_Source(1.0, funSource));
+    feBilinearForm diffU({uDomaine}, new feSysElm_2D_Diffusion(kDiffusivity));
+    feBilinearForm sourceU({uDomaine}, new feSysElm_Source<2>(1.0, funSource));
 
     feLinearSystem *system;
     feCheck(createLinearSystem(system, PETSC, {&diffU, &sourceU}, metaNumber.getNbUnknowns(), argc, argv));
@@ -154,8 +154,8 @@ int main(int argc, char **argv)
     feCheck(solver->makeSteps(0));
 
     if(hasAnalyticSolution){
-      fePostProc post(uDomaine, &mesh, &metaNumber, funSol);
-      L2errorU[2*i] = post.computeL2ErrorNorm(&sol);
+      feNorm norm(L2_ERROR, {uDomaine}, &sol, funSol);
+      L2errorU[2*i] = norm.compute();
     } else{
       // Export solution for error estimation
       std::string solutionFile = "solution_" + std::to_string(i+1) + ".txt";

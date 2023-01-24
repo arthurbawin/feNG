@@ -67,7 +67,7 @@ double Polynomial::integrate(feMesh *mesh, std::string cncGeoID, int iElm)
   mesh->getCoord(cncGeoID, iElm, geoCoord);
   feSpace *geoSpace = mesh->getGeometricSpace(cncGeoID);
 
-  int n = geoSpace->getNbQuadPoints();
+  int n = geoSpace->getNumQuadPoints();
   const std::vector<double> &J = geoSpace->getCncGeo()->getJacobians();
   std::vector<double> &w = geoSpace->getQuadratureWeights();
   std::vector<double> x(3, 0.0);
@@ -95,7 +95,7 @@ double Polynomial::innerProduct(Polynomial &other, feMesh *mesh, std::string cnc
   // other.print();
   // printf("over elem %d\n", iElm);
 
-  int n = geoSpace->getNbQuadPoints();
+  int n = geoSpace->getNumQuadPoints();
   // printf("looping on n = %d\n", n);
   const std::vector<double> &J = geoSpace->getCncGeo()->getJacobians();
   std::vector<double> &w = geoSpace->getQuadratureWeights();

@@ -89,7 +89,8 @@ int main(int argc, char **argv)
   sol.initializeUnknowns(&mesh);
 
   feBilinearForm *mass, *diff;
-  feCheck(createBilinearForm( mass, {uDomaine}, new feSysElm_1D_Masse(1.0, nullptr))   );
+  // feCheck(createBilinearForm( mass, {uDomaine}, new feSysElm_1D_Masse(1.0))   );
+  feCheck(createBilinearForm( mass, {uDomaine}, new feSysElm_Mass<1>(1.0))   );
   feCheck(createBilinearForm( diff, {uDomaine}, new feSysElm_1D_Diffusion(kDiffusivity)) );
 
   feLinearSystem *system;
@@ -108,7 +109,7 @@ int main(int argc, char **argv)
   feCheck(createTimeIntegrator(solver, BDF1, tol, system, &numbering, &sol, &mesh, norms, exportData, t0, tEnd, nSteps));
 
   int nInteriorPlotNodes = 10;
-  feBasicViewer viewer("test", mesh.getNbInteriorElems(), nInteriorPlotNodes);
+  feBasicViewer viewer("test", mesh.getNumInteriorElements(), nInteriorPlotNodes);
 
   double xLim[2] = {xa, xb};
   double yLim[2] = {0, 1.};

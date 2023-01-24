@@ -50,7 +50,7 @@ void feMetric::metricScaling()
     for(int k = 0; k < nQuad; ++k) {
       // Interpolate det(Q) at quad nodes
       for(int iNode = 0; iNode < _recovery->_nNodePerElm; ++iNode) {
-        int v = _recovery->_cnc->getNodeConnectivity(iElm, iNode);
+        int v = _recovery->_cnc->getVertexConnectivity(iElm, iNode);
         I += J[nQuad * iElm + k] * w[k] * _recovery->_geoSpace->getFunctionAtQuadNode(iNode, k) *
              pow(_metrics[v].determinant(), exponent);
       }

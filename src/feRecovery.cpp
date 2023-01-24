@@ -67,20 +67,20 @@ static std::map<std::pair<int, int>, std::string> suffix = {
   {{3, 3}, "dxyy"}, {{3, 4}, "dyxx"}, {{3, 5}, "dyxy"}, {{3, 6}, "dyyx"}, {{3, 7}, "dyyy"},
 };
 
-fePatch::fePatch(feCncGeo *cnc, feMesh *mesh)
+fePatch::fePatch(const feCncGeo *cnc, feMesh *mesh)
 {
   // Get unique vertex indices in the node connectivity
-  _vertices = cnc->getNodeConnectivityCopy();
+  _vertices = cnc->getVerticesConnectivity();
   std::sort(_vertices.begin(), _vertices.end());
   auto last = std::unique(_vertices.begin(), _vertices.end());
   _vertices.erase(last, _vertices.end());
 
   _nVertices = _vertices.size();
-  _nNodePerElm = cnc->getNbNodePerElem();
-  _nEdgePerElm = cnc->getNbEdgePerElem();
-  std::vector<int> &connecNodes = cnc->getNodeConnectivityRef();
+  _nNodePerElm = cnc->getNumVerticesPerElem();
+  _nEdgePerElm = cnc->getNumEdgesPerElem();
+  const std::vector<int> &connecNodes = cnc->getVerticesConnectivity();
 
-  int nElm = cnc->getNbElm();
+  int nElm = cnc->getNumElements();
   for(int i = 0; i < nElm; ++i) {
     for(int j = 0; j < _nNodePerElm; ++j) {
       vertToElems[connecNodes[_nNodePerElm * i + j]].insert(i); // TODO : A verifier
@@ -182,9 +182,9 @@ feRecovery::feRecovery(feMetaNumber *metaNumber, feSpace *space, feMesh *mesh, f
     _solRefGrad(solRefGrad), _solRefHess(solRefHess)
 {
   _cnc = space->getCncGeo();
-  _nElm = _cnc->getNbElm();
-  _nNodePerElm = _cnc->getNbNodePerElem();
-  _adr.resize(_intSpace->getNbFunctions());
+  _nElm = _cnc->getNumElements();
+  _nNodePerElm = _cnc->getNumVerticesPerElem();
+  _adr.resize(_intSpace->getNumFunctions());
   _solution.resize(_adr.size());
   _geoSpace = _cnc->getFeSpace();
   _degSol = space->getPolynomialDegree();
@@ -400,8 +400,8 @@ feRecovery::feRecovery(feSpace *space, feMesh *mesh, std::string recoveryFile)
   : _mesh(mesh), _intSpace(space)
 {
   _cnc = space->getCncGeo();
-  _nElm = _cnc->getNbElm();
-  _nNodePerElm = _cnc->getNbNodePerElem();
+  _nElm = _cnc->getNumElements();
+  _nNodePerElm = _cnc->getNumVerticesPerElem();
   _geoSpace = _cnc->getFeSpace();
   _degSol = space->getPolynomialDegree();
   _dim = mesh->getDim();
@@ -557,7 +557,7 @@ void feRecovery::matrixInverseEigen1D()
 
   std::vector<double> geoCoord(9, 0.), x(3, 0.0), monomials(_dimRecovery, 0.);
 
-  int nQuad = _geoSpace->getNbQuadPoints();
+  int nQuad = _geoSpace->getNumQuadPoints();
 
   std::cout << nQuad << std::endl;
 
@@ -726,7 +726,7 @@ void feRecovery::matrixInverseEigen2D()
 
   std::vector<double> geoCoord(9, 0.), x(3, 0.0), xLoc(3, 0.0), monomials(_dimRecovery, 0.);
 
-  int nQuad = _geoSpace->getNbQuadPoints();
+  int nQuad = _geoSpace->getNumQuadPoints();
 
   std::vector<double> &solVec = _sol->getSolutionReference();
 
@@ -885,7 +885,7 @@ void feRecovery::solveLeastSquareEigen1D(int indRecovery, int iDerivative)
   std::vector<double> x(3, 0.0);
   std::vector<double> monomials(_dimRecovery, 0.);
 
-  int nQuad = _geoSpace->getNbQuadPoints();
+  int nQuad = _geoSpace->getNumQuadPoints();
 
   std::vector<int> &vertices = _patch->getVertices();
 
@@ -939,7 +939,7 @@ void feRecovery::solveLeastSquareEigen1D(int indRecovery, int iDerivative)
           for(int iDeriv = 0; iDeriv < indRecovery; ++iDeriv) {
             // Vertices
             for(int iVert = 0; iVert < 2; ++iVert) {
-              int vNode = _cnc->getNodeConnectivity(elem, iVert);
+              int vNode = _cnc->getVertexConnectivity(elem, iVert);
               std::vector<double> &du = derivativeCoeff[vNode][iDeriv];
               u[iDeriv] += _intSpace->getFunctionAtQuadNode(iVert, k) * du[0];
             }
@@ -1077,7 +1077,7 @@ void feRecovery::solveLeastSquareEigen1D(int indRecovery, int iDerivative)
           for(int iDeriv = 0; iDeriv < indRecovery; ++iDeriv) {
             // Vertices
             for(int iVert = 0; iVert < 2; ++iVert) {
-              int vNode = _cnc->getNodeConnectivity(elem, iVert);
+              int vNode = _cnc->getVertexConnectivity(elem, iVert);
               std::vector<double> &du = derivativeCoeff[vNode][iDeriv];
               u[iDeriv] += _intSpace->getFunctionAtQuadNode(iVert, k) * du[0];
             }
@@ -1172,13 +1172,13 @@ void feRecovery::solveLeastSquareEigen2D(int indRecovery, int iDerivative)
   std::vector<double> xLoc(3, 0.0);
   std::vector<double> monomials(_dimRecovery, 0.);
 
-  int nQuad = _geoSpace->getNbQuadPoints();
+  int nQuad = _geoSpace->getNumQuadPoints();
 
   std::vector<int> &vertices = _patch->getVertices();
 
   std::vector<double> u(indRecovery, 0.);
 
-  int _nEdgePerElm = _cnc->getNbEdgePerElem();
+  int _nEdgePerElm = _cnc->getNumEdgesPerElem();
   int _nVertPerElm = _nNodePerElm;
 
   std::vector<double> &solVec = _sol->getSolutionReference();
@@ -1251,7 +1251,7 @@ void feRecovery::solveLeastSquareEigen2D(int indRecovery, int iDerivative)
           }
           // for(int iNode = 0; iNode < _nNodePerElm; ++iNode) {
           //   std::cout<<_nNodePerElm<<std::endl;
-          //   int vNode = _cnc->getNodeConnectivity(elem, iNode);
+          //   int vNode = _cnc->getVertexConnectivity(elem, iNode);
           //   // Get the coefficients of the derivative (used only if recovering a derivative)
           //   for(int iDeriv = 0; iDeriv < indRecovery; ++iDeriv){
           //     std::vector<double> &du = derivativeCoeff[vNode][iDeriv];
@@ -1272,7 +1272,7 @@ void feRecovery::solveLeastSquareEigen2D(int indRecovery, int iDerivative)
             // Vertices
             // printf("elem with vertices\n");
             for(int iVert = 0; iVert < _nVertPerElm; ++iVert) {
-              int vNode = _cnc->getNodeConnectivity(elem, iVert);
+              int vNode = _cnc->getVertexConnectivity(elem, iVert);
               std::vector<double> &du = derivativeCoeff[vNode][iDeriv];
               // xLoc[0] = x[0] - _mesh->getVertex(vNode)->x();
               // xLoc[1] = x[1] - _mesh->getVertex(vNode)->y();
@@ -1291,11 +1291,11 @@ void feRecovery::solveLeastSquareEigen2D(int indRecovery, int iDerivative)
               std::vector<double> &du = derivativeCoeffOnEdges[localEdge][0][iDeriv];
               // int v1, v2;
               // if(iEdge == _nEdgePerElm-1){
-              //   v1 = _cnc->getNodeConnectivity(elem, iEdge);
-              //   v2 = _cnc->getNodeConnectivity(elem, 0);
+              //   v1 = _cnc->getVertexConnectivity(elem, iEdge);
+              //   v2 = _cnc->getVertexConnectivity(elem, 0);
               // } else{
-              //   v1 = _cnc->getNodeConnectivity(elem, iEdge);
-              //   v2 = _cnc->getNodeConnectivity(elem, iEdge+1);
+              //   v1 = _cnc->getVertexConnectivity(elem, iEdge);
+              //   v2 = _cnc->getVertexConnectivity(elem, iEdge+1);
               // }
               // xLoc[0] = x[0] - (_mesh->getVertex(v1)->x() + _mesh->getVertex(v2)->x())/2.0;
               // xLoc[1] = x[1] - (_mesh->getVertex(v1)->y() + _mesh->getVertex(v2)->y())/2.0;
@@ -1429,7 +1429,7 @@ void feRecovery::solveLeastSquareEigen2D(int indRecovery, int iDerivative)
             u[iDeriv] = 0.0;
           }
           // for(int iNode = 0; iNode < _nNodePerElm; ++iNode) {
-          //   int vNode = _cnc->getNodeConnectivity(elem, iNode);
+          //   int vNode = _cnc->getVertexConnectivity(elem, iNode);
           //   // Get the coefficients of the derivative (used only if recovering a derivative)
           //   for(int iDeriv = 0; iDeriv < indRecovery; ++iDeriv){
           //     std::vector<double> &du = derivativeCoeff[vNode][iDeriv];
@@ -1449,7 +1449,7 @@ void feRecovery::solveLeastSquareEigen2D(int indRecovery, int iDerivative)
             // Vertices
             // printf("elem with vertices\n");
             for(int iVert = 0; iVert < _nVertPerElm; ++iVert) {
-              int vNode = _cnc->getNodeConnectivity(elem, iVert);
+              int vNode = _cnc->getVertexConnectivity(elem, iVert);
 
               // OPT_CHANGE
               // std::vector<double> &du = derivativeCoeff[vNode][iDeriv];
@@ -1479,11 +1479,11 @@ void feRecovery::solveLeastSquareEigen2D(int indRecovery, int iDerivative)
 
               // int v1, v2;
               // if(iEdge == _nEdgePerElm-1){
-              //   v1 = _cnc->getNodeConnectivity(elem, iEdge);
-              //   v2 = _cnc->getNodeConnectivity(elem, 0);
+              //   v1 = _cnc->getVertexConnectivity(elem, iEdge);
+              //   v2 = _cnc->getVertexConnectivity(elem, 0);
               // } else{
-              //   v1 = _cnc->getNodeConnectivity(elem, iEdge);
-              //   v2 = _cnc->getNodeConnectivity(elem, iEdge+1);
+              //   v1 = _cnc->getVertexConnectivity(elem, iEdge);
+              //   v2 = _cnc->getVertexConnectivity(elem, iEdge+1);
               // }
               // xLoc[0] = x[0] - (_mesh->getVertex(v1)->x() + _mesh->getVertex(v2)->x())/2.0;
               // xLoc[1] = x[1] - (_mesh->getVertex(v1)->y() + _mesh->getVertex(v2)->y())/2.0;
@@ -1577,7 +1577,7 @@ void feRecovery::solveLeastSquareEigen2D(int indRecovery, int iDerivative)
 //   // La solution interpolée aux points d'intégration
 //   double u, jac;
 
-//   int nQuad = _geoSpace->getNbQuadPoints();
+//   int nQuad = _geoSpace->getNumQuadPoints();
 
 //   std::vector<int> &vertices = _patch->getVertices();
 //   for(auto v : vertices) {
@@ -1648,7 +1648,7 @@ void feRecovery::solveLeastSquareEigen2D(int indRecovery, int iDerivative)
 //           // quad nodes to avoid a trivial solution
 //           u = 0.0;
 //           for(int iNode = 0; iNode < _nNodePerElm; ++iNode) {
-//             int vNode = _cnc->getNodeConnectivity(elem, iNode);
+//             int vNode = _cnc->getVertexConnectivity(elem, iNode);
 //             // Get the coefficients of the derivative (used only if recovering a derivative)
 //             std::vector<double> &du = derivativeCoeff[vNode][indRecovery];
 //             // printf("iNode = %d \t vertex = %d\n", iNode, vNode);
@@ -1734,7 +1734,7 @@ void feRecovery::derivative(int indRecovery, int iDerivative, std::ostream &outp
     std::vector<double> solV(vertices.size(), 0.0);
     for(auto v : vertices) solV[v] = recoveryCoeff[v][0][0];
     derivAtVertices.push_back(solV);
-    std::vector<double> solE(_mesh->getNbEdges(), 0.0);
+    std::vector<double> solE(_mesh->getNumEdges(), 0.0);
     for(auto e : _mesh->_edges) solE[e.getTag() - 1] = recoveryCoeffOnEdges[e.getTag()][0][0][0];
     derivAtEdges.push_back(solE);
   }
@@ -1762,8 +1762,8 @@ void feRecovery::derivative(int indRecovery, int iDerivative, std::ostream &outp
     // To store the derivatives
     std::vector<double> dudxV(vertices.size(), 0.0);
     std::vector<double> dudyV(vertices.size(), 0.0);
-    std::vector<double> dudxE(_mesh->getNbEdges(), 0.0);
-    std::vector<double> dudyE(_mesh->getNbEdges(), 0.0);
+    std::vector<double> dudxE(_mesh->getNumEdges(), 0.0);
+    std::vector<double> dudyE(_mesh->getNumEdges(), 0.0);
 
     for(auto v : vertices) {
       std::vector<double> &u = recoveryCoeff[v][indRecovery];
@@ -1978,12 +1978,12 @@ void feRecovery::estimateError(std::vector<double> &norm, feFunction *solRef)
   std::vector<double> xLoc(3, 0.);
   std::vector<double> monomials(_dimRecovery, 0.);
 
-  int nQuad = _geoSpace->getNbQuadPoints();
+  int nQuad = _geoSpace->getNumQuadPoints();
   std::vector<double> &w = _geoSpace->getQuadratureWeights();
   const std::vector<double> &J = _cnc->getJacobians();
 
   int _nVertPerElm = _nNodePerElm;
-  int _nEdgePerElm = _cnc->getNbEdgePerElem();
+  int _nEdgePerElm = _cnc->getNumEdgesPerElem();
 
   std::vector<double> &solVec = _sol->getSolutionReference();
 
@@ -2006,7 +2006,7 @@ void feRecovery::estimateError(std::vector<double> &norm, feFunction *solRef)
       // u reconstruit au point d'intégration : interpolation des valeurs issues des sommets
       double uReconstruit = 0.0;
       // for(int iNode = 0; iNode < _nNodePerElm; ++iNode) {
-      //   int v = _cnc->getNodeConnectivity(iElm, iNode);
+      //   int v = _cnc->getVertexConnectivity(iElm, iNode);
 
       //   xLoc[0] = x[0] - _mesh->getVertex(v)->x();
       //   xLoc[1] = x[1] - _mesh->getVertex(v)->y();
@@ -2022,7 +2022,7 @@ void feRecovery::estimateError(std::vector<double> &norm, feFunction *solRef)
       // Good way ?
       // Vertices
       for(int iVert = 0; iVert < _nVertPerElm; ++iVert) {
-        int vNode = _cnc->getNodeConnectivity(iElm, iVert);
+        int vNode = _cnc->getVertexConnectivity(iElm, iVert);
         // printf("vert %d of %d\n", iVert, _nVertPerElm);
         // printf("u = %4.4f\n", recoveryCoeff[vNode][0][0]);
         uReconstruit += _intSpace->getFunctionAtQuadNode(iVert, k) * recoveryCoeff[vNode][0][0];
@@ -2046,7 +2046,7 @@ void feRecovery::estimateError(std::vector<double> &norm, feFunction *solRef)
       // // Get the coefficients of the derivative (used only if recovering a derivative)
       // // Vertices
       // for(int iVert = 0; iVert < _nVertPerElm; ++iVert){
-      //   int vNode = _cnc->getNodeConnectivity(iElm, iVert);
+      //   int vNode = _cnc->getVertexConnectivity(iElm, iVert);
       //   xLoc[0] = x[0] - _mesh->getVertex(vNode)->x();
       //   // xLoc[1] = x[1] - _mesh->getVertex(vNode)->y();
       //   // xLoc[2] = x[2] - _mesh->getVertex(vNode)->z();
@@ -2069,11 +2069,11 @@ void feRecovery::estimateError(std::vector<double> &norm, feFunction *solRef)
       //   std::vector<double> &du = derivativeCoeffOnEdges[localEdge][0][iDeriv];
       //   // int v1, v2;
       //   // if(iEdge == _nEdgePerElm-1){
-      //   //   v1 = _cnc->getNodeConnectivity(elem, iEdge);
-      //   //   v2 = _cnc->getNodeConnectivity(elem, 0);
+      //   //   v1 = _cnc->getVertexConnectivity(elem, iEdge);
+      //   //   v2 = _cnc->getVertexConnectivity(elem, 0);
       //   // } else{
-      //   //   v1 = _cnc->getNodeConnectivity(elem, iEdge);
-      //   //   v2 = _cnc->getNodeConnectivity(elem, iEdge+1);
+      //   //   v1 = _cnc->getVertexConnectivity(elem, iEdge);
+      //   //   v2 = _cnc->getVertexConnectivity(elem, iEdge+1);
       //   // }
       //   // xLoc[0] = x[0] - (_mesh->getVertex(v1)->x() + _mesh->getVertex(v2)->x())/2.0;
       //   // xLoc[1] = x[1] - (_mesh->getVertex(v1)->y() + _mesh->getVertex(v2)->y())/2.0;
@@ -2125,12 +2125,12 @@ void feRecovery::estimateDudxError(std::vector<double> &norm, feVectorFunction *
   std::vector<double> xLoc(3, 0.);
   std::vector<double> monomials(_dimRecovery, 0.);
 
-  int nQuad = _geoSpace->getNbQuadPoints();
+  int nQuad = _geoSpace->getNumQuadPoints();
   std::vector<double> &w = _geoSpace->getQuadratureWeights();
   const std::vector<double> &J = _cnc->getJacobians();
 
   int _nVertPerElm = _nNodePerElm;
-  int _nEdgePerElm = _cnc->getNbEdgePerElem();
+  int _nEdgePerElm = _cnc->getNumEdgesPerElem();
 
   // for(int iElm = 0; iElm < _nElm; ++iElm) {
 
@@ -2158,7 +2158,7 @@ void feRecovery::estimateDudxError(std::vector<double> &norm, feVectorFunction *
 
       // Vertices
       for(int iVert = 0; iVert < _nVertPerElm; ++iVert) {
-        int vNode = _cnc->getNodeConnectivity(iElm, iVert);
+        int vNode = _cnc->getVertexConnectivity(iElm, iVert);
         // xLoc[0] = x[0] - _mesh->getVertex(vNode)->x();
         // xLoc[1] = x[1] - _mesh->getVertex(vNode)->y();
         // xLoc[2] = x[2] - _mesh->getVertex(vNode)->z();
@@ -2177,11 +2177,11 @@ void feRecovery::estimateDudxError(std::vector<double> &norm, feVectorFunction *
         int localEdge = fabs(_cnc->getEdgeConnectivity(iElm, iEdge));
         // int v1, v2;
         // if(iEdge == _nEdgePerElm-1){
-        //   v1 = _cnc->getNodeConnectivity(iElm, iEdge);
-        //   v2 = _cnc->getNodeConnectivity(iElm, 0);
+        //   v1 = _cnc->getVertexConnectivity(iElm, iEdge);
+        //   v2 = _cnc->getVertexConnectivity(iElm, 0);
         // } else{
-        //   v1 = _cnc->getNodeConnectivity(iElm, iEdge);
-        //   v2 = _cnc->getNodeConnectivity(iElm, iEdge+1);
+        //   v1 = _cnc->getVertexConnectivity(iElm, iEdge);
+        //   v2 = _cnc->getVertexConnectivity(iElm, iEdge+1);
         // }
         // xLoc[0] = x[0] - (_mesh->getVertex(v1)->x() + _mesh->getVertex(v2)->x())/2.0;
         // xLoc[1] = x[1] - (_mesh->getVertex(v1)->y() + _mesh->getVertex(v2)->y())/2.0;
@@ -2254,12 +2254,12 @@ void feRecovery::estimateH1Error(std::vector<double> &norm, feVectorFunction *so
   std::vector<double> xLoc(3, 0.);
   std::vector<double> monomials(_dimDerivation, 0.);
 
-  int nQuad = _geoSpace->getNbQuadPoints();
+  int nQuad = _geoSpace->getNumQuadPoints();
   std::vector<double> &w = _geoSpace->getQuadratureWeights();
   const std::vector<double> &J = _cnc->getJacobians();
 
   int _nVertPerElm = _nNodePerElm;
-  int _nEdgePerElm = _cnc->getNbEdgePerElem();
+  int _nEdgePerElm = _cnc->getNumEdgesPerElem();
 
   FILE *f = fopen("duReconstruite.txt", "w");
 
@@ -2285,7 +2285,7 @@ void feRecovery::estimateH1Error(std::vector<double> &norm, feVectorFunction *so
       double dudxReconstruit = 0.0;
       double dudyReconstruit = 0.0;
       // for(int iNode = 0; iNode < _nNodePerElm; ++iNode) {
-      //   int v = _cnc->getNodeConnectivity(iElm, iNode);
+      //   int v = _cnc->getVertexConnectivity(iElm, iNode);
 
       //   xLoc[0] = x[0] - _mesh->getVertex(v)->x();
       //   xLoc[1] = x[1] - _mesh->getVertex(v)->y();
@@ -2301,7 +2301,7 @@ void feRecovery::estimateH1Error(std::vector<double> &norm, feVectorFunction *so
 
       // Vertices
       for(int iVert = 0; iVert < _nVertPerElm; ++iVert) {
-        int vNode = _cnc->getNodeConnectivity(iElm, iVert);
+        int vNode = _cnc->getVertexConnectivity(iElm, iVert);
         // std::vector<double> &dux = derivativeCoeff[vNode][0];
         // std::vector<double> &duy = derivativeCoeff[vNode][1];
         xLoc[0] = x[0] - _mesh->getVertex(vNode)->x();
@@ -2328,11 +2328,11 @@ void feRecovery::estimateH1Error(std::vector<double> &norm, feVectorFunction *so
         // std::vector<double> &du = derivativeCoeffOnEdges[localEdge][0][iDeriv];
         int v1, v2;
         if(iEdge == _nEdgePerElm - 1) {
-          v1 = _cnc->getNodeConnectivity(iElm, iEdge);
-          v2 = _cnc->getNodeConnectivity(iElm, 0);
+          v1 = _cnc->getVertexConnectivity(iElm, iEdge);
+          v2 = _cnc->getVertexConnectivity(iElm, 0);
         } else {
-          v1 = _cnc->getNodeConnectivity(iElm, iEdge);
-          v2 = _cnc->getNodeConnectivity(iElm, iEdge + 1);
+          v1 = _cnc->getVertexConnectivity(iElm, iEdge);
+          v2 = _cnc->getVertexConnectivity(iElm, iEdge + 1);
         }
         xLoc[0] = x[0] - (_mesh->getVertex(v1)->x() + _mesh->getVertex(v2)->x()) / 2.0;
         xLoc[1] = x[1] - (_mesh->getVertex(v1)->y() + _mesh->getVertex(v2)->y()) / 2.0;
@@ -2441,12 +2441,12 @@ void feRecovery::estimateHessError(std::vector<double> &norm, feVectorFunction *
   std::vector<double> xLoc(3, 0.);
   std::vector<double> monomials(_dimDerivation, 0.);
 
-  int nQuad = _geoSpace->getNbQuadPoints();
+  int nQuad = _geoSpace->getNumQuadPoints();
   std::vector<double> &w = _geoSpace->getQuadratureWeights();
   const std::vector<double> &J = _cnc->getJacobians();
 
   int _nVertPerElm = _nNodePerElm;
-  int _nEdgePerElm = _cnc->getNbEdgePerElem();
+  int _nEdgePerElm = _cnc->getNumEdgesPerElem();
 
   std::vector<double> &solVec = _sol->getSolutionReference();
 
@@ -2475,7 +2475,7 @@ void feRecovery::estimateHessError(std::vector<double> &norm, feVectorFunction *
       double d2udyxReconstruit = 0.0;
       double d2udy2Reconstruit = 0.0;
       // for(int iNode = 0; iNode < _nNodePerElm; ++iNode) {
-      //   int v = _cnc->getNodeConnectivity(iElm, iNode);
+      //   int v = _cnc->getVertexConnectivity(iElm, iNode);
 
       //   xLoc[0] = x[0] - _mesh->getVertex(v)->x();
       //   xLoc[1] = x[1] - _mesh->getVertex(v)->y();
@@ -2491,7 +2491,7 @@ void feRecovery::estimateHessError(std::vector<double> &norm, feVectorFunction *
 
       // Vertices
       for(int iVert = 0; iVert < _nVertPerElm; ++iVert) {
-        int vNode = _cnc->getNodeConnectivity(iElm, iVert);
+        int vNode = _cnc->getVertexConnectivity(iElm, iVert);
         // std::vector<double> &dux = derivativeCoeff[vNode][0];
         // std::vector<double> &duy = derivativeCoeff[vNode][1];
         // xLoc[0] = x[0] - _mesh->getVertex(vNode)->x();
@@ -2526,11 +2526,11 @@ void feRecovery::estimateHessError(std::vector<double> &norm, feVectorFunction *
         // std::vector<double> &du = derivativeCoeffOnEdges[localEdge][0][iDeriv];
         // int v1, v2;
         // if(iEdge == _nEdgePerElm-1){
-        //   v1 = _cnc->getNodeConnectivity(iElm, iEdge);
-        //   v2 = _cnc->getNodeConnectivity(iElm, 0);
+        //   v1 = _cnc->getVertexConnectivity(iElm, iEdge);
+        //   v2 = _cnc->getVertexConnectivity(iElm, 0);
         // } else{
-        //   v1 = _cnc->getNodeConnectivity(iElm, iEdge);
-        //   v2 = _cnc->getNodeConnectivity(iElm, iEdge+1);
+        //   v1 = _cnc->getVertexConnectivity(iElm, iEdge);
+        //   v2 = _cnc->getVertexConnectivity(iElm, iEdge+1);
         // }
         // xLoc[0] = x[0] - (_mesh->getVertex(v1)->x() + _mesh->getVertex(v2)->x())/2.0;
         // xLoc[1] = x[1] - (_mesh->getVertex(v1)->y() + _mesh->getVertex(v2)->y())/2.0;
@@ -2622,12 +2622,12 @@ void feRecovery::estimated3Error(std::vector<double> &norm, feFunction *fund3udx
   std::vector<double> xLoc(3, 0.);
   std::vector<double> monomials(_dimDerivation, 0.);
 
-  int nQuad = _geoSpace->getNbQuadPoints();
+  int nQuad = _geoSpace->getNumQuadPoints();
   std::vector<double> &w = _geoSpace->getQuadratureWeights();
   const std::vector<double> &J = _cnc->getJacobians();
 
   int _nVertPerElm = _nNodePerElm;
-  int _nEdgePerElm = _cnc->getNbEdgePerElem();
+  int _nEdgePerElm = _cnc->getNumEdgesPerElem();
 
   std::vector<double> &solVec = _sol->getSolutionReference();
 
@@ -2659,7 +2659,7 @@ void feRecovery::estimated3Error(std::vector<double> &norm, feFunction *fund3udx
 
       // Vertices
       for(int iVert = 0; iVert < _nVertPerElm; ++iVert) {
-        int vNode = _cnc->getNodeConnectivity(iElm, iVert);
+        int vNode = _cnc->getVertexConnectivity(iElm, iVert);
         d3udx3Reconstruit +=
           _intSpace->getFunctionAtQuadNode(iVert, k) * derivativeCoeff[vNode][0][0];
       }
@@ -2698,7 +2698,7 @@ void feRecovery::estimated3Error(std::vector<double> &norm, feFunction *fund3udx
 
       double d3udx3Reconstruit = 0.0;
 
-      int v = _cnc->getNodeConnectivity(elmRef, 1);
+      int v = _cnc->getVertexConnectivity(elmRef, 1);
 
       xLoc[0] = x[0] - _mesh->getVertex(v)->x();
       xLoc[1] = x[1] - _mesh->getVertex(v)->y();
@@ -2711,7 +2711,7 @@ void feRecovery::estimated3Error(std::vector<double> &norm, feFunction *fund3udx
 
       // // Vertices
       // for(int iVert = 0; iVert < _nVertPerElm; ++iVert){
-      //   int vNode = _cnc->getNodeConnectivity(iElm, iVert);
+      //   int vNode = _cnc->getVertexConnectivity(iElm, iVert);
       //   d3udx3Reconstruit += _intSpace->getFunctionAtQuadNode(iVert, k) *
       //   derivativeCoeff[vNode][0][0];
       // }
@@ -2755,9 +2755,9 @@ double feRecovery::evalDerivative(int indexDerivative, double *x)
       x[0], x[1]);
     return 0.0;
   } else {
-    NODAL_VALUES[0] = derivAtVertices[indexDerivative][_cnc->getNodeConnectivity(elm, 0)];
-    NODAL_VALUES[1] = derivAtVertices[indexDerivative][_cnc->getNodeConnectivity(elm, 1)];
-    NODAL_VALUES[2] = derivAtVertices[indexDerivative][_cnc->getNodeConnectivity(elm, 2)];
+    NODAL_VALUES[0] = derivAtVertices[indexDerivative][_cnc->getVertexConnectivity(elm, 0)];
+    NODAL_VALUES[1] = derivAtVertices[indexDerivative][_cnc->getVertexConnectivity(elm, 1)];
+    NODAL_VALUES[2] = derivAtVertices[indexDerivative][_cnc->getVertexConnectivity(elm, 2)];
     NODAL_VALUES[3] = derivAtEdges[indexDerivative][fabs(_cnc->getEdgeConnectivity(elm, 0)) - 1];
     NODAL_VALUES[4] = derivAtEdges[indexDerivative][fabs(_cnc->getEdgeConnectivity(elm, 1)) - 1];
     NODAL_VALUES[5] = derivAtEdges[indexDerivative][fabs(_cnc->getEdgeConnectivity(elm, 2)) - 1];
@@ -2787,9 +2787,9 @@ double feRecovery::evalDerivative(int indexDerivative, double *x)
   //     static_cast<feMesh2DP1*>(_mesh)->locateVertex(x,elm,u);
 
   //     std::vector<double> nodalValues(6,0.0);
-  //     nodalValues[0] = derivAtVertices[0][_cnc->getNodeConnectivity(elm, 0)];
-  //     nodalValues[1] = derivAtVertices[0][_cnc->getNodeConnectivity(elm, 1)];
-  //     nodalValues[2] = derivAtVertices[0][_cnc->getNodeConnectivity(elm, 2)];
+  //     nodalValues[0] = derivAtVertices[0][_cnc->getVertexConnectivity(elm, 0)];
+  //     nodalValues[1] = derivAtVertices[0][_cnc->getVertexConnectivity(elm, 1)];
+  //     nodalValues[2] = derivAtVertices[0][_cnc->getVertexConnectivity(elm, 2)];
   //     nodalValues[3] = derivAtEdges[0][fabs(_cnc->getEdgeConnectivity(elm, 0))-1];
   //     nodalValues[4] = derivAtEdges[0][fabs(_cnc->getEdgeConnectivity(elm, 1))-1];
   //     nodalValues[5] = derivAtEdges[0][fabs(_cnc->getEdgeConnectivity(elm, 2))-1];

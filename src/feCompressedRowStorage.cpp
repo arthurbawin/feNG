@@ -24,7 +24,7 @@ feCompressedRowStorage::feCompressedRowStorage(int numUnknowns, std::vector<feBi
 
   for(feBilinearForm *f : formMatrices) {
 
-    feInt nbElems = f->getCncGeo()->getNbElm();
+    feInt nbElems = f->getCncGeo()->getNumElements();
 
     // #pragma omp parallel for
     for(feInt iElm = 0; iElm < nbElems; iElm++) {
@@ -83,7 +83,7 @@ feCompressedRowStorage::feCompressedRowStorage(int numUnknowns, std::vector<feBi
   for(feInt i = 0; i < ordre; i++) ddlNumberOfElements[i] = 0;
   for(int eq = 0; eq < numMatrixForms; eq++) {
     feBilinearForm *equelm = formMatrices[eq];
-    feInt nbElems = equelm->getCncGeo()->getNbElm();
+    feInt nbElems = equelm->getCncGeo()->getNumElements();
 
     for(feInt el = 0; el < nbElems; el++) {
       equelm->initializeAddressingVectors(el);

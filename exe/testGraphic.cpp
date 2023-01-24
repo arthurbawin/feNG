@@ -28,7 +28,7 @@ int main(int argc, char **argv)
   sol.initializeUnknowns(&mesh);
 
   int nInteriorPlotNodes = 40;
-  feBasicViewer viewer("Testing the graphic window", mesh.getNbInteriorElems(), nInteriorPlotNodes);
+  feBasicViewer viewer("Testing the graphic window", mesh.getNumInteriorElements(), nInteriorPlotNodes);
 
   double xLim[2] = {0., 1.};
   double yLim[2] = {0., 1.};

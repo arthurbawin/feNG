@@ -206,8 +206,6 @@ void feLinearSystemPETSc::setResidualToZero()
 void feLinearSystemPETSc::assembleMatrices(feSolution *sol)
 {
 #if defined(HAVE_PETSC)
-  // feInfo("Assembling the matrix ...");
-  // tic();
 
   PetscErrorCode ierr = 0;
 
@@ -215,8 +213,8 @@ void feLinearSystemPETSc::assembleMatrices(feSolution *sol)
     feBilinearForm *f = _formMatrices[eq];
     feCncGeo *cnc = f->getCncGeo();
     int nbColor = cnc->getNbColor();
-    std::vector<int> &nbElmPerColor = cnc->getNbElmPerColor();
-    std::vector<std::vector<int> > &listElmPerColor = cnc->getListElmPerColor();
+    const std::vector<int> &nbElmPerColor = cnc->getNbElmPerColor();
+    const std::vector<std::vector<int> > &listElmPerColor = cnc->getListElmPerColor();
     int nbElmC;
     std::vector<int> listElmC;
 
@@ -319,8 +317,6 @@ void feLinearSystemPETSc::assembleMatrices(feSolution *sol)
 void feLinearSystemPETSc::assembleResiduals(feSolution *sol)
 {
 #if defined(HAVE_PETSC)
-  // feInfo("Assembling the residual...");
-  // tic();
 
   PetscErrorCode ierr = 0;
 
@@ -328,8 +324,8 @@ void feLinearSystemPETSc::assembleResiduals(feSolution *sol)
     feBilinearForm *f = _formResiduals[eq];
     feCncGeo *cnc = f->getCncGeo();
     int nbColor = cnc->getNbColor();
-    std::vector<int> &nbElmPerColor = cnc->getNbElmPerColor();
-    std::vector<std::vector<int> > &listElmPerColor = cnc->getListElmPerColor();
+    const std::vector<int> &nbElmPerColor = cnc->getNbElmPerColor();
+    const std::vector<std::vector<int> > &listElmPerColor = cnc->getListElmPerColor();
     int nbElmC;
     std::vector<int> listElmC;
 

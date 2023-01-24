@@ -13,6 +13,7 @@
 #include "feNumber.h"
 #include "feSolution.h"
 #include "feSysElm.h"
+#include "feSysElm_Ext.h"
 #include "feBilinearForm.h"
 #include "feSolver.h"
 #include "feLinearSystem.h"
@@ -23,10 +24,8 @@
 #include "feMetric.h"
 #include "feCurvedAdapt.h"
 #include "feAdaptMesh.h"
-#include "fePostProc.h"
 #include "feNorm.h"
 #include "feGraphics.h"
-//#include "feComputer.h"
 
 #if defined(HAVE_OMP)
 #include "omp.h"

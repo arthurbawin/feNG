@@ -31,11 +31,11 @@ protected:
   // Maximum dimension of the mesh elements
   int _dim;
   // Number of vertices
-  int _nNod;
+  int _nVertices;
   // Number of vertices defined on the same geometric entity as another node
-  int _nNodesWithNoPhysical;
+  int _nVerticesWithNoPhysical;
   // Number of edges (1D-facets)
-  int _nEdg;
+  int _nEdges;
   // Total number of elements of all types and all dimensions
   int _nTotalElm;
   // Number of non-boundary elements
@@ -63,19 +63,19 @@ public:
   // The constructor of the base class should not be called directly. Instead, 
   // call the constructor of the derived class with matching dimension, e.g. mesh2DP1.
   feMesh(int nNod = 0, int dim = 0, int nCncGeo = 0, std::string ID = "")
-    : _ID(ID), _dim(dim), _nNod(nNod), _nEdg(0), _nCncGeo(nCncGeo){};
+    : _ID(ID), _dim(dim), _nVertices(nNod), _nEdges(0), _nCncGeo(nCncGeo){};
   virtual ~feMesh() {}
 
   std::string getID() { return _ID; }
   int getDim() { return _dim; }
-  int getNbNodes() { return _nNod; }
-  int getNbNodesWithoutPhysical() { return _nNodesWithNoPhysical; }
-  int getNbEdges() { return _nEdg; }
-  int getNbElems() { return _nTotalElm; }
-  int getNbInteriorElems() { return _nInteriorElm; }
-  int getNbBoundaryElems() { return _nBoundaryElm; }
+  int getNumVertices() { return _nVertices; }
+  int getNumVerticesWithoutPhysical() { return _nVerticesWithNoPhysical; }
+  int getNumEdges() { return _nEdges; }
+  int getNumElements() { return _nTotalElm; }
+  int getNumInteriorElements() { return _nInteriorElm; }
+  int getNumBoundaryElements() { return _nBoundaryElm; }
   int getVertexSequentialTagFromGmshTag(int gmshNodeTag) { return _verticesMap[gmshNodeTag]; }
-  int getNbCncGeo() { return _nCncGeo; }
+  int getNumCncGeo() { return _nCncGeo; }
   std::vector<feCncGeo *> &getCncGeo() { return _cncGeo; }
 
   Vertex *getVertex(int iVertex) { return &_vertices[iVertex]; }
@@ -104,8 +104,8 @@ public:
   feCncGeo *getCncGeoByTag(const int cncGeoTag) const;
 
   // Return the number of elements on the connectivity
-  int getNbElm(std::string const &cncGeoID);
-  int getNbElm(const int cncGeoTag);
+  int getNumElements(std::string const &cncGeoID);
+  int getNumElements(const int cncGeoTag);
 
   // Return the number of nodes on the reference element
   // associated to the discretization of the connectivity,
@@ -113,8 +113,8 @@ public:
   // This applies to the elements used for the geometric
   // discretization, not the interpolation functions (which
   // are in the feSpace).
-  int getNbNodePerElem(std::string const &cncGeoID);
-  int getNbNodePerElem(const int cncGeoTag);
+  int getNumVerticesPerElem(std::string const &cncGeoID);
+  int getNumVerticesPerElem(const int cncGeoTag);
 
   // Return the global (unique) tag of the numVertex-th vertex
   // of element with local tag numElem in matching connectivity.

@@ -54,7 +54,7 @@ int main(int argc, char **argv)
 
   // Set the default parameters.
   const char *meshFile = "../data/square1.msh";
-  int verbosity = 2;
+  int verbosity = 1;
   int order = 1;
   int degreeQuadrature = 15;
 
@@ -127,7 +127,7 @@ int main(int argc, char **argv)
   //
   // There is no form to define on the boundary.
   feBilinearForm *diff, *source;
-  feCheck(createBilinearForm(  diff, {uDomaine}, new feSysElm_2D_Diffusion(k, nullptr)  ));
+  feCheck(createBilinearForm(  diff, {uDomaine}, new feSysElm_2D_Diffusion(kDiffusivity)  ));
   feCheck(createBilinearForm(source, {uDomaine}, new feSysElm_2D_Source(1.0, funSource) ));
 
   // Create the linear system. Assembly of the elementary matrices and RHS is
@@ -164,18 +164,14 @@ int main(int argc, char **argv)
   feNorm *norm;
   feCheck(createNorm(norm, L2_ERROR, {uDomaine}, &sol, funSol));
 
-  fePostProc post(uDomaine, &mesh, &numbering, funSol);
   feInfo("L2 error = %10.10f", norm->compute(L2_ERROR));
-  feInfo("L2 error = %10.10f", post.computeL2ErrorNorm(&sol));
 
   feInfo("L1   error = %10.10f", norm->compute(L1_ERROR));
   feInfo("Linf error = %10.10f", norm->compute(LINF_ERROR));
 
   feInfo("Area = %10.10f", norm->compute(AREA));
-  feInfo("Area = %10.10f", post.computeMeasure());
 
   feInfo("Integral = %10.10f", norm->compute(INTEGRAL));
-  feInfo("Integral = %10.10f", post.computeSolutionIntegral(&sol));
 
 
   feInfo("System size = %u", system->getSystemSize());

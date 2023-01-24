@@ -41,7 +41,7 @@ feStatus createBilinearForm(feBilinearForm *&form, const std::vector<feSpace *> 
 
   // TEMPORARY: Check that all FE spaces have the same number of quadrature nodes
   for(size_t i = 0; i < spaces.size(); ++i) {
-    if(spaces[i]->getNbQuadPoints() != spaces[0]->getNbQuadPoints()){
+    if(spaces[i]->getNumQuadPoints() != spaces[0]->getNumQuadPoints()){
       return feErrorMsg(FE_STATUS_ERROR, "FE spaces used to define a (bi-)linear form "
         "must have the same number of quadrature points\n");
     }
@@ -112,7 +112,7 @@ feBilinearForm::feBilinearForm(std::vector<feSpace *> spaces, feSysElm *elementa
   , _geoSpace(_cnc->getFeSpace())
   , _J(_cnc->getJacobians())
 {
-  _geoCoord.resize(3 * _cnc->getNbNodePerElem());
+  _geoCoord.resize(3 * _cnc->getNumVerticesPerElem());
 
   // Initialize the elementary system
   _sysElm->createElementarySystem(_intSpaces);
@@ -122,7 +122,7 @@ feBilinearForm::feBilinearForm(std::vector<feSpace *> spaces, feSysElm *elementa
   // Copy the quadrature rule from the first FE space
   // to the elementary system
   // FIXME: they must have the same number of quad points...
-  _sysElm->_nQuad = spaces[0]->getNbQuadPoints();
+  _sysElm->_nQuad = spaces[0]->getNumQuadPoints();
   _sysElm->_wQuad = spaces[0]->getQuadratureWeights(); 
   _sysElm->_rQuad = spaces[0]->getRQuadraturePoints();
   _sysElm->_sQuad = spaces[0]->getSQuadraturePoints();
@@ -131,9 +131,9 @@ feBilinearForm::feBilinearForm(std::vector<feSpace *> spaces, feSysElm *elementa
   // Set the elementary system size (number of DOF in i and j)
   _M = _N = 0;
   for(size_t k = 0; k < _fieldsLayoutI.size(); ++k)
-    _M += _intSpaces[_fieldsLayoutI[k]]->getNbFunctions();
+    _M += _intSpaces[_fieldsLayoutI[k]]->getNumFunctions();
   for(size_t k = 0; k < _fieldsLayoutJ.size(); ++k)
-    _N += _intSpaces[_fieldsLayoutJ[k]]->getNbFunctions();
+    _N += _intSpaces[_fieldsLayoutJ[k]]->getNumFunctions();
 
   _adrI.resize(_M);
   _adrJ.resize(_N);
@@ -160,15 +160,15 @@ feBilinearForm::feBilinearForm(std::vector<feSpace *> spaces, feSysElm *elementa
   _solPrev.resize(_intSpaces.size());
   _solNext.resize(_intSpaces.size());
   for(size_t k = 0; k < _intSpaces.size(); ++k)
-    _adr[k].resize(_intSpaces[k]->getNbFunctions());
+    _adr[k].resize(_intSpaces[k]->getNumFunctions());
   for(size_t k = 0; k < _intSpaces.size(); ++k)
-    _sol[k].resize(_intSpaces[k]->getNbFunctions());
+    _sol[k].resize(_intSpaces[k]->getNumFunctions());
   for(size_t k = 0; k < _intSpaces.size(); ++k)
-    _solDot[k].resize(_intSpaces[k]->getNbFunctions());
+    _solDot[k].resize(_intSpaces[k]->getNumFunctions());
   for(size_t k = 0; k < _intSpaces.size(); ++k)
-    _solPrev[k].resize(_intSpaces[k]->getNbFunctions());
+    _solPrev[k].resize(_intSpaces[k]->getNumFunctions());
   for(size_t k = 0; k < _intSpaces.size(); ++k)
-    _solNext[k].resize(_intSpaces[k]->getNbFunctions());
+    _solNext[k].resize(_intSpaces[k]->getNumFunctions());
 }
 
 // Copy constructor
@@ -299,13 +299,13 @@ void feBilinearForm::initializeAddressingVectors(int numElem)
   // Initialize continuous addressing vectors in I and J
   // (one for all fields in I, and one for all fields in J)
   for(size_t i = 0, count = 0; i < _fieldsLayoutI.size(); ++i) {
-    int M = _intSpaces[_fieldsLayoutI[i]]->getNbFunctions();
+    int M = _intSpaces[_fieldsLayoutI[i]]->getNumFunctions();
     for(int k = 0; k < M; ++k) {
       _adrI[count++] = _adr[i][k];
     };
   }
   for(size_t i = 0, count = 0; i < _fieldsLayoutJ.size(); ++i) {
-    int N = _intSpaces[_fieldsLayoutJ[i]]->getNbFunctions();
+    int N = _intSpaces[_fieldsLayoutJ[i]]->getNumFunctions();
     for(int k = 0; k < N; ++k) {
       _adrJ[count++] = _adr[i][k];
     };
@@ -353,13 +353,13 @@ void feBilinearForm::initialize(feSolution *sol, int numElem)
 
   // INITIALISERVADIJ
   for(size_t i = 0, count = 0; i < _fieldsLayoutI.size(); ++i) {
-    int nielm = _intSpaces[_fieldsLayoutI[i]]->getNbFunctions();
+    int nielm = _intSpaces[_fieldsLayoutI[i]]->getNumFunctions();
     for(int k = 0; k < nielm; ++k) {
       _adrI[count++] = _adr[_fieldsLayoutI[i]][k];
     };
   }
   for(size_t i = 0, count = 0; i < _fieldsLayoutJ.size(); ++i) {
-    int nielm = _intSpaces[_fieldsLayoutJ[i]]->getNbFunctions();
+    int nielm = _intSpaces[_fieldsLayoutJ[i]]->getNumFunctions();
     for(int k = 0; k < nielm; ++k) {
       _adrJ[count++] = _adr[_fieldsLayoutJ[i]][k];
     };
@@ -422,7 +422,7 @@ void feBilinearForm::computeMatrixFiniteDifference(feSolution *sol, int numElem)
 
     feSpace *Unknowns = _intSpaces[_fieldsLayoutJ[k]];
 
-    for(feInt j = 0; j < Unknowns->getNbFunctions(); j++, numColumn++) {
+    for(feInt j = 0; j < Unknowns->getNumFunctions(); j++, numColumn++) {
       double temp_sol = _sol[_fieldsLayoutJ[k]][j]; 
       double temp_soldot = _solDot[_fieldsLayoutJ[k]][j];
       double delta_h = _h0 * std::max(fabs(temp_sol), 1.0);

@@ -2,19 +2,19 @@
 
 extern int FE_VERBOSE;
 
-feNumber::feNumber(feMesh *mesh) : _nNod(mesh->getNbNodes()), _nEdg(mesh->getNbEdges())
+feNumber::feNumber(feMesh *mesh) : _nNod(mesh->getNumVertices()), _nEdg(mesh->getNumEdges())
 {
   _nElm = 0;
   for(auto *cnc : mesh->getCncGeo()){
-    _nElm += cnc->getNbElm();
+    _nElm += cnc->getNumElements();
   }
 
   // A global elem to edge map : if the global (line) elem is also an edge.
   // Edges are numbered starting from 1, so a 0 value means the element is not an edge.
   _elemToEdge.resize(_nElm, 0);
   for(auto const &cnc : mesh->getCncGeo()) {
-    for(int iElm = 0; iElm < cnc->getNbElm(); ++iElm) {
-      if(cnc->getNbEdgePerElem() == 1) {
+    for(int iElm = 0; iElm < cnc->getNumElements(); ++iElm) {
+      if(cnc->getNumEdgesPerElem() == 1) {
         int iElmGlobal = cnc->getElementConnectivity(iElm);
         _elemToEdge[iElmGlobal] = cnc->getEdgeConnectivity(iElm, 0);
       }
@@ -27,15 +27,16 @@ feNumber::feNumber(feMesh *mesh) : _nNod(mesh->getNbNodes()), _nEdg(mesh->getNbE
   _codeDOFVertices.resize(_nNod, DOF_NOT_ASSIGNED);
   _codeDOFElements.resize(_nElm, DOF_NOT_ASSIGNED);
   _codeDOFEdges.resize(_nEdg, DOF_NOT_ASSIGNED);
-
-  // TODO : Ajouter une b-rep et verifier la compatibilite des feSpace frontieres
 }
 
 void feNumber::setUnknownVertexDOF(feMesh *mesh, std::string const &cncGeoID, int numElem, int numVertex, int numDOF)
 {
   int vert = mesh->getVertex(cncGeoID, numElem, numVertex);
-  // printf("Assigning DOF_UNKNOWN and 1 dof at vertex %d on cnc %s on elem %d at vertex %d\n", vert,
-  // cncGeoID.c_str(), numElem, numVertex);
+  #if defined(FENG_DEBUG)
+    feInfoCond(FE_VERBOSE > 1, "Assigning %d DOF_UNKNOWN at global vertex %d defined on "
+      "connectivity %s: local elem %d at vertex %d", 
+      numDOF, vert, cncGeoID.data(), numElem, numVertex);
+  #endif
   _nDOFVertices[vert] = numDOF;
   _codeDOFVertices[vert] = DOF_UNKNOWN;
 }
@@ -43,8 +44,11 @@ void feNumber::setUnknownVertexDOF(feMesh *mesh, std::string const &cncGeoID, in
 void feNumber::setUnknownElementDOF(feMesh *mesh, std::string const &cncGeoID, int numElem, int numDOF)
 {
   int elem = mesh->getElement(cncGeoID, numElem);
-  printf("Assigning DOF_UNKNOWN and %d dof(s) at elem %d on cnc %s on elem %d\n", numDOF, elem,
-  cncGeoID.data(), numElem);
+  #if defined(FENG_DEBUG)
+    feInfoCond(FE_VERBOSE > 1, "Assigning %d DOF_UNKNOWN at global element %d defined on "
+      "connectivity %s: local elem %d", 
+      numDOF, elem, cncGeoID.data(), numElem);
+  #endif
   _nDOFElements[elem] = numDOF;
   _codeDOFElements[elem] = DOF_UNKNOWN;
 }
@@ -53,8 +57,11 @@ void feNumber::setUnknownEdgeDOF(feMesh *mesh, std::string const &cncGeoID, int 
                           int numDOF)
 {
   int edge = fabs(mesh->getEdge(cncGeoID, numElem, numEdge)) - 1;
-  // printf("Assigning DOF_UNKNOWN and %d dof(s) at edge %d which is edge number %d of elem %d on cnc %s\n",
-  // numDOF, edge, numEdge, numElem, cncGeoID.c_str());
+  #if defined(FENG_DEBUG)
+    feInfoCond(FE_VERBOSE > 1, "Assigning %d DOF_UNKNOWN at global edge %d defined on "
+      "connectivity %s: local elem %d at edge %d", 
+      numDOF, edge, cncGeoID.data(), numElem, numEdge);
+  #endif
   _nDOFEdges[edge] = numDOF;
   _codeDOFEdges[edge] = DOF_UNKNOWN;
 }
@@ -63,16 +70,22 @@ void feNumber::setEssentialVertexDOF(feMesh *mesh, std::string const &cncGeoID, 
                                         int numVertex)
 {
   int vert = mesh->getVertex(cncGeoID, numElem, numVertex);
-  // printf("Setting global vertex %d as DOF_ESSENTIAL - on cnc %s on elem %d at vertex %d\n", vert,
-  // cncGeoID.c_str(), numElem, numVertex);
+  #if defined(FENG_DEBUG)
+    feInfoCond(FE_VERBOSE > 1, "Setting DOF_ESSENTIAL at global vertex %d defined on "
+      "connectivity %s: local elem %d at vertex %d", 
+      vert, cncGeoID.data(), numElem, numVertex);
+  #endif
   _codeDOFVertices[vert] = DOF_ESSENTIAL;
 }
 
 void feNumber::setEssentialElementDOF(feMesh *mesh, std::string const &cncGeoID, int numElem)
 {
   int elem = mesh->getElement(cncGeoID, numElem);
-  // printf("Setting global element %d as DOF_ESSENTIAL - on cnc %s on elem %d\n", elem, cncGeoID.c_str(),
-  // numElem);
+  #if defined(FENG_DEBUG)
+    feInfoCond(FE_VERBOSE > 1, "Setting DOF_ESSENTIAL at global element %d defined on "
+      "connectivity %s: local elem %d", 
+      elem, cncGeoID.data(), numElem);
+  #endif
   _codeDOFElements[elem] = DOF_ESSENTIAL;
 }
 
@@ -80,8 +93,11 @@ void feNumber::setEssentialEdgeDOF(feMesh *mesh, std::string const &cncGeoID, in
                                       int numEdge)
 {
   int edge = fabs(mesh->getEdge(cncGeoID, numElem, numEdge)) - 1;
-  // printf("Setting global edge %d as DOF_ESSENTIAL which is edge number %d of elem %d on cnc %s\n", edge,
-  // numEdge, numElem, cncGeoID.c_str());
+  #if defined(FENG_DEBUG)
+    feInfoCond(FE_VERBOSE > 1, "Setting DOF_ESSENTIAL at global edge %d defined on "
+      "connectivity %s: local elem %d at edge %d", 
+      edge, cncGeoID.data(), numElem, numEdge);
+  #endif
   _codeDOFEdges[edge] = DOF_ESSENTIAL;
 }
 
@@ -102,7 +118,7 @@ int feNumber::getEdgeDOF(feMesh *mesh, std::string const &cncGeoID, int numElem,
                          int numDOF)
 {
   // In connecEdges, edges are numbered starting from 1 and can be negative
-  int edge = abs(mesh->getEdge(cncGeoID, numElem, numEdge)) - 1;
+  int edge = fabs(mesh->getEdge(cncGeoID, numElem, numEdge)) - 1;
   return _numberingEdges[_maxDOFperEdge * edge + numDOF];
 }
 

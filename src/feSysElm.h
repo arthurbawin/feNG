@@ -138,179 +138,82 @@ public:
   bool hasMatrix() { return _hasMatrix; }
 
   virtual void createElementarySystem(std::vector<feSpace *> &space) = 0;
-  virtual void computeAe(feBilinearForm *form) = 0;
+  virtual void computeAe(feBilinearForm *form){};
   virtual void computeBe(feBilinearForm *form) = 0;
 };
 
-class feSysElm_0D_StiffSpring : public feSysElm
+template<int dim>
+class feSysElm_Source : public feSysElm
 {
-  protected:
-    feFunction *_fct;
-    std::vector<double> _par; // Parametre
-    int _idX; // pos
-    int _idV; // vit
-    std::vector<double> _feX;
-    std::vector<double> _feV;
+protected:
+  feFunction *_sourceFun;
+  double _par;
+  int _idU;
+  std::vector<double> _feU;
 
-  public:
-    feSysElm_0D_StiffSpring(std::vector<double> par, feFunction *fct)
-      : feSysElm(true), _fct(fct), _par(par)
-    {
-      _dim = 0;
-      _nFields = 2;
-      _ID = STIFFSPRING_0D;
-    };
-    ~feSysElm_0D_StiffSpring() {}
-    void createElementarySystem(std::vector<feSpace *> &space);
-    void computeAe(feBilinearForm *form);
-    void computeBe(feBilinearForm *form);
+public:
+  feSysElm_Source(double par, feFunction *fct) : feSysElm(false), _sourceFun(fct), _par(par)
+  {
+    _dim = dim;
+    _nFields = 1;
+    _ID = SOURCE_2D;
+  };
+
+  ~feSysElm_Source() {}
+
+  void createElementarySystem(std::vector<feSpace *> &space);
+  void computeBe(feBilinearForm *form);
 };
 
-class feSysElm_0D_Stiff2 : public feSysElm
+template<int dim>
+class feSysElm_Mass : public feSysElm
 {
-  protected:
-    feFunction *_fct;
-    double _par; // Parametre
-    int _idX;
-    int _idY;
-    int _idZ;
-    std::vector<double> _feX;
-    std::vector<double> _feY;
-    std::vector<double> _feZ;
+protected:
+  double _coeff;
+  int _idU;
+  std::vector<double> _feU;
 
-  public:
-    feSysElm_0D_Stiff2(double par, feFunction *fct) : feSysElm(true), _fct(fct), _par(par)
-    {
-      _dim = 0;
-      _nFields = 3;
-      _ID = STIFF2_0D;
-    };
-    ~feSysElm_0D_Stiff2() {}
-    void createElementarySystem(std::vector<feSpace *> &space);
-    void computeAe(feBilinearForm *form);
-    void computeBe(feBilinearForm *form);
+public:
+  feSysElm_Mass(double coeff) : feSysElm(true), _coeff(coeff)
+  {
+    _dim = dim;
+    _nFields = 1;
+    _ID = MASS_2D;
+    _computeMatrixWithFD = false;
+  };
+  ~feSysElm_Mass() {}
+
+  void createElementarySystem(std::vector<feSpace *> &space);
+  void computeAe(feBilinearForm *form);
+  void computeBe(feBilinearForm *form);
 };
 
-class feSysElm_0D_Stiff3 : public feSysElm
+template<int dim>
+class feSysElm_Diffusion : public feSysElm
 {
-  protected:
-    feFunction *_fct;
-    double _par; // Parametre
-    int _idX;
-    int _idY;
-    int _idZ;
-    std::vector<double> _feX;
-    std::vector<double> _feY;
-    std::vector<double> _feZ;
+protected:
+  feFunction *_diffusivity;
+  int _idU;
+  std::vector<double> _feU;
+  std::vector<double> _gradPhi;
 
-  public:
-    feSysElm_0D_Stiff3(double par, feFunction *fct) : feSysElm(true), _fct(fct), _par(par)
-    {
-      _dim = 0;
-      _nFields = 3;
-      _ID = STIFF3_0D;
-    };
-    ~feSysElm_0D_Stiff3() {}
-    void createElementarySystem(std::vector<feSpace *> &space);
-    void computeAe(feBilinearForm *form);
-    void computeBe(feBilinearForm *form);
+public:
+  feSysElm_Diffusion(feFunction *diffusivity) : feSysElm(true), _diffusivity(diffusivity)
+  {
+    _dim = dim;
+    _nFields = 1;
+    _ID = DIFFUSION_2D;
+    _computeMatrixWithFD = false;
+  };
+
+  ~feSysElm_Diffusion() {}
+
+  void createElementarySystem(std::vector<feSpace *> &space);
+  void computeAe(feBilinearForm *form);
+  void computeBe(feBilinearForm *form);
 };
 
-class feSysElm_0D_weakBC : public feSysElm
-{
-  protected:
-    feFunction *_fct;
-    double _par; // Parametre
-    int _idU;
-    int _idL;
-    std::vector<double> _feU;
-    std::vector<double> _feL;
-
-  public:
-    feSysElm_0D_weakBC(double par, feFunction *fct) : feSysElm(true), _fct(fct), _par(par)
-    {
-      _dim = 0;
-      _nFields = 2;
-      _ID = WEAKBC_0D;
-    };
-    ~feSysElm_0D_weakBC() {}
-    void createElementarySystem(std::vector<feSpace *> &space);
-    void computeAe(feBilinearForm *form);
-    void computeBe(feBilinearForm *form);
-};
-
-class feSysElm_0D_weakBC_edo1 : public feSysElm
-{
-  protected:
-    feFunction *_fct;
-    double _par; // Parametre
-    int _idU;
-    int _idL;
-    int _idV;
-    std::vector<double> _feU;
-    std::vector<double> _feL;
-
-  public:
-    feSysElm_0D_weakBC_edo1(double par, feFunction *fct) : feSysElm(true), _fct(fct), _par(par)
-    {
-      _dim = 0;
-      _nFields = 3;
-      _ID = WEAKBC_EDO1_0D;
-    };
-    ~feSysElm_0D_weakBC_edo1() {}
-    void createElementarySystem(std::vector<feSpace *> &space);
-    void computeAe(feBilinearForm *form);
-    void computeBe(feBilinearForm *form);
-};
-
-class feSysElm_0D_weakBC_edo1_V2 : public feSysElm
-{
-  protected:
-    feFunction *_fct;
-    double _par; // Parametre
-    int _idU;
-    int _idL;
-    int _idV;
-    std::vector<double> _feU;
-    std::vector<double> _feL;
-
-  public:
-    feSysElm_0D_weakBC_edo1_V2(double par, feFunction *fct) : feSysElm(true), _fct(fct), _par(par)
-    {
-      _dim = 0;
-      _nFields = 3;
-      _ID = WEAKBC_EDO1_V2_0D;
-    };
-    ~feSysElm_0D_weakBC_edo1_V2() {}
-    void createElementarySystem(std::vector<feSpace *> &space);
-    void computeAe(feBilinearForm *form);
-    void computeBe(feBilinearForm *form);
-};
-
-class feSysElm_0D_weakBC_edo2 : public feSysElm
-{
-  protected:
-    feFunction *_fct;
-    double _par; // Parametre
-    int _idU;
-    int _idL;
-    int _idV;
-    int _idW;
-    std::vector<double> _feU;
-    std::vector<double> _feL;
-
-  public:
-    feSysElm_0D_weakBC_edo2(double par, feFunction *fct) : feSysElm(true), _fct(fct), _par(par)
-    {
-      _dim = 0;
-      _nFields = 4;
-      _ID = WEAKBC_EDO2_0D;
-    };
-    ~feSysElm_0D_weakBC_edo2() {}
-    void createElementarySystem(std::vector<feSpace *> &space);
-    void computeAe(feBilinearForm *form);
-    void computeBe(feBilinearForm *form);
-};
+// -----------------------------------------------------------------------------
 
 class feSysElm_0D_Masse : public feSysElm
 {
@@ -337,7 +240,7 @@ class feSysElm_0D_Source : public feSysElm
 {
   protected:
     feFunction *_fct;
-    double _par; // Parametre
+    double _par;
     int _idU;
     std::vector<double> _feU;
 
@@ -349,53 +252,6 @@ class feSysElm_0D_Source : public feSysElm
       _ID = SOURCE_0D;
     };
     ~feSysElm_0D_Source() {}
-    void createElementarySystem(std::vector<feSpace *> &space);
-    void computeAe(feBilinearForm *form);
-    void computeBe(feBilinearForm *form);
-};
-
-class feSysElm_0D_Source_crossed : public feSysElm
-{
-  protected:
-    feVectorFunction *_fct;
-    double _par; // Parametre
-    int _idU;
-    std::vector<double> _feU;
-
-  public:
-    feSysElm_0D_Source_crossed(double par, feVectorFunction *fct)
-      : feSysElm(false), _fct(fct), _par(par)
-    {
-      _dim = 0;
-      _nFields = 1;
-      _ID = SOURCE_CROSSED_0D;
-    };
-    ~feSysElm_0D_Source_crossed() {}
-    void createElementarySystem(std::vector<feSpace *> &space);
-    void computeAe(feBilinearForm *form);
-    void computeBe(feBilinearForm *form);
-};
-
-class feSysElm_1D_weakBC_edo1 : public feSysElm
-{
-  protected:
-    feFunction *_fct;
-    double _par; // Parametre
-    int _idU;
-    int _idL;
-    int _idV;
-    std::vector<double> _feU;
-    std::vector<double> _feV;
-    std::vector<double> _feL;
-
-  public:
-    feSysElm_1D_weakBC_edo1(double par, feFunction *fct) : feSysElm(true), _fct(fct), _par(par)
-    {
-      _dim = 1;
-      _nFields = 3;
-      _ID = WEAKBC_EDO1_1D;
-    };
-    ~feSysElm_1D_weakBC_edo1() {}
     void createElementarySystem(std::vector<feSpace *> &space);
     void computeAe(feBilinearForm *form);
     void computeBe(feBilinearForm *form);
@@ -437,22 +293,26 @@ public:
 // Matrix and residual
 //
 //  /
-//  | kD * grad(u) dot grad(v) dx 
+//  | k * grad(u) dot grad(v) dx 
 //  /
 //
 // # fields: 1 (FE solution and test functions)
+//
+// Parameters:
+//  diffusivity: scalar field returning the diffusivity k(x)
+//
 //                        U
 // Fields layout: phi_U [   ]
 //
 class feSysElm_1D_Diffusion : public feSysElm
 {
 protected:
-  feFunction *_diffusivityFun;
+  feFunction *_diffusivity;
   int _idU;
   std::vector<double> _feU;
   std::vector<double> _feUdx;
 public:
-  feSysElm_1D_Diffusion(feFunction *diffusivityFun) : feSysElm(true), _diffusivityFun(diffusivityFun)
+  feSysElm_1D_Diffusion(feFunction *diffusivity) : feSysElm(true), _diffusivity(diffusivity)
   {
     _dim = 1;
     _nFields = 1;
@@ -480,13 +340,12 @@ public:
 class feSysElm_1D_Masse : public feSysElm
 {
 protected:
-  feFunction *_fct;
   double _coeff;
   int _idU;
   std::vector<double> _feU;
 
 public:
-  feSysElm_1D_Masse(double coeff, feFunction *fct) : feSysElm(true), _fct(fct), _coeff(coeff)
+  feSysElm_1D_Masse(double coeff) : feSysElm(true),_coeff(coeff)
   {
     _dim = 1;
     _nFields = 1;
@@ -569,17 +428,42 @@ public:
   void computeBe(feBilinearForm *form);
 };
 
+//
+// 1D SUPG stabilization for the advection-diffusion equation.
+// Matrix and residual
+//
+//  /
+//  | P(v) * tau * R(u) dx 
+//  /
+//
+// with:
+//  P(v) = c dot v
+//  tau: the SUPG parameter defined by nuNum/c^2, nuNum the numerical diffusivity
+//  R(u) = c*dudx + kd2u/dx2 + f the residual
+// 
+// # fields: 1 (FE solution and test functions)
+//
+// Parameters:
+//     velocity: imposed velocity (scalar field)
+//  diffusivity: physical diffusivity (double)
+//       source: source term (scalar field)
+//                        U
+// Fields layout: phi_U [   ]
+//
 class feSysElm_1D_SUPGStab : public feSysElm
 {
 protected:
-  feFunction *_fct;
-  std::vector<double> _par;
+  feFunction *_velocity;
+  double _diffusivity;
+  feFunction *_source;
+
   int _idU;
   std::vector<double> _feU;
   std::vector<double> _feUdx;
 
 public:
-  feSysElm_1D_SUPGStab(std::vector<double> par, feFunction *fct) : feSysElm(true), _fct(fct), _par(par)
+  feSysElm_1D_SUPGStab(double diffusivity, feFunction *velocity, feFunction *source)
+    : feSysElm(true), _velocity(velocity), _diffusivity(diffusivity), _source(source)
   {
     _dim = 1;
     _nFields = 1;
@@ -593,11 +477,21 @@ public:
   void computeBe(feBilinearForm *form);
 };
 
+//
+// 1D DG discretization of the advection weak form.
+// Matrix and residual
+// 
+// # fields: 1 (FE solution and test functions)
+//
+// Parameters:
+//                        U
+// Fields layout: phi_U [   ]
+//
 class feSysElm_1D_DG_Advection : public feSysElm
 {
 protected:
   feFunction *_fct;
-  double _par; // Parametres
+  double _par;
   int _idU;
   std::vector<double> _feU;
   std::vector<double> _feUdx;
@@ -645,7 +539,7 @@ class feSysElm_2D_Masse : public feSysElm
 {
 protected:
   feFunction *_fct;
-  double _par; // Parametre
+  double _par;
   int _idU;
   std::vector<double> _feU;
   std::vector<double> _feUdx;
@@ -671,16 +565,13 @@ public:
 class feSysElm_2D_Source : public feSysElm
 {
 protected:
-  feFunction *_fct;
-  double _par; // Parametre
+  feFunction *_sourceFun;
+  double _par;
   int _idU;
   std::vector<double> _feU;
-  std::vector<double> _feUdx;
-  std::vector<double> _feUdy;
-  std::vector<double> _x;
 
 public:
-  feSysElm_2D_Source(double par, feFunction *fct) : feSysElm(false), _fct(fct), _par(par)
+  feSysElm_2D_Source(double par, feFunction *fct) : feSysElm(false), _sourceFun(fct), _par(par)
   {
     _dim = 2;
     _nFields = 1;
@@ -697,8 +588,7 @@ public:
 class feSysElm_2D_Diffusion : public feSysElm
 {
 protected:
-  feFunction *_fct;
-  double _par; // Parametre
+  feFunction *_diffusivity;
   int _idU;
   std::vector<double> _feU;
   std::vector<double> _feUdx;
@@ -707,7 +597,7 @@ protected:
   std::vector<double> _dxds; // [dx/ds, dy/ds, dz/ds]
 
 public:
-  feSysElm_2D_Diffusion(double par, feFunction *fct) : feSysElm(true), _fct(fct), _par(par)
+  feSysElm_2D_Diffusion(feFunction *diffusivity) : feSysElm(true), _diffusivity(diffusivity)
   {
     _dim = 2;
     _nFields = 1;
@@ -726,7 +616,7 @@ class feSysElm_2D_Advection : public feSysElm
 {
 protected:
   feVectorFunction *_fct; // The imposed velocity field
-  double _par; // Parametre
+  double _par;
   int _idU;
   std::vector<double> _feU;
   std::vector<double> _feUdx;
@@ -753,7 +643,7 @@ class feSysElm_2D_Stokes : public feSysElm
 {
 protected:
   feVectorFunction *_fct;
-  std::vector<double> &_par; // Parametre
+  std::vector<double> &_par;
   int _idU;
   int _idV;
   int _idP;
@@ -788,7 +678,7 @@ class feSysElm_2D_NavierStokes : public feSysElm
 protected:
   feVectorFunction *_fct;
   feFunction *_viscosityFct;
-  std::vector<double> &_par; // Parametre
+  std::vector<double> &_par;
   int _idU;
   int _idV;
   int _idP;

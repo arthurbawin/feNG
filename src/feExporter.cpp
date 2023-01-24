@@ -65,23 +65,23 @@ void feExporterVTK::writeHeader(std::ostream &output)
 
 void feExporterVTK::writeNodes(std::ostream &output, feCncGeo *cnc)
 {
-  int nNod = _mesh->getNbNodes();
+  int nVertices = _mesh->getNumVertices();
   output << "DATASET UNSTRUCTURED_GRID\n";
 
   if(_addP2Nodes) {
-    output << "POINTS " << nNod + _mesh->getNbEdges() << " double\n";
+    output << "POINTS " << nVertices + _mesh->getNumEdges() << " double\n";
   } else {
-    output << "POINTS " << nNod << " double\n";
+    output << "POINTS " << nVertices << " double\n";
   }
 
   Vertex *v;
-  for(int i = 0; i < nNod; ++i) {
-    // v = _mesh->getVertex(cnc->getNodeConnectivity(i));
+  for(int i = 0; i < nVertices; ++i) {
+    // v = _mesh->getVertex(cnc->getVertexConnectivity(i));
     v = _mesh->getVertex(i);
     output << v->x() << " " << v->y() << " " << v->z() << std::endl;
   }
 
-  int cnt = nNod;
+  int cnt = nVertices;
   if(_addP2Nodes) {
     /* Additional nodes are added in the order of the edges,
     like in feExporterVTK::writeFields. Both must be modified together. */
@@ -98,8 +98,8 @@ void feExporterVTK::writeNodes(std::ostream &output, feCncGeo *cnc)
 
 void feExporterVTK::writeElementsConnectivity(std::ostream &output, feCncGeo *cnc)
 {
-  int nElm = cnc->getNbElm();
-  int nNodePerElem = _addP2Nodes ? 6 : cnc->getNbNodePerElem();
+  int nElm = cnc->getNumElements();
+  int nNodePerElem = _addP2Nodes ? 6 : cnc->getNumVerticesPerElem();
   output << "CELLS " << nElm << " " << nElm * (nNodePerElem + 1) << std::endl;
   for(int iElm = 0; iElm < nElm; ++iElm) {
     output << nNodePerElem << " ";
@@ -108,7 +108,7 @@ void feExporterVTK::writeElementsConnectivity(std::ostream &output, feCncGeo *cn
       // Mid-points were added and do not exist in the mesh
       // Vertices
       for(int j = 0; j < 3; ++j) {
-        int node = cnc->getNodeConnectivity(iElm, j);
+        int node = cnc->getVertexConnectivity(iElm, j);
         output << node << " ";
       }
       // Edges
@@ -120,7 +120,7 @@ void feExporterVTK::writeElementsConnectivity(std::ostream &output, feCncGeo *cn
     } else {
       // Regular case : all nodes exist in the mesh
       for(int j = 0; j < nNodePerElem; ++j) {
-        int node = cnc->getNodeConnectivity(iElm, j);
+        int node = cnc->getVertexConnectivity(iElm, j);
         output << node << " ";
       }
     }
@@ -141,10 +141,10 @@ void feExporterVTK::writeField(std::ostream &output, feCncGeo *cnc, feSpace *int
                                std::string fieldID, bool loopOverCnc)
 {
   std::vector<double> &solVec = _sol->getSolutionReference();
-  std::vector<feInt> adr(intSpace->getNbFunctions());
-  std::vector<double> sol(intSpace->getNbFunctions());
-  // int nVertices = cnc->getNbNodes();
-  int nVertices = loopOverCnc ? cnc->getNbNodes() : _mesh->getNbNodes();
+  std::vector<feInt> adr(intSpace->getNumFunctions());
+  std::vector<double> sol(intSpace->getNumFunctions());
+  // int nVertices = cnc->getNumVertices();
+  int nVertices = loopOverCnc ? cnc->getNumVertices() : _mesh->getNumVertices();
   feNumber *n = _metaNumber->getNumbering(fieldID);
   // int nVertices = n->getNbNodes();
 
@@ -319,9 +319,9 @@ void feExporterVTK::writeEigenvector(std::ostream &output, feCncGeo *cnc, feSpac
 {
 #if defined(HAVE_PETSC)
   std::vector<double> &solVec = _sol->getSolutionReference();
-  std::vector<feInt> adr(intSpace->getNbFunctions());
-  std::vector<double> sol(intSpace->getNbFunctions());
-  int nVertices = loopOverCnc ? cnc->getNbNodes() : _mesh->getNbNodes();
+  std::vector<feInt> adr(intSpace->getNumFunctions());
+  std::vector<double> sol(intSpace->getNumFunctions());
+  int nVertices = loopOverCnc ? cnc->getNumVertices() : _mesh->getNumVertices();
   feNumber *n = _metaNumber->getNumbering(fieldID);
 
   size_t n_zero = ceil(log10(nEigenPairs + 1));

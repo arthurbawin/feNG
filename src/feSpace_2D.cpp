@@ -5,21 +5,22 @@
 
 EigenMat I6 = EigenMat::Identity(6, 6);
 
-// feSpace used to interpolate on a geometric connectivity
-feSpaceTriP1::feSpaceTriP1(std::string cncGeoID) : feSpace(nullptr, "GEO", cncGeoID, nullptr)
+// -----------------------------------------------------------------------------
+// Lagrange element of degree 1 on reference triangle r = [0,1], s = [0,1-r]
+// -----------------------------------------------------------------------------
+feSpaceTriP1::feSpaceTriP1(std::string cncGeoID) : feSpace(2, nullptr, "GEO", cncGeoID, nullptr)
 {
   _nFunctions = 3;
   _Lcoor = {0., 0., 0., 1., 0., 0., 0., 1., 0.};
+  _isGeometricInterpolant = true;
 }
 
-// feSpace used to compute (bi-)linear forms
 feSpaceTriP1::feSpaceTriP1(feMesh *mesh, const std::string fieldID, const std::string cncGeoID, feFunction *fct,
                            const bool useGlobalShapeFunctions)
-  : feSpace(mesh, fieldID, cncGeoID, fct, useGlobalShapeFunctions)
+  : feSpace(2, mesh, fieldID, cncGeoID, fct, useGlobalShapeFunctions)
 {
   _nFunctions = 3;
   _Lcoor = {0., 0., 0., 1., 0., 0., 0., 1., 0.};
-  // _adr.resize(_nFunctions);
 }
 
 std::vector<double> feSpaceTriP1::L(double *r) { return {1.0 - r[0] - r[1], r[0], r[1]}; }
@@ -31,11 +32,10 @@ void feSpaceTriP1::L(double *r, double *L)
 }
 std::vector<double> feSpaceTriP1::dLdr(double *r) { return {-1.0, 1.0, 0.0}; }
 std::vector<double> feSpaceTriP1::dLds(double *r) { return {-1.0, 0.0, 1.0}; }
-std::vector<double> feSpaceTriP1::dLdt(double *r) { return {0., 0., 0.}; }
 
 void feSpaceTriP1::initializeNumberingUnknowns()
 {
-  for(int i = 0; i < _mesh->getNbElm(_cncGeoID); ++i) {
+  for(int i = 0; i < _mesh->getNumElements(_cncGeoID); ++i) {
     _numbering->setUnknownVertexDOF(_mesh, _cncGeoID, i, 0);
     _numbering->setUnknownVertexDOF(_mesh, _cncGeoID, i, 1);
     _numbering->setUnknownVertexDOF(_mesh, _cncGeoID, i, 2);
@@ -44,7 +44,7 @@ void feSpaceTriP1::initializeNumberingUnknowns()
 
 void feSpaceTriP1::initializeNumberingEssential()
 {
-  for(int i = 0; i < _mesh->getNbElm(_cncGeoID); ++i) {
+  for(int i = 0; i < _mesh->getNumElements(_cncGeoID); ++i) {
     _numbering->setEssentialVertexDOF(_mesh, _cncGeoID, i, 0);
     _numbering->setEssentialVertexDOF(_mesh, _cncGeoID, i, 1);
     _numbering->setEssentialVertexDOF(_mesh, _cncGeoID, i, 2);
@@ -53,28 +53,20 @@ void feSpaceTriP1::initializeNumberingEssential()
 
 void feSpaceTriP1::initializeAddressingVector(int numElem, std::vector<feInt> &adr)
 {
-  adr.resize(3);
   adr[0] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 0);
   adr[1] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 1);
   adr[2] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 2);
 }
 
-// feSpace used to interpolate on a geometric connectivity
-feSpaceTri_CR1::feSpaceTri_CR1(std::string cncGeoID)
-  : feSpace(nullptr, "GEO", cncGeoID, nullptr)
-{
-  _nFunctions = 3;
-  _Lcoor = {0.5, 0., 0., 0.5, 0.5, 0., 0., 0.5, 0.};
-}
-
-// feSpace used to compute (bi-)linear forms
+// -----------------------------------------------------------------------------
+// Non-conforming Crouzeix-Raviart element of degree 1 on reference triangle r = [0,1], s = [0,1-r]
+// -----------------------------------------------------------------------------
 feSpaceTri_CR1::feSpaceTri_CR1(feMesh *mesh, std::string fieldID,
                                                        std::string cncGeoID, feFunction *fct)
-  : feSpace(mesh, fieldID, cncGeoID, fct)
+  : feSpace(2, mesh, fieldID, cncGeoID, fct)
 {
   _nFunctions = 3;
   _Lcoor = {0.5, 0., 0., 0.5, 0.5, 0., 0., 0.5, 0.};
-  // _adr.resize(_nFunctions);
 }
 
 std::vector<double> feSpaceTri_CR1::L(double *r)
@@ -89,12 +81,11 @@ void feSpaceTri_CR1::L(double *r, double *L)
 }
 std::vector<double> feSpaceTri_CR1::dLdr(double *r) { return {0.0, 2.0, -2.0}; }
 std::vector<double> feSpaceTri_CR1::dLds(double *r) { return {-2.0, 2.0, 0.0}; }
-std::vector<double> feSpaceTri_CR1::dLdt(double *r) { return {0., 0., 0.}; }
 
 void feSpaceTri_CR1::initializeNumberingUnknowns()
 {
   int nDOFPerEdge = 1;
-  for(int i = 0; i < _mesh->getNbElm(_cncGeoID); ++i) {
+  for(int i = 0; i < _mesh->getNumElements(_cncGeoID); ++i) {
     _numbering->setUnknownEdgeDOF(_mesh, _cncGeoID, i, 0, nDOFPerEdge);
     _numbering->setUnknownEdgeDOF(_mesh, _cncGeoID, i, 1, nDOFPerEdge);
     _numbering->setUnknownEdgeDOF(_mesh, _cncGeoID, i, 2, nDOFPerEdge);
@@ -103,7 +94,7 @@ void feSpaceTri_CR1::initializeNumberingUnknowns()
 
 void feSpaceTri_CR1::initializeNumberingEssential()
 {
-  for(int i = 0; i < _mesh->getNbElm(_cncGeoID); ++i) {
+  for(int i = 0; i < _mesh->getNumElements(_cncGeoID); ++i) {
     _numbering->setEssentialEdgeDOF(_mesh, _cncGeoID, i, 0);
     _numbering->setEssentialEdgeDOF(_mesh, _cncGeoID, i, 1);
     _numbering->setEssentialEdgeDOF(_mesh, _cncGeoID, i, 2);
@@ -118,21 +109,22 @@ void feSpaceTri_CR1::initializeAddressingVector(int numElem,
   adr[2] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 2, 0);
 }
 
-// feSpace used to interpolate on a geometric connectivity
-feSpaceTriP2::feSpaceTriP2(std::string cncGeoID) : feSpace(nullptr, "GEO", cncGeoID, nullptr)
+// -----------------------------------------------------------------------------
+// Lagrange element of degree 2 on reference triangle r = [0,1], s = [0,1-r]
+// -----------------------------------------------------------------------------
+feSpaceTriP2::feSpaceTriP2(std::string cncGeoID) : feSpace(2, nullptr, "GEO", cncGeoID, nullptr)
 {
   _nFunctions = 6;
   _Lcoor = {0., 0., 0., 1., 0., 0., 0., 1., 0., 0.5, 0., 0., 0.5, 0.5, 0., 0., 0.5, 0.};
+  _isGeometricInterpolant = true;
 }
 
-// feSpace used to compute (bi-)linear forms
 feSpaceTriP2::feSpaceTriP2(feMesh *mesh, const std::string fieldID, const std::string cncGeoID, feFunction *fct,
                            const bool useGlobalShapeFunctions)
-  : feSpace(mesh, fieldID, cncGeoID, fct, useGlobalShapeFunctions)
+  : feSpace(2, mesh, fieldID, cncGeoID, fct, useGlobalShapeFunctions)
 {
   _nFunctions = 6;
   _Lcoor = {0., 0., 0., 1., 0., 0., 0., 1., 0., 0.5, 0., 0., 0.5, 0.5, 0., 0., 0.5, 0.};
-  // _adr.resize(_nFunctions);
 }
 
 std::vector<double> feSpaceTriP2::L(double *r)
@@ -338,13 +330,11 @@ std::vector<double> feSpaceTriP2::dLds(double *r)
           4. * (1. - r[0] - 2. * r[1])};
 }
 
-std::vector<double> feSpaceTriP2::dLdt(double *r) { return {0., 0., 0., 0., 0., 0.}; }
-
 void feSpaceTriP2::initializeNumberingUnknowns()
 {
   int nDOFPerEdge = 1;
-  for(int i = 0; i < _mesh->getNbElm(_cncGeoID); ++i) {
-    for(int j = 0; j < this->getCncGeo()->getNbNodePerElem(); ++j) {
+  for(int i = 0; i < _mesh->getNumElements(_cncGeoID); ++i) {
+    for(int j = 0; j < this->getCncGeo()->getNumVerticesPerElem(); ++j) {
       _numbering->setUnknownVertexDOF(_mesh, _cncGeoID, i, j);
     }
     if(this->getCncGeo()->getFeSpace()->getPolynomialDegree() != 2) {
@@ -357,8 +347,8 @@ void feSpaceTriP2::initializeNumberingUnknowns()
 
 void feSpaceTriP2::initializeNumberingEssential()
 {
-  for(int i = 0; i < _mesh->getNbElm(_cncGeoID); ++i) {
-    for(int j = 0; j < this->getCncGeo()->getNbNodePerElem(); ++j) {
+  for(int i = 0; i < _mesh->getNumElements(_cncGeoID); ++i) {
+    for(int j = 0; j < this->getCncGeo()->getNumVerticesPerElem(); ++j) {
       _numbering->setEssentialVertexDOF(_mesh, _cncGeoID, i, j);
     }
     if(this->getCncGeo()->getFeSpace()->getPolynomialDegree() != 2) {
@@ -371,7 +361,6 @@ void feSpaceTriP2::initializeNumberingEssential()
 
 void feSpaceTriP2::initializeAddressingVector(int numElem, std::vector<feInt> &adr)
 {
-  // adr.resize(6);
   adr[0] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 0);
   adr[1] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 1);
   adr[2] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 2);
@@ -386,24 +375,16 @@ void feSpaceTriP2::initializeAddressingVector(int numElem, std::vector<feInt> &a
   }
 }
 
-// feSpace used to interpolate on a geometric connectivity
-feSpaceTri_CR2::feSpaceTri_CR2(std::string cncGeoID)
-  : feSpace(nullptr, "GEO", cncGeoID, nullptr)
-{
-  _nFunctions = 7;
-  _Lcoor = {0., 0.,  0.,  1., 0., 0.,  0., 1.,      0.,      0.5, 0.,
-            0., 0.5, 0.5, 0., 0., 0.5, 0., 1. / 3., 1. / 3., 0};
-}
-
-// feSpace used to compute (bi-)linear forms
+// -----------------------------------------------------------------------------
+// Non-conforming Crouzeix-Raviart element of degree 2 on reference triangle r = [0,1], s = [0,1-r]
+// -----------------------------------------------------------------------------
 feSpaceTri_CR2::feSpaceTri_CR2(feMesh *mesh, std::string fieldID,
                                                        std::string cncGeoID, feFunction *fct)
-  : feSpace(mesh, fieldID, cncGeoID, fct)
+  : feSpace(2, mesh, fieldID, cncGeoID, fct)
 {
   _nFunctions = 7;
   _Lcoor = {0., 0.,  0.,  1., 0., 0.,  0., 1.,    0.,    0.5, 0.,
             0., 0.5, 0.5, 0., 0., 0.5, 0., 1 / 3, 1 / 3, 0};
-  // _adr.resize(_nFunctions);
 }
 
 std::vector<double> feSpaceTri_CR2::L(double *r)
@@ -445,17 +426,12 @@ std::vector<double> feSpaceTri_CR2::dLds(double *r)
           6. * (1. - r[0] - 2. * r[1])};
 }
 
-std::vector<double> feSpaceTri_CR2::dLdt(double *r)
-{
-  return {0., 0., 0., 0., 0., 0., 0.};
-}
-
 void feSpaceTri_CR2::initializeNumberingUnknowns()
 {
   int nDOFPerEdge = 1;
   int nDOFPerElem = 1;
-  for(int i = 0; i < _mesh->getNbElm(_cncGeoID); ++i) {
-    for(int j = 0; j < this->getCncGeo()->getNbNodePerElem(); ++j) {
+  for(int i = 0; i < _mesh->getNumElements(_cncGeoID); ++i) {
+    for(int j = 0; j < this->getCncGeo()->getNumVerticesPerElem(); ++j) {
       _numbering->setUnknownVertexDOF(_mesh, _cncGeoID, i, j);
     }
     if(this->getCncGeo()->getFeSpace()->getPolynomialDegree() != 2) {
@@ -469,8 +445,8 @@ void feSpaceTri_CR2::initializeNumberingUnknowns()
 
 void feSpaceTri_CR2::initializeNumberingEssential()
 {
-  for(int i = 0; i < _mesh->getNbElm(_cncGeoID); ++i) {
-    for(int j = 0; j < this->getCncGeo()->getNbNodePerElem(); ++j) {
+  for(int i = 0; i < _mesh->getNumElements(_cncGeoID); ++i) {
+    for(int j = 0; j < this->getCncGeo()->getNumVerticesPerElem(); ++j) {
       _numbering->setEssentialVertexDOF(_mesh, _cncGeoID, i, j);
     }
     if(this->getCncGeo()->getFeSpace()->getPolynomialDegree() != 2) {
@@ -500,19 +476,21 @@ void feSpaceTri_CR2::initializeAddressingVector(int numElem,
   adr[6] = _numbering->getElementDOF(_mesh, _cncGeoID, numElem, 0);
 }
 
-// feSpace used to interpolate on a geometric connectivity
-feSpaceTriP3::feSpaceTriP3(std::string cncGeoID) : feSpace(nullptr, "GEO", cncGeoID, nullptr)
+// -----------------------------------------------------------------------------
+// Lagrange element of degree 3 on reference triangle r = [0,1], s = [0,1-r]
+// -----------------------------------------------------------------------------
+feSpaceTriP3::feSpaceTriP3(std::string cncGeoID) : feSpace(2, nullptr, "GEO", cncGeoID, nullptr)
 {
   _nFunctions = 10;
   _Lcoor = {0., 0., 0.,      1., 0., 0.,      0.,      1.,      0.,      1. / 3.,
             0., 0., 2. / 3., 0., 0., 2. / 3., 1. / 3., 0.,      1. / 3., 2. / 3.,
             0., 0., 2. / 3., 0., 0., 1. / 3., 0.,      1. / 3., 1. / 3., 0.};
+  _isGeometricInterpolant = true;
 }
 
-// feSpace used to compute (bi-)linear forms
 feSpaceTriP3::feSpaceTriP3(feMesh *mesh, const std::string fieldID, const std::string cncGeoID, feFunction *fct,
                            const bool useGlobalShapeFunctions)
-  : feSpace(mesh, fieldID, cncGeoID, fct, useGlobalShapeFunctions)
+  : feSpace(2, mesh, fieldID, cncGeoID, fct, useGlobalShapeFunctions)
 {
   _nFunctions = 10;
   _Lcoor = {0., 0., 0.,      1., 0., 0.,      0.,      1.,      0.,      1. / 3.,
@@ -599,16 +577,11 @@ std::vector<double> feSpaceTriP3::dLds(double *r)
           R * 2.7E1 - R * S * 5.4E1 - (R * R) * 2.7E1};
 }
 
-std::vector<double> feSpaceTriP3::dLdt(double *r)
-{
-  return {0., 0., 0., 0., 0., 0., 0., 0., 0., 0.};
-}
-
 void feSpaceTriP3::initializeNumberingUnknowns()
 {
   int nDOFPerEdge = 2;
   int nDOFPerElem = 1;
-  for(int i = 0; i < _mesh->getNbElm(_cncGeoID); ++i) {
+  for(int i = 0; i < _mesh->getNumElements(_cncGeoID); ++i) {
     _numbering->setUnknownVertexDOF(_mesh, _cncGeoID, i, 0);
     _numbering->setUnknownVertexDOF(_mesh, _cncGeoID, i, 1);
     _numbering->setUnknownVertexDOF(_mesh, _cncGeoID, i, 2);
@@ -621,7 +594,7 @@ void feSpaceTriP3::initializeNumberingUnknowns()
 
 void feSpaceTriP3::initializeNumberingEssential()
 {
-  for(int i = 0; i < _mesh->getNbElm(_cncGeoID); ++i) {
+  for(int i = 0; i < _mesh->getNumElements(_cncGeoID); ++i) {
     _numbering->setEssentialVertexDOF(_mesh, _cncGeoID, i, 0);
     _numbering->setEssentialVertexDOF(_mesh, _cncGeoID, i, 1);
     _numbering->setEssentialVertexDOF(_mesh, _cncGeoID, i, 2);
@@ -664,8 +637,10 @@ void feSpaceTriP3::initializeAddressingVector(int numElem, std::vector<feInt> &a
   adr[9] = _numbering->getElementDOF(_mesh, _cncGeoID, numElem, 0);
 }
 
-/* P4 Lagrange interpolant on triangle :
-
+// -----------------------------------------------------------------------------
+// Lagrange element of degree 4 on reference triangle r = [0,1], s = [0,1-r]
+// -----------------------------------------------------------------------------
+/*
    2
    | \
    9   8
@@ -678,8 +653,7 @@ void feSpaceTriP3::initializeAddressingVector(int numElem, std::vector<feInt> &a
 
 */
 
-// feSpace used to interpolate on a geometric connectivity
-feSpaceTriP4::feSpaceTriP4(std::string cncGeoID) : feSpace(nullptr, "GEO", cncGeoID, nullptr)
+feSpaceTriP4::feSpaceTriP4(std::string cncGeoID) : feSpace(2, nullptr, "GEO", cncGeoID, nullptr)
 {
   _nFunctions = 15;
   double x0 = 0.0, x1 = 1. / 4., x2 = 1. / 2., x3 = 3. / 4., x4 = 1.;
@@ -687,12 +661,12 @@ feSpaceTriP4::feSpaceTriP4(std::string cncGeoID) : feSpace(nullptr, "GEO", cncGe
   _Lcoor = {x0, y0, 0., x4, y0, 0., x0, y4, 0., x1, y0, 0., x2, y0, 0.,
             x3, y0, 0., x3, y1, 0., x2, y2, 0., x1, y3, 0., y3, x0, 0.,
             y2, x0, 0., y1, x0, 0., x1, y1, 0., x2, y1, 0., x1, y2, 0.};
+  _isGeometricInterpolant = true;
 }
 
-// feSpace used to compute (bi-)linear forms
 feSpaceTriP4::feSpaceTriP4(feMesh *mesh, const std::string fieldID, const std::string cncGeoID, feFunction *fct,
                            const bool useGlobalShapeFunctions)
-  : feSpace(mesh, fieldID, cncGeoID, fct, useGlobalShapeFunctions)
+  : feSpace(2, mesh, fieldID, cncGeoID, fct, useGlobalShapeFunctions)
 {
   _nFunctions = 15;
   double x0 = 0.0, x1 = 1. / 4., x2 = 1. / 2., x3 = 3. / 4., x4 = 1.;
@@ -700,7 +674,6 @@ feSpaceTriP4::feSpaceTriP4(feMesh *mesh, const std::string fieldID, const std::s
   _Lcoor = {x0, y0, 0., x4, y0, 0., x0, y4, 0., x1, y0, 0., x2, y0, 0.,
             x3, y0, 0., x3, y1, 0., x2, y2, 0., x1, y3, 0., y3, x0, 0.,
             y2, x0, 0., y1, x0, 0., x1, y1, 0., x2, y1, 0., x1, y2, 0.};
-  // _adr.resize(_nFunctions);
 }
 
 std::vector<double> feSpaceTriP4::L(double *r)
@@ -809,16 +782,11 @@ std::vector<double> feSpaceTriP4::dLds(double *r)
           128. * (-(R * (8. * R * S - 10. * S - R + 12. * S * S + 1.)) / 4.)};
 }
 
-std::vector<double> feSpaceTriP4::dLdt(double *r)
-{
-  return {0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.};
-}
-
 void feSpaceTriP4::initializeNumberingUnknowns()
 {
   int nDOFPerEdge = 3;
   int nDOFPerElem = 3;
-  for(int i = 0; i < _mesh->getNbElm(_cncGeoID); ++i) {
+  for(int i = 0; i < _mesh->getNumElements(_cncGeoID); ++i) {
     _numbering->setUnknownVertexDOF(_mesh, _cncGeoID, i, 0);
     _numbering->setUnknownVertexDOF(_mesh, _cncGeoID, i, 1);
     _numbering->setUnknownVertexDOF(_mesh, _cncGeoID, i, 2);
@@ -831,7 +799,7 @@ void feSpaceTriP4::initializeNumberingUnknowns()
 
 void feSpaceTriP4::initializeNumberingEssential()
 {
-  for(int i = 0; i < _mesh->getNbElm(_cncGeoID); ++i) {
+  for(int i = 0; i < _mesh->getNumElements(_cncGeoID); ++i) {
     _numbering->setEssentialVertexDOF(_mesh, _cncGeoID, i, 0);
     _numbering->setEssentialVertexDOF(_mesh, _cncGeoID, i, 1);
     _numbering->setEssentialVertexDOF(_mesh, _cncGeoID, i, 2);

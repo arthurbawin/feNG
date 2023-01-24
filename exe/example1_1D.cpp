@@ -121,7 +121,7 @@ int main(int argc, char **argv)
   feCheck(solver->makeStep());
 
   int nInteriorPlotNodes = 40;
-  feBasicViewer viewer("test", mesh.getNbInteriorElems(), nInteriorPlotNodes);
+  feBasicViewer viewer("test", mesh.getNumInteriorElements(), nInteriorPlotNodes);
 
   double xLim[2] = {xa, xb};
   double yLim[2] = {0, 0.2};

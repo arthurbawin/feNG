@@ -34,7 +34,7 @@ protected:
   std::map<int, std::set<int> > edgeToElems; // A set of element tags for each mesh edge
 
 public:
-  fePatch(feCncGeo *cnc, feMesh *mesh);
+  fePatch(const feCncGeo *cnc, feMesh *mesh);
   ~fePatch() {}
 
   std::vector<int> &getVertices() { return _vertices; }
