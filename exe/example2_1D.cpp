@@ -90,7 +90,7 @@ int main(int argc, char **argv)
 
   feBilinearForm *mass, *diff;
   // feCheck(createBilinearForm( mass, {uDomaine}, new feSysElm_1D_Masse(1.0))   );
-  feCheck(createBilinearForm( mass, {uDomaine}, new feSysElm_Mass<1>(1.0))   );
+  feCheck(createBilinearForm( mass, {uDomaine}, new feSysElm_Mass(1.0))   );
   feCheck(createBilinearForm( diff, {uDomaine}, new feSysElm_1D_Diffusion(kDiffusivity)) );
 
   feLinearSystem *system;

@@ -78,6 +78,13 @@ public:
   double **_Ae;
   double *_Be;
 
+  double _dxdr[3];
+  double _dxds[3];
+  double _dxdt[3];
+  double _drdx[3];
+  double _drdy[3];
+  double _drdz[3];
+
 protected:
   // Tag and name of the geometric connectivity on which the form is defined
   int _cncGeoTag;

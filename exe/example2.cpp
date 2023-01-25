@@ -105,7 +105,7 @@ int main(int argc, char **argv)
     nElm[i] = mesh.getNumInteriorElements();
 
     feSpace *uBord, *uDomaine;
-    int degreeQuadrature = 10;
+    int degreeQuadrature = 8;
     int dim;
     feCheck(createFiniteElementSpace(uBord, &mesh, elementType::LAGRANGE, order, "U", "Bord", degreeQuadrature, funSol));
     feCheck(createFiniteElementSpace(uDomaine, &mesh, elementType::LAGRANGE, order, "U", "Domaine", degreeQuadrature, funZero));
@@ -127,8 +127,9 @@ int main(int argc, char **argv)
     feMetaNumber metaNumber(&mesh, spaces, essentialSpaces);
     feSolution sol(metaNumber.getNbDOFs(), spaces, essentialSpaces);
 
-    feBilinearForm diffU({uDomaine}, new feSysElm_2D_Diffusion(kDiffusivity));
-    feBilinearForm sourceU({uDomaine}, new feSysElm_Source<2>(1.0, funSource));
+    // feBilinearForm diffU({uDomaine}, new feSysElm_2D_Diffusion(kDiffusivity));
+    feBilinearForm diffU({uDomaine}, new feSysElm_Diffusion<2>(kDiffusivity));
+    feBilinearForm sourceU({uDomaine}, new feSysElm_Source(funSource));
 
     feLinearSystem *system;
     feCheck(createLinearSystem(system, PETSC, {&diffU, &sourceU}, metaNumber.getNbUnknowns(), argc, argv));
@@ -148,7 +149,7 @@ int main(int argc, char **argv)
     feExportData exportData = {exporter, exportEveryNSteps, vtkFileRoot};
 
     TimeIntegrator *solver;
-    feTolerances tol{1e-9, 1e-8, 3};
+    feTolerances tol{1e-13, 1e-8, 3};
     feCheck(createTimeIntegrator(solver, STATIONARY, tol, system, &metaNumber, &sol, &mesh, norms,
                                  exportData));
     feCheck(solver->makeSteps(0));

@@ -79,7 +79,7 @@ public:
   // normResidual: norm of the RHS b (residual in the Newton-Raphson iteration)
   //      normAxb: norm of the residual Ax-b
   //        nIter: number of iteration used to solve (0 for direct solver)
-  virtual void solve(double *normDx, double *normResidual, double *normAxb, int *nIter) = 0;
+  virtual bool solve(double *normDx, double *normResidual, double *normAxb, int *nIter) = 0;
 
   // Apply the Newton-Raphson correction u_new = u_old + du
   virtual void correctSolution(feSolution *sol) = 0;

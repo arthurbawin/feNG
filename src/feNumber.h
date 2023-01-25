@@ -52,9 +52,9 @@ protected:
   std::vector<int> _elemToEdge;
 
   // The global number of all essential DOF (elements, faces (edges) and vertices together).
-  std::vector<int> _allEssentialDOF;
+  std::set<int> _allEssentialDOF;
   // The global number of all unknown DOF (elements, faces (edges) and vertices together).
-  std::vector<int> _allUnknownDOF;
+  std::set<int> _allUnknownDOF;
 
 public:
 
@@ -68,10 +68,10 @@ public:
   // int getNbNodes() { return _nNod; }
   int getNbDOFs() { return _nDofs; }
 
-  // Return a reference to the array of all UNKNOWN DOF of this field (vert/elem/edge mixed)
-  std::vector<int> &getUnknownDOF() { return _allUnknownDOF; };
-  // Return a reference to the array of all ESSENTIAL DOF of this field (vert/elem/edge mixed)
-  std::vector<int> &getEssentialDOF() { return _allEssentialDOF; };
+  // Return a reference to the set of all UNKNOWN DOF of this field (vert/elem/edge mixed)
+  std::set<int> &getUnknownDOF() { return _allUnknownDOF; };
+  // Return a reference to the set of all ESSENTIAL DOF of this field (vert/elem/edge mixed)
+  std::set<int> &getEssentialDOF() { return _allEssentialDOF; };
 
   // Set the numDOF-th DOF associated to the numVertex-th vertex on the numElem-th element
   // of geometric connectivity cncGeoID as UNKNOWN. The default number of DOF per vertex 
@@ -176,16 +176,16 @@ public:
 
   // Return a reference to the array of all UNKNOWN DOF (vert/elem/edge mixed)
   // for target field
-  std::vector<int> &getUnknownDOF(std::string fieldID)
+  std::set<int> &getUnknownDOF(std::string fieldID)
     { return _numberings[fieldID]->getUnknownDOF(); };
-  std::vector<int> &getUnknownDOF(int fieldTag)
+  std::set<int> &getUnknownDOF(int fieldTag)
     { return _numberings[_fieldIDs[fieldTag]]->getUnknownDOF(); };
 
   // Return a reference to the array of all ESSENTIAL DOF (vert/elem/edge mixed)
   // for target field
-  std::vector<int> &getEssentialDOF(std::string fieldID)
+  std::set<int> &getEssentialDOF(std::string fieldID)
     { return _numberings[fieldID]->getEssentialDOF(); };
-  std::vector<int> &getEssentialDOF(int fieldTag)
+  std::set<int> &getEssentialDOF(int fieldTag)
     { return _numberings[_fieldIDs[fieldTag]]->getEssentialDOF(); };
 
   // Export the vertex DOFs and their coordinates in file.

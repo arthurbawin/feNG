@@ -49,7 +49,7 @@ public:
   // correctSolution    : somme de la correction dans le vecteur solution
   //                      ou dans la structure solution
   // ====================================================================
-  void solve(double *normDx, double *normResidual, double *normAxb,
+  bool solve(double *normDx, double *normResidual, double *normAxb,
                      int *nIter); // MATLAB : RESOUDRE
   void setToZero(); // MATLAB : INITIALISE
   void setMatrixToZero(); // MATLAB : INITIALISE_LA_MATRICE

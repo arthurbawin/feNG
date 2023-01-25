@@ -273,9 +273,9 @@ void feNumber::compactFieldDOF()
   _allUnknownDOF.clear();
   for(size_t i = 0; i < _numberingVertices.size(); ++i) {
     if(_codeDOFVertices[i] == DOF_ESSENTIAL){
-      _allEssentialDOF.push_back(_numberingVertices[i]);
+      _allEssentialDOF.insert(_numberingVertices[i]);
     } else if(_codeDOFVertices[i] == DOF_UNKNOWN){
-      _allUnknownDOF.push_back(_numberingVertices[i]);
+      _allUnknownDOF.insert(_numberingVertices[i]);
     } else{
       // "Ghost" degrees of freedom are not kept
     }
@@ -284,9 +284,9 @@ void feNumber::compactFieldDOF()
   for(int i = 0; i < _nElm; ++i) {
     for(int j = 0; j < _maxDOFperElem; ++j) {
       if(_codeDOFElements[i] == DOF_ESSENTIAL){
-        _allEssentialDOF.push_back(_numberingElements[_maxDOFperElem * i + j]);
+        _allEssentialDOF.insert(_numberingElements[_maxDOFperElem * i + j]);
       } else if(_codeDOFElements[i] == DOF_UNKNOWN){
-        _allUnknownDOF.push_back(_numberingElements[_maxDOFperElem * i + j]);
+        _allUnknownDOF.insert(_numberingElements[_maxDOFperElem * i + j]);
       }
     }
   }
@@ -294,9 +294,9 @@ void feNumber::compactFieldDOF()
   for(int i = 0; i < _nEdg; ++i) {
     for(int j = 0; j < _maxDOFperEdge; ++j) {
       if(_codeDOFEdges[i] == DOF_ESSENTIAL){
-        _allEssentialDOF.push_back(_numberingEdges[_maxDOFperEdge * i + j]);
+        _allEssentialDOF.insert(_numberingEdges[_maxDOFperEdge * i + j]);
       } else if(_codeDOFEdges[i] == DOF_UNKNOWN){
-        _allUnknownDOF.push_back(_numberingEdges[_maxDOFperEdge * i + j]);
+        _allUnknownDOF.insert(_numberingEdges[_maxDOFperEdge * i + j]);
       }
     }
   }

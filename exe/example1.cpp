@@ -127,8 +127,8 @@ int main(int argc, char **argv)
   //
   // There is no form to define on the boundary.
   feBilinearForm *diff, *source;
-  feCheck(createBilinearForm(  diff, {uDomaine}, new feSysElm_2D_Diffusion(kDiffusivity)  ));
-  feCheck(createBilinearForm(source, {uDomaine}, new feSysElm_2D_Source(1.0, funSource) ));
+  feCheck(createBilinearForm(  diff, {uDomaine}, new feSysElm_Diffusion<2>(kDiffusivity)  ));
+  feCheck(createBilinearForm(source, {uDomaine}, new feSysElm_Source(funSource) ));
 
   // Create the linear system. Assembly of the elementary matrices and RHS is
   // performed in the solve step below ("makeSteps"). Two linear solvers are available:

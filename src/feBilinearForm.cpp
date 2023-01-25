@@ -21,12 +21,15 @@ feStatus createBilinearForm(feBilinearForm *&form, const std::vector<feSpace *> 
 
   // Check that the elementary system is defined on a connectivity of same space dimension
   for(size_t i = 0; i < spaces.size(); ++i) {
-    if(spaces[i]->getDim() != elementarySystem->getDim()){
+    // Weak forms that can be defined on any dimension have dim = -1
+    if(elementarySystem->getDim() != -1){
+      if(spaces[i]->getDim() != elementarySystem->getDim()){
       return feErrorMsg(FE_STATUS_ERROR, "(Bi-)linear form %s should be defined on connectivity with dimension %d "
         "(given dimension is %d)\n",
         elementarySystem->getWeakFormName().data(),
         elementarySystem->getDim(),
         spaces[i]->getDim());
+      }
     }
   }
 

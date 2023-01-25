@@ -68,7 +68,7 @@ int main(int argc, char **argv)
 {
   petscInitialize(argc, argv);
 
-  double c = 5.0;
+  double c = 1.0;
   double k = 1.0;
   feFunction *funSol       = new feFunction(fSol,    {c, k});
   feFunction *funSource    = new feFunction(fSource, {});
@@ -76,62 +76,80 @@ int main(int argc, char **argv)
   feFunction *cVelocity    = new feFunction(fConstant, {c});
   feFunction *kDiffusivity = new feFunction(fConstant, {k});
 
-  int dim, deg = 1, degreeQuadrature = 10;
+  int dim, deg = 4, degreeQuadrature = 20;
   double xa = 0.;
   double xb = 1.;
-  int nElm = 500;
-  feMesh1DP1 mesh(xa, xb, nElm, "BXA", "BXB", "Domaine");
 
-  feSpace *uG, *uD, *uDomaine;
-  feCheck(createFiniteElementSpace(uG, &mesh, elementType::LAGRANGE, deg, "U", "BXA", degreeQuadrature, funSol));
-  feCheck(createFiniteElementSpace(uD, &mesh, elementType::LAGRANGE, deg, "U", "BXB", degreeQuadrature, funSol));
-  feCheck(createFiniteElementSpace(uDomaine, &mesh, elementType::LAGRANGE, deg, "U", "Domaine", degreeQuadrature, funZero));
+  int nConv = 6;
+  int nElm[8] = {10, 20, 40, 80, 160, 320, 640, 1280};
+  std::vector<double> L2error(2 * nConv, 0.0);
 
-  std::vector<feSpace*> spaces = {uG, uD, uDomaine};
-  std::vector<feSpace*> essentialSpaces = {uG, uD};
+  for(int i = 0; i < nConv; ++i){
 
-  feMetaNumber numbering(&mesh, spaces, essentialSpaces);
+    feMesh1DP1 mesh(xa, xb, nElm[i], "BXA", "BXB", "Domaine");
 
-  feSolution sol(numbering.getNbDOFs(), spaces, essentialSpaces);
-  sol.initializeUnknowns(&mesh);
+    feSpace *uG, *uD, *uDomaine;
+    feCheck(createFiniteElementSpace(uG, &mesh, elementType::LAGRANGE, deg, "U", "BXA", degreeQuadrature, funSol));
+    feCheck(createFiniteElementSpace(uD, &mesh, elementType::LAGRANGE, deg, "U", "BXB", degreeQuadrature, funSol));
+    feCheck(createFiniteElementSpace(uDomaine, &mesh, elementType::LAGRANGE, deg, "U", "Domaine", degreeQuadrature, funZero));
 
-  feBilinearForm *adv, *diff, *source;
-  feCheck(createBilinearForm(    adv, {uDomaine}, new feSysElm_1D_Advection(cVelocity)) );
-  feCheck(createBilinearForm(   diff, {uDomaine}, new feSysElm_1D_Diffusion(kDiffusivity))     );
-  feCheck(createBilinearForm( source, {uDomaine}, new feSysElm_1D_Source(funSource))    );
+    std::vector<feSpace*> spaces = {uG, uD, uDomaine};
+    std::vector<feSpace*> essentialSpaces = {uG, uD};
 
-  feLinearSystem *system;
-  feCheck(createLinearSystem(system, PETSC, {adv, diff, source}, numbering.getNbUnknowns(), argc, argv));
+    feMetaNumber numbering(&mesh, spaces, essentialSpaces);
 
-  feNorm normU(L2_ERROR, {uDomaine}, &sol, funSol);
-  std::vector<feNorm *> norms = {&normU};
+    feSolution sol(numbering.getNbDOFs(), spaces, essentialSpaces);
+    sol.initializeUnknowns(&mesh);
 
-  feExporter *exporter;
-  feCheck(createVisualizationExporter(exporter, VTK, &numbering, &sol, &mesh, spaces));
-  int exportEveryNSteps = 1;
-  std::string vtkFileRoot = "output";
-  feExportData exportData = {nullptr, exportEveryNSteps, vtkFileRoot};
+    feBilinearForm *adv, *diff, *source;
+    feCheck(createBilinearForm(    adv, {uDomaine}, new feSysElm_1D_Advection(cVelocity)) );
+    feCheck(createBilinearForm(   diff, {uDomaine}, new feSysElm_Diffusion<1>(kDiffusivity))     );
+    feCheck(createBilinearForm( source, {uDomaine}, new feSysElm_Source(funSource))    );
 
-  TimeIntegrator *solver;
-  feTolerances tol{1e-9, 1e-8, 50};
-  double t0 = 0.;
-  double tEnd = 0.1;
-  double nSteps = 50;
-  feCheck(createTimeIntegrator(solver, BDF1, tol, system, &numbering, &sol, &mesh, norms, exportData, t0, tEnd, nSteps));
-  feCheck(solver->makeStep());
+    feLinearSystem *system;
+    feCheck(createLinearSystem(system, PETSC, {adv, diff, source}, numbering.getNbUnknowns(), argc, argv));
 
-  int nInteriorPlotNodes = 40;
-  feBasicViewer viewer("test", mesh.getNumInteriorElements(), nInteriorPlotNodes);
+    feNorm normU(L2_ERROR, {uDomaine}, &sol, funSol);
+    std::vector<feNorm *> norms = {&normU};
 
-  double xLim[2] = {xa, xb};
-  double yLim[2] = {0, 0.2};
-  viewer.setAxesLimits(xLim, yLim);
+    feExporter *exporter;
+    feCheck(createVisualizationExporter(exporter, VTK, &numbering, &sol, &mesh, spaces));
+    int exportEveryNSteps = 1;
+    std::string vtkFileRoot = "output";
+    feExportData exportData = {nullptr, exportEveryNSteps, vtkFileRoot};
 
-  do{
-    viewer.reshapeWindowBox(1.2, mesh, sol);
-    viewer.draw1DCurve(mesh, numbering, sol, uDomaine, funSol);
-    viewer.windowUpdate();
-  } while(!viewer.windowShouldClose());
+    TimeIntegrator *solver;
+    feTolerances tol{1e-10, 1e-10, 10};
+    feCheck(createTimeIntegrator(solver, STATIONARY, tol, system, &numbering, &sol, &mesh, norms, exportData));
+    feCheck(solver->makeStep());
+
+    // Get the error
+    L2error[2*i] = normU.compute();
+
+    if(i == nConv-1){
+      int nInteriorPlotNodes = 40;
+      feBasicViewer viewer("test", mesh.getNumInteriorElements(), nInteriorPlotNodes);
+
+      double xLim[2] = {xa, xb};
+      double yLim[2] = {0, 0.2};
+      viewer.setAxesLimits(xLim, yLim);
+
+      do{
+        viewer.reshapeWindowBox(1.2, mesh, sol);
+        viewer.draw1DCurve(mesh, numbering, sol, uDomaine, funSol);
+        viewer.windowUpdate();
+      } while(!viewer.windowShouldClose());
+    }
+  }
+
+  // Compute the convergence rate
+  for(int i = 1; i < nConv; ++i) {
+    L2error[2 * i + 1] = -log(L2error[2 * i] / L2error[2 * (i - 1)]) / log(nElm[i] / nElm[i - 1]);
+  }
+  printf("%12s \t %12s \t %12s \n", "nElm", "||E_U||", "rate");
+  for(int i = 0; i < nConv; ++i){
+    printf("%12d \t %12.6e \t %12.6e\n", nElm[i], L2error[2 * i], L2error[2 * i + 1]);
+  }
 
   petscFinalize();
   return 0;

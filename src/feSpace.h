@@ -209,6 +209,14 @@ public:
   {
     return _dLdt[_nFunctions * iQuadNode + iFun];
   }
+
+  // Get the gradient in physical coordinates of the basis functions at quadrature node:
+  // gradPhi = [dPhi1dx ... dPhindx, dPhi1dy ... dPhindy, dPhi1dz ... dPhindz]
+  // Size of gradPhi = dim x nFunctions
+  void getFunctionsPhysicalGradientAtQuadNode(const int iQuadNode, const double jac,
+    std::vector<double> & geoCoord, double dxdr[3], double dxds[3], double dxdt[3],
+    double drdx[3], double drdy[3], double drdz[3], double *gradPhi);
+
   double getd2Functiondr2AtQuadNode(const int iFun, const int iQuadNode)
   {
     return _d2Ldr2[_nFunctions * iQuadNode + iFun];
@@ -217,9 +225,6 @@ public:
   {
     return _d2Lds2[_nFunctions * iQuadNode + iFun];
   }
-
-  void getFunctionsPhysicalGradientAtQuadNode(const int iQuadNode, const double jac,
-    std::vector<double> & geoCoord, double *gradPhi);
 
   double getGlobalFunctionAtQuadNode(const int iElm, const int iFun, const int iQuadNode)
   {
@@ -293,7 +298,9 @@ public:
   double interpolateFieldAtQuadNode_ssDerivative(std::vector<double> &field, int iNode);
 
   void interpolateFieldAtQuadNode_physicalGradient(std::vector<double> &field, 
-    const int iQuadNode, const double jac, std::vector<double> & geoCoord, double *grad);
+    const int iQuadNode, const double jac, std::vector<double> & geoCoord,
+    double dxdr[3], double dxds[3], double dxdt[3],
+    double drdx[3], double drdy[3], double drdz[3], double *grad);
 
   // Interpolate scalar field or derivatives at iNode-th quadrature node using global shape functions
   double interpolateFieldAtQuadNode(std::vector<double> &field, int iElm, int iNode);
@@ -305,10 +312,16 @@ public:
                                         std::vector<double> &res);
   void interpolateVectorFieldAtQuadNode_rDerivative(std::vector<double> &field,
     int iNode, std::vector<double> &res);
+  void interpolateVectorFieldAtQuadNode_rDerivative(std::vector<double> &field,
+    int iNode, double res[3]);
   void interpolateVectorFieldAtQuadNode_sDerivative(std::vector<double> &field,
     int iNode, std::vector<double> &res);
+  void interpolateVectorFieldAtQuadNode_sDerivative(std::vector<double> &field,
+    int iNode, double res[3]);
   void interpolateVectorFieldAtQuadNode_tDerivative(std::vector<double> &field,
     int iNode, std::vector<double> &res);
+  void interpolateVectorFieldAtQuadNode_tDerivative(std::vector<double> &field,
+    int iNode, double res[3]);
 };
 
 // -----------------------------------------------------------------------------

@@ -35,7 +35,7 @@ public:
   void assemble(feSolution *sol);
   void assembleMatrices(feSolution *sol);
   void assembleResiduals(feSolution *sol);
-  void solve(double *normDx, double *normResidual, double *normAxb, int *nIter);
+  bool solve(double *normDx, double *normResidual, double *normAxb, int *nIter);
   void correctSolution(feSolution *sol);
   void assignResidualToDCResidual(feSolutionContainer *solContainer);
   void applyCorrectionToResidual(double coeff, std::vector<double> &d);

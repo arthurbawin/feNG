@@ -119,12 +119,14 @@ void feLinearSystemPETSc::initialize()
   ierr = PCSetType(preconditioner, PCILU);
   CHKERRABORT(PETSC_COMM_WORLD, ierr);
 
-  PetscReal rel_tol = 1e-6;
-  PetscReal abs_tol = 1e-12;
+  PetscReal rel_tol = 1e-10;
+  PetscReal abs_tol = 1e-15;
   PetscReal div_tol = 1e6;
-  PetscInt max_iter = 500;
+  PetscInt max_iter = 10000;
 
   ierr = KSPSetTolerances(ksp, rel_tol, abs_tol, div_tol, max_iter);
+  CHKERRABORT(PETSC_COMM_WORLD, ierr);
+  ierr = KSPSetNormType(ksp, KSP_NORM_UNPRECONDITIONED);
   CHKERRABORT(PETSC_COMM_WORLD, ierr);
   ierr = KSPSetFromOptions(ksp);
   CHKERRABORT(PETSC_COMM_WORLD, ierr);
@@ -418,25 +420,62 @@ void feLinearSystemPETSc::assemble(feSolution *sol)
 }
 
 // Solve the system and compute norms of solution and residuals
-void feLinearSystemPETSc::solve(double *normDx, double *normResidual, double *normAxb, int *nIter)
+bool feLinearSystemPETSc::solve(double *normDx, double *normResidual, double *normAxb, int *nIter)
 {
 #if defined(HAVE_PETSC)
-  // KSPView(ksp,PETSC_VIEWER_STDOUT_WORLD);
-  // feInfo("th used : %d",omp_get_thread_num());
   PetscErrorCode ierr = KSPSolve(ksp, _res, _dx);
   CHKERRABORT(PETSC_COMM_WORLD, ierr);
-  // KSPView(ksp,PETSC_VIEWER_STDOUT_WORLD);
+
+  KSPConvergedReason reason;
+  ierr = KSPGetConvergedReason(ksp, &reason);
+
+  bool ret = reason > 0;
+
+  if(reason < 0){
+    const char *reasonString;
+    KSPGetConvergedReasonString(ksp, &reasonString);
+    feWarning("\nPETSc solve failed with KSP error code: %s", reasonString);
+    if(reason == KSP_DIVERGED_PC_FAILED){
+      PCFailedReason reasonpc;
+      ierr = PCGetFailedReason(preconditioner, &reasonpc);
+      switch(reasonpc){
+        case PC_SETUP_ERROR:
+        std::cout << 1 << std::endl;
+        break;
+        case PC_NOERROR:
+        std::cout << 2 << std::endl;
+        break;
+        case PC_FACTOR_STRUCT_ZEROPIVOT:
+        std::cout << 3 << std::endl;
+        break;
+        case PC_FACTOR_NUMERIC_ZEROPIVOT:
+        std::cout << 4 << std::endl;
+        break;
+        case PC_FACTOR_OUTMEMORY:
+        std::cout << 5 << std::endl;
+        break;
+        case PC_FACTOR_OTHER:
+        std::cout << 6 << std::endl;
+        break;
+        case PC_INCONSISTENT_RHS:
+        std::cout << 7 << std::endl;
+        case PC_SUBPC_ERROR:
+        std::cout << 8 << std::endl;
+        break;
+    }
+    }
+  }
+
   KSPGetIterationNumber(ksp, nIter);
   VecSet(_linSysRes, 0.0);
   MatMult(_A, _dx, _linSysRes);
   VecAXPY(_linSysRes, -1.0, _res);
-  ierr = VecNorm(_res, NORM_MAX, normResidual);
-  CHKERRABORT(PETSC_COMM_WORLD, ierr);
-  ierr = VecNorm(_dx, NORM_MAX, normDx);
-  CHKERRABORT(PETSC_COMM_WORLD, ierr);
-  ierr = VecNorm(_linSysRes, NORM_MAX, normAxb);
-  CHKERRABORT(PETSC_COMM_WORLD, ierr);
+  ierr = VecNorm(_res, NORM_MAX, normResidual); CHKERRABORT(PETSC_COMM_WORLD, ierr);
+  ierr = VecNorm(_dx, NORM_MAX, normDx); CHKERRABORT(PETSC_COMM_WORLD, ierr);
+  ierr = VecNorm(_linSysRes, NORM_MAX, normAxb); CHKERRABORT(PETSC_COMM_WORLD, ierr);
+  return ret;
 #endif
+  return false;
 }
 
 void feLinearSystemPETSc::correctSolution(feSolution *sol)

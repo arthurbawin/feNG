@@ -6,6 +6,9 @@
 
 typedef enum {
 
+  SOURCE,
+  MASS,
+
   // 0D weak forms
   STIFFSPRING_0D,
   STIFF2_0D,
@@ -41,6 +44,11 @@ typedef enum {
 inline const std::string toString(elementSystemType t)
 {
   switch(t) {
+
+    case SOURCE:
+      return "SOURCE";
+    case MASS:
+      return "MASS";
 
     case MASS_0D:
       return "MASS_0D";
@@ -142,21 +150,22 @@ public:
   virtual void computeBe(feBilinearForm *form) = 0;
 };
 
-template<int dim>
+// -----------------------------------------------------------------------------
+// Templated or any dimension forms
+// -----------------------------------------------------------------------------
 class feSysElm_Source : public feSysElm
 {
 protected:
-  feFunction *_sourceFun;
-  double _par;
+  feFunction *_source;
   int _idU;
   std::vector<double> _feU;
 
 public:
-  feSysElm_Source(double par, feFunction *fct) : feSysElm(false), _sourceFun(fct), _par(par)
+  feSysElm_Source(feFunction *source) : feSysElm(false), _source(source)
   {
-    _dim = dim;
+    _dim = -1;
     _nFields = 1;
-    _ID = SOURCE_2D;
+    _ID = SOURCE;
   };
 
   ~feSysElm_Source() {}
@@ -165,7 +174,6 @@ public:
   void computeBe(feBilinearForm *form);
 };
 
-template<int dim>
 class feSysElm_Mass : public feSysElm
 {
 protected:
@@ -176,9 +184,9 @@ protected:
 public:
   feSysElm_Mass(double coeff) : feSysElm(true), _coeff(coeff)
   {
-    _dim = dim;
+    _dim = -1;
     _nFields = 1;
-    _ID = MASS_2D;
+    _ID = MASS;
     _computeMatrixWithFD = false;
   };
   ~feSysElm_Mass() {}
@@ -194,7 +202,6 @@ class feSysElm_Diffusion : public feSysElm
 protected:
   feFunction *_diffusivity;
   int _idU;
-  std::vector<double> _feU;
   std::vector<double> _gradPhi;
 
 public:
