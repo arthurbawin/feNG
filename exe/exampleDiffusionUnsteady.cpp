@@ -3,22 +3,20 @@
   Solving the steady-state heat equation on a triangle mesh.
 
 */
+#include <iostream>
+#include <fstream>
 
 #include "feAPI.h"
 
 double fSol(const double t, const std::vector<double> &x, const std::vector<double> &par)
 {
-  double D = 0.05;
-  double cx = 0.5;
-  double cy = 0.5;
-  double pi = 3.14159;
-  return 1.0 / (4.0 * pi * D * t) *exp(-((x[0]-cx)*(x[0]-cx)+(x[1]-cy)*(x[1]-cy))/(4.0*D*t)) ;
+  return pow(x[0],2) + pow(x[1],2) + pow(t,6);
 }
 
 double fSource(const double t, const std::vector<double> &pos, const std::vector<double> &par)
 {
   double k = par[0];
-  return k * 30. * pos[0] * pos[0] * pos[0] * pos[0];
+  return -6.*pow(t,5) + k*4.;
 }
 
 double fZero(const double t, const std::vector<double> &pos, const std::vector<double> &par)
@@ -33,129 +31,198 @@ int main(int argc, char **argv)
   petscInitialize(argc, argv);
 
   // Set the default parameters.
-  const char *meshFile = "../data/mesh/finer_27k.msh";
+  
   int verbosity = 2;
-  int order = 2;
+  int order = 3;
   int degreeQuadrature = 10;
+  int nIter = 1;
 
-  // Create an option parser and parse the command line arguments.
-  // If a command line argument is provided, it will overwrite the default parameter.
-  // Each "addOption" adds an optional field, although it can be made required by
-  // setting the 5th argument of addOption to "true".
-  feOptionsParser options(argc, argv);
-  options.addOption(&meshFile, "-m", "--mesh", "Mesh file");
-  options.addOption(&order, "-o", "--order", "Finite element space order");
-  options.addOption(&degreeQuadrature, "-dquad", "--degreeQuadrature", "Degree of the quadrature");
-  options.addOption(&verbosity, "-v", "--verbosity", "Verbosity level");
-  feCheck(options.parse());
-
-  // Set the global verbosity level :
-  // - 0 : No information messages, only print warnings and errors
-  // - 1 : Moderate information messages (default)
-  // - 2 : All information messages
-  setVerbose(verbosity);
-
-  // Create a mesh structure from a Gmsh mesh file (version 2.2 or 4.1+)
-  feMesh2DP1 mesh(meshFile);
-
-  // Create function structures for the analytic solution and the source term
-  // Here the model PDE is the stationary heat equation div(k grad u) + f = 0,
-  // with k the thermal conductivity.
-  double k = 1.0;
+  double k = 0.0001;
   feFunction *funSol = new feFunction(fSol, {});
   feFunction *funSource = new feFunction(fSource, {k});
   feFunction *funZero = new feFunction(fZero, {});
 
-  // Define a finite element space on each subdomain of the computational domain.
-  // Here the mesh contains only a 2D subdomain ("Domaine") and a 1D boundary ("Bord"),
-  // and the solution field is named "U". Quadrature rules are defined on the finite
-  // element space, with parameter "degreeQuadrature" governing the number of quad nodes.
-  // The function provided is used to initialize the degrees of freedom on the feSpace.
-  int dim;
-  feSpace *uBord, *uDomaine;
-  feCheck(createFiniteElementSpace(uBord, &mesh, dim = 1, LINE, order, "U", "Bord",
-                                   degreeQuadrature, funSol));
-  feCheck(createFiniteElementSpace(uDomaine, &mesh, dim = 2, TRI, order, "U", "Domaine",
-                                   degreeQuadrature, funSol));
+  feOptionsParser options(argc, argv);
+  options.addOption(&nIter, "-n", "--nMeshes", "Number of meshes for the convergence study");
+  options.addOption(&order, "-o", "--order", "Finite element space order");
+  options.addOption(&degreeQuadrature, "-dquad", "--degreeQuadrature", "Degree of the quadrature");
+  options.addOption(&verbosity, "-v", "--verbosity", "Verbosity level");
+  feCheck(options.parse());
+  setVerbose(verbosity);
 
-  // Define the set of all finite elements spaces and the set of feSpaces
-  // forming the essential boundary conditions. The second set must always be
-  // a subset of the first.
-  // std::vector<feSpace *> spaces = {uDirichlet, uNeumannHaut, uNeumannBas, uDomaine};
-  std::vector<feSpace *> spaces = {uBord, uDomaine};
-  std::vector<feSpace *> essentialSpaces = {uBord};
-
-  // Create a "meta" structure containing the numbering of each unknown field.
-  feMetaNumber metaNumber(&mesh, spaces, essentialSpaces);
-
-  // Create the solution structure (contains essentially the solution at all DOFs).
-  feSolution sol(&mesh, spaces, essentialSpaces, &metaNumber);
-
-  // Define (bi-)linear forms : here we define a bilinear symmetric diffusion form which
-  // is the integral of k*(grad phi)_i*(grad phi)_j and a linear form which is the integral
-  // of f*phi_i.
-  feBilinearForm diffU({uDomaine}, &mesh, degreeQuadrature, new feSysElm_2D_Diffusion(k, nullptr));
-  feBilinearForm sourceU({uDomaine}, &mesh, degreeQuadrature, new feSysElm_2D_Source(1.0, funZero));
-  feBilinearForm masseU({uDomaine}, &mesh, degreeQuadrature, new feSysElm_2D_Masse(k, nullptr));
+  std::vector<double> normBDF(2 * nIter, 0.0);
+  std::vector<double> normDC2(2 * nIter, 0.0);
+  std::vector<double> normDC3(2 * nIter, 0.0);
+  std::vector<double> normDC4(2 * nIter, 0.0);
+  std::vector<double> normDC5(2 * nIter, 0.0);
+  std::vector<int> nElm(nIter, 0);
+  std::vector<int> TT(nIter, 0);
 
 
-  // Initialize the linear system. Assembly of the elementary matrices and RHS is
-  // performed in the solve step. Two linear solvers are available :
-  // MKL Pardiso (direct solver) and PETSc (collection of iterative solvers).
-  feLinearSystem *system;
-  feCheck(createLinearSystem(system, PETSC, spaces, {&diffU, &sourceU, &masseU}, &metaNumber, &mesh, argc, argv));
+  for(int iter = 0; iter < nIter; ++iter) {
 
-  // Define post-processin tools to compute norms and whatnot (norms will be replaced by
-  // fePostProc)
-  feComputer *normU = new feComputer(uDomaine, &mesh, &metaNumber, "L2Norm_1Field", funSol);
-  std::vector<feComputer *> norms = {normU};
-  // Create an exporter structure to write the solution for visualization. Currently the only
-  // supported format for visualization is VTK.
-  feExporter *exporter;
-  feCheck(createVisualizationExporter(exporter, VTK, &metaNumber, &sol, &mesh, spaces));
-  int exportEveryNSteps = 1;
-  std::string vtkFileRoot = "outDIFF_";
-  feExportData exportData = {exporter, exportEveryNSteps, vtkFileRoot};
+    // std::string meshName ="../data/Convergence/finer" + std::to_string(iter+1) + ".msh";
+    std::string meshName = "../data/Convergence/squareDirichlet1.msh";
 
-  // Solve the discrete problem. Initialize a TimeIntegrator object and tolerances on the
-  // Newton-Raphson nonlinear solver (tolerance on the solution correction dx, tolerance on the
-  // residual, max number of iterations). Here the PDE is linear : the nonlinear solver should
-  // converge in 2 iterations. The TimeIntegrator can be STATIONARY, BDF1, BDF2 or a
-  // deferred-correction method (DC2F, DC3, DC3F). The solution will be exported for visualization
-  // according to the exportData structure. The linear system is assembled and solved in the
-  // "makeSteps()" call.
-  TimeIntegrator *solver;
-  feTolerances tol{1e-9, 1e-8, 4};
-  double t0 = 1.;
-  double t1 = 1.2;
-  int nTimeSteps = 10;
-  feCheck(createTimeIntegrator(solver, BDF1, tol, system, &metaNumber, &sol, &mesh, norms, exportData, t0, t1, nTimeSteps));
-  feCheck(solver->makeSteps(nTimeSteps));
+    feMesh2DP1 mesh(meshName);
+    nElm[iter] = mesh.getNbInteriorElems();
 
-  // Post-process the solution
-  fePostProc post(uDomaine, &mesh, &metaNumber, funSol);
-  feInfo("Measure = %f", post.computeMeasure());
-  feInfo("Integral of sol = %10.10f", post.computeSolutionIntegral(&sol));
-  feInfo("Integral of fun = %10.10f", post.computeFunctionIntegral(funSol, 1.2));
-  feInfo("L2 Error = %10.10f", post.computeL2ErrorNorm(&sol));
 
-  for(size_t i=0; i<norms.size();i++){
-      std::vector<double> result = norms[i]->getResult();
-      std::cout<< "Erreur norme L2 de " << norms[i]->getIntSpace()->getFieldID() << std::endl;
-      for(size_t j=0; j<result.size();j++){
-        feInfo("normL2[%d] = %10.10f",j,result[j]);
-      }
+    int dim;
+    feSpace *uBord, *uDomaine;
+    feCheck(createFiniteElementSpace(uBord, &mesh, dim = 1, LINE, order, "U", "Bord", degreeQuadrature, funSol));
+    feCheck(createFiniteElementSpace(uDomaine, &mesh, dim = 2, TRI, order, "U", "Surface", degreeQuadrature, funSol));
+
+    std::vector<feSpace *> spaces = {uBord, uDomaine};
+    std::vector<feSpace *> essentialSpaces = {uBord};
+
+    feMetaNumber metaNumber(&mesh, spaces, essentialSpaces);
+
+    feSolution sol(&mesh, spaces, essentialSpaces, &metaNumber);
+
+    feBilinearForm masseU({uDomaine}, &mesh, degreeQuadrature, new feSysElm_2D_Masse(1.0, nullptr));
+    feBilinearForm diffU({uDomaine}, &mesh, degreeQuadrature, new feSysElm_2D_Diffusion(k, nullptr));
+    feBilinearForm sourceU({uDomaine}, &mesh, degreeQuadrature, new feSysElm_2D_Source(1.0, funSource));
+
+
+    feLinearSystem *system;
+    feCheck(createLinearSystem(system, PETSC, spaces, {&diffU, &sourceU, &masseU}, &metaNumber, &mesh, argc, argv));
+    // feCheck(createLinearSystem(system, MKLPARDISO, spaces, {&diffU, &sourceU, &masseU}, &metaNumber, &mesh, argc, argv));
+
+    feNormV2  *normU = new feNormV2({uDomaine}, &mesh, &metaNumber, "L2Norm_1Field", {funSol});
+    std::vector<feNormV2 *> norms = {normU};
+
+    feExporter *exporter;
+    feCheck(createVisualizationExporter(exporter, VTK, &metaNumber, &sol, &mesh, spaces));
+    int exportEveryNSteps = 1;
+    std::string vtkFileRoot = "outDIFF_";
+    feExportData exportData = {nullptr, exportEveryNSteps, vtkFileRoot};
+
+
+    // Solver
+    feSolverV2 *solver;
+    feTolerancesV2 tol{1e-11, 1e-11, 50};
+    // double criteriaNormU; double criteriaNormRes; double ratioNormU; double ratioNormRes; double nbIterBeforeRecompute; double convergedBeforeNIter;
+    feMatrixComputeCriteria criteria{1e-0, 1e-0, 5, 5, 4, 5};
+    feCheck(createSolver(solver, system, &metaNumber, Newton, tol, &criteria));
+
+
+    //Resolution
+    feTimeIntegrator *timeIntegrator;
+    double t0 = 0.;
+    double t1 = 1.;
+    std::string codeDt = "Alt";
+    int nTimeSteps = 10* pow(2, iter);
+    TT[iter] = nTimeSteps;
+    // feCheck(createTimeIntegrator(solver, DC5, tol, system, &metaNumber, &sol, &mesh, comput, exportData, t0, t1, nTimeSteps, CodeIni));
+    feCheck(createTimeIntegratorV2(timeIntegrator, &mesh, solver, system, &metaNumber, &sol, DC5F_V2, "SOLDOT", t0, t1, nTimeSteps, norms, exportData, codeDt));
+    feCheck(timeIntegrator->makeSteps());
+
+
+    std::vector<double> normIterBDF = timeIntegrator->getINormBDF(0);
+    std::vector<double> normIterDC2 = timeIntegrator->getINormDC2(0);
+    std::vector<double> normIterDC3 = timeIntegrator->getINormDC3(0);
+    std::vector<double> normIterDC4 = timeIntegrator->getINormDC4(0);
+    std::vector<double> normIterDC5 = timeIntegrator->getINormDC5(0);
+    normBDF[2*iter] = *std::max_element(normIterBDF.begin(), normIterBDF.end());
+    normDC2[2*iter] = *std::max_element(normIterDC2.begin(), normIterDC2.end());
+    normDC3[2*iter] = *std::max_element(normIterDC3.begin(), normIterDC3.end());
+    normDC4[2*iter] = *std::max_element(normIterDC4.begin(), normIterDC4.end());
+    normDC5[2*iter] = *std::max_element(normIterDC5.begin(), normIterDC5.end());
+
+    // printf("\n");
+    // feInfo("normBDF");
+    // for (size_t i=0; i<normIterBDF.size(); i++){
+    //   feInfo("%f", normIterBDF[i]);
+    // }
+
+    // printf("\n"); 
+    // feInfo("normDC2");
+    // for (size_t i=0; i<normIterDC2.size(); i++){
+    //   feInfo("%f", normIterDC2[i]);
+    // }
+
+    // printf("\n"); 
+    // feInfo("normDC3");
+    // for (size_t i=0; i<normIterDC3.size(); i++){
+    //   feInfo("%f", normIterDC3[i]);
+    // }
+
+    // printf("\n"); 
+    // feInfo("normDC4");
+    // for (size_t i=0; i<normIterDC4.size(); i++){
+    //   feInfo("%f", normIterDC4[i]);
+    // }
+
+    // printf("\n"); 
+    // feInfo("normDC5");
+    // for (size_t i=0; i<normIterDC5.size(); i++){
+    //   feInfo("%f", normIterDC5[i]);
+    // }
+
+    // printf("\n"); 
+    // feInfo("normDC6");
+    // for (size_t i=0; i<normIterDC6.size(); i++){
+    //   feInfo("%f", normIterDC6[i]);
+    // }
+
+
+
+    delete solver;
+    delete exporter;
+    delete uDomaine;
+    delete uBord;
   }
 
-  // Free the used memory
-  delete solver;
-  delete exporter;
-  delete uDomaine;
-  delete uBord;
+
+  // Calcul du taux de convergence
+  for(int i = 1; i < nIter; ++i) {
+    normBDF[2 * i + 1] = -log(normBDF[2 * i] / normBDF[2 * (i - 1)]) / log(2.);
+    normDC2[2 * i + 1] = -log(normDC2[2 * i] / normDC2[2 * (i - 1)]) / log(2.);
+    normDC3[2 * i + 1] = -log(normDC3[2 * i] / normDC3[2 * (i - 1)]) / log(2.);
+    normDC4[2 * i + 1] = -log(normDC4[2 * i] / normDC4[2 * (i - 1)]) / log(2.);
+    normDC5[2 * i + 1] = -log(normDC5[2 * i] / normDC5[2 * (i - 1)]) / log(2.);
+    
+  }
+
+  printf("BDF");
+  printf("%12s \t %12s \t %12s\n", "nElm", "||u-uh||", "tauxU");
+  for(int i = 0; i < nIter; ++i)
+    printf("%12d \t %12.6e \t %12.6e \n", nElm[i], normBDF[2 * i], normBDF[2 * i + 1]);
+
+
+  printf("");
+  printf("DC2");
+  printf("%12s \t %12s \t %12s\n", "nElm", "||u-uh||", "tauxU");
+  for(int i = 0; i < nIter; ++i)
+    printf("%12d \t %12.6e \t %12.6e \n", nElm[i], normDC2[2 * i], normDC2[2 * i + 1]);
+
+
+  printf("");
+  printf("DC3");
+  printf("%12s \t %12s \t %12s\n", "nElm", "||u-uh||", "tauxU");
+  for(int i = 0; i < nIter; ++i)
+    printf("%12d \t %12.6e \t %12.6e \n", nElm[i], normDC3[2 * i], normDC3[2 * i + 1]);
+
+
+  printf("");
+  printf("DC4");
+  printf("%12s \t %12s \t %12s\n", "nElm", "||u-uh||", "tauxU");
+  for(int i = 0; i < nIter; ++i)
+    printf("%12d \t %12.6e \t %12.6e \n", nElm[i], normDC4[2 * i], normDC4[2 * i + 1]);
+
+
+  printf("");
+  printf("DC5");
+  printf("%12s \t %12s \t %12s\n", "nElm", "||u-uh||", "tauxU");
+  for(int i = 0; i < nIter; ++i)
+    printf("%12d \t %12.6e \t %12.6e \n", nElm[i], normDC5[2 * i], normDC5[2 * i + 1]);
+ 
   delete funSol;
   delete funSource;
+  delete funZero;
 
   petscFinalize();
-  // toc();
+
   return 0;
 }
