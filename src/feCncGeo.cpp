@@ -172,13 +172,13 @@ feStatus feCncGeo::computeJacobians()
 
     case 1:
     {
-      std::vector<double> j(3, 0.0);
+      std::vector<double> dxdr(3, 0.0);
 
       for(int iElm = 0; iElm < _nElements; ++iElm) {
         _mesh->getCoord(_tag, iElm, geoCoord);
         for(int k = 0; k < nQuad; ++k) {
-          _geometricInterpolant->interpolateVectorFieldAtQuadNode_rDerivative(geoCoord, k, j);
-          _J[nQuad * iElm + k] = sqrt(j[0] * j[0] + j[1] * j[1]);
+          _geometricInterpolant->interpolateVectorFieldAtQuadNode_rDerivative(geoCoord, k, dxdr);
+          _J[nQuad * iElm + k] = sqrt(dxdr[0] * dxdr[0] + dxdr[1] * dxdr[1]);
         }
       }
       break;
@@ -215,6 +215,30 @@ feStatus feCncGeo::computeJacobians()
   }
 
   return FE_STATUS_OK;
+}
+
+void feCncGeo::computeElementTransformation(std::vector<double> &elementCoord, const int iQuadNode,
+  const double jac, ElementTransformation &T)
+{
+  T.jac = jac;
+  if(_dim == 0){
+    T.drdx[0] = 1.;
+  } else if(_dim == 1){
+    _geometricInterpolant->interpolateVectorFieldAtQuadNode_rDerivative(elementCoord, iQuadNode, T.dxdr);
+    T.drdx[0] = 1. / T.dxdr[0];
+  } else if(_dim == 2){
+    _geometricInterpolant->interpolateVectorFieldAtQuadNode_rDerivative(elementCoord, iQuadNode, T.dxdr);
+    _geometricInterpolant->interpolateVectorFieldAtQuadNode_sDerivative(elementCoord, iQuadNode, T.dxds);
+    T.drdx[0] =  T.dxds[1] / jac; T.drdx[1] = -T.dxdr[1] / jac;
+    T.drdy[0] = -T.dxds[0] / jac; T.drdy[1] =  T.dxdr[0] / jac;
+  } else if(_dim == 3){
+    _geometricInterpolant->interpolateVectorFieldAtQuadNode_rDerivative(elementCoord, iQuadNode, T.dxdr);
+    _geometricInterpolant->interpolateVectorFieldAtQuadNode_sDerivative(elementCoord, iQuadNode, T.dxds);
+    _geometricInterpolant->interpolateVectorFieldAtQuadNode_tDerivative(elementCoord, iQuadNode, T.dxdt);
+     /* Write inverse of 3x3 matrix (-: */
+    feErrorMsg(FE_STATUS_ERROR, "Inverse of element transformation not implemented in 3D");
+    exit(-1);
+  }
 }
 
 static int colorChoice(std::vector<bool> availableColor, std::vector<int> &nbElmPerColor,

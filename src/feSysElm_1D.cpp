@@ -387,6 +387,7 @@ void feSysElm_1D_Euler::computeBe(feBilinearForm *form)
 
   for(int k = 0; k < _nQuad; ++k) {
     jac = form->_J[_nQuad * form->_numElem + k];
+    form->_cnc->computeElementTransformation(form->_geoCoord, k, jac, form->_transformation);
 
     form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, _pos);
     double A = area(_pos[0]);
@@ -404,12 +405,9 @@ void feSysElm_1D_Euler::computeBe(feBilinearForm *form)
 
     form->_intSpaces[_idru]->getFunctionsAtQuadNode(k, _phiru);
 
-    form->_intSpaces[_idr]->getFunctionsPhysicalGradientAtQuadNode(k, jac, form->_geoCoord, 
-      form->_dxdr, form->_dxds, form->_dxdt, form->_drdx, form->_drdy, form->_drdz, _gradphir.data());
-    form->_intSpaces[_idru]->getFunctionsPhysicalGradientAtQuadNode(k, jac, form->_geoCoord, 
-      form->_dxdr, form->_dxds, form->_dxdt, form->_drdx, form->_drdy, form->_drdz, _gradphiru.data());
-    form->_intSpaces[_idre]->getFunctionsPhysicalGradientAtQuadNode(k, jac, form->_geoCoord, 
-      form->_dxdr, form->_dxds, form->_dxdt, form->_drdx, form->_drdy, form->_drdz, _gradphire.data());
+    form->_intSpaces[_idr]->getFunctionsPhysicalGradientAtQuadNode(k, form->_transformation, _gradphir.data());
+    form->_intSpaces[_idru]->getFunctionsPhysicalGradientAtQuadNode(k, form->_transformation, _gradphiru.data());
+    form->_intSpaces[_idre]->getFunctionsPhysicalGradientAtQuadNode(k, form->_transformation, _gradphire.data());
 
     double flux[3];
     flux[0] = rhouA;
@@ -672,14 +670,12 @@ void feSysElm_1D_Coupled::computeAe(feBilinearForm *form)
   double jac;
   for(int k = 0; k < _nQuad; ++k) {
     jac = form->_J[_nQuad * form->_numElem + k];
+    form->_cnc->computeElementTransformation(form->_geoCoord, k, jac, form->_transformation);
     
     form->_intSpaces[_idu]->getFunctionsAtQuadNode(k, _phiu);
     form->_intSpaces[_idv]->getFunctionsAtQuadNode(k, _phiv);
-
-    form->_intSpaces[_idu]->getFunctionsPhysicalGradientAtQuadNode(k, jac, form->_geoCoord, 
-      form->_dxdr, form->_dxds, form->_dxdt, form->_drdx, form->_drdy, form->_drdz, _gradphiu.data());
-    form->_intSpaces[_idv]->getFunctionsPhysicalGradientAtQuadNode(k, jac, form->_geoCoord, 
-      form->_dxdr, form->_dxds, form->_dxdt, form->_drdx, form->_drdy, form->_drdz, _gradphiv.data());
+    form->_intSpaces[_idu]->getFunctionsPhysicalGradientAtQuadNode(k, form->_transformation, _gradphiu.data());
+    form->_intSpaces[_idv]->getFunctionsPhysicalGradientAtQuadNode(k, form->_transformation, _gradphiv.data());
 
     int I = 0, J = 0;
     // Residu pour u
@@ -712,6 +708,7 @@ void feSysElm_1D_Coupled::computeBe(feBilinearForm *form)
   double jac;
   for(int k = 0; k < _nQuad; ++k) {
     jac = form->_J[_nQuad * form->_numElem + k];
+    form->_cnc->computeElementTransformation(form->_geoCoord, k, jac, form->_transformation);
     
     // Compute current fields and gradient of test functions
     double u = form->_intSpaces[_idu]->interpolateFieldAtQuadNode(form->_sol[_idu], k);
@@ -720,10 +717,8 @@ void feSysElm_1D_Coupled::computeBe(feBilinearForm *form)
     form->_intSpaces[_idu]->getFunctionsAtQuadNode(k, _phiu);
     form->_intSpaces[_idv]->getFunctionsAtQuadNode(k, _phiv);
 
-    form->_intSpaces[_idu]->getFunctionsPhysicalGradientAtQuadNode(k, jac, form->_geoCoord, 
-      form->_dxdr, form->_dxds, form->_dxdt, form->_drdx, form->_drdy, form->_drdz, _gradphiu.data());
-    form->_intSpaces[_idv]->getFunctionsPhysicalGradientAtQuadNode(k, jac, form->_geoCoord, 
-      form->_dxdr, form->_dxds, form->_dxdt, form->_drdx, form->_drdy, form->_drdz, _gradphiv.data());
+    form->_intSpaces[_idu]->getFunctionsPhysicalGradientAtQuadNode(k, form->_transformation, _gradphiu.data());
+    form->_intSpaces[_idv]->getFunctionsPhysicalGradientAtQuadNode(k, form->_transformation, _gradphiv.data());
 
     int cnt = 0;
     // Residu pour u

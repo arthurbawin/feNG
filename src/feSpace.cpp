@@ -216,8 +216,9 @@ feStatus createFiniteElementSpace(feSpace *&space,
   feQuadrature rule(degreeQuadrature, mesh->getCncGeoByName(cncGeoID)->getGeometry());
   
   // FIXME: the FE space of the geometric connectivity is the one of the last created space...
-  feCheck(space->getCncGeo()->getFeSpace()->setQuadratureRule(&rule));
-  feCheck(space->setQuadratureRule(&rule));
+  feStatus s;
+  s = space->getCncGeo()->getFeSpace()->setQuadratureRule(&rule); if(s != FE_STATUS_OK){ return s; }
+  s = space->setQuadratureRule(&rule); if(s != FE_STATUS_OK){ return s; }
 
   return FE_STATUS_OK;
 }
@@ -406,61 +407,40 @@ void feSpace::getFunctionsAtQuadNode(const int iQuadNode, std::vector<double> &p
   }
 }
 
-void feSpace::getFunctionsPhysicalGradientAtQuadNode(const int iQuadNode, const double jac, 
-  std::vector<double> & geoCoord, double dxdr[3], double dxds[3], double dxdt[3],
-    double drdx[3], double drdy[3], double drdz[3], double *gradPhi)
+void feSpace::getFunctionsPhysicalGradientAtQuadNode(const int iQuadNode,
+  const ElementTransformation &T, double *gradPhi)
 {
-  // Inverse of the jacobian of the transformation dx/dr:
-  feSpace *geometricInterpolant = this->getCncGeo()->getFeSpace();
-
   if(_dim == 0){
     gradPhi[0] = 0.;
   }
   else if(_dim == 1)
   {
-    geometricInterpolant->interpolateVectorFieldAtQuadNode_rDerivative(geoCoord, iQuadNode, dxdr);
-    // drdx[0] = 1. / jac;
     for(int i = 0; i < _nFunctions; ++i){
-      // gradPhi[i] = _dLdr[_nFunctions * iQuadNode + i] * drdx[0];
-      gradPhi[i] = _dLdr[_nFunctions * iQuadNode + i] / jac;
+      gradPhi[i] = _dLdr[_nFunctions * iQuadNode + i] * T.drdx[0];
+      // gradPhi[i] = _dLdr[_nFunctions * iQuadNode + i] / jac;
     }
   }
   else if(_dim == 2)
   {
-    geometricInterpolant->interpolateVectorFieldAtQuadNode_rDerivative(geoCoord, iQuadNode, dxdr);
-    geometricInterpolant->interpolateVectorFieldAtQuadNode_sDerivative(geoCoord, iQuadNode, dxds);
-    drdx[0] =  dxds[1] / jac; drdx[1] = -dxdr[1] / jac;
-    drdy[0] = -dxds[0] / jac; drdy[1] =  dxdr[0] / jac;
     for(int i = 0; i < _nFunctions; ++i){
-      gradPhi[i*_dim + 0] = _dLdr[_nFunctions * iQuadNode + i] * drdx[0] +
-                            _dLds[_nFunctions * iQuadNode + i] * drdx[1];
- 
-      gradPhi[i*_dim + 1] = _dLdr[_nFunctions * iQuadNode + i] * drdy[0] +
-                            _dLds[_nFunctions * iQuadNode + i] * drdy[1];
+      gradPhi[i*_dim + 0] = _dLdr[_nFunctions * iQuadNode + i] * T.drdx[0] +
+                            _dLds[_nFunctions * iQuadNode + i] * T.drdx[1];
+      gradPhi[i*_dim + 1] = _dLdr[_nFunctions * iQuadNode + i] * T.drdy[0] +
+                            _dLds[_nFunctions * iQuadNode + i] * T.drdy[1];
     }
   }
   else if(_dim == 3)
   {
-    geometricInterpolant->interpolateVectorFieldAtQuadNode_rDerivative(geoCoord, iQuadNode, dxdr);
-    geometricInterpolant->interpolateVectorFieldAtQuadNode_sDerivative(geoCoord, iQuadNode, dxds);
-    geometricInterpolant->interpolateVectorFieldAtQuadNode_tDerivative(geoCoord, iQuadNode, dxdt);
-
-    /* Write inverse of 3x3 matrix (-: */
-    feErrorMsg(FE_STATUS_ERROR, "Gradient of shape functions not implemented in 3D");
-    exit(-1);
-
     for(int i = 0; i < _nFunctions; ++i){
-      gradPhi[i*_dim + 0] = _dLdr[_nFunctions * iQuadNode + i] * drdx[0] +
-                            _dLds[_nFunctions * iQuadNode + i] * drdx[1] +
-                            _dLdt[_nFunctions * iQuadNode + i] * drdx[2];
-
-      gradPhi[i*_dim + 1] = _dLdr[_nFunctions * iQuadNode + i] * drdy[0] +
-                            _dLds[_nFunctions * iQuadNode + i] * drdy[1] +
-                            _dLdt[_nFunctions * iQuadNode + i] * drdy[2];
-
-      gradPhi[i*_dim + 2] = _dLdr[_nFunctions * iQuadNode + i] * drdz[0] +
-                            _dLds[_nFunctions * iQuadNode + i] * drdz[1] +
-                            _dLdt[_nFunctions * iQuadNode + i] * drdz[2];
+      gradPhi[i*_dim + 0] = _dLdr[_nFunctions * iQuadNode + i] * T.drdx[0] +
+                            _dLds[_nFunctions * iQuadNode + i] * T.drdx[1] +
+                            _dLdt[_nFunctions * iQuadNode + i] * T.drdx[2];
+      gradPhi[i*_dim + 1] = _dLdr[_nFunctions * iQuadNode + i] * T.drdy[0] +
+                            _dLds[_nFunctions * iQuadNode + i] * T.drdy[1] +
+                            _dLdt[_nFunctions * iQuadNode + i] * T.drdy[2];
+      gradPhi[i*_dim + 2] = _dLdr[_nFunctions * iQuadNode + i] * T.drdz[0] +
+                            _dLds[_nFunctions * iQuadNode + i] * T.drdz[1] +
+                            _dLdt[_nFunctions * iQuadNode + i] * T.drdz[2];
     }
   }  
 }
@@ -714,67 +694,45 @@ double feSpace::interpolateFieldAtQuadNode_ssDerivative(std::vector<double> &fie
 }
 
 void feSpace::interpolateFieldAtQuadNode_physicalGradient(std::vector<double> &field,
-  const int iQuadNode, const double jac, std::vector<double> & geoCoord, 
-  double dxdr[3], double dxds[3], double dxdt[3],
-  double drdx[3], double drdy[3], double drdz[3], double *grad)
+  const int iQuadNode, const ElementTransformation &T, double *grad)
 {
-  // Inverse of the jacobian of the transformation dx/dr:
-  feSpace *geometricInterpolant = this->getCncGeo()->getFeSpace();
-
   grad[0] = grad[1] = grad[2] = 0.;
   if(_dim == 0){
     grad[0] = 0.;
   }
   else if(_dim == 1)
   {
-    geometricInterpolant->interpolateVectorFieldAtQuadNode_rDerivative(geoCoord, iQuadNode, dxdr);
     for(int i = 0; i < _nFunctions; ++i){
-      double dphi_i_dx = _dLdr[_nFunctions * iQuadNode + i];
+      double dphi_i_dx = _dLdr[_nFunctions * iQuadNode + i] * T.drdx[0];
       grad[0] += field[i] * dphi_i_dx;
     }
-    grad[0] /= jac;
+    // grad[0] /= jac;
   }
   else if(_dim == 2)
   {
-    geometricInterpolant->interpolateVectorFieldAtQuadNode_rDerivative(geoCoord, iQuadNode, dxdr);
-    geometricInterpolant->interpolateVectorFieldAtQuadNode_sDerivative(geoCoord, iQuadNode, dxds);
-    drdx[0] =  dxds[1]; drdx[1] = -dxdr[1];
-    drdy[0] = -dxds[0]; drdy[1] =  dxdr[0];
     for(int i = 0; i < _nFunctions; ++i){
-      double dphi_i_dx = _dLdr[_nFunctions * iQuadNode + i] * drdx[0] +
-                         _dLds[_nFunctions * iQuadNode + i] * drdx[1];
-      double dphi_i_dy = _dLdr[_nFunctions * iQuadNode + i] * drdy[0] +
-                         _dLds[_nFunctions * iQuadNode + i] * drdy[1]; 
-
+      double dphi_i_dx = _dLdr[_nFunctions * iQuadNode + i] * T.drdx[0] +
+                         _dLds[_nFunctions * iQuadNode + i] * T.drdx[1];
+      double dphi_i_dy = _dLdr[_nFunctions * iQuadNode + i] * T.drdy[0] +
+                         _dLds[_nFunctions * iQuadNode + i] * T.drdy[1]; 
       grad[0] += field[i] * dphi_i_dx;
       grad[1] += field[i] * dphi_i_dy;
     }
-    grad[0] /= jac;
-    grad[1] /= jac;
+    // grad[0] /= jac;
+    // grad[1] /= jac;
   }
   else if(_dim == 3)
   {
-    geometricInterpolant->interpolateVectorFieldAtQuadNode_rDerivative(geoCoord, iQuadNode, dxdr);
-    geometricInterpolant->interpolateVectorFieldAtQuadNode_sDerivative(geoCoord, iQuadNode, dxds);
-    geometricInterpolant->interpolateVectorFieldAtQuadNode_tDerivative(geoCoord, iQuadNode, dxdt);
-
-    /* Write inverse of 3x3 matrix (-: */
-    feErrorMsg(FE_STATUS_ERROR, "Gradient of shape functions not implemented in 3D");
-    exit(-1);
-
     for(int i = 0; i < _nFunctions; ++i){
-      double dphi_i_dx = _dLdr[_nFunctions * iQuadNode + i] * drdx[0] +
-                         _dLds[_nFunctions * iQuadNode + i] * drdx[1] +
-                         _dLdt[_nFunctions * iQuadNode + i] * drdx[2];
-
-      double dphi_i_dy = _dLdr[_nFunctions * iQuadNode + i] * drdy[0] +
-                         _dLds[_nFunctions * iQuadNode + i] * drdy[1] +
-                         _dLdt[_nFunctions * iQuadNode + i] * drdy[2];
-
-      double dphi_i_dz = _dLdr[_nFunctions * iQuadNode + i] * drdz[0] +
-                         _dLds[_nFunctions * iQuadNode + i] * drdz[1] +
-                         _dLdt[_nFunctions * iQuadNode + i] * drdz[2];
-
+      double dphi_i_dx = _dLdr[_nFunctions * iQuadNode + i] * T.drdx[0] +
+                         _dLds[_nFunctions * iQuadNode + i] * T.drdx[1] +
+                         _dLdt[_nFunctions * iQuadNode + i] * T.drdx[2];
+      double dphi_i_dy = _dLdr[_nFunctions * iQuadNode + i] * T.drdy[0] +
+                         _dLds[_nFunctions * iQuadNode + i] * T.drdy[1] +
+                         _dLdt[_nFunctions * iQuadNode + i] * T.drdy[2];
+      double dphi_i_dz = _dLdr[_nFunctions * iQuadNode + i] * T.drdz[0] +
+                         _dLds[_nFunctions * iQuadNode + i] * T.drdz[1] +
+                         _dLdt[_nFunctions * iQuadNode + i] * T.drdz[2];
       grad[0] += field[i] * dphi_i_dx;
       grad[1] += field[i] * dphi_i_dy;
       grad[2] += field[i] * dphi_i_dz;
@@ -783,13 +741,8 @@ void feSpace::interpolateFieldAtQuadNode_physicalGradient(std::vector<double> &f
 }
 
 void feSpace::interpolateVectorFieldAtQuadNode_physicalGradient(std::vector<double> &field,
-  const int nComponents, const int iQuadNode, const double jac, std::vector<double> & geoCoord, 
-  double dxdr[3], double dxds[3], double dxdt[3],
-  double drdx[3], double drdy[3], double drdz[3], double *grad)
+  const int nComponents, const int iQuadNode, const ElementTransformation &T, double *grad)
 {
-  // Inverse of the jacobian of the transformation dx/dr:
-  feSpace *geometricInterpolant = this->getCncGeo()->getFeSpace();
-
   // Size of grad is nComponents x nComponents: derivatives are computed
   // assuming the highest space dimension is the number of vector components.
   // The resulting grad array is:
@@ -799,59 +752,42 @@ void feSpace::interpolateVectorFieldAtQuadNode_physicalGradient(std::vector<doub
 
   if(nComponents == 1)
   {
-    geometricInterpolant->interpolateVectorFieldAtQuadNode_rDerivative(geoCoord, iQuadNode, dxdr);
     for(int i = 0; i < _nFunctions; ++i){
-      double dphi_i_dx = _dLdr[_nFunctions * iQuadNode + i];
+      double dphi_i_dx = _dLdr[_nFunctions * iQuadNode + i] * T.drdx[0];
       grad[0] += field[i] * dphi_i_dx;
     }
-    grad[0] /= jac;
   }
   else if(nComponents == 2)
   {
-    geometricInterpolant->interpolateVectorFieldAtQuadNode_rDerivative(geoCoord, iQuadNode, dxdr);
-    geometricInterpolant->interpolateVectorFieldAtQuadNode_sDerivative(geoCoord, iQuadNode, dxds);
-    drdx[0] =  dxds[1]; drdx[1] = -dxdr[1];
-    drdy[0] = -dxds[0]; drdy[1] =  dxdr[0];
     for(int i = 0; i < _nFunctions; ++i){
-      double dphi_i_dx = _dLdr[_nFunctions * iQuadNode + i] * drdx[0] +
-                         _dLds[_nFunctions * iQuadNode + i] * drdx[1];
-      double dphi_i_dy = _dLdr[_nFunctions * iQuadNode + i] * drdy[0] +
-                         _dLds[_nFunctions * iQuadNode + i] * drdy[1]; 
+      double dphi_i_dx = _dLdr[_nFunctions * iQuadNode + i] * T.drdx[0] +
+                         _dLds[_nFunctions * iQuadNode + i] * T.drdx[1];
+      double dphi_i_dy = _dLdr[_nFunctions * iQuadNode + i] * T.drdy[0] +
+                         _dLds[_nFunctions * iQuadNode + i] * T.drdy[1]; 
 
       grad[ i % nComponents * nComponents + 0 ] += field[i] * dphi_i_dx;
       grad[ i % nComponents * nComponents + 1 ] += field[i] * dphi_i_dy;
     }
-    grad[0] /= jac;
-    grad[1] /= jac;
-    grad[2] /= jac;
-    grad[3] /= jac;
   }
   else if(nComponents == 3)
   {
-    geometricInterpolant->interpolateVectorFieldAtQuadNode_rDerivative(geoCoord, iQuadNode, dxdr);
-    geometricInterpolant->interpolateVectorFieldAtQuadNode_sDerivative(geoCoord, iQuadNode, dxds);
-    geometricInterpolant->interpolateVectorFieldAtQuadNode_tDerivative(geoCoord, iQuadNode, dxdt);
-
-    /* Write inverse of 3x3 matrix (-: */
-    feErrorMsg(FE_STATUS_ERROR, "Gradient of shape functions not implemented in 3D");
-    exit(-1);
-
     for(int i = 0; i < _nFunctions; ++i){
-      double dphi_i_dx = _dLdr[_nFunctions * iQuadNode + i] * drdx[0] +
-                         _dLds[_nFunctions * iQuadNode + i] * drdx[1] +
-                         _dLdt[_nFunctions * iQuadNode + i] * drdx[2];
+      double dphi_i_dx = _dLdr[_nFunctions * iQuadNode + i] * T.drdx[0] +
+                         _dLds[_nFunctions * iQuadNode + i] * T.drdx[1] +
+                         _dLdt[_nFunctions * iQuadNode + i] * T.drdx[2];
 
-      double dphi_i_dy = _dLdr[_nFunctions * iQuadNode + i] * drdy[0] +
-                         _dLds[_nFunctions * iQuadNode + i] * drdy[1] +
-                         _dLdt[_nFunctions * iQuadNode + i] * drdy[2];
+      double dphi_i_dy = _dLdr[_nFunctions * iQuadNode + i] * T.drdy[0] +
+                         _dLds[_nFunctions * iQuadNode + i] * T.drdy[1] +
+                         _dLdt[_nFunctions * iQuadNode + i] * T.drdy[2];
 
-      double dphi_i_dz = _dLdr[_nFunctions * iQuadNode + i] * drdz[0] +
-                         _dLds[_nFunctions * iQuadNode + i] * drdz[1] +
-                         _dLdt[_nFunctions * iQuadNode + i] * drdz[2];
+      double dphi_i_dz = _dLdr[_nFunctions * iQuadNode + i] * T.drdz[0] +
+                         _dLds[_nFunctions * iQuadNode + i] * T.drdz[1] +
+                         _dLdt[_nFunctions * iQuadNode + i] * T.drdz[2];
 
-      grad[0] += field[i] * dphi_i_dx;
-      grad[1] += field[i] * dphi_i_dy;
-      grad[2] += field[i] * dphi_i_dz;
+      // FIXME
+      // grad[0] += field[i] * dphi_i_dx;
+      // grad[1] += field[i] * dphi_i_dy;
+      // grad[2] += field[i] * dphi_i_dz;
     }
   }  
 }

@@ -31,6 +31,19 @@ enum class geometricInterpolant {
 std::string toString(geometryType t);
 std::string toString(geometricInterpolant t);
 
+// Reference-to-physical transformation jacobian matrix dx(r)/dr
+// and its inverse dr(x)/dx.
+typedef struct TransformationStruct
+{
+  double jac;
+  double dxdr[3];
+  double dxds[3];
+  double dxdt[3];
+  double drdx[3];
+  double drdy[3];
+  double drdz[3];
+} ElementTransformation;
+
 class feSpace;
 class feMesh;
 class feQuadrature;
@@ -124,6 +137,9 @@ public:
 
   feStatus computeJacobians();
   const std::vector<double> &getJacobians() const { return _J; }
+
+  void computeElementTransformation(std::vector<double> &elementCoord, const int iQuadNode,
+    const double jac, ElementTransformation &transformation);
 
   const std::vector<int> &getVerticesConnectivity() const { return _connecVertices; }
   const std::vector<int> &getEdgeConnectivity() const { return _connecEdges; }

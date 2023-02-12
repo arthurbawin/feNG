@@ -10,6 +10,7 @@
 #include "SBoundingBox3d.h"
 
 extern int FE_VERBOSE;
+static int VERBOSE_THRESHOLD = 0;
 
 // Number of nodes for each type of Gmsh elements, type is the index of the array + 1
 int nodes_of_gmsh_element[] = {
@@ -396,7 +397,7 @@ feStatus feMesh2DP1::readMsh2(std::istream &input, const bool curved, const bool
           for(auto pair : physicalEntitiesDescription) {
             /* pair = { {dim,tag}, name } */
             // printf("Comparing entity dim = %d - tag = %d with stored entity %s - dim = %d - tag =
-            // %d\n", entityDim, physicalTag, pair.second.c_str(), pair.first.first,
+            // %d\n", entityDim, physicalTag, pair.second.data(), pair.first.first,
             // pair.first.second);
             if(entityDim == pair.first.first && physicalTag == pair.first.second)
               isPartOfTheOriginalEntities = true;
@@ -662,7 +663,7 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, const bool curved, const bool
       pE.nEdgePerElem = -1;
       pE.interp = geometricInterpolant::NONE;
       _physicalEntities[pair.first] = pE;
-      feInfoCond(FE_VERBOSE > 1, "Created physical entity \"%s\"", pE.name.c_str());
+      feInfoCond(FE_VERBOSE > VERBOSE_THRESHOLD, "\t\tCreated Physical entity \"%s\"", pE.name.data());
     }
   }
 
@@ -685,9 +686,9 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, const bool curved, const bool
         pE.interp = geometricInterpolant::NONE;
 
         _physicalEntities[{pE.dim, pE.tag}] = pE;
-        feInfoCond(FE_VERBOSE > 1,
-                   "Created Physical entity \"%s\" with dimension %d and gmsh tag %d",
-                   pE.name.c_str(), pE.dim, pE.tag);
+        feInfoCond(FE_VERBOSE > VERBOSE_THRESHOLD,
+                   "\t\tCreated Physical entity \"%s\" with dimension %d and gmsh tag %d",
+                   pE.name.data(), pE.dim, pE.tag);
       }
 
       // Save the description of the physical entities : this is used when looping and adapting the
@@ -727,23 +728,17 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, const bool curved, const bool
         for(int j = 0; j < e.numPhysicalTags; ++j) {
           input >> ph1;
           e.physicalTags.push_back(ph1);
-          if(_physicalEntities.find({e.dim, ph1}) != _physicalEntities.end()) {
+          if(_physicalEntities.find({e.dim, ph1}) != _physicalEntities.end())
+          {
             _physicalEntities[{e.dim, ph1}].listEntities.push_back(e.tag);
-            // if(FE_VERBOSE) printf("In readGmsh4 : Geometric entity with dim = %d - tag = %d is
-            // part of Physical
-            // \"%s\"\n", e.dim, e.tagGmsh, _physicalEntities[{e.dim, ph1}].name.c_str());
           } else if(_physicalEntities.find({e.dim, -ph1}) !=
                     _physicalEntities.end())
-          { // Physical entity numbered in reverse
+          { 
+            // Physical entity numbered in reverse
             _physicalEntities[{e.dim, -ph1}].listEntities.push_back(e.tag);
-            if(FE_VERBOSE > -1) {
-              // printf("In readGmsh4 : Geometric entity with dim = %d - tag = %d is part of
-              // Physical \"%s\"\n", e.dim, e.tagGmsh, _physicalEntities[{e.dim,
-              // -ph1}].name.c_str());
-              feWarning("Physical entity \"%s\" is negative on geometric entity (%d,%d) and is "
-                        "thus numbered in reverse order.",
-                        _physicalEntities[{e.dim, -ph1}].name.c_str(), e.dim, e.tagGmsh);
-            }
+            feWarning("Physical entity \"%s\" is negative on geometric entity (%d,%d) and is "
+                      "thus numbered in reverse order.",
+                      _physicalEntities[{e.dim, -ph1}].name.data(), e.dim, e.tagGmsh);
           }
         }
 
@@ -751,7 +746,7 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, const bool curved, const bool
           feInfo("Geometric entity with (dim,tagGmsh) = (%d,%d) is part of %d physical entities :",
             e.dim, e.tagGmsh, e.numPhysicalTags);
           for(int ii = 0; ii < e.numPhysicalTags; ++ii){
-            feInfo("    is part of physical %s", _physicalEntities[{e.dim,e.physicalTags[ii]}].name.c_str() );
+            feInfo("    is part of physical %s", _physicalEntities[{e.dim,e.physicalTags[ii]}].name.data() );
           }
           return feErrorMsg(FE_STATUS_ERROR,
                             "Geometric entity can only be part of a maximum of one "
@@ -786,11 +781,9 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, const bool curved, const bool
             } else if(_physicalEntities.find({e.dim, -ph1}) != _physicalEntities.end()) { 
               // Physical entity numbered in reversed order
               _physicalEntities[{e.dim, -ph1}].listEntities.push_back(e.tag);
-              if(FE_VERBOSE > -1) {
-                feWarning("Physical entity \"%s\" is negative on geometric entity (%d,%d) and is "
-                          "thus numbered in reverse order.",
-                          _physicalEntities[{e.dim, -ph1}].name.c_str(), e.dim, e.tagGmsh);
-              }
+              feWarning("Physical entity \"%s\" is negative on geometric entity (%d,%d) and is "
+                        "thus numbered in reverse order.",
+                        _physicalEntities[{e.dim, -ph1}].name.data(), e.dim, e.tagGmsh);
             }
           } else {
             _physicalEntities[{e.dim, tagUnnumberedEntities++}].listEntities.push_back(e.tag);
@@ -801,7 +794,7 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, const bool curved, const bool
           feInfo("Geometric entity with (dim,tagGmsh) = (%d,%d) is part of %d physical entities :",
             e.dim, e.tagGmsh, e.numPhysicalTags);
           for(int ii = 0; ii < e.numPhysicalTags; ++ii){
-            feInfo("    is part of physical %s", _physicalEntities[{e.dim,e.physicalTags[ii]}].name.c_str() );
+            feInfo("    is part of physical %s", _physicalEntities[{e.dim,e.physicalTags[ii]}].name.data() );
           }
           return feErrorMsg(FE_STATUS_ERROR,
                             "Geometric entity can only be part of a maximum of one "
@@ -834,21 +827,13 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, const bool curved, const bool
           if(ph1 != 0) {
             if(_physicalEntities.find({e.dim, ph1}) != _physicalEntities.end()) {
               _physicalEntities[{e.dim, ph1}].listEntities.push_back(e.tag);
-              // if(FE_VERBOSE) printf("In readGmsh4 (FE_VERBOSE) : Geometric entity with dim = %d -
-              // tag = %d is part of Physical \"%s\"\n", e.dim, ph1, _physicalEntities[{e.dim,
-              // ph1}].name.c_str());
             } else if(_physicalEntities.find({e.dim, -ph1}) !=
                       _physicalEntities.end()) { // Physical entity numbered in reverse
               _physicalEntities[{e.dim, -ph1}].listEntities.push_back(e.tag);
-              if(FE_VERBOSE > -1) {
-                // printf("In readGmsh4 : Geometric entity with dim = %d - tag = %d is part of
-                // Physical \"%s\"\n", e.dim, e.tagGmsh, _physicalEntities[{e.dim,
-                // -ph1}].name.c_str());
-                feWarning("Physical entity \"%s\" is negative on geometric entity (%d,%d) and is "
-                          "thus numbered in "
-                          "reverse order.\n",
-                          _physicalEntities[{e.dim, -ph1}].name.c_str(), e.dim, e.tagGmsh);
-              }
+              feWarning("Physical entity \"%s\" is negative on geometric entity (%d,%d) and is "
+                        "thus numbered in "
+                        "reverse order.\n",
+                        _physicalEntities[{e.dim, -ph1}].name.data(), e.dim, e.tagGmsh);
             }
           } else {
             _physicalEntities[{e.dim, tagUnnumberedEntities++}].listEntities.push_back(e.tag);
@@ -859,7 +844,7 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, const bool curved, const bool
           feInfo("Geometric entity with (dim,tagGmsh) = (%d,%d) is part of %d physical entities :",
             e.dim, e.tagGmsh, e.numPhysicalTags);
           for(int ii = 0; ii < e.numPhysicalTags; ++ii){
-            feInfo("    is part of physical %s", _physicalEntities[{e.dim,e.physicalTags[ii]}].name.c_str() );
+            feInfo("    is part of physical %s", _physicalEntities[{e.dim,e.physicalTags[ii]}].name.data() );
           }
           return feErrorMsg(FE_STATUS_ERROR,
                             "Geometric entity can only be part of a maximum of one "
@@ -900,7 +885,7 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, const bool curved, const bool
           feInfo("Geometric entity with (dim,tagGmsh) = (%d,%d) is part of %d physical entities :",
             e.dim, e.tagGmsh, e.numPhysicalTags);
           for(int ii = 0; ii < e.numPhysicalTags; ++ii){
-            feInfo("    is part of physical %s", _physicalEntities[{e.dim,e.physicalTags[ii]}].name.c_str() );
+            feInfo("    is part of physical %s", _physicalEntities[{e.dim,e.physicalTags[ii]}].name.data() );
           }
           return feErrorMsg(FE_STATUS_ERROR,
                             "Geometric entity can only be part of a maximum of one "
@@ -977,6 +962,13 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, const bool curved, const bool
         // Determine geometric feSpace and allocate nodes connectivity based on elemType
         switch(elemType) {
           case 1:
+            if(curved){
+              // We assume the mesh is made of the same elements,
+              // hence there should not be 2-node edges if the 
+              // mesh is curved.
+              return feErrorMsg(FE_STATUS_ERROR, "Curved mesh is enabled, but there are 2-node edges"
+                " in the mesh. For now curved meshes can only have high-order edges.");
+            }
             [[gnu::fallthrough]]; //  2-node line
           case 8:
             if(curved && _entities[p].interp == geometricInterpolant::NONE) {
@@ -1025,8 +1017,17 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, const bool curved, const bool
               _entities[p].connecNodes.resize(numElementsInBlock * _entities[p].nNodePerElem);
               break;
             }
-          case 2:
-            [[gnu::fallthrough]]; //  3-node triangle
+          case 2: //  3-node triangle
+
+            if(curved){
+              // We assume the mesh is made of the same elements,
+              // hence there should not be 3-node triangles if the 
+              // mesh is curved.
+              return feErrorMsg(FE_STATUS_ERROR, "Curved mesh is enabled, but there are 3-node triangles"
+                " in the mesh. For now curved meshes can only have high-order triangles.");
+            }
+
+            [[gnu::fallthrough]]; 
           case 9:
             if(curved && _entities[p].interp == geometricInterpolant::NONE) {
               _entities[p].interp = geometricInterpolant::TRIP2;
@@ -1421,22 +1422,6 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, const bool curved, const bool
                   "Only the first node was added, the others were discarded.",
                   _entities[p].dim, _entities[p].tagGmsh);
               }
-
-              // // We only allow a geometric Point to have a single node
-              // if(_entities[p].nElm == 1) {
-              //   _nVerticesWithNoPhysical++;
-              //   if(printNodeWarning) {
-              //     feWarning(
-              //       "More than one node are present in geometric entity (dim = %d, gmshTag = %d). "
-              //       "Only the first node was added, the others were discarded.",
-              //       _entities[p].dim, _entities[p].tagGmsh);
-              //     printNodeWarning = false;
-              //   }
-              // } else {
-              //   _entities[p].nElm = 1;
-              //   _entities[p].connecElem[0] = countElems++;
-              //   _entities[p].connecNodes[0] = elemNodes[0];
-              // }
               break;
             }
             default: // any other element
@@ -1451,10 +1436,6 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, const bool curved, const bool
     } // if buffer = "Elements"
   } // while input
 
-  // if(_physicalEntities.size() == 0) {
-  //   return feErrorMsg(FE_STATUS_ERROR, "No physical entities defined on the mesh.\n");
-  // }
-
   return FE_STATUS_OK;
 }
 
@@ -1464,12 +1445,16 @@ feStatus feMesh2DP1::readGmsh(const std::string meshName, const bool curved, con
   _gmshVersion = 0;
   std::filebuf fb;
 
-  feInfo("=====================================================================");
-  feInfo("                   Beginning of mesh information                     ");
-  feInfo("=====================================================================");
-  feInfo("Reading mesh file : %s", meshName.c_str());
+  feInfoCond(FE_VERBOSE > 0, "");
+  feInfoCond(FE_VERBOSE > 0, "MESH:");
+  feInfoCond(FE_VERBOSE > 0, "\t\tReading mesh file: %s", meshName.data());
 
-  std::ifstream f(meshName.c_str());
+  // feInfo("=====================================================================");
+  // feInfo("                   Beginning of mesh information                     ");
+  // feInfo("=====================================================================");
+  // feInfo("Reading mesh file : %s", meshName.data());
+
+  std::ifstream f(meshName.data());
   if(!f.good()) {
     return feErrorMsg(FE_STATUS_READ_ERROR, "Mesh file does not exist.");
   }
@@ -1500,28 +1485,14 @@ feStatus feMesh2DP1::readGmsh(const std::string meshName, const bool curved, con
     fb.close();
   } // if fb.open
 
-  if(FE_VERBOSE > 1) {
-    feInfo("List of geometric entities with their attributes :");
-    for(auto const &x : _entities) {
-      entity e = x.second;
-      feInfo("Entity #%2d : dim = %1d - gmshTag = %3d - nElm = %6d - nNodePerElem = %2d - "
-             "geometric interpolant : %10s "
-             "- part of physical groups : %2d",
-             e.tag, e.dim, e.tagGmsh, e.nElm, e.nNodePerElem, toString(e.interp).data(),
-             (e.numPhysicalTags > 0) ? e.physicalTags[0] : -1);
-      // std::cout<<"elems : "<<std::endl;
-      // for(auto val : e.connecElem)
-      //   std::cout<<val<<" ";
-      // std::cout<<std::endl;
-      // std::cout<<"nodes : "<<std::endl;
-      // for(auto val : e.connecNodes)
-      //   std::cout<<val<<" ";
-      // std::cout<<std::endl;
-      // std::cout<<"edges : "<<std::endl;
-      // for(auto val : e.connecEdges)
-      //   std::cout<<val<<" ";
-      // std::cout<<std::endl;
-    }
+  feInfoCond(FE_VERBOSE > VERBOSE_THRESHOLD, "\t\tList of geometric entities with their attributes :");
+  for(auto const &x : _entities) {
+    entity e = x.second;
+    feInfoCond(FE_VERBOSE > VERBOSE_THRESHOLD, "\t\t\tEntity #%2d : dim = %1d - gmshTag = %3d - nElm = %6d - nNodePerElem = %2d - "
+      "geometric interpolant : %10s "
+      "- part of physical groups : %2d",
+      e.tag, e.dim, e.tagGmsh, e.nElm, e.nNodePerElem, toString(e.interp).data(),
+      (e.numPhysicalTags > 0) ? e.physicalTags[0] : -1);
   }
 
   // Geometric connectivities are defined on the physical entities (named domains) :
@@ -1529,19 +1500,12 @@ feStatus feMesh2DP1::readGmsh(const std::string meshName, const bool curved, con
   // Sequential tag for all entities, different from the Gmsh entity tag (reset for each dimension)
   for(auto const &x : _entities) {
     entity e = x.second;
-    // std::cout<<"Entity "<<e.tag<<" (dim = "<<e.dim<<" tag Gmsh = "<<e.tagGmsh<<")"<<std::endl;
     for(auto &p : _physicalEntities) {
       physicalEntity &pE = p.second;
-      // printf("Physical \"%s\" has %d geometric entities :\n", pE.name.c_str(),
-      // pE.listEntities.size());
       bool error = false;
       for(auto ent : pE.listEntities) {
         if(ent == e.tag && pE.dim == e.dim) {
-          // std::cout<<"    Physical "<<pE.name<<" - entity "<<ent<<" (tag Gmsh = "<<e.tagGmsh<<")
-          // of dimension
-          // "<<e.dim<<" and "<<e.nElm<<" elements : match"<<std::endl;
           pE.nElm += e.nElm;
-          // std::cout<<pE.nElm<<std::endl;
           // Assign and check nNodePerElem
           if(pE.nNodePerElem == -1)
             pE.nNodePerElem = e.nNodePerElem;
@@ -1565,22 +1529,8 @@ feStatus feMesh2DP1::readGmsh(const std::string meshName, const bool curved, con
       if(error) {
         return feErrorMsg(FE_STATUS_ERROR,
                           "Multiple geometric connectivities on physical entity "
-                          "%s"
-                          ".\n",
-                          pE.name.c_str());
+                          "%s.\n", pE.name.data());
       }
-    }
-  }
-
-  if(FE_VERBOSE > 1) {
-    feInfo("List of physical groups with their attributes :");
-    for(auto &p : _physicalEntities) {
-      physicalEntity &pE = p.second;
-      feInfo("Physical %15s : dim = %1d - nEntities = %2d - nElm = %9d - nNodePerElem = %2d - "
-             "nEdgePerElem = %1d - "
-             "geometric interpolant : %10s",
-             pE.name.c_str(), pE.dim, pE.listEntities.size(), pE.nElm, pE.nNodePerElem,
-             pE.nEdgePerElem, toString(pE.interp).data());
     }
   }
 
@@ -1595,14 +1545,14 @@ feStatus feMesh2DP1::readGmsh(const std::string meshName, const bool curved, con
       entity e = x.second;
       for(auto ent : pE.listEntities) {
         if(ent == e.tag) {
-          // printf("In physical %s - geometric entity %d : \n", pE.name.c_str(), e.tagGmsh);
+          // printf("In physical %s - geometric entity %d : \n", pE.name.data(), e.tagGmsh);
           // std::vector<int> tmp = e.connecNodes;
           // std::sort(tmp.begin(), tmp.end());
           // tmp.erase( std::unique(tmp.begin(), tmp.end()), tmp.end() );
           // std::cout<<tmp.size()<<std::endl;
           // printf("Copying info from entity (%d,%d) with %d elements and cnc %s to physical
           // (%d,%d) named %s\n",
-          //   e.dim, e.tag, e.nElm, e.cncID.c_str(), pE.dim, pE.tag, pE.name.c_str());
+          //   e.dim, e.tag, e.nElm, e.cncID.data(), pE.dim, pE.tag, pE.name.data());
           // printf("Physical has %d elements and connecElem.size() = %d\n", pE.nElm,
           // pE.connecElem.size());
           for(int iElm = 0; iElm < e.nElm; ++iElm) {
@@ -1724,9 +1674,18 @@ feStatus feMesh2DP1::readGmsh(const std::string meshName, const bool curved, con
       pE.geometry = geometryType::TRI;
       pE.geoSpace = new feSpaceTriP3("xyz");
     } else {
-      return feErrorMsg(FE_STATUS_ERROR, "Unknown geometric connectivity \"%s\" on domain \"%s\".",
+      return feErrorMsg(FE_STATUS_ERROR, "Unknown geometric connectivity interpolant \"%s\" on domain \"%s\".",
                         toString(pE.interp).data(), pE.name.data());
     }
+  }
+
+  feInfoCond(FE_VERBOSE > VERBOSE_THRESHOLD, "\t\tList of physical groups with their attributes :");
+  for(auto &p : _physicalEntities) {
+    physicalEntity &pE = p.second;
+    feInfoCond(FE_VERBOSE > VERBOSE_THRESHOLD,  "\t\t\tPhysical %15s : dim = %1d - nEntities = %2d - nElm = %9d - nNodePerElem = %2d - "
+     "nEdgePerElem = %1d - geometric interpolant : %10s",
+     pE.name.data(), pE.dim, pE.listEntities.size(), pE.nElm, pE.nNodePerElem,
+     pE.nEdgePerElem, toString(pE.interp).data());
   }
 
   // Finally, create geometric connectivities
@@ -1789,6 +1748,7 @@ feStatus feMesh2DP1::readGmsh(const std::string meshName, const bool curved, con
   double min2d[2], max2d[2];
 
   // Create an RTree storing the elements of highest dimension
+  // Elements are hardcoded "Triangle" for now
   for(int i = 0; i < _elements.size(); ++i) {
     Triangle *t = _elements[i];
     SBoundingBox3d bbox;
@@ -1807,10 +1767,6 @@ feStatus feMesh2DP1::readGmsh(const std::string meshName, const bool curved, con
 
   // Initialize the search context structure that is used to search in the RTree
   _searchCtx.elements = &_elements;
-
-  feInfo("=====================================================================");
-  feInfo("                     End of mesh information                         ");
-  feInfo("=====================================================================");
 
   return FE_STATUS_OK;
 }

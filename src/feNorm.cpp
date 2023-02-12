@@ -7,10 +7,16 @@ feStatus createNorm(feNorm *&norm,
   feFunction *scalarSolution,
   feVectorFunction *vectorSolution)
 {
+  for(auto *fS : spaces){
+    if(fS == nullptr){
+      return feErrorMsg(FE_STATUS_ERROR, "Null pointer in vector of FE spaces, maybe you forgot to initialize it.");
+    }
+  }
+
   // Check that all interpolation spaces are defined on the same connectivity
   int cncGeoTag = spaces[0]->getCncGeoTag();
-  for(size_t i = 0; i < spaces.size(); ++i) {
-    if(spaces[i]->getCncGeoTag() != cncGeoTag)
+  for(auto *fS : spaces) {
+    if(fS->getCncGeoTag() != cncGeoTag)
       return feErrorMsg(FE_STATUS_ERROR, "Norm defined on more than one geometric connectivity (physical entity).\n"
         "All finite element spaces in \"spaces\" should be defined on the same geometric connectivity.\n");
   }
@@ -25,9 +31,9 @@ feNorm::feNorm(normType type, const std::vector<feSpace*> &spaces, feSolution *s
   : _type(type)
   , _spaces(spaces)
   , _solution(sol)
-  , _cnc(spaces[0]->getCncGeo())
   , _scalarSolution(scalarSolution)
   , _vectorSolution(vectorSolution)
+  , _cnc(spaces[0]->getCncGeo())
   , _J(_cnc->getJacobians())
 {
   _nQuad = spaces[0]->getNumQuadPoints();
@@ -44,6 +50,8 @@ feNorm::feNorm(normType type, const std::vector<feSpace*> &spaces, feSolution *s
   for(size_t k = 0; k < spaces.size(); ++k)
     _localSol[k].resize(spaces[k]->getNumFunctions());
 
+  // Provide only a geometric connectivity, to compute integrals of source terms, etc.
+  // but not of the finite element solution.
   _cncOnly = false;
 }
 
@@ -60,6 +68,8 @@ feNorm::feNorm(feCncGeo *cnc, feFunction *scalarSolution, feVectorFunction *vect
   _pos.resize(3);
   _geoCoord.resize(3 * cnc->getNumVerticesPerElem());
 
+  // Provide only a geometric connectivity, to compute integrals of source terms, etc.
+  // but not of the finite element solution.
   _cncOnly = true;
 }
 

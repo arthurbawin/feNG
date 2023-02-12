@@ -154,6 +154,7 @@ void feSysElm_2D_SUPGStab::computeBe(feBilinearForm *form)
   std::vector<double> c(2, 0.0);
   for(int k = 0; k < _nQuad; ++k) {
     jac = form->_J[_nQuad * form->_numElem + k];
+    form->_cnc->computeElementTransformation(form->_geoCoord, k, jac, form->_transformation);
 
     // Evaluate the imposed velocity field, diffusivity, reaction coefficient and source term
     form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, _pos);
@@ -166,12 +167,11 @@ void feSysElm_2D_SUPGStab::computeBe(feBilinearForm *form)
     u = form->_intSpaces[_idU]->interpolateFieldAtQuadNode(form->_sol[_idU], k);
 
     // Compute grad(u)
-    form->_intSpaces[_idU]->interpolateFieldAtQuadNode_physicalGradient(form->_sol[_idU], k, jac, form->_geoCoord, 
-      form->_dxdr, form->_dxds, form->_dxdt, form->_drdx, form->_drdy, form->_drdz, grad_u);
+    form->_intSpaces[_idU]->interpolateFieldAtQuadNode_physicalGradient(form->_sol[_idU],
+      k, form->_transformation, grad_u);
 
     // Compute grad(phi)
-    form->_intSpaces[_idU]->getFunctionsPhysicalGradientAtQuadNode(k, jac, form->_geoCoord, 
-      form->_dxdr, form->_dxds, form->_dxdt, form->_drdx, form->_drdy, form->_drdz, _gradPhiU.data());
+    form->_intSpaces[_idU]->getFunctionsPhysicalGradientAtQuadNode(k, form->_transformation, _gradPhiU.data());
 
     // Compute stabilization parameter tau
     tau = tau2DTri(2, c.data(), diffusivity, _nFunctions, _gradPhiU);
@@ -651,6 +651,7 @@ void feSysElm_2D_Euler::computeBe(feBilinearForm *form)
 
   for(int k = 0; k < _nQuad; ++k) {
     jac = form->_J[_nQuad * form->_numElem + k];
+    form->_cnc->computeElementTransformation(form->_geoCoord, k, jac, form->_transformation);
     
     // Compute current fields and gradient of test functions
      r = form->_intSpaces[_idr ]->interpolateFieldAtQuadNode(form->_sol[_idr ], k);
@@ -667,14 +668,10 @@ void feSysElm_2D_Euler::computeBe(feBilinearForm *form)
     form->_intSpaces[_idrv]->getFunctionsAtQuadNode(k, _phirv);
     form->_intSpaces[_idre]->getFunctionsAtQuadNode(k, _phire);
 
-    form->_intSpaces[_idr]->getFunctionsPhysicalGradientAtQuadNode(k, jac, form->_geoCoord, 
-      form->_dxdr, form->_dxds, form->_dxdt, form->_drdx, form->_drdy, form->_drdz, _gradphir.data());
-    form->_intSpaces[_idru]->getFunctionsPhysicalGradientAtQuadNode(k, jac, form->_geoCoord, 
-      form->_dxdr, form->_dxds, form->_dxdt, form->_drdx, form->_drdy, form->_drdz, _gradphiru.data());
-    form->_intSpaces[_idrv]->getFunctionsPhysicalGradientAtQuadNode(k, jac, form->_geoCoord, 
-      form->_dxdr, form->_dxds, form->_dxdt, form->_drdx, form->_drdy, form->_drdz, _gradphirv.data());
-    form->_intSpaces[_idre]->getFunctionsPhysicalGradientAtQuadNode(k, jac, form->_geoCoord, 
-      form->_dxdr, form->_dxds, form->_dxdt, form->_drdx, form->_drdy, form->_drdz, _gradphire.data());
+    form->_intSpaces[_idr]->getFunctionsPhysicalGradientAtQuadNode(k, form->_transformation, _gradphir.data());
+    form->_intSpaces[_idru]->getFunctionsPhysicalGradientAtQuadNode(k, form->_transformation, _gradphiru.data());
+    form->_intSpaces[_idrv]->getFunctionsPhysicalGradientAtQuadNode(k, form->_transformation, _gradphirv.data());
+    form->_intSpaces[_idre]->getFunctionsPhysicalGradientAtQuadNode(k, form->_transformation, _gradphire.data());
 
      // + 1.0 * _phiru[i]
      // + 1.0 * _phirv[i]
