@@ -36,6 +36,7 @@ set(feNG_SRC
     feSysElm_1D.cpp
     feSysElm_2D.cpp
     feTriangle.cpp
+    feVectorSysElm.cpp
     glfem.cpp)
 
 if(ENABLE_METRIC)

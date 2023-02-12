@@ -76,7 +76,7 @@ feStatus defaultMessageCallback(feMessage *msg)
   if(msg->level == FE_MSGLEVEL_INFO)
     fprintf(stdout, "Info : %s\n", msg->string);
   else if(msg->level == FE_MSGLEVEL_ERROR)
-    fprintf(stderr, "= X = Error : %s   \n in %s -> %s:%s\n", msg->string, msg->func, msg->file,
+    fprintf(stderr, "\n= X = Error : %s   \n in %s -> %s:%s\n", msg->string, msg->func, msg->file,
             msg->line);
   else if(msg->level == FE_MSGLEVEL_TRACE)
     fprintf(stderr, "  - trace -   %s -> %s:%s  \t(%s)\n", msg->func, msg->file, msg->line,

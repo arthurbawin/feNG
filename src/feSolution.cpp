@@ -79,6 +79,8 @@ void feSolution::initializeTemporalSolution(double t0, double t1, int nTimeSteps
 void feSolution::initializeUnknowns(feMesh *mesh)
 {
   std::vector<double> x(3);
+  std::vector<double> vecVal(3);
+  double val;
 
   for(feSpace *fS : _spaces) {
 
@@ -105,19 +107,24 @@ void feSolution::initializeUnknowns(feMesh *mesh)
         for(int j = 0; j < fS->getNumFunctions(); ++j) {
           double r[3] = {coor[3 * j], coor[3 * j + 1], coor[3 * j + 2]};
           geoSpace->interpolateVectorField(localCoord, r, x);
-          _sol[adr[j]] = fS->evalFun(_tn, x);
+
+          if(fS->getNumComponents() > 1){
+            // Vector valued finite element space
+            fS->evalFun(_tn, x, vecVal);
+            int indexComponent = j % fS->getNumComponents();
+            val = vecVal[indexComponent];
+          } else{
+            // Scalar valued finite element space
+            val = fS->evalFun(_tn, x);
+          }
+
+          _sol[adr[j]] = val;
         }
       }
     }
 
     else if(fS->getDOFInitialization() == dofInitialization::LEAST_SQUARES)
     {
-      // Temporary test
-      if(fS->getElementType() != elementType::LEGENDRE){
-        feErrorMsg(FE_STATUS_ERROR, "LEAST_SQUARES dof initialization available only for 1D Legendre elements.");
-        exit(-1);
-      }
-
       // Assuming 1D Legendre polynomials: the initial condition is satisfied on each element in the least-square sense:
       //
       //  <phi_i, phi_j> U_j^e = <phi_i, funSol> ==> A_ij^e U_j^e = B_j^e
@@ -169,6 +176,8 @@ void feSolution::initializeUnknowns(feMesh *mesh)
 void feSolution::initializeEssentialBC(feMesh *mesh, feSolutionContainer *solContainer)
 {
   std::vector<double> x(3);
+  std::vector<double> vecVal(3);
+  double val;
 
   for(feSpace *fS : _essentialSpaces) {
 
@@ -184,7 +193,8 @@ void feSolution::initializeEssentialBC(feMesh *mesh, feSolutionContainer *solCon
     
     feSpace *geoSpace = mesh->getGeometricSpace(fS->getCncGeoID());
     
-    if(fS->getDOFInitialization() == dofInitialization::NODEWISE)
+    if(fS->getDOFInitialization() == dofInitialization::NODEWISE ||
+       fS->getDOFInitialization() == dofInitialization::EXTRAPOLATED_EULER_0D)
     {
       // Node based: the initial condition is imposed at the vertices DOF
       for(int iElm = 0; iElm < nElm; ++iElm) {
@@ -195,7 +205,17 @@ void feSolution::initializeEssentialBC(feMesh *mesh, feSolutionContainer *solCon
         for(int j = 0; j < fS->getNumFunctions(); ++j) {
           double r[3] = {coor[3 * j], coor[3 * j + 1], coor[3 * j + 2]};
           geoSpace->interpolateVectorField(localCoord, r, x);
-          double val = fS->evalFun(_tn, x);
+
+          if(fS->getNumComponents() > 1){
+            // Vector valued finite element space
+            fS->evalFun(_tn, x, vecVal);
+            int indexComponent = j % fS->getNumComponents();
+            val = vecVal[indexComponent];
+          } else{
+            // Scalar valued finite element space
+            val = fS->evalFun(_tn, x);
+          }
+
           _sol[adr[j]] = val;
 
           if(solContainer != nullptr) {
@@ -212,6 +232,28 @@ void feSolution::initializeEssentialBC(feMesh *mesh, feSolutionContainer *solCon
       exit(-1);
     }
   }
+
+  // if(fS->getDOFInitialization() == dofInitialization::EXTRAPOLATED_EULER_0D) {
+  //   // Extrapolate solution from inside the domain to the boundary
+  //   // Only in 1D for Euler equations for now
+
+
+
+  //   for(int iElm = 0; iElm < nElm; ++iElm) {
+  //     fS->initializeAddressingVector(iElm, adr);
+
+  //     for(int j = 0; j < fS->getNumFunctions(); ++j) {
+  //       double r[3] = {coor[3 * j], coor[3 * j + 1], coor[3 * j + 2]};
+  //       geoSpace->interpolateVectorField(localCoord, r, x);
+
+  //       // Extrapolate solution
+
+  //       _sol[adr[j]] = val;
+  //     }
+
+  //   }
+  // }
+
 }
 
 void feSolution::copySpace(feMesh *mesh, feSpace *s1, feSpace *s2)

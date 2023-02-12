@@ -13,10 +13,13 @@ feStatus createBilinearForm(feBilinearForm *&form, const std::vector<feSpace *> 
   // Check that all interpolation spaces are defined on the same connectivity
   int cncGeoTag = spaces[0]->getCncGeoTag();
   for(size_t i = 0; i < spaces.size(); ++i) {
-    if(spaces[i]->getCncGeoTag() != cncGeoTag)
-      return feErrorMsg(FE_STATUS_ERROR, "(Bi-)linear form %s is defined on more than one geometric connectivity.\n"
-        "All finite element spaces in \"spaces\" should be defined on the same geometric connectivity.\n",
-        elementarySystem->getWeakFormName().data());
+    if(spaces[i]->getCncGeoTag() != cncGeoTag){
+      if(elementarySystem->getID() != EULER_0D_FLUX){
+        return feErrorMsg(FE_STATUS_ERROR, "(Bi-)linear form %s is defined on more than one geometric connectivity.\n"
+          "All finite element spaces in \"spaces\" should be defined on the same geometric connectivity.\n",
+          elementarySystem->getWeakFormName().data());
+      }
+    }
   }
 
   // Check that the elementary system is defined on a connectivity of same space dimension
@@ -43,13 +46,12 @@ feStatus createBilinearForm(feBilinearForm *&form, const std::vector<feSpace *> 
   }
 
   // TEMPORARY: Check that all FE spaces have the same number of quadrature nodes
-  for(size_t i = 0; i < spaces.size(); ++i) {
-    if(spaces[i]->getNumQuadPoints() != spaces[0]->getNumQuadPoints()){
-      return feErrorMsg(FE_STATUS_ERROR, "FE spaces used to define a (bi-)linear form "
-        "must have the same number of quadrature points\n");
-    }
-  }
-
+  // for(size_t i = 0; i < spaces.size(); ++i) {
+  //   if(spaces[i]->getNumQuadPoints() != spaces[0]->getNumQuadPoints()){
+  //     return feErrorMsg(FE_STATUS_ERROR, "FE spaces used to define a (bi-)linear form "
+  //       "must have the same number of quadrature points\n");
+  //   }
+  // }
 
   form = new feBilinearForm(spaces, elementarySystem);
 
@@ -106,7 +108,7 @@ static inline void printResidual(feInt m, double **b)
 
 static inline void freeResidual(double **b) { free(*b); }
 
-feBilinearForm::feBilinearForm(std::vector<feSpace *> spaces, feSysElm *elementarySystem)
+feBilinearForm::feBilinearForm(std::vector<feSpace*> spaces, feSysElm *elementarySystem)
   : _sysElm(elementarySystem)
   , _intSpaces(spaces)
   , _cnc(spaces[0]->getCncGeo())
@@ -209,57 +211,20 @@ feBilinearForm::feBilinearForm(const feBilinearForm &f)
     _h0 = pow(DBL_EPSILON, 1.0 / 2.0);
   }
 
-  switch(f._sysElm->getID()) {
-    // case STIFFSPRING_0D :
-    //   _sysElm=new feSysElm_0D_StiffSpring(f._sysElm);
-    //   break;
-    // case STIFF2_0D :
-    //   _sysElm=new feSysElm_0D_Stiff2();
-    //   break;
-    // case STIFF3_0D :
-    //   _sysElm=new feSysElm_0D_Stiff3();
-    //   break;
-    // case WEAKBC_0D :
-    //   _sysElm=new feSysElm_0D_weakBC();
-    //   break;
-    // case WEAKBC_EDO1_0D :
-    //   _sysElm=new feSysElm_0D_weakBC_edo1();
-    //   break;
-    // case WEAKBC_EDO1_V2_0D :
-    //   _sysElm=new feSysElm_0D_weakBC_edo1_V2();
-    //   break;
-    // case WEAKBC_EDO2_0D :
-    //   _sysElm=new feSysElm_0D_weakBC_edo2();
-    //   break;
-    // case MASSE_0D :
-    //   _sysElm=new feSysElm_0D_Masse();
-    //   break;
-    // case SOURCE_0D :
-    //   _sysElm=new feSysElm_0D_Source();
-    //   break;
-    // case SOURCE_CROSSED_0D :
-    //   _sysElm=new feSysElm_0D_Source_crossed();
-    //   break;
-    // case WEAKBC_EDO1_1D :
-    //   _sysElm=new feSysElm_1D_weakBC_edo1();
-    //   break;
-    // case SOURCE_1D :
-    //   _sysElm=new feSysElm_1D_Source();
-    //   break;
-    // case DIFF_1D :
-    //   _sysElm=new feSysElm_1D_Diffusion();
-    //   break;
-    // case MASSE_1D :
-    //   _sysElm=new feSysElm_1D_Masse(();
-    //     break;
-    case MASS_2D :
-      _sysElm = new feSysElm_2D_Masse(static_cast<feSysElm_2D_Masse &>(*f._sysElm));
+  int dim = f._sysElm->getDim();
+
+  switch(f._sysElm->getID())
+  {
+    case MASS :
+      _sysElm = new feSysElm_Mass(static_cast<feSysElm_Mass &>(*f._sysElm));
       break;
-    case SOURCE_2D:
-      _sysElm = new feSysElm_2D_Source(static_cast<feSysElm_2D_Source &>(*f._sysElm));
+    case SOURCE:
+      _sysElm = new feSysElm_Source(static_cast<feSysElm_Source &>(*f._sysElm));
       break;
-    case DIFFUSION_2D:
-      _sysElm = new feSysElm_2D_Diffusion(static_cast<feSysElm_2D_Diffusion &>(*f._sysElm));
+    case DIFFUSION:
+      if(dim == 0){_sysElm = new feSysElm_Diffusion<0>(static_cast<feSysElm_Diffusion<0> &>(*f._sysElm)); }
+      if(dim == 1){_sysElm = new feSysElm_Diffusion<1>(static_cast<feSysElm_Diffusion<1> &>(*f._sysElm)); }
+      if(dim == 2){_sysElm = new feSysElm_Diffusion<2>(static_cast<feSysElm_Diffusion<2> &>(*f._sysElm)); }
       break;
     case NEUMANN_1D:
       _sysElm = new feSysElm_1D_NeumannBC(static_cast<feSysElm_1D_NeumannBC &>(*f._sysElm));
@@ -304,13 +269,13 @@ void feBilinearForm::initializeAddressingVectors(int numElem)
   for(size_t i = 0, count = 0; i < _fieldsLayoutI.size(); ++i) {
     int M = _intSpaces[_fieldsLayoutI[i]]->getNumFunctions();
     for(int k = 0; k < M; ++k) {
-      _adrI[count++] = _adr[i][k];
+      _adrI[count++] = _adr[_fieldsLayoutI[i]][k];
     };
   }
   for(size_t i = 0, count = 0; i < _fieldsLayoutJ.size(); ++i) {
     int N = _intSpaces[_fieldsLayoutJ[i]]->getNumFunctions();
     for(int k = 0; k < N; ++k) {
-      _adrJ[count++] = _adr[i][k];
+      _adrJ[count++] = _adr[_fieldsLayoutJ[i]][k];
     };
   }
 }
@@ -318,31 +283,52 @@ void feBilinearForm::initializeAddressingVectors(int numElem)
 void feBilinearForm::initialize(feSolution *sol, int numElem)
 {
   for(size_t i = 0; i < _intSpaces.size(); i++) {
+
     feSpace *fS = _intSpaces[i];
     std::vector<double> &solRef = sol->getSolutionReference();
 
+    // ------------------------------------------------------------------
     // Initialize solution on neighbouring elements (for e.g. DG fluxes)
-    // if(numElem > 0){
-    //   fS->initializeAddressingVector(numElem - 1, _adr[i]);
-    // } else{
-    //   // Periodicity:
-    //   fS->initializeAddressingVector(_cnc->getNbElm() - 1, _adr[i]);
-    // }
+    if(numElem > 0){
+      fS->initializeAddressingVector(numElem - 1, _adr[i]);
+    } else{
+      // Periodicity:
+      fS->initializeAddressingVector(_cnc->getNumElements() - 1, _adr[i]);
+      // 0 flux
+      // fS->initializeAddressingVector(numElem, _adr[i]);
+    }
+    for(size_t k = 0; k < _adr[i].size(); ++k) {
+      _solPrev[i][k] = solRef[_adr[i][k]];
+    }
 
-    // for(size_t k = 0; k < _adr[i].size(); ++k) {
-    //   _solPrev[i][k] = solRef[_adr[i][k]];
-    // }
-
-    // if(numElem < _cnc->getNbElm() - 1){
-    //   fS->initializeAddressingVector(numElem + 1, _adr[i]);
-    // } else{
-    //   // Periodicity:
-    //   fS->initializeAddressingVector(0, _adr[i]);
-    // }
-
-    // for(size_t k = 0; k < _adr[i].size(); ++k) {
-    //   _solNext[i][k] = solRef[_adr[i][k]];
-    // }
+    if(numElem < _cnc->getNumElements() - 1){
+      fS->initializeAddressingVector(numElem + 1, _adr[i]);
+    } else{
+      // Periodicity:
+      fS->initializeAddressingVector(0, _adr[i]);
+      // 0 flux
+      // fS->initializeAddressingVector(numElem, _adr[i]);
+    }
+    for(size_t k = 0; k < _adr[i].size(); ++k) {
+      _solNext[i][k] = solRef[_adr[i][k]];
+    }
+    // ------------------------------------------------------------------
+    if(fS->getDOFInitialization() == dofInitialization::EXTRAPOLATED_EULER_0D)
+    {
+      // Initialize the corresponding domain FE space to extrapolate on this boundary
+      if(_intSpaces[i+3]->getCncGeo()->getNumElements() < 3){
+        feErrorMsg(FE_STATUS_ERROR, "Cannot initialize solution on next and/or previous element to extrapolate"
+          " field \"%s\" on boundary because interior connectivity \"%s\" only has %d elements.",
+          _intSpaces[i+3]->getFieldID().data(),
+          _intSpaces[i+3]->getCncGeo()->getID().data(),
+          _intSpaces[i+3]->getCncGeo()->getNumElements());
+        exit(-1);
+      }
+      _intSpaces[i+3]->initializeAddressingVector(2, _adr[i]);
+      for(size_t k = 0; k < _adr[i].size(); ++k) { _solNext[i][k] = solRef[_adr[i][k]]; }
+      _intSpaces[i+3]->initializeAddressingVector(_intSpaces[i+3]->getCncGeo()->getNumElements()-3, _adr[i]);
+      for(size_t k = 0; k < _adr[i].size(); ++k) { _solPrev[i][k] = solRef[_adr[i][k]]; }
+    }
 
     // Initialize solution and its time derivative on current element
     fS->initializeAddressingVector(numElem, _adr[i]);
@@ -372,6 +358,11 @@ void feBilinearForm::initialize(feSolution *sol, int numElem)
 void feBilinearForm::computeMatrix(feSolution *sol, int numElem)
 {
   (this->*feBilinearForm::ptrComputeMatrix)(sol, numElem);
+  // if(_sysElm->getID() == VECTOR_CONVECTIVE_ACCELERATION){
+  //   feInfo("Matrice sur elm %d", numElem);
+  //   printMatrix(_M, _N, &_Ae);
+  //   exit(-1);
+  // }
 }
 
 void feBilinearForm::computeResidual(feSolution *sol, int numElem)
@@ -441,8 +432,10 @@ void feBilinearForm::computeMatrixFiniteDifference(feSolution *sol, int numElem)
       for(feInt i = 0; i < _M; i++)
         _Rh[i] = _Be[i];
 
-      for(feInt i = 0; i < _M; i++)
-        _Ae[i][numColumn] = (-_Rh[i] + _R0[i]) * invdelta_h;
+      for(feInt i = 0; i < _M; i++){
+        // Matrix and residual are of opposite sign
+        _Ae[i][numColumn] = - (_Rh[i] - _R0[i]) * invdelta_h;
+      }
 
       _sol[_fieldsLayoutJ[k]][j]    = temp_sol;
       _solDot[_fieldsLayoutJ[k]][j] = temp_soldot;

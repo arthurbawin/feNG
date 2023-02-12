@@ -35,7 +35,7 @@ int main(int argc, char **argv)
   viewer.setAxesLimits(xLim, yLim);
 
   do{
-    viewer.reshapeWindowBox(1.2, mesh, sol);
+    viewer.reshapeWindowBox(1.2, 1.2, mesh, sol);
     viewer.draw1DCurve(mesh, numbering, sol, uDomaine, funTest);
     viewer.windowUpdate();
   } while(!viewer.windowShouldClose());

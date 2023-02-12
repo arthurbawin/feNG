@@ -315,9 +315,9 @@ void glfemMessage(char *message)
 GLFWwindow* glfemInit(const char *theWindowName)
 {
     glfwInit();
-    GLFWwindow* window = glfwCreateWindow(480,480,"Simple example with graphics",NULL,NULL);    
+    GLFWwindow* window = glfwCreateWindow(800,800,"Simple example with graphics",NULL,NULL);    
     glfwMakeContextCurrent(window);
-    glfemSetRasterSize(480,480);
+    glfemSetRasterSize(800,800);
     glfwSetWindowTitle(window,theWindowName);
     glShadeModel(GL_SMOOTH);
     glMakeRasterFont();

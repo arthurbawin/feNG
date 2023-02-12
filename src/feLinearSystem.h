@@ -48,8 +48,21 @@ protected:
   // The linear forms with only a residual
   std::vector<feBilinearForm *> _formResiduals;
 
-  // Recompute the jacobian matrix?
+  // Recompute the jacobian matrix at current Newton-Raphson step?
   bool recomputeMatrix;
+
+    // Options for iterative solver:
+  double _rel_tol = 1e-6;
+  double _abs_tol = 1e-14;
+  double _div_tol = 1e6;
+  int _max_iter = 5e3;
+
+  // Display and export options:
+  bool _displayMatrixInConsole = false;
+  bool _displayMatrixInWindow = false;
+  bool _displayRHSInConsole = false;
+  bool _exportMatrixMatlab = false;
+  bool _exportRHSMatlab = false;
 
 public:
   // Create an abstract linear system. Do not call directly, 
@@ -59,6 +72,17 @@ public:
 
   // Return the size m of the linear system (dimension of the square matrix m x m)
   virtual feInt getSystemSize() = 0;
+
+  void setAbsoluteTol(double absTol){ _abs_tol = absTol; };
+  void setRelativeTol(double relTol){ _rel_tol = relTol; };
+  void setDivergenceTol(double divTol){ _div_tol = divTol; };
+  void setMaxIter(int maxIter) { _max_iter = maxIter; };
+
+  void setDisplayMatrixInConsole(bool flag){ _displayMatrixInConsole = flag; };
+  void setDisplayMatrixInWindow(bool flag){ _displayMatrixInWindow = flag; };
+  void setDisplayRHSInConsole(bool flag){ _displayRHSInConsole = flag; };
+  void setExportMatrixMatlab(bool flag){ _exportMatrixMatlab = flag; };
+  void setExportRHSMatlab(bool flag){ _exportRHSMatlab = flag; };
 
   bool getRecomputeStatus() { return recomputeMatrix; }
   void setRecomputeStatus(bool status) { recomputeMatrix = status; }
@@ -96,7 +120,7 @@ public:
   // Print the matrix to the console or PETSc viewer
   virtual void viewMatrix() = 0;
   // Print the RHS to the console
-  virtual void printRHS() = 0;
+  virtual void viewRHS() = 0;
 };
 
 #endif

@@ -76,7 +76,7 @@ public:
   int getNumBoundaryElements() { return _nBoundaryElm; }
   int getVertexSequentialTagFromGmshTag(int gmshNodeTag) { return _verticesMap[gmshNodeTag]; }
   int getNumCncGeo() { return _nCncGeo; }
-  std::vector<feCncGeo *> &getCncGeo() { return _cncGeo; }
+  const std::vector<feCncGeo *> &getCncGeo() const { return _cncGeo; }
 
   Vertex *getVertex(int iVertex) { return &_vertices[iVertex]; }
   Vertex *getVertexFromGmshNodeTag(int gmshNodeTag)
@@ -239,7 +239,7 @@ private:
     int numPhysicalTags;
     std::vector<int> physicalTags;
     int gmshType; // Element type in Gmsh
-    geometricInterpolant interp;
+    geometricInterpolant interp = geometricInterpolant::NONE;
     int nElm;
     int nNodePerElem = 0;
     int nEdgePerElem;
@@ -261,7 +261,7 @@ private:
     int tag;
     std::vector<int> listEntities; // Tag des entities
     geometryType geometry;
-    geometricInterpolant interp;
+    geometricInterpolant interp = geometricInterpolant::NONE;
     feSpace *geoSpace;
     int nElm;
     int nNodePerElem;

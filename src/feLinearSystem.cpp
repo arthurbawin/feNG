@@ -15,6 +15,12 @@ feStatus createLinearSystem(feLinearSystem *&system,
   feInfoCond(FE_VERBOSE > 0, "");
   feInfoCond(FE_VERBOSE > 0, "LINEAR SYSTEM:");
 
+  for(auto *form : bilinearForms){
+    if(form == nullptr){
+      return feErrorMsg(FE_STATUS_ERROR, "Null pointer in vector of bilinear forms, maybe you forgot to initialize it.");
+    }
+  }
+
   if(numUnknowns == 0)
     return feErrorMsg(FE_STATUS_ERROR, "0 unknowns : attempting to create a linear system of size 0.");
 

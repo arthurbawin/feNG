@@ -14,12 +14,7 @@ class feSysElm_0D_Source_crossed : public feSysElm
 
   public:
     feSysElm_0D_Source_crossed(double par, feVectorFunction *fct)
-      : feSysElm(false), _fct(fct), _par(par)
-    {
-      _dim = 0;
-      _nFields = 1;
-      _ID = SOURCE_CROSSED_0D;
-    };
+      : feSysElm(0, 1, SOURCE_CROSSED_0D, false), _fct(fct), _par(par){};
     ~feSysElm_0D_Source_crossed() {}
     void createElementarySystem(std::vector<feSpace *> &space);
     void computeAe(feBilinearForm *form);
@@ -39,12 +34,7 @@ class feSysElm_1D_weakBC_edo1 : public feSysElm
     std::vector<double> _feL;
 
   public:
-    feSysElm_1D_weakBC_edo1(double par, feFunction *fct) : feSysElm(true), _fct(fct), _par(par)
-    {
-      _dim = 1;
-      _nFields = 3;
-      _ID = WEAKBC_EDO1_1D;
-    };
+    feSysElm_1D_weakBC_edo1(double par, feFunction *fct) : feSysElm(1, 3, WEAKBC_EDO1_1D, true), _fct(fct), _par(par){};
     ~feSysElm_1D_weakBC_edo1() {}
     void createElementarySystem(std::vector<feSpace *> &space);
     void computeAe(feBilinearForm *form);
@@ -63,12 +53,7 @@ class feSysElm_0D_StiffSpring : public feSysElm
 
   public:
     feSysElm_0D_StiffSpring(std::vector<double> par, feFunction *fct)
-      : feSysElm(true), _fct(fct), _par(par)
-    {
-      _dim = 0;
-      _nFields = 2;
-      _ID = STIFFSPRING_0D;
-    };
+      : feSysElm(0, 2, STIFFSPRING_0D, true), _fct(fct), _par(par){};
     ~feSysElm_0D_StiffSpring() {}
     void createElementarySystem(std::vector<feSpace *> &space);
     void computeAe(feBilinearForm *form);
@@ -88,12 +73,7 @@ class feSysElm_0D_Stiff2 : public feSysElm
     std::vector<double> _feZ;
 
   public:
-    feSysElm_0D_Stiff2(double par, feFunction *fct) : feSysElm(true), _fct(fct), _par(par)
-    {
-      _dim = 0;
-      _nFields = 3;
-      _ID = STIFF2_0D;
-    };
+    feSysElm_0D_Stiff2(double par, feFunction *fct) : feSysElm(0, 3, STIFF2_0D, true), _fct(fct), _par(par){};
     ~feSysElm_0D_Stiff2() {}
     void createElementarySystem(std::vector<feSpace *> &space);
     void computeAe(feBilinearForm *form);
@@ -113,12 +93,7 @@ class feSysElm_0D_Stiff3 : public feSysElm
     std::vector<double> _feZ;
 
   public:
-    feSysElm_0D_Stiff3(double par, feFunction *fct) : feSysElm(true), _fct(fct), _par(par)
-    {
-      _dim = 0;
-      _nFields = 3;
-      _ID = STIFF3_0D;
-    };
+    feSysElm_0D_Stiff3(double par, feFunction *fct) : feSysElm(0, 3, STIFF3_0D, true), _fct(fct), _par(par){};
     ~feSysElm_0D_Stiff3() {}
     void createElementarySystem(std::vector<feSpace *> &space);
     void computeAe(feBilinearForm *form);
@@ -136,12 +111,7 @@ class feSysElm_0D_weakBC : public feSysElm
     std::vector<double> _feL;
 
   public:
-    feSysElm_0D_weakBC(double par, feFunction *fct) : feSysElm(true), _fct(fct), _par(par)
-    {
-      _dim = 0;
-      _nFields = 2;
-      _ID = WEAKBC_0D;
-    };
+    feSysElm_0D_weakBC(double par, feFunction *fct) : feSysElm(0, 2, WEAKBC_0D, true), _fct(fct), _par(par){};
     ~feSysElm_0D_weakBC() {}
     void createElementarySystem(std::vector<feSpace *> &space);
     void computeAe(feBilinearForm *form);
@@ -160,12 +130,7 @@ class feSysElm_0D_weakBC_edo1 : public feSysElm
     std::vector<double> _feL;
 
   public:
-    feSysElm_0D_weakBC_edo1(double par, feFunction *fct) : feSysElm(true), _fct(fct), _par(par)
-    {
-      _dim = 0;
-      _nFields = 3;
-      _ID = WEAKBC_EDO1_0D;
-    };
+    feSysElm_0D_weakBC_edo1(double par, feFunction *fct) : feSysElm(0, 3, WEAKBC_EDO1_0D, true), _fct(fct), _par(par){};
     ~feSysElm_0D_weakBC_edo1() {}
     void createElementarySystem(std::vector<feSpace *> &space);
     void computeAe(feBilinearForm *form);
@@ -184,12 +149,7 @@ class feSysElm_0D_weakBC_edo1_V2 : public feSysElm
     std::vector<double> _feL;
 
   public:
-    feSysElm_0D_weakBC_edo1_V2(double par, feFunction *fct) : feSysElm(true), _fct(fct), _par(par)
-    {
-      _dim = 0;
-      _nFields = 3;
-      _ID = WEAKBC_EDO1_V2_0D;
-    };
+    feSysElm_0D_weakBC_edo1_V2(double par, feFunction *fct) : feSysElm(0, 3, WEAKBC_EDO1_V2_0D, true), _fct(fct), _par(par){};
     ~feSysElm_0D_weakBC_edo1_V2() {}
     void createElementarySystem(std::vector<feSpace *> &space);
     void computeAe(feBilinearForm *form);
@@ -209,12 +169,7 @@ class feSysElm_0D_weakBC_edo2 : public feSysElm
     std::vector<double> _feL;
 
   public:
-    feSysElm_0D_weakBC_edo2(double par, feFunction *fct) : feSysElm(true), _fct(fct), _par(par)
-    {
-      _dim = 0;
-      _nFields = 4;
-      _ID = WEAKBC_EDO2_0D;
-    };
+    feSysElm_0D_weakBC_edo2(double par, feFunction *fct) : feSysElm(0, 4, WEAKBC_EDO2_0D, true), _fct(fct), _par(par){};
     ~feSysElm_0D_weakBC_edo2() {}
     void createElementarySystem(std::vector<feSpace *> &space);
     void computeAe(feBilinearForm *form);

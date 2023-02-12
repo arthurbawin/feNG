@@ -1,6 +1,10 @@
 #include "feLinearSystemPETSc.h"
 #include "feCompressedRowStorage.h"
 
+#if defined(HAVE_PETSC)
+#include "petscdraw.h"
+#endif
+
 extern int FE_VERBOSE;
 
 bool petscWasInitialized = false;
@@ -29,37 +33,37 @@ void petscFinalize()
 void feLinearSystemPETSc::initialize()
 {
 #if defined(HAVE_PETSC)
-  PetscErrorCode ierr;
   PetscMPIInt size;
-
-  ierr = MPI_Comm_size(PETSC_COMM_WORLD, &size);
+  PetscErrorCode ierr = MPI_Comm_size(PETSC_COMM_WORLD, &size);
   CHKERRABORT(PETSC_COMM_WORLD, ierr);
   if(size != 1) {
-    printf("In feLinearSystemPETSc::initialize : This is a uniprocessor example only\n");
-    return;
+    feErrorMsg(FE_STATUS_ERROR, "Cannot run on more than 1 processor :/");
+    exit(-1);
   }
 
   // Allocate vectors and matrix
-  ierr = VecCreate(PETSC_COMM_WORLD, &_dx);
+  ierr = VecCreate(PETSC_COMM_WORLD, &_du);
   CHKERRABORT(PETSC_COMM_WORLD, ierr);
-  ierr = VecSetSizes(_dx, PETSC_DECIDE, _nInc);
+  ierr = VecSetSizes(_du, PETSC_DECIDE, _nInc);
   CHKERRABORT(PETSC_COMM_WORLD, ierr);
-  ierr = VecSetFromOptions(_dx);
+  ierr = VecSetFromOptions(_du);
   CHKERRABORT(PETSC_COMM_WORLD, ierr);
 
-  ierr = VecDuplicate(_dx, &_res);
+  ierr = VecDuplicate(_du, &_rhs);
   CHKERRABORT(PETSC_COMM_WORLD, ierr);
-  ierr = VecDuplicate(_dx, &_linSysRes);
+  ierr = VecDuplicate(_du, &_linSysRes);
   CHKERRABORT(PETSC_COMM_WORLD, ierr);
-  ierr = VecSet(_dx, 1.0);
+  ierr = VecSet(_du, 1.0);
 
   // Determine the nonzero structure
-  feCompressedRowStorage CRS(_nInc, _formMatrices, _numMatrixForms);
+  // feCompressedRowStorage CRS(_nInc, _formMatrices, _numMatrixForms);
+  _EZCRS = new feEZCompressedRowStorage(_nInc, _formMatrices, _numMatrixForms);
 
-  feInt *NNZ = CRS.getNnz();
+  // feInt *NNZ = CRS.getNnz();
   std::vector<PetscInt> nnz(_nInc, 0);
   for(int i = 0; i < _nInc; ++i) {
-    nnz[i] = NNZ[i];
+    // nnz[i] = NNZ[i];
+    nnz[i] = _EZCRS->getNnzAt(i);
   }
 
   bool withPrealloc = true;
@@ -119,12 +123,8 @@ void feLinearSystemPETSc::initialize()
   ierr = PCSetType(preconditioner, PCILU);
   CHKERRABORT(PETSC_COMM_WORLD, ierr);
 
-  PetscReal rel_tol = 1e-10;
-  PetscReal abs_tol = 1e-15;
-  PetscReal div_tol = 1e6;
-  PetscInt max_iter = 10000;
-
-  ierr = KSPSetTolerances(ksp, rel_tol, abs_tol, div_tol, max_iter);
+  ierr = KSPSetTolerances(ksp, (PetscReal) _rel_tol, (PetscReal) _abs_tol, 
+    (PetscReal) _div_tol, (PetscInt) _max_iter);
   CHKERRABORT(PETSC_COMM_WORLD, ierr);
   ierr = KSPSetNormType(ksp, KSP_NORM_UNPRECONDITIONED);
   CHKERRABORT(PETSC_COMM_WORLD, ierr);
@@ -133,8 +133,8 @@ void feLinearSystemPETSc::initialize()
 
   PetscInt M, N, Nres, Ndx, NlinSysRes;
   MatGetSize(_A, &M, &N);
-  VecGetSize(_res, &Nres);
-  VecGetSize(_dx, &Ndx);
+  VecGetSize(_rhs, &Nres);
+  VecGetSize(_du, &Ndx);
   VecGetSize(_linSysRes, &NlinSysRes);
 
   feInfoCond(FE_VERBOSE > 0, "\t\tCreated a PETSc linear system of size %d x %d", M, N);
@@ -148,10 +148,10 @@ void feLinearSystemPETSc::initialize()
   ierr = PCGetType(preconditioner, &preconditionerType);
   feInfoCond(FE_VERBOSE > 0, "\t\t\tPreconditioner: %s", preconditionerType);
 
-  feInfoCond(FE_VERBOSE > 0, "\t\t\tRelative tolerance: %1.4e", rel_tol);
-  feInfoCond(FE_VERBOSE > 0, "\t\t\tAbsolute tolerance: %1.4e", abs_tol);
-  feInfoCond(FE_VERBOSE > 0, "\t\t\tDivergence criterion: %1.4e", div_tol);
-  feInfoCond(FE_VERBOSE > 0, "\t\t\tMax number of iterations: %d", max_iter);
+  feInfoCond(FE_VERBOSE > 0, "\t\t\tRelative tolerance: %1.4e", _rel_tol);
+  feInfoCond(FE_VERBOSE > 0, "\t\t\tAbsolute tolerance: %1.4e", _abs_tol);
+  feInfoCond(FE_VERBOSE > 0, "\t\t\tDivergence criterion: %1.4e", _div_tol);
+  feInfoCond(FE_VERBOSE > 0, "\t\t\tMax number of iterations: %d", _max_iter);
 #endif
 }
 
@@ -169,12 +169,35 @@ feLinearSystemPETSc::feLinearSystemPETSc(int argc, char **argv,
 void feLinearSystemPETSc::viewMatrix()
 {
 #if defined(HAVE_PETSC)
-  MatView(_A, PETSC_VIEWER_STDOUT_WORLD);
-  // PetscViewer viewer;
-  // PetscViewerDrawOpen(PETSC_COMM_WORLD, NULL, NULL, 0, 0, 600, 600, &viewer);
-  // PetscObjectSetName((PetscObject)viewer, "Line graph Plot");
-  // PetscViewerPushFormat(viewer, PETSC_VIEWER_DRAW_LG);
-  // MatView(_A, viewer);
+  if(_displayMatrixInConsole){
+    MatView(_A, PETSC_VIEWER_STDOUT_WORLD);
+  }
+
+  if(_displayMatrixInWindow){
+
+    PetscErrorCode ierr = 0;
+    // ierr = MatGetOrdering(_A, MATORDERINGRCM, &_rowMap, &_colMap); CHKERRV(ierr);
+    // ierr = MatPermute(_A, _rowMap, _colMap, &_Ap); CHKERRV(ierr);
+
+    PetscViewer viewer;
+    PetscDraw draw;
+    ierr = PetscViewerDrawOpen(PETSC_COMM_WORLD, NULL, NULL, 0, 0, 600, 600, &viewer); CHKERRV(ierr);
+    ierr = MatView(_A, viewer); CHKERRV(ierr);
+    ierr = PetscViewerDrawGetDraw(viewer, 0, &draw); CHKERRV(ierr);
+    ierr = PetscDrawSetPause(draw, -1); CHKERRV(ierr); // Wait for user
+    PetscDrawPause(draw);
+    ierr = PetscViewerDestroy(&viewer); CHKERRV(ierr);
+  }
+
+#endif
+}
+
+void feLinearSystemPETSc::viewRHS()
+{
+#if defined(HAVE_PETSC)
+  if(_displayRHSInConsole){
+    VecView(_rhs, PETSC_VIEWER_STDOUT_WORLD);
+  }
 #endif
 }
 
@@ -189,19 +212,16 @@ void feLinearSystemPETSc::setToZero()
 void feLinearSystemPETSc::setMatrixToZero()
 {
 #if defined(HAVE_PETSC)
-  PetscErrorCode ierr = 0;
-  ierr = MatZeroEntries(_A);
+  PetscErrorCode ierr = MatZeroEntries(_A);
   CHKERRABORT(PETSC_COMM_WORLD, ierr);
-  // ierr = MatAssemblyBegin(_A,MAT_FINAL_ASSEMBLY); CHKERRABORT(PETSC_COMM_WORLD, ierr);
-  // ierr = MatAssemblyEnd(_A, MAT_FINAL_ASSEMBLY);   CHKERRABORT(PETSC_COMM_WORLD, ierr);
-  // viewMatrix();
 #endif
 }
 
 void feLinearSystemPETSc::setResidualToZero()
 {
 #if defined(HAVE_PETSC)
-  VecZeroEntries(_res);
+  PetscErrorCode ierr = VecZeroEntries(_rhs);
+  CHKERRABORT(PETSC_COMM_WORLD, ierr);
 #endif
 }
 
@@ -212,23 +232,20 @@ void feLinearSystemPETSc::assembleMatrices(feSolution *sol)
   PetscErrorCode ierr = 0;
 
   for(feInt eq = 0; eq < _numMatrixForms; ++eq) {
+
     feBilinearForm *f = _formMatrices[eq];
     feCncGeo *cnc = f->getCncGeo();
-    int nbColor = cnc->getNbColor();
-    const std::vector<int> &nbElmPerColor = cnc->getNbElmPerColor();
+    int numColors = cnc->getNbColor();
+    const std::vector<int> &numElemPerColor = cnc->getNbElmPerColor();
     const std::vector<std::vector<int> > &listElmPerColor = cnc->getListElmPerColor();
-    int nbElmC;
+    int numElementsInColor;
     std::vector<int> listElmC;
 
-    for(int iColor = 0; iColor < nbColor; ++iColor) {
-      nbElmC = nbElmPerColor[iColor]; // nbElm : nombre d'elm de meme couleur
+    for(int iColor = 0; iColor < numColors; ++iColor) {
+      numElementsInColor = numElemPerColor[iColor];
       listElmC = listElmPerColor[iColor];
-      // nbElmC = cnc->getNbElmPerColorI(iColor);
-      // listElmC = cnc -> getListElmPerColorI(iColor);
 
-      // int numThread = 0;
       int elm;
-
       double **Ae;
       feInt sizeI;
       feInt sizeJ;
@@ -238,22 +255,22 @@ void feLinearSystemPETSc::assembleMatrices(feSolution *sol)
       std::vector<feInt> adrJ;
       std::vector<PetscScalar> values;
 
-#if defined(HAVE_OMP)
-#pragma omp parallel for private(elm, f, niElm, njElm, sizeI, sizeJ, adrI, adrJ,   \
+      #if defined(HAVE_OMP)
+      #pragma omp parallel for private(elm, f, niElm, njElm, sizeI, sizeJ, adrI, adrJ,   \
                                Ae, ierr, values)
-#endif
-      for(int iElm = 0; iElm < nbElmC; ++iElm) {
-#if defined(HAVE_OMP)
-        // numThread = omp_get_thread_num();
+      #endif
+      for(int iElm = 0; iElm < numElementsInColor; ++iElm) {
+        #if defined(HAVE_OMP)
         int eqt = eq + omp_get_thread_num() * _numMatrixForms;
         f = _formMatrices[eqt];
-#endif
+        #endif
         elm = listElmC[iElm];
-        f->computeMatrix(sol, elm); // Matrice elementaire
 
+        // Compute element-wise matrix
+        f->computeMatrix(sol, elm);
         Ae = f->getAe();
 
-        // Determine assignment indices
+        // Determine global assignment indices
         adrI = f->getAdrI();
         adrJ = f->getAdrJ();
         sizeI = adrI.size();
@@ -268,51 +285,50 @@ void feLinearSystemPETSc::assembleMatrices(feSolution *sol)
         }
 
         adrI.erase(std::remove_if(adrI.begin(), adrI.end(),
-                                  [this](const int &x) { return x >= this->_nInc; }),
-                   adrI.end());
+          [this](const int &x) { return x >= this->_nInc; }), adrI.end());
         adrJ.erase(std::remove_if(adrJ.begin(), adrJ.end(),
-                                  [this](const int &x) { return x >= this->_nInc; }),
-                   adrJ.end());
+          [this](const int &x) { return x >= this->_nInc; }), adrJ.end());
 
         // Flatten Ae at relevant indices
         sizeI = adrI.size();
         sizeJ = adrJ.size();
+
         values.resize(sizeI * sizeJ);
         for(feInt i = 0; i < sizeI; ++i) {
           for(feInt j = 0; j < sizeJ; ++j) {
-            values[sizeI * i + j] = Ae[niElm[i]][njElm[j]];
+            values[sizeJ * i + j] = Ae[niElm[i]][njElm[j]];
           }
         }
-        ierr = MatSetValues(_A, adrI.size(), adrI.data(), adrJ.size(), adrJ.data(), values.data(),
-                            ADD_VALUES);
+
+        // Increment global matrix
+        ierr = MatSetValues(_A, adrI.size(), adrI.data(), adrJ.size(), adrJ.data(), values.data(), ADD_VALUES);
         niElm.clear();
         njElm.clear();
       }
-    } // nbColor
-
-  } // NumberOfBilinearForms
+    }
+  }
 
   ierr = MatAssemblyBegin(_A, MAT_FINAL_ASSEMBLY);
   CHKERRABORT(PETSC_COMM_WORLD, ierr);
   ierr = MatAssemblyEnd(_A, MAT_FINAL_ASSEMBLY);
   CHKERRABORT(PETSC_COMM_WORLD, ierr);
-  // double normMat = 0.0;
-  // ierr = MatNorm(_A, NORM_FROBENIUS, &normMat); CHKERRABORT(PETSC_COMM_WORLD, ierr);
-  // printf("Norme de la matrice : %10.10e\n", normMat);
 
-  // feInfo("Done");
-  // toc();
-  // viewMatrix();
-  // PetscViewer viewer;
-  // PetscViewerASCIIOpen(PETSC_COMM_WORLD, "matrix", FILE_MODE_WRITE, &viewer);
-  // MatView(_A,viewer);
+  // double normMat;
+  // ierr = MatNorm(_A, NORM_FROBENIUS, &normMat);
+  // CHKERRABORT(PETSC_COMM_WORLD, ierr);
 
-  PetscViewer viewer;
-  PetscViewerASCIIOpen(PETSC_COMM_WORLD, "matrix.m", &viewer);
-  PetscViewerPushFormat(viewer, PETSC_VIEWER_ASCII_MATLAB);
-  MatView(_A,viewer);
-  PetscViewerPopFormat(viewer);
-  PetscViewerDestroy(&viewer);
+  viewMatrix();
+
+  if(_exportMatrixMatlab){
+    feInfoCond(FE_VERBOSE > 1, "\t\t\tExporting global matrix to Matlab");
+    PetscViewer viewer;
+    PetscViewerASCIIOpen(PETSC_COMM_WORLD, "matrix.m", &viewer);
+    PetscViewerPushFormat(viewer, PETSC_VIEWER_ASCII_MATLAB);
+    MatView(_A,viewer);
+    PetscViewerPopFormat(viewer);
+    PetscViewerDestroy(&viewer);
+  }
+  
 #endif
 }
 
@@ -323,44 +339,42 @@ void feLinearSystemPETSc::assembleResiduals(feSolution *sol)
   PetscErrorCode ierr = 0;
 
   for(feInt eq = 0; eq < _numResidualForms; ++eq) {
+
     feBilinearForm *f = _formResiduals[eq];
     feCncGeo *cnc = f->getCncGeo();
-    int nbColor = cnc->getNbColor();
-    const std::vector<int> &nbElmPerColor = cnc->getNbElmPerColor();
+    int numColors = cnc->getNbColor();
+    const std::vector<int> &numElemPerColor = cnc->getNbElmPerColor();
     const std::vector<std::vector<int> > &listElmPerColor = cnc->getListElmPerColor();
-    int nbElmC;
+    int numElementsInColor;
     std::vector<int> listElmC;
 
-    for(int iColor = 0; iColor < nbColor; ++iColor) {
-      nbElmC = nbElmPerColor[iColor]; // nbElm : nombre d'elm de meme couleur
+    for(int iColor = 0; iColor < numColors; ++iColor) {
+      int numElementsInColor = numElemPerColor[iColor];
       listElmC = listElmPerColor[iColor];
-      // nbElmC = cnc->getNbElmPerColorI(iColor);
-      // listElmC = cnc -> getListElmPerColorI(iColor);
 
-      // int numThread = 0;
       int elm;
-
       double *Be;
       feInt sizeI;
       std::vector<feInt> niElm;
       std::vector<feInt> adrI;
       std::vector<PetscScalar> values;
 
-#if defined(HAVE_OMP)
-#pragma omp parallel for private(elm, niElm, Be, f, adrI, ierr, values, sizeI)
-#endif
-      for(int iElm = 0; iElm < nbElmC; ++iElm) {
-#if defined(HAVE_OMP)
-        // numThread = omp_get_thread_num();
+      #if defined(HAVE_OMP)
+      #pragma omp parallel for private(elm, niElm, Be, f, adrI, ierr, values, sizeI)
+      #endif
+      for(int iElm = 0; iElm < numElementsInColor; ++iElm) {
+        #if defined(HAVE_OMP)
         int eqt = eq + omp_get_thread_num() * _numResidualForms;
         f = _formResiduals[eqt];
-#endif
+        #endif
 
         elm = listElmC[iElm];
-        f->computeResidual(sol, elm); // Matrice elementaire
 
+        // Compute the element-wise residual
+        f->computeResidual(sol, elm);
         Be = f->getBe();
 
+        // Determine global assignment indices
         adrI = f->getAdrI();
         sizeI = adrI.size();
         niElm.reserve(sizeI);
@@ -368,9 +382,8 @@ void feLinearSystemPETSc::assembleResiduals(feSolution *sol)
           if(adrI[i] < _nInc) niElm.push_back(i);
         }
 
-        adrI.erase(std::remove_if(adrI.begin(), adrI.end(),
-                                  [this](const int &x) { return x >= this->_nInc; }),
-                   adrI.end());
+        adrI.erase(std::remove_if(adrI.begin(), adrI.end(), 
+          [this](const int &x) { return x >= this->_nInc; }), adrI.end());
 
         sizeI = adrI.size();
         values.resize(sizeI);
@@ -378,35 +391,19 @@ void feLinearSystemPETSc::assembleResiduals(feSolution *sol)
           values[i] = Be[niElm[i]];
         }
 
-        // if(f->getID() == DG_ADVECTION_1D){
-        //   for(feInt i = 0; i < sizeI; ++i) {
-        //     feInfo("Adding values[%d] = %f", i, values[i]);
-        //   }
-        // }
-
-        ierr = VecSetValues(_res, adrI.size(), adrI.data(), values.data(), ADD_VALUES);
+        // Increment global residual
+        ierr = VecSetValues(_rhs, adrI.size(), adrI.data(), values.data(), ADD_VALUES);
         niElm.clear();
+      }
+    }
+  }
 
-      } // for elm mm couleur
-
-    } // for nbColor
-  } // for formBili
-
-  ierr = VecAssemblyBegin(_res);
+  ierr = VecAssemblyBegin(_rhs);
   CHKERRABORT(PETSC_COMM_WORLD, ierr);
-  ierr = VecAssemblyEnd(_res);
+  ierr = VecAssemblyEnd(_rhs);
   CHKERRABORT(PETSC_COMM_WORLD, ierr);
-
-  // feInfo("Done");
-  // toc();
-  // VecView(_res,PETSC_VIEWER_STDOUT_WORLD);
-  // double normResidual = 0.0;
-  // VecNorm(_res, NORM_2, &normResidual);
-  // CHKERRABORT(PETSC_COMM_WORLD, ierr);
-  // printf("Norme du résidu : %10.10e\n", normResidual);
-
-  // feInfo("Assembled residual:");
-  // printRHS();
+  
+  viewRHS();
 
 #endif
 }
@@ -419,19 +416,26 @@ void feLinearSystemPETSc::assemble(feSolution *sol)
   this->assembleResiduals(sol);
 }
 
-// Solve the system and compute norms of solution and residuals
-bool feLinearSystemPETSc::solve(double *normDx, double *normResidual, double *normAxb, int *nIter)
+// Solve the linear system and compute max norms of solution and residuals
+bool feLinearSystemPETSc::solve(double *normSolution, double *normRHS, double *normResidualAxMinusb, int *nIter)
 {
 #if defined(HAVE_PETSC)
-  PetscErrorCode ierr = KSPSolve(ksp, _res, _dx);
+
+  PetscErrorCode ierr = 0;
+
+  // Set tolerances, in case the have changed since creation
+  ierr = KSPSetTolerances(ksp, (PetscReal) _rel_tol, (PetscReal) _abs_tol, 
+    (PetscReal) _div_tol, (PetscInt) _max_iter);
+
+  // Solve
+  ierr = KSPSolve(ksp, _rhs, _du);
   CHKERRABORT(PETSC_COMM_WORLD, ierr);
 
   KSPConvergedReason reason;
   ierr = KSPGetConvergedReason(ksp, &reason);
 
-  bool ret = reason > 0;
-
   if(reason < 0){
+    // Solve failed
     const char *reasonString;
     KSPGetConvergedReasonString(ksp, &reasonString);
     feWarning("\nPETSc solve failed with KSP error code: %s", reasonString);
@@ -440,40 +444,34 @@ bool feLinearSystemPETSc::solve(double *normDx, double *normResidual, double *no
       ierr = PCGetFailedReason(preconditioner, &reasonpc);
       switch(reasonpc){
         case PC_SETUP_ERROR:
-        std::cout << 1 << std::endl;
-        break;
+          feWarning("\nPETSc solve failed with preconditioner error code: %s", "PC_SETUP_ERROR"); break;
         case PC_NOERROR:
-        std::cout << 2 << std::endl;
-        break;
+          feWarning("\nPETSc solve failed with preconditioner error code: %s", "PC_NOERROR"); break;
         case PC_FACTOR_STRUCT_ZEROPIVOT:
-        std::cout << 3 << std::endl;
-        break;
+          feWarning("\nPETSc solve failed with preconditioner error code: %s", "PC_FACTOR_STRUCT_ZEROPIVOT"); break;
         case PC_FACTOR_NUMERIC_ZEROPIVOT:
-        std::cout << 4 << std::endl;
-        break;
+          feWarning("\nPETSc solve failed with preconditioner error code: %s", "PC_FACTOR_NUMERIC_ZEROPIVOT"); break;
         case PC_FACTOR_OUTMEMORY:
-        std::cout << 5 << std::endl;
-        break;
+          feWarning("\nPETSc solve failed with preconditioner error code: %s", "PC_FACTOR_OUTMEMORY"); break;
         case PC_FACTOR_OTHER:
-        std::cout << 6 << std::endl;
-        break;
+          feWarning("\nPETSc solve failed with preconditioner error code: %s", "PC_FACTOR_OTHER"); break;
         case PC_INCONSISTENT_RHS:
-        std::cout << 7 << std::endl;
+          feWarning("\nPETSc solve failed with preconditioner error code: %s", "PC_INCONSISTENT_RHS"); break;
         case PC_SUBPC_ERROR:
-        std::cout << 8 << std::endl;
-        break;
-    }
+          feWarning("\nPETSc solve failed with preconditioner error code: %s", "PC_SUBPC_ERROR"); break;
+      }
     }
   }
 
   KSPGetIterationNumber(ksp, nIter);
   VecSet(_linSysRes, 0.0);
-  MatMult(_A, _dx, _linSysRes);
-  VecAXPY(_linSysRes, -1.0, _res);
-  ierr = VecNorm(_res, NORM_MAX, normResidual); CHKERRABORT(PETSC_COMM_WORLD, ierr);
-  ierr = VecNorm(_dx, NORM_MAX, normDx); CHKERRABORT(PETSC_COMM_WORLD, ierr);
-  ierr = VecNorm(_linSysRes, NORM_MAX, normAxb); CHKERRABORT(PETSC_COMM_WORLD, ierr);
-  return ret;
+  MatMult(_A, _du, _linSysRes);
+  VecAXPY(_linSysRes, -1.0, _rhs);
+  ierr = VecNorm(_rhs,       NORM_MAX, normRHS); CHKERRABORT(PETSC_COMM_WORLD, ierr);
+  ierr = VecNorm(_du,        NORM_MAX, normSolution); CHKERRABORT(PETSC_COMM_WORLD, ierr);
+  ierr = VecNorm(_linSysRes, NORM_MAX, normResidualAxMinusb); CHKERRABORT(PETSC_COMM_WORLD, ierr);
+
+  return reason > 0;
 #endif
   return false;
 }
@@ -483,9 +481,9 @@ void feLinearSystemPETSc::correctSolution(feSolution *sol)
 #if defined(HAVE_PETSC)
   std::vector<double> &_sol = sol->getSolutionReference();
   PetscScalar *array;
-  VecGetArray(_dx, &array);
+  VecGetArray(_du, &array);
   for(int i = 0; i < _nInc; ++i) _sol[i] += array[i];
-  VecRestoreArray(_dx, &array);
+  VecRestoreArray(_du, &array);
 #endif
 }
 
@@ -493,9 +491,9 @@ void feLinearSystemPETSc::assignResidualToDCResidual(feSolutionContainer *solCon
 {
 #if defined(HAVE_PETSC)
   PetscScalar *array;
-  VecGetArray(_res, &array);
+  VecGetArray(_rhs, &array);
   for(int i = 0; i < _nInc; ++i) solContainer->_fResidual[0][i] = array[i];
-  VecRestoreArray(_res, &array);
+  VecRestoreArray(_rhs, &array);
 #endif
 }
 
@@ -503,46 +501,26 @@ void feLinearSystemPETSc::applyCorrectionToResidual(double coeff, std::vector<do
 {
 #if defined(HAVE_PETSC)
   PetscScalar *array;
-  VecGetArray(_res, &array);
+  VecGetArray(_rhs, &array);
   for(int i = 0; i < _nInc; ++i) array[i] += coeff * d[i];
-  VecRestoreArray(_res, &array);
-#endif
-}
-
-void feLinearSystemPETSc::printRHS()
-{
-#if defined(HAVE_PETSC)
-  // VecView(_res, PETSC_VIEWER_STDOUT_WORLD);
-  PetscScalar *array;
-  VecGetArray(_res, &array);
-  for(int i = 0; i < _nInc; ++i) printf("%12.16f\n", array[i]);
-  VecRestoreArray(_res, &array);
+  VecRestoreArray(_rhs, &array);
 #endif
 }
 
 void feLinearSystemPETSc::finalize()
 {
 #if defined(HAVE_PETSC)
-  PetscErrorCode ierr;
-  ierr = KSPDestroy(&ksp);
+  delete _EZCRS;
+  PetscErrorCode ierr = KSPDestroy(&ksp);
   CHKERRABORT(PETSC_COMM_WORLD, ierr);
-  printf("In feLinearSystemPETSc::feLinearSystemPETSc : Deleted KSP\n");
   ierr = MatDestroy(&_A);
   CHKERRABORT(PETSC_COMM_WORLD, ierr);
-  printf("In feLinearSystemPETSc::feLinearSystemPETSc : Deleted matrix A         of size %d\n",
-         _nInc);
   ierr = VecDestroy(&_linSysRes);
   CHKERRABORT(PETSC_COMM_WORLD, ierr);
-  printf("In feLinearSystemPETSc::feLinearSystemPETSc : Deleted vector linSysRes of size %d\n",
-         _nInc);
-  ierr = VecDestroy(&_res);
+  ierr = VecDestroy(&_rhs);
   CHKERRABORT(PETSC_COMM_WORLD, ierr);
-  printf("In feLinearSystemPETSc::feLinearSystemPETSc : Deleted vector res       of size %d\n",
-         _nInc);
-  ierr = VecDestroy(&_dx);
+  ierr = VecDestroy(&_du);
   CHKERRABORT(PETSC_COMM_WORLD, ierr);
-  printf("In feLinearSystemPETSc::feLinearSystemPETSc : Deleted vector dx        of size %d\n",
-         _nInc);
 #endif
 }
 

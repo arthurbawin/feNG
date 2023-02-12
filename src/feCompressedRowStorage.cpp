@@ -1,5 +1,43 @@
 #include "feCompressedRowStorage.h"
 
+feEZCompressedRowStorage::feEZCompressedRowStorage(int numUnknowns,
+  std::vector<feBilinearForm *> &formMatrices, int numMatrixForms)
+{
+  nnz.resize(numUnknowns, 0.);
+  nnzset.resize(numUnknowns);
+
+  int nI, nJ;
+  std::vector<feInt> adrI;
+  std::vector<feInt> adrJ;
+
+  for(int i = 0; i < nnzset.size(); ++i){
+    nnzset[i].clear();
+  }
+
+  for(auto *f : formMatrices){
+    for(int iElm = 0; iElm < f->getCncGeo()->getNumElements(); ++iElm){
+      f->initializeAddressingVectors(iElm);
+
+      adrI = f->getAdrI(); nI = adrI.size();
+      adrJ = f->getAdrJ(); nJ = adrJ.size();
+
+      for(int i = 0; i < nI; ++i){
+        for(int j = 0; j < nJ; ++j){
+          if(adrI[i] < numUnknowns && adrJ[j] < numUnknowns){
+            nnzset[adrI[i]].insert(adrJ[j]);
+            allocatedPairs.insert( {adrI[i], adrJ[j]} );
+          }
+        }
+      }
+    }
+  }
+
+  for(int i = 0; i < nnzset.size(); ++i){
+    nnz[i] = fmax(1, nnzset[i].size());
+  }
+
+}
+
 // ====================================================================
 // Constructeur de la classe de base CSR
 // ====================================================================
@@ -13,37 +51,14 @@ feCompressedRowStorage::feCompressedRowStorage(int numUnknowns, std::vector<feBi
   ddlNumberOfElements = new feInt[ordre]; // à initialiser à zéro
   for(feInt i = 0; i < ordre; i++) ddlNumberOfElements[i] = 0;
 
-  // ================================================================
-  // COMPTER LES ELEMENTS D'UN DEGRE DE LIBERTE
-  // POUR CONSTRUIRE L'ESPACE TEMPORAIRE
-  // ================================================================
-  // int NumberOfBilinearForms = numMatrixForms;
-
-  // feInfo("Building a CRS with %d matrix forms (check = %d)", numMatrixForms, formMatrices.size());
-  // std::vector<double> coord(9, 0.);
-
   for(feBilinearForm *f : formMatrices) {
 
     feInt nbElems = f->getCncGeo()->getNumElements();
 
-    // #pragma omp parallel for
     for(feInt iElm = 0; iElm < nbElems; iElm++) {
-      // printf("Assembling element %8d on thread %d/%d\n", e, omp_get_thread_num(),
-      // omp_get_num_threads());
       f->initializeAddressingVectors(iElm);
       feInt NBRI = f->getLocalMatrixM();
       std::vector<feInt> VADI = f->getAdrI(); // &VADI ????
-
-      // feInfo("niELm = %d", NBRI);
-      // feInfo("Vecteur d'adressage elm %d", iElm);
-      // for(auto val : VADI){
-      //   feInfo("%d", val);
-      // }
-      // mesh->getCoord(cncGeoTag, iElm, coord);
-      // feInfo("Coordonnées :");
-      // for(int ii = 0; ii < 3; ++ii){
-      //   feInfo("%f - %f - %f", coord[3*ii+0], coord[3*ii+1], coord[3*ii+2]);
-      // }
 
       for(feInt i = 0; i < NBRI; i++) {
         feInt I = (feInt)VADI[i];
@@ -78,7 +93,7 @@ feCompressedRowStorage::feCompressedRowStorage(int numUnknowns, std::vector<feBi
   }
 
   // ================================================================
-  // RECUPERER LES NUMEROS DES FORMES BIULINEAIRES ET DES ELEMENTS
+  // RECUPERER LES NUMEROS DES FORMES BILINEAIRES ET DES ELEMENTS
   // ================================================================
   for(feInt i = 0; i < ordre; i++) ddlNumberOfElements[i] = 0;
   for(int eq = 0; eq < numMatrixForms; eq++) {
@@ -122,7 +137,7 @@ feCompressedRowStorage::feCompressedRowStorage(int numUnknowns, std::vector<feBi
     feInt nbrcof = 0;
 
     // ================================================================
-    // Pour stoujours avoir un coefficient sur la diagonale
+    // Pour toujours avoir un coefficient sur la diagonale
     // 18 fevrier 2011 mod -- AG
     // ================================================================
     ddl_rngcof[I] = true;

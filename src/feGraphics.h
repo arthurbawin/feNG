@@ -33,6 +33,10 @@ protected:
   double *_u;
   double *_uh;
 
+  double *_rho;
+  double *_mach;
+  double *_p;
+
 public:
   // Create an OpenGL window for 1D curves visualization. See testGraphic.cpp
   // for example use including resizing of the window, drawing and buffer update.
@@ -54,10 +58,19 @@ public:
                    feMetaNumber &numbering,
                    feSolution &solution,
                    feSpace *space,
-                   feFunction *analyticSolution = nullptr);
+                   feFunction *analyticSolution = nullptr,
+                   double yScaling = 1.0,
+                   int color = 0);
+
+  void drawEulerNozzle(feMesh &mesh,
+                       feMetaNumber &numbering,
+                       feSolution &solution,
+                       std::vector<feSpace*> &spaces, // rhoA, rhouA and eA
+                       double yScaling[3],
+                       feFunction *analyticSolution = nullptr);
 
   void reshapeWindowBox(double xMin, double xMax, double yMin, double yMax);
-  void reshapeWindowBox(double scaleFactor, feMesh &mesh, feSolution &solution);
+  void reshapeWindowBox(double scaleFactorX, double scaleFactorY, feMesh &mesh, feSolution &solution);
   void windowUpdate();
   void getWindowBox();
   bool windowShouldClose();

@@ -140,8 +140,9 @@ public:
 public:
   // Create a (bi-)linear form to compute the element-wise weak form
   // defined by elementarySystem with interpolation and test functions
-  // defined in spaces.
+  // defined in spaces/vectorSpaces.
   feBilinearForm(std::vector<feSpace*> spaces, feSysElm *elementarySystem);
+
   feBilinearForm(const feBilinearForm &f);
   ~feBilinearForm();
 

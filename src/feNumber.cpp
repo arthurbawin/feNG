@@ -271,13 +271,15 @@ void feNumber::compactFieldDOF()
 {
   _allEssentialDOF.clear();
   _allUnknownDOF.clear();
-  for(size_t i = 0; i < _numberingVertices.size(); ++i) {
-    if(_codeDOFVertices[i] == DOF_ESSENTIAL){
-      _allEssentialDOF.insert(_numberingVertices[i]);
-    } else if(_codeDOFVertices[i] == DOF_UNKNOWN){
-      _allUnknownDOF.insert(_numberingVertices[i]);
-    } else{
-      // "Ghost" degrees of freedom are not kept
+  for(size_t i = 0; i < _nNod; ++i) {
+    for(int j = 0; j < _maxDOFperVertex; ++j) {
+      if(_codeDOFVertices[i] == DOF_ESSENTIAL){
+        _allEssentialDOF.insert(_numberingVertices[_maxDOFperVertex * i + j]);
+      } else if(_codeDOFVertices[i] == DOF_UNKNOWN){
+        _allUnknownDOF.insert(_numberingVertices[_maxDOFperVertex * i + j]);
+      } else{
+        // "Ghost" degrees of freedom are not kept
+      }
     }
   }
 
@@ -380,6 +382,19 @@ void feNumber::printCodeEdges()
 feMetaNumber::feMetaNumber(feMesh *mesh, const std::vector<feSpace *> &spaces,
                            const std::vector<feSpace *> &essentialSpaces)
 {
+  for(auto *fS : spaces){
+    if(fS == nullptr){
+      feErrorMsg(FE_STATUS_ERROR, "Null pointer in vector of FE spaces, maybe you forgot to initialize it.");
+      exit(-1);
+    }
+  }
+  for(auto *fS : essentialSpaces){
+    if(fS == nullptr){
+      feErrorMsg(FE_STATUS_ERROR, "Null pointer in vector of FE essentialSpaces, maybe you forgot to initialize it.");
+      exit(-1);
+    }
+  }
+
   for(feSpace *fS : spaces) {
     if(std::find(_fieldIDs.begin(), _fieldIDs.end(), fS->getFieldID()) == _fieldIDs.end())
       _fieldIDs.push_back(fS->getFieldID());
@@ -391,8 +406,14 @@ feMetaNumber::feMetaNumber(feMesh *mesh, const std::vector<feSpace *> &spaces,
     for(feSpace *fS : spaces)
       if(fSBC->getFieldID() == fS->getFieldID() && fSBC->getCncGeoID() == fS->getCncGeoID())
         err = false;
-    if(err)
-      feWarning("Condition essentielle imposée sur un champ ou une connectivité non présent(e).");
+    if(err){
+      feErrorMsg(FE_STATUS_ERROR, "Space for field \"%s\" and connectivity \"%s\" was marked as\n"
+        " essential but is missing from the vector of FE spaces.\n"
+        " All essential spaces must be specified in the vector of FE spaces.",
+        fSBC->getFieldID().data(),
+        fSBC->getCncGeoID().data());
+      exit(-1);
+    }
   }
 
   // Create one numbering for each field

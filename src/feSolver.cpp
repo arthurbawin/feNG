@@ -84,6 +84,10 @@ feStatus solveQNBDF(feSolutionContainer *solDot, feTolerances tol, feMetaNumber 
     // stop = (normDx <= tol.tolDx && normResidual <= tol.tolResidual) || iter > tol.maxIter;
     stop = (normDx <= tol.tolDx) || (iter > tol.maxIter);
 
+    if(normResidual <= tol.tolResidual){
+      stop = true;
+    }
+
     // if((iter > 2 || prev_status == 0) && ((normResidual / _normR0) < 0.001) && normDx < 0.1 && nIterSinceMatrixComputation < 8) {
     //   linearSystem->setRecomputeStatus(false);
     // } else if(iter == 1 && prev_status == 0){
@@ -410,12 +414,21 @@ feStatus BDF1Solver::makeStep()
   _solutionContainer->rotate(_dt);
   initializeBDF1(_sol, _metaNumber, _mesh, dynamic_cast<feSolutionBDF1 *>(_solutionContainer));
   // printf("Étape 1 - recomputeMatrix = %s : Solution BDF1 - t = %6.6e\n", _linearSystem->getRecomputeStatus() ? "true" : "false", _sol->getCurrentTime());
-  solveQNBDF(_solutionContainer, _tol, _metaNumber, _linearSystem, _sol, _mesh);
+  feStatus s = solveQNBDF(_solutionContainer, _tol, _metaNumber, _linearSystem, _sol, _mesh);
+  if(s != FE_STATUS_OK){
+    return s;
+  }
+  
   fePstClc(_sol, _linearSystem, _solutionContainer);
   _sol->setSolFromContainer(_solutionContainer);
 
   _tCurrent += _dt;
   ++_currentStep;
+
+  if(_exportData.exporter != nullptr){
+    std::string fileName = _exportData.fileNameRoot + std::to_string(_currentStep) + ".vtk";
+    feCheck(_exportData.exporter->writeStep(fileName));
+  }
 
   return FE_STATUS_OK;
 }

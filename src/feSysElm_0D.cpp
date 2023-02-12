@@ -271,57 +271,6 @@ void feSysElm_0D_weakBC_edo2::computeBe(feBilinearForm *form)
   form->_Be[3] -= (wDot - gammaDotDot);
 }
 
-void feSysElm_0D_Masse::createElementarySystem(std::vector<feSpace *> &space)
-{
-  // _idU = 0;
-  _fieldsLayoutI.resize(space.size());
-  _fieldsLayoutJ.resize(space.size());
-  for(int i = 0; i < space.size(); i++) {
-    _fieldsLayoutI[i] = i;
-    _fieldsLayoutJ[i] = i;
-  }
-}
-
-void feSysElm_0D_Masse::computeAe(feBilinearForm *form)
-{
-  // int                nG = form->_geoSpace->getNbQuadPoints();
-  std::vector<double> w = form->_geoSpace->getQuadratureWeights();
-  double rho = _par;
-  // int        nFunctions = form->_intSpaces[_idU]->getNumFunctions();
-
-  for(int i = 0; i < form->_intSpaces.size(); ++i) {
-    form->_Ae[i][i] = rho * form->_c0;
-  }
-}
-
-void feSysElm_0D_Masse::computeBe(feBilinearForm *form)
-{
-  // int                nG = form->_geoSpace->getNbQuadPoints();
-  std::vector<double> w = form->_geoSpace->getQuadratureWeights();
-  double rho = _par;
-  // int        nFunctions = form->_intSpaces[_idU]->getNumFunctions();
-
-  double uDot;
-
-  for(int i = 0; i < form->_intSpaces.size(); ++i) {
-    uDot = form->_intSpaces[i]->interpolateFieldAtQuadNode(form->_solDot[i], 0);
-    form->_Be[i] -= rho * uDot;
-  }
-}
-
-void feSysElm_0D_Source::createElementarySystem(std::vector<feSpace *> &space)
-{
-  _idU = 0;
-  _feU.resize(space[_idU]->getNumFunctions());
-}
-
-void feSysElm_0D_Source::computeBe(feBilinearForm *form)
-{
-  std::vector<double> x(3, 0.0);
-  double S = _fct->eval(form->_tn, x);
-  form->_Be[0] -= S;
-}
-
 void feSysElm_0D_Source_crossed::createElementarySystem(std::vector<feSpace *> &space)
 {
   _fieldsLayoutI.resize(space.size());

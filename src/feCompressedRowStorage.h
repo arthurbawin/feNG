@@ -4,6 +4,32 @@
 #include "feNG.h"
 #include "feBilinearForm.h"
 
+// A simplified class to give to PETSc
+class feEZCompressedRowStorage
+{
+protected:
+  std::vector<feInt> nnz;
+  std::vector<std::set<feInt>> nnzset;
+  std::set<std::pair<feInt,feInt>> allocatedPairs;
+public:
+  feEZCompressedRowStorage(int numUnknowns, std::vector<feBilinearForm *> &formMatrices, int numMatrixForms);
+  ~feEZCompressedRowStorage(){};
+
+  feInt *getNnz() { return nnz.data(); };
+  feInt getNnzAt(int i) { return nnz[i]; };
+  bool findPair(feInt i, feInt j)
+  {
+    for(std::pair<feInt,feInt> pp : allocatedPairs){
+      if(pp.first == i && pp.second == j)
+      {
+        feInfo("Found preallocated pair %d,%d", i, j);
+        return true;
+      }
+    }
+    return false;
+  }
+};
+
 class feCompressedRowStorage
 {
 public:
@@ -60,8 +86,6 @@ protected:
   feInt **ddlColor = NULL;
   feInt *liste = NULL;
   bool *ddl_rngcof = NULL;
-
-private:
 };
 
 class feCompressedRowStorageMklPardiso : public feCompressedRowStorage

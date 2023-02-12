@@ -17,8 +17,10 @@ typedef enum
   L1_ERROR,
   // Compute ||uh||_L2(cnc)
   L2,
+  VECTOR_L2,
   // Compute ||u - uh||_L1(cnc), with u a user-defined scalar field
   L2_ERROR,
+  VECTOR_L2_ERROR,
   // Compute ||uh||_Linf(cnc)
   LINF,
   // Compute ||u - uh||_Linf(cnc), with u a user-defined scalar field
@@ -130,9 +132,11 @@ public:
 private:
   void initializeLocalSolutionOnSpace(int iSpace, int iElm);
   double computeLpNorm(int p, bool error = false);
+  double computeVectorLpNorm(int p, bool error = false);
   double computeL1Norm(bool error = false);
   double computeL2Norm(bool error = false);
   double computeLInfNorm(bool error = false);
+  double computeH1SemiNorm(bool error = false);
   double computeH1Norm(bool error = false);
   double computeArea();
   double computeIntegral();

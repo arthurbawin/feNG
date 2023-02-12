@@ -82,12 +82,7 @@ int main(int argc, char **argv)
   feFunction *funSol = new feFunction(fSol, {});
   feFunction *funSource = new feFunction(fSource, {k});
   feFunction *funZero = new feFunction(fZero, {});
-  feFunction *kDiffusivity = new feFunction(fConstant, {1.0});
-  // feFunction *funNeumann = new feFunction(fNeumannBC, {});
-  // feFunction *funNeumannY = new feFunction(fNeumannYBC, {});
-  // feFunction *funOne = new feFunction(fOne, {1.0});
-  // feFunction *funTwo = new feFunction(fOne, {2.0});
-  // feFunction *funThree = new feFunction(fOne, {3.0});
+  feFunction *kDiffusivity = new feFunction(fConstant, {-k});
 
   std::vector<int> nElm(nMesh, 0);
   std::vector<double> L2errorU(2 * nMesh, 0.0);
@@ -149,7 +144,7 @@ int main(int argc, char **argv)
     feExportData exportData = {exporter, exportEveryNSteps, vtkFileRoot};
 
     TimeIntegrator *solver;
-    feTolerances tol{1e-13, 1e-8, 3};
+    feTolerances tol{1e-13, 1e-8, 5};
     feCheck(createTimeIntegrator(solver, STATIONARY, tol, system, &metaNumber, &sol, &mesh, norms,
                                  exportData));
     feCheck(solver->makeSteps(0));
@@ -167,6 +162,7 @@ int main(int argc, char **argv)
     delete exporter;
     delete uBord;
     delete uDomaine;
+    delete system;
   }
 
   // Error estimation if the analytic solution is not available

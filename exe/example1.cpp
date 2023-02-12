@@ -187,6 +187,7 @@ int main(int argc, char **argv)
   delete funSol;
   delete funSource;
   delete norm;
+  delete system;
 
   petscFinalize();
   return 0;

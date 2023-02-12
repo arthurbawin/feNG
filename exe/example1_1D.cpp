@@ -47,16 +47,11 @@ double fSol(const double t, const std::vector<double> &pos, const std::vector<do
   return 1./c * (x - (1. - exp(c * x / k))/(1. - exp(c / k)));
 }
 
-// The source term f(x)
-double fSource(const double t, const std::vector<double> &pos, const std::vector<double> &par)
+void fVelocity(const double t, const std::vector<double> &pos, const std::vector<double> &par, std::vector<double> &res)
 {
-  return -1;
-}
-
-// A zero function to initialize the values of the degrees of freedom
-double fZero(const double t, const std::vector<double> &pos, const std::vector<double> &par)
-{
-  return 0.;
+  // Constant x-velocity equal to the given parameter
+  res[0] = par[0];
+  res[1] = 0.;
 }
 
 double fConstant(const double t, const std::vector<double> &pos, const std::vector<double> &par)
@@ -68,15 +63,31 @@ int main(int argc, char **argv)
 {
   petscInitialize(argc, argv);
 
-  double c = 1.0;
-  double k = 1.0;
-  feFunction *funSol       = new feFunction(fSol,    {c, k});
-  feFunction *funSource    = new feFunction(fSource, {});
-  feFunction *funZero      = new feFunction(fZero,   {});
-  feFunction *cVelocity    = new feFunction(fConstant, {c});
-  feFunction *kDiffusivity = new feFunction(fConstant, {k});
+  // int nElm = 10;
 
-  int dim, deg = 4, degreeQuadrature = 20;
+  double ceq = 1.0;
+  double keq = 1.0;
+  double feq = 1.0;
+
+  feOptionsParser options(argc, argv);
+  // options.addOption(&nElm, "-n", "--nElm", "Number of mesh elements");
+  options.addOption(&ceq, "-c", "--velocity", "Constant velocity");
+  options.addOption(&feq, "-f", "--source", "Constant source term");
+  feCheck(options.parse());
+
+  double ccode = ceq;
+  double kcode = -keq;
+  double fcode = -feq;
+
+  feFunction *funSol      = new feFunction(fSol, {ceq, keq});
+
+  feFunction *funSource   = new feFunction(fConstant, {fcode});
+  feFunction *funZero     = new feFunction(fConstant, {0.});
+  feFunction *diffusivity = new feFunction(fConstant, {kcode});
+  feFunction *scalarVelocity = new feFunction(fConstant, {ccode});
+  feVectorFunction *velocity = new feVectorFunction(fVelocity, {ccode});
+
+  int deg = 1, degreeQuadrature = 4;
   double xa = 0.;
   double xb = 1.;
 
@@ -86,11 +97,14 @@ int main(int argc, char **argv)
 
   for(int i = 0; i < nConv; ++i){
 
+    feInfo("Element Peclet = %f", fabs(ceq)*(xb-xa)/nElm[i] / (2.*fabs(keq)) );
+    feInfo("Global  Peclet = %f", fabs(ceq)*(xb-xa) / (fabs(keq)) );
+
     feMesh1DP1 mesh(xa, xb, nElm[i], "BXA", "BXB", "Domaine");
 
     feSpace *uG, *uD, *uDomaine;
-    feCheck(createFiniteElementSpace(uG, &mesh, elementType::LAGRANGE, deg, "U", "BXA", degreeQuadrature, funSol));
-    feCheck(createFiniteElementSpace(uD, &mesh, elementType::LAGRANGE, deg, "U", "BXB", degreeQuadrature, funSol));
+    feCheck(createFiniteElementSpace(uG, &mesh, elementType::LAGRANGE, deg, "U", "BXA", degreeQuadrature, funZero));
+    feCheck(createFiniteElementSpace(uD, &mesh, elementType::LAGRANGE, deg, "U", "BXB", degreeQuadrature, funZero));
     feCheck(createFiniteElementSpace(uDomaine, &mesh, elementType::LAGRANGE, deg, "U", "Domaine", degreeQuadrature, funZero));
 
     std::vector<feSpace*> spaces = {uG, uD, uDomaine};
@@ -101,13 +115,14 @@ int main(int argc, char **argv)
     feSolution sol(numbering.getNbDOFs(), spaces, essentialSpaces);
     sol.initializeUnknowns(&mesh);
 
-    feBilinearForm *adv, *diff, *source;
-    feCheck(createBilinearForm(    adv, {uDomaine}, new feSysElm_1D_Advection(cVelocity)) );
-    feCheck(createBilinearForm(   diff, {uDomaine}, new feSysElm_Diffusion<1>(kDiffusivity))     );
-    feCheck(createBilinearForm( source, {uDomaine}, new feSysElm_Source(funSource))    );
+    feBilinearForm *adv, *diff, *source, *supg;
+    feCheck(createBilinearForm(    adv, {uDomaine}, new feSysElm_Advection<1>(velocity))    );
+    feCheck(createBilinearForm(   diff, {uDomaine}, new feSysElm_Diffusion<1>(diffusivity)) );
+    feCheck(createBilinearForm( source, {uDomaine}, new feSysElm_Source(funSource))          );
+    feCheck(createBilinearForm(   supg, {uDomaine}, new feSysElm_1D_SUPGStab(-kcode, scalarVelocity, funSource)) );
 
     feLinearSystem *system;
-    feCheck(createLinearSystem(system, PETSC, {adv, diff, source}, numbering.getNbUnknowns(), argc, argv));
+    feCheck(createLinearSystem(system, PETSC, {adv, diff, source, supg}, numbering.getNbUnknowns(), argc, argv));
 
     feNorm normU(L2_ERROR, {uDomaine}, &sol, funSol);
     std::vector<feNorm *> norms = {&normU};
@@ -123,23 +138,31 @@ int main(int argc, char **argv)
     feCheck(createTimeIntegrator(solver, STATIONARY, tol, system, &numbering, &sol, &mesh, norms, exportData));
     feCheck(solver->makeStep());
 
+    double umax = 0.;
+    for(auto val : sol.getSolutionReference())
+      umax = fmax(umax, fabs(val));
+    feInfo("umax = %f", umax);
+    feInfo("umax = %f", umax);
+    feInfo("umax = %f", umax);
+    feInfo("umax = %f", umax);
+
     // Get the error
     L2error[2*i] = normU.compute();
 
-    if(i == nConv-1){
+    // if(i == nConv-1){
       int nInteriorPlotNodes = 40;
       feBasicViewer viewer("test", mesh.getNumInteriorElements(), nInteriorPlotNodes);
 
-      double xLim[2] = {xa, xb};
-      double yLim[2] = {0, 0.2};
-      viewer.setAxesLimits(xLim, yLim);
+      // double xLim[2] = {xa, xb};
+      // double yLim[2] = {0, 0.2};
+      // viewer.setAxesLimits(xLim, yLim);
 
       do{
-        viewer.reshapeWindowBox(1.2, mesh, sol);
-        viewer.draw1DCurve(mesh, numbering, sol, uDomaine, funSol);
+        viewer.reshapeWindowBox(0, 1., -0.1, 1.3);
+        viewer.draw1DCurve(mesh, numbering, sol, uDomaine, funSol, ceq);
         viewer.windowUpdate();
       } while(!viewer.windowShouldClose());
-    }
+    // }
   }
 
   // Compute the convergence rate

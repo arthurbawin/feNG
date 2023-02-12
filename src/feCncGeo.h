@@ -48,9 +48,9 @@ protected:
   int _tag;
   // Dimension
   int _dim;
-  // Elements geometry
+  // Elements geometry (see enum above)
   geometryType _geometry;
-  // Interpolation functions used to describe the geometry
+  // Interpolation functions used to describe the geometry (see enum above)
   geometricInterpolant _interpolant;
 
   // Number of vertices in the Physical Entity

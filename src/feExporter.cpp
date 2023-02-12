@@ -143,55 +143,61 @@ void feExporterVTK::writeField(std::ostream &output, feCncGeo *cnc, feSpace *int
   std::vector<double> &solVec = _sol->getSolutionReference();
   std::vector<feInt> adr(intSpace->getNumFunctions());
   std::vector<double> sol(intSpace->getNumFunctions());
-  // int nVertices = cnc->getNumVertices();
   int nVertices = loopOverCnc ? cnc->getNumVertices() : _mesh->getNumVertices();
   feNumber *n = _metaNumber->getNumbering(fieldID);
-  // int nVertices = n->getNbNodes();
+  int nComponents = intSpace->getNumComponents();
 
   // output << "POINT_DATA " << _writtenNodes << std::endl;
   // output << "SCALARS " << fieldID << " double 1" << std::endl;
   // output << "LOOKUP_TABLE default" << std::endl;
-  output << fieldID << " 1 "<<_writtenNodes<<" double" << std::endl;
 
-  int iDOF;
+  output << fieldID << " " << nComponents << " " << _writtenNodes <<" double" << std::endl;
+
+  int iDOF, elm;
   Vertex *v;
   std::vector<double> x;
-  double r[3]; 
-  int elm;
-  double val;
+  std::vector<double> res(3, 0.);
+  double r[3], val;
 
   // Write field(s) to a text file
   std::string fileName = "solution" + fieldID + ".txt";
   FILE *f = fopen(fileName.c_str(), "w");
   for(int iVertex = 0; iVertex < nVertices; ++iVertex) {
-    iDOF = n->getDOFNumberAtVertex(iVertex);
 
-    if(iDOF >= 0) {
-      // There is a degree of freedom at this mesh vertex
-      output << solVec[iDOF] << std::endl;
-    } else {
-      // feInfo("TEST");
-      /* No dof associated to the mesh vertex.
-      Interpolate solution at vertex. */
-      v = _mesh->getVertex(iVertex);
-      x = {v->x(), v->y(), v->z()};
-      _mesh->locateVertex(x.data(), elm, r);
-      intSpace->initializeAddressingVector(elm, adr);
+    // Loop over components for vector-valued FE spaces
+    for(int iComp = 0; iComp < nComponents; ++iComp){
 
-      // initialise Solution
-      for(size_t i = 0; i < adr.size(); ++i) {
-        sol[i] = solVec[adr[i]];
-      }
+      iDOF = n->getDOFNumberAtVertex(iVertex, iComp);
 
-      if(intSpace->useGlobalFunctions()) {
-        val = intSpace->interpolateField(sol, elm, x);
+      if(iDOF >= 0) {
+        // There is a degree of freedom at this mesh vertex
+
+        // FIXME: This is only valid for Lagrange type elements,
+        // where to DOF is the function evaluation. We should interpolate.
+        output << solVec[iDOF] << std::endl;
+
       } else {
-        val = intSpace->interpolateField(sol, r);
-      }
+        /* No dof associated to the mesh vertex.
+        Interpolate solution at vertex. */
+        v = _mesh->getVertex(iVertex);
+        x = {v->x(), v->y(), v->z()};
+        _mesh->locateVertex(x.data(), elm, r);
+        intSpace->initializeAddressingVector(elm, adr);
 
-      output << val << std::endl;
+        for(size_t i = 0; i < adr.size(); ++i) {
+          sol[i] = solVec[adr[i]];
+        }
+
+        if(intSpace->useGlobalFunctions()) {
+          val = intSpace->interpolateField(sol, elm, x);
+        } else {
+          val = intSpace->interpolateField(sol, r);
+        }
+
+        output << val << std::endl;
+      }
+      fprintf(f, "%+-16.16e\n", solVec[iDOF]);
     }
-    fprintf(f, "%+-16.16e\n", solVec[iDOF]);
   }
   fclose(f);
 
@@ -200,12 +206,7 @@ void feExporterVTK::writeField(std::ostream &output, feCncGeo *cnc, feSpace *int
   if(_addP2Nodes) {
     /* Additional nodes are added in the order of the edges,
     like in feExporterVTK::writeNodes. Both must be modified together. */
-    Vertex *v0;
-    Vertex *v1;
-    int elm;
-    double val;
-    std::vector<double> x;
-    double r[3];
+    Vertex *v0, *v1;
     for(auto e : _mesh->_edges) {
       v0 = e.getVertex(0);
       v1 = e.getVertex(1);
@@ -213,13 +214,22 @@ void feExporterVTK::writeField(std::ostream &output, feCncGeo *cnc, feSpace *int
                                (v0->z() + v1->z()) / 2.};
       _mesh->locateVertex(x.data(), elm, r);
       intSpace->initializeAddressingVector(elm, adr);
-      for(size_t i = 0; i < adr.size(); ++i) sol[i] = solVec[adr[i]];
+      for(size_t i = 0; i < adr.size(); ++i)
+        sol[i] = solVec[adr[i]];
       if(intSpace->useGlobalFunctions()) {
         val = intSpace->interpolateField(sol, elm, x);
+        output << val << std::endl;
       } else {
-        val = intSpace->interpolateField(sol, r);
+        if(nComponents > 1){
+          intSpace->interpolateVectorField(sol, nComponents, r, res);
+          for(int i = 0; i < nComponents; ++i)
+            output << res[i] << std::endl;
+        } else{
+          val = intSpace->interpolateField(sol, r);
+          output << val << std::endl;
+        }
       }
-      output << val << std::endl;
+      
     }
   }
 }

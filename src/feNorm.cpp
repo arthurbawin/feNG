@@ -88,11 +88,29 @@ double feNorm::compute(normType type)
     case L2_ERROR:
       res = this->computeLpNorm(2, true);
       break;
+    case VECTOR_L2:
+      res = this->computeVectorLpNorm(2, false);
+      break;
+    case VECTOR_L2_ERROR:
+      res = this->computeVectorLpNorm(2, true);
+      break;
     case LINF:
       res = this->computeLInfNorm(false);
       break;
     case LINF_ERROR:
       res = this->computeLInfNorm(true);
+      break;
+    case SEMI_H1:
+      res = this->computeH1SemiNorm(false);
+      break;
+    case SEMI_H1_ERROR:
+      res = this->computeH1SemiNorm(true);
+      break;
+    case H1:
+      res = this->computeH1Norm(false);
+      break;
+    case H1_ERROR:
+      res = this->computeH1Norm(true);
       break;
     case AREA:
       res = this->computeArea();
@@ -125,6 +143,12 @@ double feNorm::computeLpNorm(int p, bool error)
 {
   double res = 0.0, uh, u, t = _solution->getCurrentTime();
 
+  if(error && _scalarSolution == nullptr){
+    feErrorMsg(FE_STATUS_ERROR, "Cannot compute Lp norm of error function"
+      " because exact solution is NULL");
+    exit(-1);
+  }
+
   #if defined(HAVE_OMP)
   #pragma omp parallel for private(_geoCoord, uh, u) reduction(+ : res) schedule(dynamic)
   #endif
@@ -139,6 +163,43 @@ double feNorm::computeLpNorm(int p, bool error)
       u = error ? _scalarSolution->eval(t, _pos) : 0.0;
 
       res += pow(fabs(u - uh), p) * _J[_nQuad * iElm + k] * _w[k];
+    }
+  }
+  return pow(res, 1./(double) p);
+}
+
+double feNorm::computeVectorLpNorm(int p, bool error)
+{
+  double res = 0.0, compNorm, t = _solution->getCurrentTime();
+  std::vector<double> u(3, 0.);
+  std::vector<double> uh(3, 0.);
+  int nComponents = _spaces[0]->getNumComponents();
+
+  if(error && _vectorSolution == nullptr){
+    feErrorMsg(FE_STATUS_ERROR, "Cannot compute Lp norm of vector error function"
+      " because exact solution is NULL");
+    exit(-1);
+  }
+
+  #if defined(HAVE_OMP)
+  #pragma omp parallel for private(_geoCoord, uh, u) reduction(+ : res) schedule(dynamic)
+  #endif
+  for(int iElm = 0; iElm < _nElm; ++iElm) {
+
+    this->initializeLocalSolutionOnSpace(0, iElm);
+    _spaces[0]->_mesh->getCoord(_cnc, iElm, _geoCoord);
+
+    for(int k = 0; k < _nQuad; ++k) {
+      _spaces[0]->interpolateVectorFieldAtQuadNode(_localSol[0], k, uh, nComponents);
+      _geoSpace->interpolateVectorFieldAtQuadNode(_geoCoord, k, _pos);
+      if(error) (*_vectorSolution)(t, _pos, u);
+
+      compNorm = 0.;
+      for(int i = 0; i < nComponents; ++i){
+        compNorm += pow(fabs(u[i] - uh[i]), p);
+      }
+
+      res += compNorm * _J[_nQuad * iElm + k] * _w[k];
     }
   }
   return pow(res, 1./(double) p);
@@ -210,6 +271,15 @@ double feNorm::computeLInfNorm(bool error)
       res = fmax(res, fabs(u - uh));
     }
   }
+  return res;
+}
+
+double feNorm::computeH1SemiNorm(bool error)
+{
+  double res = 0.0;
+
+  /* ... */
+  
   return res;
 }
 
