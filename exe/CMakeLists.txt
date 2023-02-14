@@ -17,6 +17,7 @@ feNG_add_executable(euler1D euler1D.cpp "")
 feNG_add_executable(eulerBump eulerBump.cpp "")
 feNG_add_executable(coupled coupled.cpp "")
 feNG_add_executable(stokes stokes.cpp "")
+feNG_add_executable(poiseuille poiseuille.cpp "")
 
 feNG_add_executable(tp1_1 tp1_1.cpp "")
 feNG_add_executable(tp1_2 tp1_2.cpp "")

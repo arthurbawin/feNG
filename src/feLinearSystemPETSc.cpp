@@ -416,6 +416,59 @@ void feLinearSystemPETSc::assemble(feSolution *sol)
   this->assembleResiduals(sol);
 }
 
+void feLinearSystemPETSc::constraintEssentialComponents(feSolution *sol)
+{
+  Vec u;
+  VecCreate(PETSC_COMM_WORLD, &u);
+  VecSetSizes(u, PETSC_DECIDE, _nInc);
+  VecSetFromOptions(u);
+  PetscErrorCode ierr = 0;
+  std::vector<PetscInt> rowsToConstraint;
+  PetscScalar val;
+  std::vector<feInt> adr;
+
+  for(auto space : sol->_spaces){
+    int nComponents = space->getNumComponents();
+    if(nComponents > 1){
+      adr.resize(space->getNumFunctions(), 0);
+      for(int i = 0; i < nComponents; ++i){
+        if(space->isEssentialComponent(i)){
+          feInfo("Constraining comp %d on space %s - %s", i, space->getFieldID().data(),
+            space->getCncGeoID().data());
+          for(int iElm = 0; iElm < space->getNumElements(); ++iElm){
+
+            // Constraint matrix and RHS
+            space->initializeAddressingVector(iElm, adr);
+            // for(auto val : adr)
+            //   feInfo("adr = %d", val);
+            for(int j = 0; j < space->getNumFunctions(); ++j){
+              if(j % nComponents == i){
+                PetscInt DOF = adr[j];
+                if(adr[j] < _nInc){
+                  // A DOF shared between this space and another 
+                  // essential space has a tag higher than _nInc,
+                  // hence  we cannot constraint it, but it's 
+                  // already an essential DOF for which there is no
+                  // need to solve (its value will be imposed by the 
+                  // other space though, so check for spaces overlap).
+                  rowsToConstraint.push_back(DOF);
+                  val = 0.;
+                  // feInfo("Constraining DOF = %d (nInc = %d) to %f", DOF, _nInc, val);
+                  VecSetValues(u, 1, &DOF, &val, INSERT_VALUES);
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  ierr = MatZeroRowsColumns(_A, rowsToConstraint.size(), rowsToConstraint.data(), 1., u, _rhs);
+  CHKERRABORT(PETSC_COMM_WORLD, ierr);
+  VecDestroy(&u);
+}
+
 // Solve the linear system and compute max norms of solution and residuals
 bool feLinearSystemPETSc::solve(double *normSolution, double *normRHS, double *normResidualAxMinusb, int *nIter)
 {

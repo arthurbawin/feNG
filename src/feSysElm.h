@@ -5,8 +5,8 @@
 #include "feSpace.h"
 // #include "feVectorSpace.h"
 
-typedef enum {
-
+typedef enum
+{
   SOURCE,
   VECTOR_SOURCE,
   GRAD_SOURCE,
@@ -18,12 +18,12 @@ typedef enum {
   NONLINEAR_DIFFUSION,
   ADVECTION,
   NONLINEAR_ADVECTION,
-
   VECTOR_CONVECTIVE_ACCELERATION,
-
+  DIV_NEWTONIAN_STRESS,
   MIXED_GRADIENT,
   MIXED_DIVERGENCE,
   MIXED_CURL,
+  ZERO_BLOCK,
 
   // 0D weak forms
   STIFFSPRING_0D,
@@ -40,9 +40,6 @@ typedef enum {
 
   // 1D weak forms
   WEAKBC_EDO1_1D,
-  SOURCE_1D,
-  DIFFUSION_1D,
-  MASS_1D,
   NEUMANN_1D,
   ADVECTION_1D,
   DG_ADVECTION_1D,
@@ -51,9 +48,6 @@ typedef enum {
   EULER_1D,
 
   // 2D weak forms
-  MASS_2D,
-  SOURCE_2D,
-  DIFFUSION_2D,
   ADVECTION_2D,
   SUPG_STABILIZATION_2D,
   STOKES_2D,
@@ -64,25 +58,40 @@ typedef enum {
 inline const std::string toString(elementSystemType t)
 {
   switch(t) {
-
     case SOURCE:
       return "SOURCE";
+    case VECTOR_SOURCE:
+      return "VECTOR_SOURCE";
+    case GRAD_SOURCE:
+      return "GRAD_SOURCE";
     case MASS:
       return "MASS";
+    case VECTOR_MASS:
+      return "VECTOR_MASS";
     case TRANSIENT_MASS:
       return "TRANSIENT_MASS";
     case DIFFUSION:
       return "DIFFUSION";
+    case VECTOR_DIFFUSION:
+      return "VECTOR_DIFFUSION";
     case NONLINEAR_DIFFUSION:
       return "NONLINEAR_DIFFUSION";
     case ADVECTION:
       return "ADVECTION";
     case NONLINEAR_ADVECTION:
       return "NONLINEAR_ADVECTION";
-
+    case VECTOR_CONVECTIVE_ACCELERATION:
+      return "VECTOR_CONVECTIVE_ACCELERATION";
+    case DIV_NEWTONIAN_STRESS:
+      return "DIV_NEWTONIAN_STRESS";
     case MIXED_GRADIENT:
       return "MIXED_GRADIENT";
-
+    case MIXED_DIVERGENCE:
+      return "MIXED_DIVERGENCE";
+    case MIXED_CURL:
+      return "MIXED_CURL";
+      case ZERO_BLOCK:
+      return "ZERO_BLOCK";
     case NEUMANN_1D:
       return "NEUMANN_1D";
     case ADVECTION_1D:
@@ -97,7 +106,6 @@ inline const std::string toString(elementSystemType t)
       return "EULER_1D";
     case EULER_0D_FLUX:
       return "EULER_0D_FLUX";
-
     case ADVECTION_2D:
       return "ADVECTION_2D";
     case STOKES_2D:
@@ -108,7 +116,6 @@ inline const std::string toString(elementSystemType t)
       return "SUPG_STABILIZATION_2D";
     case EULER_2D:
       return "EULER_2D";
-
     default:
       return "[Unknown elementSystemType]";
   }
@@ -453,6 +460,33 @@ public:
   void computeBe(feBilinearForm *form);
 };
 
+//
+// Integral of - sigma : grad(v), with sigma = -pI + 2*mu*d(u)
+//                                with d(u) = (grad(u) + grad(u)^T)/2
+//
+// Hence: integral of -p * div(v) + mu * d : grad(v) dx
+//
+class feSysElm_DivergenceNewtonianStress : public feSysElm
+{
+protected:
+  feFunction *_coeff;
+  feFunction *_viscosity;
+  int _idU;
+  int _idP;
+  std::vector<double> _gradu;
+  std::vector<double> _symmetricGradu;
+  std::vector<double> _gradPhiU;
+public:
+  feSysElm_DivergenceNewtonianStress(feFunction *coeff, feFunction *viscosity)
+    : feSysElm(-1, 2, DIV_NEWTONIAN_STRESS, true), _coeff(coeff), _viscosity(viscosity){
+      _computeMatrixWithFD = true;
+    };
+  ~feSysElm_DivergenceNewtonianStress(){};
+  void createElementarySystem(std::vector<feSpace *> &space);
+  void computeAe(feBilinearForm *form);
+  void computeBe(feBilinearForm *form);
+};
+
 // Weak form of grad(f) cdot v, with f scalar and v vector-valued
 //
 // Integral of -f div(v)
@@ -551,14 +585,13 @@ protected:
   int _idU;
   int _idV;
 public:
-  feSysElm_ZeroBlock() : feSysElm(-1, 2, MIXED_DIVERGENCE, true)
+  feSysElm_ZeroBlock() : feSysElm(-1, 2, ZERO_BLOCK, true)
   {
     _computeMatrixWithFD = false;
   };
   ~feSysElm_ZeroBlock(){};
   void createElementarySystem(std::vector<feSpace *> &space);
-  void computeAe(feBilinearForm *form);
-  void computeBe(feBilinearForm *form);
+  void computeBe(feBilinearForm *form){};
 };
 
 //

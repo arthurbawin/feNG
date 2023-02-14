@@ -87,9 +87,9 @@ public:
   // Same as above, but mark the DOF as ESSENTIAL.
   // Multiple degrees of freedom defined on the same entity (vertex/element/edge) cannot 
   // be part UNKNOWN and part ESSENTIAL: the whole entity (and thus all of its DOF) is marked as ESSENTIAL.
-  void setEssentialVertexDOF(feMesh *mesh, std::string const &cncGeoID, int numElem, int numVertex);
-  void setEssentialElementDOF(feMesh *mesh, std::string const &cncGeoID, int numElem);
-  void setEssentialEdgeDOF(feMesh *mesh, std::string const &cncGeoID, int numElem, int numEdge);
+  void setEssentialVertexDOF(feMesh *mesh, std::string const &cncGeoID, int numElem, int numVertex, int numDOF = -1);
+  void setEssentialElementDOF(feMesh *mesh, std::string const &cncGeoID, int numElem, int numDOF = -1);
+  void setEssentialEdgeDOF(feMesh *mesh, std::string const &cncGeoID, int numElem, int numEdge, int numDOF = -1);
 
   // Get the global number of the specified DOF
   int getVertexDOF(feMesh *mesh, std::string const &cncGeoID, int numElem, int numVertex, int numDOF = 0);
@@ -108,6 +108,7 @@ public:
   void exportNumberingVertices(feMesh *mesh, FILE *file);
 
 protected:
+  void allocateStructures();
   // Set the DOF codes
   void prepareNumbering();
   // Assign the global number to UNKNOWN DOF starting from globalNum.

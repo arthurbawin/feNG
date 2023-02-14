@@ -34,7 +34,8 @@ Plane Surface(1) = {1};
 //Physical Curve("Haut")   = {3};
 //Physical Curve("Gauche") = {4};
 //Physical Curve("Angle")  = {1,2};
-Physical Curve("Bord")  = {1,2,3,4};
+Physical Curve("Bord")  = {1,3,4};
+Physical Curve("Droite")  = {2};
 //Physical Surface("Surface") = {1};
 
 

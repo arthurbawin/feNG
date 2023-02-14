@@ -179,7 +179,36 @@ void feSolution::initializeEssentialBC(feMesh *mesh, feSolutionContainer *solCon
   std::vector<double> vecVal(3);
   double val;
 
-  for(feSpace *fS : _essentialSpaces) {
+  // Essential spaces + non essential vector spaces with one or more
+  // essential component. The whole vector space is re-initialized,
+  // which is fine since initialization order for non-essential
+  // spaces is irrelevant.
+  // Also set _essentialComponent to true for all fully essential spaces.
+  std::vector<feSpace*> allEssentialSpaces = _essentialSpaces;
+  for(auto *space : _spaces){
+    if(space->getNumComponents() > 1){
+      bool toAdd = false;
+      for(int i = 0; i < space->getNumComponents(); ++i){
+        if(space->isEssentialComponent(i)){
+          toAdd = true;
+        }
+      }
+      if(toAdd) allEssentialSpaces.push_back(space);
+    }
+  }
+  for(auto *space : _essentialSpaces){
+    space->setEssentialComponent(0, true);
+    space->setEssentialComponent(1, true);
+    space->setEssentialComponent(2, true);
+  }
+
+  for(auto s : allEssentialSpaces){
+    for(int i = 0; i < s->getNumComponents(); ++i)
+      if(s->isEssentialComponent(i))
+        feInfo("ESSENTIAL : comp %d - %s - %s", i, s->getFieldID().data(), s->getCncGeoID().data());
+  }
+
+  for(feSpace *fS : allEssentialSpaces) {
 
     if(fS->getDOFInitialization() == dofInitialization::PREVIOUS_SOL){
       continue;
@@ -211,17 +240,16 @@ void feSolution::initializeEssentialBC(feMesh *mesh, feSolutionContainer *solCon
             fS->evalFun(_tn, x, vecVal);
             int indexComponent = j % fS->getNumComponents();
             val = vecVal[indexComponent];
+            if(fS->isEssentialComponent(indexComponent)){
+              _sol[adr[j]] = val;
+              if(solContainer != nullptr) { solContainer->_sol[0][adr[j]] = val; };
+            }
           } else{
             // Scalar valued finite element space
             val = fS->evalFun(_tn, x);
+            _sol[adr[j]] = val;
+            if(solContainer != nullptr) { solContainer->_sol[0][adr[j]] = val; };
           }
-
-          _sol[adr[j]] = val;
-
-          if(solContainer != nullptr) {
-            solContainer->_sol[0][adr[j]] = val;
-          };
-
         }
       }
     }

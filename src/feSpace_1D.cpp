@@ -266,10 +266,16 @@ void feSpaceVecP1<dim>::initializeNumberingUnknowns()
 template<int dim>
 void feSpaceVecP1<dim>::initializeNumberingEssential()
 {
-  for(int i = 0; i < _mesh->getNumElements(_cncGeoID); ++i) {
-    _numbering->setEssentialVertexDOF(_mesh, _cncGeoID, i, 0);
-    _numbering->setEssentialVertexDOF(_mesh, _cncGeoID, i, 1);
-  }
+  // for(int iComp = 0; iComp < _nComponents; ++iComp){
+  //   if(_essentialComponents[iComp]){
+      // feInfo("Imposing essential condition on compo %d and space %s - %s",
+      //   iComp, _fieldID.data(), _cncGeoID.data());
+      for(int i = 0; i < _mesh->getNumElements(_cncGeoID); ++i) {
+        _numbering->setEssentialVertexDOF(_mesh, _cncGeoID, i, 0); //, iComp);
+        _numbering->setEssentialVertexDOF(_mesh, _cncGeoID, i, 1); //, iComp);
+      }
+  //   }
+  // }
 }
 
 template<int dim>
@@ -519,15 +525,21 @@ void feSpaceVecP2<dim>::initializeNumberingUnknowns()
 template<int dim>
 void feSpaceVecP2<dim>::initializeNumberingEssential()
 {
-  for(int i = 0; i < _mesh->getNumElements(_cncGeoID); ++i) {
-    for(int j = 0; j < this->getCncGeo()->getNumVerticesPerElem(); ++j) {
-      _numbering->setEssentialVertexDOF(_mesh, _cncGeoID, i, j);
-    }
-    if(this->getCncGeo()->getFeSpace()->getPolynomialDegree() != 2) {
-      _numbering->setEssentialElementDOF(_mesh, _cncGeoID, i);
-      _numbering->setEssentialEdgeDOF(_mesh, _cncGeoID, i, 0);
-    }
-  }
+  // for(int iComp = 0; iComp < _nComponents; ++iComp){
+  //   if(_essentialComponents[iComp]){
+  //     feInfo("Imposing essential condition on compo %d and space %s - %s",
+  //       iComp, _fieldID.data(), _cncGeoID.data());
+      for(int i = 0; i < _mesh->getNumElements(_cncGeoID); ++i) {
+        for(int j = 0; j < this->getCncGeo()->getNumVerticesPerElem(); ++j) {
+          _numbering->setEssentialVertexDOF(_mesh, _cncGeoID, i, j);
+        }
+        if(this->getCncGeo()->getFeSpace()->getPolynomialDegree() != 2) {
+          _numbering->setEssentialElementDOF(_mesh, _cncGeoID, i);
+          _numbering->setEssentialEdgeDOF(_mesh, _cncGeoID, i, 0);
+        }
+      }
+  //   }
+  // }
 }
 
 template<int dim>

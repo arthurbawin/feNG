@@ -93,6 +93,7 @@ protected:
   int _dim;
 
   int _nComponents = 1;
+  bool _essentialComponents[3] = {false, false, false};
 
   // Quadrature rule on the reference element:
   // number of quadrature nodes, weights and coordinates
@@ -162,6 +163,9 @@ public:
 
   // Return the number of field components (1 for scalar finite element, 1/2/3 for vector element)
   int getNumComponents() { return _nComponents; };
+
+  void setEssentialComponent(int iComponent, bool flag){ _essentialComponents[iComponent] = flag; };
+  bool isEssentialComponent(int iComponent){ return _essentialComponents[iComponent]; };
 
   // Return the attributes of the geometric connectivity on which the space is defined
   feCncGeo *getCncGeo() { return _cnc; }

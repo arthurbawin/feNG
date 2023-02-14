@@ -6,9 +6,14 @@ extern int FE_VERBOSE;
 feStatus createBilinearForm(feBilinearForm *&form, const std::vector<feSpace *> &spaces, feSysElm *elementarySystem)
 {
   feInfoCond(FE_VERBOSE > 0, "");
-  feInfoCond(FE_VERBOSE > 0, "(BI-)LINEAR FORM:");
+  feInfoCond(FE_VERBOSE > 0, "(BI)LINEAR FORM:");
 
   // Perform some checks and exit on error:
+  for(auto *s : spaces){
+    if(s == nullptr){
+      return feErrorMsg(FE_STATUS_ERROR, "Null pointer in vector of FE spaces, maybe you forgot to initialize it.");
+    }
+  }
 
   // Check that all interpolation spaces are defined on the same connectivity
   int cncGeoTag = spaces[0]->getCncGeoTag();

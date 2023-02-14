@@ -52,7 +52,7 @@ protected:
   bool recomputeMatrix;
 
     // Options for iterative solver:
-  double _rel_tol = 1e-6;
+  double _rel_tol = 1e-8;
   double _abs_tol = 1e-14;
   double _div_tol = 1e6;
   int _max_iter = 5e3;
@@ -96,6 +96,8 @@ public:
   virtual void assemble(feSolution *sol) = 0;
   virtual void assembleMatrices(feSolution *sol) = 0;
   virtual void assembleResiduals(feSolution *sol) = 0;
+
+  virtual void constraintEssentialComponents(feSolution *sol) = 0;
 
   // Solve the linear system Ax-b
   //

@@ -135,6 +135,7 @@ int main(int argc, char **argv)
   // MKL Pardiso (direct solver) and PETSc (collection of iterative solvers).
   feLinearSystem *system;
   feCheck(createLinearSystem(system, PETSC, {diff, source}, numbering.getNbUnknowns(), argc, argv));
+  // system->setDisplayMatrixInWindow(true);
 
   // Post-processing tools to compute norms and whatnot
   feNorm normU(L2_ERROR, {uDomaine}, &sol, funSol);

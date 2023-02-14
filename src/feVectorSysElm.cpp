@@ -490,6 +490,66 @@ void feSysElm_VectorConvectiveAcceleration::computeBe(feBilinearForm *form)
   }
 }
 
+// -----------------------------------------------------------------------------
+// Bilinear form: weak divergence of newtonian stress tensor (mixed u and p)
+// -----------------------------------------------------------------------------
+void feSysElm_DivergenceNewtonianStress::createElementarySystem(std::vector<feSpace *> &space)
+{
+  _idU = 0;
+  _idP = 1;
+  _fieldsLayoutI = {_idU};
+  _fieldsLayoutJ = {_idU, _idP};
+  _nFunctions = space[_idU]->getNumFunctions();
+  _nComponents = space[_idU]->getNumComponents();
+  _gradu.resize(_nComponents * _nComponents);
+  _symmetricGradu.resize(_nComponents * _nComponents);
+  _gradPhiU.resize(_nComponents * _nFunctions);
+}
+
+void feSysElm_DivergenceNewtonianStress::computeAe(feBilinearForm *form)
+{
+  // TO DO
+}
+
+void feSysElm_DivergenceNewtonianStress::computeBe(feBilinearForm *form)
+{
+  double jac, coeff, mu, p, div_v, doubleContraction;
+  for(int k = 0; k < _nQuad; ++k) {
+    jac = form->_J[_nQuad * form->_numElem + k];
+    form->_cnc->computeElementTransformation(form->_geoCoord, k, jac, form->_transformation);
+
+    // Evaluate scalar coefficients
+    form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, _pos);
+    mu = (*_viscosity)(form->_tn, _pos);
+    coeff = (*_coeff)(form->_tn, _pos);
+
+    // Get p, grad_u and gradphiU
+    p = form->_intSpaces[_idP]->interpolateFieldAtQuadNode(form->_sol[_idP], k);
+    form->_intSpaces[_idU]->interpolateVectorFieldAtQuadNode_physicalGradient(form->_sol[_idU], _nComponents, 
+      k, form->_transformation, _gradu.data());
+    form->_intSpaces[_idU]->getFunctionsPhysicalGradientAtQuadNode(k, form->_transformation, _gradPhiU.data());
+
+    for(int m = 0; m < _nComponents; ++m) {
+      for(int n = 0; n < _nComponents; ++n) {
+        _symmetricGradu[m*_nComponents+n] = _gradu[m*_nComponents + n] + _gradu[n*_nComponents + m];
+      }
+    }
+
+    for(int i = 0; i < _nFunctions; ++i) {
+
+      // Divergence of test function
+      div_v = _gradPhiU[i*_nComponents + (i % _nComponents)];
+      // Double contraction d(u) : grad(v)
+      doubleContraction = 0.;
+      for(int m = 0; m < _nComponents; ++m) {
+        doubleContraction += _symmetricGradu[(i % _nComponents)*_nComponents + m] * _gradPhiU[i*_nComponents + m];
+      }
+
+      form->_Be[i] -= coeff * (-p * div_v + mu * doubleContraction) * jac * _wQuad[k];
+    }
+  }
+}
+
 ////////////////////////////////////////////////////
 ////////////////////////////////////////////////////
 
@@ -500,17 +560,4 @@ void feSysElm_ZeroBlock::createElementarySystem(std::vector<feSpace *> &space)
   _fieldsLayoutI = {_idV};
   _fieldsLayoutJ = {_idU};
   _nFunctions = space[_idU]->getNumFunctions();
-}
-
-void feSysElm_ZeroBlock::computeAe(feBilinearForm *form)
-{
-  // for(int i = 0; i < _nFunctions; ++i){
-  //   for(int j = 0; j < _nFunctions; ++j){
-  //     form->_Ae[i][j] += 0.;
-  //   }
-  // }
-}
-
-void feSysElm_ZeroBlock::computeBe(feBilinearForm *form)
-{
 }

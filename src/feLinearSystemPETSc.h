@@ -55,6 +55,7 @@ public:
   void assemble(feSolution *sol);
   void assembleMatrices(feSolution *sol);
   void assembleResiduals(feSolution *sol);
+  void constraintEssentialComponents(feSolution *sol);
   bool solve(double *normSolution, double *normRHS, double *normResidualAxMinusb, int *nIter);
   void correctSolution(feSolution *sol);
   void assignResidualToDCResidual(feSolutionContainer *solContainer);

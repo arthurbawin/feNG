@@ -24,10 +24,6 @@ protected:
   std::vector<double> _sol;
   std::vector<double> _dsoldt;
 
-  // Copy of the FE spaces ptrs
-  std::vector<feSpace *> _spaces;
-  std::vector<feSpace *> _essentialSpaces;
-
   // Time integration info will be moved to the solver later
   // First coefficient of the BDF approximation, multiplying the
   // newest solution.
@@ -39,6 +35,11 @@ protected:
   double _t1;
   int _nTimeSteps;
   double _dt;
+  
+public:
+  // Copy of the FE spaces ptrs
+  std::vector<feSpace *> _spaces;
+  std::vector<feSpace *> _essentialSpaces;
 
 public:
   // Create a solution wrapper holding numDOF degrees of freedom and their time derivative.

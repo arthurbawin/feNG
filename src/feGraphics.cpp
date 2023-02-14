@@ -41,7 +41,7 @@ feBasicViewer::~feBasicViewer()
 
 void feBasicViewer::drawMessage(std::string &message)
 {
-  glfemMessage(message.data());
+  glfemMessage(&message[0]);
 }
 
 void feBasicViewer::setAxesLimits(double *xLim, double *yLim)
