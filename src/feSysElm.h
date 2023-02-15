@@ -25,6 +25,9 @@ typedef enum
   MIXED_CURL,
   ZERO_BLOCK,
 
+  GLS_STOKES_STABILIZATION,
+  GLS_NS_STABILIZATION,
+
   // 0D weak forms
   STIFFSPRING_0D,
   STIFF2_0D,
@@ -482,6 +485,30 @@ public:
       _computeMatrixWithFD = true;
     };
   ~feSysElm_DivergenceNewtonianStress(){};
+  void createElementarySystem(std::vector<feSpace *> &space);
+  void computeAe(feBilinearForm *form);
+  void computeBe(feBilinearForm *form);
+};
+
+//
+// Galerkin least-squares stabilization for the Stokes equations
+//
+class feSysElm_GLS_Stokes_Stab : public feSysElm
+{
+protected:
+  feFunction *_density;
+  feFunction *_viscosity;
+  feVectorFunction *_volumeForce;
+  int _idU;
+  int _idP;
+  std::vector<double> _gradu;
+  std::vector<double> _gradPhiU;
+public:
+  feSysElm_GLS_Stokes_Stab(feFunction *coeff, feFunction *viscosity)
+    : feSysElm(-1, 2, DIV_NEWTONIAN_STRESS, true), _coeff(coeff), _viscosity(viscosity){
+      _computeMatrixWithFD = true;
+    };
+  ~feSysElm_GLS_Stokes_Stab(){};
   void createElementarySystem(std::vector<feSpace *> &space);
   void computeAe(feBilinearForm *form);
   void computeBe(feBilinearForm *form);

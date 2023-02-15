@@ -34,6 +34,8 @@ protected:
   // Residual of the linear system : A*du - RHS
   Vec _linSysRes;
 
+  Vec _constrainedDOFValue;
+
   // Krylov solver (default is GMRES)
   KSP ksp;
   // Preconditioner (default is ILU(0))

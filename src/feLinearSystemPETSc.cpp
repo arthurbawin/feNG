@@ -55,6 +55,10 @@ void feLinearSystemPETSc::initialize()
   CHKERRABORT(PETSC_COMM_WORLD, ierr);
   ierr = VecSet(_du, 1.0);
 
+  ierr = VecDuplicate(_du, &_constrainedDOFValue);
+  CHKERRABORT(PETSC_COMM_WORLD, ierr);
+  ierr = VecSet(_constrainedDOFValue, 0.0);
+
   // Determine the nonzero structure
   // feCompressedRowStorage CRS(_nInc, _formMatrices, _numMatrixForms);
   _EZCRS = new feEZCompressedRowStorage(_nInc, _formMatrices, _numMatrixForms);
@@ -109,6 +113,20 @@ void feLinearSystemPETSc::initialize()
     CHKERRABORT(PETSC_COMM_WORLD, ierr);
   }
 
+  // Insert elements on the diagonal and set to zero to
+  // avoid using a weak form for a block of zeros
+  PetscInt indiceDiag;
+  PetscScalar val = 0.;
+  for(int i = 0; i < _nInc; ++i){
+    indiceDiag = i;
+    ierr = MatSetValues(_A, 1, &indiceDiag, 1, &indiceDiag, &val, INSERT_VALUES);
+    CHKERRABORT(PETSC_COMM_WORLD, ierr);
+  }
+  ierr = MatAssemblyBegin(_A, MAT_FLUSH_ASSEMBLY);
+  CHKERRABORT(PETSC_COMM_WORLD, ierr);
+  ierr = MatAssemblyEnd(_A, MAT_FLUSH_ASSEMBLY);
+  CHKERRABORT(PETSC_COMM_WORLD, ierr);
+
   // Create the Krylov solver (default is GMRES)
   ierr = KSPCreate(PETSC_COMM_WORLD, &ksp);
   CHKERRABORT(PETSC_COMM_WORLD, ierr);
@@ -136,6 +154,24 @@ void feLinearSystemPETSc::initialize()
   VecGetSize(_rhs, &Nres);
   VecGetSize(_du, &Ndx);
   VecGetSize(_linSysRes, &NlinSysRes);
+
+  // ierr = MatAssemblyBegin(_A, MAT_FINAL_ASSEMBLY);
+  // CHKERRABORT(PETSC_COMM_WORLD, ierr);
+  // ierr = MatAssemblyEnd(_A, MAT_FINAL_ASSEMBLY);
+  // CHKERRABORT(PETSC_COMM_WORLD, ierr);
+
+  // // Initialize diagonal to zero
+  // // Vec diag;
+  // // VecDuplicate(_du, &diag);
+  // // MatGetDiagonal(_A, diag);
+  // // VecSet(diag, 0.);
+  // std::vector<PetscInt> d(_nInc, 0);
+  // std::vector<PetscScalar> dval(_nInc, 0.);
+  // for(int i = 0; i < _nInc; ++i)
+  //   d[i] = i;
+  // ierr = MatSetValues(_A, d.size(), d.data(), d.size(), d.data(), dval.data(), INSERT_VALUES);
+  // // ierr = MatDiagonalSet(_A, diag, INSERT_VALUES);
+  // CHKERRABORT(PETSC_COMM_WORLD, ierr);
 
   feInfoCond(FE_VERBOSE > 0, "\t\tCreated a PETSc linear system of size %d x %d", M, N);
   feInfoCond(FE_VERBOSE > 0, "\t\tIterative linear solver info:");
@@ -418,23 +454,15 @@ void feLinearSystemPETSc::assemble(feSolution *sol)
 
 void feLinearSystemPETSc::constraintEssentialComponents(feSolution *sol)
 {
-  Vec u;
-  VecCreate(PETSC_COMM_WORLD, &u);
-  VecSetSizes(u, PETSC_DECIDE, _nInc);
-  VecSetFromOptions(u);
-  PetscErrorCode ierr = 0;
   std::vector<PetscInt> rowsToConstraint;
   PetscScalar val;
   std::vector<feInt> adr;
-
   for(auto space : sol->_spaces){
     int nComponents = space->getNumComponents();
     if(nComponents > 1){
       adr.resize(space->getNumFunctions(), 0);
       for(int i = 0; i < nComponents; ++i){
         if(space->isEssentialComponent(i)){
-          feInfo("Constraining comp %d on space %s - %s", i, space->getFieldID().data(),
-            space->getCncGeoID().data());
           for(int iElm = 0; iElm < space->getNumElements(); ++iElm){
 
             // Constraint matrix and RHS
@@ -452,9 +480,6 @@ void feLinearSystemPETSc::constraintEssentialComponents(feSolution *sol)
                   // need to solve (its value will be imposed by the 
                   // other space though, so check for spaces overlap).
                   rowsToConstraint.push_back(DOF);
-                  val = 0.;
-                  // feInfo("Constraining DOF = %d (nInc = %d) to %f", DOF, _nInc, val);
-                  VecSetValues(u, 1, &DOF, &val, INSERT_VALUES);
                 }
               }
             }
@@ -464,9 +489,9 @@ void feLinearSystemPETSc::constraintEssentialComponents(feSolution *sol)
     }
   }
 
-  ierr = MatZeroRowsColumns(_A, rowsToConstraint.size(), rowsToConstraint.data(), 1., u, _rhs);
+  PetscErrorCode ierr = MatZeroRowsColumns(_A, rowsToConstraint.size(), 
+    rowsToConstraint.data(), 1., _constrainedDOFValue, _rhs);
   CHKERRABORT(PETSC_COMM_WORLD, ierr);
-  VecDestroy(&u);
 }
 
 // Solve the linear system and compute max norms of solution and residuals
@@ -573,6 +598,8 @@ void feLinearSystemPETSc::finalize()
   ierr = VecDestroy(&_rhs);
   CHKERRABORT(PETSC_COMM_WORLD, ierr);
   ierr = VecDestroy(&_du);
+  CHKERRABORT(PETSC_COMM_WORLD, ierr);
+  ierr = VecDestroy(&_constrainedDOFValue);
   CHKERRABORT(PETSC_COMM_WORLD, ierr);
 #endif
 }

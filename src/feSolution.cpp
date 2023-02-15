@@ -202,12 +202,6 @@ void feSolution::initializeEssentialBC(feMesh *mesh, feSolutionContainer *solCon
     space->setEssentialComponent(2, true);
   }
 
-  for(auto s : allEssentialSpaces){
-    for(int i = 0; i < s->getNumComponents(); ++i)
-      if(s->isEssentialComponent(i))
-        feInfo("ESSENTIAL : comp %d - %s - %s", i, s->getFieldID().data(), s->getCncGeoID().data());
-  }
-
   for(feSpace *fS : allEssentialSpaces) {
 
     if(fS->getDOFInitialization() == dofInitialization::PREVIOUS_SOL){

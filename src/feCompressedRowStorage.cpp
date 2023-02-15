@@ -12,6 +12,8 @@ feEZCompressedRowStorage::feEZCompressedRowStorage(int numUnknowns,
 
   for(int i = 0; i < nnzset.size(); ++i){
     nnzset[i].clear();
+    // To add a zero on diagonal elements
+    nnzset[i].insert(i);
   }
 
   for(auto *f : formMatrices){
@@ -31,6 +33,7 @@ feEZCompressedRowStorage::feEZCompressedRowStorage(int numUnknowns,
       }
     }
   }
+
 
   for(int i = 0; i < nnzset.size(); ++i){
     nnz[i] = fmax(1, nnzset[i].size());
