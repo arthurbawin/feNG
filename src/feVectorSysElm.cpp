@@ -553,17 +553,95 @@ void feSysElm_DivergenceNewtonianStress::computeBe(feBilinearForm *form)
 // -----------------------------------------------------------------------------
 // Bilinear form: GLS stabilization for the Stokes equations
 // -----------------------------------------------------------------------------
+static double compute_hTau(int dim, const double velocity[3], double normVelocity, 
+  int nFunctions, const std::vector<double> &gradphi)
+{
+  // Compute hTau from (13.17) in Fortin & Garon
+  double res = 0., dotprod;
+  for(int i = 0; i < nFunctions; ++i){
+    dotprod = 0.;
+    for(int iDim = 0; iDim < dim; ++iDim){
+      dotprod += velocity[iDim]/normVelocity * gradphi[i*dim + iDim];
+    }
+    res += dotprod*dotprod;
+  }
+  res = fmax(1e-10, res);
+  return sqrt(2.) / sqrt(res);
+}
+
+static double getInnerRadius(const std::vector<double> &triCoord)
+{
+  // radius of inscribed circle = 2 * Area / sum(Line_i)
+  double dist[3], k = 0.;
+  for(int i = 0; i < 3; i++) {
+    double x0 = triCoord[3*i + 0];
+    double y0 = triCoord[3*i + 1];
+    double x1 = triCoord[3*((i+1) % 3) + 0];
+    double y1 = triCoord[3*((i+1) % 3) + 1];
+    dist[i] = sqrt((x1-x0)*(x1-x0) + (y1-y0)*(y1-y0));
+    k += 0.5 * dist[i];
+  }
+  double const area =
+    std::sqrt(k * (k - dist[0]) * (k - dist[1]) * (k - dist[2]));
+  return area / k;
+}
+
+static double getOuterRadius(const std::vector<double> &triCoord)
+{
+  // radius of circle circumscribing a triangle
+  double dist[3], k = 0.0;
+  for(int i = 0; i < 3; i++) {
+    double x0 = triCoord[3*i + 0];
+    double y0 = triCoord[3*i + 1];
+    double x1 = triCoord[3*((i+1) % 3) + 0];
+    double y1 = triCoord[3*((i+1) % 3) + 1];
+    dist[i] = sqrt((x1-x0)*(x1-x0) + (y1-y0)*(y1-y0));
+    k += 0.5 * dist[i];
+  }
+  double const area =
+    std::sqrt(k * (k - dist[0]) * (k - dist[1]) * (k - dist[2]));
+  return dist[0] * dist[1] * dist[2] / (4 * area);
+}
+
+static double compute_hEquivalent(const std::vector<double> &triCoord)
+{
+  double hInscribed = getInnerRadius(triCoord);
+  double hCircumscribed = getOuterRadius(triCoord);
+  return (hInscribed + hCircumscribed)/2.;
+}
+
+static double compute_tauStokes(const std::vector<double> &triCoord, int dim, double velocity[3], double viscosity, int nFunctions, std::vector<double> &gradphi)
+{
+  double normV = sqrt(velocity[0]*velocity[0] + velocity[1]*velocity[1] + velocity[2]*velocity[2]);
+  // double hTau = compute_hTau(dim, velocity, normV, nFunctions, gradphi);
+  double hTau = compute_hEquivalent(triCoord);
+  if(fabs(sqrt((2 * normV / hTau) * (2 * normV / hTau) + (4. * viscosity / (3. * hTau)))) < 1e-14 ||
+    fabs(hTau) > 1e10){
+    feInfo("v = %f - %f - %f", velocity[0], velocity[1], velocity[2]);
+    for(auto val : gradphi)
+      feInfo("gradphi = %f", val);
+    feInfo("hTau = %f", hTau);
+  }
+  // return 1./ sqrt((2 * normV / hTau) * (2 * normV / hTau) + (4. * viscosity / (3. * hTau)));
+  return 1./ sqrt((2 * normV / hTau) * (2 * normV / hTau) + (4. * viscosity / (hTau*hTau)) * (4. * viscosity / (hTau*hTau)));
+}
+
 void feSysElm_GLS_Stokes_Stab::createElementarySystem(std::vector<feSpace *> &space)
 {
   _idU = 0;
   _idP = 1;
-  _fieldsLayoutI = {_idU};
+  _fieldsLayoutI = {_idU, _idP};
   _fieldsLayoutJ = {_idU, _idP};
-  _nFunctions = space[_idU]->getNumFunctions();
   _nComponents = space[_idU]->getNumComponents();
+  _nFunctionsU = space[_idU]->getNumFunctions();
+  _nFunctionsP = space[_idP]->getNumFunctions();
+  _f.resize(_nComponents);
+  _residual.resize(_nComponents);
+  _u.resize(_nComponents);
   _gradu.resize(_nComponents * _nComponents);
-  _symmetricGradu.resize(_nComponents * _nComponents);
-  _gradPhiU.resize(_nComponents * _nFunctions);
+  _gradp.resize(_nComponents);
+  _gradPhiU.resize(_nComponents * _nFunctionsU);
+  _gradPhiP.resize(_nComponents * _nFunctionsP);
 }
 
 void feSysElm_GLS_Stokes_Stab::computeAe(feBilinearForm *form)
@@ -573,39 +651,54 @@ void feSysElm_GLS_Stokes_Stab::computeAe(feBilinearForm *form)
 
 void feSysElm_GLS_Stokes_Stab::computeBe(feBilinearForm *form)
 {
-  double jac, coeff, mu, p, div_v, doubleContraction;
+  double jac, coeff, rho, mu, tau, dotProd;
+  int cnt;
   for(int k = 0; k < _nQuad; ++k) {
     jac = form->_J[_nQuad * form->_numElem + k];
     form->_cnc->computeElementTransformation(form->_geoCoord, k, jac, form->_transformation);
 
     // Evaluate scalar coefficients
     form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, _pos);
-    mu = (*_viscosity)(form->_tn, _pos);
     coeff = (*_coeff)(form->_tn, _pos);
+    rho = (*_density)(form->_tn, _pos);
+    mu = (*_viscosity)(form->_tn, _pos);
+    (*_volumeForce)(form->_tn, _pos, _f);
 
-    // Get p, grad_u and gradphiU
-    p = form->_intSpaces[_idP]->interpolateFieldAtQuadNode(form->_sol[_idP], k);
-    form->_intSpaces[_idU]->interpolateVectorFieldAtQuadNode_physicalGradient(form->_sol[_idU], _nComponents, 
-      k, form->_transformation, _gradu.data());
-    form->_intSpaces[_idU]->getFunctionsPhysicalGradientAtQuadNode(k, form->_transformation, _gradPhiU.data());
+    // Get u, p, grad_u, grad_p, gradphiU and gradphiP
+    // form->_intSpaces[_idU]->interpolateVectorFieldAtQuadNode(form->_sol[_idU], k, _u, _nComponents);
+    // form->_intSpaces[_idU]->interpolateVectorFieldAtQuadNode_physicalGradient(form->_sol[_idU], _nComponents, 
+      // k, form->_transformation, _gradu.data());
+    form->_intSpaces[_idP]->interpolateVectorFieldAtQuadNode_physicalGradient(form->_sol[_idP], 1,
+     k, form->_transformation, _gradp.data());
+    // form->_intSpaces[_idU]->getFunctionsPhysicalGradientAtQuadNode(k, form->_transformation, _gradPhiU.data());
+    form->_intSpaces[_idP]->getFunctionsPhysicalGradientAtQuadNode(k, form->_transformation, _gradPhiP.data());
 
-    for(int m = 0; m < _nComponents; ++m) {
-      for(int n = 0; n < _nComponents; ++n) {
-        _symmetricGradu[m*_nComponents+n] = _gradu[m*_nComponents + n] + _gradu[n*_nComponents + m];
+    // for(auto val : _gradPhiP)
+    //   feInfo("gradphi = %f", val);
+    // feInfo("");
+
+    // Stabilization parameter
+    tau = compute_tauStokes(form->_geoCoord, _nComponents, _u.data(), mu, _nFunctionsU, _gradPhiU);
+    // feInfo("tau = %f", tau);
+
+    // cnt = 0;
+    // for(int i = 0; i < _nFunctionsU; ++i) {
+    //   form->_Be[cnt++] -=  0. * jac * _wQuad[k];
+    // }
+
+    cnt = _nFunctionsU;
+    for(int i = 0; i < _nFunctionsP; ++i) {
+
+      dotProd = 0.;
+      for(int j = 0; j < _nComponents; ++j){
+        // Residual of the (strong) Stokes equation
+        // _residual[j] = - rho*_f[j] + _gradp[j];
+        // _residual[j] = _gradp[j];
+        dotProd += _gradp[j] * _gradPhiP[ i*_nComponents + j ];
       }
-    }
 
-    for(int i = 0; i < _nFunctions; ++i) {
-
-      // Divergence of test function
-      div_v = _gradPhiU[i*_nComponents + (i % _nComponents)];
-      // Double contraction d(u) : grad(v)
-      doubleContraction = 0.;
-      for(int m = 0; m < _nComponents; ++m) {
-        doubleContraction += _symmetricGradu[(i % _nComponents)*_nComponents + m] * _gradPhiU[i*_nComponents + m];
-      }
-
-      form->_Be[i] -= coeff * (-p * div_v + mu * doubleContraction) * jac * _wQuad[k];
+      form->_Be[cnt++] -= coeff * tau * dotProd * jac * _wQuad[k];
+    
     }
   }
 }

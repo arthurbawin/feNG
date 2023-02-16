@@ -496,16 +496,30 @@ public:
 class feSysElm_GLS_Stokes_Stab : public feSysElm
 {
 protected:
+  feFunction *_coeff;
   feFunction *_density;
   feFunction *_viscosity;
   feVectorFunction *_volumeForce;
   int _idU;
   int _idP;
+  int _nFunctionsU;
+  int _nFunctionsP;
+  std::vector<double> _f;
+  std::vector<double> _residual;
+  std::vector<double> _u;
   std::vector<double> _gradu;
+  std::vector<double> _gradp;
   std::vector<double> _gradPhiU;
+  std::vector<double> _gradPhiP;
 public:
-  feSysElm_GLS_Stokes_Stab(feFunction *coeff, feFunction *viscosity)
-    : feSysElm(-1, 2, DIV_NEWTONIAN_STRESS, true), _coeff(coeff), _viscosity(viscosity){
+  feSysElm_GLS_Stokes_Stab(feFunction *coeff, feFunction *density, 
+    feFunction *viscosity, feVectorFunction *volumeForce)
+    : feSysElm(-1, 2, GLS_STOKES_STABILIZATION, true)
+    , _coeff(coeff)
+    , _density(density)
+    , _viscosity(viscosity)
+    , _volumeForce(volumeForce)
+    {
       _computeMatrixWithFD = true;
     };
   ~feSysElm_GLS_Stokes_Stab(){};
