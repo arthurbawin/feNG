@@ -83,6 +83,7 @@ int main(int argc, char **argv)
 
   feFunction *funSource   = new feFunction(fConstant, {fcode});
   feFunction *funZero     = new feFunction(fConstant, {0.});
+  feFunction *funOne     = new feFunction(fConstant, {1.});
   feFunction *diffusivity = new feFunction(fConstant, {kcode});
   feFunction *scalarVelocity = new feFunction(fConstant, {ccode});
   feVectorFunction *velocity = new feVectorFunction(fVelocity, {ccode});

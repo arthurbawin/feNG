@@ -65,8 +65,6 @@ set(feNG_API
     feGraphics.h
     feFunction.h
     feLinearSystem.h
-    feLinearSystemMklPardiso.h
-    feLinearSystemPETSc.h
     feMesh.h
     feMessage.h
     feMetric.h

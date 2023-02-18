@@ -16,18 +16,69 @@ feEZCompressedRowStorage::feEZCompressedRowStorage(int numUnknowns,
     nnzset[i].insert(i);
   }
 
-  for(auto *f : formMatrices){
-    for(int iElm = 0; iElm < f->getCncGeo()->getNumElements(); ++iElm){
-      f->initializeAddressingVectors(iElm);
+  // Working non parallel version
+  // for(auto *f : formMatrices){
+  //   feInfo("Looping over %d elements", f->getCncGeo()->getNumElements());
+  //   for(int iElm = 0; iElm < f->getCncGeo()->getNumElements(); ++iElm){
+  //     f->initializeAddressingVectors(iElm);
 
-      adrI = f->getAdrI(); nI = adrI.size();
-      adrJ = f->getAdrJ(); nJ = adrJ.size();
+  //     adrI = f->getAdrI(); nI = adrI.size();
+  //     adrJ = f->getAdrJ(); nJ = adrJ.size();
 
-      for(int i = 0; i < nI; ++i){
-        for(int j = 0; j < nJ; ++j){
-          if(adrI[i] < numUnknowns && adrJ[j] < numUnknowns){
-            nnzset[adrI[i]].insert(adrJ[j]);
-            allocatedPairs.insert( {adrI[i], adrJ[j]} );
+  //     for(int i = 0; i < nI; ++i){
+  //       for(int j = 0; j < nJ; ++j){
+  //         if(adrI[i] < numUnknowns && adrJ[j] < numUnknowns){
+  //           nnzset[adrI[i]].insert(adrJ[j]);
+  //           // allocatedPairs.insert( {adrI[i], adrJ[j]} );
+  //         }
+  //       }
+  //     }
+  //   }
+  // }
+
+  for(size_t iForm = 0; iForm < numMatrixForms; ++iForm) {
+
+    feBilinearForm *f = formMatrices[iForm];
+    feCncGeo *cnc = f->getCncGeo();
+    int numColors = cnc->getNbColor();
+    const std::vector<int> &numElemPerColor = cnc->getNbElmPerColor();
+    const std::vector<std::vector<int> > &listElmPerColor = cnc->getListElmPerColor();
+    int numElementsInColor;
+    std::vector<int> listElmC;
+
+    int nTOTELM = 0;
+    for(int iColor = 0; iColor < numColors; ++iColor) {
+      numElementsInColor = numElemPerColor[iColor];
+      listElmC = listElmPerColor[iColor];
+
+      int elm, nI, nJ;
+      std::vector<feInt> adrI;
+      std::vector<feInt> adrJ;
+
+      nTOTELM += numElementsInColor;
+
+      #if defined(HAVE_OMP)
+      #pragma omp parallel for private(elm, f, adrI, adrJ, nI, nJ)
+      #endif
+      for(int iElm = 0; iElm < numElementsInColor; ++iElm) {
+        #if defined(HAVE_OMP)
+        int numForm = iForm + omp_get_thread_num() * numMatrixForms;
+        f = formMatrices[numForm];
+        #endif
+        elm = listElmC[iElm];
+        
+        f->initializeAddressingVectors(elm);
+
+        // Determine global assignment indices
+        adrI = f->getAdrI(); nI = adrI.size();
+        adrJ = f->getAdrJ(); nJ = adrJ.size();
+
+        for(int i = 0; i < nI; ++i){
+          for(int j = 0; j < nJ; ++j){
+            if(adrI[i] < numUnknowns && adrJ[j] < numUnknowns){
+              // #pragma omp critical
+              nnzset[adrI[i]].insert(adrJ[j]);
+            }
           }
         }
       }

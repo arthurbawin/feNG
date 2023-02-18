@@ -159,9 +159,6 @@ double feNorm::computeLpNorm(int p, bool error)
     exit(-1);
   }
 
-  #if defined(HAVE_OMP)
-  #pragma omp parallel for private(_geoCoord, uh, u) reduction(+ : res) schedule(dynamic)
-  #endif
   for(int iElm = 0; iElm < _nElm; ++iElm) {
 
     this->initializeLocalSolutionOnSpace(0, iElm);
@@ -191,9 +188,9 @@ double feNorm::computeVectorLpNorm(int p, bool error)
     exit(-1);
   }
 
-  #if defined(HAVE_OMP)
-  #pragma omp parallel for private(_geoCoord, uh, u) reduction(+ : res) schedule(dynamic)
-  #endif
+  // #if defined(HAVE_OMP)
+  // #pragma omp parallel for private(_geoCoord) reduction(+ : res) schedule(dynamic)
+  // #endif
   for(int iElm = 0; iElm < _nElm; ++iElm) {
 
     this->initializeLocalSolutionOnSpace(0, iElm);
@@ -219,9 +216,9 @@ double feNorm::computeL1Norm(bool error)
 {
   double res = 0.0, uh, u, t = _solution->getCurrentTime();
 
-  #if defined(HAVE_OMP)
-  #pragma omp parallel for private(_geoCoord, uh, u) reduction(+ : res) schedule(dynamic)
-  #endif
+  // #if defined(HAVE_OMP)
+  // #pragma omp parallel for private(_geoCoord, uh, u) reduction(+ : res) schedule(dynamic)
+  // #endif
   for(int iElm = 0; iElm < _nElm; ++iElm) {
 
     this->initializeLocalSolutionOnSpace(0, iElm);
@@ -242,9 +239,9 @@ double feNorm::computeL2Norm(bool error)
 {
   double res = 0.0, uh, u, t = _solution->getCurrentTime();
 
-  #if defined(HAVE_OMP)
-  #pragma omp parallel for private(_geoCoord, uh, u) reduction(+ : res) schedule(dynamic)
-  #endif
+  // #if defined(HAVE_OMP)
+  // #pragma omp parallel for private(_geoCoord, uh, u) reduction(+ : res) schedule(dynamic)
+  // #endif
   for(int iElm = 0; iElm < _nElm; ++iElm) {
 
     this->initializeLocalSolutionOnSpace(0, iElm);
@@ -265,9 +262,9 @@ double feNorm::computeLInfNorm(bool error)
 {
   double res = -DBL_MAX, uh, u, t = _solution->getCurrentTime();
 
-  #if defined(HAVE_OMP)
-  #pragma omp parallel for private(_geoCoord, uh, u) reduction(+ : res) schedule(dynamic)
-  #endif
+  // #if defined(HAVE_OMP)
+  // #pragma omp parallel for private(_geoCoord, uh, u) reduction(+ : res) schedule(dynamic)
+  // #endif
   for(int iElm = 0; iElm < _nElm; ++iElm) {
 
     this->initializeLocalSolutionOnSpace(0, iElm);
@@ -316,9 +313,9 @@ double feNorm::computeArea()
 double feNorm::computeIntegral()
 {
   double res = 0.0, uh;
-  #if defined(HAVE_OMP)
-  #pragma omp parallel for private(_geoCoord, uh, u) reduction(+ : res) schedule(dynamic)
-  #endif
+  // #if defined(HAVE_OMP)
+  // #pragma omp parallel for private(_geoCoord, uh) reduction(+ : res) schedule(dynamic)
+  // #endif
   for(int iElm = 0; iElm < _nElm; ++iElm) {
     this->initializeLocalSolutionOnSpace(0, iElm);
     for(int k = 0; k < _nQuad; ++k) {
@@ -333,9 +330,9 @@ double feNorm::computeIntegralUserFunction()
 {
   double res = 0.0, u, t = 0.;
 
-  #if defined(HAVE_OMP)
-  #pragma omp parallel for private(_geoCoord, u) reduction(+ : res) schedule(dynamic)
-  #endif
+  // #if defined(HAVE_OMP)
+  // #pragma omp parallel for private(_geoCoord, u) reduction(+ : res) schedule(dynamic)
+  // #endif
   for(int iElm = 0; iElm < _nElm; ++iElm) {
 
     _geoSpace->_mesh->getCoord(_cnc, iElm, _geoCoord);

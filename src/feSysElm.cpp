@@ -132,13 +132,14 @@ void feSysElm_Diffusion<dim>::createElementarySystem(std::vector<feSpace *> &spa
 template<int dim>
 void feSysElm_Diffusion<dim>::computeAe(feBilinearForm *form)
 {
+	double jac, coeff;
   for(int k = 0; k < _nQuad; ++k) {
-    double jac = form->_J[_nQuad * form->_numElem + k];
+    jac = form->_J[_nQuad * form->_numElem + k];
     form->_cnc->computeElementTransformation(form->_geoCoord, k, jac, form->_transformation);
 
-    // Evaluate diffusivity k(t,x)
+    // Evaluate scalar parameter
     form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, _pos);
-    double kD = (*_diffusivity)(form->_tn, _pos);
+    coeff = (*_coeff)(form->_tn, _pos);
 
     // Compute grad(phi)
     form->_intSpaces[_idU]->getFunctionsPhysicalGradientAtQuadNode(k, form->_transformation, _gradPhi.data());
@@ -146,7 +147,7 @@ void feSysElm_Diffusion<dim>::computeAe(feBilinearForm *form)
     for(int i = 0; i < _nFunctions; ++i) {
       for(int j = 0; j < _nFunctions; ++j) {
         for(int iDim = 0; iDim < dim; ++iDim){
-          form->_Ae[i][j] -= _gradPhi[i*dim + iDim] * _gradPhi[j*dim + iDim] * kD * jac * _wQuad[k];
+        	form->_Ae[i][j] -= coeff * _gradPhi[i*dim + iDim] * _gradPhi[j*dim + iDim] * jac * _wQuad[k];
         }
       }
     }
@@ -156,14 +157,14 @@ void feSysElm_Diffusion<dim>::computeAe(feBilinearForm *form)
 template<int dim>
 void feSysElm_Diffusion<dim>::computeBe(feBilinearForm *form)
 {
-  double grad_u[3] = {0., 0., 0.};
+  double jac, coeff, grad_u[3] = {0., 0., 0.};
   for(int k = 0; k < _nQuad; ++k) {
-    double jac = form->_J[_nQuad * form->_numElem + k];
+    jac = form->_J[_nQuad * form->_numElem + k];
     form->_cnc->computeElementTransformation(form->_geoCoord, k, jac, form->_transformation);
 
     // Evaluate diffusivity k(t,x)
     form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, _pos);
-    double kD = (*_diffusivity)(form->_tn, _pos);
+    coeff = (*_coeff)(form->_tn, _pos);
 
     // Compute grad(u)
     form->_intSpaces[_idU]->interpolateFieldAtQuadNode_physicalGradient(form->_sol[_idU],
@@ -174,7 +175,7 @@ void feSysElm_Diffusion<dim>::computeBe(feBilinearForm *form)
     
     for(int i = 0; i < _nFunctions; ++i) {
     	for(int iDim = 0; iDim < dim; ++iDim){
-      	form->_Be[i] += _gradPhi[i*dim + iDim] * grad_u[iDim] * kD * jac * _wQuad[k];
+      	form->_Be[i] += coeff * _gradPhi[i*dim + iDim] * grad_u[iDim] * jac * _wQuad[k];
     	}
     }
   }

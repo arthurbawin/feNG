@@ -10,24 +10,24 @@ class feEZCompressedRowStorage
 protected:
   std::vector<feInt> nnz;
   std::vector<std::set<feInt>> nnzset;
-  std::set<std::pair<feInt,feInt>> allocatedPairs;
+  // std::set<std::pair<feInt,feInt>> allocatedPairs;
 public:
   feEZCompressedRowStorage(int numUnknowns, std::vector<feBilinearForm *> &formMatrices, int numMatrixForms);
   ~feEZCompressedRowStorage(){};
 
   feInt *getNnz() { return nnz.data(); };
   feInt getNnzAt(int i) { return nnz[i]; };
-  bool findPair(feInt i, feInt j)
-  {
-    for(std::pair<feInt,feInt> pp : allocatedPairs){
-      if(pp.first == i && pp.second == j)
-      {
-        feInfo("Found preallocated pair %d,%d", i, j);
-        return true;
-      }
-    }
-    return false;
-  }
+  // bool findPair(feInt i, feInt j)
+  // {
+  //   for(std::pair<feInt,feInt> pp : allocatedPairs){
+  //     if(pp.first == i && pp.second == j)
+  //     {
+  //       feInfo("Found preallocated pair %d,%d", i, j);
+  //       return true;
+  //     }
+  //   }
+  //   return false;
+  // }
 };
 
 class feCompressedRowStorage

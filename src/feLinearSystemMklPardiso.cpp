@@ -1,5 +1,4 @@
-#include "feLinearSystemMklPardiso.h"
-#include <math.h>
+#include "feLinearSystem.h"
 
 #if defined(HAVE_MKL)
 #include "mkl.h"
@@ -106,7 +105,7 @@ double vectorL2Norm(feInt N, double *V)
   return pow(t, 0.5);
 }
 
-void feLinearSystemMklPardiso::print_matrix()
+void feLinearSystemMklPardiso::viewMatrix()
 {
   for(feInt i = 0; i < nz; i++) printf("%ld %g \n", i, Ax[i]);
 }
@@ -237,7 +236,7 @@ void feLinearSystemMklPardiso::assembleMatrices(feSolution *sol)
       }
     }
   }
-  // print_matrix();
+  // viewMatrix();
   // double res = 0.0;
   // for(feInt i = 0; i < nz; i++) res += fabs(Ax[i]);
   // feInfo("sumMatrix = %f", res);

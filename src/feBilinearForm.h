@@ -167,6 +167,9 @@ public:
   double getMatrixNorm();
   double getResidualNorm();
 
+  void viewLocalMatrix();
+  void viewLocalResidual();
+
 private:
   // Initialize the form on element numElem.
   // Initializes _adr and the local solutions _sol, _solDot, _solPrev, _solNext

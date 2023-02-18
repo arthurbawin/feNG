@@ -208,6 +208,7 @@ feBilinearForm::feBilinearForm(const feBilinearForm &f)
 {
   _Ae = allocateMatrix(_M, _N);
   allocateResidual(_M, &_Be);
+
   if(f._sysElm->computeMatrixWithFD()) {
     _R0 = nullptr;
     _Rh = nullptr;
@@ -216,38 +217,14 @@ feBilinearForm::feBilinearForm(const feBilinearForm &f)
     _h0 = pow(DBL_EPSILON, 1.0 / 2.0);
   }
 
+  // Elementary system has to be copied as well to be thread-safe
+  _sysElm = f._sysElm->clone();
   int dim = f._sysElm->getDim();
-
-  switch(f._sysElm->getID())
-  {
-    case MASS :
-      _sysElm = new feSysElm_Mass(static_cast<feSysElm_Mass &>(*f._sysElm));
-      break;
-    case SOURCE:
-      _sysElm = new feSysElm_Source(static_cast<feSysElm_Source &>(*f._sysElm));
-      break;
-    case DIFFUSION:
-      if(dim == 0){_sysElm = new feSysElm_Diffusion<0>(static_cast<feSysElm_Diffusion<0> &>(*f._sysElm)); }
-      if(dim == 1){_sysElm = new feSysElm_Diffusion<1>(static_cast<feSysElm_Diffusion<1> &>(*f._sysElm)); }
-      if(dim == 2){_sysElm = new feSysElm_Diffusion<2>(static_cast<feSysElm_Diffusion<2> &>(*f._sysElm)); }
-      break;
-    case NEUMANN_1D:
-      _sysElm = new feSysElm_1D_NeumannBC(static_cast<feSysElm_1D_NeumannBC &>(*f._sysElm));
-      break;
-    case ADVECTION_2D:
-      _sysElm = new feSysElm_2D_Advection(static_cast<feSysElm_2D_Advection &>(*f._sysElm));
-      break;
-    case STOKES_2D :
-      _sysElm = new feSysElm_2D_Stokes(static_cast<feSysElm_2D_Stokes &>(*f._sysElm));
-      break;
-    case NAVIERSTOKES_2D:
-      _sysElm = new feSysElm_2D_NavierStokes(static_cast<feSysElm_2D_NavierStokes &>(*f._sysElm));
-      break;
-    default:
-      feWarning("Copy constructor for feBilinearForm - Elementary system \"%s\" is unknown. Exiting.",
-        f._sysElm->getWeakFormName().data());
-      exit(-1);
-  }
+  _sysElm->_nQuad = _intSpaces[0]->getNumQuadPoints();
+  _sysElm->_wQuad = _intSpaces[0]->getQuadratureWeights(); 
+  _sysElm->_rQuad = _intSpaces[0]->getRQuadraturePoints();
+  _sysElm->_sQuad = _intSpaces[0]->getSQuadraturePoints();
+  _sysElm->_tQuad = _intSpaces[0]->getTQuadraturePoints();
 }
 
 feBilinearForm::~feBilinearForm()
@@ -261,12 +238,24 @@ feBilinearForm::~feBilinearForm()
   delete _sysElm;
 }
 
+void feBilinearForm::viewLocalMatrix()
+{
+  printMatrix(_M, _N, &_Ae);
+}
+
+void feBilinearForm::viewLocalResidual()
+{
+  printResidual(_M, &_Be);
+}
+
 void feBilinearForm::initializeAddressingVectors(int numElem)
 {
+  // feInfo("adr.size = %d on thread %d", _adr.size(), omp_get_thread_num());
   // Initialize _adr for all FE spaces
   for(size_t i = 0; i < _intSpaces.size(); i++) {
     feSpace *fS = _intSpaces[i];
     fS->initializeAddressingVector(numElem, _adr[i]);
+    // feInfo("adr[%d].size = %d on thread %d", i, _adr[i].size(), omp_get_thread_num());
   }
 
   // Initialize continuous addressing vectors in I and J

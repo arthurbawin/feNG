@@ -91,6 +91,7 @@ int main(int argc, char **argv)
   feFunction *funInitial   = new feFunction(fIni,  {});
   feFunction *funSol       = new feFunction(fSol,  {x0, k});
   feFunction *funZero      = new feFunction(fZero, {});
+  feFunction *funOne      = new feFunction(fConstant, {1.});
   feFunction *kDiffusivity = new feFunction(fConstant, {-k});
   feFunction *fSource = new feFunction(fConstant, {-1.0});
 

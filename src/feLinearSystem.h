@@ -7,6 +7,13 @@
 #include "feBilinearForm.h"
 #include "feSolution.h"
 #include "feSolutionContainer.h"
+#include "feCompressedRowStorage.h"
+
+#if defined(HAVE_PETSC)
+#include "petscksp.h"
+#endif
+
+#include <chrono>
 
 /* Supported linear solvers */
 typedef enum { MKLPARDISO, PETSC } linearSolverType;
@@ -99,10 +106,10 @@ public:
 
   virtual void constraintEssentialComponents(feSolution *sol) = 0;
 
-  // Solve the linear system Ax-b
+  // Solve the linear system Ax = b, which is J*du = -NL(u) (or -R(u)) in a Newton step
   //
-  //       normDx: norm of the solution vector x (correction in the Newton-Rapshon iteration)
-  // normResidual: norm of the RHS b (residual in the Newton-Raphson iteration)
+  //       normDx: norm of the solution vector x (= du, correction in the Newton-Rapshon iteration)
+  // normResidual: norm of the RHS b (= -NL(u)//R(u), residual in the Newton-Raphson iteration)
   //      normAxb: norm of the residual Ax-b
   //        nIter: number of iteration used to solve (0 for direct solver)
   virtual bool solve(double *normDx, double *normResidual, double *normAxb, int *nIter) = 0;
@@ -124,5 +131,151 @@ public:
   // Print the RHS to the console
   virtual void viewRHS() = 0;
 };
+
+//
+// PETSc iterative solvers
+//
+class feLinearSystemPETSc : public feLinearSystem
+{
+protected:
+
+  int _argc;
+  char **_argv;
+
+#if defined(HAVE_PETSC)
+  // Number of unknown DOFs (size of the system)
+  PetscInt _nInc;
+  // Global finite element matrix
+  Mat _A;
+  // Reordered global matrix and row/col indices
+  Mat _Ap;
+  IS _rowMap;
+  IS _colMap;
+
+  // Global finite element RHS
+  Vec _rhs;
+  // Solution vector du
+  Vec _du;
+  // Residual of the linear system : A*du - RHS
+  Vec _linSysRes;
+  // Values of constrained DOF (usually 0)
+  Vec _constrainedDOFValue;
+
+  // Krylov solver (default is GMRES)
+  KSP ksp;
+  // Preconditioner (default is ILU(0))
+  PC preconditioner;
+#endif
+
+  feEZCompressedRowStorage *_EZCRS;
+
+public:
+  feLinearSystemPETSc(int argc, char **argv, std::vector<feBilinearForm *> bilinearForms, int numUnknowns);
+  ~feLinearSystemPETSc();
+
+  feInt getSystemSize() {return (feInt) _nInc; };
+
+  // See doc in feLinearSystem.h
+  void setToZero();
+  void setMatrixToZero();
+  void setResidualToZero();
+  void assemble(feSolution *sol);
+  void assembleMatrices(feSolution *sol);
+  void assembleResiduals(feSolution *sol);
+  void constraintEssentialComponents(feSolution *sol);
+  bool solve(double *normSolution, double *normRHS, double *normResidualAxMinusb, int *nIter);
+  void correctSolution(feSolution *sol);
+  void assignResidualToDCResidual(feSolutionContainer *solContainer);
+  void applyCorrectionToResidual(double coeff, std::vector<double> &d);
+  void viewMatrix();
+  void viewRHS();
+
+private:
+  void initialize();
+  void finalize();
+};
+
+//
+// MKL Pardiso direct solver
+//
+#if defined(HAVE_MKL)
+class feLinearSystemMklPardiso : public feLinearSystem
+{
+protected:
+  feCompressedRowStorageMklPardiso *crsMklPardiso;
+  feMKLPardisoInt matrixOrder;
+  double *du;
+  double *residu;
+  feInt iparm12 = 1; // Modification de IPARM[12]
+  bool symbolicFactorization = true;
+  
+  void *PT[64];
+  feMKLPardisoInt MYTPE;
+  feMKLPardisoInt IPARM[64];
+  double DPARM[64];
+
+  feMKLPardisoInt MAXFCT;
+  feMKLPardisoInt MNUM;
+  feMKLPardisoInt MTYPE;
+  feMKLPardisoInt SOLVER;
+  feMKLPardisoInt PHASE;
+  feMKLPardisoInt N;
+  feMKLPardisoInt NRHS;
+  feMKLPardisoInt ERROR;
+  feMKLPardisoInt MSGLVL;
+  feMKLPardisoInt IDUM;
+  double DDUM;
+  feMKLPardisoInt IPIVOT;
+
+  feMKLPardisoInt nz;
+  feMKLPardisoInt *Ap; // dimension ordre+1, IA
+  feMKLPardisoInt *Aj; // dimension nz, JA
+  double *Ax; // dimension nz
+
+public:
+  feLinearSystemMklPardiso(std::vector<feBilinearForm *> bilinearForms, int numUnknowns);
+  ~feLinearSystemMklPardiso();
+
+  // ====================================================================
+  // Pour modifier les paramètres de Pardiso
+  // pivot : valeur de l'exposant du nombre réel 10^(-pivot)
+  //         valeur par défaut pivot := 13
+  // ====================================================================
+  void setPivot(int pivot);
+  void setPardisoMsglvlHigh() { MSGLVL = 1; };
+  void setPardisoMsglvlLow() { MSGLVL = 0; };
+  bool getSymbolicFactorizationStatus() { return symbolicFactorization; }
+  void setSymbolicFactorizationStatus(bool status)
+  {
+    symbolicFactorization = status;
+    if(symbolicFactorization) recomputeMatrix = true;
+  }
+  void toggleSymbolicFactorizationStatus()
+  {
+    symbolicFactorization = !symbolicFactorization;
+    if(symbolicFactorization) recomputeMatrix = true;
+  }
+
+  void setToZero();
+  void setMatrixToZero();
+  void setResidualToZero();
+  void assemble(feSolution *sol);
+  void assembleMatrices(feSolution *sol);
+  void assembleResiduals(feSolution *sol);
+  void constraintEssentialComponents(feSolution *sol){};
+  bool solve(double *normDx, double *normResidual, double *normAxb, int *nIter);
+  void assignResidualToDCResidual(feSolutionContainer *solContainer);
+  void applyCorrectionToResidual(double coeff, std::vector<double> &d);
+  void correctSolution(feSolution *sol);
+  void correctSolution(double *sol);
+  void viewMatrix(){};
+  void viewRHS(){};
+
+private:
+  void mklSymbolicFactorization(void);
+  void mklFactorization(void);
+  void mklSolve(void);
+};
+#endif // HAVE_MKL
 
 #endif

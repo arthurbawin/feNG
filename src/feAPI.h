@@ -18,7 +18,6 @@
 #include "feSolver.h"
 #include "feLinearSystem.h"
 #include "feEigenProblem.h"
-#include "feLinearSystemPETSc.h"
 #include "feExporter.h"
 #include "feRecovery.h"
 #include "feMetric.h"

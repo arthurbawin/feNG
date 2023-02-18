@@ -81,8 +81,9 @@ int main(int argc, char **argv)
   double k = 1.0;
   feFunction *funSol = new feFunction(fSol, {});
   feFunction *funSource = new feFunction(fSource, {k});
-  feFunction *funZero = new feFunction(fZero, {});
-  feFunction *kDiffusivity = new feFunction(fConstant, {-k});
+  
+  feConstantFunction funZero(0.);
+  feConstantFunction *kDiffusivity = new feConstantFunction(-k);
 
   std::vector<int> nElm(nMesh, 0);
   std::vector<double> L2errorU(2 * nMesh, 0.0);
@@ -103,14 +104,14 @@ int main(int argc, char **argv)
     int degreeQuadrature = 8;
     int dim;
     feCheck(createFiniteElementSpace(uBord, &mesh, elementType::LAGRANGE, order, "U", "Bord", degreeQuadrature, funSol));
-    feCheck(createFiniteElementSpace(uDomaine, &mesh, elementType::LAGRANGE, order, "U", "Domaine", degreeQuadrature, funZero));
+    feCheck(createFiniteElementSpace(uDomaine, &mesh, elementType::LAGRANGE, order, "U", "Domaine", degreeQuadrature, &funZero));
     // feSpace *uSaut, *uHaut, *uBas, *uDroite, *uGauche, *uDomaine;
-    // feCheck(createFiniteElementSpace(uHaut,    &mesh, dim = 1, LINE, order, "U", "Haut",    degreeQuadrature, funZero));
-    // feCheck(createFiniteElementSpace(uBas,     &mesh, dim = 1, LINE, order, "U", "Bas",     degreeQuadrature, funZero));
-    // feCheck(createFiniteElementSpace(uDroite,  &mesh, dim = 1, LINE, order, "U", "Droite",  degreeQuadrature, funZero));
-    // feCheck(createFiniteElementSpace(uGauche,  &mesh, dim = 1, LINE, order, "U", "Gauche",  degreeQuadrature, funZero));
-    // feCheck(createFiniteElementSpace(uSaut,    &mesh, dim = 1, LINE, order, "U", "Saut",    degreeQuadrature, funZero));
-    // feCheck(createFiniteElementSpace(uDomaine, &mesh, dim = 2, TRI,  order, "U", "Domaine", degreeQuadrature, funZero));
+    // feCheck(createFiniteElementSpace(uHaut,    &mesh, dim = 1, LINE, order, "U", "Haut",    degreeQuadrature, &funZero));
+    // feCheck(createFiniteElementSpace(uBas,     &mesh, dim = 1, LINE, order, "U", "Bas",     degreeQuadrature, &funZero));
+    // feCheck(createFiniteElementSpace(uDroite,  &mesh, dim = 1, LINE, order, "U", "Droite",  degreeQuadrature, &funZero));
+    // feCheck(createFiniteElementSpace(uGauche,  &mesh, dim = 1, LINE, order, "U", "Gauche",  degreeQuadrature, &funZero));
+    // feCheck(createFiniteElementSpace(uSaut,    &mesh, dim = 1, LINE, order, "U", "Saut",    degreeQuadrature, &funZero));
+    // feCheck(createFiniteElementSpace(uDomaine, &mesh, dim = 2, TRI,  order, "U", "Domaine", degreeQuadrature, &funZero));
 
     // std::vector<feSpace *> spaces = {uSaut, uHaut, uBas, uDroite, uGauche, uDomaine};
     // std::vector<feSpace *> spaces = {uHaut, uBas, uDroite, uGauche, uDomaine};
@@ -183,18 +184,18 @@ int main(int argc, char **argv)
   //     int dim, degreeQuadrature = 30;
   //     feSpace *uSaut1, *uHaut1, *uBas1, *uDroite1, *uGauche1, *uDomaine1;
   //     feSpace *uSaut2, *uHaut2, *uBas2, *uDroite2, *uGauche2, *uDomaine2;
-  //     feCheck(createFiniteElementSpace(uHaut1,    &mesh1, dim = 1, LINE, LAGRANGE, order, "U", "Haut",    degreeQuadrature, funZero));
-  //     feCheck(createFiniteElementSpace(uBas1,     &mesh1, dim = 1, LINE, LAGRANGE, order, "U", "Bas",     degreeQuadrature, funZero));
-  //     feCheck(createFiniteElementSpace(uDroite1,  &mesh1, dim = 1, LINE, LAGRANGE, order, "U", "Droite",  degreeQuadrature, funZero));
-  //     feCheck(createFiniteElementSpace(uGauche1,  &mesh1, dim = 1, LINE, LAGRANGE, order, "U", "Gauche",  degreeQuadrature, funZero));
-  //     feCheck(createFiniteElementSpace(uDomaine1, &mesh1, dim = 2, TRI,  LAGRANGE, order, "U", "Domaine", degreeQuadrature, funZero));
-  //     feCheck(createFiniteElementSpace(uSaut1,    &mesh1, dim = 1, LINE, LAGRANGE, order, "U", "Saut",    degreeQuadrature, funZero));
-  //     feCheck(createFiniteElementSpace(uHaut2,    &mesh2, dim = 1, LINE, LAGRANGE, order, "U", "Haut",    degreeQuadrature, funZero));
-  //     feCheck(createFiniteElementSpace(uBas2,     &mesh2, dim = 1, LINE, LAGRANGE, order, "U", "Bas",     degreeQuadrature, funZero));
-  //     feCheck(createFiniteElementSpace(uDroite2,  &mesh2, dim = 1, LINE, LAGRANGE, order, "U", "Droite",  degreeQuadrature, funZero));
-  //     feCheck(createFiniteElementSpace(uGauche2,  &mesh2, dim = 1, LINE, LAGRANGE, order, "U", "Gauche",  degreeQuadrature, funZero));
-  //     feCheck(createFiniteElementSpace(uDomaine2, &mesh2, dim = 2, TRI,  LAGRANGE, order, "U", "Domaine", degreeQuadrature, funZero));
-  //     feCheck(createFiniteElementSpace(uSaut2,    &mesh2, dim = 1, LINE, LAGRANGE, order, "U", "Saut",    degreeQuadrature, funZero));
+  //     feCheck(createFiniteElementSpace(uHaut1,    &mesh1, dim = 1, LINE, LAGRANGE, order, "U", "Haut",    degreeQuadrature, &funZero));
+  //     feCheck(createFiniteElementSpace(uBas1,     &mesh1, dim = 1, LINE, LAGRANGE, order, "U", "Bas",     degreeQuadrature, &funZero));
+  //     feCheck(createFiniteElementSpace(uDroite1,  &mesh1, dim = 1, LINE, LAGRANGE, order, "U", "Droite",  degreeQuadrature, &funZero));
+  //     feCheck(createFiniteElementSpace(uGauche1,  &mesh1, dim = 1, LINE, LAGRANGE, order, "U", "Gauche",  degreeQuadrature, &funZero));
+  //     feCheck(createFiniteElementSpace(uDomaine1, &mesh1, dim = 2, TRI,  LAGRANGE, order, "U", "Domaine", degreeQuadrature, &funZero));
+  //     feCheck(createFiniteElementSpace(uSaut1,    &mesh1, dim = 1, LINE, LAGRANGE, order, "U", "Saut",    degreeQuadrature, &funZero));
+  //     feCheck(createFiniteElementSpace(uHaut2,    &mesh2, dim = 1, LINE, LAGRANGE, order, "U", "Haut",    degreeQuadrature, &funZero));
+  //     feCheck(createFiniteElementSpace(uBas2,     &mesh2, dim = 1, LINE, LAGRANGE, order, "U", "Bas",     degreeQuadrature, &funZero));
+  //     feCheck(createFiniteElementSpace(uDroite2,  &mesh2, dim = 1, LINE, LAGRANGE, order, "U", "Droite",  degreeQuadrature, &funZero));
+  //     feCheck(createFiniteElementSpace(uGauche2,  &mesh2, dim = 1, LINE, LAGRANGE, order, "U", "Gauche",  degreeQuadrature, &funZero));
+  //     feCheck(createFiniteElementSpace(uDomaine2, &mesh2, dim = 2, TRI,  LAGRANGE, order, "U", "Domaine", degreeQuadrature, &funZero));
+  //     feCheck(createFiniteElementSpace(uSaut2,    &mesh2, dim = 1, LINE, LAGRANGE, order, "U", "Saut",    degreeQuadrature, &funZero));
 
   //     std::vector<feSpace *> spaces1 = {uSaut1, uHaut1, uBas1, uDroite1, uGauche1, uDomaine1};
   //     std::vector<feSpace *> spaces2 = {uSaut2, uHaut2, uBas2, uDroite2, uGauche2, uDomaine2};
@@ -214,11 +215,6 @@ int main(int argc, char **argv)
   //     delete sol2;
   //   }
   // }
-
-  for(auto val : L2errorU){
-    feInfo("val = %f", val);
-  }
-
 
   // Compute the convergence rate
   for(int i = 1; i < nMesh; ++i) {

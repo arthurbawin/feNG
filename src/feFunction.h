@@ -19,6 +19,19 @@ typedef std::function<void(const double,
   const std::vector<double> &,
   std::vector<double> &)> VectorField;
 
+static double constantCallback(const double t, const std::vector<double> &pos, 
+  const std::vector<double> &par)
+{
+  return par[0];
+}
+
+static void constantVectorCallback(const double t, const std::vector<double> &pos, 
+  const std::vector<double> &par, std::vector<double> &res)
+{
+  res[0] = par[0];
+  res[1] = par[1];
+}
+
 // Wrappers for scalar and vector fields
 class feFunction
 {
@@ -42,6 +55,13 @@ public:
   double operator()(const double u){ return _fct2(u, _par); };
 };
 
+class feConstantFunction : public feFunction
+{
+public:
+  feConstantFunction(double C) : feFunction(constantCallback, {C}){};
+  ~feConstantFunction(){};
+};
+
 class feVectorFunction
 {
 protected:
@@ -57,6 +77,13 @@ public:
   void eval(const double t, const std::vector<double> &x, std::vector<double> &res){ _fct(t, x, _par, res); };
   void operator()(const double t, const std::vector<double> &x, std::vector<double> &res){ _fct(t, x, _par, res); };
   std::vector<double> getParam() { return _par; }
+};
+
+class feConstantVectorFunction : public feVectorFunction
+{
+public:
+  feConstantVectorFunction(std::vector<double> C) : feVectorFunction(constantVectorCallback, C){};
+  ~feConstantVectorFunction(){};
 };
 
 #endif

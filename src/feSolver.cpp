@@ -68,11 +68,11 @@ feStatus solveQNBDF(feSolutionContainer *solDot, feTolerances tol, feMetaNumber 
 
     bool successSolve = linearSystem->solve(&normDx, &normResidual, &normAxb, &linearSystemIter);
 
-    // if(!successSolve){
-    //   feWarning("Iter %2d : ||J*du - NL(u)|| = %10.10e (%4d iter.) \t ||du|| = %10.10e \t ||NL(u)|| = %10.10e (%s)",
-    //   ++iter, normAxb, linearSystemIter, normDx, normResidual, linearSystem->getRecomputeStatus() ? "true" : "false");
-    //   return feErrorMsg(FE_STATUS_ERROR, "Could not solve linear system at iter %2d )-:", iter);
-    // }
+    if(!successSolve){
+      feWarning("Iter %2d : ||J*du - NL(u)|| = %10.10e (%4d iter.) \t ||du|| = %10.10e \t ||NL(u)|| = %10.10e (%s)",
+      ++iter, normAxb, linearSystemIter, normDx, normResidual, linearSystem->getRecomputeStatus() ? "true" : "false");
+      return feErrorMsg(FE_STATUS_ERROR, "Could not solve linear system at iter %2d )-:", iter);
+    }
 
     // if(iter == 0 && status == 1) _normR0 = normResidual;
     // if(iter == 0 && status == 0) _normFirstR0 = normResidual; // in case we have to recalculate the matrix and update the R0

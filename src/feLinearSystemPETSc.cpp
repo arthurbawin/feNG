@@ -1,5 +1,4 @@
-#include "feLinearSystemPETSc.h"
-#include "feCompressedRowStorage.h"
+#include "feLinearSystem.h"
 
 #if defined(HAVE_PETSC)
 #include "petscdraw.h"
@@ -265,6 +264,8 @@ void feLinearSystemPETSc::assembleMatrices(feSolution *sol)
 {
 #if defined(HAVE_PETSC)
 
+  std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
+
   PetscErrorCode ierr = 0;
 
   for(feInt eq = 0; eq < _numMatrixForms; ++eq) {
@@ -337,7 +338,11 @@ void feLinearSystemPETSc::assembleMatrices(feSolution *sol)
         }
 
         // Increment global matrix
+        #if defined(HAVE_OMP)
+        #pragma omp critical
+        #endif
         ierr = MatSetValues(_A, adrI.size(), adrI.data(), adrJ.size(), adrJ.data(), values.data(), ADD_VALUES);
+        CHKERRABORT(PETSC_COMM_WORLD, ierr);
         niElm.clear();
         njElm.clear();
       }
@@ -353,7 +358,11 @@ void feLinearSystemPETSc::assembleMatrices(feSolution *sol)
   // ierr = MatNorm(_A, NORM_FROBENIUS, &normMat);
   // CHKERRABORT(PETSC_COMM_WORLD, ierr);
 
+  std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
+
   viewMatrix();
+
+  std::cout << "Assembled matrix in" << std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count() << "[ms]" << std::endl;
 
   if(_exportMatrixMatlab){
     feInfoCond(FE_VERBOSE > 1, "\t\t\tExporting global matrix to Matlab");
@@ -373,6 +382,8 @@ void feLinearSystemPETSc::assembleResiduals(feSolution *sol)
 #if defined(HAVE_PETSC)
 
   PetscErrorCode ierr = 0;
+
+  std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
 
   for(feInt eq = 0; eq < _numResidualForms; ++eq) {
 
@@ -428,6 +439,9 @@ void feLinearSystemPETSc::assembleResiduals(feSolution *sol)
         }
 
         // Increment global residual
+        #if defined(HAVE_OMP)
+        #pragma omp critical
+        #endif
         ierr = VecSetValues(_rhs, adrI.size(), adrI.data(), values.data(), ADD_VALUES);
         niElm.clear();
       }
@@ -438,8 +452,13 @@ void feLinearSystemPETSc::assembleResiduals(feSolution *sol)
   CHKERRABORT(PETSC_COMM_WORLD, ierr);
   ierr = VecAssemblyEnd(_rhs);
   CHKERRABORT(PETSC_COMM_WORLD, ierr);
+
+  std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
   
   viewRHS();
+
+  feInfo("Assembled RHS in");
+  std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count() << "[ms]" << std::endl;
 
 #endif
 }
@@ -516,7 +535,7 @@ bool feLinearSystemPETSc::solve(double *normSolution, double *normRHS, double *n
     // Solve failed
     const char *reasonString;
     KSPGetConvergedReasonString(ksp, &reasonString);
-    feWarning("\nPETSc solve failed with KSP error code: %s", reasonString);
+    feWarning("PETSc solve failed with KSP error code: %s", reasonString);
     if(reason == KSP_DIVERGED_PC_FAILED){
       PCFailedReason reasonpc;
       ierr = PCGetFailedReason(preconditioner, &reasonpc);
@@ -548,6 +567,15 @@ bool feLinearSystemPETSc::solve(double *normSolution, double *normRHS, double *n
   ierr = VecNorm(_rhs,       NORM_MAX, normRHS); CHKERRABORT(PETSC_COMM_WORLD, ierr);
   ierr = VecNorm(_du,        NORM_MAX, normSolution); CHKERRABORT(PETSC_COMM_WORLD, ierr);
   ierr = VecNorm(_linSysRes, NORM_MAX, normResidualAxMinusb); CHKERRABORT(PETSC_COMM_WORLD, ierr);
+
+  if(reason == KSP_DIVERGED_ITS){
+    feWarning("Max number of iteration reached");
+    return true;
+  }
+  if(reason == KSP_DIVERGED_BREAKDOWN){
+    feWarning("Diverged breakdown");
+    return true;
+  }
 
   return reason > 0;
 #endif
