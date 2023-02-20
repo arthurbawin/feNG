@@ -15,10 +15,6 @@ double fSol(const double t, const std::vector<double> &pos, const std::vector<do
 {
   double x = pos[0];
   return pow(x, 6);
-  // double y = pos[1];
-  // double a = 10.0;
-  // double b = 2.;
-  // return 0.5*(1.0 + tanh(a*(x - sin(b*M_PI*y)/4.0)));
 }
 
 double fSource(const double t, const std::vector<double> &pos, const std::vector<double> &par)
@@ -29,16 +25,6 @@ double fSource(const double t, const std::vector<double> &pos, const std::vector
   double b = 2.;
   double k = par[0];
   return -k * 30. * pos[0] * pos[0] * pos[0] * pos[0];
-
-  // double T = pow(tanh(a*(x - sin(M_PI*b*y)/4)),2);
-  // double uxx = a*a*tanh(a*(x - sin(M_PI*b*y)/4))*(T - 1);
-  // double uyy = (a*a*b*b*M_PI*M_PI*tanh(a*(x - sin(M_PI*b*y)/4))*pow(cos(M_PI*b*y),2)*(T - 1))/16 - (a*b*b*M_PI*M_PI*sin(M_PI*b*y)*(T - 1))/8;
-  // return k * (uxx + uyy);
-}
-
-double fConstant(const double t, const std::vector<double> &pos, const std::vector<double> &par)
-{
-  return par[0];
 }
 
 int main(int argc, char **argv)
@@ -48,22 +34,22 @@ int main(int argc, char **argv)
   petscInitialize(argc, argv);
 
   // Set the default parameters.
-  const char *meshFile = "../data/square6.msh";
+  const char *meshFile = "../data/square1.msh";
   int verbosity = 1;
-  int order = 4;
-  int degreeQuadrature = 15;
+  int order = 1;
+  int degreeQuadrature = 4;
 
   // Create an option parser and parse the command line arguments.
   // Returns an error if a command line argument is ill-formed.
   // If a command line argument is provided, it will overwrite the default parameter.
   // Each parameter added with "addOption" is optional by default, to make it required,
   // set the 5th argument of addOption to "true".
-  // feOptionsParser options(argc, argv);
-  // options.addOption(&meshFile, "-m", "--mesh", "Mesh file (gmsh format .msh only)");
-  // options.addOption(&order, "-o", "--order", "Finite element space order (polynomial degree)");
-  // options.addOption(&degreeQuadrature, "-dquad", "--degreeQuadrature", "Degree of the quadrature");
-  // options.addOption(&verbosity, "-v", "--verbosity", "Verbosity level");
-  // feCheck(options.parse());
+  feOptionsParser options(argc, argv);
+  options.addOption(&meshFile, "-m", "--mesh", "Mesh file (gmsh format .msh only)");
+  options.addOption(&order, "-o", "--order", "Finite element space order (polynomial degree)");
+  options.addOption(&degreeQuadrature, "-dquad", "--degreeQuadrature", "Degree of the quadrature");
+  options.addOption(&verbosity, "-v", "--verbosity", "Verbosity level");
+  feCheck(options.parse());
 
   // Set the global verbosity level :
   // - 0 : No information messages, only print warnings and errors
@@ -80,11 +66,11 @@ int main(int argc, char **argv)
   // These functions are used to initialize the degrees of freedom (unknown and
   // boundary conditions).
   double k = 1.0;
-  feFunction *funSol    = new feFunction(fSol,    {});
-  feFunction *funSource = new feFunction(fSource, {k});
-  feFunction *funZero   = new feFunction(fConstant, {0.});
-  feFunction *funOne    = new feFunction(fConstant, {1.});
-  feFunction *kDiffusivity = new feFunction(fConstant, {1.});
+  feFunction funSol(fSol,    {});
+  feFunction funSource(fSource, {k});
+  feConstantFunction funZero(0.);
+  feConstantFunction funOne(1.);
+  feConstantFunction diffusivity(k);
 
   // Define a finite element space on each subdomain of the computational domain.
   // The subdomains are defined by the Physical Entities in gmsh, and the name given
@@ -94,8 +80,8 @@ int main(int argc, char **argv)
   // element space, with parameter "degreeQuadrature" governing the number of quadrature nodes.
   // The feFunction provided is used to initialize the degrees of freedom on the feSpace.
   feSpace *uBord, *uDomaine;
-  feCheck(createFiniteElementSpace(uBord, &mesh, elementType::LAGRANGE, order, "U", "Bord", degreeQuadrature, funSol));
-  feCheck(createFiniteElementSpace(uDomaine, &mesh, elementType::LAGRANGE, order, "U", "Domaine", degreeQuadrature, funZero));
+  feCheck(createFiniteElementSpace(   uBord, &mesh, elementType::LAGRANGE, order, "U",    "Bord", degreeQuadrature, &funSol));
+  feCheck(createFiniteElementSpace(uDomaine, &mesh, elementType::LAGRANGE, order, "U", "Domaine", degreeQuadrature, &funZero));
 
   // Define the set of all finite elements spaces and the set of FE spaces
   // forming the essential (Dirichlet) boundary conditions. The second set must always be
@@ -123,18 +109,17 @@ int main(int argc, char **argv)
   //
   // There is no form to define on the boundary.
   feBilinearForm *diff, *source;
-  feCheck(createBilinearForm(  diff, {uDomaine}, new feSysElm_Diffusion<2>(kDiffusivity)  ));
-  feCheck(createBilinearForm(source, {uDomaine}, new feSysElm_Source(funSource) ));
+  feCheck(createBilinearForm(  diff, {uDomaine}, new feSysElm_Diffusion<2>(&diffusivity)  ));
+  feCheck(createBilinearForm(source, {uDomaine}, new feSysElm_Source(&funSource) ));
 
   // Create the linear system. Assembly of the elementary matrices and RHS is
   // performed in the solve step below ("makeSteps"). Two linear solvers are available:
   // MKL Pardiso (direct solver) and PETSc (collection of iterative solvers).
   feLinearSystem *system;
   feCheck(createLinearSystem(system, PETSC, {diff, source}, numbering.getNbUnknowns(), argc, argv));
-  // system->setDisplayMatrixInConsole(true);
 
   // Post-processing tools to compute norms and whatnot
-  feNorm normU(L2_ERROR, {uDomaine}, &sol, funSol);
+  feNorm normU(L2_ERROR, {uDomaine}, &sol, &funSol);
   std::vector<feNorm *> norms = {&normU};
 
   // Create an exporter structure to write the solution for visualization. Currently the only
@@ -159,19 +144,8 @@ int main(int argc, char **argv)
 
   // Compute L2 norm of the error u-uh
   feNorm *norm;
-  feCheck(createNorm(norm, L2_ERROR, {uDomaine}, &sol, funSol));
-
+  feCheck(createNorm(norm, L2_ERROR, {uDomaine}, &sol, &funSol));
   feInfo("L2 error = %10.10f", norm->compute(L2_ERROR));
-
-  feInfo("L1   error = %10.10f", norm->compute(L1_ERROR));
-  feInfo("Linf error = %10.10f", norm->compute(LINF_ERROR));
-
-  feInfo("Area = %10.10f", norm->compute(AREA));
-
-  feInfo("Integral = %10.10f", norm->compute(INTEGRAL));
-
-
-  feInfo("System size = %u", system->getSystemSize());
 
   // Free the used memory
   delete diff;
@@ -180,9 +154,6 @@ int main(int argc, char **argv)
   delete exporter;
   delete uDomaine;
   delete uBord;
-  delete funZero;
-  delete funSol;
-  delete funSource;
   delete norm;
   delete system;
 
