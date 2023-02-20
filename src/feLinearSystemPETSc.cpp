@@ -558,6 +558,8 @@ bool feLinearSystemPETSc::solve(double *normSolution, double *normRHS, double *n
         #endif
         case PC_SUBPC_ERROR:
           feWarning("\nPETSc solve failed with preconditioner error code: %s", "PC_SUBPC_ERROR"); break;
+        default:
+          feWarning("\nPETSc solve failed with unknown preconditioner error code"); break;
       }
     }
   }
