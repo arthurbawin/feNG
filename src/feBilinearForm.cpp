@@ -217,7 +217,7 @@ feBilinearForm::feBilinearForm(const feBilinearForm &f)
     _h0 = pow(DBL_EPSILON, 1.0 / 2.0);
   }
 
-  // Elementary system has to be copied as well to be thread-safe
+  // Elementary system has to be cloned to be thread-safe
   _sysElm = f._sysElm->clone();
   int dim = f._sysElm->getDim();
   _sysElm->_nQuad = _intSpaces[0]->getNumQuadPoints();

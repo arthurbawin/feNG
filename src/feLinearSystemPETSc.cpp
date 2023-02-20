@@ -552,8 +552,10 @@ bool feLinearSystemPETSc::solve(double *normSolution, double *normRHS, double *n
           feWarning("\nPETSc solve failed with preconditioner error code: %s", "PC_FACTOR_OUTMEMORY"); break;
         case PC_FACTOR_OTHER:
           feWarning("\nPETSc solve failed with preconditioner error code: %s", "PC_FACTOR_OTHER"); break;
+        #if PETSC_VERSION_GE(3,16,0)
         case PC_INCONSISTENT_RHS:
           feWarning("\nPETSc solve failed with preconditioner error code: %s", "PC_INCONSISTENT_RHS"); break;
+        #endif
         case PC_SUBPC_ERROR:
           feWarning("\nPETSc solve failed with preconditioner error code: %s", "PC_SUBPC_ERROR"); break;
       }
