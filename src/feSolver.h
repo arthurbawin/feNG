@@ -71,7 +71,7 @@ public:
   void setMesh(feMesh *mesh) { _mesh = mesh; }
   std::vector<double> &getNorm(int iNorm) { return _normL2[iNorm]; };
 
-  int getCurrentStep(){ return _currentStep; };
+  int getCurrentStep() { return _currentStep; };
 
   virtual feStatus makeStep() = 0;
   virtual feStatus makeSteps(int nSteps) = 0;
@@ -103,7 +103,7 @@ public:
 
   std::vector<double> &getNorm(int iNorm) { return _normL2[iNorm]; };
 
-  feStatus makeStep(){ return FE_STATUS_OK; };
+  feStatus makeStep() { return FE_STATUS_OK; };
   feStatus makeSteps(int nSteps);
 };
 
@@ -136,7 +136,7 @@ public:
 
   std::vector<double> &getNorm(int iNorm) { return _normL2[iNorm]; };
 
-  feStatus makeStep(){ return FE_STATUS_OK; };
+  feStatus makeStep() { return FE_STATUS_OK; };
   feStatus makeSteps(int nSteps);
 };
 
@@ -158,7 +158,7 @@ public:
 
   std::vector<double> &getNorm(int iNorm) { return _normL2[iNorm]; };
 
-  feStatus makeStep(){ return FE_STATUS_OK; };
+  feStatus makeStep() { return FE_STATUS_OK; };
   feStatus makeSteps(int nSteps);
 };
 
@@ -180,7 +180,7 @@ public:
 
   std::vector<double> &getNorm(int iNorm) { return _normL2[iNorm]; };
 
-  feStatus makeStep(){ return FE_STATUS_OK; };
+  feStatus makeStep() { return FE_STATUS_OK; };
   feStatus makeSteps(int nSteps);
 };
 
@@ -203,7 +203,7 @@ public:
   std::vector<double> &getNorm(int iNorm) { return _normL2[iNorm]; };
   std::vector<double> &getInt(int iNorm) { return _normL2[iNorm]; };
 
-  feStatus makeStep(){ return FE_STATUS_OK; };
+  feStatus makeStep() { return FE_STATUS_OK; };
   feStatus makeSteps(int nSteps);
 };
 

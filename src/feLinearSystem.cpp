@@ -4,23 +4,24 @@ extern int FE_VERBOSE;
 
 extern bool petscWasInitialized;
 
-feStatus createLinearSystem(feLinearSystem *&system,
-  linearSolverType type, 
-  std::vector<feBilinearForm *> bilinearForms,
-  int numUnknowns,
-  int argc, char **argv)
+feStatus createLinearSystem(feLinearSystem *&system, linearSolverType type,
+                            std::vector<feBilinearForm *> bilinearForms, int numUnknowns, int argc,
+                            char **argv)
 {
   feInfoCond(FE_VERBOSE > 0, "");
   feInfoCond(FE_VERBOSE > 0, "LINEAR SYSTEM:");
 
-  for(auto *form : bilinearForms){
-    if(form == nullptr){
-      return feErrorMsg(FE_STATUS_ERROR, "Null pointer in vector of bilinear forms, maybe you forgot to initialize it.");
+  for(auto *form : bilinearForms) {
+    if(form == nullptr) {
+      return feErrorMsg(
+        FE_STATUS_ERROR,
+        "Null pointer in vector of bilinear forms, maybe you forgot to initialize it.");
     }
   }
 
   if(numUnknowns == 0)
-    return feErrorMsg(FE_STATUS_ERROR, "0 unknowns : attempting to create a linear system of size 0.");
+    return feErrorMsg(FE_STATUS_ERROR,
+                      "0 unknowns : attempting to create a linear system of size 0.");
 
   switch(type) {
     case MKLPARDISO:
@@ -31,8 +32,7 @@ feStatus createLinearSystem(feLinearSystem *&system,
       return feErrorMsg(FE_STATUS_ERROR,
                         "feNG must be compiled with Intel MKL to solve with MKL Pardiso.");
 #endif
-    case PETSC:
-    {
+    case PETSC: {
 #if defined(HAVE_PETSC)
       if(argc == 0 || argv == nullptr) {
         return feErrorMsg(FE_STATUS_ERROR,
@@ -46,7 +46,9 @@ feStatus createLinearSystem(feLinearSystem *&system,
       std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
       system = new feLinearSystemPETSc(argc, argv, bilinearForms, numUnknowns);
       std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
-      std::cout << "Created linear system in " << std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count() << "[ms]" << std::endl;
+      std::cout << "Created linear system in "
+                << std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count()
+                << "[ms]" << std::endl;
       break;
     }
 #else
@@ -60,8 +62,7 @@ feStatus createLinearSystem(feLinearSystem *&system,
   return FE_STATUS_OK;
 }
 
-feLinearSystem::feLinearSystem(std::vector<feBilinearForm *> bilinearForms)
-  : recomputeMatrix(false)
+feLinearSystem::feLinearSystem(std::vector<feBilinearForm *> bilinearForms) : recomputeMatrix(false)
 {
   _numMatrixForms = 0;
   _numResidualForms = bilinearForms.size();
@@ -69,19 +70,19 @@ feLinearSystem::feLinearSystem(std::vector<feBilinearForm *> bilinearForms)
 #if defined(HAVE_OMP)
   int nThreads = omp_get_max_threads();
 #else
-  int nThreads = 1;
+    int nThreads = 1;
 #endif
 
   for(int i = 0; i < nThreads; ++i) {
     for(feBilinearForm *f : bilinearForms) {
-      #if defined(HAVE_OMP)
-          feBilinearForm *fCpy = new feBilinearForm(*f);
-          _formResiduals.push_back(fCpy);
-          if(f->hasMatrix()) _formMatrices.push_back(fCpy);
-      #else
-          _formResiduals.push_back(f);
-          if(f->hasMatrix()) _formMatrices.push_back(f);
-      #endif
+#if defined(HAVE_OMP)
+      feBilinearForm *fCpy = new feBilinearForm(*f);
+      _formResiduals.push_back(fCpy);
+      if(f->hasMatrix()) _formMatrices.push_back(fCpy);
+#else
+        _formResiduals.push_back(f);
+        if(f->hasMatrix()) _formMatrices.push_back(f);
+#endif
       if(f->hasMatrix() && i == 0) _numMatrixForms++;
     }
   }

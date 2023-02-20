@@ -19,11 +19,12 @@ feLinearSystemMklPardiso::feLinearSystemMklPardiso(std::vector<feBilinearForm *>
   // Structure Creuse CSR de MKL
   //=================================================================
   // tic();
-  crsMklPardiso = new feCompressedRowStorageMklPardiso(metaNumber, mesh, _formMatrices, _numMatrixForms);
+  crsMklPardiso =
+    new feCompressedRowStorageMklPardiso(metaNumber, mesh, _formMatrices, _numMatrixForms);
   // toc();
   nz = crsMklPardiso->getNz();
-  Ap = (feMKLPardisoInt *) crsMklPardiso->getAp();
-  Aj = (feMKLPardisoInt *) crsMklPardiso->getAj();
+  Ap = (feMKLPardisoInt *)crsMklPardiso->getAp();
+  Aj = (feMKLPardisoInt *)crsMklPardiso->getAj();
   Ax = crsMklPardiso->allocateMatrix();
   crsMklPardiso->zeroMatrix(Ax);
   matrixOrder = (feMKLPardisoInt)crsMklPardiso->getMatrixOrder();
@@ -99,7 +100,7 @@ double vectorL2Norm(feInt N, double *V)
 #if defined(HAVE_OMP)
 #pragma omp parallel for reduction(+ : t) schedule(dynamic)
 #endif
-  for(feInt i = 0; i < N; i++){
+  for(feInt i = 0; i < N; i++) {
     t += V[i] * V[i];
   }
   return pow(t, 0.5);
@@ -118,11 +119,11 @@ void feLinearSystemMklPardiso::assembleMatrices(feSolution *sol)
   // feInt NumberOfBilinearForms = _formMatrices.size();
 
   feInfo("Repartition des NNZ: ");
-  for(int i = 0; i < matrixOrder; ++i){
+  for(int i = 0; i < matrixOrder; ++i) {
     feInfo("NNZ[%d] = %d", i, crsMklPardiso->getNnz()[i]);
   }
   feInfo("Repartition de Ap: ");
-  for(int i = 0; i < matrixOrder+1; ++i){
+  for(int i = 0; i < matrixOrder + 1; ++i) {
     feInfo("Ap[%d] = %d", i, Ap[i]);
   }
   // feInfo("Repartition de Aj: ");
@@ -132,7 +133,6 @@ void feLinearSystemMklPardiso::assembleMatrices(feSolution *sol)
 
   feInfo("PRINTING INFO");
   crsMklPardiso->print_info();
-
 
   for(feInt eq = 0; eq < _numMatrixForms; eq++) {
     feBilinearForm *f = _formMatrices[eq];
@@ -168,8 +168,8 @@ void feLinearSystemMklPardiso::assembleMatrices(feSolution *sol)
       std::vector<feInt> irangee;
 
 #if defined(HAVE_OMP)
-#pragma omp parallel for private(numThread, elm, eqt, f, nRow, nColumn, Row, Column, Ae, I, J, debut, fin, ncf,       \
-                                 irangee) schedule(dynamic)
+#pragma omp parallel for private(numThread, elm, eqt, f, nRow, nColumn, Row, Column, Ae, I, J,     \
+                                 debut, fin, ncf, irangee) schedule(dynamic)
 #endif
       for(int iElm = 0; iElm < nbElmC; ++iElm) {
 #if defined(HAVE_OMP)
@@ -184,8 +184,7 @@ void feLinearSystemMklPardiso::assembleMatrices(feSolution *sol)
         Row = f->getAdrI();
 
         feInfo("elm %d SIZE OF ROW is %d - matrixORder = %d", iElm, Row.size(), matrixOrder);
-        for(auto val : Row)
-          feInfo("val = %d", val);
+        for(auto val : Row) feInfo("val = %d", val);
 
         nColumn = f->getLocalMatrixN();
         Column = f->getAdrJ();

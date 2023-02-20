@@ -3,25 +3,30 @@
 
 extern int FE_VERBOSE;
 
-feStatus createBilinearForm(feBilinearForm *&form, const std::vector<feSpace *> &spaces, feSysElm *elementarySystem)
+feStatus createBilinearForm(feBilinearForm *&form, const std::vector<feSpace *> &spaces,
+                            feSysElm *elementarySystem)
 {
   feInfoCond(FE_VERBOSE > 0, "");
   feInfoCond(FE_VERBOSE > 0, "(BI)LINEAR FORM:");
 
   // Perform some checks and exit on error:
-  for(auto *s : spaces){
-    if(s == nullptr){
-      return feErrorMsg(FE_STATUS_ERROR, "Null pointer in vector of FE spaces, maybe you forgot to initialize it.");
+  for(auto *s : spaces) {
+    if(s == nullptr) {
+      return feErrorMsg(FE_STATUS_ERROR,
+                        "Null pointer in vector of FE spaces, maybe you forgot to initialize it.");
     }
   }
 
   // Check that all interpolation spaces are defined on the same connectivity
   int cncGeoTag = spaces[0]->getCncGeoTag();
   for(size_t i = 0; i < spaces.size(); ++i) {
-    if(spaces[i]->getCncGeoTag() != cncGeoTag){
-      if(elementarySystem->getID() != EULER_0D_FLUX){
-        return feErrorMsg(FE_STATUS_ERROR, "(Bi-)linear form %s is defined on more than one geometric connectivity.\n"
-          "All finite element spaces in \"spaces\" should be defined on the same geometric connectivity.\n",
+    if(spaces[i]->getCncGeoTag() != cncGeoTag) {
+      if(elementarySystem->getID() != EULER_0D_FLUX) {
+        return feErrorMsg(
+          FE_STATUS_ERROR,
+          "(Bi-)linear form %s is defined on more than one geometric connectivity.\n"
+          "All finite element spaces in \"spaces\" should be defined on the same geometric "
+          "connectivity.\n",
           elementarySystem->getWeakFormName().data());
       }
     }
@@ -30,24 +35,23 @@ feStatus createBilinearForm(feBilinearForm *&form, const std::vector<feSpace *> 
   // Check that the elementary system is defined on a connectivity of same space dimension
   for(size_t i = 0; i < spaces.size(); ++i) {
     // Weak forms that can be defined on any dimension have dim = -1
-    if(elementarySystem->getDim() != -1){
-      if(spaces[i]->getDim() != elementarySystem->getDim()){
-      return feErrorMsg(FE_STATUS_ERROR, "(Bi-)linear form %s should be defined on connectivity with dimension %d "
-        "(given dimension is %d)\n",
-        elementarySystem->getWeakFormName().data(),
-        elementarySystem->getDim(),
-        spaces[i]->getDim());
+    if(elementarySystem->getDim() != -1) {
+      if(spaces[i]->getDim() != elementarySystem->getDim()) {
+        return feErrorMsg(FE_STATUS_ERROR,
+                          "(Bi-)linear form %s should be defined on connectivity with dimension %d "
+                          "(given dimension is %d)\n",
+                          elementarySystem->getWeakFormName().data(), elementarySystem->getDim(),
+                          spaces[i]->getDim());
       }
     }
   }
 
-  // Check that the number of FE spaces match the required 
+  // Check that the number of FE spaces match the required
   // number of spaces to compute the weak form
-  if(spaces.size() != elementarySystem->getNumFields()){
+  if(spaces.size() != elementarySystem->getNumFields()) {
     return feErrorMsg(FE_STATUS_ERROR, "(Bi-)linear form %s expects %d FE space(s) (given: %d)\n",
-        elementarySystem->getWeakFormName().data(),
-        elementarySystem->getNumFields(),
-        spaces.size());
+                      elementarySystem->getWeakFormName().data(), elementarySystem->getNumFields(),
+                      spaces.size());
   }
 
   // TEMPORARY: Check that all FE spaces have the same number of quadrature nodes
@@ -61,8 +65,7 @@ feStatus createBilinearForm(feBilinearForm *&form, const std::vector<feSpace *> 
   form = new feBilinearForm(spaces, elementarySystem);
 
   feInfoCond(FE_VERBOSE > 0, "\t\tDefined (bi-)linear form %s on connectivity %s",
-    elementarySystem->getWeakFormName().data(),
-    spaces[0]->getCncGeoID().data());
+             elementarySystem->getWeakFormName().data(), spaces[0]->getCncGeoID().data());
 
   return FE_STATUS_OK;
 }
@@ -113,14 +116,10 @@ static inline void printResidual(feInt m, double **b)
 
 static inline void freeResidual(double **b) { free(*b); }
 
-feBilinearForm::feBilinearForm(std::vector<feSpace*> spaces, feSysElm *elementarySystem)
-  : _sysElm(elementarySystem)
-  , _intSpaces(spaces)
-  , _cnc(spaces[0]->getCncGeo())
-  , _cncGeoID(spaces[0]->getCncGeoID())
-  , _cncGeoTag(spaces[0]->getCncGeoTag())
-  , _geoSpace(_cnc->getFeSpace())
-  , _J(_cnc->getJacobians())
+feBilinearForm::feBilinearForm(std::vector<feSpace *> spaces, feSysElm *elementarySystem)
+  : _sysElm(elementarySystem), _intSpaces(spaces), _cnc(spaces[0]->getCncGeo()),
+    _cncGeoID(spaces[0]->getCncGeoID()), _cncGeoTag(spaces[0]->getCncGeoTag()),
+    _geoSpace(_cnc->getFeSpace()), _J(_cnc->getJacobians())
 {
   _geoCoord.resize(3 * _cnc->getNumVerticesPerElem());
 
@@ -133,7 +132,7 @@ feBilinearForm::feBilinearForm(std::vector<feSpace*> spaces, feSysElm *elementar
   // to the elementary system
   // FIXME: they must have the same number of quad points...
   _sysElm->_nQuad = spaces[0]->getNumQuadPoints();
-  _sysElm->_wQuad = spaces[0]->getQuadratureWeights(); 
+  _sysElm->_wQuad = spaces[0]->getQuadratureWeights();
   _sysElm->_rQuad = spaces[0]->getRQuadraturePoints();
   _sysElm->_sQuad = spaces[0]->getSQuadraturePoints();
   _sysElm->_tQuad = spaces[0]->getTQuadraturePoints();
@@ -155,11 +154,11 @@ feBilinearForm::feBilinearForm(std::vector<feSpace*> spaces, feSysElm *elementar
   // Set the computation method for the element matrix
   if(elementarySystem->computeMatrixWithFD()) {
     ptrComputeMatrix = &feBilinearForm::computeMatrixFiniteDifference;
-      _R0 = nullptr;
-      _Rh = nullptr;
-      allocateResidual(_M, &_Rh);
-      allocateResidual(_M, &_R0);
-      _h0 = pow(DBL_EPSILON, 1.0 / 2.0);
+    _R0 = nullptr;
+    _Rh = nullptr;
+    allocateResidual(_M, &_Rh);
+    allocateResidual(_M, &_R0);
+    _h0 = pow(DBL_EPSILON, 1.0 / 2.0);
   } else {
     ptrComputeMatrix = &feBilinearForm::computeMatrixAnalytical;
   }
@@ -169,12 +168,9 @@ feBilinearForm::feBilinearForm(std::vector<feSpace*> spaces, feSysElm *elementar
   _solDot.resize(_intSpaces.size());
   _solPrev.resize(_intSpaces.size());
   _solNext.resize(_intSpaces.size());
-  for(size_t k = 0; k < _intSpaces.size(); ++k)
-    _adr[k].resize(_intSpaces[k]->getNumFunctions());
-  for(size_t k = 0; k < _intSpaces.size(); ++k)
-    _sol[k].resize(_intSpaces[k]->getNumFunctions());
-  for(size_t k = 0; k < _intSpaces.size(); ++k)
-    _solDot[k].resize(_intSpaces[k]->getNumFunctions());
+  for(size_t k = 0; k < _intSpaces.size(); ++k) _adr[k].resize(_intSpaces[k]->getNumFunctions());
+  for(size_t k = 0; k < _intSpaces.size(); ++k) _sol[k].resize(_intSpaces[k]->getNumFunctions());
+  for(size_t k = 0; k < _intSpaces.size(); ++k) _solDot[k].resize(_intSpaces[k]->getNumFunctions());
   for(size_t k = 0; k < _intSpaces.size(); ++k)
     _solPrev[k].resize(_intSpaces[k]->getNumFunctions());
   for(size_t k = 0; k < _intSpaces.size(); ++k)
@@ -183,28 +179,11 @@ feBilinearForm::feBilinearForm(std::vector<feSpace*> spaces, feSysElm *elementar
 
 // Copy constructor
 feBilinearForm::feBilinearForm(const feBilinearForm &f)
-  : _intSpaces(f._intSpaces)
-  , _cnc(f._cnc)
-  , _cncGeoID(f._cncGeoID)
-  , _cncGeoTag(f._cncGeoTag)
-  , _geoSpace(f._geoSpace)
-  , _fieldsLayoutI(f._fieldsLayoutI)
-  , _fieldsLayoutJ(f._fieldsLayoutJ)
-  , _M(f._M)
-  , _N(f._N)
-  , _J(f._J)
-  , _adr(f._adr)
-  , _adrI(f._adrI)
-  , _adrJ(f._adrJ)
-  , _sol(f._sol)
-  , _solDot(f._solDot)
-  , _solPrev(f._solPrev)
-  , _solNext(f._solNext)
-  , _R0(f._R0)
-  , _Rh(f._Rh)
-  , _h0(f._h0)
-  , ptrComputeMatrix(f.ptrComputeMatrix)
-  , _geoCoord(f._geoCoord)
+  : _intSpaces(f._intSpaces), _cnc(f._cnc), _cncGeoID(f._cncGeoID), _cncGeoTag(f._cncGeoTag),
+    _geoSpace(f._geoSpace), _fieldsLayoutI(f._fieldsLayoutI), _fieldsLayoutJ(f._fieldsLayoutJ),
+    _M(f._M), _N(f._N), _J(f._J), _adr(f._adr), _adrI(f._adrI), _adrJ(f._adrJ), _sol(f._sol),
+    _solDot(f._solDot), _solPrev(f._solPrev), _solNext(f._solNext), _R0(f._R0), _Rh(f._Rh),
+    _h0(f._h0), ptrComputeMatrix(f.ptrComputeMatrix), _geoCoord(f._geoCoord)
 {
   _Ae = allocateMatrix(_M, _N);
   allocateResidual(_M, &_Be);
@@ -221,7 +200,7 @@ feBilinearForm::feBilinearForm(const feBilinearForm &f)
   _sysElm = f._sysElm->clone();
   int dim = f._sysElm->getDim();
   _sysElm->_nQuad = _intSpaces[0]->getNumQuadPoints();
-  _sysElm->_wQuad = _intSpaces[0]->getQuadratureWeights(); 
+  _sysElm->_wQuad = _intSpaces[0]->getQuadratureWeights();
   _sysElm->_rQuad = _intSpaces[0]->getRQuadraturePoints();
   _sysElm->_sQuad = _intSpaces[0]->getSQuadraturePoints();
   _sysElm->_tQuad = _intSpaces[0]->getTQuadraturePoints();
@@ -238,15 +217,9 @@ feBilinearForm::~feBilinearForm()
   delete _sysElm;
 }
 
-void feBilinearForm::viewLocalMatrix()
-{
-  printMatrix(_M, _N, &_Ae);
-}
+void feBilinearForm::viewLocalMatrix() { printMatrix(_M, _N, &_Ae); }
 
-void feBilinearForm::viewLocalResidual()
-{
-  printResidual(_M, &_Be);
-}
+void feBilinearForm::viewLocalResidual() { printResidual(_M, &_Be); }
 
 void feBilinearForm::initializeAddressingVectors(int numElem)
 {
@@ -277,15 +250,14 @@ void feBilinearForm::initializeAddressingVectors(int numElem)
 void feBilinearForm::initialize(feSolution *sol, int numElem)
 {
   for(size_t i = 0; i < _intSpaces.size(); i++) {
-
     feSpace *fS = _intSpaces[i];
     std::vector<double> &solRef = sol->getSolutionReference();
 
     // ------------------------------------------------------------------
     // Initialize solution on neighbouring elements (for e.g. DG fluxes)
-    if(numElem > 0){
+    if(numElem > 0) {
       fS->initializeAddressingVector(numElem - 1, _adr[i]);
-    } else{
+    } else {
       // Periodicity:
       fS->initializeAddressingVector(_cnc->getNumElements() - 1, _adr[i]);
       // 0 flux
@@ -295,9 +267,9 @@ void feBilinearForm::initialize(feSolution *sol, int numElem)
       _solPrev[i][k] = solRef[_adr[i][k]];
     }
 
-    if(numElem < _cnc->getNumElements() - 1){
+    if(numElem < _cnc->getNumElements() - 1) {
       fS->initializeAddressingVector(numElem + 1, _adr[i]);
-    } else{
+    } else {
       // Periodicity:
       fS->initializeAddressingVector(0, _adr[i]);
       // 0 flux
@@ -307,21 +279,26 @@ void feBilinearForm::initialize(feSolution *sol, int numElem)
       _solNext[i][k] = solRef[_adr[i][k]];
     }
     // ------------------------------------------------------------------
-    if(fS->getDOFInitialization() == dofInitialization::EXTRAPOLATED_EULER_0D)
-    {
+    if(fS->getDOFInitialization() == dofInitialization::EXTRAPOLATED_EULER_0D) {
       // Initialize the corresponding domain FE space to extrapolate on this boundary
-      if(_intSpaces[i+3]->getCncGeo()->getNumElements() < 3){
-        feErrorMsg(FE_STATUS_ERROR, "Cannot initialize solution on next and/or previous element to extrapolate"
+      if(_intSpaces[i + 3]->getCncGeo()->getNumElements() < 3) {
+        feErrorMsg(
+          FE_STATUS_ERROR,
+          "Cannot initialize solution on next and/or previous element to extrapolate"
           " field \"%s\" on boundary because interior connectivity \"%s\" only has %d elements.",
-          _intSpaces[i+3]->getFieldID().data(),
-          _intSpaces[i+3]->getCncGeo()->getID().data(),
-          _intSpaces[i+3]->getCncGeo()->getNumElements());
+          _intSpaces[i + 3]->getFieldID().data(), _intSpaces[i + 3]->getCncGeo()->getID().data(),
+          _intSpaces[i + 3]->getCncGeo()->getNumElements());
         exit(-1);
       }
-      _intSpaces[i+3]->initializeAddressingVector(2, _adr[i]);
-      for(size_t k = 0; k < _adr[i].size(); ++k) { _solNext[i][k] = solRef[_adr[i][k]]; }
-      _intSpaces[i+3]->initializeAddressingVector(_intSpaces[i+3]->getCncGeo()->getNumElements()-3, _adr[i]);
-      for(size_t k = 0; k < _adr[i].size(); ++k) { _solPrev[i][k] = solRef[_adr[i][k]]; }
+      _intSpaces[i + 3]->initializeAddressingVector(2, _adr[i]);
+      for(size_t k = 0; k < _adr[i].size(); ++k) {
+        _solNext[i][k] = solRef[_adr[i][k]];
+      }
+      _intSpaces[i + 3]->initializeAddressingVector(
+        _intSpaces[i + 3]->getCncGeo()->getNumElements() - 3, _adr[i]);
+      for(size_t k = 0; k < _adr[i].size(); ++k) {
+        _solPrev[i][k] = solRef[_adr[i][k]];
+      }
     }
 
     // Initialize solution and its time derivative on current element
@@ -399,39 +376,36 @@ void feBilinearForm::computeMatrixFiniteDifference(feSolution *sol, int numElem)
 
   // Compute _Be and copy it in _R0
   _sysElm->computeBe(this);
-  for(feInt i = 0; i < _M; i++)
-    _R0[i] = _Be[i];
-  
+  for(feInt i = 0; i < _M; i++) _R0[i] = _Be[i];
+
   // ==================================================================
   // Calcul des résidus perturbés
   // ==================================================================
   feInt numColumn = 0;
   for(size_t k = 0; k < _fieldsLayoutJ.size(); k++) {
-
     feSpace *Unknowns = _intSpaces[_fieldsLayoutJ[k]];
 
     for(feInt j = 0; j < Unknowns->getNumFunctions(); j++, numColumn++) {
-      double temp_sol = _sol[_fieldsLayoutJ[k]][j]; 
+      double temp_sol = _sol[_fieldsLayoutJ[k]][j];
       double temp_soldot = _solDot[_fieldsLayoutJ[k]][j];
       double delta_h = _h0 * std::max(fabs(temp_sol), 1.0);
       double invdelta_h = 1.0 / delta_h;
 
-      _sol[_fieldsLayoutJ[k]][j]    = _sol[_fieldsLayoutJ[k]][j] + delta_h;
+      _sol[_fieldsLayoutJ[k]][j] = _sol[_fieldsLayoutJ[k]][j] + delta_h;
       _solDot[_fieldsLayoutJ[k]][j] = _solDot[_fieldsLayoutJ[k]][j] + delta_h * _c0;
 
       setResidualToZero(_M, &_Be);
 
       // Compute _Be and copy it in _Rh
       _sysElm->computeBe(this);
-      for(feInt i = 0; i < _M; i++)
-        _Rh[i] = _Be[i];
+      for(feInt i = 0; i < _M; i++) _Rh[i] = _Be[i];
 
-      for(feInt i = 0; i < _M; i++){
+      for(feInt i = 0; i < _M; i++) {
         // Matrix and residual are of opposite sign
-        _Ae[i][numColumn] = - (_Rh[i] - _R0[i]) * invdelta_h;
+        _Ae[i][numColumn] = -(_Rh[i] - _R0[i]) * invdelta_h;
       }
 
-      _sol[_fieldsLayoutJ[k]][j]    = temp_sol;
+      _sol[_fieldsLayoutJ[k]][j] = temp_sol;
       _solDot[_fieldsLayoutJ[k]][j] = temp_soldot;
     }
   }

@@ -1,7 +1,6 @@
 #include "feSysElm.h"
 #include "feBilinearForm.h"
 
-
 void feSysElm_2D_Advection::createElementarySystem(std::vector<feSpace *> &space)
 {
   _idU = 0;
@@ -27,7 +26,6 @@ void feSysElm_2D_Advection::computeBe(feBilinearForm *form)
 
   double Jac, u, dudt, dudx, dudy;
   for(int k = 0; k < nG; ++k) {
-
     // Evaluate the exterior velocity field
     std::vector<double> v(2, 0.0);
     std::vector<double> x(3, 0.0);
@@ -61,21 +59,22 @@ void feSysElm_2D_Advection::computeBe(feBilinearForm *form)
     //   cT += J * w[k] * (v[0] * _feUdx[i] + v[1] * _feUdy[i]) * dudt;
     //   kT += J * w[k] * (v[0] * _feUdx[i] + v[1] * _feUdy[i]) * (v[0] * dudx + v[1] * dudy);
     // }
-    double dx01 = fabs(form->_geoCoord[3]-form->_geoCoord[0]);
-    double dx02 = fabs(form->_geoCoord[6]-form->_geoCoord[0]);
-    double dx12 = fabs(form->_geoCoord[6]-form->_geoCoord[3]);
-    double dy01 = fabs(form->_geoCoord[4]-form->_geoCoord[1]);
-    double dy02 = fabs(form->_geoCoord[7]-form->_geoCoord[1]);
-    double dy12 = fabs(form->_geoCoord[7]-form->_geoCoord[4]);
-    double h01 = sqrt(dx01*dx01 + dy01*dy01);
-    double h02 = sqrt(dx02*dx02 + dy02*dy02);
-    double h12 = sqrt(dx12*dx12 + dy12*dy12);
-    double h = fmax(h12,fmax(h01,h02));
-    double normeU = sqrt(v[0]*v[0]+v[1]*v[1]);
+    double dx01 = fabs(form->_geoCoord[3] - form->_geoCoord[0]);
+    double dx02 = fabs(form->_geoCoord[6] - form->_geoCoord[0]);
+    double dx12 = fabs(form->_geoCoord[6] - form->_geoCoord[3]);
+    double dy01 = fabs(form->_geoCoord[4] - form->_geoCoord[1]);
+    double dy02 = fabs(form->_geoCoord[7] - form->_geoCoord[1]);
+    double dy12 = fabs(form->_geoCoord[7] - form->_geoCoord[4]);
+    double h01 = sqrt(dx01 * dx01 + dy01 * dy01);
+    double h02 = sqrt(dx02 * dx02 + dy02 * dy02);
+    double h12 = sqrt(dx12 * dx12 + dy12 * dy12);
+    double h = fmax(h12, fmax(h01, h02));
+    double normeU = sqrt(v[0] * v[0] + v[1] * v[1]);
     // double Peh = normeU * h / 2.0;
 
-    // double tau = 1.0/( sqrt( 4.0/(form->_dt*form->_dt) + 4.0*normeU*normeU/h/h + 9.0*16.0/(h*h*h*h)) );
-    double tau = 1.0/( sqrt( 4.0/(form->_dt*form->_dt) + 4.0*normeU*normeU/h/h ) );
+    // double tau = 1.0/( sqrt( 4.0/(form->_dt*form->_dt) + 4.0*normeU*normeU/h/h
+    // + 9.0*16.0/(h*h*h*h)) );
+    double tau = 1.0 / (sqrt(4.0 / (form->_dt * form->_dt) + 4.0 * normeU * normeU / h / h));
     // tau = 0.01;
     // double tau = h/2.0/sqrt(v[0]*v[0]+v[1]*v[1]) * (cosh(Peh)/sinh(Peh) - 1.0/Peh);
     // double tau = (cosh(Peh)/sinh(Peh) - 1.0/Peh);
@@ -83,15 +82,18 @@ void feSysElm_2D_Advection::computeBe(feBilinearForm *form)
     // std::cout<<tau<<std::endl;
     // double deltaSUPG = c/kT;
     // double Re = (v[0]*v[0]+v[1]*v[1]) * c/kT;
-    // printf("Re = %+-4.4e - c = %+-4.4e - cT = %+-4.4e - kT = %+-4.4e - delta = %+-4.4e\n", Re, c, cT, kT, deltaSUPG);
+    // printf("Re = %+-4.4e - c = %+-4.4e - cT = %+-4.4e - kT = %+-4.4e - delta = %+-4.4e\n", Re, c,
+    // cT, kT, deltaSUPG);
 
     for(int i = 0; i < nFunctions; ++i) {
       u = form->_intSpaces[_idU]->interpolateFieldAtQuadNode(form->_sol[_idU], k);
-      dudt = form->_intSpaces[_idU]->interpolateFieldAtQuadNode(form->_solDot[_idU],k);
-      dudx = form->_intSpaces[_idU]->interpolateFieldAtQuadNode_rDerivative(form->_sol[_idU], k) * drdx +
-             form->_intSpaces[_idU]->interpolateFieldAtQuadNode_sDerivative(form->_sol[_idU], k) * dsdx;
-      dudy = form->_intSpaces[_idU]->interpolateFieldAtQuadNode_rDerivative(form->_sol[_idU], k) * drdy +
-             form->_intSpaces[_idU]->interpolateFieldAtQuadNode_sDerivative(form->_sol[_idU], k) * dsdy;
+      dudt = form->_intSpaces[_idU]->interpolateFieldAtQuadNode(form->_solDot[_idU], k);
+      dudx =
+        form->_intSpaces[_idU]->interpolateFieldAtQuadNode_rDerivative(form->_sol[_idU], k) * drdx +
+        form->_intSpaces[_idU]->interpolateFieldAtQuadNode_sDerivative(form->_sol[_idU], k) * dsdx;
+      dudy =
+        form->_intSpaces[_idU]->interpolateFieldAtQuadNode_rDerivative(form->_sol[_idU], k) * drdy +
+        form->_intSpaces[_idU]->interpolateFieldAtQuadNode_sDerivative(form->_sol[_idU], k) * dsdy;
 
       _feU[i] = form->_intSpaces[_idU]->getFunctionAtQuadNode(i, k);
       _feUdx[i] = form->_intSpaces[_idU]->getdFunctiondrAtQuadNode(i, k) * drdx +
@@ -102,9 +104,14 @@ void feSysElm_2D_Advection::computeBe(feBilinearForm *form)
       // SUPG ?
       // double delta = form->_geoCoord[3]-form->_geoCoord[0];
       // double deltaSUPG = 0.01;
-      // form->_Be[i] -= ((v[0] * dudx + v[1] * dudy) * _feU[i] + delta * (v[0] * dudx + v[1] * dudy) * (v[0] * _feUdx[i] + v[1] * _feUdy[i])) * J * w[k];
-      // form->_Be[i] -= Jac * w[k] * ((v[0] * dudx + v[1] * dudy) * _feU[i] + deltaSUPG * (v[0] * _feUdx[i] + v[1] * _feUdy[i]) * (dudt + v[0] * dudx + v[1] * dudy));
-      form->_Be[i] -= Jac * w[k] * ((v[0] * dudx + v[1] * dudy) * _feU[i] + tau       * (v[0] * _feUdx[i] + v[1] * _feUdy[i]) * (dudt + v[0] * dudx + v[1] * dudy));
+      // form->_Be[i] -= ((v[0] * dudx + v[1] * dudy) * _feU[i] + delta * (v[0] * dudx + v[1] *
+      // dudy) * (v[0] * _feUdx[i] + v[1] * _feUdy[i])) * J * w[k]; form->_Be[i] -= Jac * w[k] *
+      // ((v[0] * dudx + v[1] * dudy) * _feU[i] + deltaSUPG * (v[0] * _feUdx[i] + v[1] * _feUdy[i])
+      // * (dudt + v[0] * dudx + v[1] * dudy));
+      form->_Be[i] -=
+        Jac * w[k] *
+        ((v[0] * dudx + v[1] * dudy) * _feU[i] +
+         tau * (v[0] * _feUdx[i] + v[1] * _feUdy[i]) * (dudt + v[0] * dudx + v[1] * dudy));
     }
   }
 }
@@ -127,25 +134,29 @@ void feSysElm_2D_SUPGStab::computeAe(feBilinearForm *form)
   // Finite differences for now
 }
 
-static double tau2DTri(int dim, double velocity[3], double diffusivity, int nFunctions, std::vector<double> &gradphi)
+static double tau2DTri(int dim, double velocity[3], double diffusivity, int nFunctions,
+                       std::vector<double> &gradphi)
 {
   // Compute hTau from (13.17) in Fortin & Garon
-  double normV = sqrt(velocity[0]*velocity[0] + velocity[1]*velocity[1] + velocity[2]*velocity[2]);
+  double normV =
+    sqrt(velocity[0] * velocity[0] + velocity[1] * velocity[1] + velocity[2] * velocity[2]);
 
   double res = 0., dotprod;
-  for(int i = 0; i < nFunctions; ++i){
+  for(int i = 0; i < nFunctions; ++i) {
     dotprod = 0.;
-    for(int iDim = 0; iDim < dim; ++iDim){
-      dotprod += velocity[iDim]/normV * gradphi[i*dim + iDim];
+    for(int iDim = 0; iDim < dim; ++iDim) {
+      dotprod += velocity[iDim] / normV * gradphi[i * dim + iDim];
     }
-    res += dotprod*dotprod;
+    res += dotprod * dotprod;
   }
 
   double hTau = sqrt(2.) / sqrt(res);
 
   double rho = 1.;
   double cp = 1.;
-  return 1.0 / sqrt( 4.*normV*normV/(hTau*hTau) + 144.*diffusivity*diffusivity/((rho*cp*hTau*hTau)*(rho*cp*hTau*hTau)) );
+  return 1.0 / sqrt(4. * normV * normV / (hTau * hTau) +
+                    144. * diffusivity * diffusivity /
+                      ((rho * cp * hTau * hTau) * (rho * cp * hTau * hTau)));
 }
 
 void feSysElm_2D_SUPGStab::computeBe(feBilinearForm *form)
@@ -167,20 +178,21 @@ void feSysElm_2D_SUPGStab::computeBe(feBilinearForm *form)
     u = form->_intSpaces[_idU]->interpolateFieldAtQuadNode(form->_sol[_idU], k);
 
     // Compute grad(u)
-    form->_intSpaces[_idU]->interpolateFieldAtQuadNode_physicalGradient(form->_sol[_idU],
-      k, form->_transformation, grad_u);
+    form->_intSpaces[_idU]->interpolateFieldAtQuadNode_physicalGradient(
+      form->_sol[_idU], k, form->_transformation, grad_u);
 
     // Compute grad(phi)
-    form->_intSpaces[_idU]->getFunctionsPhysicalGradientAtQuadNode(k, form->_transformation, _gradPhiU.data());
+    form->_intSpaces[_idU]->getFunctionsPhysicalGradientAtQuadNode(k, form->_transformation,
+                                                                   _gradPhiU.data());
 
     // Compute stabilization parameter tau
     tau = tau2DTri(2, c.data(), diffusivity, _nFunctions, _gradPhiU);
-    
+
     // Compute PDE residual:
     // Reaction term
     double residual = reaction * u;
-    // Convection term 
-    for(int iDim = 0; iDim < 2; ++iDim){
+    // Convection term
+    for(int iDim = 0; iDim < 2; ++iDim) {
       residual += c[iDim] * grad_u[iDim];
     }
     // Diffusion term (0 for linear elements)
@@ -189,8 +201,8 @@ void feSysElm_2D_SUPGStab::computeBe(feBilinearForm *form)
     residual += source;
 
     for(int i = 0; i < _nFunctions; ++i) {
-      for(int iDim = 0; iDim < 2; ++iDim){
-        form->_Be[i] -= residual * tau * c[iDim] * _gradPhiU[i*2 + iDim] * jac * _wQuad[k];
+      for(int iDim = 0; iDim < 2; ++iDim) {
+        form->_Be[i] -= residual * tau * c[iDim] * _gradPhiU[i * 2 + iDim] * jac * _wQuad[k];
       }
     }
   }
@@ -248,14 +260,18 @@ void feSysElm_2D_Stokes::computeBe(feBilinearForm *form)
     v = form->_intSpaces[_idV]->interpolateFieldAtQuadNode(form->_sol[_idV], k);
     p = form->_intSpaces[_idP]->interpolateFieldAtQuadNode(form->_sol[_idP], k);
 
-    dudx = form->_intSpaces[_idU]->interpolateFieldAtQuadNode_rDerivative(form->_sol[_idU], k) * drdx +
-           form->_intSpaces[_idU]->interpolateFieldAtQuadNode_sDerivative(form->_sol[_idU], k) * dsdx;
-    dudy = form->_intSpaces[_idU]->interpolateFieldAtQuadNode_rDerivative(form->_sol[_idU], k) * drdy +
-           form->_intSpaces[_idU]->interpolateFieldAtQuadNode_sDerivative(form->_sol[_idU], k) * dsdy;
-    dvdx = form->_intSpaces[_idV]->interpolateFieldAtQuadNode_rDerivative(form->_sol[_idV], k) * drdx +
-           form->_intSpaces[_idV]->interpolateFieldAtQuadNode_sDerivative(form->_sol[_idV], k) * dsdx;
-    dvdy = form->_intSpaces[_idV]->interpolateFieldAtQuadNode_rDerivative(form->_sol[_idV], k) * drdy +
-           form->_intSpaces[_idV]->interpolateFieldAtQuadNode_sDerivative(form->_sol[_idV], k) * dsdy;
+    dudx =
+      form->_intSpaces[_idU]->interpolateFieldAtQuadNode_rDerivative(form->_sol[_idU], k) * drdx +
+      form->_intSpaces[_idU]->interpolateFieldAtQuadNode_sDerivative(form->_sol[_idU], k) * dsdx;
+    dudy =
+      form->_intSpaces[_idU]->interpolateFieldAtQuadNode_rDerivative(form->_sol[_idU], k) * drdy +
+      form->_intSpaces[_idU]->interpolateFieldAtQuadNode_sDerivative(form->_sol[_idU], k) * dsdy;
+    dvdx =
+      form->_intSpaces[_idV]->interpolateFieldAtQuadNode_rDerivative(form->_sol[_idV], k) * drdx +
+      form->_intSpaces[_idV]->interpolateFieldAtQuadNode_sDerivative(form->_sol[_idV], k) * dsdx;
+    dvdy =
+      form->_intSpaces[_idV]->interpolateFieldAtQuadNode_rDerivative(form->_sol[_idV], k) * drdy +
+      form->_intSpaces[_idV]->interpolateFieldAtQuadNode_sDerivative(form->_sol[_idV], k) * dsdy;
 
     Sxx = -p + 2. * mu * dudx;
     Sxy = mu * (dudy + dvdx);
@@ -321,14 +337,18 @@ void feSysElm_2D_Stokes::computeAe(feBilinearForm *form)
     double dsdx = -_dxdr[1] / jac;
     double dsdy = _dxdr[0] / jac;
 
-    dudx = form->_intSpaces[_idU]->interpolateFieldAtQuadNode_rDerivative(form->_sol[_idU], k) * drdx +
-           form->_intSpaces[_idU]->interpolateFieldAtQuadNode_sDerivative(form->_sol[_idU], k) * dsdx;
-    dudy = form->_intSpaces[_idU]->interpolateFieldAtQuadNode_rDerivative(form->_sol[_idU], k) * drdy +
-           form->_intSpaces[_idU]->interpolateFieldAtQuadNode_sDerivative(form->_sol[_idU], k) * dsdy;
-    dvdx = form->_intSpaces[_idV]->interpolateFieldAtQuadNode_rDerivative(form->_sol[_idV], k) * drdx +
-           form->_intSpaces[_idV]->interpolateFieldAtQuadNode_sDerivative(form->_sol[_idV], k) * dsdx;
-    dvdy = form->_intSpaces[_idV]->interpolateFieldAtQuadNode_rDerivative(form->_sol[_idV], k) * drdy +
-           form->_intSpaces[_idV]->interpolateFieldAtQuadNode_sDerivative(form->_sol[_idV], k) * dsdy;
+    dudx =
+      form->_intSpaces[_idU]->interpolateFieldAtQuadNode_rDerivative(form->_sol[_idU], k) * drdx +
+      form->_intSpaces[_idU]->interpolateFieldAtQuadNode_sDerivative(form->_sol[_idU], k) * dsdx;
+    dudy =
+      form->_intSpaces[_idU]->interpolateFieldAtQuadNode_rDerivative(form->_sol[_idU], k) * drdy +
+      form->_intSpaces[_idU]->interpolateFieldAtQuadNode_sDerivative(form->_sol[_idU], k) * dsdy;
+    dvdx =
+      form->_intSpaces[_idV]->interpolateFieldAtQuadNode_rDerivative(form->_sol[_idV], k) * drdx +
+      form->_intSpaces[_idV]->interpolateFieldAtQuadNode_sDerivative(form->_sol[_idV], k) * dsdx;
+    dvdy =
+      form->_intSpaces[_idV]->interpolateFieldAtQuadNode_rDerivative(form->_sol[_idV], k) * drdy +
+      form->_intSpaces[_idV]->interpolateFieldAtQuadNode_sDerivative(form->_sol[_idV], k) * dsdy;
 
     int I = 0, J;
 
@@ -355,7 +375,8 @@ void feSysElm_2D_Stokes::computeAe(feBilinearForm *form)
     for(int i = 0; i < nFunctionsU; ++i) {
       J = 0;
       for(int j = 0; j < nFunctionsU; ++j) {
-        form->_Ae[I][J++] += jac * w[k] * (_feUdx[i] * mu * 2. * _feUdx[j] + _feUdy[i] * mu * _feUdy[j]);
+        form->_Ae[I][J++] +=
+          jac * w[k] * (_feUdx[i] * mu * 2. * _feUdx[j] + _feUdy[i] * mu * _feUdy[j]);
       }
       for(int j = 0; j < nFunctionsV; ++j) {
         form->_Ae[I][J++] += jac * w[k] * (_feUdy[i] * mu * _feVdx[j]);
@@ -373,7 +394,8 @@ void feSysElm_2D_Stokes::computeAe(feBilinearForm *form)
         form->_Ae[I][J++] += jac * w[k] * (_feVdx[i] * mu * _feUdy[j]);
       }
       for(int j = 0; j < nFunctionsV; ++j) {
-        form->_Ae[I][J++] += jac * w[k] * (_feVdy[i] * mu * 2. * _feVdy[j] + _feVdx[i] * mu * _feVdx[j]);
+        form->_Ae[I][J++] +=
+          jac * w[k] * (_feVdy[i] * mu * 2. * _feVdy[j] + _feVdx[i] * mu * _feVdx[j]);
       }
       for(int j = 0; j < nFunctionsP; ++j) {
         form->_Ae[I][J++] -= jac * w[k] * (_feVdy[i] * _feP[j]);
@@ -453,14 +475,18 @@ void feSysElm_2D_NavierStokes::computeBe(feBilinearForm *form)
     dudt = form->_intSpaces[_idU]->interpolateFieldAtQuadNode(form->_solDot[_idU], k);
     dvdt = form->_intSpaces[_idV]->interpolateFieldAtQuadNode(form->_solDot[_idV], k);
 
-    dudx = form->_intSpaces[_idU]->interpolateFieldAtQuadNode_rDerivative(form->_sol[_idU], k) * drdx +
-           form->_intSpaces[_idU]->interpolateFieldAtQuadNode_sDerivative(form->_sol[_idU], k) * dsdx;
-    dudy = form->_intSpaces[_idU]->interpolateFieldAtQuadNode_rDerivative(form->_sol[_idU], k) * drdy +
-           form->_intSpaces[_idU]->interpolateFieldAtQuadNode_sDerivative(form->_sol[_idU], k) * dsdy;
-    dvdx = form->_intSpaces[_idV]->interpolateFieldAtQuadNode_rDerivative(form->_sol[_idV], k) * drdx +
-           form->_intSpaces[_idV]->interpolateFieldAtQuadNode_sDerivative(form->_sol[_idV], k) * dsdx;
-    dvdy = form->_intSpaces[_idV]->interpolateFieldAtQuadNode_rDerivative(form->_sol[_idV], k) * drdy +
-           form->_intSpaces[_idV]->interpolateFieldAtQuadNode_sDerivative(form->_sol[_idV], k) * dsdy;
+    dudx =
+      form->_intSpaces[_idU]->interpolateFieldAtQuadNode_rDerivative(form->_sol[_idU], k) * drdx +
+      form->_intSpaces[_idU]->interpolateFieldAtQuadNode_sDerivative(form->_sol[_idU], k) * dsdx;
+    dudy =
+      form->_intSpaces[_idU]->interpolateFieldAtQuadNode_rDerivative(form->_sol[_idU], k) * drdy +
+      form->_intSpaces[_idU]->interpolateFieldAtQuadNode_sDerivative(form->_sol[_idU], k) * dsdy;
+    dvdx =
+      form->_intSpaces[_idV]->interpolateFieldAtQuadNode_rDerivative(form->_sol[_idV], k) * drdx +
+      form->_intSpaces[_idV]->interpolateFieldAtQuadNode_sDerivative(form->_sol[_idV], k) * dsdx;
+    dvdy =
+      form->_intSpaces[_idV]->interpolateFieldAtQuadNode_rDerivative(form->_sol[_idV], k) * drdy +
+      form->_intSpaces[_idV]->interpolateFieldAtQuadNode_sDerivative(form->_sol[_idV], k) * dsdy;
 
     Sxx = -p + 2. * mu * dudx;
     Sxy = mu * (dudy + dvdx);
@@ -476,8 +502,8 @@ void feSysElm_2D_NavierStokes::computeBe(feBilinearForm *form)
       _feUdy[i] = form->_intSpaces[_idU]->getdFunctiondrAtQuadNode(i, k) * drdy +
                   form->_intSpaces[_idU]->getdFunctiondsAtQuadNode(i, k) * dsdy;
       form->_Be[cnt++] -= (_feU[i] * rho * (dudt + u * dudx + v * dudy) + Sxx * _feUdx[i] +
-                    Sxy * _feUdy[i] - f[0] * _feU[i]) *
-                   J * w[k];
+                           Sxy * _feUdy[i] - f[0] * _feU[i]) *
+                          J * w[k];
     }
     // Residu pour v
     for(int i = 0; i < nFunctionsV; ++i) {
@@ -487,8 +513,8 @@ void feSysElm_2D_NavierStokes::computeBe(feBilinearForm *form)
       _feVdy[i] = form->_intSpaces[_idV]->getdFunctiondrAtQuadNode(i, k) * drdy +
                   form->_intSpaces[_idV]->getdFunctiondsAtQuadNode(i, k) * dsdy;
       form->_Be[cnt++] -= (_feV[i] * rho * (dvdt + u * dvdx + v * dvdy) + Syx * _feVdx[i] +
-                    Syy * _feVdy[i] - f[1] * _feV[i]) *
-                   J * w[k];
+                           Syy * _feVdy[i] - f[1] * _feV[i]) *
+                          J * w[k];
     }
     // Residu pour p
     for(int i = 0; i < nFunctionsP; ++i) {
@@ -534,14 +560,18 @@ void feSysElm_2D_NavierStokes::computeAe(feBilinearForm *form)
     dudt = form->_intSpaces[_idU]->interpolateFieldAtQuadNode(form->_solDot[_idU], k);
     dvdt = form->_intSpaces[_idV]->interpolateFieldAtQuadNode(form->_solDot[_idV], k);
 
-    dudx = form->_intSpaces[_idU]->interpolateFieldAtQuadNode_rDerivative(form->_sol[_idU], k) * drdx +
-           form->_intSpaces[_idU]->interpolateFieldAtQuadNode_sDerivative(form->_sol[_idU], k) * dsdx;
-    dudy = form->_intSpaces[_idU]->interpolateFieldAtQuadNode_rDerivative(form->_sol[_idU], k) * drdy +
-           form->_intSpaces[_idU]->interpolateFieldAtQuadNode_sDerivative(form->_sol[_idU], k) * dsdy;
-    dvdx = form->_intSpaces[_idV]->interpolateFieldAtQuadNode_rDerivative(form->_sol[_idV], k) * drdx +
-           form->_intSpaces[_idV]->interpolateFieldAtQuadNode_sDerivative(form->_sol[_idV], k) * dsdx;
-    dvdy = form->_intSpaces[_idV]->interpolateFieldAtQuadNode_rDerivative(form->_sol[_idV], k) * drdy +
-           form->_intSpaces[_idV]->interpolateFieldAtQuadNode_sDerivative(form->_sol[_idV], k) * dsdy;
+    dudx =
+      form->_intSpaces[_idU]->interpolateFieldAtQuadNode_rDerivative(form->_sol[_idU], k) * drdx +
+      form->_intSpaces[_idU]->interpolateFieldAtQuadNode_sDerivative(form->_sol[_idU], k) * dsdx;
+    dudy =
+      form->_intSpaces[_idU]->interpolateFieldAtQuadNode_rDerivative(form->_sol[_idU], k) * drdy +
+      form->_intSpaces[_idU]->interpolateFieldAtQuadNode_sDerivative(form->_sol[_idU], k) * dsdy;
+    dvdx =
+      form->_intSpaces[_idV]->interpolateFieldAtQuadNode_rDerivative(form->_sol[_idV], k) * drdx +
+      form->_intSpaces[_idV]->interpolateFieldAtQuadNode_sDerivative(form->_sol[_idV], k) * dsdx;
+    dvdy =
+      form->_intSpaces[_idV]->interpolateFieldAtQuadNode_rDerivative(form->_sol[_idV], k) * drdy +
+      form->_intSpaces[_idV]->interpolateFieldAtQuadNode_sDerivative(form->_sol[_idV], k) * dsdy;
 
     int I = 0, J = 0;
 
@@ -574,7 +604,8 @@ void feSysElm_2D_NavierStokes::computeAe(feBilinearForm *form)
            _feUdx[i] * mu * 2. * _feUdx[j] + _feUdy[i] * mu * _feUdy[j]);
       }
       for(int j = 0; j < nFunctionsV; ++j) {
-        form->_Ae[I][J++] += jac * w[k] * (rho * _feU[i] * (_feV[j] * dudy) + _feUdy[i] * mu * _feVdx[j]);
+        form->_Ae[I][J++] +=
+          jac * w[k] * (rho * _feU[i] * (_feV[j] * dudy) + _feUdy[i] * mu * _feVdx[j]);
       }
       for(int j = 0; j < nFunctionsP; ++j) {
         form->_Ae[I][J++] -= jac * w[k] * (_feUdx[i] * _feP[j]);
@@ -586,7 +617,8 @@ void feSysElm_2D_NavierStokes::computeAe(feBilinearForm *form)
     for(int i = 0; i < nFunctionsV; ++i) {
       J = 0;
       for(int j = 0; j < nFunctionsU; ++j) {
-        form->_Ae[I][J++] += jac * w[k] * (rho * _feV[i] * (_feU[j] * dvdx) + _feVdx[i] * mu * _feUdy[j]);
+        form->_Ae[I][J++] +=
+          jac * w[k] * (rho * _feV[i] * (_feU[j] * dvdx) + _feVdx[i] * mu * _feUdy[j]);
       }
       for(int j = 0; j < nFunctionsV; ++j) {
         form->_Ae[I][J++] +=
@@ -619,7 +651,7 @@ void feSysElm_2D_NavierStokes::computeAe(feBilinearForm *form)
 
 void feSysElm_2D_Euler::createElementarySystem(std::vector<feSpace *> &space)
 {
-  _idr  = 0;
+  _idr = 0;
   _idru = 1;
   _idrv = 2;
   _idre = 3;
@@ -652,15 +684,15 @@ void feSysElm_2D_Euler::computeBe(feBilinearForm *form)
   for(int k = 0; k < _nQuad; ++k) {
     jac = form->_J[_nQuad * form->_numElem + k];
     form->_cnc->computeElementTransformation(form->_geoCoord, k, jac, form->_transformation);
-    
+
     // Compute current fields and gradient of test functions
-     r = form->_intSpaces[_idr ]->interpolateFieldAtQuadNode(form->_sol[_idr ], k);
+    r = form->_intSpaces[_idr]->interpolateFieldAtQuadNode(form->_sol[_idr], k);
     ru = form->_intSpaces[_idru]->interpolateFieldAtQuadNode(form->_sol[_idru], k);
     rv = form->_intSpaces[_idrv]->interpolateFieldAtQuadNode(form->_sol[_idrv], k);
     re = form->_intSpaces[_idre]->interpolateFieldAtQuadNode(form->_sol[_idre], k);
-    u = ru/r;
-    v = rv/r;
-    T = (re/r) - (u*u+v*v)/2.;
+    u = ru / r;
+    v = rv / r;
+    T = (re / r) - (u * u + v * v) / 2.;
     p = (gamma - 1.) * r * T;
 
     form->_intSpaces[_idr]->getFunctionsAtQuadNode(k, _phir);
@@ -668,30 +700,38 @@ void feSysElm_2D_Euler::computeBe(feBilinearForm *form)
     form->_intSpaces[_idrv]->getFunctionsAtQuadNode(k, _phirv);
     form->_intSpaces[_idre]->getFunctionsAtQuadNode(k, _phire);
 
-    form->_intSpaces[_idr]->getFunctionsPhysicalGradientAtQuadNode(k, form->_transformation, _gradphir.data());
-    form->_intSpaces[_idru]->getFunctionsPhysicalGradientAtQuadNode(k, form->_transformation, _gradphiru.data());
-    form->_intSpaces[_idrv]->getFunctionsPhysicalGradientAtQuadNode(k, form->_transformation, _gradphirv.data());
-    form->_intSpaces[_idre]->getFunctionsPhysicalGradientAtQuadNode(k, form->_transformation, _gradphire.data());
+    form->_intSpaces[_idr]->getFunctionsPhysicalGradientAtQuadNode(k, form->_transformation,
+                                                                   _gradphir.data());
+    form->_intSpaces[_idru]->getFunctionsPhysicalGradientAtQuadNode(k, form->_transformation,
+                                                                    _gradphiru.data());
+    form->_intSpaces[_idrv]->getFunctionsPhysicalGradientAtQuadNode(k, form->_transformation,
+                                                                    _gradphirv.data());
+    form->_intSpaces[_idre]->getFunctionsPhysicalGradientAtQuadNode(k, form->_transformation,
+                                                                    _gradphire.data());
 
-     // + 1.0 * _phiru[i]
-     // + 1.0 * _phirv[i]
+    // + 1.0 * _phiru[i]
+    // + 1.0 * _phirv[i]
 
     int cnt = 0;
     // Residu pour rho
     for(int i = 0; i < _nFunctionsr; ++i) {
-      form->_Be[cnt++] += (ru * _gradphir[2*i+0] + rv * _gradphir[2*i+1]) * jac * _wQuad[k];
+      form->_Be[cnt++] += (ru * _gradphir[2 * i + 0] + rv * _gradphir[2 * i + 1]) * jac * _wQuad[k];
     }
     // Residu pour rho*u
     for(int i = 0; i < _nFunctionsru; ++i) {
-      form->_Be[cnt++] += ((ru*u+p) * _gradphiru[2*i+0] + ru*v * _gradphiru[2*i+1]) * jac * _wQuad[k];
+      form->_Be[cnt++] +=
+        ((ru * u + p) * _gradphiru[2 * i + 0] + ru * v * _gradphiru[2 * i + 1]) * jac * _wQuad[k];
     }
     // Residu pour rho*v
     for(int i = 0; i < _nFunctionsrv; ++i) {
-      form->_Be[cnt++] += (ru*v * _gradphirv[2*i+0] + (rv*v+p) * _gradphirv[2*i+1]) * jac * _wQuad[k];
+      form->_Be[cnt++] +=
+        (ru * v * _gradphirv[2 * i + 0] + (rv * v + p) * _gradphirv[2 * i + 1]) * jac * _wQuad[k];
     }
     // Residu pour rho*e
     for(int i = 0; i < _nFunctionsre; ++i) {
-      form->_Be[cnt++] += (u*(re + p) * _gradphire[2*i+0] + v*(re + p) * _gradphire[2*i+1]) * jac * _wQuad[k];
+      form->_Be[cnt++] +=
+        (u * (re + p) * _gradphire[2 * i + 0] + v * (re + p) * _gradphire[2 * i + 1]) * jac *
+        _wQuad[k];
     }
   }
 
@@ -701,7 +741,7 @@ void feSysElm_2D_Euler::computeBe(feBilinearForm *form)
 
 void feSysElm_1D_EulerBord::createElementarySystem(std::vector<feSpace *> &space)
 {
-  _idr  = 0;
+  _idr = 0;
   _idru = 1;
   _idrv = 2;
   _idre = 3;
@@ -735,15 +775,15 @@ void feSysElm_1D_EulerBord::computeBe(feBilinearForm *form)
     jac = form->_J[_nQuad * form->_numElem + k];
 
     form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, _pos);
-    
+
     // Compute current fields and gradient of test functions
-     r = form->_intSpaces[_idr ]->interpolateFieldAtQuadNode(form->_sol[_idr ], k);
+    r = form->_intSpaces[_idr]->interpolateFieldAtQuadNode(form->_sol[_idr], k);
     ru = form->_intSpaces[_idru]->interpolateFieldAtQuadNode(form->_sol[_idru], k);
     rv = form->_intSpaces[_idrv]->interpolateFieldAtQuadNode(form->_sol[_idrv], k);
     re = form->_intSpaces[_idre]->interpolateFieldAtQuadNode(form->_sol[_idre], k);
-    u = ru/r;
-    v = rv/r;
-    T = (re/r) - (u*u+v*v)/2.;
+    u = ru / r;
+    v = rv / r;
+    T = (re / r) - (u * u + v * v) / 2.;
     p = (gamma - 1.) * r * T;
 
     form->_intSpaces[_idr]->getFunctionsAtQuadNode(k, _phir);
@@ -751,41 +791,42 @@ void feSysElm_1D_EulerBord::computeBe(feBilinearForm *form)
     form->_intSpaces[_idrv]->getFunctionsAtQuadNode(k, _phirv);
     form->_intSpaces[_idre]->getFunctionsAtQuadNode(k, _phire);
 
-    // form->_intSpaces[_idr]->getFunctionsPhysicalGradientAtQuadNode(k, jac, form->_geoCoord, 
-    //   form->_dxdr, form->_dxds, form->_dxdt, form->_drdx, form->_drdy, form->_drdz, _gradphir.data());
-    // form->_intSpaces[_idru]->getFunctionsPhysicalGradientAtQuadNode(k, jac, form->_geoCoord, 
-    //   form->_dxdr, form->_dxds, form->_dxdt, form->_drdx, form->_drdy, form->_drdz, _gradphiru.data());
-    // form->_intSpaces[_idrv]->getFunctionsPhysicalGradientAtQuadNode(k, jac, form->_geoCoord, 
-    //   form->_dxdr, form->_dxds, form->_dxdt, form->_drdx, form->_drdy, form->_drdz, _gradphirv.data());
-    // form->_intSpaces[_idre]->getFunctionsPhysicalGradientAtQuadNode(k, jac, form->_geoCoord, 
-    //   form->_dxdr, form->_dxds, form->_dxdt, form->_drdx, form->_drdy, form->_drdz, _gradphire.data());
+    // form->_intSpaces[_idr]->getFunctionsPhysicalGradientAtQuadNode(k, jac, form->_geoCoord,
+    //   form->_dxdr, form->_dxds, form->_dxdt, form->_drdx, form->_drdy, form->_drdz,
+    //   _gradphir.data());
+    // form->_intSpaces[_idru]->getFunctionsPhysicalGradientAtQuadNode(k, jac, form->_geoCoord,
+    //   form->_dxdr, form->_dxds, form->_dxdt, form->_drdx, form->_drdy, form->_drdz,
+    //   _gradphiru.data());
+    // form->_intSpaces[_idrv]->getFunctionsPhysicalGradientAtQuadNode(k, jac, form->_geoCoord,
+    //   form->_dxdr, form->_dxds, form->_dxdt, form->_drdx, form->_drdy, form->_drdz,
+    //   _gradphirv.data());
+    // form->_intSpaces[_idre]->getFunctionsPhysicalGradientAtQuadNode(k, jac, form->_geoCoord,
+    //   form->_dxdr, form->_dxds, form->_dxdt, form->_drdx, form->_drdy, form->_drdz,
+    //   _gradphire.data());
 
     double x0 = form->_geoCoord[0];
     double y0 = form->_geoCoord[1];
     double x1 = form->_geoCoord[3];
     double y1 = form->_geoCoord[4];
-    double nx = y1-y0;
-    double ny = x0-x1;
-    double N = sqrt(nx*nx + ny*ny);
+    double nx = y1 - y0;
+    double ny = x0 - x1;
+    double N = sqrt(nx * nx + ny * ny);
     nx /= N;
     ny /= N;
-    if(fabs(N) < 1e-3){
+    if(fabs(N) < 1e-3) {
       feInfo("ICI");
       exit(-1);
     }
 
     // fprintf(f, "VP(%.16g,%.16g,%.16g){%.16g,%.16g,%.16g};\n", _pos[0], _pos[1], 0., nx, ny, 0.0);
 
-    if(_boundaryType == 1)
-    {
+    if(_boundaryType == 1) {
       // Wall
       Fn[0] = 0.;
       Fn[1] = p * nx;
       Fn[2] = p * ny;
       Fn[3] = 0.;
-    }
-    else if(_boundaryType == 2)
-    {
+    } else if(_boundaryType == 2) {
       // // Inflow: imposed u, v, p and T ?
       // double R = 1.;
       // double Ti = 1.;
@@ -823,39 +864,37 @@ void feSysElm_1D_EulerBord::computeBe(feBilinearForm *form)
       double Tt_set = 288.6;
       double R = 287.;
 
-      double Ht = p/r * gamma/(gamma-1.) + 0.5*(u*u+v*v);
-      double ci = sqrt(gamma*p/r);
-      double Rplus = -(u*nx+v*ny) - 2.*ci/(gamma-1.);
-      double a = 1. + 2./(gamma-1.);
-      double b = 2*Rplus;
-      double c = (gamma-1.)/2. * (Rplus*Rplus - 2*Ht);
+      double Ht = p / r * gamma / (gamma - 1.) + 0.5 * (u * u + v * v);
+      double ci = sqrt(gamma * p / r);
+      double Rplus = -(u * nx + v * ny) - 2. * ci / (gamma - 1.);
+      double a = 1. + 2. / (gamma - 1.);
+      double b = 2 * Rplus;
+      double c = (gamma - 1.) / 2. * (Rplus * Rplus - 2 * Ht);
       // feInfo("%f - %f - %f", gamma, p, r);
       // feInfo("%f - %f - %f", ci, u, v);
       // feInfo("%f - %f - %f", r, Ht, Rplus);
       // feInfo("%f - %f - %f", b, c, b*b - 4.*a*c);
-      double cb1 = -b/(2.*a) + sqrt(b*b - 4.*a*c)/(2.*a);
-      double cb2 = -b/(2.*a) - sqrt(b*b - 4.*a*c)/(2.*a);
-      if(isnan(cb1) || isnan(cb2)){
+      double cb1 = -b / (2. * a) + sqrt(b * b - 4. * a * c) / (2. * a);
+      double cb2 = -b / (2. * a) - sqrt(b * b - 4. * a * c) / (2. * a);
+      if(isnan(cb1) || isnan(cb2)) {
         feInfo("%f - %f", cb1, cb2);
         exit(-1);
       }
       double cb = fmax(cb1, cb2);
-      double U = 2*cb/(gamma-1.);
-      double Mb = U/cb;
-      double pb = pt_set * pow((1. + (gamma-1.)/2. * Mb*Mb), gamma/(gamma-1.));
-      double Tb = Tt_set * pow( pb/pt_set , (gamma-1.)/gamma);
-      double rhob = pb/(R*Tb);
-      double ub = U*nx;
-      double vb = U*ny;
-      double Eb = pb/(gamma-1.) + (ub*ub+vb*vb)/2.;
-      double ubn = ub*nx + vb*ny;
-      Fn[0] = rhob*ubn;
-      Fn[1] = rhob*ub*ubn + pb*nx;
-      Fn[2] = rhob*vb*ubn + pb*ny;
-      Fn[3] = (Eb+pb)*ubn;
-    }
-    else if(_boundaryType == 3)
-    {
+      double U = 2 * cb / (gamma - 1.);
+      double Mb = U / cb;
+      double pb = pt_set * pow((1. + (gamma - 1.) / 2. * Mb * Mb), gamma / (gamma - 1.));
+      double Tb = Tt_set * pow(pb / pt_set, (gamma - 1.) / gamma);
+      double rhob = pb / (R * Tb);
+      double ub = U * nx;
+      double vb = U * ny;
+      double Eb = pb / (gamma - 1.) + (ub * ub + vb * vb) / 2.;
+      double ubn = ub * nx + vb * ny;
+      Fn[0] = rhob * ubn;
+      Fn[1] = rhob * ub * ubn + pb * nx;
+      Fn[2] = rhob * vb * ubn + pb * ny;
+      Fn[3] = (Eb + pb) * ubn;
+    } else if(_boundaryType == 3) {
       // Outflow: imposed p ?
       // double po = 0.98;
       // // double un = u*nx + v*ny;
@@ -898,16 +937,16 @@ void feSysElm_1D_EulerBord::computeBe(feBilinearForm *form)
       // double Ti = gamma * p / r; // Definition?
       double Ti = (gamma - 1.) * p / r; // Definition?
       double rhob = gamma * pb / Ti;
-      double ubn = ub*nx + vb*ny;
-      double Eb = pb/(gamma-1.) + (ub*ub+vb*vb)/2.;
+      double ubn = ub * nx + vb * ny;
+      double Eb = pb / (gamma - 1.) + (ub * ub + vb * vb) / 2.;
       // The state vector at the boundary is qb = (rhob, ub, vb, pb)
       // The flux F(qb) is:
-      Fn[0] = rhob*ubn;
-      Fn[1] = rhob*ub*ubn + pb*nx;
-      Fn[2] = rhob*vb*ubn + pb*ny;
-      Fn[3] = (Eb+pb)*ubn;
+      Fn[0] = rhob * ubn;
+      Fn[1] = rhob * ub * ubn + pb * nx;
+      Fn[2] = rhob * vb * ubn + pb * ny;
+      Fn[3] = (Eb + pb) * ubn;
     }
-  
+
     int cnt = 0;
     // Residu pour rho
     for(int i = 0; i < _nFunctionsr; ++i) {

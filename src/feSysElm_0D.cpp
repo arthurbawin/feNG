@@ -70,7 +70,7 @@ void feSysElm_0D_Stiff2::computeAe(feBilinearForm *form)
 void feSysElm_0D_Stiff2::computeBe(feBilinearForm *form)
 {
   double omega = _par;
-  
+
   double xDot = form->_intSpaces[_idX]->interpolateFieldAtQuadNode(form->_solDot[_idX], 0);
   double yDot = form->_intSpaces[_idY]->interpolateFieldAtQuadNode(form->_solDot[_idY], 0);
   double zDot = form->_intSpaces[_idZ]->interpolateFieldAtQuadNode(form->_solDot[_idZ], 0);
@@ -114,7 +114,7 @@ void feSysElm_0D_Stiff3::computeAe(feBilinearForm *form)
 void feSysElm_0D_Stiff3::computeBe(feBilinearForm *form)
 {
   double omega = _par;
-  
+
   double xDot = form->_intSpaces[_idX]->interpolateFieldAtQuadNode(form->_solDot[_idX], 0);
   double yDot = form->_intSpaces[_idY]->interpolateFieldAtQuadNode(form->_solDot[_idY], 0);
   double zDot = form->_intSpaces[_idZ]->interpolateFieldAtQuadNode(form->_solDot[_idZ], 0);

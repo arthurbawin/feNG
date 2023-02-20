@@ -1,15 +1,12 @@
 #include "feNorm.h"
 
-feStatus createNorm(feNorm *&norm,
-  normType type,
-  const std::vector<feSpace*> &spaces,
-  feSolution *sol,
-  feFunction *scalarSolution,
-  feVectorFunction *vectorSolution)
+feStatus createNorm(feNorm *&norm, normType type, const std::vector<feSpace *> &spaces,
+                    feSolution *sol, feFunction *scalarSolution, feVectorFunction *vectorSolution)
 {
-  for(auto *fS : spaces){
-    if(fS == nullptr){
-      return feErrorMsg(FE_STATUS_ERROR, "Null pointer in vector of FE spaces, maybe you forgot to initialize it.");
+  for(auto *fS : spaces) {
+    if(fS == nullptr) {
+      return feErrorMsg(FE_STATUS_ERROR,
+                        "Null pointer in vector of FE spaces, maybe you forgot to initialize it.");
     }
   }
 
@@ -17,8 +14,10 @@ feStatus createNorm(feNorm *&norm,
   int cncGeoTag = spaces[0]->getCncGeoTag();
   for(auto *fS : spaces) {
     if(fS->getCncGeoTag() != cncGeoTag)
-      return feErrorMsg(FE_STATUS_ERROR, "Norm defined on more than one geometric connectivity (physical entity).\n"
-        "All finite element spaces in \"spaces\" should be defined on the same geometric connectivity.\n");
+      return feErrorMsg(FE_STATUS_ERROR,
+                        "Norm defined on more than one geometric connectivity (physical entity).\n"
+                        "All finite element spaces in \"spaces\" should be defined on the same "
+                        "geometric connectivity.\n");
   }
 
   norm = new feNorm(type, spaces, sol, scalarSolution, vectorSolution);
@@ -26,15 +25,10 @@ feStatus createNorm(feNorm *&norm,
   return FE_STATUS_OK;
 }
 
-feNorm::feNorm(normType type, const std::vector<feSpace*> &spaces, feSolution *sol, feFunction *scalarSolution,
-               feVectorFunction *vectorSolution)
-  : _type(type)
-  , _spaces(spaces)
-  , _solution(sol)
-  , _scalarSolution(scalarSolution)
-  , _vectorSolution(vectorSolution)
-  , _cnc(spaces[0]->getCncGeo())
-  , _J(_cnc->getJacobians())
+feNorm::feNorm(normType type, const std::vector<feSpace *> &spaces, feSolution *sol,
+               feFunction *scalarSolution, feVectorFunction *vectorSolution)
+  : _type(type), _spaces(spaces), _solution(sol), _scalarSolution(scalarSolution),
+    _vectorSolution(vectorSolution), _cnc(spaces[0]->getCncGeo()), _J(_cnc->getJacobians())
 {
   _nQuad = spaces[0]->getNumQuadPoints();
   _w = spaces[0]->getQuadratureWeights();
@@ -44,11 +38,9 @@ feNorm::feNorm(normType type, const std::vector<feSpace*> &spaces, feSolution *s
   _geoCoord.resize(3 * _cnc->getNumVerticesPerElem());
 
   _adr.resize(spaces.size());
-  for(size_t k = 0; k < spaces.size(); ++k)
-    _adr[k].resize(spaces[k]->getNumFunctions());
+  for(size_t k = 0; k < spaces.size(); ++k) _adr[k].resize(spaces[k]->getNumFunctions());
   _localSol.resize(spaces.size());
-  for(size_t k = 0; k < spaces.size(); ++k)
-    _localSol[k].resize(spaces[k]->getNumFunctions());
+  for(size_t k = 0; k < spaces.size(); ++k) _localSol[k].resize(spaces[k]->getNumFunctions());
 
   // Provide only a geometric connectivity, to compute integrals of source terms, etc.
   // but not of the finite element solution.
@@ -56,10 +48,8 @@ feNorm::feNorm(normType type, const std::vector<feSpace*> &spaces, feSolution *s
 }
 
 feNorm::feNorm(feCncGeo *cnc, feFunction *scalarSolution, feVectorFunction *vectorSolution)
-  : _cnc(cnc)
-  , _scalarSolution(scalarSolution)
-  , _vectorSolution(vectorSolution)
-  , _J(_cnc->getJacobians())
+  : _cnc(cnc), _scalarSolution(scalarSolution), _vectorSolution(vectorSolution),
+    _J(_cnc->getJacobians())
 {
   _nQuad = cnc->getFeSpace()->getNumQuadPoints();
   _w = cnc->getFeSpace()->getQuadratureWeights();
@@ -75,17 +65,15 @@ feNorm::feNorm(feCncGeo *cnc, feFunction *scalarSolution, feVectorFunction *vect
 
 double feNorm::compute(normType type)
 {
-  if( _cncOnly && !(type == AREA || type == INTEGRAL_F) )
-  {
+  if(_cncOnly && !(type == AREA || type == INTEGRAL_F)) {
     feErrorMsg(FE_STATUS_ERROR, "This norm was created with a geometric"
-      " connectivity only. Cannot compute this norm without"
-      " providing solution and finite element space.");
+                                " connectivity only. Cannot compute this norm without"
+                                " providing solution and finite element space.");
     exit(-1);
   }
 
   double res;
-  switch(type)
-  {
+  switch(type) {
     case L1:
       res = this->computeLpNorm(1, false);
       break;
@@ -138,10 +126,7 @@ double feNorm::compute(normType type)
   return res;
 }
 
-double feNorm::compute()
-{
-  return this->compute(_type);
-}
+double feNorm::compute() { return this->compute(_type); }
 
 void feNorm::initializeLocalSolutionOnSpace(int iSpace, int iElm)
 {
@@ -153,14 +138,13 @@ double feNorm::computeLpNorm(int p, bool error)
 {
   double res = 0.0, uh, u, t = _solution->getCurrentTime();
 
-  if(error && _scalarSolution == nullptr){
+  if(error && _scalarSolution == nullptr) {
     feErrorMsg(FE_STATUS_ERROR, "Cannot compute Lp norm of error function"
-      " because exact solution is NULL");
+                                " because exact solution is NULL");
     exit(-1);
   }
 
   for(int iElm = 0; iElm < _nElm; ++iElm) {
-
     this->initializeLocalSolutionOnSpace(0, iElm);
     _spaces[0]->_mesh->getCoord(_cnc, iElm, _geoCoord);
 
@@ -172,7 +156,7 @@ double feNorm::computeLpNorm(int p, bool error)
       res += pow(fabs(u - uh), p) * _J[_nQuad * iElm + k] * _w[k];
     }
   }
-  return pow(res, 1./(double) p);
+  return pow(res, 1. / (double)p);
 }
 
 double feNorm::computeVectorLpNorm(int p, bool error)
@@ -182,9 +166,9 @@ double feNorm::computeVectorLpNorm(int p, bool error)
   std::vector<double> uh(3, 0.);
   int nComponents = _spaces[0]->getNumComponents();
 
-  if(error && _vectorSolution == nullptr){
+  if(error && _vectorSolution == nullptr) {
     feErrorMsg(FE_STATUS_ERROR, "Cannot compute Lp norm of vector error function"
-      " because exact solution is NULL");
+                                " because exact solution is NULL");
     exit(-1);
   }
 
@@ -192,7 +176,6 @@ double feNorm::computeVectorLpNorm(int p, bool error)
   // #pragma omp parallel for private(_geoCoord) reduction(+ : res) schedule(dynamic)
   // #endif
   for(int iElm = 0; iElm < _nElm; ++iElm) {
-
     this->initializeLocalSolutionOnSpace(0, iElm);
     _spaces[0]->_mesh->getCoord(_cnc, iElm, _geoCoord);
 
@@ -202,14 +185,14 @@ double feNorm::computeVectorLpNorm(int p, bool error)
       if(error) (*_vectorSolution)(t, _pos, u);
 
       compNorm = 0.;
-      for(int i = 0; i < nComponents; ++i){
+      for(int i = 0; i < nComponents; ++i) {
         compNorm += pow(fabs(u[i] - uh[i]), p);
       }
 
       res += compNorm * _J[_nQuad * iElm + k] * _w[k];
     }
   }
-  return pow(res, 1./(double) p);
+  return pow(res, 1. / (double)p);
 }
 
 double feNorm::computeL1Norm(bool error)
@@ -220,7 +203,6 @@ double feNorm::computeL1Norm(bool error)
   // #pragma omp parallel for private(_geoCoord, uh, u) reduction(+ : res) schedule(dynamic)
   // #endif
   for(int iElm = 0; iElm < _nElm; ++iElm) {
-
     this->initializeLocalSolutionOnSpace(0, iElm);
 
     _spaces[0]->_mesh->getCoord(_cnc, iElm, _geoCoord);
@@ -243,7 +225,6 @@ double feNorm::computeL2Norm(bool error)
   // #pragma omp parallel for private(_geoCoord, uh, u) reduction(+ : res) schedule(dynamic)
   // #endif
   for(int iElm = 0; iElm < _nElm; ++iElm) {
-
     this->initializeLocalSolutionOnSpace(0, iElm);
 
     _spaces[0]->_mesh->getCoord(_cnc, iElm, _geoCoord);
@@ -266,7 +247,6 @@ double feNorm::computeLInfNorm(bool error)
   // #pragma omp parallel for private(_geoCoord, uh, u) reduction(+ : res) schedule(dynamic)
   // #endif
   for(int iElm = 0; iElm < _nElm; ++iElm) {
-
     this->initializeLocalSolutionOnSpace(0, iElm);
 
     _spaces[0]->_mesh->getCoord(_cnc, iElm, _geoCoord);
@@ -286,7 +266,7 @@ double feNorm::computeH1SemiNorm(bool error)
   double res = 0.0;
 
   /* ... */
-  
+
   return res;
 }
 
@@ -295,7 +275,7 @@ double feNorm::computeH1Norm(bool error)
   double res = 0.0;
 
   /* ... */
-  
+
   return res;
 }
 
@@ -334,7 +314,6 @@ double feNorm::computeIntegralUserFunction()
   // #pragma omp parallel for private(_geoCoord, u) reduction(+ : res) schedule(dynamic)
   // #endif
   for(int iElm = 0; iElm < _nElm; ++iElm) {
-
     _geoSpace->_mesh->getCoord(_cnc, iElm, _geoCoord);
 
     for(int k = 0; k < _nQuad; ++k) {
@@ -346,17 +325,16 @@ double feNorm::computeIntegralUserFunction()
   return res;
 }
 
-// Compute the integral of uh * f, where f is a user-defined function 
+// Compute the integral of uh * f, where f is a user-defined function
 double feNorm::computeIntegralDotProduct()
 {
   // double I = 0.0, solInt, J, t = _solution->getCurrentTime();
-  
+
   // // std::vector<feInt> adr0(_spaces[0]->getNumFunctions());
   // // std::vector<double> sol0(adr0.size());
   // // std::vector<double> &solVec = _solution->getSolutionReference();
 
   // for(int iElm = 0; iElm < _nElm; ++iElm) {
-
 
   //   _spaces[0]->initializeAddressingVector(iElm, adr0);
   //   for(size_t i = 0; i < adr0.size(); ++i) {

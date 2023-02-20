@@ -17,7 +17,7 @@
 #include "rtree.h"
 
 //
-// Abstract mesh class. Meshes are defined through the derived 
+// Abstract mesh class. Meshes are defined through the derived
 // classes according to their highest space dimension:
 //  0D mesh: feMesh0DP0
 //  1D mesh: feMesh1DP1
@@ -60,7 +60,7 @@ public:
   std::vector<Triangle *> _elements;
 
 public:
-  // The constructor of the base class should not be called directly. Instead, 
+  // The constructor of the base class should not be called directly. Instead,
   // call the constructor of the derived class with matching dimension, e.g. mesh2DP1.
   feMesh(int nNod = 0, int dim = 0, int nCncGeo = 0, std::string ID = "")
     : _ID(ID), _dim(dim), _nVertices(nNod), _nEdges(0), _nCncGeo(nCncGeo){};
@@ -87,7 +87,7 @@ public:
 
   // Write in geoCoord the physical coordinates of the nodes on the
   // element with LOCAL tag numElem on the connectivity named
-  // cncGeoID or numbered cncGeoTag. The geoCoord vector should have size 
+  // cncGeoID or numbered cncGeoTag. The geoCoord vector should have size
   // equal to 3 * numNodesPerElement.
   //
   // The coordinates are structured as follows:
@@ -119,23 +119,23 @@ public:
   // Return the global (unique) tag of the numVertex-th vertex
   // of element with local tag numElem in matching connectivity.
   int getVertex(std::string const &cncGeoID, const int numElem, const int numVertex);
-  int getVertex(const int cncGeoTag, const  int numElem, const  int numVertex);
+  int getVertex(const int cncGeoTag, const int numElem, const int numVertex);
 
   // Return the global (unique) tag of element with local
   // tag numElem in matching connectivity.
-  int getElement(std::string const &cncGeoID, const  int numElem);
-  int getElement(const int cncGeoTag, const  int numElem);
+  int getElement(std::string const &cncGeoID, const int numElem);
+  int getElement(const int cncGeoTag, const int numElem);
 
   // Return the global (unique) tag of the numEdge-th edge
   // of element with local tag numElem in matching connectivity
-  int getEdge(std::string const &cncGeoID, const  int numElem, const int numEdge);
-  int getEdge(const int cncGeoTag, const  int numElem, const int numEdge);
+  int getEdge(std::string const &cncGeoID, const int numElem, const int numEdge);
+  int getEdge(const int cncGeoTag, const int numElem, const int numEdge);
 
   // Return a pointer to the FE space of matching connectivity
   feSpace *getGeometricSpace(std::string const &cncGeoID);
   feSpace *getGeometricSpace(int cncGeoTag);
 
-  // Locate the physical node x in the mesh. Return true if the 
+  // Locate the physical node x in the mesh. Return true if the
   // node was found, false otherwise. If the node was found,
   // the parameters are modified as follow:
   //
@@ -143,8 +143,7 @@ public:
   //    u: the rst (or xi-eta-zeta) coordinates of x on the reference element
   //      with u[0] = r, u[1] = s, u[2] = t
   //    tol: tolerance (applies only to 2D+ search in tree)
-  virtual bool locateVertex(const double *x, int &iElm, double *u,
-                            double tol = 1e-5) = 0;
+  virtual bool locateVertex(const double *x, int &iElm, double *u, double tol = 1e-5) = 0;
 };
 
 //
@@ -166,8 +165,7 @@ public:
   feMesh0DP0(double xA, int nElm, std::string domID);
   virtual ~feMesh0DP0();
 
-  virtual bool locateVertex(const double *x, int &iElm, double *u,
-                            double tol = 1e-5)
+  virtual bool locateVertex(const double *x, int &iElm, double *u, double tol = 1e-5)
   {
     u[0] = 1.;
     return true;
@@ -184,7 +182,7 @@ protected:
   double _xA, _xB;
   // Name of the boundaries and of the interior domain
   std::string _bndA_ID, _bndB_ID, _domID;
-  // 
+  //
   int _nElmPerBoundary;
   int _nNodDomain;
   int _nNodBoundary;
@@ -194,22 +192,19 @@ public:
   // uniform line elements and two boundary point elements.
   // The boundaries are named boundaryBeginName and boundaryEndName,
   // and the interior domain is named domainName.
-  feMesh1DP1(const double xBegin, const double xEnd,
-    const int numElements,
-    const std::string &boundaryBeginName, 
-    const std::string &boundaryEndName, 
-    const std::string &domainName);
+  feMesh1DP1(const double xBegin, const double xEnd, const int numElements,
+             const std::string &boundaryBeginName, const std::string &boundaryEndName,
+             const std::string &domainName);
   virtual ~feMesh1DP1();
 
-  virtual bool locateVertex(const double *x, int &iElm, double *u,
-                            double tol = 1e-5);
+  virtual bool locateVertex(const double *x, int &iElm, double *u, double tol = 1e-5);
 };
 
 class feMetaNumber;
 class feSolutionContainer;
 
 typedef struct rtreeSearchCtxStruct {
-  std::vector<Triangle*> *elements;
+  std::vector<Triangle *> *elements;
   double uvw[3];
   double r[3];
   double x[3];
@@ -225,12 +220,11 @@ typedef struct rtreeSearchCtxStruct {
 class feMesh2DP1 : public feMesh
 {
 private:
-
   // A Geometric Entity.
-  // These are Gmsh's elementary geometric blocks, such as Points, 
-  // Lines, Surfaces, etc. that are grouped together to form 
+  // These are Gmsh's elementary geometric blocks, such as Points,
+  // Lines, Surfaces, etc. that are grouped together to form
   // Physical Entities (named domains of subdomains).
-  // Each Geometric Entity in the mesh must be part of one (and 
+  // Each Geometric Entity in the mesh must be part of one (and
   // only one) Physical Enttity (subdomains cannot overlap).
   typedef struct entityStruct {
     int dim;
@@ -251,7 +245,7 @@ private:
   } entity;
 
   // A Physical Entity.
-  // A group of Geometric Entities of same dimension, with 
+  // A group of Geometric Entities of same dimension, with
   // a name. Physical Entities cannot overlap.
   // Equations and boundary conditions are defined on Physical
   // Entities.
@@ -283,7 +277,6 @@ public:
   typedef std::map<std::pair<int, int>, std::string> mapType;
 
 protected:
-
   // Geometric Entities sorted by pairs <dimension, tag>
   std::map<std::pair<int, int>, entity> _entities;
 
@@ -324,7 +317,7 @@ public:
   // Create a 2D mesh from GMSH file "meshName".
   // Only reads .msh files with version 4+.
   //
-  //  meshName: the relative or absolute path to the mesh file, 
+  //  meshName: the relative or absolute path to the mesh file,
   //            e.g. "square.msh" or "../data/square.msh".
   //  curved: true if using a high-order mesh (currently supporting
   //          only 1st and 2nd order geometries), false otherwise.
@@ -343,7 +336,8 @@ private:
                     mapType physicalEntitiesDescription);
   feStatus readMsh4(std::istream &input, const bool curved, const bool reversed,
                     mapType physicalEntitiesDescription);
-  feStatus readGmsh(const std::string meshName, const bool curved = false, const bool reversed = false,
+  feStatus readGmsh(const std::string meshName, const bool curved = false,
+                    const bool reversed = false,
                     const mapType physicalEntitiesDescription = mapType());
 
 public:
@@ -358,13 +352,10 @@ public:
 
   // Transfer whole FE solution(s) associated to the current mesh to another mesh.
   // The solution(s) are stored in solutionContainer and are transferred in place.
-  void transfer(feMesh2DP1 *otherMesh,
-    feMetaNumber *myMN,
-    feMetaNumber *otherMN,
-    feSolutionContainer *solutionContainer,
-    const std::vector<feSpace *> &mySpaces,
-    const std::vector<feSpace *> &mySpacesEssBC,
-    const std::vector<feSpace *> &otherSpaces);
+  void transfer(feMesh2DP1 *otherMesh, feMetaNumber *myMN, feMetaNumber *otherMN,
+                feSolutionContainer *solutionContainer, const std::vector<feSpace *> &mySpaces,
+                const std::vector<feSpace *> &mySpacesEssBC,
+                const std::vector<feSpace *> &otherSpaces);
 };
 
 #endif

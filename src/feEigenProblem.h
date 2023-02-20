@@ -19,7 +19,7 @@
 /* Supported eigen solvers */
 typedef enum { SLEPC } eigenSolverType;
 
-typedef struct eigenPairType{
+typedef struct eigenPairType {
   double valReal;
   double valImag;
 #if defined(HAVE_PETSC)
@@ -44,7 +44,7 @@ protected:
 #if defined(HAVE_SLEPC)
   PetscInt _nInc;
   PetscInt _nDofs;
-  Mat _A,_B;
+  Mat _A, _B;
   EPS _eps; // Eigenproblem solver context
   ST _st;
   KSP _ksp;
@@ -55,11 +55,8 @@ protected:
   std::vector<eigenPair> _eigenPairs;
 
 public:
-  feEigenProblem(int argc, char **argv,
-                 std::vector<feBilinearForm *> lhsForms,
-                 std::vector<feBilinearForm *> rhsForms,
-                 feMetaNumber *metaNumber,
-                 feMesh *mesh);
+  feEigenProblem(int argc, char **argv, std::vector<feBilinearForm *> lhsForms,
+                 std::vector<feBilinearForm *> rhsForms, feMetaNumber *metaNumber, feMesh *mesh);
 
   ~feEigenProblem();
 
@@ -83,12 +80,10 @@ public:
 void slepcInitialize(int argc, char **argv);
 void slepcFinalize();
 
-feStatus createEigenProblem(feEigenProblem *&eigenProblem,
-                            eigenSolverType type,
+feStatus createEigenProblem(feEigenProblem *&eigenProblem, eigenSolverType type,
                             std::vector<feSpace *> allFESpaces,
                             std::vector<feBilinearForm *> lhsForms,
-                            std::vector<feBilinearForm *> rhsForms,
-                            feMetaNumber *metaNumber,
+                            std::vector<feBilinearForm *> rhsForms, feMetaNumber *metaNumber,
                             feMesh *mesh, int argc = 0, char **argv = nullptr);
 
 #endif

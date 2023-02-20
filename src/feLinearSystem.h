@@ -32,11 +32,9 @@ void petscFinalize();
 //   numUnknowns: total number of unknowns (dimension of the system)
 
 // argc and argv are provided for PETSc command line options
-feStatus createLinearSystem(feLinearSystem *&system,
-  linearSolverType type,
-  std::vector<feBilinearForm *> bilinearForms,
-  int numUnknowns,
-  int argc = 0, char **argv = nullptr);
+feStatus createLinearSystem(feLinearSystem *&system, linearSolverType type,
+                            std::vector<feBilinearForm *> bilinearForms, int numUnknowns,
+                            int argc = 0, char **argv = nullptr);
 
 //
 // Abstract class handling the linear system to be solved at each step
@@ -45,7 +43,7 @@ feStatus createLinearSystem(feLinearSystem *&system,
 class feLinearSystem
 {
 protected:
-  // The number of (bi-)linear forms that require to 
+  // The number of (bi-)linear forms that require to
   // assemble a residual or a residual and a matrix
   int _numMatrixForms;
   int _numResidualForms;
@@ -58,7 +56,7 @@ protected:
   // Recompute the jacobian matrix at current Newton-Raphson step?
   bool recomputeMatrix;
 
-    // Options for iterative solver:
+  // Options for iterative solver:
   double _rel_tol = 1e-8;
   double _abs_tol = 1e-14;
   double _div_tol = 1e6;
@@ -72,7 +70,7 @@ protected:
   bool _exportRHSMatlab = false;
 
 public:
-  // Create an abstract linear system. Do not call directly, 
+  // Create an abstract linear system. Do not call directly,
   // call the derived constructors instead.
   feLinearSystem(std::vector<feBilinearForm *> bilinearForms);
   virtual ~feLinearSystem() {}
@@ -80,16 +78,16 @@ public:
   // Return the size m of the linear system (dimension of the square matrix m x m)
   virtual feInt getSystemSize() = 0;
 
-  void setAbsoluteTol(double absTol){ _abs_tol = absTol; };
-  void setRelativeTol(double relTol){ _rel_tol = relTol; };
-  void setDivergenceTol(double divTol){ _div_tol = divTol; };
+  void setAbsoluteTol(double absTol) { _abs_tol = absTol; };
+  void setRelativeTol(double relTol) { _rel_tol = relTol; };
+  void setDivergenceTol(double divTol) { _div_tol = divTol; };
   void setMaxIter(int maxIter) { _max_iter = maxIter; };
 
-  void setDisplayMatrixInConsole(bool flag){ _displayMatrixInConsole = flag; };
-  void setDisplayMatrixInWindow(bool flag){ _displayMatrixInWindow = flag; };
-  void setDisplayRHSInConsole(bool flag){ _displayRHSInConsole = flag; };
-  void setExportMatrixMatlab(bool flag){ _exportMatrixMatlab = flag; };
-  void setExportRHSMatlab(bool flag){ _exportRHSMatlab = flag; };
+  void setDisplayMatrixInConsole(bool flag) { _displayMatrixInConsole = flag; };
+  void setDisplayMatrixInWindow(bool flag) { _displayMatrixInWindow = flag; };
+  void setDisplayRHSInConsole(bool flag) { _displayRHSInConsole = flag; };
+  void setExportMatrixMatlab(bool flag) { _exportMatrixMatlab = flag; };
+  void setExportRHSMatlab(bool flag) { _exportRHSMatlab = flag; };
 
   bool getRecomputeStatus() { return recomputeMatrix; }
   void setRecomputeStatus(bool status) { recomputeMatrix = status; }
@@ -138,7 +136,6 @@ public:
 class feLinearSystemPETSc : public feLinearSystem
 {
 protected:
-
   int _argc;
   char **_argv;
 
@@ -170,10 +167,11 @@ protected:
   feEZCompressedRowStorage *_EZCRS;
 
 public:
-  feLinearSystemPETSc(int argc, char **argv, std::vector<feBilinearForm *> bilinearForms, int numUnknowns);
+  feLinearSystemPETSc(int argc, char **argv, std::vector<feBilinearForm *> bilinearForms,
+                      int numUnknowns);
   ~feLinearSystemPETSc();
 
-  feInt getSystemSize() {return (feInt) _nInc; };
+  feInt getSystemSize() { return (feInt)_nInc; };
 
   // See doc in feLinearSystem.h
   void setToZero();
@@ -208,7 +206,7 @@ protected:
   double *residu;
   feInt iparm12 = 1; // Modification de IPARM[12]
   bool symbolicFactorization = true;
-  
+
   void *PT[64];
   feMKLPardisoInt MYTPE;
   feMKLPardisoInt IPARM[64];

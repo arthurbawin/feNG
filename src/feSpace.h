@@ -16,17 +16,18 @@
 typedef Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> EigenMat;
 
 // Supported choices of degrees of freedom to define finite element spaces
-enum class elementType { 
+enum class elementType {
   LAGRANGE,
   VECTOR_LAGRANGE,
   DG_LAGRANGE,
-  LEGENDRE, 
-  HERMITE, 
-  CROUZEIX_RAVIART };
+  LEGENDRE,
+  HERMITE,
+  CROUZEIX_RAVIART
+};
 
 // How the degrees of freedom should be initialized from the provided field f:
 //
-//  PREVIOUS_SOL: dofs are not initialized (use only when using solution from a 
+//  PREVIOUS_SOL: dofs are not initialized (use only when using solution from a
 //                previous simulation)
 //      NODEWISE: dofs are initialized such that uh(x_i) = f(x_i)
 //
@@ -56,21 +57,16 @@ class feSolution;
 //                          Default initialization method is NODEWISE, i.e. uh(x_i) = f(x_i)
 // useGlobalShapeFunctions: choose between local (reference space) or global (physical space)
 //                          shape functions (global still experimental, do not use yet).
-feStatus createFiniteElementSpace(feSpace *&space,
-  feMesh *mesh,
-  const elementType element,
-  const int degree,
-  const std::string fieldName,
-  const std::string connectivityName,
-  const int degreeQuadrature,
-  void *fct,
-  const bool useGlobalShapeFunctions = false);
+feStatus createFiniteElementSpace(feSpace *&space, feMesh *mesh, const elementType element,
+                                  const int degree, const std::string fieldName,
+                                  const std::string connectivityName, const int degreeQuadrature,
+                                  void *fct, const bool useGlobalShapeFunctions = false);
 
 // Abstract class defining a finite element space, handling the interpolation
-// functions defined over the elements. A finite element space can be used 
+// functions defined over the elements. A finite element space can be used
 // to interpolate either the geometry or the fields of interest.
 //
-// An FE space is defined on a single geometric connectivity (which 
+// An FE space is defined on a single geometric connectivity (which
 // corresponds to a Physical Entity in the mesh).
 class feSpace
 {
@@ -78,7 +74,7 @@ protected:
   // The type of finite element
   elementType _elementType;
   // Pointer to the mesh on which the space is defined
-  feMesh *_mesh; 
+  feMesh *_mesh;
   // Name of the associated field, e.g "U", "V", "P"
   std::string _fieldID;
   // Number (tag) of the associated field
@@ -137,14 +133,14 @@ protected:
   feCncGeo *_cnc;
 
 public:
-
   friend class feBilinearForm;
   friend class feNorm;
   friend class feCncGeo;
-  
+
   // Do not use the abstract class constructor directly, call the derived classes.
-  feSpace(const int dimension, feMesh *mesh = nullptr, const std::string &fieldID = "", const std::string &cncGeoID = "",
-    feFunction *scalarField = nullptr, feVectorFunction *vectorField = nullptr, const bool useGlobalShapeFunctions = false);
+  feSpace(const int dimension, feMesh *mesh = nullptr, const std::string &fieldID = "",
+          const std::string &cncGeoID = "", feFunction *scalarField = nullptr,
+          feVectorFunction *vectorField = nullptr, const bool useGlobalShapeFunctions = false);
   virtual ~feSpace(){};
 
   const std::string &getFieldID() { return _fieldID; }
@@ -153,19 +149,22 @@ public:
   int getCncGeoTag() { return _cncGeoTag; }
 
   // Assign the tag of a geometric space after the mesh has been created
-  void setCncGeoTag(int tag){ _cncGeoTag = tag; }
+  void setCncGeoTag(int tag) { _cncGeoTag = tag; }
   // Assign the pointer to the connectivity after it has been created
-  void setCncPtr(feCncGeo *cnc){ _cnc = cnc; }
+  void setCncPtr(feCncGeo *cnc) { _cnc = cnc; }
   // Assign the mesh pointer of a geometric space after the mesh has been created
-  void setMeshPtr(feMesh *mesh){ _mesh = mesh; }
+  void setMeshPtr(feMesh *mesh) { _mesh = mesh; }
   // Assign the pointer to the field numbering after the numbering has been created
-  void setNumberingPtr(feNumber *numbering){ _numbering = numbering; }
+  void setNumberingPtr(feNumber *numbering) { _numbering = numbering; }
 
   // Return the number of field components (1 for scalar finite element, 1/2/3 for vector element)
   int getNumComponents() { return _nComponents; };
 
-  void setEssentialComponent(int iComponent, bool flag){ _essentialComponents[iComponent] = flag; };
-  bool isEssentialComponent(int iComponent){ return _essentialComponents[iComponent]; };
+  void setEssentialComponent(int iComponent, bool flag)
+  {
+    _essentialComponents[iComponent] = flag;
+  };
+  bool isEssentialComponent(int iComponent) { return _essentialComponents[iComponent]; };
 
   // Return the attributes of the geometric connectivity on which the space is defined
   feCncGeo *getCncGeo() { return _cnc; }
@@ -193,12 +192,12 @@ public:
   // Evaluate the local shape functions and derivatives at quadrature nodes
   virtual std::vector<double> L(double *r) = 0;
   virtual void L(double *r, double *L) = 0;
-  virtual std::vector<double> dLdr(double *r){ return std::vector<double>(_nFunctions, 0.); };
-  virtual std::vector<double> dLds(double *r){ return std::vector<double>(_nFunctions, 0.); };
-  virtual std::vector<double> dLdt(double *r){ return std::vector<double>(_nFunctions, 0.); };
-  virtual std::vector<double> d2Ldr2(double *r){ return std::vector<double>(_nFunctions, 0.); };
-  virtual std::vector<double> d2Lds2(double *r){ return std::vector<double>(_nFunctions, 0.); };
-  virtual std::vector<double> d2Ldt2(double *r){ return std::vector<double>(_nFunctions, 0.); };
+  virtual std::vector<double> dLdr(double *r) { return std::vector<double>(_nFunctions, 0.); };
+  virtual std::vector<double> dLds(double *r) { return std::vector<double>(_nFunctions, 0.); };
+  virtual std::vector<double> dLdt(double *r) { return std::vector<double>(_nFunctions, 0.); };
+  virtual std::vector<double> d2Ldr2(double *r) { return std::vector<double>(_nFunctions, 0.); };
+  virtual std::vector<double> d2Lds2(double *r) { return std::vector<double>(_nFunctions, 0.); };
+  virtual std::vector<double> d2Ldt2(double *r) { return std::vector<double>(_nFunctions, 0.); };
 
   // Evaluate the global shape functions at quadrature nodes
   virtual feStatus Lphys(int iElm, std::vector<double> &x, std::vector<double> &L,
@@ -230,8 +229,8 @@ public:
   // Get the gradient in physical coordinates of the basis functions at quadrature node:
   // gradPhi = [dPhi1dx ... dPhindx, dPhi1dy ... dPhindy, dPhi1dz ... dPhindz]
   // Size of gradPhi = dim x nFunctions
-  void getFunctionsPhysicalGradientAtQuadNode(const int iQuadNode,
-  const ElementTransformation &T, double *gradPhi);
+  void getFunctionsPhysicalGradientAtQuadNode(const int iQuadNode, const ElementTransformation &T,
+                                              double *gradPhi);
 
   double getd2Functiondr2AtQuadNode(const int iFun, const int iQuadNode)
   {
@@ -268,10 +267,11 @@ public:
   virtual void initializeAddressingVector(int numElem, std::vector<feInt> &adr) = 0;
 
   // Evaluate prescribed scalar field
-  double evalFun(const double t, const std::vector<double> &x)
-    { return _scalarFct->eval(t, x); }
+  double evalFun(const double t, const std::vector<double> &x) { return _scalarFct->eval(t, x); }
   void evalFun(const double t, const std::vector<double> &x, std::vector<double> &res)
-    { _vectorFct->eval(t, x, res); }
+  {
+    _vectorFct->eval(t, x, res);
+  }
 
   //
   // Interpolation of fields and derivatives at reference node r = [r,s,t] or physical node x:
@@ -296,36 +296,41 @@ public:
   void interpolateField(double *field, int fieldSize, double *r, double *shape, double &res);
 
   double interpolateField(feSolution *sol, std::vector<double> &x);
-  void interpolateField_gradrs(feSolution *sol, std::vector<double> &x,
-                               std::vector<double> &grad);
+  void interpolateField_gradrs(feSolution *sol, std::vector<double> &x, std::vector<double> &grad);
 
   // Interpolate vector field or derivatives at reference node r = [r,s,t]
   // using local shape functions (default). Result is stored in res.
   void interpolateVectorField(std::vector<double> &field, double *r, std::vector<double> &res);
-  void interpolateVectorField(std::vector<double> &field, int nComponents, double *r, std::vector<double> &res);
-  void interpolateVectorField_rDerivative(std::vector<double> &field, double *r, std::vector<double> &res);
-  void interpolateVectorField_sDerivative(std::vector<double> &field, double *r, std::vector<double> &res);
+  void interpolateVectorField(std::vector<double> &field, int nComponents, double *r,
+                              std::vector<double> &res);
+  void interpolateVectorField_rDerivative(std::vector<double> &field, double *r,
+                                          std::vector<double> &res);
+  void interpolateVectorField_sDerivative(std::vector<double> &field, double *r,
+                                          std::vector<double> &res);
 
   //
   // Interpolation of fields and derivatives at quadrature node:
   //
 
-  // Interpolate scalar field or derivatives at iNode-th quadrature node using local shape functions (default)
+  // Interpolate scalar field or derivatives at iNode-th quadrature node using local shape functions
+  // (default)
   double interpolateFieldAtQuadNode(std::vector<double> &field, int iNode);
   double interpolateFieldAtQuadNode_rDerivative(std::vector<double> &field, int iNode);
   double interpolateFieldAtQuadNode_sDerivative(std::vector<double> &field, int iNode);
   double interpolateFieldAtQuadNode_rrDerivative(std::vector<double> &field, int iNode);
   double interpolateFieldAtQuadNode_ssDerivative(std::vector<double> &field, int iNode);
 
-  void interpolateFieldAtQuadNode_physicalGradient(std::vector<double> &field, 
-    const int iQuadNode, const ElementTransformation &T, double *grad);
+  void interpolateFieldAtQuadNode_physicalGradient(std::vector<double> &field, const int iQuadNode,
+                                                   const ElementTransformation &T, double *grad);
 
-  // Interpolate scalar field or derivatives at iNode-th quadrature node using global shape functions
+  // Interpolate scalar field or derivatives at iNode-th quadrature node using global shape
+  // functions
   double interpolateFieldAtQuadNode(std::vector<double> &field, int iElm, int iNode);
   double interpolateFieldAtQuadNode_xDerivative(std::vector<double> &field, int iElm, int iNode);
   double interpolateFieldAtQuadNode_yDerivative(std::vector<double> &field, int iElm, int iNode);
 
-  // Interpolate vector field or derivatives at iNode-th quadrature node using local shape functions (default)
+  // Interpolate vector field or derivatives at iNode-th quadrature node using local shape functions
+  // (default)
 
   // Interpolate vector valued function using scalar valued FE space
   void interpolateVectorFieldAtQuadNode(std::vector<double> &field, int iNode,
@@ -333,34 +338,33 @@ public:
   // Interpolate vector valued function using vector valued FE space
   void interpolateVectorFieldAtQuadNode(std::vector<double> &field, int iNode,
                                         std::vector<double> &res, int nComponents);
-  
-  void interpolateVectorFieldAtQuadNode_rDerivative(std::vector<double> &field,
-    int iNode, std::vector<double> &res);
-  void interpolateVectorFieldAtQuadNode_rDerivative(std::vector<double> &field,
-    int iNode, double res[3]);
-  void interpolateVectorFieldAtQuadNode_sDerivative(std::vector<double> &field,
-    int iNode, std::vector<double> &res);
-  void interpolateVectorFieldAtQuadNode_sDerivative(std::vector<double> &field,
-    int iNode, double res[3]);
-  void interpolateVectorFieldAtQuadNode_tDerivative(std::vector<double> &field,
-    int iNode, std::vector<double> &res);
-  void interpolateVectorFieldAtQuadNode_tDerivative(std::vector<double> &field,
-    int iNode, double res[3]);
+
+  void interpolateVectorFieldAtQuadNode_rDerivative(std::vector<double> &field, int iNode,
+                                                    std::vector<double> &res);
+  void interpolateVectorFieldAtQuadNode_rDerivative(std::vector<double> &field, int iNode,
+                                                    double res[3]);
+  void interpolateVectorFieldAtQuadNode_sDerivative(std::vector<double> &field, int iNode,
+                                                    std::vector<double> &res);
+  void interpolateVectorFieldAtQuadNode_sDerivative(std::vector<double> &field, int iNode,
+                                                    double res[3]);
+  void interpolateVectorFieldAtQuadNode_tDerivative(std::vector<double> &field, int iNode,
+                                                    std::vector<double> &res);
+  void interpolateVectorFieldAtQuadNode_tDerivative(std::vector<double> &field, int iNode,
+                                                    double res[3]);
 
   void interpolateVectorFieldAtQuadNode_physicalGradient(std::vector<double> &field,
-  const int nComponents, const int iQuadNode, const ElementTransformation &T, double *grad);
+                                                         const int nComponents, const int iQuadNode,
+                                                         const ElementTransformation &T,
+                                                         double *grad);
 };
 
 class feScalarSpace : public feSpace
 {
 protected:
 public:
-  feScalarSpace(const int dimension,
-    feMesh *mesh = nullptr,
-    const std::string &fieldID = "",
-    const std::string &cncGeoID = "",
-    feFunction *scalarField = nullptr,
-    const bool useGlobalShapeFunctions = false);
+  feScalarSpace(const int dimension, feMesh *mesh = nullptr, const std::string &fieldID = "",
+                const std::string &cncGeoID = "", feFunction *scalarField = nullptr,
+                const bool useGlobalShapeFunctions = false);
   ~feScalarSpace(){};
 };
 
@@ -368,12 +372,9 @@ class feVectorSpace : public feSpace
 {
 protected:
 public:
-  feVectorSpace(const int dimension,
-    feMesh *mesh = nullptr,
-    const std::string &fieldID = "",
-    const std::string &cncGeoID = "",
-    feVectorFunction *vectorField = nullptr,
-    const bool useGlobalShapeFunctions = false);
+  feVectorSpace(const int dimension, feMesh *mesh = nullptr, const std::string &fieldID = "",
+                const std::string &cncGeoID = "", feVectorFunction *vectorField = nullptr,
+                const bool useGlobalShapeFunctions = false);
   ~feVectorSpace(){};
 };
 
@@ -404,7 +405,8 @@ public:
 class feSpace0D_Hermite : public feScalarSpace
 {
 public:
-  feSpace0D_Hermite(feMesh *mesh, const std::string fieldID, const std::string cncGeoID, feFunction *fct);
+  feSpace0D_Hermite(feMesh *mesh, const std::string fieldID, const std::string cncGeoID,
+                    feFunction *fct);
   ~feSpace0D_Hermite(){};
 
   int getNumFunctions() { return 2; }
@@ -465,15 +467,15 @@ public:
 // -----------------------------------------------------------------------------
 // Vector Lagrange element of degree 1 on 1D reference element [-1,1]
 // -----------------------------------------------------------------------------
-template<int dim>
-class feSpaceVecP1 : public feVectorSpace
+template <int dim> class feSpaceVecP1 : public feVectorSpace
 {
 protected:
 public:
-  feSpaceVecP1(feMesh *mesh, const std::string fieldID, const std::string cncGeoID, feVectorFunction *fct);
+  feSpaceVecP1(feMesh *mesh, const std::string fieldID, const std::string cncGeoID,
+               feVectorFunction *fct);
   ~feSpaceVecP1(){};
 
-  int getNumFunctions() { return 2*dim; }
+  int getNumFunctions() { return 2 * dim; }
   int getPolynomialDegree() { return 1; }
 
   std::vector<double> L(double *r);
@@ -492,7 +494,8 @@ class feSpace1D_DG_P1 : public feScalarSpace
 {
 protected:
 public:
-  feSpace1D_DG_P1(feMesh *mesh, const std::string fieldID, const std::string cncGeoID, feFunction *fct);
+  feSpace1D_DG_P1(feMesh *mesh, const std::string fieldID, const std::string cncGeoID,
+                  feFunction *fct);
   ~feSpace1D_DG_P1(){};
 
   int getNumFunctions() { return 2; }
@@ -515,7 +518,8 @@ class feSpace1D_CR0 : public feScalarSpace
 {
 protected:
 public:
-  feSpace1D_CR0(feMesh *mesh, const std::string fieldID, const std::string cncGeoID, feFunction *fct);
+  feSpace1D_CR0(feMesh *mesh, const std::string fieldID, const std::string cncGeoID,
+                feFunction *fct);
   ~feSpace1D_CR0() {}
 
   int getNumFunctions() { return 1; }
@@ -555,15 +559,15 @@ public:
 // -----------------------------------------------------------------------------
 // Vector Lagrange element of degree 2 on 1D reference element [-1,1]
 // -----------------------------------------------------------------------------
-template<int dim>
-class feSpaceVecP2 : public feVectorSpace
+template <int dim> class feSpaceVecP2 : public feVectorSpace
 {
 protected:
 public:
-  feSpaceVecP2(feMesh *mesh, const std::string fieldID, const std::string cncGeoID, feVectorFunction *fct);
+  feSpaceVecP2(feMesh *mesh, const std::string fieldID, const std::string cncGeoID,
+               feVectorFunction *fct);
   ~feSpaceVecP2(){};
 
-  int getNumFunctions() { return 3*dim; }
+  int getNumFunctions() { return 3 * dim; }
   int getPolynomialDegree() { return 1; }
 
   std::vector<double> L(double *r);
@@ -601,15 +605,15 @@ public:
 // -----------------------------------------------------------------------------
 // Vector Lagrange element of degree 3 on 1D reference element [-1,1]
 // -----------------------------------------------------------------------------
-template<int dim>
-class feSpaceVecP3 : public feVectorSpace
+template <int dim> class feSpaceVecP3 : public feVectorSpace
 {
 protected:
 public:
-  feSpaceVecP3(feMesh *mesh, const std::string fieldID, const std::string cncGeoID, feVectorFunction *fct);
+  feSpaceVecP3(feMesh *mesh, const std::string fieldID, const std::string cncGeoID,
+               feVectorFunction *fct);
   ~feSpaceVecP3(){};
 
-  int getNumFunctions() { return 4*dim; }
+  int getNumFunctions() { return 4 * dim; }
   int getPolynomialDegree() { return 1; }
 
   std::vector<double> L(double *r);
@@ -628,7 +632,8 @@ class feSpace1D_H3 : public feScalarSpace
 {
 protected:
 public:
-  feSpace1D_H3(feMesh *mesh, const std::string fieldID, const std::string cncGeoID, feFunction *fct);
+  feSpace1D_H3(feMesh *mesh, const std::string fieldID, const std::string cncGeoID,
+               feFunction *fct);
   ~feSpace1D_H3() {}
 
   int getNumFunctions() { return 4; }
@@ -674,9 +679,10 @@ class feSpace1D_Legendre : public feScalarSpace
 {
 protected:
   int _degree;
+
 public:
-  feSpace1D_Legendre(const int degree, feMesh *mesh,
-    const std::string fieldID, const std::string cncGeoID, feFunction *fct);
+  feSpace1D_Legendre(const int degree, feMesh *mesh, const std::string fieldID,
+                     const std::string cncGeoID, feFunction *fct);
   ~feSpace1D_Legendre() {}
 
   int getNumFunctions() { return _nFunctions; }
@@ -720,16 +726,15 @@ public:
 // -----------------------------------------------------------------------------
 // Vector Lagrange element of degree 1 on reference triangle r = [0,1], s = [0,1-r]
 // -----------------------------------------------------------------------------
-template<int dim>
-class feSpaceVecTriP1 : public feVectorSpace
+template <int dim> class feSpaceVecTriP1 : public feVectorSpace
 {
 protected:
 public:
-  feSpaceVecTriP1(feMesh *mesh, const std::string fieldID, const std::string cncGeoID, feVectorFunction *fct,
-               const bool useGlobalShapeFunctions = false);
+  feSpaceVecTriP1(feMesh *mesh, const std::string fieldID, const std::string cncGeoID,
+                  feVectorFunction *fct, const bool useGlobalShapeFunctions = false);
   ~feSpaceVecTriP1() {}
 
-  int getNumFunctions() { return 3*dim; }
+  int getNumFunctions() { return 3 * dim; }
   int getPolynomialDegree() { return 1; }
 
   std::vector<double> L(double *r);
@@ -751,7 +756,7 @@ class feSpaceTri_CR1 : public feScalarSpace
 protected:
 public:
   feSpaceTri_CR1(feMesh *mesh, const std::string fieldID, const std::string cncGeoID,
-                             feFunction *fct);
+                 feFunction *fct);
   ~feSpaceTri_CR1() {}
 
   int getNumFunctions() { return 3; }
@@ -798,15 +803,14 @@ public:
 // -----------------------------------------------------------------------------
 // Vector Lagrange element of degree 2 on reference triangle r = [0,1], s = [0,1-r]
 // -----------------------------------------------------------------------------
-template<int dim>
-class feSpaceVecTriP2 : public feVectorSpace
+template <int dim> class feSpaceVecTriP2 : public feVectorSpace
 {
 public:
-  feSpaceVecTriP2(feMesh *mesh, const std::string fieldID, const std::string cncGeoID, feVectorFunction *fct,
-               const bool useGlobalShapeFunctions = false);
+  feSpaceVecTriP2(feMesh *mesh, const std::string fieldID, const std::string cncGeoID,
+                  feVectorFunction *fct, const bool useGlobalShapeFunctions = false);
   ~feSpaceVecTriP2() {}
 
-  int getNumFunctions() { return 6*dim; }
+  int getNumFunctions() { return 6 * dim; }
   int getPolynomialDegree() { return 2; }
 
   std::vector<double> L(double *r);
@@ -828,7 +832,7 @@ class feSpaceTri_CR2 : public feScalarSpace
 protected:
 public:
   feSpaceTri_CR2(feMesh *mesh, const std::string fieldID, const std::string cncGeoID,
-                             feFunction *fct);
+                 feFunction *fct);
   ~feSpaceTri_CR2() {}
 
   int getNumFunctions() { return 7; }
@@ -872,15 +876,14 @@ public:
 // -----------------------------------------------------------------------------
 // Vector Lagrange element of degree 3 on reference triangle r = [0,1], s = [0,1-r]
 // -----------------------------------------------------------------------------
-template<int dim>
-class feSpaceVecTriP3 : public feVectorSpace
+template <int dim> class feSpaceVecTriP3 : public feVectorSpace
 {
 public:
-  feSpaceVecTriP3(feMesh *mesh, const std::string fieldID, const std::string cncGeoID, feVectorFunction *fct,
-               const bool useGlobalShapeFunctions = false);
+  feSpaceVecTriP3(feMesh *mesh, const std::string fieldID, const std::string cncGeoID,
+                  feVectorFunction *fct, const bool useGlobalShapeFunctions = false);
   ~feSpaceVecTriP3() {}
 
-  int getNumFunctions() { return 10*dim; }
+  int getNumFunctions() { return 10 * dim; }
   int getPolynomialDegree() { return 3; }
 
   std::vector<double> L(double *r);

@@ -10,13 +10,12 @@
 class feSolutionContainer;
 
 //
-// A wrapper containing the FE solution (DOF values) (and 
+// A wrapper containing the FE solution (DOF values) (and
 // time integration info that should be moved to the solver).
 //
 class feSolution
 {
 protected:
-  
   // The number of DOFs (size of the arrays)
   int _nDOF;
 
@@ -35,7 +34,7 @@ protected:
   double _t1;
   int _nTimeSteps;
   double _dt;
-  
+
 public:
   // Copy of the FE spaces ptrs
   std::vector<feSpace *> _spaces;
@@ -43,7 +42,8 @@ public:
 
 public:
   // Create a solution wrapper holding numDOF degrees of freedom and their time derivative.
-  feSolution(int numDOF, const std::vector<feSpace *> &spaces, const std::vector<feSpace *> &essentialSpaces);
+  feSolution(int numDOF, const std::vector<feSpace *> &spaces,
+             const std::vector<feSpace *> &essentialSpaces);
   // Create a solution wrapper from a solution file. See printSol function for parsing.
   feSolution(std::string solutionFile);
   ~feSolution() {}

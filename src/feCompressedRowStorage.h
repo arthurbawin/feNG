@@ -9,10 +9,11 @@ class feEZCompressedRowStorage
 {
 protected:
   std::vector<feInt> nnz;
-  std::vector<std::set<feInt>> nnzset;
+  std::vector<std::set<feInt> > nnzset;
   // std::set<std::pair<feInt,feInt>> allocatedPairs;
 public:
-  feEZCompressedRowStorage(int numUnknowns, std::vector<feBilinearForm *> &formMatrices, int numMatrixForms);
+  feEZCompressedRowStorage(int numUnknowns, std::vector<feBilinearForm *> &formMatrices,
+                           int numMatrixForms);
   ~feEZCompressedRowStorage(){};
 
   feInt *getNnz() { return nnz.data(); };
@@ -33,7 +34,8 @@ public:
 class feCompressedRowStorage
 {
 public:
-  feCompressedRowStorage(int numUnknowns, std::vector<feBilinearForm *> &formMatrices, int numMatrixForms);
+  feCompressedRowStorage(int numUnknowns, std::vector<feBilinearForm *> &formMatrices,
+                         int numMatrixForms);
   ~feCompressedRowStorage()
   {
     if(nnz != NULL) delete[] nnz;
@@ -91,7 +93,8 @@ protected:
 class feCompressedRowStorageMklPardiso : public feCompressedRowStorage
 {
 public:
-  feCompressedRowStorageMklPardiso(int numUnknowns, std::vector<feBilinearForm *> &formMatrices, int numMatrixForms);
+  feCompressedRowStorageMklPardiso(int numUnknowns, std::vector<feBilinearForm *> &formMatrices,
+                                   int numMatrixForms);
   ~feCompressedRowStorageMklPardiso()
   {
     if(rangee != NULL) delete[] rangee;

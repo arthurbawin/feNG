@@ -42,9 +42,8 @@ double errorSquaredCallback(double *xa, double *xb, double *xc, double *xab, dou
   gmsh::model::mesh::getBasisFunctions(triangleP2, localCoord, "GradLagrange", numComponents,
                                        gradBasisFunctions, numOrientations);
 
-  double F[6] = {f(activeRecovery, xa),   f(activeRecovery, xb),
-                 f(activeRecovery, xc),   f(activeRecovery, xab),
-                 f(activeRecovery, xbc), f(activeRecovery, xca)};
+  double F[6] = {f(activeRecovery, xa),  f(activeRecovery, xb),  f(activeRecovery, xc),
+                 f(activeRecovery, xab), f(activeRecovery, xbc), f(activeRecovery, xca)};
   double X[6] = {xa[0], xb[0], xc[0], xab[0], xbc[0], xca[0]};
   double Y[6] = {xa[1], xb[1], xc[1], xab[1], xbc[1], xca[1]};
   double e2 = 0;
@@ -110,8 +109,8 @@ void createAnisoMesh(feMetric *metric, feMetricOptions metricOptions)
 */
 void createCurvedMesh(feFunction *solExact, feMetaNumber *metaNumber, feSolution *sol,
                       feSpace *intSpace, feRecovery *recovery, feMetric *metric,
-                      feMetricOptions &metricOptions, int onlyGenerateVertices, 
-                      int nLoopsAnisoMesh, bool curve)
+                      feMetricOptions &metricOptions, int onlyGenerateVertices, int nLoopsAnisoMesh,
+                      bool curve)
 {
 #if defined(HAVE_GMSH)
   // if(metricOptions.isGmshModelReady){
@@ -127,8 +126,9 @@ void createCurvedMesh(feFunction *solExact, feMetaNumber *metaNumber, feSolution
   gmsh::model::setCurrent(metricOptions.modelForMesh);
 
   // Aniso mesh with MMG (used to get the boundary vertices only)
-  // std::string cmd = "mmg2d " + metricOptions.metricMeshNameForMMG + " -hgrad 3 -o " + metricOptions.metricMeshNameForMMG_out;
-  // std::string cmd1 = "mmg2d " + metricOptions.metricMeshNameForMMG + " -hgrad 10 -o tmp.mesh";
+  // std::string cmd = "mmg2d " + metricOptions.metricMeshNameForMMG + " -hgrad 3 -o " +
+  // metricOptions.metricMeshNameForMMG_out; std::string cmd1 = "mmg2d " +
+  // metricOptions.metricMeshNameForMMG + " -hgrad 10 -o tmp.mesh";
   std::string cmd1 = "mmg2d " + metricOptions.metricMeshNameForMMG + " -hgrad -1 -o tmp.mesh";
   system(cmd1.c_str());
   std::string cmd2 = "gmsh tmp.mesh -o " + metricOptions.metricMeshNameForMMG_out + " -0";
@@ -137,7 +137,7 @@ void createCurvedMesh(feFunction *solExact, feMetaNumber *metaNumber, feSolution
   // system(cmd3.c_str());
 
   // Loop a few times
-  for(int i = 0; i < nLoopsAnisoMesh; ++i){
+  for(int i = 0; i < nLoopsAnisoMesh; ++i) {
     gmsh::open(metricOptions.metricMeshNameForMMG_out);
     gmsh::model::getCurrent(metricOptions.modelForMetric);
     metric->setGmshMetricModel(metricOptions.modelForMetric);
@@ -160,8 +160,8 @@ void createCurvedMesh(feFunction *solExact, feMetaNumber *metaNumber, feSolution
   gmsh::option::setNumber("Mesh.MshFileVersion", 4.1);
   gmsh::write("afterVersion.msh");
 
-  // Determine if the mesh is reversed (MMG seems to reverse the mesh sometimes, unless I'm doing something wrong)
-  // Get quadrature rule and interpolation functions on the adapted mesh
+  // Determine if the mesh is reversed (MMG seems to reverse the mesh sometimes, unless I'm doing
+  // something wrong) Get quadrature rule and interpolation functions on the adapted mesh
   int triP1 = gmsh::model::mesh::getElementType("Triangle", 1);
   std::vector<double> localCoord;
   std::vector<double> weights;
@@ -174,7 +174,7 @@ void createCurvedMesh(feFunction *solExact, feMetaNumber *metaNumber, feSolution
   //   feInfo("det1 = %f", det[i]);
 
   // Check the first determinant
-  if(det[0] < 0){
+  if(det[0] < 0) {
     feInfo("Adapted aniso mesh is reversed : reversing the numbering");
     gmsh::model::mesh::reverse();
   }
@@ -187,12 +187,10 @@ void createCurvedMesh(feFunction *solExact, feMetaNumber *metaNumber, feSolution
   gmsh::vectorpair dimTags;
   gmsh::model::getEntities(dimTags);
   std::vector<int> entities1D, entities2D;
-  for(auto p : dimTags){
-    std::cout<<p.first<<" - "<<p.second<<std::endl;
-    if(p.first == 1)
-      entities1D.push_back(p.second);
-    if(p.first == 2)
-      entities2D.push_back(p.second);
+  for(auto p : dimTags) {
+    std::cout << p.first << " - " << p.second << std::endl;
+    if(p.first == 1) entities1D.push_back(p.second);
+    if(p.first == 2) entities2D.push_back(p.second);
   }
 
   gmsh::write("beforePhysical.msh");
@@ -208,40 +206,41 @@ void createCurvedMesh(feFunction *solExact, feMetaNumber *metaNumber, feSolution
   // If it's the case, reverse the mesh and keep the negative physical tags.
   std::vector<int> physicalTags;
   bool atLeastOnePositive = false, atLeastOneNegative = false;
-  for(auto e : entities1D){
+  for(auto e : entities1D) {
     gmsh::model::getPhysicalGroupsForEntity(1, e, physicalTags);
-    if(physicalTags[0] >= 0){
+    if(physicalTags[0] >= 0) {
       atLeastOnePositive = true;
-    } else{
+    } else {
       atLeastOneNegative = true;
     }
   }
-  for(auto e : entities2D){
+  for(auto e : entities2D) {
     gmsh::model::getPhysicalGroupsForEntity(2, e, physicalTags);
-    if(physicalTags[0] >= 0){
+    if(physicalTags[0] >= 0) {
       atLeastOnePositive = true;
-    } else{
+    } else {
       atLeastOneNegative = true;
     }
   }
-  if(atLeastOnePositive && atLeastOneNegative){
+  if(atLeastOnePositive && atLeastOneNegative) {
     // If this happens then I'm very confused
-    feWarning("Some physical tags added to the MMG mesh are positive, whereas some are negative...");
+    feWarning(
+      "Some physical tags added to the MMG mesh are positive, whereas some are negative...");
     exit(-1);
   }
 
-  if(atLeastOneNegative){
+  if(atLeastOneNegative) {
     // All are negative : reverse the mesh
     feInfo("Physical tags added to the MMG mesh are negative but numbering is positive :"
-      " reversing the numbering to match the signs of the physical tags");
+           " reversing the numbering to match the signs of the physical tags");
     gmsh::model::mesh::reverse();
   }
   gmsh::write("afterPhysicalCheck.msh");
-  
+
   gmsh::write(metricOptions.adaptedMeshName);
 
   // Curve after a few aniso adaptations
-  if(curve){
+  if(curve) {
     gmsh::open(metricOptions.metricMeshNameForMMG);
     gmsh::model::getCurrent(metricOptions.modelForMetric);
 
@@ -249,39 +248,28 @@ void createCurvedMesh(feFunction *solExact, feMetaNumber *metaNumber, feSolution
     gmsh::model::setCurrent(metricOptions.modelForMesh);
 
     gmsh::model::getEntities(dimTags, 2);
-    if(dimTags.size() > 1){
+    if(dimTags.size() > 1) {
       feWarning("Gmsh model has more than one surface");
-    } else{
+    } else {
       faceTag = dimTags[0].second;
     }
 
     std::vector<int> viewTags;
     gmsh::view::getTags(viewTags);
     feInfo("There are %d views in the gmsh model : ", viewTags.size());
-    for(auto val : viewTags){
+    for(auto val : viewTags) {
       feInfo("View %d with index %d", val, gmsh::view::getIndex(val));
     }
 
     metric->setMetricViewTag(viewTags[0]);
 
     computePointsUsingScaledCrossFieldPlanarP2(
-      metricOptions.modelForMetric.c_str(),
-      metricOptions.modelForMesh.c_str(),
-      metric->getMetricViewTag(), 
-      faceTag,
-      pts,
-      errorSquaredCallback,
-      metricOptions.inside,
-      nullptr,
-      onlyGenerateVertices,
-      evaluateFieldFromRecoveryCallback,
-      (void *) recovery,
-      interpolateMetricP1WithDerivativesWrapper,
-      interpolateMetricP1Wrapper,
-      interpolateMetricAndDerivativeOnP2EdgeWrapper,
-      interpolateMetricP1Wrapper1D,
-      interpolateMetricAndDerivativeOnP2EdgeWrapper1D,
-      (void *) metric);
+      metricOptions.modelForMetric.c_str(), metricOptions.modelForMesh.c_str(),
+      metric->getMetricViewTag(), faceTag, pts, errorSquaredCallback, metricOptions.inside, nullptr,
+      onlyGenerateVertices, evaluateFieldFromRecoveryCallback, (void *)recovery,
+      interpolateMetricP1WithDerivativesWrapper, interpolateMetricP1Wrapper,
+      interpolateMetricAndDerivativeOnP2EdgeWrapper, interpolateMetricP1Wrapper1D,
+      interpolateMetricAndDerivativeOnP2EdgeWrapper1D, (void *)metric);
 
     gmsh::write(metricOptions.adaptedMeshName);
   }

@@ -26,12 +26,10 @@ void slepcFinalize()
 #endif
 }
 
-feStatus createEigenProblem(feEigenProblem *&eigenProblem,
-                            eigenSolverType type,
+feStatus createEigenProblem(feEigenProblem *&eigenProblem, eigenSolverType type,
                             std::vector<feSpace *> allFESpaces,
                             std::vector<feBilinearForm *> lhsForms,
-                            std::vector<feBilinearForm *> rhsForms,
-                            feMetaNumber *metaNumber,
+                            std::vector<feBilinearForm *> rhsForms, feMetaNumber *metaNumber,
                             feMesh *mesh, int argc, char **argv)
 {
   if(metaNumber->getNbUnknowns() == 0)
@@ -88,46 +86,45 @@ feStatus createEigenProblem(feEigenProblem *&eigenProblem,
   return FE_STATUS_OK;
 }
 
-feEigenProblem::feEigenProblem(int argc, char **argv,
-                 std::vector<feBilinearForm *> lhsForms,
-                 std::vector<feBilinearForm *> rhsForms,
-                 feMetaNumber *metaNumber,
-                 feMesh *mesh)
+feEigenProblem::feEigenProblem(int argc, char **argv, std::vector<feBilinearForm *> lhsForms,
+                               std::vector<feBilinearForm *> rhsForms, feMetaNumber *metaNumber,
+                               feMesh *mesh)
   : _argc(argc), _argv(argv), _metaNumber(metaNumber), _mesh(mesh)
 #if defined(HAVE_SLEPC)
-  , _nInc(metaNumber->getNbUnknowns()), _nDofs(metaNumber->getNbDOFs())
+    ,
+    _nInc(metaNumber->getNbUnknowns()), _nDofs(metaNumber->getNbDOFs())
 #endif
- {
+{
   _numAForms = lhsForms.size();
   _numBForms = rhsForms.size();
 
 #if defined(HAVE_OMP)
-    int nThreads = omp_get_max_threads();
+  int nThreads = omp_get_max_threads();
 #else
-    int nThreads = 1;
+  int nThreads = 1;
 #endif
 
-  // Copy the bilinear forms    
+  // Copy the bilinear forms
   for(int i = 0; i < nThreads; ++i) {
     for(feBilinearForm *f : lhsForms) {
-      #if defined(HAVE_OMP)
-          feBilinearForm *fCpy = new feBilinearForm(*f);
-          _AForms.push_back(fCpy);
-      #else
-          _AForms.push_back(f);
-      #endif
+#if defined(HAVE_OMP)
+      feBilinearForm *fCpy = new feBilinearForm(*f);
+      _AForms.push_back(fCpy);
+#else
+      _AForms.push_back(f);
+#endif
     }
     for(feBilinearForm *f : rhsForms) {
-      #if defined(HAVE_OMP)
-          feBilinearForm *fCpy = new feBilinearForm(*f);
-          _BForms.push_back(fCpy);
-      #else
-          _BForms.push_back(f);
-      #endif
+#if defined(HAVE_OMP)
+      feBilinearForm *fCpy = new feBilinearForm(*f);
+      _BForms.push_back(fCpy);
+#else
+      _BForms.push_back(f);
+#endif
     }
   }
 
- #if defined(HAVE_SLEPC)
+#if defined(HAVE_SLEPC)
   PetscErrorCode ierr;
 
   // Allocate matrices:
@@ -143,14 +140,22 @@ feEigenProblem::feEigenProblem(int argc, char **argv,
     nnz_B[i] = NNZ_B[i];
   }
 
-  ierr = MatCreate(PETSC_COMM_WORLD, &_A); CHKERRABORT(PETSC_COMM_WORLD, ierr);
-  ierr = MatCreate(PETSC_COMM_WORLD, &_B); CHKERRABORT(PETSC_COMM_WORLD, ierr);
-  ierr = MatSetSizes(_A, PETSC_DECIDE, PETSC_DECIDE, _nInc, _nInc); CHKERRABORT(PETSC_COMM_WORLD, ierr);
-  ierr = MatSetSizes(_B, PETSC_DECIDE, PETSC_DECIDE, _nInc, _nInc); CHKERRABORT(PETSC_COMM_WORLD, ierr);
-  ierr = MatSetFromOptions(_A); CHKERRABORT(PETSC_COMM_WORLD, ierr);
-  ierr = MatSetFromOptions(_B); CHKERRABORT(PETSC_COMM_WORLD, ierr);
-  ierr = MatSeqAIJSetPreallocation(_A, 0, nnz_A.data()); CHKERRABORT(PETSC_COMM_WORLD, ierr);
-  ierr = MatSeqAIJSetPreallocation(_B, 0, nnz_B.data()); CHKERRABORT(PETSC_COMM_WORLD, ierr);
+  ierr = MatCreate(PETSC_COMM_WORLD, &_A);
+  CHKERRABORT(PETSC_COMM_WORLD, ierr);
+  ierr = MatCreate(PETSC_COMM_WORLD, &_B);
+  CHKERRABORT(PETSC_COMM_WORLD, ierr);
+  ierr = MatSetSizes(_A, PETSC_DECIDE, PETSC_DECIDE, _nInc, _nInc);
+  CHKERRABORT(PETSC_COMM_WORLD, ierr);
+  ierr = MatSetSizes(_B, PETSC_DECIDE, PETSC_DECIDE, _nInc, _nInc);
+  CHKERRABORT(PETSC_COMM_WORLD, ierr);
+  ierr = MatSetFromOptions(_A);
+  CHKERRABORT(PETSC_COMM_WORLD, ierr);
+  ierr = MatSetFromOptions(_B);
+  CHKERRABORT(PETSC_COMM_WORLD, ierr);
+  ierr = MatSeqAIJSetPreallocation(_A, 0, nnz_A.data());
+  CHKERRABORT(PETSC_COMM_WORLD, ierr);
+  ierr = MatSeqAIJSetPreallocation(_B, 0, nnz_B.data());
+  CHKERRABORT(PETSC_COMM_WORLD, ierr);
   ierr = MatSetUp(_A);
   ierr = MatSetUp(_B);
 
@@ -159,7 +164,7 @@ feEigenProblem::feEigenProblem(int argc, char **argv,
   MatGetSize(_B, &Mb, &Nb);
   feInfoCond(FE_VERBOSE > 0, "Created an eigen problem with matrix A of size %d x %d", Ma, Na);
   feInfoCond(FE_VERBOSE > 0, "                         with matrix B of size %d x %d", Mb, Nb);
- #endif
+#endif
 };
 
 void feEigenProblem::viewLHSMatrix()
@@ -180,8 +185,10 @@ void feEigenProblem::setMatricesToZero()
 {
 #if defined(HAVE_SLEPC)
   PetscErrorCode ierr;
-  ierr = MatZeroEntries(_A); CHKERRABORT(PETSC_COMM_WORLD, ierr);
-  ierr = MatZeroEntries(_B); CHKERRABORT(PETSC_COMM_WORLD, ierr);
+  ierr = MatZeroEntries(_A);
+  CHKERRABORT(PETSC_COMM_WORLD, ierr);
+  ierr = MatZeroEntries(_B);
+  CHKERRABORT(PETSC_COMM_WORLD, ierr);
 #endif
 }
 
@@ -214,7 +221,7 @@ void feEigenProblem::assembleLHSMatrix(feSolution *sol)
 
 #if defined(HAVE_OMP)
 #pragma omp parallel for private(numThread, elm, eqt, f, niElm, njElm, sizeI, sizeJ, adrI, adrJ,   \
-                               Ae, ierr, values)
+                                 Ae, ierr, values)
 #endif
       for(int iElm = 0; iElm < nbElmC; ++iElm) {
 #if defined(HAVE_OMP)
@@ -264,14 +271,16 @@ void feEigenProblem::assembleLHSMatrix(feSolution *sol)
     } // nbColor
   } // NumberOfBilinearForms
 
-  ierr = MatAssemblyBegin(_A, MAT_FINAL_ASSEMBLY); CHKERRABORT(PETSC_COMM_WORLD, ierr);
-  ierr = MatAssemblyEnd(_A, MAT_FINAL_ASSEMBLY); CHKERRABORT(PETSC_COMM_WORLD, ierr);
+  ierr = MatAssemblyBegin(_A, MAT_FINAL_ASSEMBLY);
+  CHKERRABORT(PETSC_COMM_WORLD, ierr);
+  ierr = MatAssemblyEnd(_A, MAT_FINAL_ASSEMBLY);
+  CHKERRABORT(PETSC_COMM_WORLD, ierr);
 
   // Write matrix to a Matlab file
   PetscViewer viewer;
   PetscViewerASCIIOpen(PETSC_COMM_WORLD, "matrix_A.m", &viewer);
   PetscViewerPushFormat(viewer, PETSC_VIEWER_ASCII_MATLAB);
-  MatView(_A,viewer);
+  MatView(_A, viewer);
   PetscViewerPopFormat(viewer);
   PetscViewerDestroy(&viewer);
 #endif
@@ -306,7 +315,7 @@ void feEigenProblem::assembleRHSMatrix(feSolution *sol)
 
 #if defined(HAVE_OMP)
 #pragma omp parallel for private(numThread, elm, eqt, f, niElm, njElm, sizeI, sizeJ, adrI, adrJ,   \
-                               Ae, ierr, values)
+                                 Ae, ierr, values)
 #endif
       for(int iElm = 0; iElm < nbElmC; ++iElm) {
 #if defined(HAVE_OMP)
@@ -356,14 +365,16 @@ void feEigenProblem::assembleRHSMatrix(feSolution *sol)
     } // nbColor
   } // NumberOfBilinearForms
 
-  ierr = MatAssemblyBegin(_B, MAT_FINAL_ASSEMBLY); CHKERRABORT(PETSC_COMM_WORLD, ierr);
-  ierr = MatAssemblyEnd(_B, MAT_FINAL_ASSEMBLY); CHKERRABORT(PETSC_COMM_WORLD, ierr);
+  ierr = MatAssemblyBegin(_B, MAT_FINAL_ASSEMBLY);
+  CHKERRABORT(PETSC_COMM_WORLD, ierr);
+  ierr = MatAssemblyEnd(_B, MAT_FINAL_ASSEMBLY);
+  CHKERRABORT(PETSC_COMM_WORLD, ierr);
 
   // Write matrix to a Matlab file
   PetscViewer viewer;
   PetscViewerASCIIOpen(PETSC_COMM_WORLD, "matrix_B.m", &viewer);
   PetscViewerPushFormat(viewer, PETSC_VIEWER_ASCII_MATLAB);
-  MatView(_B,viewer);
+  MatView(_B, viewer);
   PetscViewerPopFormat(viewer);
   PetscViewerDestroy(&viewer);
 #endif
@@ -377,12 +388,12 @@ void feEigenProblem::assemble(feSolution *sol)
 
 void feEigenProblem::solve(feSolution *sol)
 {
-#if defined (HAVE_SLEPC)
+#if defined(HAVE_SLEPC)
 
-	sol->initializeUnknowns(_mesh, _metaNumber);
+  sol->initializeUnknowns(_mesh, _metaNumber);
   sol->initializeEssentialBC(_mesh, _metaNumber);
 
-	// Create eigensolver context
+  // Create eigensolver context
   EPSCreate(PETSC_COMM_WORLD, &_eps);
   // Set operators. In this case, it is a generalized eigenvalue problem.
   EPSSetOperators(_eps, _A, _B);
@@ -395,25 +406,27 @@ void feEigenProblem::solve(feSolution *sol)
   feInfo("                     Information from SLEPC                          ");
   feInfo("=====================================================================");
 
-	PetscInt nev, maxit, i, its, lits, nconv;
-	EPSSolve(_eps);
-	EPSGetIterationNumber(_eps,&its);
-  PetscPrintf(PETSC_COMM_WORLD," Number of iterations of the method: %" PetscInt_FMT "\n",its);
-  EPSGetST(_eps,&_st);
-  STGetKSP(_st,&_ksp);
-  KSPGetTotalIterations(_ksp,&lits);
-  PetscPrintf(PETSC_COMM_WORLD," Number of linear iterations of the method: %" PetscInt_FMT "\n",lits);
-  EPSGetType(_eps,&_type);
-  PetscPrintf(PETSC_COMM_WORLD," Solution method: %s\n\n",_type);
-  EPSGetDimensions(_eps,&nev,NULL,NULL);
-  PetscPrintf(PETSC_COMM_WORLD," Number of requested eigenvalues: %" PetscInt_FMT "\n",nev);
-  EPSGetTolerances(_eps,&_tol,&maxit);
-  PetscPrintf(PETSC_COMM_WORLD," Stopping condition: tol=%.4g, maxit=%" PetscInt_FMT "\n",(double)_tol,maxit);
+  PetscInt nev, maxit, i, its, lits, nconv;
+  EPSSolve(_eps);
+  EPSGetIterationNumber(_eps, &its);
+  PetscPrintf(PETSC_COMM_WORLD, " Number of iterations of the method: %" PetscInt_FMT "\n", its);
+  EPSGetST(_eps, &_st);
+  STGetKSP(_st, &_ksp);
+  KSPGetTotalIterations(_ksp, &lits);
+  PetscPrintf(PETSC_COMM_WORLD, " Number of linear iterations of the method: %" PetscInt_FMT "\n",
+              lits);
+  EPSGetType(_eps, &_type);
+  PetscPrintf(PETSC_COMM_WORLD, " Solution method: %s\n\n", _type);
+  EPSGetDimensions(_eps, &nev, NULL, NULL);
+  PetscPrintf(PETSC_COMM_WORLD, " Number of requested eigenvalues: %" PetscInt_FMT "\n", nev);
+  EPSGetTolerances(_eps, &_tol, &maxit);
+  PetscPrintf(PETSC_COMM_WORLD, " Stopping condition: tol=%.4g, maxit=%" PetscInt_FMT "\n",
+              (double)_tol, maxit);
 
-  EPSErrorView(_eps,EPS_ERROR_RELATIVE,NULL);
-  PetscViewerPushFormat(PETSC_VIEWER_STDOUT_WORLD,PETSC_VIEWER_ASCII_INFO_DETAIL);
-  EPSConvergedReasonView(_eps,PETSC_VIEWER_STDOUT_WORLD);
-  EPSErrorView(_eps,EPS_ERROR_RELATIVE,PETSC_VIEWER_STDOUT_WORLD);
+  EPSErrorView(_eps, EPS_ERROR_RELATIVE, NULL);
+  PetscViewerPushFormat(PETSC_VIEWER_STDOUT_WORLD, PETSC_VIEWER_ASCII_INFO_DETAIL);
+  EPSConvergedReasonView(_eps, PETSC_VIEWER_STDOUT_WORLD);
+  EPSErrorView(_eps, EPS_ERROR_RELATIVE, PETSC_VIEWER_STDOUT_WORLD);
   PetscViewerPopFormat(PETSC_VIEWER_STDOUT_WORLD);
 
   EPSGetConverged(_eps, &nconv);
@@ -426,13 +439,13 @@ void feEigenProblem::solve(feSolution *sol)
 
   // Store eigenpairs in the eigenProblem.
   _eigenPairs.clear();
-  for (i = 0; i < nconv; i++){
-  	_eigenPairs.push_back(eigenPair());
-  	MatCreateVecs(_A, NULL, &_eigenPairs[i].vecReal);
-  	MatCreateVecs(_A, NULL, &_eigenPairs[i].vecImag);
-  	EPSGetEigenpair(_eps, i, &eigr, &eigi, _eigenPairs[i].vecReal, _eigenPairs[i].vecImag);
-  	_eigenPairs[i].valReal = eigr;
-  	_eigenPairs[i].valImag = eigi;
+  for(i = 0; i < nconv; i++) {
+    _eigenPairs.push_back(eigenPair());
+    MatCreateVecs(_A, NULL, &_eigenPairs[i].vecReal);
+    MatCreateVecs(_A, NULL, &_eigenPairs[i].vecImag);
+    EPSGetEigenpair(_eps, i, &eigr, &eigi, _eigenPairs[i].vecReal, _eigenPairs[i].vecImag);
+    _eigenPairs[i].valReal = eigr;
+    _eigenPairs[i].valImag = eigi;
   }
 
   // Start with the eigenpair associated to the lowest eigenvalue
@@ -440,36 +453,38 @@ void feEigenProblem::solve(feSolution *sol)
 
   // Re-normalize by setting the max nodal value to +-1
   PetscScalar norm;
-  for (i = 0; i < nconv; i++){
-  	VecNorm(_eigenPairs[i].vecReal, NORM_INFINITY, &norm);
-  	VecScale(_eigenPairs[i].vecReal, 1./norm);
+  for(i = 0; i < nconv; i++) {
+    VecNorm(_eigenPairs[i].vecReal, NORM_INFINITY, &norm);
+    VecScale(_eigenPairs[i].vecReal, 1. / norm);
   }
 
 #endif
 }
 
 // Sets the eigenPairIndex-th eigenmode as the active solution in the feSolution.
-// For example, if U is the computed field, the eigenmode will be stored in the feSolution instead of U.
-void feEigenProblem::setEigenmodeAsActiveSolution(feSolution *sol, size_t eigenPairIndex, std::string fieldID)
+// For example, if U is the computed field, the eigenmode will be stored in the feSolution instead
+// of U.
+void feEigenProblem::setEigenmodeAsActiveSolution(feSolution *sol, size_t eigenPairIndex,
+                                                  std::string fieldID)
 {
 #if defined(HAVE_SLEPC)
-	std::vector<int> allUnknownDOF = _metaNumber->getUnknownDOF(fieldID);
+  std::vector<int> allUnknownDOF = _metaNumber->getUnknownDOF(fieldID);
 
-	PetscScalar *vecRealArray;
+  PetscScalar *vecRealArray;
   VecGetArray(_eigenPairs[eigenPairIndex].vecReal, &vecRealArray);
-	for(int dof : allUnknownDOF){
-		sol->setSolAtDOF(dof, vecRealArray[dof]);
-	}
-	VecRestoreArray(_eigenPairs[eigenPairIndex].vecReal, &vecRealArray);
+  for(int dof : allUnknownDOF) {
+    sol->setSolAtDOF(dof, vecRealArray[dof]);
+  }
+  VecRestoreArray(_eigenPairs[eigenPairIndex].vecReal, &vecRealArray);
 #endif
 }
 
 feEigenProblem::~feEigenProblem()
 {
 #if defined(HAVE_SLEPC)
-	for(size_t i = 0; i < _eigenPairs.size(); ++i){
-		VecDestroy(&_eigenPairs[i].vecReal);
-		VecDestroy(&_eigenPairs[i].vecImag);
-	}
+  for(size_t i = 0; i < _eigenPairs.size(); ++i) {
+    VecDestroy(&_eigenPairs[i].vecReal);
+    VecDestroy(&_eigenPairs[i].vecImag);
+  }
 #endif
 }

@@ -6,8 +6,7 @@
 #include "feNumber.h"
 #include "feSolution.h"
 
-typedef enum
-{
+typedef enum {
   // In the following, cnc refers to the geometric connectivity
   // over which the norm or integral is computed.
 
@@ -57,28 +56,25 @@ class feNorm;
 // This is the recommended way of creating a norm.
 // Call within feCheck( ... ) to safely exit if a problem arises.
 //
-// Although a type is necessary to create a norm, any norm object can call any 
+// Although a type is necessary to create a norm, any norm object can call any
 // norm or integral computation routine (just make sure adequate FE spaces are provided).
-// The type is used when norms are given to a tim integration scheme, and the generic 
+// The type is used when norms are given to a tim integration scheme, and the generic
 // 'compute' routine is called at each time step.
 //
 //           type: the norm of integral to compute, see enum above
-//         spaces: the FE spaces used to compute the norm. The spaces must be 
+//         spaces: the FE spaces used to compute the norm. The spaces must be
 //                 defined on the same connectivity (Physical Entity) and be compatible
 //                 with the required norm, e.g. an L2 error norm of a scalar field will
-//                 be computed using the first FE space only, but the norm of a vector 
+//                 be computed using the first FE space only, but the norm of a vector
 //                 field used the first n spaces, with n the space dimension.
 //            sol: ptr to the active solution
-// scalarSolution: ptr to a scalar field used in the definition of the norm or 
+// scalarSolution: ptr to a scalar field used in the definition of the norm or
 //                 integral to compute, see enum (typically the exact solution)
-// vectorSolution: ptr to a vector field used in the definition of the norm or 
+// vectorSolution: ptr to a vector field used in the definition of the norm or
 //                 integral to compute, see enum (typically the exact solution)
-feStatus createNorm(feNorm *&norm,
-  normType type,
-  const std::vector<feSpace*> &spaces,
-  feSolution *sol,
-  feFunction *scalarSolution = nullptr,
-  feVectorFunction *vectorSolution = nullptr);
+feStatus createNorm(feNorm *&norm, normType type, const std::vector<feSpace *> &spaces,
+                    feSolution *sol, feFunction *scalarSolution = nullptr,
+                    feVectorFunction *vectorSolution = nullptr);
 
 //
 // Computes a variety of norms and integrals over a geometric connectivity
@@ -103,8 +99,8 @@ protected:
   const std::vector<double> &_J;
 
   // Addressing vector and local solution for each FE space
-  std::vector<std::vector<feInt>> _adr;
-  std::vector<std::vector<double>> _localSol;
+  std::vector<std::vector<feInt> > _adr;
+  std::vector<std::vector<double> > _localSol;
   // Convenience vectors to evaluate a field at position _pos
   // and physical coordinates of an element
   std::vector<double> _pos;
@@ -117,11 +113,12 @@ protected:
 
 public:
   // Create a norm. To perform safety checks, create a norm using createNorm instead.
-  feNorm(normType type, const std::vector<feSpace*> &spaces, feSolution *sol, feFunction *scalarSolution = nullptr,
-         feVectorFunction *vectorSolution = nullptr);
+  feNorm(normType type, const std::vector<feSpace *> &spaces, feSolution *sol,
+         feFunction *scalarSolution = nullptr, feVectorFunction *vectorSolution = nullptr);
   // Create a norm providing only the geometric connectivity and a solution.
   // Used to compute integrals over user-defined field only (not on FE solution).
-  feNorm(feCncGeo *cnc, feFunction *scalarSolution = nullptr, feVectorFunction *vectorSolution = nullptr);
+  feNorm(feCncGeo *cnc, feFunction *scalarSolution = nullptr,
+         feVectorFunction *vectorSolution = nullptr);
   ~feNorm(){};
 
   // Compute and return the norm or integral matching the type 'type' (see enum above)

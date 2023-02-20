@@ -63,7 +63,7 @@ double Polynomial::integrate(feMesh *mesh, std::string cncGeoID, int iElm)
 {
   double res = 0.0;
 
-  std::vector<double> geoCoord; 
+  std::vector<double> geoCoord;
   mesh->getCoord(cncGeoID, iElm, geoCoord);
   feSpace *geoSpace = mesh->getGeometricSpace(cncGeoID);
 

@@ -11,44 +11,38 @@ feQuadrature::feQuadrature(int degree, geometryType geometry) : _degQuad(degree)
   _x1D.resize(_nQuad1D);
 
   if(geometry == geometryType::POINT) _dim = 0;
-  if(geometry == geometryType::LINE ) _dim = 1;
+  if(geometry == geometryType::LINE) _dim = 1;
   if(geometry == geometryType::TRI || geometry == geometryType::QUAD) _dim = 2;
-  if(geometry == geometryType::TET || geometry == geometryType::HEX ) _dim = 3;
+  if(geometry == geometryType::TET || geometry == geometryType::HEX) _dim = 3;
 
-  if(geometry == geometryType::POINT)
-  {
+  if(geometry == geometryType::POINT) {
     _w.resize(1);
     _w[0] = 1.;
     _xr.resize(1);
     _xr[0] = 0.;
     _yr.resize(1);
     _zr.resize(1);
-  }
-  else if(geometry == geometryType::LINE)
-  {
+  } else if(geometry == geometryType::LINE) {
     computeWeightAndRoot(_nQuad1D);
     _w = _w1D;
     _xr = _x1D;
     _yr.resize(_nQuad1D);
     _zr.resize(_nQuad1D);
-  }
-  else if(geometry == geometryType::TRI)
-  {
+  } else if(geometry == geometryType::TRI) {
     computeWeightAndRootTri(degree, 1);
   } else if(geometry == geometryType::QUAD) {
     computeWeightAndRootSquare();
   } else if(geometry == geometryType::HEX) {
     computeWeightAndRootCube();
-  } else if(geometry == geometryType::TET){
+  } else if(geometry == geometryType::TET) {
     computeWeightAndRootTetra();
-  } else{
+  } else {
     feErrorMsg(FE_STATUS_ERROR, "Could not create a quadrature rule for geometry \"%s\".",
-      toString(geometry).data());
+               toString(geometry).data());
     exit(-1);
   }
 
   _nQuad = _w.size();
-
 }
 
 void feQuadrature::computeWeightAndRoot(int nQuadLocal)
@@ -92,7 +86,7 @@ void feQuadrature::computePolynomialValueAndDerivative(double x, double *result)
 
 void feQuadrature::computeWeightAndRootTri(int degree, int method)
 {
-  if(degree <= 20){
+  if(degree <= 20) {
     // Get hardcoded quadrature points from Gmsh
     // Rule with negative weights only for order 20
     IntPt *rule = getGQTPts(degree);
@@ -103,15 +97,14 @@ void feQuadrature::computeWeightAndRootTri(int degree, int method)
     _yr.resize(nQuad);
     _zr.resize(nQuad);
 
-    for(int i = 0; i < nQuad; ++i){
+    for(int i = 0; i < nQuad; ++i) {
       _xr[i] = rule[i].pt[0];
       _yr[i] = rule[i].pt[1];
       _zr[i] = rule[i].pt[2];
       _w[i] = rule[i].weight;
     }
 
-  } else{
-
+  } else {
     if(method == 1) {
       // Tensor rule with n^2 points
       _w.resize(pow(_nQuad1D, _dim));
@@ -153,7 +146,6 @@ void feQuadrature::computeWeightAndRootTri(int degree, int method)
         }
       }
     }
-
   }
 }
 

@@ -266,7 +266,7 @@ void initializeDC3(feSolution *sol, feMetaNumber *metaNumber, feMesh *mesh, feSo
     f[1] = solBDF2->_fResidual[1][k];
     f[2] = solBDF2->_fResidual[2][k];
     tableDD(sub, f, table, delta);
-    d3u = 2.0 * delta[n]; 
+    d3u = 2.0 * delta[n];
     solDC3->_d[k] = d3u / 6.0 * k1 * (k1 + k2);
   }
   // Init FESOL
@@ -321,8 +321,9 @@ void initializeDC3F_centered(feSolution *sol, feMetaNumber *metaNumber, feMesh *
     f[0] = solDC2F->_fResidual[0][k];
     f[1] = solDC2F->_fResidual[1][k];
     f[2] = solDC2F->_fResidual[2][k];
-    tableDD(sub, f, table, delta);;
-    d3u = 2.0 * delta[n]; 
+    tableDD(sub, f, table, delta);
+    ;
+    d3u = 2.0 * delta[n];
     d2u = delta[0] + delta[n] * (-k2); // l'intervalle vaut k2 pas k1
     solDC3->_d[k] = d2u * k1 / 2.0 - d3u / 6.0 * k1 * k1;
   }
@@ -379,7 +380,7 @@ void initializeDC3F(feSolution *sol, feMetaNumber *metaNumber, feMesh *mesh,
     solDC3->_fResidual[1][k] = solDC2F->_fResidual[1][k];
     solDC3->_fResidual[2][k] = solDC2F->_fResidual[2][k];
     tableDD(sub, f, table, delta);
-    d3u =2.0 * delta[n]; 
+    d3u = 2.0 * delta[n];
     d2u = delta[0] + delta[n] * (k1 - k2);
     d2u = delta[0] + delta[n] * k1;
     solDC3->_d[k] = d2u * k1 / 2.0 - d3u / 6.0 * k1 * k1;

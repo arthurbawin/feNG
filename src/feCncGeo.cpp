@@ -9,13 +9,20 @@ extern int FE_VERBOSE;
 std::string toString(geometryType t)
 {
   switch(t) {
-    case geometryType::POINT: return "POINT";
-    case geometryType::LINE: return "LINE";
-    case geometryType::TRI: return "TRI";
-    case geometryType::QUAD: return "QUAD";
-    case geometryType::TET: return "TET";
-    case geometryType::HEX: return "HEX";
-    default: return "Unknown geometry";
+    case geometryType::POINT:
+      return "POINT";
+    case geometryType::LINE:
+      return "LINE";
+    case geometryType::TRI:
+      return "TRI";
+    case geometryType::QUAD:
+      return "QUAD";
+    case geometryType::TET:
+      return "TET";
+    case geometryType::HEX:
+      return "HEX";
+    default:
+      return "Unknown geometry";
   }
 }
 
@@ -44,32 +51,17 @@ std::string toString(geometricInterpolant t)
 }
 
 feCncGeo::feCncGeo(const int tag, const int dimension, const int nVerticesPerElement,
-  const int nElements, const int nEdgesPerElement, const std::string &ID, 
-  const geometryType geometry, 
-  const geometricInterpolant interpolant, 
-  feSpace *space,
-  std::vector<int> connecVertices,
-  std::vector<int> connecElem,
-  std::vector<int> connecEdges,
-  std::vector<int> connecFaces)
-  : _ID(ID)
-  , _tag(tag)
-  , _dim(dimension)
-  , _geometry(geometry)
-  , _interpolant(interpolant)
-  , _nVerticesPerElm(nVerticesPerElement)
-  , _nElements(nElements)
-  , _nEdgesPerElem(nEdgesPerElement)
-  , _connecVertices(connecVertices)
-  , _connecElem(connecElem)
-  , _connecEdges(connecEdges)
-  , _connecFaces(connecFaces)
-  , _geometricInterpolant(space)
+                   const int nElements, const int nEdgesPerElement, const std::string &ID,
+                   const geometryType geometry, const geometricInterpolant interpolant,
+                   feSpace *space, std::vector<int> connecVertices, std::vector<int> connecElem,
+                   std::vector<int> connecEdges, std::vector<int> connecFaces)
+  : _ID(ID), _tag(tag), _dim(dimension), _geometry(geometry), _interpolant(interpolant),
+    _nVerticesPerElm(nVerticesPerElement), _nElements(nElements), _nEdgesPerElem(nEdgesPerElement),
+    _connecVertices(connecVertices), _connecElem(connecElem), _connecEdges(connecEdges),
+    _connecFaces(connecFaces), _geometricInterpolant(space)
 {
-  if(connecElem.size() == 0)
-    _connecElem.resize(nElements);
-  if(connecEdges.size() == 0)
-    _connecEdges.resize(nElements * nEdgesPerElement);
+  if(connecElem.size() == 0) _connecElem.resize(nElements);
+  if(connecEdges.size() == 0) _connecEdges.resize(nElements * nEdgesPerElement);
 
   std::sort(connecVertices.begin(), connecVertices.end());
   _nVertices = std::unique(connecVertices.begin(), connecVertices.end()) - connecVertices.begin();
@@ -79,72 +71,86 @@ feCncGeo::feCncGeo(const int tag, const int dimension, const int nVerticesPerEle
 };
 
 int feCncGeo::getVertexConnectivity(const int iVertex) const
-{ 
-  #if defined(FENG_DEBUG)
+{
+#if defined(FENG_DEBUG)
   if(iVertex >= _connecVertices.size())
-    feErrorMsg(FE_STATUS_ERROR, "Out of bounds: accessing entry %d in _connecVertices"
-      " of size %u", iVertex, _connecVertices.size());
-  #endif
+    feErrorMsg(FE_STATUS_ERROR,
+               "Out of bounds: accessing entry %d in _connecVertices"
+               " of size %u",
+               iVertex, _connecVertices.size());
+#endif
   return _connecVertices[iVertex];
 }
 
 int feCncGeo::getVertexConnectivity(const int numElem, const int iVertex) const
-{ 
-  #if defined(FENG_DEBUG)
+{
+#if defined(FENG_DEBUG)
   if(_nVerticesPerElm * numElem + iVertex >= _connecVertices.size())
-    feErrorMsg(FE_STATUS_ERROR, "Out of bounds: accessing entry %d in _connecVertices"
-      " of size %u", _nVerticesPerElm * numElem + iVertex, _connecVertices.size());
-  #endif
+    feErrorMsg(FE_STATUS_ERROR,
+               "Out of bounds: accessing entry %d in _connecVertices"
+               " of size %u",
+               _nVerticesPerElm * numElem + iVertex, _connecVertices.size());
+#endif
   return _connecVertices[_nVerticesPerElm * numElem + iVertex];
 }
 
 void feCncGeo::setVertexConnectivity(const int numElem, const int iVertex, const int val)
-{ 
-  #if defined(FENG_DEBUG)
+{
+#if defined(FENG_DEBUG)
   if(_nVerticesPerElm * numElem + iVertex >= _connecVertices.size())
-    feErrorMsg(FE_STATUS_ERROR, "Out of bounds: accessing entry %d in _connecVertices"
-      " of size %u", _nVerticesPerElm * numElem + iVertex, _connecVertices.size());
-  #endif
+    feErrorMsg(FE_STATUS_ERROR,
+               "Out of bounds: accessing entry %d in _connecVertices"
+               " of size %u",
+               _nVerticesPerElm * numElem + iVertex, _connecVertices.size());
+#endif
   _connecVertices[_nVerticesPerElm * numElem + iVertex] = val;
 }
 
 int feCncGeo::getElementConnectivity(const int numElem) const
 {
-  #if defined(FENG_DEBUG)
+#if defined(FENG_DEBUG)
   if(numElem >= _connecElem.size())
-    feErrorMsg(FE_STATUS_ERROR, "Out of bounds: accessing entry %d in _connecElem"
-      " of size %u", numElem, _connecElem.size());
-  #endif
+    feErrorMsg(FE_STATUS_ERROR,
+               "Out of bounds: accessing entry %d in _connecElem"
+               " of size %u",
+               numElem, _connecElem.size());
+#endif
   return _connecElem[numElem];
 }
 
-void feCncGeo::setElementConnectivity(const int numElem, const int val) 
+void feCncGeo::setElementConnectivity(const int numElem, const int val)
 {
-  #if defined(FENG_DEBUG)
+#if defined(FENG_DEBUG)
   if(numElem >= _connecElem.size())
-    feErrorMsg(FE_STATUS_ERROR, "Out of bounds: accessing entry %d in _connecElem"
-      " of size %u", numElem, _connecElem.size());
-  #endif
+    feErrorMsg(FE_STATUS_ERROR,
+               "Out of bounds: accessing entry %d in _connecElem"
+               " of size %u",
+               numElem, _connecElem.size());
+#endif
   _connecElem[numElem] = val;
 }
 
 int feCncGeo::getEdgeConnectivity(const int numElem, const int iEdge) const
 {
-  #if defined(FENG_DEBUG)
+#if defined(FENG_DEBUG)
   if(_nEdgesPerElem * numElem + iEdge >= _connecEdges.size())
-    feErrorMsg(FE_STATUS_ERROR, "Out of bounds: accessing entry %d in _connecEdges"
-      " of size %u", _nEdgesPerElem * numElem + iEdge, _connecEdges.size());
-  #endif
+    feErrorMsg(FE_STATUS_ERROR,
+               "Out of bounds: accessing entry %d in _connecEdges"
+               " of size %u",
+               _nEdgesPerElem * numElem + iEdge, _connecEdges.size());
+#endif
   return _connecEdges[_nEdgesPerElem * numElem + iEdge];
 }
 
-void feCncGeo::setEdgeConnectivity(const int numElem, const int iEdge, const int val) 
+void feCncGeo::setEdgeConnectivity(const int numElem, const int iEdge, const int val)
 {
-  #if defined(FENG_DEBUG)
+#if defined(FENG_DEBUG)
   if(_nEdgesPerElem * numElem + iEdge >= _connecEdges.size())
-    feErrorMsg(FE_STATUS_ERROR, "Out of bounds: accessing entry %d in _connecEdges"
-      " of size %u", _nEdgesPerElem * numElem + iEdge, _connecEdges.size());
-  #endif
+    feErrorMsg(FE_STATUS_ERROR,
+               "Out of bounds: accessing entry %d in _connecEdges"
+               " of size %u",
+               _nEdgesPerElem * numElem + iEdge, _connecEdges.size());
+#endif
   _connecEdges[_nEdgesPerElem * numElem + iEdge] = val;
 }
 
@@ -160,8 +166,7 @@ feStatus feCncGeo::computeJacobians()
 
   std::vector<double> geoCoord(3 * _nVerticesPerElm);
 
-  switch(_dim){
-
+  switch(_dim) {
     case 0:
       for(int iElm = 0; iElm < _nElements; ++iElm) {
         for(int k = 0; k < nQuad; ++k) {
@@ -170,8 +175,7 @@ feStatus feCncGeo::computeJacobians()
       }
       break;
 
-    case 1:
-    {
+    case 1: {
       std::vector<double> dxdr(3, 0.0);
 
       for(int iElm = 0; iElm < _nElements; ++iElm) {
@@ -184,8 +188,7 @@ feStatus feCncGeo::computeJacobians()
       break;
     }
 
-    case 2:
-    {
+    case 2: {
       std::vector<double> dxdr(3, 0.0); // [dx/dr, dy/dr, dz/dr]
       std::vector<double> dxds(3, 0.0); // [dx/ds, dy/ds, dz/ds]
       for(int iElm = 0; iElm < _nElements; ++iElm) {
@@ -196,46 +199,55 @@ feStatus feCncGeo::computeJacobians()
           _J[nQuad * iElm + k] = dxdr[0] * dxds[1] - dxdr[1] * dxds[0];
 
           if(_J[nQuad * iElm + k] <= 0) {
-            return feErrorMsg(FE_STATUS_ERROR, 
-              "Negative or zero jacobian = %+-12.12e on elm %d with coordinates (%+-1.4e - %+-1.4e) - (%+-1.4e - %+-1.4e) - (%+-1.4e - %+-1.4e)\n",
-              _J[nQuad * iElm + k], iElm,
-              geoCoord[3*0+0], geoCoord[3*0+1], 
-              geoCoord[3*1+0], geoCoord[3*1+1], 
-              geoCoord[3*2+0], geoCoord[3*2+1]);
+            return feErrorMsg(FE_STATUS_ERROR,
+                              "Negative or zero jacobian = %+-12.12e on elm %d with coordinates "
+                              "(%+-1.4e - %+-1.4e) - (%+-1.4e - %+-1.4e) - (%+-1.4e - %+-1.4e)\n",
+                              _J[nQuad * iElm + k], iElm, geoCoord[3 * 0 + 0], geoCoord[3 * 0 + 1],
+                              geoCoord[3 * 1 + 0], geoCoord[3 * 1 + 1], geoCoord[3 * 2 + 0],
+                              geoCoord[3 * 2 + 1]);
           }
-
         }
       }
       break;
     }
 
     default:
-      return feErrorMsg(FE_STATUS_ERROR,"Element jacobian not implemented "
-        "for elements with dim = %d.\n", _dim);
+      return feErrorMsg(FE_STATUS_ERROR,
+                        "Element jacobian not implemented "
+                        "for elements with dim = %d.\n",
+                        _dim);
   }
 
   return FE_STATUS_OK;
 }
 
 void feCncGeo::computeElementTransformation(std::vector<double> &elementCoord, const int iQuadNode,
-  const double jac, ElementTransformation &T)
+                                            const double jac, ElementTransformation &T)
 {
   T.jac = jac;
-  if(_dim == 0){
+  if(_dim == 0) {
     T.drdx[0] = 1.;
-  } else if(_dim == 1){
-    _geometricInterpolant->interpolateVectorFieldAtQuadNode_rDerivative(elementCoord, iQuadNode, T.dxdr);
+  } else if(_dim == 1) {
+    _geometricInterpolant->interpolateVectorFieldAtQuadNode_rDerivative(elementCoord, iQuadNode,
+                                                                        T.dxdr);
     T.drdx[0] = 1. / T.dxdr[0];
-  } else if(_dim == 2){
-    _geometricInterpolant->interpolateVectorFieldAtQuadNode_rDerivative(elementCoord, iQuadNode, T.dxdr);
-    _geometricInterpolant->interpolateVectorFieldAtQuadNode_sDerivative(elementCoord, iQuadNode, T.dxds);
-    T.drdx[0] =  T.dxds[1] / jac; T.drdx[1] = -T.dxdr[1] / jac;
-    T.drdy[0] = -T.dxds[0] / jac; T.drdy[1] =  T.dxdr[0] / jac;
-  } else if(_dim == 3){
-    _geometricInterpolant->interpolateVectorFieldAtQuadNode_rDerivative(elementCoord, iQuadNode, T.dxdr);
-    _geometricInterpolant->interpolateVectorFieldAtQuadNode_sDerivative(elementCoord, iQuadNode, T.dxds);
-    _geometricInterpolant->interpolateVectorFieldAtQuadNode_tDerivative(elementCoord, iQuadNode, T.dxdt);
-     /* Write inverse of 3x3 matrix (-: */
+  } else if(_dim == 2) {
+    _geometricInterpolant->interpolateVectorFieldAtQuadNode_rDerivative(elementCoord, iQuadNode,
+                                                                        T.dxdr);
+    _geometricInterpolant->interpolateVectorFieldAtQuadNode_sDerivative(elementCoord, iQuadNode,
+                                                                        T.dxds);
+    T.drdx[0] = T.dxds[1] / jac;
+    T.drdx[1] = -T.dxdr[1] / jac;
+    T.drdy[0] = -T.dxds[0] / jac;
+    T.drdy[1] = T.dxdr[0] / jac;
+  } else if(_dim == 3) {
+    _geometricInterpolant->interpolateVectorFieldAtQuadNode_rDerivative(elementCoord, iQuadNode,
+                                                                        T.dxdr);
+    _geometricInterpolant->interpolateVectorFieldAtQuadNode_sDerivative(elementCoord, iQuadNode,
+                                                                        T.dxds);
+    _geometricInterpolant->interpolateVectorFieldAtQuadNode_tDerivative(elementCoord, iQuadNode,
+                                                                        T.dxdt);
+    /* Write inverse of 3x3 matrix (-: */
     feErrorMsg(FE_STATUS_ERROR, "Inverse of element transformation not implemented in 3D");
     exit(-1);
   }
@@ -273,7 +285,7 @@ void feCncGeo::colorElements(int coloringAlgorithm)
 {
   feInfoCond(FE_VERBOSE > 0, "\t\tColoring connectivity %s...", _ID.c_str());
   // Create the node patch :
-  int size= *std::max_element(_connecVertices.begin(), _connecVertices.end())+1;
+  int size = *std::max_element(_connecVertices.begin(), _connecVertices.end()) + 1;
   _listElmPerNode.resize(size);
   _nbElmPerNode.resize(size);
   for(int i = 0; i < _nElements; ++i) {
@@ -328,59 +340,59 @@ void feCncGeo::colorElements(int coloringAlgorithm)
       break;
     }
 
-      case 2:  //Returning a homogeneous distribution of elements per color
-      {
-        // Create the Elements patch : 
-        int sizeElm = *std::max_element(_connecElem.begin(), _connecElem.end())+1;
-        _nbElmPerElm.resize(sizeElm);
-        _listElmPerElm.resize(sizeElm);
-        std::vector< std::set<int> > listElmPerElm(sizeElm);
-        for(int i = 0; i < _nElements; ++i) {
-          int elm = _connecElem[i];
-          for(int j = 0; j < _nVerticesPerElm; ++j) {
-            int nds = _connecVertices[i * _nVerticesPerElm + j];
-            for(int ngb : _listElmPerNode[nds]){
-              if(ngb != i){
-                listElmPerElm[elm].insert(ngb);
-              }
+    case 2: // Returning a homogeneous distribution of elements per color
+    {
+      // Create the Elements patch :
+      int sizeElm = *std::max_element(_connecElem.begin(), _connecElem.end()) + 1;
+      _nbElmPerElm.resize(sizeElm);
+      _listElmPerElm.resize(sizeElm);
+      std::vector<std::set<int> > listElmPerElm(sizeElm);
+      for(int i = 0; i < _nElements; ++i) {
+        int elm = _connecElem[i];
+        for(int j = 0; j < _nVerticesPerElm; ++j) {
+          int nds = _connecVertices[i * _nVerticesPerElm + j];
+          for(int ngb : _listElmPerNode[nds]) {
+            if(ngb != i) {
+              listElmPerElm[elm].insert(ngb);
             }
           }
         }
-        // Convert sets to vectors
-        for(int i = 0; i < _nElements; ++i) {
-          int elm = _connecElem[i];
-          std::vector<int> v(listElmPerElm[elm].begin(), listElmPerElm[elm].end());
-          _nbElmPerElm[elm] = v.size();
-          _listElmPerElm[elm] = v;
-        }
-
-
-        //Finding the Elm with the most neighbours to asign nb Colors
-        _nbColor=*std::max_element(_nbElmPerElm.begin(), _nbElmPerElm.end())+1;
-  
-        _elmToColor.resize(_nElements, -1);
-        _nbElmPerColor.resize(_nbColor);
-        _listElmPerColor.resize(_nbColor, std::vector<int>(0, 0));
-        for(int iElm = 0; iElm < _nElements; iElm++) {
-          if(_elmToColor[iElm] == -1) {
-            int elm = _connecElem[iElm];
-            // feInfo("%d",elm);
-            std::vector<int> iPatchElm = _listElmPerElm[elm];
-            std::vector<bool> availableColor(_nbColor, true);
-            for(int i = 0; i < _nbElmPerElm[elm]; i++) {
-              if(_elmToColor[iPatchElm[i]] != -1 && availableColor[_elmToColor[iPatchElm[i]]] == true) {
-                availableColor[_elmToColor[iPatchElm[i]]] = false;
-              }
-            }
-
-            int activColor = colorChoice(availableColor, _nbElmPerColor, _nbColor,_listElmPerColor);
-            _elmToColor[iElm] = activColor; 
-            _nbElmPerColor[activColor] =_nbElmPerColor[activColor] + 1;
-            _listElmPerColor[activColor].push_back(iElm);
-          }
-        }
-        break;
       }
+      // Convert sets to vectors
+      for(int i = 0; i < _nElements; ++i) {
+        int elm = _connecElem[i];
+        std::vector<int> v(listElmPerElm[elm].begin(), listElmPerElm[elm].end());
+        _nbElmPerElm[elm] = v.size();
+        _listElmPerElm[elm] = v;
+      }
+
+      // Finding the Elm with the most neighbours to asign nb Colors
+      _nbColor = *std::max_element(_nbElmPerElm.begin(), _nbElmPerElm.end()) + 1;
+
+      _elmToColor.resize(_nElements, -1);
+      _nbElmPerColor.resize(_nbColor);
+      _listElmPerColor.resize(_nbColor, std::vector<int>(0, 0));
+      for(int iElm = 0; iElm < _nElements; iElm++) {
+        if(_elmToColor[iElm] == -1) {
+          int elm = _connecElem[iElm];
+          // feInfo("%d",elm);
+          std::vector<int> iPatchElm = _listElmPerElm[elm];
+          std::vector<bool> availableColor(_nbColor, true);
+          for(int i = 0; i < _nbElmPerElm[elm]; i++) {
+            if(_elmToColor[iPatchElm[i]] != -1 &&
+               availableColor[_elmToColor[iPatchElm[i]]] == true) {
+              availableColor[_elmToColor[iPatchElm[i]]] = false;
+            }
+          }
+
+          int activColor = colorChoice(availableColor, _nbElmPerColor, _nbColor, _listElmPerColor);
+          _elmToColor[iElm] = activColor;
+          _nbElmPerColor[activColor] = _nbElmPerColor[activColor] + 1;
+          _listElmPerColor[activColor].push_back(iElm);
+        }
+      }
+      break;
+    }
 
     case 3: // Idem 2 but not using Patch Elm
     {

@@ -46,7 +46,7 @@ feStatus createTimeIntegrator(TimeIntegrator *&solver, timeIntegratorScheme sche
 }
 
 feStatus solveQNBDF(feSolutionContainer *solDot, feTolerances tol, feMetaNumber *metaNumber,
-                feLinearSystem *linearSystem, feSolution *sol, feMesh *mesh)
+                    feLinearSystem *linearSystem, feSolution *sol, feMesh *mesh)
 {
   feInfoCond(FE_VERBOSE > 0, "\t\t\tNONLINEAR SOLVER:");
   bool stop = false;
@@ -58,7 +58,6 @@ feStatus solveQNBDF(feSolutionContainer *solDot, feTolerances tol, feMetaNumber 
 
   // Newton-Rapshon iteration
   while(!stop) {
-
     // Reset, assemble and solve the linear system J(u) * du = -NL(u)
     linearSystem->setToZero();
     solDot->computeSolTimeDerivative(sol, linearSystem);
@@ -68,35 +67,41 @@ feStatus solveQNBDF(feSolutionContainer *solDot, feTolerances tol, feMetaNumber 
 
     bool successSolve = linearSystem->solve(&normDx, &normResidual, &normAxb, &linearSystemIter);
 
-    if(!successSolve){
-      feWarning("Iter %2d : ||J*du - NL(u)|| = %10.10e (%4d iter.) \t ||du|| = %10.10e \t ||NL(u)|| = %10.10e (%s)",
-      ++iter, normAxb, linearSystemIter, normDx, normResidual, linearSystem->getRecomputeStatus() ? "true" : "false");
+    if(!successSolve) {
+      feWarning("Iter %2d : ||J*du - NL(u)|| = %10.10e (%4d iter.) \t ||du|| = %10.10e \t "
+                "||NL(u)|| = %10.10e (%s)",
+                ++iter, normAxb, linearSystemIter, normDx, normResidual,
+                linearSystem->getRecomputeStatus() ? "true" : "false");
       return feErrorMsg(FE_STATUS_ERROR, "Could not solve linear system at iter %2d )-:", iter);
     }
 
     // if(iter == 0 && status == 1) _normR0 = normResidual;
-    // if(iter == 0 && status == 0) _normFirstR0 = normResidual; // in case we have to recalculate the matrix and update the R0
-    
+    // if(iter == 0 && status == 0) _normFirstR0 = normResidual; // in case we have to recalculate
+    // the matrix and update the R0
+
     linearSystem->correctSolution(sol);
     solDot->setSol(0, sol->getSolutionCopy());
 
     feInfoCond(FE_VERBOSE > 0,
-      "\t\t\t\tIter %2d : ||J*du - NL(u)|| = %10.10e (%4d iter.) \t ||du|| = %10.10e \t ||NL(u)|| = %10.10e (%s)",
-      ++iter, normAxb, linearSystemIter, normDx, normResidual, linearSystem->getRecomputeStatus() ? "true" : "false");
+               "\t\t\t\tIter %2d : ||J*du - NL(u)|| = %10.10e (%4d iter.) \t ||du|| = %10.10e \t "
+               "||NL(u)|| = %10.10e (%s)",
+               ++iter, normAxb, linearSystemIter, normDx, normResidual,
+               linearSystem->getRecomputeStatus() ? "true" : "false");
 
     // stop = (normDx <= tol.tolDx && normResidual <= tol.tolResidual) || iter > tol.maxIter;
     stop = (normDx <= tol.tolDx) || (iter > tol.maxIter);
 
-    if(normResidual <= tol.tolResidual){
+    if(normResidual <= tol.tolResidual) {
       stop = true;
     }
 
-    // if((iter > 2 || prev_status == 0) && ((normResidual / _normR0) < 0.001) && normDx < 0.1 && nIterSinceMatrixComputation < 8) {
+    // if((iter > 2 || prev_status == 0) && ((normResidual / _normR0) < 0.001) && normDx < 0.1 &&
+    // nIterSinceMatrixComputation < 8) {
     //   linearSystem->setRecomputeStatus(false);
     // } else if(iter == 1 && prev_status == 0){
     //     if(normResidual < 0.1){
     //       // Try with the old jacobian matrix for the first iteration
-    //       linearSystem->setRecomputeStatus(false); 
+    //       linearSystem->setRecomputeStatus(false);
     //     } else{
     //       linearSystem->setRecomputeStatus(true);
     //     }
@@ -112,25 +117,24 @@ feStatus solveQNBDF(feSolutionContainer *solDot, feTolerances tol, feMetaNumber 
   }
 
   if(iter > tol.maxIter) {
-    return feErrorMsg(FE_STATUS_ERROR, "Nonlinear solver did not converge at iter %2d : ||J*du - NL(u)|| = %10.10e  (%4d iter.) \t ||du|| = "
-              "%10.10e \t ||NL(u)|| = %10.10e",
-              iter, normAxb, linearSystemIter, normDx, normResidual);
+    return feErrorMsg(FE_STATUS_ERROR,
+                      "Nonlinear solver did not converge at iter %2d : ||J*du - NL(u)|| = %10.10e  "
+                      "(%4d iter.) \t ||du|| = "
+                      "%10.10e \t ||NL(u)|| = %10.10e",
+                      iter, normAxb, linearSystemIter, normDx, normResidual);
   } else {
-    feInfoCond(FE_VERBOSE > 0,
-               "\t\t\t\tConverged in %2d Newton iterations : ||du|| = %10.10e \t ||NL(u)|| = %10.10e", iter,
-               normDx, normResidual);
+    feInfoCond(
+      FE_VERBOSE > 0,
+      "\t\t\t\tConverged in %2d Newton iterations : ||du|| = %10.10e \t ||NL(u)|| = %10.10e", iter,
+      normDx, normResidual);
   }
   return FE_STATUS_OK;
 }
 
-StationarySolver::StationarySolver(
-  feTolerances tol,
-  feMetaNumber *metaNumber,
-  feLinearSystem *linearSystem,
-  feSolution *sol,
-  std::vector<feNorm *> &norms,
-  feMesh *mesh,
-  feExportData exportData)
+StationarySolver::StationarySolver(feTolerances tol, feMetaNumber *metaNumber,
+                                   feLinearSystem *linearSystem, feSolution *sol,
+                                   std::vector<feNorm *> &norms, feMesh *mesh,
+                                   feExportData exportData)
   : TimeIntegrator(tol, metaNumber, linearSystem, sol, norms, mesh, exportData)
 {
   // Initialize the solution container with a single solution
@@ -142,10 +146,7 @@ StationarySolver::StationarySolver(
   for(auto &n : _normL2) n.resize(1, 0.);
 }
 
-feStatus StationarySolver::makeStep()
-{
-  return this->makeSteps(0);
-}
+feStatus StationarySolver::makeStep() { return this->makeSteps(0); }
 
 feStatus StationarySolver::makeSteps(int nSteps)
 {
@@ -156,12 +157,12 @@ feStatus StationarySolver::makeSteps(int nSteps)
   feInfoCond(FE_VERBOSE > 0, "STATIONARY SOLVER:");
   feInfoCond(FE_VERBOSE > 0, "\t\tSolving for steady state solution");
   feInfoCond(FE_VERBOSE > 0, "\t\tRecompute jacobian matrix at each Newton iteration: %s",
-    _linearSystem->getRecomputeStatus() ? "true" : "false");
+             _linearSystem->getRecomputeStatus() ? "true" : "false");
 
   // Solve
   feStatus s = solveQNBDF(_solutionContainer, _tol, _metaNumber, _linearSystem, _sol, _mesh);
 
-  if(s != FE_STATUS_OK){
+  if(s != FE_STATUS_OK) {
     return s;
   }
 
@@ -191,7 +192,7 @@ feStatus StationarySolver::makeSteps(int nSteps)
   //       _norms[k]->computeIntFluxNy(_metaNumber, _sol, _mesh);
   //       _normL2[k][0] = _norms[k]->getNorm();
   //     } else {
-  //       _norms[k]->computeL2Norm(_metaNumber, _sol, _mesh); 
+  //       _norms[k]->computeL2Norm(_metaNumber, _sol, _mesh);
   //       _normL2[k][0] = _norms[k]->getNorm();
   //     }
   //   }
@@ -222,20 +223,12 @@ void fePstClc(feSolution *sol, feLinearSystem *linearSystem, feSolutionContainer
 double _f = 0.20; //_f =0.2 means dt1/dt2 = 4  _f=0.25 means dt1/dt2 = 3
 bool K1K2 = false;
 
-BDF2Solver::BDF2Solver(
-  feTolerances tol,
-  feMetaNumber *metaNumber,
-  feLinearSystem *linearSystem,
-  feSolution *sol,
-  std::vector<feNorm *> &norms,
-  feMesh *mesh,
-  feExportData exportData,
-  double t0,
-  double tEnd,
-  int nTimeSteps,
-  std::string CodeIni)
-  : TimeIntegrator(tol, metaNumber, linearSystem, sol, norms, 
-    mesh, exportData, t0, tEnd, nTimeSteps, CodeIni)
+BDF2Solver::BDF2Solver(feTolerances tol, feMetaNumber *metaNumber, feLinearSystem *linearSystem,
+                       feSolution *sol, std::vector<feNorm *> &norms, feMesh *mesh,
+                       feExportData exportData, double t0, double tEnd, int nTimeSteps,
+                       std::string CodeIni)
+  : TimeIntegrator(tol, metaNumber, linearSystem, sol, norms, mesh, exportData, t0, tEnd,
+                   nTimeSteps, CodeIni)
 {
   // Initialize the solution container with 3 solutions
   int nSol = 3;
@@ -261,8 +254,10 @@ feStatus BDF2Solver::makeSteps(int nSteps)
       printf(" ----------------------------- \n");
       printf("\n");
       double _t_ini = _t0 + 1 * _dt;
-      std::vector<feNorm *> norms2 = {_norms[0], _norms[0]}; // Il faut un vecteur norme de taille 2 sinon pb //!!!A changer!!!
-      DC2FSolver solver(_tol, _metaNumber, _linearSystem, _sol, norms2, _mesh, _exportData, _t0, _t_ini, 1);
+      std::vector<feNorm *> norms2 = {
+        _norms[0], _norms[0]}; // Il faut un vecteur norme de taille 2 sinon pb //!!!A changer!!!
+      DC2FSolver solver(_tol, _metaNumber, _linearSystem, _sol, norms2, _mesh, _exportData, _t0,
+                        _t_ini, 1);
       solver.makeSteps(1);
       feSolutionContainer *_solutionContainerDC2F = solver.getSolutionContainer();
       _solutionContainer->rotate(_dt);
@@ -296,7 +291,7 @@ feStatus BDF2Solver::makeSteps(int nSteps)
   }
 
   std::vector<double> tK1K2(nSteps + 1, 0.0);
-  if(K1K2){
+  if(K1K2) {
     tK1K2.resize(nSteps + 1, 0.0);
     for(int i = 0; i < nSteps + 1; ++i) tK1K2[i] = _t0 + i * _dt;
     for(int i = 0; i < nSteps; i += 2)
@@ -307,7 +302,7 @@ feStatus BDF2Solver::makeSteps(int nSteps)
     if(i == 0) {
       _linearSystem->setRecomputeStatus(true);
       if(_CodeIni == "BDF1/DCF") {
-      //   _solutionContainer->setSol(1, _solutionContainer->getSolution(2));
+        //   _solutionContainer->setSol(1, _solutionContainer->getSolution(2));
         printf("\n");
         printf(" ----------------------------- \n");
         printf("Continue with BDF2 \n");
@@ -374,19 +369,11 @@ feStatus BDF2Solver::makeSteps(int nSteps)
   return FE_STATUS_OK;
 }
 
-BDF1Solver::BDF1Solver(
-  feTolerances tol,
-  feMetaNumber *metaNumber,
-  feLinearSystem *linearSystem,
-  feSolution *sol,
-  std::vector<feNorm *> &norms,
-  feMesh *mesh,
-  feExportData exportData,
-  double t0,
-  double tEnd,
-  int nTimeSteps)
-  : TimeIntegrator(tol, metaNumber, linearSystem, sol, norms,
-    mesh, exportData, t0, tEnd, nTimeSteps)
+BDF1Solver::BDF1Solver(feTolerances tol, feMetaNumber *metaNumber, feLinearSystem *linearSystem,
+                       feSolution *sol, std::vector<feNorm *> &norms, feMesh *mesh,
+                       feExportData exportData, double t0, double tEnd, int nTimeSteps)
+  : TimeIntegrator(tol, metaNumber, linearSystem, sol, norms, mesh, exportData, t0, tEnd,
+                   nTimeSteps)
 {
   // Initialize the solution container with 2 solutions
   int nSol = 2;
@@ -397,15 +384,16 @@ BDF1Solver::BDF1Solver(
   for(auto &n : _normL2) n.resize(_nTimeSteps, 0.);
 
   feInfoCond(FE_VERBOSE > 0, "BDF1 SOLVER:");
-  feInfoCond(FE_VERBOSE > 0, "\t\t\t Time integration from t0 = %1.3e to tEnd = %1.3e in %d constant steps",
-    _t0, _tEnd, _nTimeSteps);
+  feInfoCond(FE_VERBOSE > 0,
+             "\t\t\t Time integration from t0 = %1.3e to tEnd = %1.3e in %d constant steps", _t0,
+             _tEnd, _nTimeSteps);
 }
 
 // Advance time integration by a single step
 feStatus BDF1Solver::makeStep()
 {
   feInfoCond(FE_VERBOSE > 0, "\t\tAdvancing 1 step from t = %1.3e to t = %1.3e (dt = %1.3e)",
-    _tCurrent, _tCurrent + _dt, _dt);
+             _tCurrent, _tCurrent + _dt, _dt);
 
   if(_currentStep == 0) {
     // Initialization and first step
@@ -416,19 +404,20 @@ feStatus BDF1Solver::makeStep()
 
   _solutionContainer->rotate(_dt);
   initializeBDF1(_sol, _metaNumber, _mesh, dynamic_cast<feSolutionBDF1 *>(_solutionContainer));
-  // printf("Étape 1 - recomputeMatrix = %s : Solution BDF1 - t = %6.6e\n", _linearSystem->getRecomputeStatus() ? "true" : "false", _sol->getCurrentTime());
+  // printf("Étape 1 - recomputeMatrix = %s : Solution BDF1 - t = %6.6e\n",
+  // _linearSystem->getRecomputeStatus() ? "true" : "false", _sol->getCurrentTime());
   feStatus s = solveQNBDF(_solutionContainer, _tol, _metaNumber, _linearSystem, _sol, _mesh);
-  if(s != FE_STATUS_OK){
+  if(s != FE_STATUS_OK) {
     return s;
   }
-  
+
   fePstClc(_sol, _linearSystem, _solutionContainer);
   _sol->setSolFromContainer(_solutionContainer);
 
   _tCurrent += _dt;
   ++_currentStep;
 
-  if(_exportData.exporter != nullptr){
+  if(_exportData.exporter != nullptr) {
     std::string fileName = _exportData.fileNameRoot + std::to_string(_currentStep) + ".vtk";
     feCheck(_exportData.exporter->writeStep(fileName));
   }
@@ -464,7 +453,6 @@ feStatus BDF1Solver::makeSteps(int nSteps)
   for(int i = 0; i < nSteps + 1; ++i) tK1K2[i] = _t0 + i * _dt;
   for(int i = 0; i < nSteps; i += 2)
     if(i + 2 < nSteps + 1) tK1K2[i + 1] = tK1K2[i] + _f * (tK1K2[i + 2] - tK1K2[i]);
-  
 
   for(int i = 0; i < nSteps; ++i) {
     _solutionContainer->rotate(_dt);
@@ -516,7 +504,7 @@ feStatus BDF1Solver::makeSteps(int nSteps)
 
     _tCurrent += _dt;
     ++_currentStep;
-    if(K1K2)_dt = tK1K2[i + 1] - tK1K2[i]; 
+    if(K1K2) _dt = tK1K2[i + 1] - tK1K2[i];
     printf("Current step = %d : t = %f\n", _currentStep, _tCurrent);
 
     if(_exportData.exporter != nullptr && (_currentStep % _exportData.exportEveryNSteps) == 0) {
@@ -547,7 +535,8 @@ DC2FSolver::DC2FSolver(feTolerances tol, feMetaNumber *metaNumber, feLinearSyste
   _normL2.resize(norms.size());
   for(auto &n : _normL2) n.resize(_nTimeSteps, 0.);
 
-  printf("Initializing DC2F solver with BDF1 : integrating from t0 = %f to tEnd = %f in %d steps\n",_t0, _tEnd, _nTimeSteps);
+  printf("Initializing DC2F solver with BDF1 : integrating from t0 = %f to tEnd = %f in %d steps\n",
+         _t0, _tEnd, _nTimeSteps);
 }
 
 feStatus DC2FSolver::makeSteps(int nSteps)
@@ -557,7 +546,7 @@ feStatus DC2FSolver::makeSteps(int nSteps)
 
   if(_currentStep == 0) {
     _linearSystem->setRecomputeStatus(true);
-    
+
     _solutionContainerBDF1->initialize(_sol, _mesh, _metaNumber);
     _sol->setSolFromContainer(_solutionContainerBDF1);
 
@@ -584,9 +573,11 @@ feStatus DC2FSolver::makeSteps(int nSteps)
     _solutionContainerBDF1->rotate(_dt);
     _solutionContainer->rotate(_dt);
 
-    initializeBDF1(_sol, _metaNumber, _mesh,dynamic_cast<feSolutionBDF1 *>(_solutionContainerBDF1));
+    initializeBDF1(_sol, _metaNumber, _mesh,
+                   dynamic_cast<feSolutionBDF1 *>(_solutionContainerBDF1));
     printf("\n");
-    printf("Étape 1 - recomputeMatrix = %s : Solution BDF1 - t = %6.6e\n", _linearSystem->getRecomputeStatus() ? "true" : "false", _sol->getCurrentTime());
+    printf("Étape 1 - recomputeMatrix = %s : Solution BDF1 - t = %6.6e\n",
+           _linearSystem->getRecomputeStatus() ? "true" : "false", _sol->getCurrentTime());
     solveQNBDF(_solutionContainerBDF1, _tol, _metaNumber, _linearSystem, _sol, _mesh);
     fePstClc(_sol, _linearSystem, _solutionContainerBDF1);
     _sol->setSolFromContainer(_solutionContainerBDF1);
@@ -596,9 +587,11 @@ feStatus DC2FSolver::makeSteps(int nSteps)
     // 	_normL2[k][_currentStep]=_norms[k]->getNorm();
     // }
 
-    initializeDC2F(_sol, _metaNumber, _mesh, dynamic_cast<feSolutionBDF1 *>(_solutionContainerBDF1),dynamic_cast<feSolutionDC2F *>(_solutionContainer));
+    initializeDC2F(_sol, _metaNumber, _mesh, dynamic_cast<feSolutionBDF1 *>(_solutionContainerBDF1),
+                   dynamic_cast<feSolutionDC2F *>(_solutionContainer));
     printf("\n");
-    printf("Étape 2 - recomputeMatrix = %s : Solution DC2F - t = %6.6e\n",_linearSystem->getRecomputeStatus() ? "true" : "false", _sol->getCurrentTime());
+    printf("Étape 2 - recomputeMatrix = %s : Solution DC2F - t = %6.6e\n",
+           _linearSystem->getRecomputeStatus() ? "true" : "false", _sol->getCurrentTime());
     solveQNBDF(_solutionContainer, _tol, _metaNumber, _linearSystem, _sol, _mesh);
     fePstClc(_sol, _linearSystem, _solutionContainer);
 
@@ -850,7 +843,6 @@ feStatus DC3FSolver::makeSteps(int nSteps)
       //     _normL2[k][_currentStep - 1] = _norms[k]->getNorm();
       //   }
       // }
-
     }
     _solutionContainer->rotate(_dt);
     initializeDC3F(_sol, _metaNumber, _mesh, dynamic_cast<feSolutionDC2F *>(_solutionContainerDC2F),
@@ -949,7 +941,7 @@ feStatus DC3FSolver_centered::makeSteps(int nSteps)
     //   _norms[i]->computeL2Norm(_metaNumber, _sol, _mesh);
     //   _normL2[i][0] = _norms[i]->getNorm();
     // }
-    
+
     printf("-----------------------------------------------------------------");
     printf("\n");
     printf("Current step = %d/%d : t = %f\n", _currentStep, nSteps, _tCurrent);
@@ -1082,7 +1074,6 @@ feStatus DC3FSolver_centered::makeSteps(int nSteps)
       //   _norms[8]->computeL2Norm(_metaNumber, _sol, _mesh);
       //   _normL2[8][_currentStep] = _norms[8]->getNorm();
       // }
-
     }
     // Compute L2 norm of the solution
     _sol->setSolFromContainer(_solutionContainerBDF1);

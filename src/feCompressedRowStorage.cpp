@@ -1,7 +1,8 @@
 #include "feCompressedRowStorage.h"
 
 feEZCompressedRowStorage::feEZCompressedRowStorage(int numUnknowns,
-  std::vector<feBilinearForm *> &formMatrices, int numMatrixForms)
+                                                   std::vector<feBilinearForm *> &formMatrices,
+                                                   int numMatrixForms)
 {
   nnz.resize(numUnknowns, 0.);
   nnzset.resize(numUnknowns);
@@ -10,7 +11,7 @@ feEZCompressedRowStorage::feEZCompressedRowStorage(int numUnknowns,
   std::vector<feInt> adrI;
   std::vector<feInt> adrJ;
 
-  for(int i = 0; i < nnzset.size(); ++i){
+  for(int i = 0; i < nnzset.size(); ++i) {
     nnzset[i].clear();
     // To add a zero on diagonal elements
     nnzset[i].insert(i);
@@ -37,7 +38,6 @@ feEZCompressedRowStorage::feEZCompressedRowStorage(int numUnknowns,
   // }
 
   for(size_t iForm = 0; iForm < numMatrixForms; ++iForm) {
-
     feBilinearForm *f = formMatrices[iForm];
     feCncGeo *cnc = f->getCncGeo();
     int numColors = cnc->getNbColor();
@@ -57,25 +57,27 @@ feEZCompressedRowStorage::feEZCompressedRowStorage(int numUnknowns,
 
       nTOTELM += numElementsInColor;
 
-      #if defined(HAVE_OMP)
-      #pragma omp parallel for private(elm, f, adrI, adrJ, nI, nJ)
-      #endif
+#if defined(HAVE_OMP)
+#pragma omp parallel for private(elm, f, adrI, adrJ, nI, nJ)
+#endif
       for(int iElm = 0; iElm < numElementsInColor; ++iElm) {
-        #if defined(HAVE_OMP)
+#if defined(HAVE_OMP)
         int numForm = iForm + omp_get_thread_num() * numMatrixForms;
         f = formMatrices[numForm];
-        #endif
+#endif
         elm = listElmC[iElm];
-        
+
         f->initializeAddressingVectors(elm);
 
         // Determine global assignment indices
-        adrI = f->getAdrI(); nI = adrI.size();
-        adrJ = f->getAdrJ(); nJ = adrJ.size();
+        adrI = f->getAdrI();
+        nI = adrI.size();
+        adrJ = f->getAdrJ();
+        nJ = adrJ.size();
 
-        for(int i = 0; i < nI; ++i){
-          for(int j = 0; j < nJ; ++j){
-            if(adrI[i] < numUnknowns && adrJ[j] < numUnknowns){
+        for(int i = 0; i < nI; ++i) {
+          for(int j = 0; j < nJ; ++j) {
+            if(adrI[i] < numUnknowns && adrJ[j] < numUnknowns) {
               // #pragma omp critical
               nnzset[adrI[i]].insert(adrJ[j]);
             }
@@ -85,28 +87,26 @@ feEZCompressedRowStorage::feEZCompressedRowStorage(int numUnknowns,
     }
   }
 
-
-  for(int i = 0; i < nnzset.size(); ++i){
+  for(int i = 0; i < nnzset.size(); ++i) {
     nnz[i] = fmax(1, nnzset[i].size());
   }
-
 }
 
 // ====================================================================
 // Constructeur de la classe de base CSR
 // ====================================================================
 
-feCompressedRowStorage::feCompressedRowStorage(int numUnknowns, std::vector<feBilinearForm *> &formMatrices,
+feCompressedRowStorage::feCompressedRowStorage(int numUnknowns,
+                                               std::vector<feBilinearForm *> &formMatrices,
                                                int numMatrixForms)
 {
-  ordre = (feInt) numUnknowns;
+  ordre = (feInt)numUnknowns;
   nnz = new feInt[ordre];
 
   ddlNumberOfElements = new feInt[ordre]; // à initialiser à zéro
   for(feInt i = 0; i < ordre; i++) ddlNumberOfElements[i] = 0;
 
   for(feBilinearForm *f : formMatrices) {
-
     feInt nbElems = f->getCncGeo()->getNumElements();
 
     for(feInt iElm = 0; iElm < nbElems; iElm++) {
@@ -271,8 +271,7 @@ int compint(const void *a, const void *b)
 }
 
 feCompressedRowStorageMklPardiso::feCompressedRowStorageMklPardiso(
-  int numUnknowns, std::vector<feBilinearForm *> &formMatrices,
-  int numMatrixForms)
+  int numUnknowns, std::vector<feBilinearForm *> &formMatrices, int numMatrixForms)
   : feCompressedRowStorage(numUnknowns, formMatrices, numMatrixForms)
 {
   // ================================================================
@@ -295,10 +294,10 @@ feCompressedRowStorageMklPardiso::feCompressedRowStorageMklPardiso(
   // =============================================================
   if(Ap != NULL) {
     Ap[0] = 0;
-    for(feInt i = 0; i < ordre; i++){
+    for(feInt i = 0; i < ordre; i++) {
       // feInfo("nnz[%d] = %d", i, nnz[i]);
       Ap[i + 1] = Ap[i] + (feInt)nnz[i]; // EFMKLPARDISOint
-    } 
+    }
   }
 
   // ================================================================

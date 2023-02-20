@@ -24,7 +24,7 @@ double evaluateFieldFromRecovery(int indexDerivative, feRecovery *rec, double *x
 
 double evaluateFieldFromRecoveryCallback(int indexDerivative, void *recUserPtr, double *x)
 {
-  return ((feRecovery*) recUserPtr)->evalDerivative(indexDerivative, x);
+  return ((feRecovery *)recUserPtr)->evalDerivative(indexDerivative, x);
 }
 
 double f(feRecovery *rec, double *x) { return evaluateFieldFromRecovery(0, rec, x); }
@@ -37,26 +37,11 @@ double fyy(feRecovery *rec, double *x) { return evaluateFieldFromRecovery(6, rec
 double fxxx(feRecovery *rec, double *x) { return evaluateFieldFromRecovery(7, rec, x); }
 double fxxy(feRecovery *rec, double *x) { return evaluateFieldFromRecovery(8, rec, x); }
 double fxyx(feRecovery *rec, double *x) { return evaluateFieldFromRecovery(9, rec, x); }
-double fxyy(feRecovery *rec, double *x)
-{
-  return evaluateFieldFromRecovery(10, rec, x);
-}
-double fyxx(feRecovery *rec, double *x)
-{
-  return evaluateFieldFromRecovery(11, rec, x);
-}
-double fyxy(feRecovery *rec, double *x)
-{
-  return evaluateFieldFromRecovery(12, rec, x);
-}
-double fyyx(feRecovery *rec, double *x)
-{
-  return evaluateFieldFromRecovery(13, rec, x);
-}
-double fyyy(feRecovery *rec, double *x)
-{
-  return evaluateFieldFromRecovery(14, rec, x);
-}
+double fxyy(feRecovery *rec, double *x) { return evaluateFieldFromRecovery(10, rec, x); }
+double fyxx(feRecovery *rec, double *x) { return evaluateFieldFromRecovery(11, rec, x); }
+double fyxy(feRecovery *rec, double *x) { return evaluateFieldFromRecovery(12, rec, x); }
+double fyyx(feRecovery *rec, double *x) { return evaluateFieldFromRecovery(13, rec, x); }
+double fyyy(feRecovery *rec, double *x) { return evaluateFieldFromRecovery(14, rec, x); }
 
 double dtt(double *x, double C, double S, feRecovery *rec)
 {
@@ -111,8 +96,7 @@ double dttt(double *x, double C, double S, feRecovery *rec, int direction)
 double sech(double x) { return 1. / cosh(x); }
 
 // For the solution u = (1. + tanh(a*(r-r0)))/2.
-double dtttAnalytical(double x, double y, double C, double S, feRecovery *rec,
-                      int direction)
+double dtttAnalytical(double x, double y, double C, double S, feRecovery *rec, int direction)
 {
   double a = 10.0;
   double x0 = 0.2;
@@ -198,8 +182,8 @@ double dtttAnalytical(double x, double y, double C, double S, feRecovery *rec,
   }
 }
 
-void computeDirectionFieldFromGradient(double *x, double &C, double &S, double tol,
-                                       feRecovery *rec, FILE *F_grad, FILE *F_iso)
+void computeDirectionFieldFromGradient(double *x, double &C, double &S, double tol, feRecovery *rec,
+                                       FILE *F_grad, FILE *F_iso)
 {
   double a, b;
   a = fx(rec, x);
@@ -211,8 +195,12 @@ void computeDirectionFieldFromGradient(double *x, double &C, double &S, double t
     double theta1 = atan2(b, a);
     C = cos(theta1);
     S = sin(theta1);
-    if(F_grad != nullptr) { fprintf(F_grad, "VP(%g,%g,%g){%g,%g,%g};\n", x[0], x[1], 0.,  C, S, 0.); }
-    if(F_iso  != nullptr) { fprintf(F_iso , "VP(%g,%g,%g){%g,%g,%g};\n", x[0], x[1], 0., -S, C, 0.); }
+    if(F_grad != nullptr) {
+      fprintf(F_grad, "VP(%g,%g,%g){%g,%g,%g};\n", x[0], x[1], 0., C, S, 0.);
+    }
+    if(F_iso != nullptr) {
+      fprintf(F_iso, "VP(%g,%g,%g){%g,%g,%g};\n", x[0], x[1], 0., -S, C, 0.);
+    }
   } else {
     // Gradient norm is too small : directions will be smoothed
     C = 1.;
@@ -220,8 +208,8 @@ void computeDirectionFieldFromGradient(double *x, double &C, double &S, double t
   }
 }
 
-void computeDirectionFieldFromHessian(double *x, double &C, double &S, double tol,
-                                      feRecovery *rec, FILE *F)
+void computeDirectionFieldFromHessian(double *x, double &C, double &S, double tol, feRecovery *rec,
+                                      FILE *F)
 {
   double a, b, c;
   a = fxx(rec, x);
@@ -253,7 +241,8 @@ void computeDirectionFieldFromHessian(double *x, double &C, double &S, double to
   }
 }
 
-void smoothDirections(std::map<size_t, double> &C, std::map<size_t, double> &S, int nIter, double tol)
+void smoothDirections(std::map<size_t, double> &C, std::map<size_t, double> &S, int nIter,
+                      double tol)
 {
 #if defined(HAVE_GMSH)
   std::vector<int> elementTypes;
@@ -309,8 +298,10 @@ void smoothDirections(std::map<size_t, double> &C, std::map<size_t, double> &S, 
     }
   }
 
-  FILE *fIso = fopen("isoAfterSmoothing.pos", "w"); fprintf(fIso, "View\"isoAfterSmoothing\"{\n");
-  FILE *fGra = fopen("graAfterSmoothing.pos", "w"); fprintf(fGra, "View\"graAfterSmoothing\"{\n");
+  FILE *fIso = fopen("isoAfterSmoothing.pos", "w");
+  fprintf(fIso, "View\"isoAfterSmoothing\"{\n");
+  FILE *fGra = fopen("graAfterSmoothing.pos", "w");
+  fprintf(fGra, "View\"graAfterSmoothing\"{\n");
 
   for(auto n : nodes) {
     double c = C[n];
@@ -324,17 +315,18 @@ void smoothDirections(std::map<size_t, double> &C, std::map<size_t, double> &S, 
     int entityDim, entityTag;
     gmsh::model::mesh::getNode(n, coord, par, entityDim, entityTag);
 
-    fprintf(fGra, "VP(%g,%g,0){%g,%g,0};", coord[0], coord[1],  c, s);
+    fprintf(fGra, "VP(%g,%g,0){%g,%g,0};", coord[0], coord[1], c, s);
     fprintf(fIso, "VP(%g,%g,0){%g,%g,0};", coord[0], coord[1], -s, c);
   }
 
-  fprintf(fIso, "};"); fclose(fIso);
-  fprintf(fGra, "};"); fclose(fGra);
+  fprintf(fIso, "};");
+  fclose(fIso);
+  fprintf(fGra, "};");
+  fclose(fGra);
 #endif
 }
 
-void smoothSizes(std::map<size_t, double> &L1, std::map<size_t, double> &L2, int nIter,
-                      double tol)
+void smoothSizes(std::map<size_t, double> &L1, std::map<size_t, double> &L2, int nIter, double tol)
 {
 #if defined(HAVE_GMSH)
   std::vector<int> elementTypes;
@@ -366,8 +358,8 @@ void smoothSizes(std::map<size_t, double> &L1, std::map<size_t, double> &L2, int
       size_t neigh = it->second;
       double l1n = L1[neigh];
       double l2n = L2[neigh];
-      double grad1 = fabs(l1n - l1)/l1;
-      double grad2 = fabs(l2n - l2)/l2;
+      double grad1 = fabs(l1n - l1) / l1;
+      double grad2 = fabs(l2n - l2) / l2;
       if(grad1 > threshold) nodes_to_treat.insert(n);
       if(grad2 > threshold) nodes_to_treat.insert(n);
     }
@@ -384,8 +376,8 @@ void smoothSizes(std::map<size_t, double> &L1, std::map<size_t, double> &L2, int
         l2 += L2[neigh];
         cnt++;
       }
-      L1[n] = l1/cnt;
-      L2[n] = l2/cnt;
+      L1[n] = l1 / cnt;
+      L2[n] = l2 / cnt;
     }
   }
 #endif
@@ -520,7 +512,8 @@ void metricHechtKuate(int nbpoints, double *x, double *y, double &A, double &B, 
 
   //     //------deplacement des points alignés avec l'origine et X0-----------
   //     if(abs(detXY) <= precision) {
-  //       printf("Point %d - \t x = %10.15f - \t y =%10.15f - \t x0 = %10.15f - \t y0 =%10.15f - \t "
+  //       printf("Point %d - \t x = %10.15f - \t y =%10.15f - \t x0 = %10.15f - \t y0 =%10.15f - \t
+  //       "
   //              "detXY = %10.15f \n",
   //              i, x[i], y[i], X0, Y0, detXY);
   //       Xi += delta;
@@ -537,7 +530,8 @@ void metricHechtKuate(int nbpoints, double *x, double *y, double &A, double &B, 
 
   //       if(ri <= epsilon) epsilon = ri * epsilon;
 
-  //       std::cout << "xi =" << x[i] << " yi =" << y[i] << " ri = " << ri << " epsilon = " << epsilon
+  //       std::cout << "xi =" << x[i] << " yi =" << y[i] << " ri = " << ri << " epsilon = " <<
+  //       epsilon
   //                 << std::endl;
   //       if(bool_assert) {
   //         assert(ri > epsilon);
@@ -625,7 +619,8 @@ void metricHechtKuate(int nbpoints, double *x, double *y, double &A, double &B, 
   //       //--cas : minoration de a-----------------------------------------------
 
   //       double Gi =
-  //         ((Xi * Yi * R0 * R0 - X0 * Y0 * Ri * Ri) / detXY + Xi * X0 / (Rmax * Rmax)) / (Yi * Y0);
+  //         ((Xi * Yi * R0 * R0 - X0 * Y0 * Ri * Ri) / detXY + Xi * X0 / (Rmax * Rmax)) / (Yi *
+  //         Y0);
 
   //       if(Xi * X0 > 0) {
   //         if(Yi * Y0 > 0)
@@ -663,7 +658,8 @@ void metricHechtKuate(int nbpoints, double *x, double *y, double &A, double &B, 
   //         Yk = y[k];
   //         Bk = (Yk * Yk * Xi * X0 + Xk * (Xk * Yi * Y0 - Yk * (Yi * X0 + Xi * Y0))) / (Xi * X0);
   //         Ck = (X0 * Xi * detXY -
-  //               Xk * (Xi * R0 * R0 * (Yk * Xi - Yi * Xk) + X0 * Ri * Ri * (-Yk * X0 + Y0 * Xk))) /
+  //               Xk * (Xi * R0 * R0 * (Yk * Xi - Yi * Xk) + X0 * Ri * Ri * (-Yk * X0 + Y0 * Xk)))
+  //               /
   //              (Xi * X0 * detXY);
 
   //         if(bool_assert) {
@@ -700,8 +696,9 @@ void metricHechtKuate(int nbpoints, double *x, double *y, double &A, double &B, 
   //         else
   //           bik = bmin;
 
-  //         aik = (Ri * Ri * Y0 * X0 - R0 * R0 * Yi * Xi + bik * Yi * Y0 * detXY) / (detXY * Xi * X0);
-  //         cik = (-Ri * Ri * X0 * X0 + R0 * R0 * Xi * Xi - bik * (Yi * X0 + Y0 * Xi) * detXY) /
+  //         aik = (Ri * Ri * Y0 * X0 - R0 * R0 * Yi * Xi + bik * Yi * Y0 * detXY) / (detXY * Xi *
+  //         X0); cik = (-Ri * Ri * X0 * X0 + R0 * R0 * Xi * Xi - bik * (Yi * X0 + Y0 * Xi) * detXY)
+  //         /
   //               (detXY * Xi * X0);
 
   //         if(bool_assert) {
@@ -842,9 +839,11 @@ void metriqueSimplexe2D(int nPhi, std::vector<double> phi, std::vector<double> e
   //       printf("Linear program infeasible!\n");
   //   } else {
   //     // printf("Solution: (");
-  //     // for (int i=0;i<nSimplex+mSimplex;i++) printf("%lf%s", retSimplex.first[i], (i < nSimplex +
+  //     // for (int i=0;i<nSimplex+mSimplex;i++) printf("%lf%s", retSimplex.first[i], (i < nSimplex
+  //     +
   //     // mSimplex - 1) ? ", " : ")\n"); for (int i=0;i<nSimplex;i++) printf("%lf%s",
-  //     // retSimplex.first[i], (i < nSimplex - 1) ? ", " : ")\n"); printf("Optimal objective value:
+  //     // retSimplex.first[i], (i < nSimplex - 1) ? ", " : ")\n"); printf("Optimal objective
+  //     value:
   //     // %lf\n", retSimplex.second);
   //     L1 = retSimplex.first[0] - retSimplex.first[1];
   //     L2 = retSimplex.first[2] - retSimplex.first[3];
@@ -905,42 +904,44 @@ void metriqueSimplexe2D(int nPhi, std::vector<double> phi, std::vector<double> e
   //   B = Q12 * (Q21 * expL11 + Q22 * expL21) + Q22 * (Q21 * expL12 + Q22 * expL22);
 
   //   residu =
-  //     sqrt((A - Aprev) * (A - Aprev) + 2 * (C - Cprev) * (C - Cprev) + (B - Bprev) * (B - Bprev));
+  //     sqrt((A - Aprev) * (A - Aprev) + 2 * (C - Cprev) * (C - Cprev) + (B - Bprev) * (B -
+  //     Bprev));
   //   // cout<<"======== ITERATION "<<i+1<<" - RESIDU = "<<residu<<" ==========="<<endl;
   //   ++i;
   // }
 }
 
-static void contractDerivativesCurved(double xdot[2], double xdotdot[2], const double hess[2][2], 
-  const double cijk[2][2][2], double &C, double &H)
+static void contractDerivativesCurved(double xdot[2], double xdotdot[2], const double hess[2][2],
+                                      const double cijk[2][2][2], double &C, double &H)
 {
   H = 0;
   C = 0;
-  for(int i = 0; i < 2; ++i){
-    for(int j = 0; j < 2; ++j){
+  for(int i = 0; i < 2; ++i) {
+    for(int j = 0; j < 2; ++j) {
       H += hess[i][j] * xdot[i] * xdotdot[j];
-      for(int k = 0; k < 2; ++k){
+      for(int k = 0; k < 2; ++k) {
         C += cijk[i][j][k] * xdot[i] * xdot[j] * xdot[k];
       }
     }
   }
 }
 
-static double bissectionFun(const double e, const double sBar, double xdotdot[2], const double v[2], const double w[2], 
-  const double k, const double hess[2][2], const double cijk[2][2][2])
+static double bissectionFun(const double e, const double sBar, double xdotdot[2], const double v[2],
+                            const double w[2], const double k, const double hess[2][2],
+                            const double cijk[2][2][2])
 {
   double I = 0.;
   double ds = 1e-2;
   double s = 0.;
-  double xdot[2]; 
+  double xdot[2];
   double C, H, f, fprev = 0.;
 
-  while(s < sBar){
-    xdot[0] = v[0] + k*w[0]*s;
-    xdot[1] = v[1] + k*w[1]*s;
+  while(s < sBar) {
+    xdot[0] = v[0] + k * w[0] * s;
+    xdot[1] = v[1] + k * w[1] * s;
     contractDerivativesCurved(xdot, xdotdot, hess, cijk, C, H);
-    f = (sBar-s)*(sBar-s) * fabs(C + 3.*H);
-    I += (f+fprev)/2. * ds;
+    f = (sBar - s) * (sBar - s) * fabs(C + 3. * H);
+    I += (f + fprev) / 2. * ds;
     fprev = f;
     s += ds;
   }
@@ -950,14 +951,15 @@ static double bissectionFun(const double e, const double sBar, double xdotdot[2]
 
 // Turn around the vertex with a quadratic parametrization, construct error curve
 // and fit an ellipse inside (brute-force for now).
-void computeWorstMetric(int nTheta, int nIncr, double e, double *x, double cG, double sG, 
-  double &h1Opt, double &h2Opt, feRecovery *rec, SMetric3 &M, double lMin, double lMax){
-
+void computeWorstMetric(int nTheta, int nIncr, double e, double *x, double cG, double sG,
+                        double &h1Opt, double &h2Opt, feRecovery *rec, SMetric3 &M, double lMin,
+                        double lMax)
+{
   double theta, k, C, H, s;
   double v[2], w[2], g1[2], g2[2], xdot[2], xdotdot[2];
 
-  std::vector<double> xE(4*nTheta, 0.);
-  std::vector<double> yE(4*nTheta, 0.);
+  std::vector<double> xE(4 * nTheta, 0.);
+  std::vector<double> yE(4 * nTheta, 0.);
 
   g1[0] = cG;
   g1[1] = sG;
@@ -979,23 +981,25 @@ void computeWorstMetric(int nTheta, int nIncr, double e, double *x, double cG, d
   // double grad[2] = {c1, c2};
   double hess[2][2] = {{c11, c12}, {c12, c22}};
   double cijk[2][2][2] = {{{c111, c112}, {c112, c122}}, {{c112, c122}, {c122, c222}}};
-  
-  double k1 = (-c2 * c2 * c11 + 2.0 * c1 * c2 * c12 - c1 * c1 * c22) / (pow(c1 * c1 + c2 * c2, 3.0 / 2.0));
-  double k2 = (c1 * c2 * (c22 - c11) + (c1 * c1 - c2 * c2) * c12) / (pow(c1 * c1 + c2 * c2, 3.0 / 2.0));
 
-  for(int iDir = 0; iDir < 4; ++iDir){
-    for(int i = 0; i < nTheta; ++i){
-      theta = i * M_PI/2. / nTheta;
+  double k1 =
+    (-c2 * c2 * c11 + 2.0 * c1 * c2 * c12 - c1 * c1 * c22) / (pow(c1 * c1 + c2 * c2, 3.0 / 2.0));
+  double k2 =
+    (c1 * c2 * (c22 - c11) + (c1 * c1 - c2 * c2) * c12) / (pow(c1 * c1 + c2 * c2, 3.0 / 2.0));
 
-      if(iDir == 0 || iDir == 1){
+  for(int iDir = 0; iDir < 4; ++iDir) {
+    for(int i = 0; i < nTheta; ++i) {
+      theta = i * M_PI / 2. / nTheta;
+
+      if(iDir == 0 || iDir == 1) {
         v[0] = g1[0] * cos(theta) + g2[0] * sin(theta);
         v[1] = g1[1] * cos(theta) + g2[1] * sin(theta);
-      } else{
+      } else {
         v[0] = -g2[0] * cos(theta) + g1[0] * sin(theta);
         v[1] = -g2[1] * cos(theta) + g1[1] * sin(theta);
       }
 
-      if(iDir == 1 || iDir == 3){
+      if(iDir == 1 || iDir == 3) {
         v[0] = -v[0];
         v[1] = -v[1];
       }
@@ -1004,23 +1008,31 @@ void computeWorstMetric(int nTheta, int nIncr, double e, double *x, double cG, d
       w[0] = -v[1];
       w[1] = v[0];
 
-      switch(iDir){
-        case 0 : k = + k1 * cos(theta) + k2*sin(theta); break;
-        case 1 : k = - k1 * cos(theta) - k2*sin(theta); break;
-        case 2 : k = - k2 * cos(theta) + k1*sin(theta); break;
-        case 3 : k = + k2 * cos(theta) - k1*sin(theta); break;
+      switch(iDir) {
+        case 0:
+          k = +k1 * cos(theta) + k2 * sin(theta);
+          break;
+        case 1:
+          k = -k1 * cos(theta) - k2 * sin(theta);
+          break;
+        case 2:
+          k = -k2 * cos(theta) + k1 * sin(theta);
+          break;
+        case 3:
+          k = +k2 * cos(theta) - k1 * sin(theta);
+          break;
       }
 
       xdot[0] = v[0];
       xdot[1] = v[1];
-      xdotdot[0] = k*w[0];
-      xdotdot[1] = k*w[1];
+      xdotdot[0] = k * w[0];
+      xdotdot[1] = k * w[1];
 
       contractDerivativesCurved(xdot, xdotdot, hess, cijk, C, H);
 
-      s = pow( (6. * e / fabs(C + 3.*H)) , 1./3. );
-      xE[iDir*nTheta+i] = x[0] + v[0]*s + k*w[0]*s*s/2.;
-      yE[iDir*nTheta+i] = x[1] + v[1]*s + k*w[1]*s*s/2.;
+      s = pow((6. * e / fabs(C + 3. * H)), 1. / 3.);
+      xE[iDir * nTheta + i] = x[0] + v[0] * s + k * w[0] * s * s / 2.;
+      yE[iDir * nTheta + i] = x[1] + v[1] * s + k * w[1] * s * s / 2.;
 
       // // // // ////////////////////////////////////////////////
 
@@ -1033,7 +1045,7 @@ void computeWorstMetric(int nTheta, int nIncr, double e, double *x, double cG, d
       // double fB = bissectionFun(e, sB, xdotdot, v, w, k, hess, cijk);
       // if(fA*fB > 0){
       //   feWarning("Bad first interval for bissection with starting s = %1.4e", s);
-      //   feWarning("Initial guesses : sA = %1.4e - fA = %+-1.4e - sB = %1.4e fB = %+-1.4e", 
+      //   feWarning("Initial guesses : sA = %1.4e - fA = %+-1.4e - sB = %1.4e fB = %+-1.4e",
       //     sA, fA, sB, fB);
       //   exit(-1);
       //   break;
@@ -1056,37 +1068,39 @@ void computeWorstMetric(int nTheta, int nIncr, double e, double *x, double cG, d
       //   }
       // }
 
-      // // feInfo("Bissection converged in %d iterations : s = %1.4e changed to sMid = %1.4e", iter, s, sMid);
+      // // feInfo("Bissection converged in %d iterations : s = %1.4e changed to sMid = %1.4e",
+      // iter, s, sMid);
 
       // xE[iDir*nTheta+i] = x + v[0]*sMid + k*w[0]*sMid*sMid/2.;
       // yE[iDir*nTheta+i] = y + v[1]*sMid + k*w[1]*sMid*sMid/2.;
-
     }
   }
 
   // Fit an ellipse with the prescribed principal directions
   double h1, h2, H1 = h1Opt, H2 = h2Opt;
   double area, areaMax = 0., d, r;
-  double thetaG = atan2(sG,cG);
+  double thetaG = atan2(sG, cG);
   bool OK;
-  for(int i = 0; i < nIncr; ++i){
-    h1 = i * H1 / (double) nIncr;
-    for(int j = 0; j < nIncr; ++j){
-      h2 = j * H2 / (double) nIncr;
-      area = h1*h2;
-      if(area > areaMax){
+  for(int i = 0; i < nIncr; ++i) {
+    h1 = i * H1 / (double)nIncr;
+    for(int j = 0; j < nIncr; ++j) {
+      h2 = j * H2 / (double)nIncr;
+      area = h1 * h2;
+      if(area > areaMax) {
         // Check the constraints (error curve)
         OK = true;
-        for(int k = 0; k < 4*nTheta; ++k){
-          d = sqrt( (xE[k] - x[0])*(xE[k] - x[0]) + (yE[k] - x[1])*(yE[k] - x[1]) );
+        for(int k = 0; k < 4 * nTheta; ++k) {
+          d = sqrt((xE[k] - x[0]) * (xE[k] - x[0]) + (yE[k] - x[1]) * (yE[k] - x[1]));
           theta = atan2(yE[k] - x[1], xE[k] - x[0]);
-          r = h1*h2/sqrt( (h1*sin(theta-thetaG))*(h1*sin(theta-thetaG)) + (h2*cos(theta-thetaG))*(h2*cos(theta-thetaG)) );
-          if(r > d){
+          r = h1 * h2 /
+              sqrt((h1 * sin(theta - thetaG)) * (h1 * sin(theta - thetaG)) +
+                   (h2 * cos(theta - thetaG)) * (h2 * cos(theta - thetaG)));
+          if(r > d) {
             OK = false;
             break;
           }
         }
-        if(OK){
+        if(OK) {
           areaMax = area;
           h1Opt = h1;
           h2Opt = h2;
@@ -1152,134 +1166,204 @@ SVector3 E_X(1., 0., 0.);
 SVector3 E_Y(0., 1., 0.);
 SVector3 E_Z(0., 0., 1.);
 double tolerance_gradation = 1e-1; // Metrics are modified if || M - M_grown || < tol
-double tolerance_diagonal = 1e-4;  // If fabs(non-diag) is below this tol, matrix is diag
+double tolerance_diagonal = 1e-4; // If fabs(non-diag) is below this tol, matrix is diag
 
-static inline double matNorm2(const SMetric3 &m){
-  double sqr = 0;
-  for(int i = 0; i < 3; i++) {
-    for(int j = 0; j < 3; j++) {
-      sqr += m(i, j)*m(i, j);
-    }
-  }
-  return sqrt(sqr);
-}
-
-static inline double matNorm2(const SMetric3 &m1, const SMetric3 &m2){
-  double sqr = 0;
-  for(int i = 0; i < 3; i++) {
-    for(int j = 0; j < 3; j++) {
-      sqr += (m1(i, j) - m2(i, j))*(m1(i, j) - m2(i, j));
-    }
-  }
-  return sqrt(sqr);
-}
-
-static inline SMetric3 intersectionReductionSimultaneeExplicite(const SMetric3 &m1, const SMetric3 &m2)
+static inline double matNorm2(const SMetric3 &m)
 {
-  double a1 = m1(0,0), b1 = m1(0,1), c1 = m1(1,1);
-  double a2 = m2(0,0), b2 = m2(0,1), c2 = m2(1,1);
+  double sqr = 0;
+  for(int i = 0; i < 3; i++) {
+    for(int j = 0; j < 3; j++) {
+      sqr += m(i, j) * m(i, j);
+    }
+  }
+  return sqrt(sqr);
+}
+
+static inline double matNorm2(const SMetric3 &m1, const SMetric3 &m2)
+{
+  double sqr = 0;
+  for(int i = 0; i < 3; i++) {
+    for(int j = 0; j < 3; j++) {
+      sqr += (m1(i, j) - m2(i, j)) * (m1(i, j) - m2(i, j));
+    }
+  }
+  return sqrt(sqr);
+}
+
+static inline SMetric3 intersectionReductionSimultaneeExplicite(const SMetric3 &m1,
+                                                                const SMetric3 &m2)
+{
+  double a1 = m1(0, 0), b1 = m1(0, 1), c1 = m1(1, 1);
+  double a2 = m2(0, 0), b2 = m2(0, 1), c2 = m2(1, 1);
   double v00, v01, vTInv00, vTInv01, vTInv10, vTInv11;
   // Metrics are identical
-  double relDiff = matNorm2(m1,m2)/matNorm2(m1);
-  if(matNorm2(m1,m2)/matNorm2(m1) < 1e-2){
-      // std::cout<<"Identical matrix : returning m1"<<std::endl;
+  double relDiff = matNorm2(m1, m2) / matNorm2(m1);
+  if(matNorm2(m1, m2) / matNorm2(m1) < 1e-2) {
+    // std::cout<<"Identical matrix : returning m1"<<std::endl;
     return m2;
   }
 
-  if(fabs(b1) < tolerance_diagonal && fabs(b2) < tolerance_diagonal){ 
-
+  if(fabs(b1) < tolerance_diagonal && fabs(b2) < tolerance_diagonal) {
     // Both matrices are diagonal
-    return SMetric3(fmax(a1,a2), fmax(c1,c2), 1., E_X, E_Y, E_Z);
+    return SMetric3(fmax(a1, a2), fmax(c1, c2), 1., E_X, E_Y, E_Z);
 
-  } else if(fabs(b1) < tolerance_diagonal){ 
-
+  } else if(fabs(b1) < tolerance_diagonal) {
     // m1 is diagonal
-    v00 = (a1*c2 + a2*c1 - sqrt(a1*a1*c2*c2 - 2*a1*a2*c1*c2 + 4*a1*b2*b2*c1 + a2*a2*c1*c1))/(2*a1*b2) - c2/b2;
-    v01 = (a1*c2 + a2*c1 + sqrt(a1*a1*c2*c2 - 2*a1*a2*c1*c2 + 4*a1*b2*b2*c1 + a2*a2*c1*c1))/(2*a1*b2) - c2/b2;
-    SVector3 v0(v00, 1., 0.); //v0.normalize();
-    SVector3 v1(v01, 1., 0.); //v1.normalize();
+    v00 = (a1 * c2 + a2 * c1 -
+           sqrt(a1 * a1 * c2 * c2 - 2 * a1 * a2 * c1 * c2 + 4 * a1 * b2 * b2 * c1 +
+                a2 * a2 * c1 * c1)) /
+            (2 * a1 * b2) -
+          c2 / b2;
+    v01 = (a1 * c2 + a2 * c1 +
+           sqrt(a1 * a1 * c2 * c2 - 2 * a1 * a2 * c1 * c2 + 4 * a1 * b2 * b2 * c1 +
+                a2 * a2 * c1 * c1)) /
+            (2 * a1 * b2) -
+          c2 / b2;
+    SVector3 v0(v00, 1., 0.); // v0.normalize();
+    SVector3 v1(v01, 1., 0.); // v1.normalize();
     double l0 = fmax(dot(v0, m1, v0), dot(v0, m2, v0));
     double l1 = fmax(dot(v1, m1, v1), dot(v1, m2, v1));
-    vTInv00 = -(a1*b2)/sqrt(a1*a1*c2*c2 - 2*a1*a2*c1*c2 + 4*a1*b2*b2*c1 + a2*a2*c1*c1);
-    vTInv01 = (sqrt(a1*a1*c2*c2 - 2*a1*a2*c1*c2 + 4*a1*b2*b2*c1 + a2*a2*c1*c1) - a1*c2 + a2*c1)/(2*sqrt(a1*a1*c2*c2 - 2*a1*a2*c1*c2 + 4*a1*b2*b2*c1 + a2*a2*c1*c1));
-    vTInv10 =  (a1*b2)/sqrt(a1*a1*c2*c2 - 2*a1*a2*c1*c2 + 4*a1*b2*b2*c1 + a2*a2*c1*c1);
-    vTInv11 = (sqrt(a1*a1*c2*c2 - 2*a1*a2*c1*c2 + 4*a1*b2*b2*c1 + a2*a2*c1*c1) + a1*c2 - a2*c1)/(2*sqrt(a1*a1*c2*c2 - 2*a1*a2*c1*c2 + 4*a1*b2*b2*c1 + a2*a2*c1*c1));
-    if(isnan(vTInv00) || isnan(vTInv01) || isnan(vTInv10) || isnan(vTInv11) || isinf(vTInv00) || isinf(vTInv01) || isinf(vTInv10) || isinf(vTInv11)){
-      std::cout<<relDiff<<std::endl;
+    vTInv00 = -(a1 * b2) / sqrt(a1 * a1 * c2 * c2 - 2 * a1 * a2 * c1 * c2 + 4 * a1 * b2 * b2 * c1 +
+                                a2 * a2 * c1 * c1);
+    vTInv01 =
+      (sqrt(a1 * a1 * c2 * c2 - 2 * a1 * a2 * c1 * c2 + 4 * a1 * b2 * b2 * c1 + a2 * a2 * c1 * c1) -
+       a1 * c2 + a2 * c1) /
+      (2 *
+       sqrt(a1 * a1 * c2 * c2 - 2 * a1 * a2 * c1 * c2 + 4 * a1 * b2 * b2 * c1 + a2 * a2 * c1 * c1));
+    vTInv10 = (a1 * b2) / sqrt(a1 * a1 * c2 * c2 - 2 * a1 * a2 * c1 * c2 + 4 * a1 * b2 * b2 * c1 +
+                               a2 * a2 * c1 * c1);
+    vTInv11 =
+      (sqrt(a1 * a1 * c2 * c2 - 2 * a1 * a2 * c1 * c2 + 4 * a1 * b2 * b2 * c1 + a2 * a2 * c1 * c1) +
+       a1 * c2 - a2 * c1) /
+      (2 *
+       sqrt(a1 * a1 * c2 * c2 - 2 * a1 * a2 * c1 * c2 + 4 * a1 * b2 * b2 * c1 + a2 * a2 * c1 * c1));
+    if(isnan(vTInv00) || isnan(vTInv01) || isnan(vTInv10) || isnan(vTInv11) || isinf(vTInv00) ||
+       isinf(vTInv01) || isinf(vTInv10) || isinf(vTInv11)) {
+      std::cout << relDiff << std::endl;
       m1.print("1 - m1");
       m2.print("1 - m2");
-      std::cout<<"NAN alert : "<<vTInv00<<" "<<vTInv01<<" "<<vTInv10<<" "<<vTInv11<<std::endl;
+      std::cout << "NAN alert : " << vTInv00 << " " << vTInv01 << " " << vTInv10 << " " << vTInv11
+                << std::endl;
       exit(-1);
     }
-    v0 = SVector3(vTInv00, vTInv01, 0.); //v0.normalize();
-    v1 = SVector3(vTInv10, vTInv11, 0.); //v1.normalize();
+    v0 = SVector3(vTInv00, vTInv01, 0.); // v0.normalize();
+    v1 = SVector3(vTInv10, vTInv11, 0.); // v1.normalize();
     return SMetric3(l0, l1, 1., v0, v1, E_Z);
 
-  } else if(fabs(b2) < tolerance_diagonal){ 
-
+  } else if(fabs(b2) < tolerance_diagonal) {
     // m2 is diagonal
-    v00 = (a1*c2)/(a2*b1) - (a1*c2 + a2*c1 + sqrt(a1*a1*c2*c2 - 2*a1*a2*c1*c2 + a2*a2*c1*c1 + 4*a2*b1*b1*c2))/(2*a2*b1);
-    v01 = (a1*c2)/(a2*b1) - (a1*c2 + a2*c1 - sqrt(a1*a1*c2*c2 - 2*a1*a2*c1*c2 + a2*a2*c1*c1 + 4*a2*b1*b1*c2))/(2*a2*b1);
-    SVector3 v0(v00, 1., 0.); //v0.normalize();
-    SVector3 v1(v01, 1., 0.); //v1.normalize();
+    v00 = (a1 * c2) / (a2 * b1) - (a1 * c2 + a2 * c1 +
+                                   sqrt(a1 * a1 * c2 * c2 - 2 * a1 * a2 * c1 * c2 +
+                                        a2 * a2 * c1 * c1 + 4 * a2 * b1 * b1 * c2)) /
+                                    (2 * a2 * b1);
+    v01 = (a1 * c2) / (a2 * b1) - (a1 * c2 + a2 * c1 -
+                                   sqrt(a1 * a1 * c2 * c2 - 2 * a1 * a2 * c1 * c2 +
+                                        a2 * a2 * c1 * c1 + 4 * a2 * b1 * b1 * c2)) /
+                                    (2 * a2 * b1);
+    SVector3 v0(v00, 1., 0.); // v0.normalize();
+    SVector3 v1(v01, 1., 0.); // v1.normalize();
     double l0 = fmax(dot(v0, m1, v0), dot(v0, m2, v0));
     double l1 = fmax(dot(v1, m1, v1), dot(v1, m2, v1));
-    vTInv00 = -(a2*b1)/sqrt(a1*a1*c2*c2 - 2*a1*a2*c1*c2 + a2*a2*c1*c1 + 4*a2*b1*b1*c2);
-    vTInv01 = (sqrt(a1*a1*c2*c2 - 2*a1*a2*c1*c2 + a2*a2*c1*c1 + 4*a2*b1*b1*c2) + a1*c2 - a2*c1)/(2*sqrt(a1*a1*c2*c2 - 2*a1*a2*c1*c2 + a2*a2*c1*c1 + 4*a2*b1*b1*c2));
-    vTInv10 =  (a2*b1)/sqrt(a1*a1*c2*c2 - 2*a1*a2*c1*c2 + a2*a2*c1*c1 + 4*a2*b1*b1*c2);
-    vTInv11 = (sqrt(a1*a1*c2*c2 - 2*a1*a2*c1*c2 + a2*a2*c1*c1 + 4*a2*b1*b1*c2) - a1*c2 + a2*c1)/(2*sqrt(a1*a1*c2*c2 - 2*a1*a2*c1*c2 + a2*a2*c1*c1 + 4*a2*b1*b1*c2));
-    if(isnan(vTInv00) || isnan(vTInv01) || isnan(vTInv10) || isnan(vTInv11) || isinf(vTInv00) || isinf(vTInv01) || isinf(vTInv10) || isinf(vTInv11)){
-      std::cout<<relDiff<<std::endl;
+    vTInv00 = -(a2 * b1) / sqrt(a1 * a1 * c2 * c2 - 2 * a1 * a2 * c1 * c2 + a2 * a2 * c1 * c1 +
+                                4 * a2 * b1 * b1 * c2);
+    vTInv01 =
+      (sqrt(a1 * a1 * c2 * c2 - 2 * a1 * a2 * c1 * c2 + a2 * a2 * c1 * c1 + 4 * a2 * b1 * b1 * c2) +
+       a1 * c2 - a2 * c1) /
+      (2 *
+       sqrt(a1 * a1 * c2 * c2 - 2 * a1 * a2 * c1 * c2 + a2 * a2 * c1 * c1 + 4 * a2 * b1 * b1 * c2));
+    vTInv10 = (a2 * b1) / sqrt(a1 * a1 * c2 * c2 - 2 * a1 * a2 * c1 * c2 + a2 * a2 * c1 * c1 +
+                               4 * a2 * b1 * b1 * c2);
+    vTInv11 =
+      (sqrt(a1 * a1 * c2 * c2 - 2 * a1 * a2 * c1 * c2 + a2 * a2 * c1 * c1 + 4 * a2 * b1 * b1 * c2) -
+       a1 * c2 + a2 * c1) /
+      (2 *
+       sqrt(a1 * a1 * c2 * c2 - 2 * a1 * a2 * c1 * c2 + a2 * a2 * c1 * c1 + 4 * a2 * b1 * b1 * c2));
+    if(isnan(vTInv00) || isnan(vTInv01) || isnan(vTInv10) || isnan(vTInv11) || isinf(vTInv00) ||
+       isinf(vTInv01) || isinf(vTInv10) || isinf(vTInv11)) {
+      std::cout << relDiff << std::endl;
       m1.print("2 - m1");
       m2.print("2 - m2");
-      std::cout<<"NAN alert : "<<vTInv00<<" "<<vTInv01<<" "<<vTInv10<<" "<<vTInv11<<std::endl;
+      std::cout << "NAN alert : " << vTInv00 << " " << vTInv01 << " " << vTInv10 << " " << vTInv11
+                << std::endl;
       exit(-1);
     }
-    v0 = SVector3(vTInv00, vTInv01, 0.); //v0.normalize();
-    v1 = SVector3(vTInv10, vTInv11, 0.); //v1.normalize();
+    v0 = SVector3(vTInv00, vTInv01, 0.); // v0.normalize();
+    v1 = SVector3(vTInv10, vTInv11, 0.); // v1.normalize();
     return SMetric3(l0, l1, 1., v0, v1, E_Z);
 
-  } else{
-
+  } else {
     // Check if metrics are multiple of one another
-    if( fabs(a2/a1 - c2/c1) < 1e-3 && fabs(a2/a1 - b2/b1) < 1e-3 ){
-      return (a2/a1 <= 1) ? m1 : m2;
-    } else{
-      v00 = (sqrt(a1*a1*c2*c2 - 2*a1*a2*c1*c2 - 4*a1*b1*b2*c2 + 4*a1*b2*b2*c1 + a2*a2*c1*c1 + 4*a2*b1*b1*c2 - 4*a2*b1*b2*c1) + a1*c2 + a2*c1 - 2*b1*b2)/(2*(a1*b2 - a2*b1)) - (a1*c2 - b1*b2)/(a1*b2 - a2*b1);
-      v01 = - (a1*c2 - b1*b2)/(a1*b2 - a2*b1) - (sqrt(a1*a1*c2*c2 - 2.*a1*a2*c1*c2 - 4.*a1*b1*b2*c2 + 4.*a1*b2*b2*c1 + a2*a2*c1*c1 + 4.*a2*b1*b1*c2 - 4.*a2*b1*b2*c1) - a1*c2 - a2*c1 + 2.*b1*b2)/(2.*(a1*b2 - a2*b1));
-      SVector3 v0(v00, 1., 0.); //v0.normalize();
-      SVector3 v1(v01, 1., 0.); //v1.normalize();
+    if(fabs(a2 / a1 - c2 / c1) < 1e-3 && fabs(a2 / a1 - b2 / b1) < 1e-3) {
+      return (a2 / a1 <= 1) ? m1 : m2;
+    } else {
+      v00 = (sqrt(a1 * a1 * c2 * c2 - 2 * a1 * a2 * c1 * c2 - 4 * a1 * b1 * b2 * c2 +
+                  4 * a1 * b2 * b2 * c1 + a2 * a2 * c1 * c1 + 4 * a2 * b1 * b1 * c2 -
+                  4 * a2 * b1 * b2 * c1) +
+             a1 * c2 + a2 * c1 - 2 * b1 * b2) /
+              (2 * (a1 * b2 - a2 * b1)) -
+            (a1 * c2 - b1 * b2) / (a1 * b2 - a2 * b1);
+      v01 = -(a1 * c2 - b1 * b2) / (a1 * b2 - a2 * b1) -
+            (sqrt(a1 * a1 * c2 * c2 - 2. * a1 * a2 * c1 * c2 - 4. * a1 * b1 * b2 * c2 +
+                  4. * a1 * b2 * b2 * c1 + a2 * a2 * c1 * c1 + 4. * a2 * b1 * b1 * c2 -
+                  4. * a2 * b1 * b2 * c1) -
+             a1 * c2 - a2 * c1 + 2. * b1 * b2) /
+              (2. * (a1 * b2 - a2 * b1));
+      SVector3 v0(v00, 1., 0.); // v0.normalize();
+      SVector3 v1(v01, 1., 0.); // v1.normalize();
       double l0 = fmax(dot(v0, m1, v0), dot(v0, m2, v0));
       double l1 = fmax(dot(v1, m1, v1), dot(v1, m2, v1));
-      vTInv00 =  (a1*b2 - a2*b1)/sqrt(a1*a1*c2*c2 - 2*a1*a2*c1*c2 - 4*a1*b1*b2*c2 + 4*a1*b2*b2*c1 + a2*a2*c1*c1 + 4*a2*b1*b1*c2 - 4*a2*b1*b2*c1);
-      vTInv01 = (sqrt(a1*a1*c2*c2 - 2*a1*a2*c1*c2 - 4*a1*b1*b2*c2 + 4*a1*b2*b2*c1 + a2*a2*c1*c1 + 4*a2*b1*b1*c2 - 4*a2*b1*b2*c1) + a1*c2 - a2*c1)/(2*sqrt(a1*a1*c2*c2 - 2*a1*a2*c1*c2 - 4*a1*b1*b2*c2 + 4*a1*b2*b2*c1 + a2*a2*c1*c1 + 4*a2*b1*b1*c2 - 4*a2*b1*b2*c1));
-      vTInv10 = -(a1*b2 - a2*b1)/sqrt(a1*a1*c2*c2 - 2*a1*a2*c1*c2 - 4*a1*b1*b2*c2 + 4*a1*b2*b2*c1 + a2*a2*c1*c1 + 4*a2*b1*b1*c2 - 4*a2*b1*b2*c1);
-      vTInv11 = (sqrt(a1*a1*c2*c2 - 2*a1*a2*c1*c2 - 4*a1*b1*b2*c2 + 4*a1*b2*b2*c1 + a2*a2*c1*c1 + 4*a2*b1*b1*c2 - 4*a2*b1*b2*c1) - a1*c2 + a2*c1)/(2*sqrt(a1*a1*c2*c2 - 2*a1*a2*c1*c2 - 4*a1*b1*b2*c2 + 4*a1*b2*b2*c1 + a2*a2*c1*c1 + 4*a2*b1*b1*c2 - 4*a2*b1*b2*c1));  
-      if(isnan(vTInv00) || isnan(vTInv01) || isnan(vTInv10) || isnan(vTInv11) || isinf(vTInv00) || isinf(vTInv01) || isinf(vTInv10) || isinf(vTInv11)){
-        std::cout<<relDiff<<std::endl;
+      vTInv00 = (a1 * b2 - a2 * b1) /
+                sqrt(a1 * a1 * c2 * c2 - 2 * a1 * a2 * c1 * c2 - 4 * a1 * b1 * b2 * c2 +
+                     4 * a1 * b2 * b2 * c1 + a2 * a2 * c1 * c1 + 4 * a2 * b1 * b1 * c2 -
+                     4 * a2 * b1 * b2 * c1);
+      vTInv01 = (sqrt(a1 * a1 * c2 * c2 - 2 * a1 * a2 * c1 * c2 - 4 * a1 * b1 * b2 * c2 +
+                      4 * a1 * b2 * b2 * c1 + a2 * a2 * c1 * c1 + 4 * a2 * b1 * b1 * c2 -
+                      4 * a2 * b1 * b2 * c1) +
+                 a1 * c2 - a2 * c1) /
+                (2 * sqrt(a1 * a1 * c2 * c2 - 2 * a1 * a2 * c1 * c2 - 4 * a1 * b1 * b2 * c2 +
+                          4 * a1 * b2 * b2 * c1 + a2 * a2 * c1 * c1 + 4 * a2 * b1 * b1 * c2 -
+                          4 * a2 * b1 * b2 * c1));
+      vTInv10 = -(a1 * b2 - a2 * b1) /
+                sqrt(a1 * a1 * c2 * c2 - 2 * a1 * a2 * c1 * c2 - 4 * a1 * b1 * b2 * c2 +
+                     4 * a1 * b2 * b2 * c1 + a2 * a2 * c1 * c1 + 4 * a2 * b1 * b1 * c2 -
+                     4 * a2 * b1 * b2 * c1);
+      vTInv11 = (sqrt(a1 * a1 * c2 * c2 - 2 * a1 * a2 * c1 * c2 - 4 * a1 * b1 * b2 * c2 +
+                      4 * a1 * b2 * b2 * c1 + a2 * a2 * c1 * c1 + 4 * a2 * b1 * b1 * c2 -
+                      4 * a2 * b1 * b2 * c1) -
+                 a1 * c2 + a2 * c1) /
+                (2 * sqrt(a1 * a1 * c2 * c2 - 2 * a1 * a2 * c1 * c2 - 4 * a1 * b1 * b2 * c2 +
+                          4 * a1 * b2 * b2 * c1 + a2 * a2 * c1 * c1 + 4 * a2 * b1 * b1 * c2 -
+                          4 * a2 * b1 * b2 * c1));
+      if(isnan(vTInv00) || isnan(vTInv01) || isnan(vTInv10) || isnan(vTInv11) || isinf(vTInv00) ||
+         isinf(vTInv01) || isinf(vTInv10) || isinf(vTInv11)) {
+        std::cout << relDiff << std::endl;
         m1.print("3 - m1");
         m2.print("3 - m2");
-        std::cout<<"NAN alert : "<<vTInv00<<" "<<vTInv01<<" "<<vTInv10<<" "<<vTInv11<<std::endl;
+        std::cout << "NAN alert : " << vTInv00 << " " << vTInv01 << " " << vTInv10 << " " << vTInv11
+                  << std::endl;
         exit(-1);
       }
-      v0 = SVector3(vTInv00, vTInv01, 0.); //v0.normalize();
-      v1 = SVector3(vTInv10, vTInv11, 0.); //v1.normalize();
+      v0 = SVector3(vTInv00, vTInv01, 0.); // v0.normalize();
+      v1 = SVector3(vTInv10, vTInv11, 0.); // v1.normalize();
       return SMetric3(l0, l1, 1., v0, v1, E_Z);
     }
   }
 }
 
-static inline SMetric3 gradationAlauzet(double grad, const SMetric3 &m, double x1, double y1, double x2, double y2){
-  SVector3 pq(x2-x1, y2-y1, 0.);
-  double eta = (1. + sqrt(dot(pq,m,pq)) * log(grad));
-  eta = 1./(eta*eta);
+static inline SMetric3 gradationAlauzet(double grad, const SMetric3 &m, double x1, double y1,
+                                        double x2, double y2)
+{
+  SVector3 pq(x2 - x1, y2 - y1, 0.);
+  double eta = (1. + sqrt(dot(pq, m, pq)) * log(grad));
+  eta = 1. / (eta * eta);
   SMetric3 tmp(m);
   tmp *= eta;
   tmp.set_m33(1.0);
   return tmp;
 }
 
-void gradationMetriques(double gradation, int nmax, std::vector<double> &coord1, std::map<int, SMetric3> &metricsOnGmshModel)
+void gradationMetriques(double gradation, int nmax, std::vector<double> &coord1,
+                        std::map<int, SMetric3> &metricsOnGmshModel)
 {
 #if defined(HAVE_GMSH)
   std::vector<int> elementTypes;
@@ -1288,7 +1372,7 @@ void gradationMetriques(double gradation, int nmax, std::vector<double> &coord1,
   gmsh::model::mesh::getElements(elementTypes, elementTags, elemNodeTags, 2);
 
   // std::vector<std::pair<size_t,size_t>> edges;
-  std::set<std::pair<size_t,size_t>, gmshEdgeLessThan> edges;
+  std::set<std::pair<size_t, size_t>, gmshEdgeLessThan> edges;
 
   std::vector<std::size_t> nodeTags;
   std::vector<double> coord;
@@ -1297,22 +1381,19 @@ void gradationMetriques(double gradation, int nmax, std::vector<double> &coord1,
   std::vector<double> nodecoord3;
   std::vector<double> parametricCoord;
   std::vector<double> nodeparametricCoord;
-  gmsh::model::mesh::getNodesByElementType(elementTypes[0], nodeTags,
-                                          coord,
-                                          parametricCoord);
+  gmsh::model::mesh::getNodesByElementType(elementTypes[0], nodeTags, coord, parametricCoord);
 
-  for(auto val : elementTypes)
-    feInfo("Elements classified on dim 2 are of type %d", val);
+  for(auto val : elementTypes) feInfo("Elements classified on dim 2 are of type %d", val);
   feInfo("There are %d elements of dim 2 and type [0]", elementTags[0].size());
   feInfo("There are %d nodes total in elem [0]", nodeTags.size());
 
   int nodedim, nodetag;
 
-  FILE* fff = fopen("CHECK.pos","w");
+  FILE *fff = fopen("CHECK.pos", "w");
   fprintf(fff, "View \" CHECK \"{\n");
 
   size_t maxtag = -1;
-  std::pair<std::set<std::pair<size_t,size_t>, gmshEdgeLessThan>::iterator, bool> ret;
+  std::pair<std::set<std::pair<size_t, size_t>, gmshEdgeLessThan>::iterator, bool> ret;
 
   for(size_t i = 0; i < elementTags[0].size(); i++) {
     size_t n0 = elemNodeTags[0][3 * i + 0];
@@ -1347,8 +1428,7 @@ void gradationMetriques(double gradation, int nmax, std::vector<double> &coord1,
   double xp, yp, xq, yq;
   bool correction = true;
   int iter = 0;
-  while(correction && iter < nmax){
-
+  while(correction && iter < nmax) {
     correction = false;
     iter++;
 
@@ -1368,51 +1448,51 @@ void gradationMetriques(double gradation, int nmax, std::vector<double> &coord1,
       mp = metricsOnGmshModel[n];
       mq = metricsOnGmshModel[neigh];
 
-      gmsh::model::mesh::getNode(n    , nodecoord1, nodeparametricCoord, nodedim, nodetag);
+      gmsh::model::mesh::getNode(n, nodecoord1, nodeparametricCoord, nodedim, nodetag);
       gmsh::model::mesh::getNode(neigh, nodecoord2, nodeparametricCoord, nodedim, nodetag);
 
       xp = nodecoord1[0];
       yp = nodecoord1[1];
       xq = nodecoord2[0];
-      yq = nodecoord2[1];      
+      yq = nodecoord2[1];
 
       // fprintf(fff, "SL(%.16g,%.16g,0.,%.16g,%.16g,0.){%u, %u};\n", xp, yp, xq, yq, 1, 1);
       // fprintf(fff, "SP(%.16g,%.16g,0.){%u};\n", xp, yp, n);
       // Span mp to neighbouring vertex
       mpq = gradationAlauzet(gradation, mp, xp, yp, xq, yq);
-      if(fabs(mpq(2,2) - 1.0) > 1e-4){
-        std::cout<<"NONZERO z entry in mpq";
-          exit(-1);
+      if(fabs(mpq(2, 2) - 1.0) > 1e-4) {
+        std::cout << "NONZERO z entry in mpq";
+        exit(-1);
       }
       mpq = intersectionReductionSimultaneeExplicite(mq, mpq);
-      if(fabs(mpq(2,2) - 1.0) > 1e-4){
-        std::cout<<"NONZERO z entry in mpq apres gradation";
-          exit(-1);
+      if(fabs(mpq(2, 2) - 1.0) > 1e-4) {
+        std::cout << "NONZERO z entry in mpq apres gradation";
+        exit(-1);
       }
 
       // mpq = intersection_reductionSimultanee(mq, mpq);
       // metricsOnGmshModel[neigh] = mpq;
 
-      if(matNorm2(metricsOnGmshModel[neigh], mpq)/matNorm2(mpq) > tolerance_gradation){
+      if(matNorm2(metricsOnGmshModel[neigh], mpq) / matNorm2(mpq) > tolerance_gradation) {
         metricsOnGmshModel[neigh] = mpq;
         correction = true;
       }
       // Span mq to n
       mqp = gradationAlauzet(gradation, mq, xq, yq, xp, yp);
-      if(fabs(mpq(2,2) - 1.0) > 1e-4){
-        std::cout<<"NONZERO z entry in mqp";
-          exit(-1);
+      if(fabs(mpq(2, 2) - 1.0) > 1e-4) {
+        std::cout << "NONZERO z entry in mqp";
+        exit(-1);
       }
       mqp = intersectionReductionSimultaneeExplicite(mp, mqp);
-      if(fabs(mpq(2,2) - 1.0) > 1e-4){
-        std::cout<<"NONZERO z entry in mqp apres gradation";
-          exit(-1);
+      if(fabs(mpq(2, 2) - 1.0) > 1e-4) {
+        std::cout << "NONZERO z entry in mqp apres gradation";
+        exit(-1);
       }
 
       // mqp = intersection_reductionSimultanee(mp, mqp);
       // metricsOnGmshModel[n] = mqp;
 
-      if(matNorm2(metricsOnGmshModel[n], mqp)/matNorm2(mqp) > tolerance_gradation){
+      if(matNorm2(metricsOnGmshModel[n], mqp) / matNorm2(mqp) > tolerance_gradation) {
         metricsOnGmshModel[n] = mqp;
         correction = true;
       }
@@ -1420,8 +1500,8 @@ void gradationMetriques(double gradation, int nmax, std::vector<double> &coord1,
       // mp = gradationAlauzet(gradation, mref, X0, Y0, xp, yp);
 
       // double factor = 1000.;
-      // getEllipsePoints(factor * mp(0, 0), factor * 2.0 * mp(0, 1), factor * mp(1, 1), xp, yp, xP, yP);
-      // for(int j = 0; j < nt; ++j) {
+      // getEllipsePoints(factor * mp(0, 0), factor * 2.0 * mp(0, 1), factor * mp(1, 1), xp, yp, xP,
+      // yP); for(int j = 0; j < nt; ++j) {
       //   if(j != nt - 1) {
       //     fprintf(fff, "SL(%.16g,%.16g,%.16g,%.16g,%.16g,%.16g){%u, %u};\n", xP[j], yP[j],
       //             0., xP[j + 1], yP[j + 1], 0., 1, 1);
@@ -1437,7 +1517,6 @@ void gradationMetriques(double gradation, int nmax, std::vector<double> &coord1,
 
     // fprintf(fff, "};");
     // fclose(fff);
-
   }
   feInfo("%d coord size", coord.size());
   feInfo("%d edges size", edges.size());
@@ -1449,10 +1528,11 @@ static Eigen::VectorXd CPLUS(7);
 // static Eigen::VectorXd CMINUS(8);
 // static Eigen::VectorXd CPLUS(8);
 
-static double solveErrorFunction(double k, double *v, double *w, double H[2][2], double C[2][2][2], std::set<double> &roots)
+static double solveErrorFunction(double k, double *v, double *w, double H[2][2], double C[2][2][2],
+                                 std::set<double> &roots)
 {
-  double a1 = k*w[0];
-  double a2 = k*w[1];
+  double a1 = k * w[0];
+  double a2 = k * w[1];
   // double a1 = 0.0;
   // double a2 = 0.0;
   double v1 = v[0];
@@ -1463,30 +1543,35 @@ static double solveErrorFunction(double k, double *v, double *w, double H[2][2],
   double H21 = H[1][0];
   double H22 = H[1][1];
 
-  double C111 =  C[0][0][0];
-  double C112 = (C[0][0][1] + C[0][1][0] + C[1][0][0])/3.;
-  double C122 = (C[0][1][1] + C[1][0][1] + C[1][1][0])/3.;
-  double C222 =  C[1][1][1];
+  double C111 = C[0][0][0];
+  double C112 = (C[0][0][1] + C[0][1][0] + C[1][0][0]) / 3.;
+  double C122 = (C[0][1][1] + C[1][0][1] + C[1][1][0]) / 3.;
+  double C222 = C[1][1][1];
 
-  double cs6 = (C111*a1*a1*a1 + 3.*C112*a1*a1*a2 + 3.*C122*a1*a2*a2 + C222*a2*a2*a2)/120.;
-  double cs5 = C111*a1*a1*v1/20. + C112*a1*a1*v2/20. + C122*a2*a2*v1/20. + C222*a2*a2*v2/20. + C112*a1*a2*v1/10. + C122*a1*a2*v2/10.;
-  double cs4 = C111*a1*v1*v1/8.  + C112*a2*v1*v1/8.  + C122*a1*v2*v2/8.  + C222*a2*v2*v2/8.  + C112*a1*v1*v2/4.  + C122*a2*v1*v2/4.;
-  double cs3 = C111*v1*v1*v1/6.  + C112*v1*v1*v2/2.  + C122*v1*v2*v2/2.  + C222*v2*v2*v2/6. ;
-  cs4 += (H11*a1*a1 + H12*a1*a2 + H21*a1*a2 + H22*a2*a2)/8.;
-  cs3 += (H11*a1*v1 + H12*a2*v1 + H21*a1*v2 + H22*a2*v2)/2.;
+  double cs6 = (C111 * a1 * a1 * a1 + 3. * C112 * a1 * a1 * a2 + 3. * C122 * a1 * a2 * a2 +
+                C222 * a2 * a2 * a2) /
+               120.;
+  double cs5 = C111 * a1 * a1 * v1 / 20. + C112 * a1 * a1 * v2 / 20. + C122 * a2 * a2 * v1 / 20. +
+               C222 * a2 * a2 * v2 / 20. + C112 * a1 * a2 * v1 / 10. + C122 * a1 * a2 * v2 / 10.;
+  double cs4 = C111 * a1 * v1 * v1 / 8. + C112 * a2 * v1 * v1 / 8. + C122 * a1 * v2 * v2 / 8. +
+               C222 * a2 * v2 * v2 / 8. + C112 * a1 * v1 * v2 / 4. + C122 * a2 * v1 * v2 / 4.;
+  double cs3 = C111 * v1 * v1 * v1 / 6. + C112 * v1 * v1 * v2 / 2. + C122 * v1 * v2 * v2 / 2. +
+               C222 * v2 * v2 * v2 / 6.;
+  cs4 += (H11 * a1 * a1 + H12 * a1 * a2 + H21 * a1 * a2 + H22 * a2 * a2) / 8.;
+  cs3 += (H11 * a1 * v1 + H12 * a2 * v1 + H21 * a1 * v2 + H22 * a2 * v2) / 2.;
 
   // Ajout du développement limité au premier ordre de Hij = Hij(x0) + s*Cijk*vk
-  cs5 += (a1*a1/20.) * (C111*v1 + C112*v2);
-  cs4 += (v1*a1/8. ) * (C111*v1 + C112*v2);
+  cs5 += (a1 * a1 / 20.) * (C111 * v1 + C112 * v2);
+  cs4 += (v1 * a1 / 8.) * (C111 * v1 + C112 * v2);
 
-  cs5 += (a1*a2/20.) * (C112*v1 + C122*v2); // C121*v1 + C122*v2
-  cs4 += (v1*a2/8. ) * (C112*v1 + C122*v2);
+  cs5 += (a1 * a2 / 20.) * (C112 * v1 + C122 * v2); // C121*v1 + C122*v2
+  cs4 += (v1 * a2 / 8.) * (C112 * v1 + C122 * v2);
 
-  cs5 += (a1*a2/20.) * (C112*v1 + C122*v2); // C211*v1 + C212*v2
-  cs4 += (v2*a1/8. ) * (C112*v1 + C122*v2);
+  cs5 += (a1 * a2 / 20.) * (C112 * v1 + C122 * v2); // C211*v1 + C212*v2
+  cs4 += (v2 * a1 / 8.) * (C112 * v1 + C122 * v2);
 
-  cs5 += (a2*a2/20.) * (C122*v1 + C222*v2); // C221*v1 + C222*v2
-  cs4 += (v2*a2/8. ) * (C122*v1 + C222*v2);
+  cs5 += (a2 * a2 / 20.) * (C122 * v1 + C222 * v2); // C221*v1 + C222*v2
+  cs4 += (v2 * a2 / 8.) * (C122 * v1 + C222 * v2);
 
   CMINUS(0) = cs6;
   CMINUS(1) = cs5;
@@ -1506,15 +1591,13 @@ static double solveErrorFunction(double k, double *v, double *w, double H[2][2],
 
   double s = 1e10;
   roots = RootFinder::solvePolynomial(CMINUS, 0., INFINITY, 1e-8);
-  for (auto it = roots.begin(); it != roots.end(); it++)
-  {
+  for(auto it = roots.begin(); it != roots.end(); it++) {
     s = fmin(s, *it);
   }
 
-  roots = RootFinder::solvePolynomial(CPLUS,  0., INFINITY, 1e-8);
-  for (auto it = roots.begin(); it != roots.end(); it++)
-  {
-      s = fmin(s, *it);
+  roots = RootFinder::solvePolynomial(CPLUS, 0., INFINITY, 1e-8);
+  for(auto it = roots.begin(); it != roots.end(); it++) {
+    s = fmin(s, *it);
   }
 
   // feInfo("lowest root is %1.16e", s);
@@ -1522,16 +1605,16 @@ static double solveErrorFunction(double k, double *v, double *w, double H[2][2],
 }
 
 #if defined(HAVE_SOPLEX)
-static void computeLvl1(double K1, double K2, double *g1, double *g2, 
-  double Hij[2][2], double Cijk[2][2][2], int nPhi, linearProblem &myLP)
+static void computeLvl1(double K1, double K2, double *g1, double *g2, double Hij[2][2],
+                        double Cijk[2][2][2], int nPhi, linearProblem &myLP)
 {
   double v1[2], v2[2], k1, k2, theta, k, v[2], w[2], s, x0[2] = {0., 0.};
 
   std::set<double> roots;
 
-  for(int iDir = 0; iDir < 4; ++iDir){
-    switch(iDir){
-      case 0 : 
+  for(int iDir = 0; iDir < 4; ++iDir) {
+    switch(iDir) {
+      case 0:
         v1[0] = g1[0];
         v1[1] = g1[1];
         v2[0] = g2[0];
@@ -1539,7 +1622,7 @@ static void computeLvl1(double K1, double K2, double *g1, double *g2,
         k1 = K1;
         k2 = K2;
         break;
-      case 1 :
+      case 1:
         v1[0] = -g1[0];
         v1[1] = -g1[1];
         v2[0] = -g2[0];
@@ -1547,37 +1630,37 @@ static void computeLvl1(double K1, double K2, double *g1, double *g2,
         k1 = -K1;
         k2 = -K2;
         break;
-      case 2 :
+      case 2:
         v1[0] = -g2[0];
         v1[1] = -g2[1];
-        v2[0] =  g1[0];
-        v2[1] =  g1[1];
+        v2[0] = g1[0];
+        v2[1] = g1[1];
         k1 = -K2;
-        k2 =  K1;
+        k2 = K1;
         break;
-      case 3 :
-        v1[0] =  g2[0];
-        v1[1] =  g2[1];
+      case 3:
+        v1[0] = g2[0];
+        v1[1] = g2[1];
         v2[0] = -g1[0];
         v2[1] = -g1[1];
-        k1 =  K2;
+        k1 = K2;
         k2 = -K1;
         break;
     }
 
-    for(int i = 0; i < nPhi; ++i){
-      theta = M_PI/2. * (double) i/ (double) nPhi;
-      k = k1*cos(theta)*cos(theta) + k2*sin(theta)*sin(theta);
-      v[0] = v1[0]*cos(theta) + v2[0]*sin(theta);
-      v[1] = v1[1]*cos(theta) + v2[1]*sin(theta);
+    for(int i = 0; i < nPhi; ++i) {
+      theta = M_PI / 2. * (double)i / (double)nPhi;
+      k = k1 * cos(theta) * cos(theta) + k2 * sin(theta) * sin(theta);
+      v[0] = v1[0] * cos(theta) + v2[0] * sin(theta);
+      v[1] = v1[1] * cos(theta) + v2[1] * sin(theta);
       w[0] = -v[1];
-      w[1] =  v[0];
+      w[1] = v[0];
 
       s = solveErrorFunction(k, v, w, Hij, Cijk, roots);
 
       // Shoot :
-      myLP.lvl1[iDir*2*nPhi + 2*i + 0] = x0[0] + s*v[0] + s*s/2. * k*w[0];
-      myLP.lvl1[iDir*2*nPhi + 2*i + 1] = x0[1] + s*v[1] + s*s/2. * k*w[1];
+      myLP.lvl1[iDir * 2 * nPhi + 2 * i + 0] = x0[0] + s * v[0] + s * s / 2. * k * w[0];
+      myLP.lvl1[iDir * 2 * nPhi + 2 * i + 1] = x0[1] + s * v[1] + s * s / 2. * k * w[1];
     }
   }
 }
@@ -1585,15 +1668,15 @@ static void computeLvl1(double K1, double K2, double *g1, double *g2,
 // Not used if we use Eigen's Q.sqrt()
 static void powerOneHalf(Eigen::Matrix2d &Q, double Q12[3])
 {
-  double a = Q(0,0);
-  double b = Q(0,1);
-  double c = Q(1,1);
+  double a = Q(0, 0);
+  double b = Q(0, 1);
+  double c = Q(1, 1);
   // Symbolic expression from Matlab for Q12 = V * sqrt(Lambda) * V^(-1)
-  double f8 = sqrt(a*a - 2.*a*c + 4.*b*b + c*c);
-  double rPlus  = sqrt(a + c + f8);
+  double f8 = sqrt(a * a - 2. * a * c + 4. * b * b + c * c);
+  double rPlus = sqrt(a + c + f8);
   double rMinus = sqrt(a + c - f8);
   double r2 = sqrt(2.);
-  double f7 = r2 * rPlus  * f8;
+  double f7 = r2 * rPlus * f8;
   double f6 = r2 * rMinus * f8;
   double f5 = r2 * a * rPlus;
   double f4 = r2 * a * rMinus;
@@ -1614,14 +1697,14 @@ static bool solveLP(linearProblem &myLP, int nPhi, Eigen::Matrix2d &L)
   // lprow.setRhs(infinity);
 
   double xi, yi, normSquared, lhs;
-  for(int i = 0; i < 4*nPhi; ++i){
-    xi = myLP.constraints[2*i];
-    yi = myLP.constraints[2*i+1];
-    normSquared = xi*xi + yi*yi;
+  for(int i = 0; i < 4 * nPhi; ++i) {
+    xi = myLP.constraints[2 * i];
+    yi = myLP.constraints[2 * i + 1];
+    normSquared = xi * xi + yi * yi;
     lhs = -normSquared * log(normSquared);
-    myLP.row.add(0,    xi*xi);
-    myLP.row.add(1, 2.*xi*yi);
-    myLP.row.add(2,    yi*yi);
+    myLP.row.add(0, xi * xi);
+    myLP.row.add(1, 2. * xi * yi);
+    myLP.row.add(2, yi * yi);
     myLP.lprow.setLhs(lhs);
     myLP.lprow.setRowVector(myLP.row);
     myLP.lprowset.add(myLP.lprow);
@@ -1629,7 +1712,7 @@ static bool solveLP(linearProblem &myLP, int nPhi, Eigen::Matrix2d &L)
     // problem.changeRowReal(i, LPRow(lhs, row, infinity));
     myLP.row.clear();
   }
-  myLP.problem.removeRowRangeReal(0, 4*nPhi-1);
+  myLP.problem.removeRowRangeReal(0, 4 * nPhi - 1);
   myLP.problem.addRowsReal(myLP.lprowset);
   myLP.lprowset.clear();
   /* solve LP */
@@ -1638,23 +1721,24 @@ static bool solveLP(linearProblem &myLP, int nPhi, Eigen::Matrix2d &L)
 
   if(myLP.stat == SPxSolver::OPTIMAL) {
     myLP.problem.getPrimal(myLP.prim);
-    L(0,0) = myLP.prim[0];
-    L(0,1) = myLP.prim[1];
-    L(1,0) = myLP.prim[1];
-    L(1,1) = myLP.prim[2];
+    L(0, 0) = myLP.prim[0];
+    L(0, 1) = myLP.prim[1];
+    L(1, 0) = myLP.prim[1];
+    L(1, 1) = myLP.prim[2];
     return true;
   } else {
-    L(0,0) = 1.0;
-    L(0,1) = 0.0;
-    L(1,0) = 0.0;
-    L(1,1) = 1.0;
+    L(0, 0) = 1.0;
+    L(0, 1) = 0.0;
+    L(1, 0) = 0.0;
+    L(1, 1) = 1.0;
     return false;
   }
 }
 
-static bool logSimplexCurved(double *x, double k1, double k2, double g1[2], double g2[2], 
-  double Hij[2][2], double Cijk[2][2][2], int maxIter, int nThetaPerQuadrant, 
-  double tol, Eigen::Matrix2d &Q, int &numIter, linearProblem &myLP)
+static bool logSimplexCurved(double *x, double k1, double k2, double g1[2], double g2[2],
+                             double Hij[2][2], double Cijk[2][2][2], int maxIter,
+                             int nThetaPerQuadrant, double tol, Eigen::Matrix2d &Q, int &numIter,
+                             linearProblem &myLP)
 {
   int nPhi = nThetaPerQuadrant;
   // int size = 2 * 4 * nPhi; // 2 coordonnees * 4 quadrants * nPhi angles/quadrant
@@ -1668,67 +1752,72 @@ static bool logSimplexCurved(double *x, double k1, double k2, double g1[2], doub
   double xi, yi;
   bool res;
 
-  for(int iter = 0; iter < maxIter; ++iter){
+  for(int iter = 0; iter < maxIter; ++iter) {
     Qprev = Q;
     Q12 = Q.sqrt();
 
     // Apply transformation Q12 to the initial constraints
-    for(int i = 0; i < 4*nPhi; ++i){
-      xi = myLP.lvl1[2*i];
-      yi = myLP.lvl1[2*i+1];
-      myLP.constraints[2*i]   = Q12(0,0) * xi + Q12(0,1) * yi;
-      myLP.constraints[2*i+1] = Q12(1,0) * xi + Q12(1,1) * yi;
-    } 
+    for(int i = 0; i < 4 * nPhi; ++i) {
+      xi = myLP.lvl1[2 * i];
+      yi = myLP.lvl1[2 * i + 1];
+      myLP.constraints[2 * i] = Q12(0, 0) * xi + Q12(0, 1) * yi;
+      myLP.constraints[2 * i + 1] = Q12(1, 0) * xi + Q12(1, 1) * yi;
+    }
 
     // Solve the linear optimization problem for L
     res = solveLP(myLP, nPhi, L);
 
-    if(res){
+    if(res) {
       // Recover Q from L
       Q = Q12 * L.exp() * Q12;
 
       diff = Q - Qprev;
-      if(diff.norm() < tol){
+      if(diff.norm() < tol) {
         numIter = iter;
         break;
       }
-    } else{
+    } else {
       // LP solver returned an error : return the last valid Q
-      if(iter == 0){
-        feWarning("In logSimplexCurved : LP solver returned an error at iteration %d. Returning identity matrix.", iter);
+      if(iter == 0) {
+        feWarning("In logSimplexCurved : LP solver returned an error at iteration %d. Returning "
+                  "identity matrix.",
+                  iter);
         FILE *f = fopen("lvl1_check.pos", "w");
         fprintf(f, "View\"lvl1\"{\n");
-        for(int i = 0; i < 4*nPhi; ++i){
+        for(int i = 0; i < 4 * nPhi; ++i) {
           // feInfo("%f - %f", myLP.lvl1[2*i], myLP.lvl1[2*i+1]);
-          fprintf(f, "SP(%g,%g,0){%g,%g,0};", x[0] + myLP.lvl1[2*i], x[1] + myLP.lvl1[2*i+1], 1., 1.);
+          fprintf(f, "SP(%g,%g,0){%g,%g,0};", x[0] + myLP.lvl1[2 * i], x[1] + myLP.lvl1[2 * i + 1],
+                  1., 1.);
         }
         int nt = 30;
         std::vector<double> xP(nt, 0.);
         std::vector<double> yP(nt, 0.);
         double factor = 1.;
-        getEllipsePoints(factor * Q(0, 0), factor * 2.0 * Q(0, 1), factor * Q(1, 1), x[0], x[1], xP, yP);
+        getEllipsePoints(factor * Q(0, 0), factor * 2.0 * Q(0, 1), factor * Q(1, 1), x[0], x[1], xP,
+                         yP);
         for(int j = 0; j < nt; ++j) {
           if(j != nt - 1) {
-            fprintf(f, "SL(%.16g,%.16g,%.16g,%.16g,%.16g,%.16g){%u, %u};\n", xP[j], yP[j],
-                    0., xP[j + 1], yP[j + 1], 0., 1, 1);
+            fprintf(f, "SL(%.16g,%.16g,%.16g,%.16g,%.16g,%.16g){%u, %u};\n", xP[j], yP[j], 0.,
+                    xP[j + 1], yP[j + 1], 0., 1, 1);
           } else {
-            fprintf(f, "SL(%.16g,%.16g,%.16g,%.16g,%.16g,%.16g){%u, %u};\n", xP[j], yP[j],
-                    0., xP[0], yP[0], 0., 1, 1);
+            fprintf(f, "SL(%.16g,%.16g,%.16g,%.16g,%.16g,%.16g){%u, %u};\n", xP[j], yP[j], 0.,
+                    xP[0], yP[0], 0., 1, 1);
           }
         }
         fprintf(f, "};\n");
         fclose(f);
         return false;
       }
-      
+
       return true;
-    } 
+    }
   }
   return true;
 }
 
-bool computeMetricLogSimplexCurved(double *x, double cG, double sG, feRecovery *rec, 
-  Eigen::Matrix2d &Q, int maxIter, int nThetaPerQuadrant, double tol, int &numIter, linearProblem &myLP)
+bool computeMetricLogSimplexCurved(double *x, double cG, double sG, feRecovery *rec,
+                                   Eigen::Matrix2d &Q, int maxIter, int nThetaPerQuadrant,
+                                   double tol, int &numIter, linearProblem &myLP)
 {
   double g1[2], g2[2];
   g1[0] = cG;
@@ -1763,14 +1852,20 @@ bool computeMetricLogSimplexCurved(double *x, double cG, double sG, feRecovery *
 
   // double c11 = (a*a*tanh(a*(X/2. - sin(M_PI*b*Y)/4.))*(T - 1))/4;
   // double c12 = -(a*a*b*M_PI*tanh(a*(X/2. - sin(M_PI*b*Y)/4.))*cos(M_PI*b*Y)*(T - 1.))/8.;
-  // double c22 = (a*a*b*b*M_PI*M_PI*tanh(a*(X/2. - sin(M_PI*b*Y)/4.))*pow(cos(M_PI*b*Y),2)*(T - 1.))/16. - (a*b*b*M_PI*M_PI*sin(M_PI*b*Y)*(T - 1.))/8.;
+  // double c22 = (a*a*b*b*M_PI*M_PI*tanh(a*(X/2. - sin(M_PI*b*Y)/4.))*pow(cos(M_PI*b*Y),2)*(T
+  // - 1.))/16. - (a*b*b*M_PI*M_PI*sin(M_PI*b*Y)*(T - 1.))/8.;
 
   // double y = Y;
   // double pi = M_PI;
   // double c111 = - (a*a*a*pow((T - 1),2))/8 - (a*a*a*T*(T - 1))/4;
-  // double c112 = (a*a*a*b*pi*cos(pi*b*y)*pow((T - 1),2))/16 + (a*a*a*b*pi*T*cos(pi*b*y)*(T - 1))/8;
-  // double c122 = (a*a*b*b*M_PI*M_PI*tanh(a*(X/2 - sin(pi*b*y)/4))*sin(pi*b*y)*(T - 1))/8 - (a*a*a*b*b*M_PI*M_PI*T*pow(cos(pi*b*y),2)*(T - 1))/16 - (a*a*a*b*b*M_PI*M_PI*pow(cos(pi*b*y),2)*pow((T - 1),2))/32;
-  // double c222 = (a*a*a*b*b*b*M_PI*M_PI*M_PI*pow(cos(pi*b*y),3)*pow((T - 1),2))/64 - (a*b*b*b*M_PI*M_PI*M_PI*cos(pi*b*y)*(T - 1))/8 + (a*a*a*b*b*b*M_PI*M_PI*M_PI*T*pow(cos(pi*b*y),3)*(T - 1))/32 - (3*a*a*b*b*b*M_PI*M_PI*M_PI*tanh(a*(X/2 - sin(pi*b*y)/4))*cos(pi*b*y)*sin(pi*b*y)*(T - 1))/16;
+  // double c112 = (a*a*a*b*pi*cos(pi*b*y)*pow((T - 1),2))/16 + (a*a*a*b*pi*T*cos(pi*b*y)*(T -
+  // 1))/8; double c122 = (a*a*b*b*M_PI*M_PI*tanh(a*(X/2 - sin(pi*b*y)/4))*sin(pi*b*y)*(T - 1))/8 -
+  // (a*a*a*b*b*M_PI*M_PI*T*pow(cos(pi*b*y),2)*(T - 1))/16 -
+  // (a*a*a*b*b*M_PI*M_PI*pow(cos(pi*b*y),2)*pow((T - 1),2))/32; double c222 =
+  // (a*a*a*b*b*b*M_PI*M_PI*M_PI*pow(cos(pi*b*y),3)*pow((T - 1),2))/64 -
+  // (a*b*b*b*M_PI*M_PI*M_PI*cos(pi*b*y)*(T - 1))/8 +
+  // (a*a*a*b*b*b*M_PI*M_PI*M_PI*T*pow(cos(pi*b*y),3)*(T - 1))/32 -
+  // (3*a*a*b*b*b*M_PI*M_PI*M_PI*tanh(a*(X/2 - sin(pi*b*y)/4))*cos(pi*b*y)*sin(pi*b*y)*(T - 1))/16;
 
   // Analytique : r4 = (x^2+y^2)^2 = x^4 + y^4 + 2*x^2 y^2
   // double c1 = 4.*X*X*X + 4. * X*Y*Y;
@@ -1811,24 +1906,30 @@ bool computeMetricLogSimplexCurved(double *x, double cG, double sG, feRecovery *
 
   // double c1 = -20/(T + 1);
   // double c2 = (15*pi*S)/(T + 1);
-  
+
   // double c11 = (20*R)/TT;
   // double c12 = -(600*pi*S*(20*X - 10*sin((3*pi*Y)/2)))/TT;
-  // double c22 = (450*pi*pi*S*S*(20*X - 10*sin((3*pi*Y)/2)))/TT - (45*pi*pi*sin((3*pi*Y)/2))/(2*(T + 1));
-  
+  // double c22 = (450*pi*pi*S*S*(20*X - 10*sin((3*pi*Y)/2)))/TT - (45*pi*pi*sin((3*pi*Y)/2))/(2*(T
+  // + 1));
+
   // double c111 = 16000/TT - (40*R*R)/TTT;
   // double c112 = (1200*pi*S*(20*X - 10*sin((3*pi*Y)/2))*R)/TTT - (12000*pi*S)/TT;
-  // double c122 = (9000*pi*pi*S*S)/TT + (900*pi*pi*sin((3*pi*Y)/2)*(20*X - 10*sin((3*pi*Y)/2)))/TT - (36000*pi*pi*S*S*T)/TTT;
-  // double c222 = (27000*pi*pi*pi*S*S*S*T)/TTT - (135*pi*pi*pi*S)/(4*(T + 1)) - (6750*pi*pi*pi*S*S*S)/TT - (2025*pi*pi*pi*S*sin((3*pi*Y)/2)*(20*X - 10*sin((3*pi*Y)/2)))/TT;
+  // double c122 = (9000*pi*pi*S*S)/TT + (900*pi*pi*sin((3*pi*Y)/2)*(20*X - 10*sin((3*pi*Y)/2)))/TT
+  // - (36000*pi*pi*S*S*T)/TTT; double c222 = (27000*pi*pi*pi*S*S*S*T)/TTT - (135*pi*pi*pi*S)/(4*(T
+  // + 1)) - (6750*pi*pi*pi*S*S*S)/TT - (2025*pi*pi*pi*S*sin((3*pi*Y)/2)*(20*X -
+  // 10*sin((3*pi*Y)/2)))/TT;
 
   double Hij[2][2] = {{c11, c12}, {c12, c22}};
   double Cijk[2][2][2] = {{{c111, c112}, {c112, c122}}, {{c112, c122}, {c122, c222}}};
-  
-  double k1 = (-c2 * c2 * c11 + 2.0 * c1 * c2 * c12 - c1 * c1 * c22) / (pow(c1 * c1 + c2 * c2, 3.0 / 2.0));
-  // k1 = -k1;
-  double k2 = (c1 * c2 * (c22 - c11) + (c1 * c1 - c2 * c2) * c12) / (pow(c1 * c1 + c2 * c2, 3.0 / 2.0));
 
-  bool res = logSimplexCurved(x, k1, k2, g1, g2, Hij, Cijk, maxIter, nThetaPerQuadrant, tol, Q, numIter, myLP);
+  double k1 =
+    (-c2 * c2 * c11 + 2.0 * c1 * c2 * c12 - c1 * c1 * c22) / (pow(c1 * c1 + c2 * c2, 3.0 / 2.0));
+  // k1 = -k1;
+  double k2 =
+    (c1 * c2 * (c22 - c11) + (c1 * c1 - c2 * c2) * c12) / (pow(c1 * c1 + c2 * c2, 3.0 / 2.0));
+
+  bool res = logSimplexCurved(x, k1, k2, g1, g2, Hij, Cijk, maxIter, nThetaPerQuadrant, tol, Q,
+                              numIter, myLP);
   return res;
 }
 #endif

@@ -5,28 +5,26 @@
 #include <functional>
 
 // Convenience type for a scalar function f(t, [x y z])
-typedef std::function<double(const double,
-  const std::vector<double> &,
-  const std::vector<double> &)> ScalarField;
+typedef std::function<double(const double, const std::vector<double> &,
+                             const std::vector<double> &)>
+  ScalarField;
 
 // Convenience type for a scalar function f(u)
-typedef std::function<double(const double,
-  const std::vector<double> &)> ScalarSolField;
+typedef std::function<double(const double, const std::vector<double> &)> ScalarSolField;
 
 // Convenience type for a vector function F(t, [x y z])
-typedef std::function<void(const double,
-  const std::vector<double> &,
-  const std::vector<double> &,
-  std::vector<double> &)> VectorField;
+typedef std::function<void(const double, const std::vector<double> &, const std::vector<double> &,
+                           std::vector<double> &)>
+  VectorField;
 
-static double constantCallback(const double t, const std::vector<double> &pos, 
-  const std::vector<double> &par)
+static double constantCallback(const double t, const std::vector<double> &pos,
+                               const std::vector<double> &par)
 {
   return par[0];
 }
 
-static void constantVectorCallback(const double t, const std::vector<double> &pos, 
-  const std::vector<double> &par, std::vector<double> &res)
+static void constantVectorCallback(const double t, const std::vector<double> &pos,
+                                   const std::vector<double> &par, std::vector<double> &res)
 {
   res[0] = par[0];
   res[1] = par[1];
@@ -49,10 +47,10 @@ public:
 
   // Evaluate the ScalarField at time t and position x
   // Can use 'eval' or operator() overloading
-  double eval(const double t, const std::vector<double> &x){ return _fct1(t, x, _par); };
-  double eval(const double u){ return _fct2(u, _par); };
-  double operator()(const double t, const std::vector<double> &x){ return _fct1(t, x, _par); };
-  double operator()(const double u){ return _fct2(u, _par); };
+  double eval(const double t, const std::vector<double> &x) { return _fct1(t, x, _par); };
+  double eval(const double u) { return _fct2(u, _par); };
+  double operator()(const double t, const std::vector<double> &x) { return _fct1(t, x, _par); };
+  double operator()(const double u) { return _fct2(u, _par); };
 };
 
 class feConstantFunction : public feFunction
@@ -74,8 +72,14 @@ public:
   ~feVectorFunction(){};
 
   // Evaluate the VectorField at time t and position x
-  void eval(const double t, const std::vector<double> &x, std::vector<double> &res){ _fct(t, x, _par, res); };
-  void operator()(const double t, const std::vector<double> &x, std::vector<double> &res){ _fct(t, x, _par, res); };
+  void eval(const double t, const std::vector<double> &x, std::vector<double> &res)
+  {
+    _fct(t, x, _par, res);
+  };
+  void operator()(const double t, const std::vector<double> &x, std::vector<double> &res)
+  {
+    _fct(t, x, _par, res);
+  };
   std::vector<double> getParam() { return _par; }
 };
 

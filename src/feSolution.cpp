@@ -5,11 +5,7 @@
 
 feSolution::feSolution(int numDOF, const std::vector<feSpace *> &space,
                        const std::vector<feSpace *> &essentialSpaces)
-  : _spaces(space)
-  , _essentialSpaces(essentialSpaces)
-  , _nDOF(numDOF)
-  , _c0(0.)
-  , _tn(0.)
+  : _spaces(space), _essentialSpaces(essentialSpaces), _nDOF(numDOF), _c0(0.), _tn(0.)
 {
   _sol.resize(numDOF);
   _dsoldt.resize(numDOF);
@@ -21,9 +17,7 @@ feSolution::feSolution(int numDOF, const std::vector<feSpace *> &space,
 
 /* Constructs an feSolution from a file created by feSolution::printSol. */
 feSolution::feSolution(std::string solutionFile)
-  : _spaces(std::vector<feSpace *>()), 
-  _essentialSpaces(std::vector<feSpace *>()),
-  _c0(0.)
+  : _spaces(std::vector<feSpace *>()), _essentialSpaces(std::vector<feSpace *>()), _c0(0.)
 {
   feInfo("Reading solution file : %s\n", solutionFile.c_str());
   std::filebuf fb;
@@ -61,8 +55,7 @@ feSolution::feSolution(std::string solutionFile)
 
 void feSolution::getSolAtDOF(const std::vector<feInt> &addressing, std::vector<double> &sol) const
 {
-  for(size_t i = 0; i < addressing.size(); ++i)
-  {
+  for(size_t i = 0; i < addressing.size(); ++i) {
     sol[i] = _sol[addressing[i]];
   }
 }
@@ -83,8 +76,7 @@ void feSolution::initializeUnknowns(feMesh *mesh)
   double val;
 
   for(feSpace *fS : _spaces) {
-
-    if(fS->getDOFInitialization() == dofInitialization::PREVIOUS_SOL){
+    if(fS->getDOFInitialization() == dofInitialization::PREVIOUS_SOL) {
       continue;
     }
 
@@ -93,27 +85,25 @@ void feSolution::initializeUnknowns(feMesh *mesh)
     std::vector<double> coor = fS->getLcoor();
     int numVerticesPerElem = mesh->getCncGeoByName(fS->getCncGeoID())->getNumVerticesPerElem();
     std::vector<double> localCoord(3 * numVerticesPerElem);
-    
+
     feSpace *geoSpace = mesh->getGeometricSpace(fS->getCncGeoID());
-    
-    if(fS->getDOFInitialization() == dofInitialization::NODEWISE)
-    {
+
+    if(fS->getDOFInitialization() == dofInitialization::NODEWISE) {
       // Node based: the initial condition is imposed at the vertices DOF
       for(int iElm = 0; iElm < nElm; ++iElm) {
-
         fS->initializeAddressingVector(iElm, adr);
         mesh->getCoord(fS->getCncGeoID(), iElm, localCoord);
-        
+
         for(int j = 0; j < fS->getNumFunctions(); ++j) {
           double r[3] = {coor[3 * j], coor[3 * j + 1], coor[3 * j + 2]};
           geoSpace->interpolateVectorField(localCoord, r, x);
 
-          if(fS->getNumComponents() > 1){
+          if(fS->getNumComponents() > 1) {
             // Vector valued finite element space
             fS->evalFun(_tn, x, vecVal);
             int indexComponent = j % fS->getNumComponents();
             val = vecVal[indexComponent];
-          } else{
+          } else {
             // Scalar valued finite element space
             val = fS->evalFun(_tn, x);
           }
@@ -123,19 +113,20 @@ void feSolution::initializeUnknowns(feMesh *mesh)
       }
     }
 
-    else if(fS->getDOFInitialization() == dofInitialization::LEAST_SQUARES)
-    {
-      // Assuming 1D Legendre polynomials: the initial condition is satisfied on each element in the least-square sense:
+    else if(fS->getDOFInitialization() == dofInitialization::LEAST_SQUARES) {
+      // Assuming 1D Legendre polynomials: the initial condition is satisfied on each element in the
+      // least-square sense:
       //
       //  <phi_i, phi_j> U_j^e = <phi_i, funSol> ==> A_ij^e U_j^e = B_j^e
       //
-      // !!! We assume that the jacobian cancels out from both side, which is true only for P1 line geometry !!!
+      // !!! We assume that the jacobian cancels out from both side, which is true only for P1 line
+      // geometry !!!
 
       // The analytic diagonal mass matrix A_ii = 2/(2*i+1)
       std::vector<double> A(fS->getNumFunctions(), 0.);
       std::vector<double> B(fS->getNumFunctions(), 0.);
-      for(int i = 0; i < fS->getNumFunctions(); ++i){
-        A[i] = 2./(2. * i + 1.);
+      for(int i = 0; i < fS->getNumFunctions(); ++i) {
+        A[i] = 2. / (2. * i + 1.);
       }
 
       int nQuad = geoSpace->getNumQuadPoints();
@@ -144,16 +135,14 @@ void feSolution::initializeUnknowns(feMesh *mesh)
 
       double uQuad = 0.;
       std::vector<double> phi(fS->getNumFunctions(), 0.);
-      for(int iElm = 0; iElm < nElm; ++iElm){
-
+      for(int iElm = 0; iElm < nElm; ++iElm) {
         fS->initializeAddressingVector(iElm, adr);
         mesh->getCoord(fS->getCncGeoID(), iElm, localCoord);
 
         // Compute the RHS
-        for(int i = 0; i < fS->getNumFunctions(); ++i){
-
+        for(int i = 0; i < fS->getNumFunctions(); ++i) {
           B[i] = 0.;
-          for(int k = 0; k < nQuad; ++k){
+          for(int k = 0; k < nQuad; ++k) {
             // Evaluate analytic solution at quad points
             double r[3] = {xQuad[k], 0., 0.};
             geoSpace->interpolateVectorField(localCoord, r, x);
@@ -165,7 +154,7 @@ void feSolution::initializeUnknowns(feMesh *mesh)
         }
 
         // Solve Aij Uj = Bj on the element
-        for(int i = 0; i < fS->getNumFunctions(); ++i){
+        for(int i = 0; i < fS->getNumFunctions(); ++i) {
           _sol[adr[i]] = B[i] / A[i];
         }
       }
@@ -184,27 +173,26 @@ void feSolution::initializeEssentialBC(feMesh *mesh, feSolutionContainer *solCon
   // which is fine since initialization order for non-essential
   // spaces is irrelevant.
   // Also set _essentialComponent to true for all fully essential spaces.
-  std::vector<feSpace*> allEssentialSpaces = _essentialSpaces;
-  for(auto *space : _spaces){
-    if(space->getNumComponents() > 1){
+  std::vector<feSpace *> allEssentialSpaces = _essentialSpaces;
+  for(auto *space : _spaces) {
+    if(space->getNumComponents() > 1) {
       bool toAdd = false;
-      for(int i = 0; i < space->getNumComponents(); ++i){
-        if(space->isEssentialComponent(i)){
+      for(int i = 0; i < space->getNumComponents(); ++i) {
+        if(space->isEssentialComponent(i)) {
           toAdd = true;
         }
       }
       if(toAdd) allEssentialSpaces.push_back(space);
     }
   }
-  for(auto *space : _essentialSpaces){
+  for(auto *space : _essentialSpaces) {
     space->setEssentialComponent(0, true);
     space->setEssentialComponent(1, true);
     space->setEssentialComponent(2, true);
   }
 
   for(feSpace *fS : allEssentialSpaces) {
-
-    if(fS->getDOFInitialization() == dofInitialization::PREVIOUS_SOL){
+    if(fS->getDOFInitialization() == dofInitialization::PREVIOUS_SOL) {
       continue;
     }
 
@@ -212,16 +200,14 @@ void feSolution::initializeEssentialBC(feMesh *mesh, feSolutionContainer *solCon
     std::vector<feInt> adr(fS->getNumFunctions());
     std::vector<double> coor = fS->getLcoor();
     int numVerticesPerElem = mesh->getCncGeoByName(fS->getCncGeoID())->getNumVerticesPerElem();
-    std::vector<double> localCoord(3 * numVerticesPerElem); 
-    
+    std::vector<double> localCoord(3 * numVerticesPerElem);
+
     feSpace *geoSpace = mesh->getGeometricSpace(fS->getCncGeoID());
-    
+
     if(fS->getDOFInitialization() == dofInitialization::NODEWISE ||
-       fS->getDOFInitialization() == dofInitialization::EXTRAPOLATED_EULER_0D)
-    {
+       fS->getDOFInitialization() == dofInitialization::EXTRAPOLATED_EULER_0D) {
       // Node based: the initial condition is imposed at the vertices DOF
       for(int iElm = 0; iElm < nElm; ++iElm) {
-
         fS->initializeAddressingVector(iElm, adr);
         mesh->getCoord(fS->getCncGeoID(), iElm, localCoord);
 
@@ -229,26 +215,28 @@ void feSolution::initializeEssentialBC(feMesh *mesh, feSolutionContainer *solCon
           double r[3] = {coor[3 * j], coor[3 * j + 1], coor[3 * j + 2]};
           geoSpace->interpolateVectorField(localCoord, r, x);
 
-          if(fS->getNumComponents() > 1){
+          if(fS->getNumComponents() > 1) {
             // Vector valued finite element space
             fS->evalFun(_tn, x, vecVal);
             int indexComponent = j % fS->getNumComponents();
             val = vecVal[indexComponent];
-            if(fS->isEssentialComponent(indexComponent)){
+            if(fS->isEssentialComponent(indexComponent)) {
               _sol[adr[j]] = val;
-              if(solContainer != nullptr) { solContainer->_sol[0][adr[j]] = val; };
+              if(solContainer != nullptr) {
+                solContainer->_sol[0][adr[j]] = val;
+              };
             }
-          } else{
+          } else {
             // Scalar valued finite element space
             val = fS->evalFun(_tn, x);
             _sol[adr[j]] = val;
-            if(solContainer != nullptr) { solContainer->_sol[0][adr[j]] = val; };
+            if(solContainer != nullptr) {
+              solContainer->_sol[0][adr[j]] = val;
+            };
           }
         }
       }
-    }
-    else if(fS->getDOFInitialization() == dofInitialization::LEAST_SQUARES)
-    {
+    } else if(fS->getDOFInitialization() == dofInitialization::LEAST_SQUARES) {
       // Not yet implemented
       feErrorMsg(FE_STATUS_ERROR, "Cannot initialize essential DOF in the LEAST_SQUARES sense.");
       exit(-1);
@@ -258,8 +246,6 @@ void feSolution::initializeEssentialBC(feMesh *mesh, feSolutionContainer *solCon
   // if(fS->getDOFInitialization() == dofInitialization::EXTRAPOLATED_EULER_0D) {
   //   // Extrapolate solution from inside the domain to the boundary
   //   // Only in 1D for Euler equations for now
-
-
 
   //   for(int iElm = 0; iElm < nElm; ++iElm) {
   //     fS->initializeAddressingVector(iElm, adr);
@@ -275,7 +261,6 @@ void feSolution::initializeEssentialBC(feMesh *mesh, feSolutionContainer *solCon
 
   //   }
   // }
-
 }
 
 void feSolution::copySpace(feMesh *mesh, feSpace *s1, feSpace *s2)
@@ -285,14 +270,14 @@ void feSolution::copySpace(feMesh *mesh, feSpace *s1, feSpace *s2)
   std::vector<feInt> adr2(s2->getNumFunctions());
   std::vector<double> coor = s1->getLcoor();
   int numVerticesPerElem = mesh->getCncGeoByName(s1->getCncGeoID())->getNumVerticesPerElem();
-  std::vector<double> localCoord(3*numVerticesPerElem);
+  std::vector<double> localCoord(3 * numVerticesPerElem);
   std::vector<double> x(3);
-  
+
   for(int iElm = 0; iElm < nElm; ++iElm) {
     s1->initializeAddressingVector(iElm, adr1);
-    s2->initializeAddressingVector(iElm, adr2);    
+    s2->initializeAddressingVector(iElm, adr2);
     for(int j = 0; j < s1->getNumFunctions(); ++j) {
-        _sol[adr2[j]] = _sol[adr1[j]];
+      _sol[adr2[j]] = _sol[adr1[j]];
     }
   }
 }

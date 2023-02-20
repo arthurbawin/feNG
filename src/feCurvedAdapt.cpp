@@ -1111,7 +1111,8 @@
 // }
 
 // static double dttt(const double x, const double y, double C, double S,
-//                    std::vector<feRecovery *> rec = std::vector<feRecovery *>(), int direction = -1)
+//                    std::vector<feRecovery *> rec = std::vector<feRecovery *>(), int direction =
+//                    -1)
 // {
 //   if(rec.size() > 0) {
 //     const double c111 = fxxxFromRec(rec, x, y);
@@ -1129,7 +1130,8 @@
 //     const double c2 = fyFromRec(rec, x, y);
 
 //     double kappa1 =
-//       (-c2 * c2 * c11 + 2.0 * c1 * c2 * c12 - c1 * c1 * c22) / (pow(c1 * c1 + c2 * c2, 3.0 / 2.0));
+//       (-c2 * c2 * c11 + 2.0 * c1 * c2 * c12 - c1 * c1 * c22) / (pow(c1 * c1 + c2 * c2, 3.0
+//       / 2.0));
 //     double kappa2 =
 //       (c1 * c2 * (c22 - c11) + (c1 * c1 - c2 * c2) * c12) / (pow(c1 * c1 + c2 * c2, 3.0 / 2.0));
 
@@ -1139,13 +1141,15 @@
 //     double g22 = C;
 //     // if(direction == 0){
 //     //   // return C * C * C * c111 + S * S * S * c222 + 3. * C * C * S * c112 + 3. * C * S * S *
-//     //   c122 + 3.0 * kappa1 * (g11*g21*c11 + g11*g22*c12 + g12*g21*c12 + g12*g22*c22); return g11 *
+//     //   c122 + 3.0 * kappa1 * (g11*g21*c11 + g11*g22*c12 + g12*g21*c12 + g12*g22*c22); return
+//     g11 *
 //     //   g11 * g11 * c111 + g12 * g12 * g12 * c222
 //     //   + 3. * g11 * g11 * g12 * c112 + 3. * g11 * g12 * g12 * c122; // + 3.0 * kappa1 *
 //     //   (g11*g21*c11 + g11*g22*c12 + g12*g21*c12 + g12*g22*c22);
 //     // } else if(direction == 1){
 //     //   // return C * C * C * c111 + S * S * S * c222 + 3. * C * C * S * c112 + 3. * C * S * S *
-//     //   c122 + 3.0 * kappa2 * (g11*g21*c11 + g21*g12*c12 + g22*g11*c12 + g12*g22*c22); return g21 *
+//     //   c122 + 3.0 * kappa2 * (g11*g21*c11 + g21*g12*c12 + g22*g11*c12 + g12*g22*c22); return
+//     g21 *
 //     //   g21 * g21 * c111 + g22 * g22 * g22 * c222
 //     //   + 3. * g21 * g21 * g22 * c112 + 3. * g21 * g22 * g22 * c122; // + 3.0 * kappa2 *
 //     //   (g11*g21*c11 + g21*g12*c12 + g22*g11*c12 + g12*g22*c22);
@@ -1570,8 +1574,8 @@
 //   return e2;
 // }
 
-// double ERROR_SQUARED_P2(double *xa, double *xb, double *xc, double *xab, double *xbc, double *xca)
-// { //, feFunction *solExact) {
+// double ERROR_SQUARED_P2(double *xa, double *xb, double *xc, double *xab, double *xbc, double
+// *xca) { //, feFunction *solExact) {
 //   int triangleP2 = gmsh::model::mesh::getElementType("Triangle", 2);
 //   std::vector<double> localCoord;
 //   std::vector<double> weights;
@@ -1617,8 +1621,8 @@
 
 // feCurvedAdapt::feCurvedAdapt(feMesh *mesh, std::vector<feRecovery *> &recovery,
 //                              feMetricOptions metricOptions, std::string meshName,
-//                              std::string metricMeshName, std::string nextMeshName, int analytical,
-//                              feFunction *solExact)
+//                              std::string metricMeshName, std::string nextMeshName, int
+//                              analytical, feFunction *solExact)
 //   : _rec(recovery)
 // {
 // #ifdef HAVE_GMSH
@@ -1643,7 +1647,8 @@
 // #if defined(CURVED)
 //   double modelSize = fmin(metricOptions.modelSizeX, metricOptions.modelSizeY);
 
-//   // gmsh::model::occ::addRectangle(0, 0, 0, metricOptions.modelSizeX, metricOptions.modelSizeY, 1);
+//   // gmsh::model::occ::addRectangle(0, 0, 0, metricOptions.modelSizeX, metricOptions.modelSizeY,
+//   1);
 
 //   // Square
 //   double xmax = metricOptions.modelSizeX;
@@ -1716,7 +1721,8 @@
 
 //   // if(nodeTags.size() != _rec[0]->getVertices().size()) {
 //   //   printf(
-//   //     "In feCurvedAdapt : Error - the number of node tags obtained from Gmsh (%d) does not match
+//   //     "In feCurvedAdapt : Error - the number of node tags obtained from Gmsh (%d) does not
+//   match
 //   //     the " "number of vertices in the recovery structure. The tag and/or dimension may be
 //   //     wrong.\n", nodeTags.size());
 //   //   exit(-1);
@@ -1744,7 +1750,8 @@
 //     // printf("%+-6.6f - %+-6.6f vs %+-6.6f - %+-6.6f\n", x, y, v->x(), v->y());
 //     // int seqV = mesh->getVertexSequentialTagFromGmshTag(nodeTags[i]);
 //     // printf("%+-6.6f - %+-6.6f vs %+-6.6f - %+-6.6f\n", x, y, mesh->getVertex(seqV)->x(),
-//     // mesh->getVertex(seqV)->y()); printf("dudx avec probe = %+-6.6e - avec recovery = %+-6.6e\n",
+//     // mesh->getVertex(seqV)->y()); printf("dudx avec probe = %+-6.6e - avec recovery =
+//     %+-6.6e\n",
 //     // fxx(x,y), recovery[0]->recoveryCoeff[seqV][0][0]);
 
 //     double C, S;
@@ -1917,7 +1924,8 @@
 //         fprintf(fff, "SL(%.16g,%.16g,%.16g,%.16g,%.16g,%.16g){%u, %u};\n", xP[j], yP[j], 0.,
 //                 xP[j + 1], yP[j + 1], 0., 1, 1);
 //       } else {
-//         fprintf(fff, "SL(%.16g,%.16g,%.16g,%.16g,%.16g,%.16g){%u, %u};\n", xP[j], yP[j], 0., xP[0],
+//         fprintf(fff, "SL(%.16g,%.16g,%.16g,%.16g,%.16g,%.16g){%u, %u};\n", xP[j], yP[j], 0.,
+//         xP[0],
 //                 yP[0], 0., 1, 1);
 //       }
 //     }
@@ -1925,9 +1933,11 @@
 //     auto pp = alreadyWrittenTags.insert(nodeTags[i]);
 
 //     if(pp.second) {
-//       fprintf(ffff, "%d \t %+-4.4e \t %+-4.4e : %+-4.4e \t %+-4.4e \t %+-4.4e \n", nodeTags[i], x,
+//       fprintf(ffff, "%d \t %+-4.4e \t %+-4.4e : %+-4.4e \t %+-4.4e \t %+-4.4e \n", nodeTags[i],
+//       x,
 //               y, M(0, 0), M(0, 1), M(1, 1));
-//       // fprintf(ffff, "%d \t %+-4.4e \t %+-4.4e : %+-4.4e \t %+-4.4e \t %+-4.4e \n", nodeTags[i],
+//       // fprintf(ffff, "%d \t %+-4.4e \t %+-4.4e : %+-4.4e \t %+-4.4e \t %+-4.4e \n",
+//       nodeTags[i],
 //       // x, y, M(0, 0), M(0, 1), M(1, 1)); Write .sol size field
 //       // fprintf(myfile, "%+-10.12f \t %+-10.12f \t %+-10.12f \t %+-10.12f \t %+-10.12f\n", x, y,
 //       // M(0, 0), M(0, 1), M(1, 1));
@@ -1997,7 +2007,8 @@
 
 //   // return;
 
-//   // std::string saveMesh = "gmsh " + meshName + " -o test.mesh -0"; // N'exporte pas les physicals
+//   // std::string saveMesh = "gmsh " + meshName + " -o test.mesh -0"; // N'exporte pas les
+//   physicals
 //   // : RIP system(saveMesh.c_str());
 //   // // Ajouter à la main les entités physiques :
 //   // // Uniquement pour les Edges et Triangles pour le moment
@@ -2146,9 +2157,9 @@
 
 //   int computePointsUsingScaledCrossFieldPlanarP2(
 //     const char *modelForMetric, const char *modelForMesh, int VIEW_TAG, int faceTag,
-//     std::vector<double> &pts, double er(double *, double *, double *, double *, double *, double *),
-//     bool inside(double *),
-//     void grad_er(double *, double *, double *, double *, double *, double *,
+//     std::vector<double> &pts, double er(double *, double *, double *, double *, double *, double
+//     *), bool inside(double *), void grad_er(double *, double *, double *, double *, double *,
+//     double *,
 //                  std::vector<double> &) = nullptr,
 //     double pointwiseError(double *) = nullptr);
 
@@ -2159,7 +2170,8 @@
 //   if(vazy) {
 //     printf("Meshing...\n");
 //     gmsh::fltk::run();
-//     computePointsUsingScaledCrossFieldPlanarP2("test", "adapt", viewTag, 0, pts, ERROR_SQUARED_P2,
+//     computePointsUsingScaledCrossFieldPlanarP2("test", "adapt", viewTag, 0, pts,
+//     ERROR_SQUARED_P2,
 //                                                metricOptions.inside);
 //     printf("Done\n");
 //   }
@@ -2242,7 +2254,8 @@
 //   //   dataF_adapt.push_back(vF);
 //   // }
 //   // gmsh::model::setCurrent("rect_adapt");
-//   // gmsh::view::addModelData(viewTagF_adapt, 0, "rect_adapt", "NodeData", nodeTags, dataF_adapt);
+//   // gmsh::view::addModelData(viewTagF_adapt, 0, "rect_adapt", "NodeData", nodeTags,
+//   dataF_adapt);
 //   // gmsh::view::write(viewTagF_adapt, "sol_adapt.msh");
 
 //   // std::vector<int> elementTypes;
@@ -2349,11 +2362,13 @@
 //   //     gmsh::model::mesh::getNode(nodeTags[0][6 * e + 3], xab, pc, eDim, eTag);
 //   //     gmsh::model::mesh::getNode(nodeTags[0][6 * e + 4], xbc, pc, eDim, eTag);
 //   //     gmsh::model::mesh::getNode(nodeTags[0][6 * e + 5], xca, pc, eDim, eTag);
-//   //     double ErrorElement = ERROR_SQUARED_P2(&xa[0], &xb[0], &xc[0], &xab[0], &xbc[0], &xca[0]);
+//   //     double ErrorElement = ERROR_SQUARED_P2(&xa[0], &xb[0], &xc[0], &xab[0], &xbc[0],
+//   &xca[0]);
 //   //     fprintf(ERR,
-//   //             "ST2(%g,%g,%g,%g,%g,%g,%g,%g,%g,%g,%g,%g,%g,%g,%g,%g,%g,%g){%g,%g,%g,%g,%g,%g};\n",
+//   // "ST2(%g,%g,%g,%g,%g,%g,%g,%g,%g,%g,%g,%g,%g,%g,%g,%g,%g,%g){%g,%g,%g,%g,%g,%g};\n",
 //   //             xa[0], xa[1], 0.0, xb[0], xb[1], 0.0, xc[0], xc[1], 0.0, xab[0], xab[1], 0.0,
-//   //             xbc[0], xbc[1], 0.0, xca[0], xca[1], 0.0, ErrorElement, ErrorElement, ErrorElement,
+//   //             xbc[0], xbc[1], 0.0, xca[0], xca[1], 0.0, ErrorElement, ErrorElement,
+//   ErrorElement,
 //   //             ErrorElement, ErrorElement, ErrorElement);
 //   //     Error += ErrorElement;
 //   //   }
@@ -2374,7 +2389,8 @@
 
 // feIsotropicAdapt::feIsotropicAdapt(feMesh *mesh, std::vector<feRecovery *> &recovery,
 //                                    feMetricOptions metricOptions, std::string metricMeshName,
-//                                    std::string nextMeshName, int analytical, feFunction *solExact)
+//                                    std::string nextMeshName, int analytical, feFunction
+//                                    *solExact)
 //   : _rec(recovery)
 // {
 // #ifdef HAVE_GMSH
@@ -2487,7 +2503,8 @@
 //         fprintf(fff, "SL(%.16g,%.16g,%.16g,%.16g,%.16g,%.16g){%u, %u};\n", xP[i], yP[i], 0.,
 //                 xP[i + 1], yP[i + 1], 0., 1, 1);
 //       } else {
-//         fprintf(fff, "SL(%.16g,%.16g,%.16g,%.16g,%.16g,%.16g){%u, %u};\n", xP[i], yP[i], 0., xP[0],
+//         fprintf(fff, "SL(%.16g,%.16g,%.16g,%.16g,%.16g,%.16g){%u, %u};\n", xP[i], yP[i], 0.,
+//         xP[0],
 //                 yP[0], 0., 1, 1);
 //       }
 //     }
@@ -2596,7 +2613,8 @@
 //   //   dataF_adapt.push_back(vF);
 //   // }
 //   // gmsh::model::setCurrent("rect_adapt");
-//   // gmsh::view::addModelData(viewTagF_adapt, 0, "rect_adapt", "NodeData", nodeTags, dataF_adapt);
+//   // gmsh::view::addModelData(viewTagF_adapt, 0, "rect_adapt", "NodeData", nodeTags,
+//   dataF_adapt);
 //   // gmsh::view::write(viewTagF_adapt, "sol_adapt.msh");
 
 //   // std::vector<int> elementTypes;

@@ -116,7 +116,7 @@ void feLinearSystemPETSc::initialize()
   // avoid using a weak form for a block of zeros
   PetscInt indiceDiag;
   PetscScalar val = 0.;
-  for(int i = 0; i < _nInc; ++i){
+  for(int i = 0; i < _nInc; ++i) {
     indiceDiag = i;
     ierr = MatSetValues(_A, 1, &indiceDiag, 1, &indiceDiag, &val, INSERT_VALUES);
     CHKERRABORT(PETSC_COMM_WORLD, ierr);
@@ -140,8 +140,8 @@ void feLinearSystemPETSc::initialize()
   ierr = PCSetType(preconditioner, PCILU);
   CHKERRABORT(PETSC_COMM_WORLD, ierr);
 
-  ierr = KSPSetTolerances(ksp, (PetscReal) _rel_tol, (PetscReal) _abs_tol, 
-    (PetscReal) _div_tol, (PetscInt) _max_iter);
+  ierr = KSPSetTolerances(ksp, (PetscReal)_rel_tol, (PetscReal)_abs_tol, (PetscReal)_div_tol,
+                          (PetscInt)_max_iter);
   CHKERRABORT(PETSC_COMM_WORLD, ierr);
   ierr = KSPSetNormType(ksp, KSP_NORM_UNPRECONDITIONED);
   CHKERRABORT(PETSC_COMM_WORLD, ierr);
@@ -195,7 +195,8 @@ feLinearSystemPETSc::feLinearSystemPETSc(int argc, char **argv,
                                          int numUnknowns)
   : feLinearSystem(bilinearForms), _argc(argc), _argv(argv)
 #if defined(HAVE_PETSC)
-    , _nInc(numUnknowns)
+    ,
+    _nInc(numUnknowns)
 #endif
 {
   this->initialize();
@@ -204,24 +205,28 @@ feLinearSystemPETSc::feLinearSystemPETSc(int argc, char **argv,
 void feLinearSystemPETSc::viewMatrix()
 {
 #if defined(HAVE_PETSC)
-  if(_displayMatrixInConsole){
+  if(_displayMatrixInConsole) {
     MatView(_A, PETSC_VIEWER_STDOUT_WORLD);
   }
 
-  if(_displayMatrixInWindow){
-
+  if(_displayMatrixInWindow) {
     PetscErrorCode ierr = 0;
     // ierr = MatGetOrdering(_A, MATORDERINGRCM, &_rowMap, &_colMap); CHKERRV(ierr);
     // ierr = MatPermute(_A, _rowMap, _colMap, &_Ap); CHKERRV(ierr);
 
     PetscViewer viewer;
     PetscDraw draw;
-    ierr = PetscViewerDrawOpen(PETSC_COMM_WORLD, NULL, NULL, 0, 0, 600, 600, &viewer); CHKERRV(ierr);
-    ierr = MatView(_A, viewer); CHKERRV(ierr);
-    ierr = PetscViewerDrawGetDraw(viewer, 0, &draw); CHKERRV(ierr);
-    ierr = PetscDrawSetPause(draw, -1); CHKERRV(ierr); // Wait for user
+    ierr = PetscViewerDrawOpen(PETSC_COMM_WORLD, NULL, NULL, 0, 0, 600, 600, &viewer);
+    CHKERRV(ierr);
+    ierr = MatView(_A, viewer);
+    CHKERRV(ierr);
+    ierr = PetscViewerDrawGetDraw(viewer, 0, &draw);
+    CHKERRV(ierr);
+    ierr = PetscDrawSetPause(draw, -1);
+    CHKERRV(ierr); // Wait for user
     PetscDrawPause(draw);
-    ierr = PetscViewerDestroy(&viewer); CHKERRV(ierr);
+    ierr = PetscViewerDestroy(&viewer);
+    CHKERRV(ierr);
   }
 
 #endif
@@ -230,7 +235,7 @@ void feLinearSystemPETSc::viewMatrix()
 void feLinearSystemPETSc::viewRHS()
 {
 #if defined(HAVE_PETSC)
-  if(_displayRHSInConsole){
+  if(_displayRHSInConsole) {
     VecView(_rhs, PETSC_VIEWER_STDOUT_WORLD);
   }
 #endif
@@ -269,7 +274,6 @@ void feLinearSystemPETSc::assembleMatrices(feSolution *sol)
   PetscErrorCode ierr = 0;
 
   for(feInt eq = 0; eq < _numMatrixForms; ++eq) {
-
     feBilinearForm *f = _formMatrices[eq];
     feCncGeo *cnc = f->getCncGeo();
     int numColors = cnc->getNbColor();
@@ -292,15 +296,14 @@ void feLinearSystemPETSc::assembleMatrices(feSolution *sol)
       std::vector<feInt> adrJ;
       std::vector<PetscScalar> values;
 
-      #if defined(HAVE_OMP)
-      #pragma omp parallel for private(elm, f, niElm, njElm, sizeI, sizeJ, adrI, adrJ,   \
-                               Ae, ierr, values)
-      #endif
+#if defined(HAVE_OMP)
+#pragma omp parallel for private(elm, f, niElm, njElm, sizeI, sizeJ, adrI, adrJ, Ae, ierr, values)
+#endif
       for(int iElm = 0; iElm < numElementsInColor; ++iElm) {
-        #if defined(HAVE_OMP)
+#if defined(HAVE_OMP)
         int eqt = eq + omp_get_thread_num() * _numMatrixForms;
         f = _formMatrices[eqt];
-        #endif
+#endif
         elm = listElmC[iElm];
 
         // Compute element-wise matrix
@@ -322,9 +325,11 @@ void feLinearSystemPETSc::assembleMatrices(feSolution *sol)
         }
 
         adrI.erase(std::remove_if(adrI.begin(), adrI.end(),
-          [this](const int &x) { return x >= this->_nInc; }), adrI.end());
+                                  [this](const int &x) { return x >= this->_nInc; }),
+                   adrI.end());
         adrJ.erase(std::remove_if(adrJ.begin(), adrJ.end(),
-          [this](const int &x) { return x >= this->_nInc; }), adrJ.end());
+                                  [this](const int &x) { return x >= this->_nInc; }),
+                   adrJ.end());
 
         // Flatten Ae at relevant indices
         sizeI = adrI.size();
@@ -337,11 +342,12 @@ void feLinearSystemPETSc::assembleMatrices(feSolution *sol)
           }
         }
 
-        // Increment global matrix
-        #if defined(HAVE_OMP)
-        #pragma omp critical
-        #endif
-        ierr = MatSetValues(_A, adrI.size(), adrI.data(), adrJ.size(), adrJ.data(), values.data(), ADD_VALUES);
+// Increment global matrix
+#if defined(HAVE_OMP)
+#pragma omp critical
+#endif
+        ierr = MatSetValues(_A, adrI.size(), adrI.data(), adrJ.size(), adrJ.data(), values.data(),
+                            ADD_VALUES);
         CHKERRABORT(PETSC_COMM_WORLD, ierr);
         niElm.clear();
         njElm.clear();
@@ -362,18 +368,20 @@ void feLinearSystemPETSc::assembleMatrices(feSolution *sol)
 
   viewMatrix();
 
-  std::cout << "Assembled matrix in" << std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count() << "[ms]" << std::endl;
+  std::cout << "Assembled matrix in"
+            << std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count() << "[ms]"
+            << std::endl;
 
-  if(_exportMatrixMatlab){
+  if(_exportMatrixMatlab) {
     feInfoCond(FE_VERBOSE > 1, "\t\t\tExporting global matrix to Matlab");
     PetscViewer viewer;
     PetscViewerASCIIOpen(PETSC_COMM_WORLD, "matrix.m", &viewer);
     PetscViewerPushFormat(viewer, PETSC_VIEWER_ASCII_MATLAB);
-    MatView(_A,viewer);
+    MatView(_A, viewer);
     PetscViewerPopFormat(viewer);
     PetscViewerDestroy(&viewer);
   }
-  
+
 #endif
 }
 
@@ -386,7 +394,6 @@ void feLinearSystemPETSc::assembleResiduals(feSolution *sol)
   std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
 
   for(feInt eq = 0; eq < _numResidualForms; ++eq) {
-
     feBilinearForm *f = _formResiduals[eq];
     feCncGeo *cnc = f->getCncGeo();
     int numColors = cnc->getNbColor();
@@ -406,14 +413,14 @@ void feLinearSystemPETSc::assembleResiduals(feSolution *sol)
       std::vector<feInt> adrI;
       std::vector<PetscScalar> values;
 
-      #if defined(HAVE_OMP)
-      #pragma omp parallel for private(elm, niElm, Be, f, adrI, ierr, values, sizeI)
-      #endif
+#if defined(HAVE_OMP)
+#pragma omp parallel for private(elm, niElm, Be, f, adrI, ierr, values, sizeI)
+#endif
       for(int iElm = 0; iElm < numElementsInColor; ++iElm) {
-        #if defined(HAVE_OMP)
+#if defined(HAVE_OMP)
         int eqt = eq + omp_get_thread_num() * _numResidualForms;
         f = _formResiduals[eqt];
-        #endif
+#endif
 
         elm = listElmC[iElm];
 
@@ -429,8 +436,9 @@ void feLinearSystemPETSc::assembleResiduals(feSolution *sol)
           if(adrI[i] < _nInc) niElm.push_back(i);
         }
 
-        adrI.erase(std::remove_if(adrI.begin(), adrI.end(), 
-          [this](const int &x) { return x >= this->_nInc; }), adrI.end());
+        adrI.erase(std::remove_if(adrI.begin(), adrI.end(),
+                                  [this](const int &x) { return x >= this->_nInc; }),
+                   adrI.end());
 
         sizeI = adrI.size();
         values.resize(sizeI);
@@ -438,10 +446,10 @@ void feLinearSystemPETSc::assembleResiduals(feSolution *sol)
           values[i] = Be[niElm[i]];
         }
 
-        // Increment global residual
-        #if defined(HAVE_OMP)
-        #pragma omp critical
-        #endif
+// Increment global residual
+#if defined(HAVE_OMP)
+#pragma omp critical
+#endif
         ierr = VecSetValues(_rhs, adrI.size(), adrI.data(), values.data(), ADD_VALUES);
         niElm.clear();
       }
@@ -454,18 +462,19 @@ void feLinearSystemPETSc::assembleResiduals(feSolution *sol)
   CHKERRABORT(PETSC_COMM_WORLD, ierr);
 
   std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
-  
+
   viewRHS();
 
   feInfo("Assembled RHS in");
-  std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count() << "[ms]" << std::endl;
+  std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count() << "[ms]"
+            << std::endl;
 
 #endif
 }
 
 void feLinearSystemPETSc::assemble(feSolution *sol)
 {
-  if(recomputeMatrix){
+  if(recomputeMatrix) {
     this->assembleMatrices(sol);
   }
   this->assembleResiduals(sol);
@@ -476,27 +485,26 @@ void feLinearSystemPETSc::constraintEssentialComponents(feSolution *sol)
   std::vector<PetscInt> rowsToConstraint;
   PetscScalar val;
   std::vector<feInt> adr;
-  for(auto space : sol->_spaces){
+  for(auto space : sol->_spaces) {
     int nComponents = space->getNumComponents();
-    if(nComponents > 1){
+    if(nComponents > 1) {
       adr.resize(space->getNumFunctions(), 0);
-      for(int i = 0; i < nComponents; ++i){
-        if(space->isEssentialComponent(i)){
-          for(int iElm = 0; iElm < space->getNumElements(); ++iElm){
-
+      for(int i = 0; i < nComponents; ++i) {
+        if(space->isEssentialComponent(i)) {
+          for(int iElm = 0; iElm < space->getNumElements(); ++iElm) {
             // Constraint matrix and RHS
             space->initializeAddressingVector(iElm, adr);
             // for(auto val : adr)
             //   feInfo("adr = %d", val);
-            for(int j = 0; j < space->getNumFunctions(); ++j){
-              if(j % nComponents == i){
+            for(int j = 0; j < space->getNumFunctions(); ++j) {
+              if(j % nComponents == i) {
                 PetscInt DOF = adr[j];
-                if(adr[j] < _nInc){
-                  // A DOF shared between this space and another 
+                if(adr[j] < _nInc) {
+                  // A DOF shared between this space and another
                   // essential space has a tag higher than _nInc,
-                  // hence  we cannot constraint it, but it's 
+                  // hence  we cannot constraint it, but it's
                   // already an essential DOF for which there is no
-                  // need to solve (its value will be imposed by the 
+                  // need to solve (its value will be imposed by the
                   // other space though, so check for spaces overlap).
                   rowsToConstraint.push_back(DOF);
                 }
@@ -508,21 +516,22 @@ void feLinearSystemPETSc::constraintEssentialComponents(feSolution *sol)
     }
   }
 
-  PetscErrorCode ierr = MatZeroRowsColumns(_A, rowsToConstraint.size(), 
-    rowsToConstraint.data(), 1., _constrainedDOFValue, _rhs);
+  PetscErrorCode ierr = MatZeroRowsColumns(_A, rowsToConstraint.size(), rowsToConstraint.data(), 1.,
+                                           _constrainedDOFValue, _rhs);
   CHKERRABORT(PETSC_COMM_WORLD, ierr);
 }
 
 // Solve the linear system and compute max norms of solution and residuals
-bool feLinearSystemPETSc::solve(double *normSolution, double *normRHS, double *normResidualAxMinusb, int *nIter)
+bool feLinearSystemPETSc::solve(double *normSolution, double *normRHS, double *normResidualAxMinusb,
+                                int *nIter)
 {
 #if defined(HAVE_PETSC)
 
   PetscErrorCode ierr = 0;
 
   // Set tolerances, in case the have changed since creation
-  ierr = KSPSetTolerances(ksp, (PetscReal) _rel_tol, (PetscReal) _abs_tol, 
-    (PetscReal) _div_tol, (PetscInt) _max_iter);
+  ierr = KSPSetTolerances(ksp, (PetscReal)_rel_tol, (PetscReal)_abs_tol, (PetscReal)_div_tol,
+                          (PetscInt)_max_iter);
 
   // Solve
   ierr = KSPSolve(ksp, _rhs, _du);
@@ -531,35 +540,48 @@ bool feLinearSystemPETSc::solve(double *normSolution, double *normRHS, double *n
   KSPConvergedReason reason;
   ierr = KSPGetConvergedReason(ksp, &reason);
 
-  if(reason < 0){
+  if(reason < 0) {
     // Solve failed
     const char *reasonString;
     KSPGetConvergedReasonString(ksp, &reasonString);
     feWarning("PETSc solve failed with KSP error code: %s", reasonString);
-    if(reason == KSP_DIVERGED_PC_FAILED){
+    if(reason == KSP_DIVERGED_PC_FAILED) {
       PCFailedReason reasonpc;
       ierr = PCGetFailedReason(preconditioner, &reasonpc);
-      switch(reasonpc){
+      switch(reasonpc) {
         case PC_SETUP_ERROR:
-          feWarning("\nPETSc solve failed with preconditioner error code: %s", "PC_SETUP_ERROR"); break;
+          feWarning("\nPETSc solve failed with preconditioner error code: %s", "PC_SETUP_ERROR");
+          break;
         case PC_NOERROR:
-          feWarning("\nPETSc solve failed with preconditioner error code: %s", "PC_NOERROR"); break;
+          feWarning("\nPETSc solve failed with preconditioner error code: %s", "PC_NOERROR");
+          break;
         case PC_FACTOR_STRUCT_ZEROPIVOT:
-          feWarning("\nPETSc solve failed with preconditioner error code: %s", "PC_FACTOR_STRUCT_ZEROPIVOT"); break;
+          feWarning("\nPETSc solve failed with preconditioner error code: %s",
+                    "PC_FACTOR_STRUCT_ZEROPIVOT");
+          break;
         case PC_FACTOR_NUMERIC_ZEROPIVOT:
-          feWarning("\nPETSc solve failed with preconditioner error code: %s", "PC_FACTOR_NUMERIC_ZEROPIVOT"); break;
+          feWarning("\nPETSc solve failed with preconditioner error code: %s",
+                    "PC_FACTOR_NUMERIC_ZEROPIVOT");
+          break;
         case PC_FACTOR_OUTMEMORY:
-          feWarning("\nPETSc solve failed with preconditioner error code: %s", "PC_FACTOR_OUTMEMORY"); break;
+          feWarning("\nPETSc solve failed with preconditioner error code: %s",
+                    "PC_FACTOR_OUTMEMORY");
+          break;
         case PC_FACTOR_OTHER:
-          feWarning("\nPETSc solve failed with preconditioner error code: %s", "PC_FACTOR_OTHER"); break;
-        #if PETSC_VERSION_GE(3,16,0)
+          feWarning("\nPETSc solve failed with preconditioner error code: %s", "PC_FACTOR_OTHER");
+          break;
+#if PETSC_VERSION_GE(3, 16, 0)
         case PC_INCONSISTENT_RHS:
-          feWarning("\nPETSc solve failed with preconditioner error code: %s", "PC_INCONSISTENT_RHS"); break;
-        #endif
+          feWarning("\nPETSc solve failed with preconditioner error code: %s",
+                    "PC_INCONSISTENT_RHS");
+          break;
+#endif
         case PC_SUBPC_ERROR:
-          feWarning("\nPETSc solve failed with preconditioner error code: %s", "PC_SUBPC_ERROR"); break;
+          feWarning("\nPETSc solve failed with preconditioner error code: %s", "PC_SUBPC_ERROR");
+          break;
         default:
-          feWarning("\nPETSc solve failed with unknown preconditioner error code"); break;
+          feWarning("\nPETSc solve failed with unknown preconditioner error code");
+          break;
       }
     }
   }
@@ -568,15 +590,18 @@ bool feLinearSystemPETSc::solve(double *normSolution, double *normRHS, double *n
   VecSet(_linSysRes, 0.0);
   MatMult(_A, _du, _linSysRes);
   VecAXPY(_linSysRes, -1.0, _rhs);
-  ierr = VecNorm(_rhs,       NORM_MAX, normRHS); CHKERRABORT(PETSC_COMM_WORLD, ierr);
-  ierr = VecNorm(_du,        NORM_MAX, normSolution); CHKERRABORT(PETSC_COMM_WORLD, ierr);
-  ierr = VecNorm(_linSysRes, NORM_MAX, normResidualAxMinusb); CHKERRABORT(PETSC_COMM_WORLD, ierr);
+  ierr = VecNorm(_rhs, NORM_MAX, normRHS);
+  CHKERRABORT(PETSC_COMM_WORLD, ierr);
+  ierr = VecNorm(_du, NORM_MAX, normSolution);
+  CHKERRABORT(PETSC_COMM_WORLD, ierr);
+  ierr = VecNorm(_linSysRes, NORM_MAX, normResidualAxMinusb);
+  CHKERRABORT(PETSC_COMM_WORLD, ierr);
 
-  if(reason == KSP_DIVERGED_ITS){
+  if(reason == KSP_DIVERGED_ITS) {
     feWarning("Max number of iteration reached");
     return true;
   }
-  if(reason == KSP_DIVERGED_BREAKDOWN){
+  if(reason == KSP_DIVERGED_BREAKDOWN) {
     feWarning("Diverged breakdown");
     return true;
   }

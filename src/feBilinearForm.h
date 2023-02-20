@@ -20,12 +20,12 @@
 //                         compute the form
 //       elementarySystem: the elementary system (discretized weak form) to be
 //                         solved on each element
-feStatus createBilinearForm(feBilinearForm *&form,
-  const std::vector<feSpace *> &spaces, feSysElm *elementarySystem);
+feStatus createBilinearForm(feBilinearForm *&form, const std::vector<feSpace *> &spaces,
+                            feSysElm *elementarySystem);
 
 //
 // A linear or bilinear form.
-// 
+//
 // Stores the elementary matrix and residual and handles
 // the assembly from local to global matrix. Initializes all
 // necessary structures before calling the feSysElm class,
@@ -74,7 +74,7 @@ public:
   // The local index of the current element in the geometric connectivity
   int _numElem;
 
-  // The local matrix and residual 
+  // The local matrix and residual
   double **_Ae;
   double *_Be;
 
@@ -85,7 +85,7 @@ protected:
   // Tag and name of the geometric connectivity on which the form is defined
   int _cncGeoTag;
   std::string _cncGeoID;
-  
+
   // Fields layout of the weak form in I,J in the local matrix.
   // It is a trivial vector _fieldsLayoutI[i] = i for most weak forms,
   // since we test the fields with their own basis functions.
@@ -93,7 +93,7 @@ protected:
   // Example for Navier-Stokes equation: local matrix has the form:
   //
   //         U V P -> unknown fields
-  // phi_U [       ]    
+  // phi_U [       ]
   // phi_V [       ]    _fieldsLayoutI = {0 1 2}
   // phi_P [       ]    _fieldsLayoutJ = {0 1 2}
   //   |
@@ -107,7 +107,7 @@ protected:
   feInt _N;
 
   // Addressing vector (local to global mapping) in I and J
-  // Continuous vector that spans all FE spaces, such that 
+  // Continuous vector that spans all FE spaces, such that
   // the local matrix is written at (_adrI[i], _adrJ[j]) in
   // the global matrix.
   std::vector<feInt> _adrI;
@@ -118,26 +118,25 @@ protected:
   double *_Rh;
   double _h0;
   // Function pointer to the matrix computation method
-  void (feBilinearForm::*ptrComputeMatrix)(feSolution *sol,
-                                           int numElem);
+  void (feBilinearForm::*ptrComputeMatrix)(feSolution *sol, int numElem);
 
 public:
   // Addressing vector of the current element for each FE space
-  std::vector<std::vector<feInt>> _adr;
+  std::vector<std::vector<feInt> > _adr;
 
   // Solution at DOFs on the current element for each FE space
-  std::vector<std::vector<double>> _sol;
-  std::vector<std::vector<double>> _solDot;
+  std::vector<std::vector<double> > _sol;
+  std::vector<std::vector<double> > _solDot;
 
   // Solution on the previous and next element (for e.g. DG fluxes)
-  std::vector<std::vector<double>> _solPrev;
-  std::vector<std::vector<double>> _solNext;
+  std::vector<std::vector<double> > _solPrev;
+  std::vector<std::vector<double> > _solNext;
 
 public:
   // Create a (bi-)linear form to compute the element-wise weak form
   // defined by elementarySystem with interpolation and test functions
   // defined in spaces/vectorSpaces.
-  feBilinearForm(std::vector<feSpace*> spaces, feSysElm *elementarySystem);
+  feBilinearForm(std::vector<feSpace *> spaces, feSysElm *elementarySystem);
 
   feBilinearForm(const feBilinearForm &f);
   ~feBilinearForm();
@@ -175,10 +174,8 @@ private:
   // Initializes _adr and the local solutions _sol, _solDot, _solPrev, _solNext
   void initialize(feSolution *sol, int numElem);
 
-  void computeMatrixAnalytical(feSolution *sol,
-                               int numElem);
-  void computeMatrixFiniteDifference(feSolution *sol,
-                                     int numElem);
+  void computeMatrixAnalytical(feSolution *sol, int numElem);
+  void computeMatrixFiniteDifference(feSolution *sol, int numElem);
 };
 
 #endif

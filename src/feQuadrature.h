@@ -16,7 +16,6 @@ struct IntPt {
 int getNGQTPts(int order);
 IntPt *getGQTPts(int order);
 
-
 class feQuadrature
 {
 protected:

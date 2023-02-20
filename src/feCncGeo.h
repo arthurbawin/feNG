@@ -33,8 +33,7 @@ std::string toString(geometricInterpolant t);
 
 // Reference-to-physical transformation jacobian matrix dx(r)/dr
 // and its inverse dr(x)/dx.
-typedef struct TransformationStruct
-{
+typedef struct TransformationStruct {
   double jac;
   double dxdr[3];
   double dxds[3];
@@ -83,7 +82,7 @@ protected:
   std::vector<int> _connecFaces;
 
   // Pointers to the FE space used to interpolate the geometry
-  // and to the mesh 
+  // and to the mesh
   feSpace *_geometricInterpolant;
   feMesh *_mesh;
 
@@ -105,16 +104,13 @@ protected:
 
 public:
   // Create a geometric connectivity. Called when parsing the mesh.
-  feCncGeo(const int tag, const int dimension, const int nVerticesPerElement,
-    const int nElements, const int nEdgesPerElement, const std::string &ID, 
-    const geometryType geometry, 
-    const geometricInterpolant interpolant, 
-    feSpace *space,
-    std::vector<int> connecVertices,
-    std::vector<int> connecElem = std::vector<int>(),
-    std::vector<int> connecEdges = std::vector<int>(),
-    std::vector<int> connecFaces = std::vector<int>());
-  ~feCncGeo(){ }
+  feCncGeo(const int tag, const int dimension, const int nVerticesPerElement, const int nElements,
+           const int nEdgesPerElement, const std::string &ID, const geometryType geometry,
+           const geometricInterpolant interpolant, feSpace *space, std::vector<int> connecVertices,
+           std::vector<int> connecElem = std::vector<int>(),
+           std::vector<int> connecEdges = std::vector<int>(),
+           std::vector<int> connecFaces = std::vector<int>());
+  ~feCncGeo() {}
 
   const std::string &getID() const { return _ID; }
   int getTag() const { return _tag; }
@@ -139,7 +135,7 @@ public:
   const std::vector<double> &getJacobians() const { return _J; }
 
   void computeElementTransformation(std::vector<double> &elementCoord, const int iQuadNode,
-    const double jac, ElementTransformation &transformation);
+                                    const double jac, ElementTransformation &transformation);
 
   const std::vector<int> &getVerticesConnectivity() const { return _connecVertices; }
   const std::vector<int> &getEdgeConnectivity() const { return _connecEdges; }

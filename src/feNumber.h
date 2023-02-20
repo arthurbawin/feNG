@@ -7,11 +7,11 @@
 #include "feSpace.h"
 #include "feCncGeo.h"
 
-typedef enum {DOF_ESSENTIAL = -1, DOF_UNKNOWN = -2, DOF_NOT_ASSIGNED = -3} dofType;
+typedef enum { DOF_ESSENTIAL = -1, DOF_UNKNOWN = -2, DOF_NOT_ASSIGNED = -3 } dofType;
 
 //
 // Handles the numbering of the degrees of freedom (DOF) of a single field.
-// 
+//
 class feNumber
 {
 protected:
@@ -38,7 +38,7 @@ protected:
   std::vector<int> _nDOFEdges;
 
   // Arrays of size nNod/nElm/nEdg x (max # DOF)
-  // Contains the global number of the DOF or DOF_NOT_ASSIGNED is 
+  // Contains the global number of the DOF or DOF_NOT_ASSIGNED is
   // the DOF is not used ("ghost" DOF)
   std::vector<int> _numberingVertices;
   std::vector<int> _numberingElements;
@@ -57,13 +57,12 @@ protected:
   std::set<int> _allUnknownDOF;
 
 public:
-
   friend class feMetaNumber;
 
   // Initialize and allocate vectors. Should not be used directly, but called
   // through the feMetaNumber class.
   feNumber(feMesh *mesh);
-  ~feNumber() {};
+  ~feNumber(){};
 
   // int getNbNodes() { return _nNod; }
   int getNbDOFs() { return _nDofs; }
@@ -74,34 +73,41 @@ public:
   std::set<int> &getEssentialDOF() { return _allEssentialDOF; };
 
   // Set the numDOF-th DOF associated to the numVertex-th vertex on the numElem-th element
-  // of geometric connectivity cncGeoID as UNKNOWN. The default number of DOF per vertex 
+  // of geometric connectivity cncGeoID as UNKNOWN. The default number of DOF per vertex
   // for continuous elements (not DG) is 1.
-  void setUnknownVertexDOF(feMesh *mesh, std::string const &cncGeoID, int numElem, int numVertex, int numDOF = 1);
+  void setUnknownVertexDOF(feMesh *mesh, std::string const &cncGeoID, int numElem, int numVertex,
+                           int numDOF = 1);
   // Set the numDOF-th DOF associated to the numElem-th element
   // of geometric connectivity cncGeoID as UNKNOWN.
   void setUnknownElementDOF(feMesh *mesh, std::string const &cncGeoID, int numElem, int numDOF);
-   // Set the numDOF-th DOF associated to the numEdge-th edge on the numElem-th element
+  // Set the numDOF-th DOF associated to the numEdge-th edge on the numElem-th element
   // of geometric connectivity cncGeoID as UNKNOWN.
-  void setUnknownEdgeDOF(feMesh *mesh, std::string const &cncGeoID, int numElem, int numEdge, int numDOF);
+  void setUnknownEdgeDOF(feMesh *mesh, std::string const &cncGeoID, int numElem, int numEdge,
+                         int numDOF);
 
   // Same as above, but mark the DOF as ESSENTIAL.
-  // Multiple degrees of freedom defined on the same entity (vertex/element/edge) cannot 
-  // be part UNKNOWN and part ESSENTIAL: the whole entity (and thus all of its DOF) is marked as ESSENTIAL.
-  void setEssentialVertexDOF(feMesh *mesh, std::string const &cncGeoID, int numElem, int numVertex, int numDOF = -1);
-  void setEssentialElementDOF(feMesh *mesh, std::string const &cncGeoID, int numElem, int numDOF = -1);
-  void setEssentialEdgeDOF(feMesh *mesh, std::string const &cncGeoID, int numElem, int numEdge, int numDOF = -1);
+  // Multiple degrees of freedom defined on the same entity (vertex/element/edge) cannot
+  // be part UNKNOWN and part ESSENTIAL: the whole entity (and thus all of its DOF) is marked as
+  // ESSENTIAL.
+  void setEssentialVertexDOF(feMesh *mesh, std::string const &cncGeoID, int numElem, int numVertex,
+                             int numDOF = -1);
+  void setEssentialElementDOF(feMesh *mesh, std::string const &cncGeoID, int numElem,
+                              int numDOF = -1);
+  void setEssentialEdgeDOF(feMesh *mesh, std::string const &cncGeoID, int numElem, int numEdge,
+                           int numDOF = -1);
 
   // Get the global number of the specified DOF
-  int getVertexDOF(feMesh *mesh, std::string const &cncGeoID, int numElem, int numVertex, int numDOF = 0);
-  int getDOFNumberAtVertex(int iVertex)
-    { return _numberingVertices[iVertex]; };
+  int getVertexDOF(feMesh *mesh, std::string const &cncGeoID, int numElem, int numVertex,
+                   int numDOF = 0);
+  int getDOFNumberAtVertex(int iVertex) { return _numberingVertices[iVertex]; };
   int getDOFNumberAtVertex(int iVertex, int numDOF)
-    { return _numberingVertices[_maxDOFperVertex * iVertex + numDOF]; };
+  {
+    return _numberingVertices[_maxDOFperVertex * iVertex + numDOF];
+  };
   int getElementDOF(feMesh *mesh, std::string const &cncGeoID, int numElem, int numDOF);
   int getEdgeDOF(feMesh *mesh, std::string const &cncGeoID, int numElem, int numEdge, int numDOF);
 
-  int getDOFCodeAtVertex(int iVertex)
-    { return _codeDOFVertices[iVertex]; };
+  int getDOFCodeAtVertex(int iVertex) { return _codeDOFVertices[iVertex]; };
 
   // Export the vertex DOFs and their coordinates in file.
   // Use the same function in feMetaNumber instead.
@@ -115,8 +121,8 @@ protected:
   // Return the new maximum global number.
   int numberUnknowns(int globalNum);
   // Assign the global number to ESSENTIAL DOF starting from globalNum.
-  // Return the new maximum global number. 
-  // Must be called AFTER numberUnknowns, since ESSENTIAL DOF overwrite 
+  // Return the new maximum global number.
+  // Must be called AFTER numberUnknowns, since ESSENTIAL DOF overwrite
   // the UNKNOWN ones.
   int numberEssential(int globalNum);
   // Fill the allEssential and allUnknown vectors
@@ -133,7 +139,7 @@ public:
 
 //
 // Handles the numbering of the degrees of freedom (DOF) for all fields.
-// 
+//
 class feMetaNumber
 {
 protected:
@@ -147,47 +153,48 @@ protected:
   std::vector<std::string> _fieldIDs;
 
   // Field numberings: <fieldID : feNumber>
-  std::map<std::string, feNumber*> _numberings;
+  std::map<std::string, feNumber *> _numberings;
 
 public:
   // Create a global numbering for the degrees of freedom of the problem.
   // spaces is the vector of all the FE spaces defined on the mesh, and
-  // essentialSpaces is the vector of FE spaces on which essential 
+  // essentialSpaces is the vector of FE spaces on which essential
   // boundary conditions are applied.
   feMetaNumber(feMesh *mesh, const std::vector<feSpace *> &spaces,
                const std::vector<feSpace *> &essentialSpaces);
   ~feMetaNumber();
 
-  int getNbUnknowns()
-    { return _nInc; }
-  int getNbDOFs()
-    { return _nDofs; }
-  int getNbDOFs(std::string fieldID)
-    { return _numberings[fieldID]->getNbDOFs(); }
-  int getNbFields()
-    { return _nFields; }
-  std::string getFieldID(int iField)
-    { return _fieldIDs[iField]; }
+  int getNbUnknowns() { return _nInc; }
+  int getNbDOFs() { return _nDofs; }
+  int getNbDOFs(std::string fieldID) { return _numberings[fieldID]->getNbDOFs(); }
+  int getNbFields() { return _nFields; }
+  std::string getFieldID(int iField) { return _fieldIDs[iField]; }
 
   // Return the numbering of target field
-  feNumber *getNumbering(std::string fieldID)
-    { return _numberings[fieldID]; }
-  feNumber *getNumbering(int fieldTag)
-    { return _numberings[_fieldIDs[fieldTag]]; }
+  feNumber *getNumbering(std::string fieldID) { return _numberings[fieldID]; }
+  feNumber *getNumbering(int fieldTag) { return _numberings[_fieldIDs[fieldTag]]; }
 
   // Return a reference to the array of all UNKNOWN DOF (vert/elem/edge mixed)
   // for target field
   std::set<int> &getUnknownDOF(std::string fieldID)
-    { return _numberings[fieldID]->getUnknownDOF(); };
+  {
+    return _numberings[fieldID]->getUnknownDOF();
+  };
   std::set<int> &getUnknownDOF(int fieldTag)
-    { return _numberings[_fieldIDs[fieldTag]]->getUnknownDOF(); };
+  {
+    return _numberings[_fieldIDs[fieldTag]]->getUnknownDOF();
+  };
 
   // Return a reference to the array of all ESSENTIAL DOF (vert/elem/edge mixed)
   // for target field
   std::set<int> &getEssentialDOF(std::string fieldID)
-    { return _numberings[fieldID]->getEssentialDOF(); };
+  {
+    return _numberings[fieldID]->getEssentialDOF();
+  };
   std::set<int> &getEssentialDOF(int fieldTag)
-    { return _numberings[_fieldIDs[fieldTag]]->getEssentialDOF(); };
+  {
+    return _numberings[_fieldIDs[fieldTag]]->getEssentialDOF();
+  };
 
   // Export the vertex DOFs and their coordinates in file.
   feStatus exportNumberingVertices(feMesh *mesh, std::string fileName);

@@ -4,11 +4,10 @@
 #include "feFunction.h"
 #include "feSpace.h"
 
-#define CLONEABLE(Type) \
-    virtual Type* clone() const { return new Type(*this); }
+#define CLONEABLE(Type)                                                                            \
+  virtual Type *clone() const { return new Type(*this); }
 
-typedef enum
-{
+typedef enum {
   SOURCE,
   VECTOR_SOURCE,
   GRAD_SOURCE,
@@ -95,7 +94,7 @@ inline const std::string toString(elementSystemType t)
       return "MIXED_DIVERGENCE";
     case MIXED_CURL:
       return "MIXED_CURL";
-      case ZERO_BLOCK:
+    case ZERO_BLOCK:
       return "ZERO_BLOCK";
     case NEUMANN_1D:
       return "NEUMANN_1D";
@@ -174,10 +173,10 @@ public:
   };
   virtual ~feSysElm() {}
 
-  virtual feSysElm* clone() const = 0;
+  virtual feSysElm *clone() const = 0;
 
-  int getDim(){ return _dim; }
-  int getNumFields(){ return _nFields; }
+  int getDim() { return _dim; }
+  int getNumFields() { return _nFields; }
   std::vector<int> &getFieldLayoutI() { return _fieldsLayoutI; }
   std::vector<int> &getFieldLayoutJ() { return _fieldsLayoutJ; }
   elementSystemType getID() { return _ID; }
@@ -186,8 +185,6 @@ public:
   bool hasMatrix() { return _hasMatrix; }
 
   virtual void createElementarySystem(std::vector<feSpace *> &spaces){};
-  // virtual void createElementarySystem(std::vector<feSpace *> &spaces, std::vector<feVectorSpace *> &vectorSpaces){};
-  
   virtual void computeAe(feBilinearForm *form){};
   virtual void computeBe(feBilinearForm *form) = 0;
 };
@@ -210,6 +207,7 @@ protected:
   feFunction *_source;
   int _idU;
   std::vector<double> _phiU;
+
 public:
   feSysElm_Source(feFunction *source) : feSysElm(-1, 1, SOURCE, false), _source(source){};
   ~feSysElm_Source(){};
@@ -225,8 +223,10 @@ protected:
   std::vector<double> _S;
   int _idU;
   std::vector<double> _phiU;
+
 public:
-  feSysElm_VectorSource(feVectorFunction *source) : feSysElm(-1, 1, VECTOR_SOURCE, false), _source(source), _S(3, 0.){};
+  feSysElm_VectorSource(feVectorFunction *source)
+    : feSysElm(-1, 1, VECTOR_SOURCE, false), _source(source), _S(3, 0.){};
   ~feSysElm_VectorSource(){};
   void createElementarySystem(std::vector<feSpace *> &spaces);
   // void createElementarySystem(std::vector<feVectorSpace *> &vectorSpaces){};
@@ -252,6 +252,7 @@ protected:
   feFunction *_coeff;
   int _idU;
   std::vector<double> _phiU;
+
 public:
   feSysElm_Mass(feFunction *coeff) : feSysElm(-1, 1, MASS, true), _coeff(coeff){};
   ~feSysElm_Mass(){};
@@ -268,6 +269,7 @@ protected:
   std::vector<double> _u;
   int _idU;
   std::vector<double> _phiU;
+
 public:
   feSysElm_VectorMass(feFunction *coeff) : feSysElm(-1, 1, VECTOR_MASS, true), _coeff(coeff)
   {
@@ -298,6 +300,7 @@ protected:
   double _coeff;
   int _idU;
   std::vector<double> _feU;
+
 public:
   feSysElm_TransientMass(double coeff) : feSysElm(-1, 1, TRANSIENT_MASS, true), _coeff(coeff){};
   ~feSysElm_TransientMass(){};
@@ -312,7 +315,7 @@ public:
 // Matrix and residual
 //
 //  /
-//  | k * grad(u) dot grad(v) dx 
+//  | k * grad(u) dot grad(v) dx
 //  /
 //
 // # fields: 1 (FE solution and test functions)
@@ -323,16 +326,15 @@ public:
 //                        U
 // Fields layout: phi_U [   ]
 //
-template<int dim>
-class feSysElm_Diffusion : public feSysElm
+template <int dim> class feSysElm_Diffusion : public feSysElm
 {
 protected:
   feFunction *_coeff;
   int _idU;
   std::vector<double> _gradPhi;
+
 public:
-  feSysElm_Diffusion(feFunction *coeff)
-    : feSysElm(dim, 1, DIFFUSION, true), _coeff(coeff){};
+  feSysElm_Diffusion(feFunction *coeff) : feSysElm(dim, 1, DIFFUSION, true), _coeff(coeff){};
   ~feSysElm_Diffusion(){};
   void createElementarySystem(std::vector<feSpace *> &space);
   void computeAe(feBilinearForm *form);
@@ -347,8 +349,10 @@ protected:
   int _idU;
   std::vector<double> _gradu;
   std::vector<double> _gradPhi;
+
 public:
-  feSysElm_VectorDiffusion(feFunction *diffusivity) : feSysElm(-1, 1, VECTOR_DIFFUSION, true), _diffusivity(diffusivity)
+  feSysElm_VectorDiffusion(feFunction *diffusivity)
+    : feSysElm(-1, 1, VECTOR_DIFFUSION, true), _diffusivity(diffusivity)
   {
     _computeMatrixWithFD = false;
   };
@@ -359,8 +363,7 @@ public:
   CLONEABLE(feSysElm_VectorDiffusion)
 };
 
-template<int dim>
-class feSysElm_NonlinearDiffusion : public feSysElm
+template <int dim> class feSysElm_NonlinearDiffusion : public feSysElm
 {
 protected:
   feFunction *_diffusivity;
@@ -368,9 +371,10 @@ protected:
   int _idU;
   std::vector<double> _phiU;
   std::vector<double> _gradPhi;
+
 public:
   feSysElm_NonlinearDiffusion(feFunction *diffusivity, feFunction *ddiffdu)
-   : feSysElm(dim, 1, NONLINEAR_DIFFUSION, true), _diffusivity(diffusivity), _ddiffdu(ddiffdu)
+    : feSysElm(dim, 1, NONLINEAR_DIFFUSION, true), _diffusivity(diffusivity), _ddiffdu(ddiffdu)
   {
     _computeMatrixWithFD = false;
   };
@@ -395,8 +399,7 @@ public:
 //                        U
 // Fields layout: phi_U [   ]
 //
-template<int dim>
-class feSysElm_Advection : public feSysElm
+template <int dim> class feSysElm_Advection : public feSysElm
 {
 protected:
   // Imposed velocity field
@@ -404,8 +407,10 @@ protected:
   int _idU;
   std::vector<double> _phiU;
   std::vector<double> _gradPhi;
+
 public:
-  feSysElm_Advection(feVectorFunction *velocity) : feSysElm(-1, 1, ADVECTION, true), _velocity(velocity)
+  feSysElm_Advection(feVectorFunction *velocity)
+    : feSysElm(-1, 1, ADVECTION, true), _velocity(velocity)
   {
     _computeMatrixWithFD = true;
   };
@@ -433,8 +438,7 @@ public:
 //                        U
 // Fields layout: phi_U [   ]
 //
-template<int dim>
-class feSysElm_NonlinearAdvection : public feSysElm
+template <int dim> class feSysElm_NonlinearAdvection : public feSysElm
 {
 protected:
   // Nonlinear flux
@@ -442,8 +446,10 @@ protected:
   int _idU;
   std::vector<double> _phiU;
   std::vector<double> _gradPhi;
+
 public:
-  feSysElm_NonlinearAdvection(feVectorFunction *flux) : feSysElm(-1, 1, NONLINEAR_ADVECTION, true), _flux(flux)
+  feSysElm_NonlinearAdvection(feVectorFunction *flux)
+    : feSysElm(-1, 1, NONLINEAR_ADVECTION, true), _flux(flux)
   {
     _computeMatrixWithFD = true;
   };
@@ -467,11 +473,13 @@ protected:
   std::vector<double> _uDotGradu;
   std::vector<double> _phiU;
   std::vector<double> _gradPhiU;
+
 public:
   feSysElm_VectorConvectiveAcceleration(feFunction *coeff)
-    : feSysElm(-1, 1, VECTOR_CONVECTIVE_ACCELERATION, true), _coeff(coeff){
-      _computeMatrixWithFD = true;
-    };
+    : feSysElm(-1, 1, VECTOR_CONVECTIVE_ACCELERATION, true), _coeff(coeff)
+  {
+    _computeMatrixWithFD = true;
+  };
   ~feSysElm_VectorConvectiveAcceleration(){};
   void createElementarySystem(std::vector<feSpace *> &space);
   void computeAe(feBilinearForm *form);
@@ -495,11 +503,13 @@ protected:
   std::vector<double> _gradu;
   std::vector<double> _symmetricGradu;
   std::vector<double> _gradPhiU;
+
 public:
   feSysElm_DivergenceNewtonianStress(feFunction *coeff, feFunction *viscosity)
-    : feSysElm(-1, 2, DIV_NEWTONIAN_STRESS, true), _coeff(coeff), _viscosity(viscosity){
-      _computeMatrixWithFD = true;
-    };
+    : feSysElm(-1, 2, DIV_NEWTONIAN_STRESS, true), _coeff(coeff), _viscosity(viscosity)
+  {
+    _computeMatrixWithFD = true;
+  };
   ~feSysElm_DivergenceNewtonianStress(){};
   void createElementarySystem(std::vector<feSpace *> &space);
   void computeAe(feBilinearForm *form);
@@ -528,17 +538,15 @@ protected:
   std::vector<double> _gradp;
   std::vector<double> _gradPhiU;
   std::vector<double> _gradPhiP;
+
 public:
-  feSysElm_GLS_Stokes_Stab(feFunction *coeff, feFunction *density, 
-    feFunction *viscosity, feVectorFunction *volumeForce)
-    : feSysElm(-1, 2, GLS_STOKES_STABILIZATION, true)
-    , _coeff(coeff)
-    , _density(density)
-    , _viscosity(viscosity)
-    , _volumeForce(volumeForce)
-    {
-      _computeMatrixWithFD = true;
-    };
+  feSysElm_GLS_Stokes_Stab(feFunction *coeff, feFunction *density, feFunction *viscosity,
+                           feVectorFunction *volumeForce)
+    : feSysElm(-1, 2, GLS_STOKES_STABILIZATION, true), _coeff(coeff), _density(density),
+      _viscosity(viscosity), _volumeForce(volumeForce)
+  {
+    _computeMatrixWithFD = true;
+  };
   ~feSysElm_GLS_Stokes_Stab(){};
   void createElementarySystem(std::vector<feSpace *> &space);
   void computeAe(feBilinearForm *form);
@@ -556,6 +564,7 @@ protected:
   feFunction *_source;
   int _idU;
   std::vector<double> _gradPhi;
+
 public:
   feSysElm_GradSource(feFunction *source) : feSysElm(-1, 1, GRAD_SOURCE, false), _source(source){};
   ~feSysElm_GradSource(){};
@@ -579,6 +588,7 @@ protected:
   int _nFunctionsV;
   std::vector<double> _phiU;
   std::vector<double> _gradPhiV;
+
 public:
   feSysElm_MixedGradient(feFunction *coeff) : feSysElm(-1, 2, MIXED_GRADIENT, true), _coeff(coeff)
   {
@@ -607,8 +617,10 @@ protected:
   std::vector<double> _gradu;
   std::vector<double> _gradPhiU;
   std::vector<double> _phiV;
+
 public:
-  feSysElm_MixedDivergence(feFunction *coeff) : feSysElm(-1, 2, MIXED_DIVERGENCE, true), _coeff(coeff)
+  feSysElm_MixedDivergence(feFunction *coeff)
+    : feSysElm(-1, 2, MIXED_DIVERGENCE, true), _coeff(coeff)
   {
     _computeMatrixWithFD = true;
   };
@@ -630,6 +642,7 @@ protected:
   std::vector<double> _gradu;
   std::vector<double> _gradPhiU;
   std::vector<double> _phiV;
+
 public:
   feSysElm_MixedCurl(feFunction *coeff) : feSysElm(2, 2, MIXED_CURL, true), _coeff(coeff)
   {
@@ -647,11 +660,9 @@ class feSysElm_ZeroBlock : public feSysElm
 protected:
   int _idU;
   int _idV;
+
 public:
-  feSysElm_ZeroBlock() : feSysElm(-1, 2, ZERO_BLOCK, true)
-  {
-    _computeMatrixWithFD = false;
-  };
+  feSysElm_ZeroBlock() : feSysElm(-1, 2, ZERO_BLOCK, true) { _computeMatrixWithFD = false; };
   ~feSysElm_ZeroBlock(){};
   void createElementarySystem(std::vector<feSpace *> &space);
   void computeBe(feBilinearForm *form){};
@@ -669,7 +680,7 @@ public:
 // where (grad(u) dot n) = h on this boundary.
 //
 // # fields: 1 (test functions)
-//                        
+//
 // Fields layout: phi_U [   ]
 //
 class feSysElm_1D_NeumannBC : public feSysElm
@@ -680,7 +691,8 @@ protected:
   std::vector<double> _feU;
 
 public:
-  feSysElm_1D_NeumannBC(feFunction *neumannBC) : feSysElm(1, 1, NEUMANN_1D, false), _neumannBC(neumannBC){};
+  feSysElm_1D_NeumannBC(feFunction *neumannBC)
+    : feSysElm(1, 1, NEUMANN_1D, false), _neumannBC(neumannBC){};
   ~feSysElm_1D_NeumannBC() {}
   void createElementarySystem(std::vector<feSpace *> &space);
   void computeAe(feBilinearForm *form){};
@@ -711,7 +723,8 @@ protected:
   std::vector<double> _feUdx;
 
 public:
-  feSysElm_1D_Advection(feFunction *cVelocity) : feSysElm(1, 1, ADVECTION_1D, true), _cVelocity(cVelocity){};
+  feSysElm_1D_Advection(feFunction *cVelocity)
+    : feSysElm(1, 1, ADVECTION_1D, true), _cVelocity(cVelocity){};
   ~feSysElm_1D_Advection() {}
   void createElementarySystem(std::vector<feSpace *> &space);
   void computeAe(feBilinearForm *form);
@@ -724,14 +737,14 @@ public:
 // Matrix and residual
 //
 //  /
-//  | P(v) * tau * R(u) dx 
+//  | P(v) * tau * R(u) dx
 //  /
 //
 // with:
 //  P(v) = c dot v
 //  tau: the SUPG parameter defined by nuNum/c^2, nuNum the numerical diffusivity
 //  R(u) = c*dudx + kd2u/dx2 + f the residual
-// 
+//
 // # fields: 1 (FE solution and test functions)
 //
 // Parameters:
@@ -754,7 +767,8 @@ protected:
 
 public:
   feSysElm_1D_SUPGStab(double diffusivity, feFunction *velocity, feFunction *source)
-    : feSysElm(1, 1, SUPG_STABILIZATION_1D, true), _velocity(velocity), _diffusivity(diffusivity), _source(source)
+    : feSysElm(1, 1, SUPG_STABILIZATION_1D, true), _velocity(velocity), _diffusivity(diffusivity),
+      _source(source)
   {
     _computeMatrixWithFD = true;
   };
@@ -779,9 +793,10 @@ protected:
   std::vector<double> _gradPhiU;
 
 public:
-  feSysElm_2D_SUPGStab(feFunction *reactionCoeff, feFunction *diffusivity, feVectorFunction *velocity, feFunction *source)
-    : feSysElm(2, 1, SUPG_STABILIZATION_2D, true), _reactionCoeff(reactionCoeff), 
-    _velocity(velocity), _diffusivity(diffusivity), _source(source)
+  feSysElm_2D_SUPGStab(feFunction *reactionCoeff, feFunction *diffusivity,
+                       feVectorFunction *velocity, feFunction *source)
+    : feSysElm(2, 1, SUPG_STABILIZATION_2D, true), _reactionCoeff(reactionCoeff),
+      _velocity(velocity), _diffusivity(diffusivity), _source(source)
   {
     _computeMatrixWithFD = true;
   };
@@ -796,7 +811,7 @@ public:
 //
 // 1D DG discretization of the advection weak form.
 // Matrix and residual
-// 
+//
 // # fields: 1 (FE solution and test functions)
 //
 // Parameters:
@@ -812,12 +827,14 @@ protected:
   int _idU;
   std::vector<double> _feU;
   std::vector<double> _feUdx;
+
 public:
   feSysElm_1D_DG_Advection(feVectorFunction *velocity, feFunction *pdeFlux, feFunction *pdedFlux)
-    : feSysElm(1, 1, DG_ADVECTION_1D, true), _velocity(velocity), _pdeFlux(pdeFlux), _pdedFlux(pdedFlux)
-    {
-      _computeMatrixWithFD = true;
-    };
+    : feSysElm(1, 1, DG_ADVECTION_1D, true), _velocity(velocity), _pdeFlux(pdeFlux),
+      _pdedFlux(pdedFlux)
+  {
+    _computeMatrixWithFD = true;
+  };
   ~feSysElm_1D_DG_Advection() {}
   void createElementarySystem(std::vector<feSpace *> &space);
   void computeAe(feBilinearForm *form);
@@ -856,11 +873,12 @@ protected:
   std::vector<double> _feU;
   std::vector<double> _feUdx;
   std::vector<double> _feUdy;
-  std::vector<double> _dxdr; 
-  std::vector<double> _dxds; 
+  std::vector<double> _dxdr;
+  std::vector<double> _dxds;
 
 public:
-  feSysElm_2D_Advection(feVectorFunction *velocity) : feSysElm(2, 1, ADVECTION_2D, true), _velocity(velocity)
+  feSysElm_2D_Advection(feVectorFunction *velocity)
+    : feSysElm(2, 1, ADVECTION_2D, true), _velocity(velocity)
   {
     _computeMatrixWithFD = true;
   };
@@ -887,8 +905,8 @@ protected:
   std::vector<double> _feVdx;
   std::vector<double> _feVdy;
   std::vector<double> _feP;
-  std::vector<double> _dxdr; 
-  std::vector<double> _dxds; 
+  std::vector<double> _dxdr;
+  std::vector<double> _dxds;
 
 public:
   feSysElm_2D_Stokes(std::vector<double> &par, feVectorFunction *fct)
@@ -955,9 +973,9 @@ protected:
 
 public:
   feSysElm_2D_Euler(feFunction *state) : feSysElm(2, 4, EULER_2D, true), _state(state)
-    {
-      _computeMatrixWithFD = true;
-    };
+  {
+    _computeMatrixWithFD = true;
+  };
   ~feSysElm_2D_Euler() {}
 
   void createElementarySystem(std::vector<feSpace *> &space);
@@ -988,7 +1006,8 @@ protected:
   std::vector<double> _gradphire;
 
 public:
-  feSysElm_1D_EulerBord(int boundaryType) : feSysElm(1, 4, EULER_2D, true), _boundaryType(boundaryType)
+  feSysElm_1D_EulerBord(int boundaryType)
+    : feSysElm(1, 4, EULER_2D, true), _boundaryType(boundaryType)
   {
     _computeMatrixWithFD = true;
   };
@@ -998,7 +1017,7 @@ public:
   void computeBe(feBilinearForm *form);
   CLONEABLE(feSysElm_1D_EulerBord)
 };
- 
+
 // -----------------------------------------
 // -----------------------------------------
 
@@ -1021,9 +1040,9 @@ protected:
 
 public:
   feSysElm_1D_Euler(feFunction *state) : feSysElm(1, 3, EULER_1D, true), _state(state)
-    {
-      _computeMatrixWithFD = true;
-    };
+  {
+    _computeMatrixWithFD = true;
+  };
   ~feSysElm_1D_Euler() {}
 
   void createElementarySystem(std::vector<feSpace *> &space);
@@ -1036,7 +1055,7 @@ class feSysElm_0D_EulerFlux : public feSysElm
 {
 protected:
   int _boundaryType;
-  int _idrhoA_b ;
+  int _idrhoA_b;
   int _idrhouA_b;
   int _ideA_b;
   int _idrhoA_dom;
@@ -1053,10 +1072,11 @@ protected:
   std::vector<double> _gradphire;
 
 public:
-  feSysElm_0D_EulerFlux(int boundaryType) : feSysElm(-1, 6, EULER_0D_FLUX, true), _boundaryType(boundaryType)
-    {
-      _computeMatrixWithFD = true;
-    };
+  feSysElm_0D_EulerFlux(int boundaryType)
+    : feSysElm(-1, 6, EULER_0D_FLUX, true), _boundaryType(boundaryType)
+  {
+    _computeMatrixWithFD = true;
+  };
   ~feSysElm_0D_EulerFlux() {}
 
   void createElementarySystem(std::vector<feSpace *> &space);
@@ -1080,9 +1100,9 @@ protected:
 
 public:
   feSysElm_1D_Coupled(feFunction *state) : feSysElm(1, 2, EULER_1D, true), _state(state)
-    {
-      _computeMatrixWithFD = false;
-    };
+  {
+    _computeMatrixWithFD = false;
+  };
   ~feSysElm_1D_Coupled() {}
 
   void createElementarySystem(std::vector<feSpace *> &space);

@@ -22,11 +22,12 @@ static int VTK_QUADRATIC_TRIANGLE = 22;
 // static int VTK_QUADRATIC_HEXAHEDRON = 25;
 
 // A etoffer au fur et a mesure
-std::map<geometricInterpolant, int> cncToVTKmap = {{geometricInterpolant::POINTP0, VTK_VERTEX},
-                                                   {geometricInterpolant::LINEP1, VTK_LINE},
-                                                   {geometricInterpolant::TRIP1, VTK_TRIANGLE},
-                                                   {geometricInterpolant::LINEP2, VTK_QUADRATIC_EDGE},
-                                                   {geometricInterpolant::TRIP2, VTK_QUADRATIC_TRIANGLE}};
+std::map<geometricInterpolant, int> cncToVTKmap = {
+  {geometricInterpolant::POINTP0, VTK_VERTEX},
+  {geometricInterpolant::LINEP1, VTK_LINE},
+  {geometricInterpolant::TRIP1, VTK_TRIANGLE},
+  {geometricInterpolant::LINEP2, VTK_QUADRATIC_EDGE},
+  {geometricInterpolant::TRIP2, VTK_QUADRATIC_TRIANGLE}};
 
 feStatus createVisualizationExporter(feExporter *&exporter, visualizationFormat format,
                                      feMetaNumber *metaNumber, feSolution *solution, feMesh *mesh,
@@ -43,8 +44,9 @@ feStatus createVisualizationExporter(feExporter *&exporter, visualizationFormat 
 }
 
 feStatus createVisualizationExporter(feExporter *&exporter, visualizationFormat format,
-                                     feMetaNumber *metaNumber, feSolution *solution, feEigenProblem *eigenProblem,
-                                     feMesh *mesh, const std::vector<feSpace *> &feSpaces)
+                                     feMetaNumber *metaNumber, feSolution *solution,
+                                     feEigenProblem *eigenProblem, feMesh *mesh,
+                                     const std::vector<feSpace *> &feSpaces)
 {
   switch(format) {
     case VTK:
@@ -151,7 +153,7 @@ void feExporterVTK::writeField(std::ostream &output, feCncGeo *cnc, feSpace *int
   // output << "SCALARS " << fieldID << " double 1" << std::endl;
   // output << "LOOKUP_TABLE default" << std::endl;
 
-  output << fieldID << " " << nComponents << " " << _writtenNodes <<" double" << std::endl;
+  output << fieldID << " " << nComponents << " " << _writtenNodes << " double" << std::endl;
 
   int iDOF, elm;
   Vertex *v;
@@ -163,10 +165,8 @@ void feExporterVTK::writeField(std::ostream &output, feCncGeo *cnc, feSpace *int
   std::string fileName = "solution" + fieldID + ".txt";
   FILE *f = fopen(fileName.c_str(), "w");
   for(int iVertex = 0; iVertex < nVertices; ++iVertex) {
-
     // Loop over components for vector-valued FE spaces
-    for(int iComp = 0; iComp < nComponents; ++iComp){
-
+    for(int iComp = 0; iComp < nComponents; ++iComp) {
       iDOF = n->getDOFNumberAtVertex(iVertex, iComp);
 
       if(iDOF >= 0) {
@@ -210,26 +210,22 @@ void feExporterVTK::writeField(std::ostream &output, feCncGeo *cnc, feSpace *int
     for(auto e : _mesh->_edges) {
       v0 = e.getVertex(0);
       v1 = e.getVertex(1);
-      x = {(v0->x() + v1->x()) / 2., (v0->y() + v1->y()) / 2.,
-                               (v0->z() + v1->z()) / 2.};
+      x = {(v0->x() + v1->x()) / 2., (v0->y() + v1->y()) / 2., (v0->z() + v1->z()) / 2.};
       _mesh->locateVertex(x.data(), elm, r);
       intSpace->initializeAddressingVector(elm, adr);
-      for(size_t i = 0; i < adr.size(); ++i)
-        sol[i] = solVec[adr[i]];
+      for(size_t i = 0; i < adr.size(); ++i) sol[i] = solVec[adr[i]];
       if(intSpace->useGlobalFunctions()) {
         val = intSpace->interpolateField(sol, elm, x);
         output << val << std::endl;
       } else {
-        if(nComponents > 1){
+        if(nComponents > 1) {
           intSpace->interpolateVectorField(sol, nComponents, r, res);
-          for(int i = 0; i < nComponents; ++i)
-            output << res[i] << std::endl;
-        } else{
+          for(int i = 0; i < nComponents; ++i) output << res[i] << std::endl;
+        } else {
           val = intSpace->interpolateField(sol, r);
           output << val << std::endl;
         }
       }
-      
     }
   }
 }
@@ -314,18 +310,16 @@ feStatus feExporterVTK::writeStep(std::string fileName)
   return FE_STATUS_OK;
 }
 
-feExporterVTK::feExporterVTK(feMesh *mesh,
-                            feSolution *sol,
-                            feEigenProblem *eigenProblem,
-                            feMetaNumber *metaNumber,
-                            const std::vector<feSpace *> &feSpaces)
+feExporterVTK::feExporterVTK(feMesh *mesh, feSolution *sol, feEigenProblem *eigenProblem,
+                             feMetaNumber *metaNumber, const std::vector<feSpace *> &feSpaces)
   : feExporter(mesh, sol, metaNumber, feSpaces)
 {
   _eigenProblem = eigenProblem;
 };
 
 void feExporterVTK::writeEigenvector(std::ostream &output, feCncGeo *cnc, feSpace *intSpace,
-  std::string fieldID, int eigenPairIndex, size_t nEigenPairs, eigenPair &ep, bool loopOverCnc)
+                                     std::string fieldID, int eigenPairIndex, size_t nEigenPairs,
+                                     eigenPair &ep, bool loopOverCnc)
 {
 #if defined(HAVE_PETSC)
   std::vector<double> &solVec = _sol->getSolutionReference();
@@ -339,7 +333,8 @@ void feExporterVTK::writeEigenvector(std::ostream &output, feCncGeo *cnc, feSpac
   std::string padded = std::string(n_zero - std::min(n_zero, notPadded.length()), '0') + notPadded;
 
   // Name of the field is the number of the mode followed by the real part of its eigenvalue
-  output << "Mode" + padded + "_" + std::to_string(ep.valReal) << " 1 "<< _writtenNodes << " double" << std::endl;
+  output << "Mode" + padded + "_" + std::to_string(ep.valReal) << " 1 " << _writtenNodes
+         << " double" << std::endl;
 
   int iDOF, elm;
   Vertex *v;
@@ -354,13 +349,13 @@ void feExporterVTK::writeEigenvector(std::ostream &output, feCncGeo *cnc, feSpac
 
     if(iDOF >= 0) {
       // There is a degree of freedom at this mesh vertex
-      
-      if(n->getDOFCodeAtVertex(iVertex) == DOF_ESSENTIAL){
+
+      if(n->getDOFCodeAtVertex(iVertex) == DOF_ESSENTIAL) {
         // DOF is an essential BC: assign the corresponding BC stored in the feSolution
         output << solVec[iDOF] << std::endl;
       }
 
-      if(n->getDOFCodeAtVertex(iVertex) == DOF_UNKNOWN){
+      if(n->getDOFCodeAtVertex(iVertex) == DOF_UNKNOWN) {
         // True DOF: read value from the eigenvector (computed at true DOFs only)
         // feInfo("Reading ev %d at DOF %d = %f", eigenPairIndex, iDOF, vecRealArray[iDOF]);
         output << vecRealArray[iDOF] << std::endl;
@@ -425,7 +420,6 @@ void feExporterVTK::writeEigenvector(std::ostream &output, feCncGeo *cnc, feSpac
 // For block by block documentation, see the feExporterVTK::writeStep function.
 feStatus feExporterVTK::writeEigenvectors(std::string fileName)
 {
-
   std::filebuf fb;
   if(fb.open(fileName, std::ios::out)) {
     std::ostream output(&fb);
@@ -481,10 +475,10 @@ feStatus feExporterVTK::writeEigenvectors(std::string fileName)
 
     // Write each eigenvector for the current field
     eigenPair ep;
-    if(spacesToExport.size() > 1){
+    if(spacesToExport.size() > 1) {
       feWarning("Currently exporting the eigenvectors for a single field only.");
     }
-    for(feSpace *fS : spacesToExport){
+    for(feSpace *fS : spacesToExport) {
       for(size_t i = 0; i < nEigenPairs; ++i) {
         ep = _eigenProblem->getEigenpair(i);
         writeEigenvector(output, cnc, fS, fS->getFieldID(), i, nEigenPairs, ep, false);

@@ -6,29 +6,30 @@
 EigenMat I6 = EigenMat::Identity(6, 6);
 
 // Copy array "dim" times by chunks of size "chunksize"
-static void duplicateScalarArray(const int scalarSize, const int chunkSize, const double *scalarArray,
-  const int dim, std::vector<double> &vectorArray)
+static void duplicateScalarArray(const int scalarSize, const int chunkSize,
+                                 const double *scalarArray, const int dim,
+                                 std::vector<double> &vectorArray)
 {
-  int nChunks = scalarSize/chunkSize;
+  int nChunks = scalarSize / chunkSize;
   int cnt = 0;
-  for(int j = 0; j < nChunks; ++j){
-    for(int iDim = 0; iDim < dim; ++iDim){
-      for(int i = 0; i < chunkSize; ++i){
-        vectorArray[cnt++] = scalarArray[chunkSize*j + i];
+  for(int j = 0; j < nChunks; ++j) {
+    for(int iDim = 0; iDim < dim; ++iDim) {
+      for(int i = 0; i < chunkSize; ++i) {
+        vectorArray[cnt++] = scalarArray[chunkSize * j + i];
       }
     }
   }
 }
 
-static void duplicateScalarArray(const int scalarSize, const int chunkSize, const double *scalarArray,
-  const int dim, double *vectorArray)
+static void duplicateScalarArray(const int scalarSize, const int chunkSize,
+                                 const double *scalarArray, const int dim, double *vectorArray)
 {
-  int nChunks = scalarSize/chunkSize;
+  int nChunks = scalarSize / chunkSize;
   int cnt = 0;
-  for(int j = 0; j < nChunks; ++j){
-      for(int iDim = 0; iDim < dim; ++iDim){
-    for(int i = 0; i < chunkSize; ++i){
-        vectorArray[cnt++] = scalarArray[chunkSize*j + i];
+  for(int j = 0; j < nChunks; ++j) {
+    for(int iDim = 0; iDim < dim; ++iDim) {
+      for(int i = 0; i < chunkSize; ++i) {
+        vectorArray[cnt++] = scalarArray[chunkSize * j + i];
       }
     }
   }
@@ -37,15 +38,16 @@ static void duplicateScalarArray(const int scalarSize, const int chunkSize, cons
 // -----------------------------------------------------------------------------
 // Lagrange element of degree 1 on reference triangle r = [0,1], s = [0,1-r]
 // -----------------------------------------------------------------------------
-feSpaceTriP1::feSpaceTriP1(std::string cncGeoID) : feScalarSpace(2, nullptr, "GEO", cncGeoID, nullptr)
+feSpaceTriP1::feSpaceTriP1(std::string cncGeoID)
+  : feScalarSpace(2, nullptr, "GEO", cncGeoID, nullptr)
 {
   _nFunctions = 3;
   _Lcoor = {0., 0., 0., 1., 0., 0., 0., 1., 0.};
   _isGeometricInterpolant = true;
 }
 
-feSpaceTriP1::feSpaceTriP1(feMesh *mesh, const std::string fieldID, const std::string cncGeoID, feFunction *fct,
-                           const bool useGlobalShapeFunctions)
+feSpaceTriP1::feSpaceTriP1(feMesh *mesh, const std::string fieldID, const std::string cncGeoID,
+                           feFunction *fct, const bool useGlobalShapeFunctions)
   : feScalarSpace(2, mesh, fieldID, cncGeoID, fct, useGlobalShapeFunctions)
 {
   _nFunctions = 3;
@@ -90,12 +92,10 @@ void feSpaceTriP1::initializeAddressingVector(int numElem, std::vector<feInt> &a
 // -----------------------------------------------------------------------------
 // Vector Lagrange element of degree 1 on reference triangle r = [0,1], s = [0,1-r]
 // -----------------------------------------------------------------------------
-template<int dim>
-feSpaceVecTriP1<dim>::feSpaceVecTriP1(feMesh *mesh,
-  const std::string fieldID,
-  const std::string cncGeoID,
-  feVectorFunction *fct,
-  const bool useGlobalShapeFunctions)
+template <int dim>
+feSpaceVecTriP1<dim>::feSpaceVecTriP1(feMesh *mesh, const std::string fieldID,
+                                      const std::string cncGeoID, feVectorFunction *fct,
+                                      const bool useGlobalShapeFunctions)
   : feVectorSpace(2, mesh, fieldID, cncGeoID, fct, useGlobalShapeFunctions)
 {
   _nComponents = dim;
@@ -105,42 +105,37 @@ feSpaceVecTriP1<dim>::feSpaceVecTriP1(feMesh *mesh,
   duplicateScalarArray(9, 3, coor, dim, _Lcoor);
 }
 
-template<int dim>
-std::vector<double> feSpaceVecTriP1<dim>::L(double *r)
-{ 
+template <int dim> std::vector<double> feSpaceVecTriP1<dim>::L(double *r)
+{
   double phi[3] = {1.0 - r[0] - r[1], r[0], r[1]};
   std::vector<double> res(_nFunctions);
   duplicateScalarArray(3, 1, phi, dim, res);
   return res;
 }
 
-template<int dim>
-void feSpaceVecTriP1<dim>::L(double *r, double *res)
+template <int dim> void feSpaceVecTriP1<dim>::L(double *r, double *res)
 {
   double phi[3] = {1.0 - r[0] - r[1], r[0], r[1]};
   duplicateScalarArray(3, 1, phi, dim, res);
 }
 
-template<int dim>
-std::vector<double> feSpaceVecTriP1<dim>::dLdr(double *r)
-{ 
+template <int dim> std::vector<double> feSpaceVecTriP1<dim>::dLdr(double *r)
+{
   double dldr[3] = {-1.0, 1.0, 0.0};
   std::vector<double> res(_nFunctions);
   duplicateScalarArray(3, 1, dldr, dim, res);
   return res;
 }
 
-template<int dim>
-std::vector<double> feSpaceVecTriP1<dim>::dLds(double *r)
-{ 
+template <int dim> std::vector<double> feSpaceVecTriP1<dim>::dLds(double *r)
+{
   double dlds[3] = {-1.0, 0.0, 1.0};
   std::vector<double> res(_nFunctions);
   duplicateScalarArray(3, 1, dlds, dim, res);
   return res;
 }
 
-template<int dim>
-void feSpaceVecTriP1<dim>::initializeNumberingUnknowns()
+template <int dim> void feSpaceVecTriP1<dim>::initializeNumberingUnknowns()
 {
   for(int i = 0; i < _mesh->getNumElements(_cncGeoID); ++i) {
     _numbering->setUnknownVertexDOF(_mesh, _cncGeoID, i, 0, dim);
@@ -149,21 +144,20 @@ void feSpaceVecTriP1<dim>::initializeNumberingUnknowns()
   }
 }
 
-template<int dim>
-void feSpaceVecTriP1<dim>::initializeNumberingEssential()
+template <int dim> void feSpaceVecTriP1<dim>::initializeNumberingEssential()
 {
   // for(int iComp = 0; iComp < _nComponents; ++iComp){
   //   if(_essentialComponents[iComp]){
-      for(int i = 0; i < _mesh->getNumElements(_cncGeoID); ++i) {
-        _numbering->setEssentialVertexDOF(_mesh, _cncGeoID, i, 0); //, iComp);
-        _numbering->setEssentialVertexDOF(_mesh, _cncGeoID, i, 1); //, iComp);
-        _numbering->setEssentialVertexDOF(_mesh, _cncGeoID, i, 2); //, iComp);
-      }
+  for(int i = 0; i < _mesh->getNumElements(_cncGeoID); ++i) {
+    _numbering->setEssentialVertexDOF(_mesh, _cncGeoID, i, 0); //, iComp);
+    _numbering->setEssentialVertexDOF(_mesh, _cncGeoID, i, 1); //, iComp);
+    _numbering->setEssentialVertexDOF(_mesh, _cncGeoID, i, 2); //, iComp);
+  }
   //   }
   // }
 }
 
-template<int dim>
+template <int dim>
 void feSpaceVecTriP1<dim>::initializeAddressingVector(int numElem, std::vector<feInt> &adr)
 {
   adr[0] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 0, 0);
@@ -180,8 +174,8 @@ template class feSpaceVecTriP1<2>;
 // -----------------------------------------------------------------------------
 // Non-conforming Crouzeix-Raviart element of degree 1 on reference triangle r = [0,1], s = [0,1-r]
 // -----------------------------------------------------------------------------
-feSpaceTri_CR1::feSpaceTri_CR1(feMesh *mesh, std::string fieldID,
-                                                       std::string cncGeoID, feFunction *fct)
+feSpaceTri_CR1::feSpaceTri_CR1(feMesh *mesh, std::string fieldID, std::string cncGeoID,
+                               feFunction *fct)
   : feScalarSpace(2, mesh, fieldID, cncGeoID, fct)
 {
   _nFunctions = 3;
@@ -220,8 +214,7 @@ void feSpaceTri_CR1::initializeNumberingEssential()
   }
 }
 
-void feSpaceTri_CR1::initializeAddressingVector(int numElem,
-                                                            std::vector<feInt> &adr)
+void feSpaceTri_CR1::initializeAddressingVector(int numElem, std::vector<feInt> &adr)
 {
   adr[0] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 0, 0);
   adr[1] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 1, 0);
@@ -231,15 +224,16 @@ void feSpaceTri_CR1::initializeAddressingVector(int numElem,
 // -----------------------------------------------------------------------------
 // Lagrange element of degree 2 on reference triangle r = [0,1], s = [0,1-r]
 // -----------------------------------------------------------------------------
-feSpaceTriP2::feSpaceTriP2(std::string cncGeoID) : feScalarSpace(2, nullptr, "GEO", cncGeoID, nullptr)
+feSpaceTriP2::feSpaceTriP2(std::string cncGeoID)
+  : feScalarSpace(2, nullptr, "GEO", cncGeoID, nullptr)
 {
   _nFunctions = 6;
   _Lcoor = {0., 0., 0., 1., 0., 0., 0., 1., 0., 0.5, 0., 0., 0.5, 0.5, 0., 0., 0.5, 0.};
   _isGeometricInterpolant = true;
 }
 
-feSpaceTriP2::feSpaceTriP2(feMesh *mesh, const std::string fieldID, const std::string cncGeoID, feFunction *fct,
-                           const bool useGlobalShapeFunctions)
+feSpaceTriP2::feSpaceTriP2(feMesh *mesh, const std::string fieldID, const std::string cncGeoID,
+                           feFunction *fct, const bool useGlobalShapeFunctions)
   : feScalarSpace(2, mesh, fieldID, cncGeoID, fct, useGlobalShapeFunctions)
 {
   _nFunctions = 6;
@@ -497,12 +491,10 @@ void feSpaceTriP2::initializeAddressingVector(int numElem, std::vector<feInt> &a
 // -----------------------------------------------------------------------------
 // Vector Lagrange element of degree 2 on reference triangle r = [0,1], s = [0,1-r]
 // -----------------------------------------------------------------------------
-template<int dim>
-feSpaceVecTriP2<dim>::feSpaceVecTriP2(feMesh *mesh,
-  const std::string fieldID,
-  const std::string cncGeoID,
-  feVectorFunction *fct,
-  const bool useGlobalShapeFunctions)
+template <int dim>
+feSpaceVecTriP2<dim>::feSpaceVecTriP2(feMesh *mesh, const std::string fieldID,
+                                      const std::string cncGeoID, feVectorFunction *fct,
+                                      const bool useGlobalShapeFunctions)
   : feVectorSpace(2, mesh, fieldID, cncGeoID, fct, useGlobalShapeFunctions)
 {
   _nComponents = dim;
@@ -512,62 +504,49 @@ feSpaceVecTriP2<dim>::feSpaceVecTriP2(feMesh *mesh,
   duplicateScalarArray(6 * 3, 3, coor, dim, _Lcoor);
 }
 
-template<int dim>
-std::vector<double> feSpaceVecTriP2<dim>::L(double *r)
-{ 
+template <int dim> std::vector<double> feSpaceVecTriP2<dim>::L(double *r)
+{
   double phi[6] = {(1. - r[0] - r[1]) * (1. - 2. * r[0] - 2. * r[1]),
-    r[0] * (2. * r[0] - 1.),
-    r[1] * (2. * r[1] - 1.),
-    4. * r[0] * (1. - r[0] - r[1]),
-    4. * r[0] * r[1],
-    4. * r[1] * (1. - r[0] - r[1])};
+                   r[0] * (2. * r[0] - 1.),
+                   r[1] * (2. * r[1] - 1.),
+                   4. * r[0] * (1. - r[0] - r[1]),
+                   4. * r[0] * r[1],
+                   4. * r[1] * (1. - r[0] - r[1])};
   std::vector<double> res(_nFunctions);
   duplicateScalarArray(6, 1, phi, dim, res);
   return res;
 }
 
-template<int dim>
-void feSpaceVecTriP2<dim>::L(double *r, double *res)
+template <int dim> void feSpaceVecTriP2<dim>::L(double *r, double *res)
 {
   double phi[6] = {(1. - r[0] - r[1]) * (1. - 2. * r[0] - 2. * r[1]),
-    r[0] * (2. * r[0] - 1.),
-    r[1] * (2. * r[1] - 1.),
-    4. * r[0] * (1. - r[0] - r[1]),
-    4. * r[0] * r[1],
-    4. * r[1] * (1. - r[0] - r[1])};
+                   r[0] * (2. * r[0] - 1.),
+                   r[1] * (2. * r[1] - 1.),
+                   4. * r[0] * (1. - r[0] - r[1]),
+                   4. * r[0] * r[1],
+                   4. * r[1] * (1. - r[0] - r[1])};
   duplicateScalarArray(6, 1, phi, dim, res);
 }
 
-template<int dim>
-std::vector<double> feSpaceVecTriP2<dim>::dLdr(double *r)
-{ 
-  double dldr[6] = {4. * (r[0] + r[1]) - 3., 
-    4. * r[0] - 1.,
-    0.,
-    4. * (1. - 2. * r[0] - r[1]), 
-    4. * r[1], 
-   -4. * r[1]};
+template <int dim> std::vector<double> feSpaceVecTriP2<dim>::dLdr(double *r)
+{
+  double dldr[6] = {4. * (r[0] + r[1]) - 3.,      4. * r[0] - 1., 0.,
+                    4. * (1. - 2. * r[0] - r[1]), 4. * r[1],      -4. * r[1]};
   std::vector<double> res(_nFunctions);
   duplicateScalarArray(6, 1, dldr, dim, res);
   return res;
 }
 
-template<int dim>
-std::vector<double> feSpaceVecTriP2<dim>::dLds(double *r)
-{ 
-  double dlds[6] = {4. * (r[0] + r[1]) - 3.,
-    0.,
-    4. * r[1] - 1.,
-   -4. * r[0],
-    4. * r[0],
-    4. * (1. - r[0] - 2. * r[1])};
+template <int dim> std::vector<double> feSpaceVecTriP2<dim>::dLds(double *r)
+{
+  double dlds[6] = {4. * (r[0] + r[1]) - 3.,     0., 4. * r[1] - 1., -4. * r[0], 4. * r[0],
+                    4. * (1. - r[0] - 2. * r[1])};
   std::vector<double> res(_nFunctions);
   duplicateScalarArray(6, 1, dlds, dim, res);
   return res;
 }
 
-template<int dim>
-void feSpaceVecTriP2<dim>::initializeNumberingUnknowns()
+template <int dim> void feSpaceVecTriP2<dim>::initializeNumberingUnknowns()
 {
   for(int i = 0; i < _mesh->getNumElements(_cncGeoID); ++i) {
     for(int j = 0; j < this->getCncGeo()->getNumVerticesPerElem(); ++j) {
@@ -581,26 +560,25 @@ void feSpaceVecTriP2<dim>::initializeNumberingUnknowns()
   }
 }
 
-template<int dim>
-void feSpaceVecTriP2<dim>::initializeNumberingEssential()
+template <int dim> void feSpaceVecTriP2<dim>::initializeNumberingEssential()
 {
   // for(int iComp = 0; iComp < _nComponents; ++iComp){
   //   if(_essentialComponents[iComp]){
-      for(int i = 0; i < _mesh->getNumElements(_cncGeoID); ++i) {
-        for(int j = 0; j < this->getCncGeo()->getNumVerticesPerElem(); ++j) {
-          _numbering->setEssentialVertexDOF(_mesh, _cncGeoID, i, j); //, iComp);
-        }
-        if(this->getCncGeo()->getFeSpace()->getPolynomialDegree() != 2) {
-          _numbering->setEssentialEdgeDOF(_mesh, _cncGeoID, i, 0); //, iComp);
-          _numbering->setEssentialEdgeDOF(_mesh, _cncGeoID, i, 1); //, iComp);
-          _numbering->setEssentialEdgeDOF(_mesh, _cncGeoID, i, 2); //, iComp);
-        }
-      }
+  for(int i = 0; i < _mesh->getNumElements(_cncGeoID); ++i) {
+    for(int j = 0; j < this->getCncGeo()->getNumVerticesPerElem(); ++j) {
+      _numbering->setEssentialVertexDOF(_mesh, _cncGeoID, i, j); //, iComp);
+    }
+    if(this->getCncGeo()->getFeSpace()->getPolynomialDegree() != 2) {
+      _numbering->setEssentialEdgeDOF(_mesh, _cncGeoID, i, 0); //, iComp);
+      _numbering->setEssentialEdgeDOF(_mesh, _cncGeoID, i, 1); //, iComp);
+      _numbering->setEssentialEdgeDOF(_mesh, _cncGeoID, i, 2); //, iComp);
+    }
+  }
   //   }
   // }
 }
 
-template<int dim>
+template <int dim>
 void feSpaceVecTriP2<dim>::initializeAddressingVector(int numElem, std::vector<feInt> &adr)
 {
   adr[0] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 0, 0);
@@ -632,8 +610,8 @@ template class feSpaceVecTriP2<2>;
 // -----------------------------------------------------------------------------
 // Non-conforming Crouzeix-Raviart element of degree 2 on reference triangle r = [0,1], s = [0,1-r]
 // -----------------------------------------------------------------------------
-feSpaceTri_CR2::feSpaceTri_CR2(feMesh *mesh, std::string fieldID,
-                                                       std::string cncGeoID, feFunction *fct)
+feSpaceTri_CR2::feSpaceTri_CR2(feMesh *mesh, std::string fieldID, std::string cncGeoID,
+                               feFunction *fct)
   : feScalarSpace(2, mesh, fieldID, cncGeoID, fct)
 {
   _nFunctions = 7;
@@ -712,8 +690,7 @@ void feSpaceTri_CR2::initializeNumberingEssential()
   }
 }
 
-void feSpaceTri_CR2::initializeAddressingVector(int numElem,
-                                                            std::vector<feInt> &adr)
+void feSpaceTri_CR2::initializeAddressingVector(int numElem, std::vector<feInt> &adr)
 {
   adr[0] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 0);
   adr[1] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 1);
@@ -733,7 +710,8 @@ void feSpaceTri_CR2::initializeAddressingVector(int numElem,
 // -----------------------------------------------------------------------------
 // Lagrange element of degree 3 on reference triangle r = [0,1], s = [0,1-r]
 // -----------------------------------------------------------------------------
-feSpaceTriP3::feSpaceTriP3(std::string cncGeoID) : feScalarSpace(2, nullptr, "GEO", cncGeoID, nullptr)
+feSpaceTriP3::feSpaceTriP3(std::string cncGeoID)
+  : feScalarSpace(2, nullptr, "GEO", cncGeoID, nullptr)
 {
   _nFunctions = 10;
   _Lcoor = {0., 0., 0.,      1., 0., 0.,      0.,      1.,      0.,      1. / 3.,
@@ -742,8 +720,8 @@ feSpaceTriP3::feSpaceTriP3(std::string cncGeoID) : feScalarSpace(2, nullptr, "GE
   _isGeometricInterpolant = true;
 }
 
-feSpaceTriP3::feSpaceTriP3(feMesh *mesh, const std::string fieldID, const std::string cncGeoID, feFunction *fct,
-                           const bool useGlobalShapeFunctions)
+feSpaceTriP3::feSpaceTriP3(feMesh *mesh, const std::string fieldID, const std::string cncGeoID,
+                           feFunction *fct, const bool useGlobalShapeFunctions)
   : feScalarSpace(2, mesh, fieldID, cncGeoID, fct, useGlobalShapeFunctions)
 {
   _nFunctions = 10;
@@ -778,20 +756,20 @@ void feSpaceTriP3::L(double *r, double *L)
   double R = r[0];
   double S = r[1];
   L[0] = R * (-1.1E1 / 2.0) - S * (1.1E1 / 2.0) + R * S * 1.8E1 - R * (S * S) * (2.7E1 / 2.0) -
-        (R * R) * S * (2.7E1 / 2.0) + (R * R) * 9.0 - (R * R * R) * (9.0 / 2.0) +
-        (S * S) * 9.0 - (S * S * S) * (9.0 / 2.0) + 1.0;
+         (R * R) * S * (2.7E1 / 2.0) + (R * R) * 9.0 - (R * R * R) * (9.0 / 2.0) + (S * S) * 9.0 -
+         (S * S * S) * (9.0 / 2.0) + 1.0;
   L[1] = R - (R * R) * (9.0 / 2.0) + (R * R * R) * (9.0 / 2.0);
   L[2] = S - (S * S) * (9.0 / 2.0) + (S * S * S) * (9.0 / 2.0);
   L[3] = R * 9.0 - R * S * (4.5E1 / 2.0) + R * (S * S) * (2.7E1 / 2.0) + (R * R) * S * 2.7E1 -
-        (R * R) * (4.5E1 / 2.0) + (R * R * R) * (2.7E1 / 2.0);
+         (R * R) * (4.5E1 / 2.0) + (R * R * R) * (2.7E1 / 2.0);
   L[4] = R * (-9.0 / 2.0) + R * S * (9.0 / 2.0) - (R * R) * S * (2.7E1 / 2.0) + (R * R) * 1.8E1 -
-        (R * R * R) * (2.7E1 / 2.0);
+         (R * R * R) * (2.7E1 / 2.0);
   L[5] = R * S * (-9.0 / 2.0) + (R * R) * S * (2.7E1 / 2.0);
   L[6] = R * S * (-9.0 / 2.0) + R * (S * S) * (2.7E1 / 2.0);
   L[7] = S * (-9.0 / 2.0) + R * S * (9.0 / 2.0) - R * (S * S) * (2.7E1 / 2.0) + (S * S) * 1.8E1 -
-        (S * S * S) * (2.7E1 / 2.0);
+         (S * S * S) * (2.7E1 / 2.0);
   L[8] = S * 9.0 - R * S * (4.5E1 / 2.0) + R * (S * S) * 2.7E1 + (R * R) * S * (2.7E1 / 2.0) -
-        (S * S) * (4.5E1 / 2.0) + (S * S * S) * (2.7E1 / 2.0);
+         (S * S) * (4.5E1 / 2.0) + (S * S * S) * (2.7E1 / 2.0);
   L[9] = R * S * 2.7E1 - R * (S * S) * 2.7E1 - (R * R) * S * 2.7E1;
 }
 
@@ -894,133 +872,129 @@ void feSpaceTriP3::initializeAddressingVector(int numElem, std::vector<feInt> &a
 // -----------------------------------------------------------------------------
 // Vector Lagrange element of degree 3 on reference triangle r = [0,1], s = [0,1-r]
 // -----------------------------------------------------------------------------
-template<int dim>
-feSpaceVecTriP3<dim>::feSpaceVecTriP3(feMesh *mesh,
-  const std::string fieldID,
-  const std::string cncGeoID,
-  feVectorFunction *fct,
-  const bool useGlobalShapeFunctions)
+template <int dim>
+feSpaceVecTriP3<dim>::feSpaceVecTriP3(feMesh *mesh, const std::string fieldID,
+                                      const std::string cncGeoID, feVectorFunction *fct,
+                                      const bool useGlobalShapeFunctions)
   : feVectorSpace(2, mesh, fieldID, cncGeoID, fct, useGlobalShapeFunctions)
 {
   _nComponents = dim;
   _nFunctions = 10 * dim;
   double coor[10 * 3] = {0., 0., 0.,      1., 0., 0.,      0.,      1.,      0.,      1. / 3.,
-            0., 0., 2. / 3., 0., 0., 2. / 3., 1. / 3., 0.,      1. / 3., 2. / 3.,
-            0., 0., 2. / 3., 0., 0., 1. / 3., 0.,      1. / 3., 1. / 3., 0.};
+                         0., 0., 2. / 3., 0., 0., 2. / 3., 1. / 3., 0.,      1. / 3., 2. / 3.,
+                         0., 0., 2. / 3., 0., 0., 1. / 3., 0.,      1. / 3., 1. / 3., 0.};
   _Lcoor.resize(10 * 3 * dim);
   duplicateScalarArray(10 * 3, 3, coor, dim, _Lcoor);
 }
 
-template<int dim>
-std::vector<double> feSpaceVecTriP3<dim>::L(double *r)
-{ 
+template <int dim> std::vector<double> feSpaceVecTriP3<dim>::L(double *r)
+{
   double R = r[0];
   double S = r[1];
-  double phi[10] = {R * (-1.1E1 / 2.0) - S * (1.1E1 / 2.0) + R * S * 1.8E1 - R * (S * S) * (2.7E1 / 2.0) -
-    (R * R) * S * (2.7E1 / 2.0) + (R * R) * 9.0 - (R * R * R) * (9.0 / 2.0) +
-    (S * S) * 9.0 - (S * S * S) * (9.0 / 2.0) + 1.0,
-    R - (R * R) * (9.0 / 2.0) + (R * R * R) * (9.0 / 2.0),
-    S - (S * S) * (9.0 / 2.0) + (S * S * S) * (9.0 / 2.0),
-    R * 9.0 - R * S * (4.5E1 / 2.0) + R * (S * S) * (2.7E1 / 2.0) + (R * R) * S * 2.7E1 -
-      (R * R) * (4.5E1 / 2.0) + (R * R * R) * (2.7E1 / 2.0),
-    R * (-9.0 / 2.0) + R * S * (9.0 / 2.0) - (R * R) * S * (2.7E1 / 2.0) + (R * R) * 1.8E1 -
-      (R * R * R) * (2.7E1 / 2.0),
-    R * S * (-9.0 / 2.0) + (R * R) * S * (2.7E1 / 2.0),
-    R * S * (-9.0 / 2.0) + R * (S * S) * (2.7E1 / 2.0),
-    S * (-9.0 / 2.0) + R * S * (9.0 / 2.0) - R * (S * S) * (2.7E1 / 2.0) + (S * S) * 1.8E1 -
-      (S * S * S) * (2.7E1 / 2.0),
-    S * 9.0 - R * S * (4.5E1 / 2.0) + R * (S * S) * 2.7E1 + (R * R) * S * (2.7E1 / 2.0) -
-      (S * S) * (4.5E1 / 2.0) + (S * S * S) * (2.7E1 / 2.0),
-    R * S * 2.7E1 - R * (S * S) * 2.7E1 - (R * R) * S * 2.7E1};
+  double phi[10] = {R * (-1.1E1 / 2.0) - S * (1.1E1 / 2.0) + R * S * 1.8E1 -
+                      R * (S * S) * (2.7E1 / 2.0) - (R * R) * S * (2.7E1 / 2.0) + (R * R) * 9.0 -
+                      (R * R * R) * (9.0 / 2.0) + (S * S) * 9.0 - (S * S * S) * (9.0 / 2.0) + 1.0,
+                    R - (R * R) * (9.0 / 2.0) + (R * R * R) * (9.0 / 2.0),
+                    S - (S * S) * (9.0 / 2.0) + (S * S * S) * (9.0 / 2.0),
+                    R * 9.0 - R * S * (4.5E1 / 2.0) + R * (S * S) * (2.7E1 / 2.0) +
+                      (R * R) * S * 2.7E1 - (R * R) * (4.5E1 / 2.0) + (R * R * R) * (2.7E1 / 2.0),
+                    R * (-9.0 / 2.0) + R * S * (9.0 / 2.0) - (R * R) * S * (2.7E1 / 2.0) +
+                      (R * R) * 1.8E1 - (R * R * R) * (2.7E1 / 2.0),
+                    R * S * (-9.0 / 2.0) + (R * R) * S * (2.7E1 / 2.0),
+                    R * S * (-9.0 / 2.0) + R * (S * S) * (2.7E1 / 2.0),
+                    S * (-9.0 / 2.0) + R * S * (9.0 / 2.0) - R * (S * S) * (2.7E1 / 2.0) +
+                      (S * S) * 1.8E1 - (S * S * S) * (2.7E1 / 2.0),
+                    S * 9.0 - R * S * (4.5E1 / 2.0) + R * (S * S) * 2.7E1 +
+                      (R * R) * S * (2.7E1 / 2.0) - (S * S) * (4.5E1 / 2.0) +
+                      (S * S * S) * (2.7E1 / 2.0),
+                    R * S * 2.7E1 - R * (S * S) * 2.7E1 - (R * R) * S * 2.7E1};
   std::vector<double> res(_nFunctions);
   duplicateScalarArray(10, 1, phi, dim, res);
   return res;
 }
 
-template<int dim>
-void feSpaceVecTriP3<dim>::L(double *r, double *res)
+template <int dim> void feSpaceVecTriP3<dim>::L(double *r, double *res)
 {
   double R = r[0];
   double S = r[1];
-  double phi[10] = {R * (-1.1E1 / 2.0) - S * (1.1E1 / 2.0) + R * S * 1.8E1 - R * (S * S) * (2.7E1 / 2.0) -
-    (R * R) * S * (2.7E1 / 2.0) + (R * R) * 9.0 - (R * R * R) * (9.0 / 2.0) +
-    (S * S) * 9.0 - (S * S * S) * (9.0 / 2.0) + 1.0,
-    R - (R * R) * (9.0 / 2.0) + (R * R * R) * (9.0 / 2.0),
-    S - (S * S) * (9.0 / 2.0) + (S * S * S) * (9.0 / 2.0),
-    R * 9.0 - R * S * (4.5E1 / 2.0) + R * (S * S) * (2.7E1 / 2.0) + (R * R) * S * 2.7E1 -
-      (R * R) * (4.5E1 / 2.0) + (R * R * R) * (2.7E1 / 2.0),
-    R * (-9.0 / 2.0) + R * S * (9.0 / 2.0) - (R * R) * S * (2.7E1 / 2.0) + (R * R) * 1.8E1 -
-      (R * R * R) * (2.7E1 / 2.0),
-    R * S * (-9.0 / 2.0) + (R * R) * S * (2.7E1 / 2.0),
-    R * S * (-9.0 / 2.0) + R * (S * S) * (2.7E1 / 2.0),
-    S * (-9.0 / 2.0) + R * S * (9.0 / 2.0) - R * (S * S) * (2.7E1 / 2.0) + (S * S) * 1.8E1 -
-      (S * S * S) * (2.7E1 / 2.0),
-    S * 9.0 - R * S * (4.5E1 / 2.0) + R * (S * S) * 2.7E1 + (R * R) * S * (2.7E1 / 2.0) -
-      (S * S) * (4.5E1 / 2.0) + (S * S * S) * (2.7E1 / 2.0),
-    R * S * 2.7E1 - R * (S * S) * 2.7E1 - (R * R) * S * 2.7E1};
+  double phi[10] = {R * (-1.1E1 / 2.0) - S * (1.1E1 / 2.0) + R * S * 1.8E1 -
+                      R * (S * S) * (2.7E1 / 2.0) - (R * R) * S * (2.7E1 / 2.0) + (R * R) * 9.0 -
+                      (R * R * R) * (9.0 / 2.0) + (S * S) * 9.0 - (S * S * S) * (9.0 / 2.0) + 1.0,
+                    R - (R * R) * (9.0 / 2.0) + (R * R * R) * (9.0 / 2.0),
+                    S - (S * S) * (9.0 / 2.0) + (S * S * S) * (9.0 / 2.0),
+                    R * 9.0 - R * S * (4.5E1 / 2.0) + R * (S * S) * (2.7E1 / 2.0) +
+                      (R * R) * S * 2.7E1 - (R * R) * (4.5E1 / 2.0) + (R * R * R) * (2.7E1 / 2.0),
+                    R * (-9.0 / 2.0) + R * S * (9.0 / 2.0) - (R * R) * S * (2.7E1 / 2.0) +
+                      (R * R) * 1.8E1 - (R * R * R) * (2.7E1 / 2.0),
+                    R * S * (-9.0 / 2.0) + (R * R) * S * (2.7E1 / 2.0),
+                    R * S * (-9.0 / 2.0) + R * (S * S) * (2.7E1 / 2.0),
+                    S * (-9.0 / 2.0) + R * S * (9.0 / 2.0) - R * (S * S) * (2.7E1 / 2.0) +
+                      (S * S) * 1.8E1 - (S * S * S) * (2.7E1 / 2.0),
+                    S * 9.0 - R * S * (4.5E1 / 2.0) + R * (S * S) * 2.7E1 +
+                      (R * R) * S * (2.7E1 / 2.0) - (S * S) * (4.5E1 / 2.0) +
+                      (S * S * S) * (2.7E1 / 2.0),
+                    R * S * 2.7E1 - R * (S * S) * 2.7E1 - (R * R) * S * 2.7E1};
   duplicateScalarArray(10, 1, phi, dim, res);
 }
 
-template<int dim>
-std::vector<double> feSpaceVecTriP3<dim>::dLdr(double *r)
-{ 
+template <int dim> std::vector<double> feSpaceVecTriP3<dim>::dLdr(double *r)
+{
   double R = r[0];
   double S = r[1];
   double dldr[10] = {R * 1.8E1 + S * 1.8E1 - R * S * 2.7E1 - (R * R) * (2.7E1 / 2.0) -
-    (S * S) * (2.7E1 / 2.0) - 1.1E1 / 2.0,
-    R * -9.0 + (R * R) * (2.7E1 / 2.0) + 1.0,
-    0.,
-    R * -4.5E1 - S * (4.5E1 / 2.0) + R * S * 5.4E1 + (R * R) * (8.1E1 / 2.0) +
-      (S * S) * (2.7E1 / 2.0) + 9.0,
-    R * 3.6E1 + S * (9.0 / 2.0) - R * S * 2.7E1 - (R * R) * (8.1E1 / 2.0) - 9.0 / 2.0,
-    S * (-9.0 / 2.0) + R * S * 2.7E1,
-    S * (-9.0 / 2.0) + (S * S) * (2.7E1 / 2.0),
-    S * (9.0 / 2.0) - (S * S) * (2.7E1 / 2.0),
-    S * (-4.5E1 / 2.0) + R * S * 2.7E1 + (S * S) * 2.7E1,
-    S * 2.7E1 - R * S * 5.4E1 - (S * S) * 2.7E1};
+                       (S * S) * (2.7E1 / 2.0) - 1.1E1 / 2.0,
+                     R * -9.0 + (R * R) * (2.7E1 / 2.0) + 1.0,
+                     0.,
+                     R * -4.5E1 - S * (4.5E1 / 2.0) + R * S * 5.4E1 + (R * R) * (8.1E1 / 2.0) +
+                       (S * S) * (2.7E1 / 2.0) + 9.0,
+                     R * 3.6E1 + S * (9.0 / 2.0) - R * S * 2.7E1 - (R * R) * (8.1E1 / 2.0) -
+                       9.0 / 2.0,
+                     S * (-9.0 / 2.0) + R * S * 2.7E1,
+                     S * (-9.0 / 2.0) + (S * S) * (2.7E1 / 2.0),
+                     S * (9.0 / 2.0) - (S * S) * (2.7E1 / 2.0),
+                     S * (-4.5E1 / 2.0) + R * S * 2.7E1 + (S * S) * 2.7E1,
+                     S * 2.7E1 - R * S * 5.4E1 - (S * S) * 2.7E1};
   std::vector<double> res(_nFunctions);
   duplicateScalarArray(10, 1, dldr, dim, res);
   return res;
 }
 
-template<int dim>
-std::vector<double> feSpaceVecTriP3<dim>::dLds(double *r)
-{ 
+template <int dim> std::vector<double> feSpaceVecTriP3<dim>::dLds(double *r)
+{
   double R = r[0];
   double S = r[1];
   double dlds[10] = {R * 1.8E1 + S * 1.8E1 - R * S * 2.7E1 - (R * R) * (2.7E1 / 2.0) -
-    (S * S) * (2.7E1 / 2.0) - 1.1E1 / 2.0,
-    0.,
-    S * -9.0 + (S * S) * (2.7E1 / 2.0) + 1.0,
-    R * (-4.5E1 / 2.0) + R * S * 2.7E1 + (R * R) * 2.7E1,
-    R * (9.0 / 2.0) - (R * R) * (2.7E1 / 2.0),
-    R * (-9.0 / 2.0) + (R * R) * (2.7E1 / 2.0),
-    R * (-9.0 / 2.0) + R * S * 2.7E1,
-    R * (9.0 / 2.0) + S * 3.6E1 - R * S * 2.7E1 - (S * S) * (8.1E1 / 2.0) - 9.0 / 2.0,
-    R * (-4.5E1 / 2.0) - S * 4.5E1 + R * S * 5.4E1 + (R * R) * (2.7E1 / 2.0) +
-    (S * S) * (8.1E1 / 2.0) + 9.0,
-    R * 2.7E1 - R * S * 5.4E1 - (R * R) * 2.7E1};
+                       (S * S) * (2.7E1 / 2.0) - 1.1E1 / 2.0,
+                     0.,
+                     S * -9.0 + (S * S) * (2.7E1 / 2.0) + 1.0,
+                     R * (-4.5E1 / 2.0) + R * S * 2.7E1 + (R * R) * 2.7E1,
+                     R * (9.0 / 2.0) - (R * R) * (2.7E1 / 2.0),
+                     R * (-9.0 / 2.0) + (R * R) * (2.7E1 / 2.0),
+                     R * (-9.0 / 2.0) + R * S * 2.7E1,
+                     R * (9.0 / 2.0) + S * 3.6E1 - R * S * 2.7E1 - (S * S) * (8.1E1 / 2.0) -
+                       9.0 / 2.0,
+                     R * (-4.5E1 / 2.0) - S * 4.5E1 + R * S * 5.4E1 + (R * R) * (2.7E1 / 2.0) +
+                       (S * S) * (8.1E1 / 2.0) + 9.0,
+                     R * 2.7E1 - R * S * 5.4E1 - (R * R) * 2.7E1};
   std::vector<double> res(_nFunctions);
   duplicateScalarArray(10, 1, dlds, dim, res);
   return res;
 }
 
-template<int dim>
-void feSpaceVecTriP3<dim>::initializeNumberingUnknowns()
+template <int dim> void feSpaceVecTriP3<dim>::initializeNumberingUnknowns()
 {
   for(int i = 0; i < _mesh->getNumElements(_cncGeoID); ++i) {
     _numbering->setUnknownVertexDOF(_mesh, _cncGeoID, i, 0, dim);
     _numbering->setUnknownVertexDOF(_mesh, _cncGeoID, i, 1, dim);
     _numbering->setUnknownVertexDOF(_mesh, _cncGeoID, i, 2, dim);
     _numbering->setUnknownElementDOF(_mesh, _cncGeoID, i, dim);
-    _numbering->setUnknownEdgeDOF(_mesh, _cncGeoID, i, 0, 2*dim);
-    _numbering->setUnknownEdgeDOF(_mesh, _cncGeoID, i, 1, 2*dim);
-    _numbering->setUnknownEdgeDOF(_mesh, _cncGeoID, i, 2, 2*dim);
+    _numbering->setUnknownEdgeDOF(_mesh, _cncGeoID, i, 0, 2 * dim);
+    _numbering->setUnknownEdgeDOF(_mesh, _cncGeoID, i, 1, 2 * dim);
+    _numbering->setUnknownEdgeDOF(_mesh, _cncGeoID, i, 2, 2 * dim);
   }
 }
 
-template<int dim>
-void feSpaceVecTriP3<dim>::initializeNumberingEssential()
+template <int dim> void feSpaceVecTriP3<dim>::initializeNumberingEssential()
 {
   for(int i = 0; i < _mesh->getNumElements(_cncGeoID); ++i) {
     _numbering->setEssentialVertexDOF(_mesh, _cncGeoID, i, 0);
@@ -1033,7 +1007,7 @@ void feSpaceVecTriP3<dim>::initializeNumberingEssential()
   }
 }
 
-template<int dim>
+template <int dim>
 void feSpaceVecTriP3<dim>::initializeAddressingVector(int numElem, std::vector<feInt> &adr)
 {
   adr[0] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 0, 0);
@@ -1101,7 +1075,8 @@ template class feSpaceVecTriP3<2>;
 
 */
 
-feSpaceTriP4::feSpaceTriP4(std::string cncGeoID) : feScalarSpace(2, nullptr, "GEO", cncGeoID, nullptr)
+feSpaceTriP4::feSpaceTriP4(std::string cncGeoID)
+  : feScalarSpace(2, nullptr, "GEO", cncGeoID, nullptr)
 {
   _nFunctions = 15;
   double x0 = 0.0, x1 = 1. / 4., x2 = 1. / 2., x3 = 3. / 4., x4 = 1.;
@@ -1112,8 +1087,8 @@ feSpaceTriP4::feSpaceTriP4(std::string cncGeoID) : feScalarSpace(2, nullptr, "GE
   _isGeometricInterpolant = true;
 }
 
-feSpaceTriP4::feSpaceTriP4(feMesh *mesh, const std::string fieldID, const std::string cncGeoID, feFunction *fct,
-                           const bool useGlobalShapeFunctions)
+feSpaceTriP4::feSpaceTriP4(feMesh *mesh, const std::string fieldID, const std::string cncGeoID,
+                           feFunction *fct, const bool useGlobalShapeFunctions)
   : feScalarSpace(2, mesh, fieldID, cncGeoID, fct, useGlobalShapeFunctions)
 {
   _nFunctions = 15;
@@ -1149,22 +1124,26 @@ void feSpaceTriP4::L(double *r, double *L)
 {
   double R = r[0];
   double S = r[1];
-  L[0] = 32. / 3. * (4. * R * R * R + 12. * R * R * S - (15. * R * R) / 2. + 12. * R * S * S - 15. * R * S +
-             (35. * R) / 8. + 4. * S * S * S - (15. * S * S) / 2. + (35. * S) / 8. - 25. / 32.);
+  L[0] = 32. / 3. *
+         (4. * R * R * R + 12. * R * R * S - (15. * R * R) / 2. + 12. * R * S * S - 15. * R * S +
+          (35. * R) / 8. + 4. * S * S * S - (15. * S * S) / 2. + (35. * S) / 8. - 25. / 32.);
   L[1] = 32. / 3. * (4. * R * R * R - (9. * R * R) / 2. + (11. * R) / 8. - 3. / 32.);
   L[2] = 32. / 3. * (0.0),
-  L[3] = 128. / 3. * (-4. * R * R * R - 9. * R * R * S + (27. * R * R) / 4. - 6. * R * S * S + 9. * R * S -
-             (13. * R) / 4. - S * S * S + (9. * S * S) / 4. - (13. * S) / 8. + 3. / 8.);
+  L[3] = 128. / 3. *
+         (-4. * R * R * R - 9. * R * R * S + (27. * R * R) / 4. - 6. * R * S * S + 9. * R * S -
+          (13. * R) / 4. - S * S * S + (9. * S * S) / 4. - (13. * S) / 8. + 3. / 8.);
   L[4] = 64. * (4. * R * R * R + 6. * R * R * S - 6. * R * R + 2. * R * S * S - (9. * R * S) / 2. +
-                 (19. * R) / 8. - S * S / 4. + (7. * S) / 16. - 3. / 16.);
-  L[5] = 128. / 3. * ((3. * R * S) / 2. - S / 8. - (7. * R) / 4. - 3. * R * R * S + (21. * R * R) / 4. -
-             4. * R * R * R + 1. / 8.);
+                (19. * R) / 8. - S * S / 4. + (7. * S) / 16. - 3. / 16.);
+  L[5] = 128. / 3. *
+         ((3. * R * S) / 2. - S / 8. - (7. * R) / 4. - 3. * R * R * S + (21. * R * R) / 4. -
+          4. * R * R * R + 1. / 8.);
   L[6] = 128. / 3. * ((S * (24. * R * R - 12. * R + 1.)) / 8.);
   L[7] = 64. * ((S * (8. * R - 1.) * (4. * S - 1.)) / 16.);
   L[8] = 128. / 3. * (S * (S - 1. / 2.) * (S - 1. / 4.));
   L[9] = 128. / 3. * (-S * (S - 1. / 2.) * (S - 1. / 4.));
   L[10] = 64. * ((S * (4. * S - 1.) * (8. * R + 8. * S - 7.)) / 16.);
-  L[11] = 128. / 3. * (-(S * (24. * R * R + 48. * R * S - 36. * R + 24. * S * S - 36. * S + 13.)) / 8.);
+  L[11] =
+    128. / 3. * (-(S * (24. * R * R + 48. * R * S - 36. * R + 24. * S * S - 36. * S + 13.)) / 8.);
   L[12] = 128. * ((S * (12. * R * R + 16. * R * S - 14. * R + 4. * S * S - 7. * S + 3.)) / 4.);
   L[13] = 128. * (-(S * (8. * R * S - S - 10. * R + 12. * R * R + 1.)) / 4.);
   L[14] = 128. * (-(S * (4. * S - 1.) * (2. * R + S - 1.)) / 4.);

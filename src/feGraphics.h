@@ -8,7 +8,7 @@ class feBasicViewer
 {
 protected:
 #if defined(HAVE_GLFW)
-  GLFWwindow* _window;
+  GLFWwindow *_window;
 #endif
 
   int _windowWidth;
@@ -54,26 +54,19 @@ public:
 
   // Draw the 1D curve discretized by continuous or discontinuous
   // elements stored in solution on the active OpenGL window.
-  void draw1DCurve(feMesh &mesh,
-                   feMetaNumber &numbering,
-                   feSolution &solution,
-                   feSpace *space,
-                   feFunction *analyticSolution = nullptr,
-                   double yScaling = 1.0,
-                   int color = 0);
+  void draw1DCurve(feMesh &mesh, feMetaNumber &numbering, feSolution &solution, feSpace *space,
+                   feFunction *analyticSolution = nullptr, double yScaling = 1.0, int color = 0);
 
-  void drawEulerNozzle(feMesh &mesh,
-                       feMetaNumber &numbering,
-                       feSolution &solution,
-                       std::vector<feSpace*> &spaces, // rhoA, rhouA and eA
-                       double yScaling[3],
-                       feFunction *analyticSolution = nullptr);
+  void drawEulerNozzle(feMesh &mesh, feMetaNumber &numbering, feSolution &solution,
+                       std::vector<feSpace *> &spaces, // rhoA, rhouA and eA
+                       double yScaling[3], feFunction *analyticSolution = nullptr);
 
   void reshapeWindowBox(double xMin, double xMax, double yMin, double yMax);
-  void reshapeWindowBox(double scaleFactorX, double scaleFactorY, feMesh &mesh, feSolution &solution);
+  void reshapeWindowBox(double scaleFactorX, double scaleFactorY, feMesh &mesh,
+                        feSolution &solution);
   void windowUpdate();
   void getWindowBox();
   bool windowShouldClose();
 };
 
-#endif 
+#endif

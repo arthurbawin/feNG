@@ -43,8 +43,8 @@ public:
   feExporterVTK(feMesh *mesh, feSolution *sol, feMetaNumber *metaNumber,
                 const std::vector<feSpace *> &feSpaces)
     : feExporter(mesh, sol, metaNumber, feSpaces){};
-  feExporterVTK(feMesh *mesh, feSolution *sol, feEigenProblem *eigenProblem, feMetaNumber *metaNumber,
-                const std::vector<feSpace *> &feSpaces);
+  feExporterVTK(feMesh *mesh, feSolution *sol, feEigenProblem *eigenProblem,
+                feMetaNumber *metaNumber, const std::vector<feSpace *> &feSpaces);
   virtual ~feExporterVTK() {}
 
   virtual feStatus writeStep(std::string fileName);
@@ -55,9 +55,10 @@ private:
   void writeNodes(std::ostream &output, feCncGeo *cnc);
   void writeElementsConnectivity(std::ostream &output, feCncGeo *cnc);
   void writeField(std::ostream &output, feCncGeo *cnc, feSpace *intSpace, std::string fieldID,
-    bool loopOverCnc = false);
-  void writeEigenvector(std::ostream &output, feCncGeo *cnc, feSpace *intSpace,
-    std::string fieldID, int eigenPairIndex, size_t nEigenPairs, eigenPair &ep, bool loopOverCnc = false);
+                  bool loopOverCnc = false);
+  void writeEigenvector(std::ostream &output, feCncGeo *cnc, feSpace *intSpace, std::string fieldID,
+                        int eigenPairIndex, size_t nEigenPairs, eigenPair &ep,
+                        bool loopOverCnc = false);
 };
 
 typedef struct feExportData {
@@ -71,7 +72,8 @@ feStatus createVisualizationExporter(feExporter *&exporter, visualizationFormat 
                                      const std::vector<feSpace *> &feSpaces);
 
 feStatus createVisualizationExporter(feExporter *&exporter, visualizationFormat format,
-                                     feMetaNumber *metaNumber, feSolution *solution, feEigenProblem *eigenProblem, 
-                                     feMesh *mesh, const std::vector<feSpace *> &feSpaces);
+                                     feMetaNumber *metaNumber, feSolution *solution,
+                                     feEigenProblem *eigenProblem, feMesh *mesh,
+                                     const std::vector<feSpace *> &feSpaces);
 
 #endif
