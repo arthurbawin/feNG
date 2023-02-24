@@ -2,7 +2,8 @@
 #define _FEMETRIC_
 
 #include "feRecovery.h"
-// #include "eigen3/Eigen/Eigen"
+#include "feNewRecovery.h"
+
 #include "../contrib/Eigen/Eigen"
 
 #include "STensor3.h"
@@ -48,12 +49,18 @@ class feMetric
 {
 protected:
   feRecovery *_recovery;
+  feNewRecovery *_newRecovery;
   feMetricOptions _options;
 
   std::map<int, SMetric3> _metrics;
   std::map<int, SMetric3> _metricsOnGmshModel;
+
+  std::map<int, Eigen::Matrix2d> _metricsP1;
+  std::map<int, Eigen::Matrix2d> _metricsOnGmshModelP1;
+
   std::map<int, Eigen::Matrix2d> _metricsOnGmshModel_eigen;
 
+  // Vertex to nodeTag
   std::map<Vertex *, int> _v2n;
 
   // The tag of the gmsh view in which the metric field is stored (if using Gmsh)
@@ -61,15 +68,16 @@ protected:
 
 public:
   feMetric(feRecovery *recovery, feMetricOptions metricOptions);
+  feMetric(feNewRecovery *recovery, feMetricOptions metricOptions);
   ~feMetric() {}
 
   void setGmshMetricModel(std::string metricModel) { _options.modelForMetric = metricModel; }
 
-  void computeMetrics();
-  void computeMetricsHechtKuate();
-  void computeMetricsWithDirectionField();
-  void computeMetricsLogSimplex();
-  void computeMetricsExtremeSizesOnly();
+  feStatus computeMetrics();
+  feStatus computeMetricsP1();
+  feStatus computeMetricsHechtKuate();
+  feStatus computeMetricsLogSimplex();
+  feStatus computeMetricsExtremeSizesOnly();
 
   void setMetricViewTag(int tag) { _metricViewTag = tag; }
   int getMetricViewTag() { return _metricViewTag; }

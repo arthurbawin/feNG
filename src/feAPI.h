@@ -20,6 +20,7 @@
 #include "feEigenProblem.h"
 #include "feExporter.h"
 #include "feRecovery.h"
+#include "feNewRecovery.h"
 #include "feMetric.h"
 #include "feCurvedAdapt.h"
 #include "feAdaptMesh.h"

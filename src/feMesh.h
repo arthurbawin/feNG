@@ -56,6 +56,8 @@ protected:
 public:
   // Set of (unique) edges
   std::set<Edge, EdgeLessThan> _edges;
+  // Unordered vector of edges
+  std::vector<const Edge*> _edgesVec;
   // Mesh elements, hardcoded triangles for now
   std::vector<Triangle *> _elements;
 
@@ -84,6 +86,8 @@ public:
     return &_vertices[_verticesMap[gmshNodeTag]];
   }
   std::vector<Vertex> &getVertices() { return _vertices; }
+  std::vector<const Edge*> &getEdges() { return _edgesVec; }
+
 
   // Write in geoCoord the physical coordinates of the nodes on the
   // element with LOCAL tag numElem on the connectivity named

@@ -1,15 +1,21 @@
 #include "feNG.h"
 
-// void tic(int mode)
-// {
-//   static std::chrono::_V2::system_clock::time_point t_start;
+using namespace std::chrono_literals;
 
-//   if(mode == 0)
-//     t_start = std::chrono::high_resolution_clock::now();
-//   else {
-//     auto t_end = std::chrono::high_resolution_clock::now();
-//     std::cout << "Elapsed time is " << (t_end - t_start).count() * 1E-9 << " seconds\n";
-//   }
-// }
+double tic(int mode)
+{
+  static std::chrono::steady_clock::time_point begin;
 
-// void toc() { tic(1); }
+  if(mode == 0){
+    begin = std::chrono::steady_clock::now();
+    return 0.;
+  }
+  else {
+    auto end = std::chrono::steady_clock::now();
+    std::chrono::duration<double, std::milli> d = end - begin;
+    double timeInSeconds  = d / 1.0s;
+    return timeInSeconds;
+  }
+}
+
+double toc() { return tic(1); }

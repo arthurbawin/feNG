@@ -14,6 +14,7 @@ set(feNG_SRC ellipseToolbox.cpp
     feMeshRead.cpp
     feMessage.cpp
     feMetric.cpp
+    feMetricInterpolation.cpp
     feMetricTools.cpp
     feNG.cpp
     feNorm.cpp
@@ -21,6 +22,7 @@ set(feNG_SRC ellipseToolbox.cpp
     feOptionsParser.cpp
     fePolynomial.cpp
     feRecovery.cpp
+    feNewRecovery.cpp
     feQuadratureTri.cpp
     feQuadrature.cpp
     feSimplex.cpp
@@ -38,13 +40,13 @@ set(feNG_SRC ellipseToolbox.cpp
     feVectorSysElm.cpp
     glfem.cpp)
 
-  if(ENABLE_METRIC)
+if(ENABLE_METRIC)
     #Add Gmsh files for STensor3
     list(APPEND feNG_SRC ${CMAKE_SOURCE_DIR}/contrib/gmsh/fullMatrix.cpp
-        ${CMAKE_SOURCE_DIR}/contrib/gmsh/Numeric.cpp
-        ${CMAKE_SOURCE_DIR}/contrib/gmsh/STensor3.cpp
-        ${CMAKE_SOURCE_DIR}/contrib/gmsh/poly34.cpp)
-    endif()
+        # ${CMAKE_SOURCE_DIR}/contrib/gmsh/poly34.cpp
+        # ${CMAKE_SOURCE_DIR}/contrib/gmsh/Numeric.cpp
+        ${CMAKE_SOURCE_DIR}/contrib/gmsh/STensor3.cpp)
+endif()
 
 set(feNG_API
     ellipseToolbox.h
@@ -63,8 +65,8 @@ set(feNG_API
     feLinearSystem.h
     feMesh.h
     feMessage.h
-    feMetric.h
-    feMetricTools.h
+    # feMetric.h
+    # feMetricTools.h
     feNG.h
     feNorm.h
     feNumber.h
@@ -72,6 +74,7 @@ set(feNG_API
     fePolynomial.h
     feQuadrature.h
     feRecovery.h
+    feNewRecovery.h
     feSimplex.h
     feSolution.h
     feSolutionContainer.h

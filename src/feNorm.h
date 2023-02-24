@@ -5,6 +5,7 @@
 #include "feMesh.h"
 #include "feNumber.h"
 #include "feSolution.h"
+#include "feNewRecovery.h"
 
 typedef enum {
   // In the following, cnc refers to the geometric connectivity
@@ -19,6 +20,7 @@ typedef enum {
   VECTOR_L2,
   // Compute ||u - uh||_L1(cnc), with u a user-defined scalar field
   L2_ERROR,
+  L2_ERROR_ESTIMATE,
   VECTOR_L2_ERROR,
   // Compute ||uh||_Linf(cnc)
   LINF,
@@ -28,6 +30,7 @@ typedef enum {
   SEMI_H1,
   // Compute |u - uh|_H1(cnc), with u a user-defined scalar field
   SEMI_H1_ERROR,
+  SEMI_H1_ERROR_ESTIMATE,
   // Compute ||uh||_H1(cnc)
   H1,
   // Compute ||u - uh||_H1(cnc), with u a user-defined scalar field
@@ -98,6 +101,9 @@ protected:
   int _nQuad;
   const std::vector<double> &_J;
 
+  // A reconstruction of the solution (and derivatives) used to estimate the error
+  feNewRecovery *_rec = nullptr;
+
   // Addressing vector and local solution for each FE space
   std::vector<std::vector<feInt> > _adr;
   std::vector<std::vector<double> > _localSol;
@@ -121,6 +127,9 @@ public:
          feVectorFunction *vectorSolution = nullptr);
   ~feNorm(){};
 
+  // Assign a reconstructed solution
+  void setRecovery(feNewRecovery *recovery){ _rec = recovery; };
+
   // Compute and return the norm or integral matching the type 'type' (see enum above)
   double compute(normType type);
   // Compute and return the norm of integral matching the norm's _type attribute
@@ -130,10 +139,12 @@ private:
   void initializeLocalSolutionOnSpace(int iSpace, int iElm);
   double computeLpNorm(int p, bool error = false);
   double computeVectorLpNorm(int p, bool error = false);
+  double computeLpErrorEstimator(int p);
   double computeL1Norm(bool error = false);
   double computeL2Norm(bool error = false);
   double computeLInfNorm(bool error = false);
-  double computeH1SemiNorm(bool error = false);
+  double computeH1SemiNorm(int p, bool error = false);
+  double computeH1SemiNormErrorEstimator();
   double computeH1Norm(bool error = false);
   double computeArea();
   double computeIntegral();

@@ -61,10 +61,21 @@ feStatus solveQNBDF(feSolutionContainer *solDot, feTolerances tol, feMetaNumber 
     // Reset, assemble and solve the linear system J(u) * du = -NL(u)
     linearSystem->setToZero();
     solDot->computeSolTimeDerivative(sol, linearSystem);
-    linearSystem->assemble(sol);
+    // linearSystem->assemble(sol);
 
+    linearSystem->assembleResiduals(sol);
+
+    // Check residual norm and exit if tolerance is reached
+    linearSystem->getResidualMaxNorm(&normResidual);
+    if(normResidual <= tol.tolResidual) {
+      feInfoCond(FE_VERBOSE > 0,
+               "\t\t\t\tNonlinear solver has stopped because residual norm ||NL(u)|| = %10.10e is below tolerance (%10.4e)",
+               normResidual, tol.tolResidual);
+      break;
+    }
+
+    linearSystem->assembleMatrices(sol);
     linearSystem->constraintEssentialComponents(sol);
-
     bool successSolve = linearSystem->solve(&normDx, &normResidual, &normAxb, &linearSystemIter);
 
     if(!successSolve) {
@@ -75,10 +86,6 @@ feStatus solveQNBDF(feSolutionContainer *solDot, feTolerances tol, feMetaNumber 
       return feErrorMsg(FE_STATUS_ERROR, "Could not solve linear system at iter %2d )-:", iter);
     }
 
-    // if(iter == 0 && status == 1) _normR0 = normResidual;
-    // if(iter == 0 && status == 0) _normFirstR0 = normResidual; // in case we have to recalculate
-    // the matrix and update the R0
-
     linearSystem->correctSolution(sol);
     solDot->setSol(0, sol->getSolutionCopy());
 
@@ -88,32 +95,7 @@ feStatus solveQNBDF(feSolutionContainer *solDot, feTolerances tol, feMetaNumber 
                ++iter, normAxb, linearSystemIter, normDx, normResidual,
                linearSystem->getRecomputeStatus() ? "true" : "false");
 
-    // stop = (normDx <= tol.tolDx && normResidual <= tol.tolResidual) || iter > tol.maxIter;
     stop = (normDx <= tol.tolDx) || (iter > tol.maxIter);
-
-    if(normResidual <= tol.tolResidual) {
-      stop = true;
-    }
-
-    // if((iter > 2 || prev_status == 0) && ((normResidual / _normR0) < 0.001) && normDx < 0.1 &&
-    // nIterSinceMatrixComputation < 8) {
-    //   linearSystem->setRecomputeStatus(false);
-    // } else if(iter == 1 && prev_status == 0){
-    //     if(normResidual < 0.1){
-    //       // Try with the old jacobian matrix for the first iteration
-    //       linearSystem->setRecomputeStatus(false);
-    //     } else{
-    //       linearSystem->setRecomputeStatus(true);
-    //     }
-    // } else {
-    //   if(iter == 2 && prev_status == 0){
-    //     // If we have to recompute the matrix we update the R0
-    //     _normR0 = _normFirstR0;
-    //   }
-    //   linearSystem->setRecomputeStatus(true);
-    //   nIterSinceMatrixComputation = 0;
-    // }
-    // nIterSinceMatrixComputation++;
   }
 
   if(iter > tol.maxIter) {

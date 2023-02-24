@@ -13,8 +13,6 @@
 #include "petscksp.h"
 #endif
 
-#include <chrono>
-
 /* Supported linear solvers */
 typedef enum { MKLPARDISO, PETSC } linearSolverType;
 
@@ -91,6 +89,8 @@ public:
 
   bool getRecomputeStatus() { return recomputeMatrix; }
   void setRecomputeStatus(bool status) { recomputeMatrix = status; }
+
+  virtual void getResidualMaxNorm(double *norm) = 0;
 
   // Reset the matrix and/or the right-hand side
   virtual void setToZero() = 0;
@@ -172,6 +172,8 @@ public:
   ~feLinearSystemPETSc();
 
   feInt getSystemSize() { return (feInt)_nInc; };
+
+  void getResidualMaxNorm(double *norm);
 
   // See doc in feLinearSystem.h
   void setToZero();

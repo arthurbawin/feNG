@@ -43,12 +43,7 @@ feStatus createLinearSystem(feLinearSystem *&system, linearSolverType type,
                           "PETSc was not initialized : please initialize PETSc first by calling "
                           "petscInitialize(argc, argv) as the very first line of your program.");
       }
-      std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
       system = new feLinearSystemPETSc(argc, argv, bilinearForms, numUnknowns);
-      std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
-      std::cout << "Created linear system in "
-                << std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count()
-                << "[ms]" << std::endl;
       break;
     }
 #else

@@ -241,6 +241,12 @@ void feLinearSystemPETSc::viewRHS()
 #endif
 }
 
+void feLinearSystemPETSc::getResidualMaxNorm(double *norm)
+{
+  PetscErrorCode ierr = VecNorm(_rhs, NORM_MAX, norm);
+  CHKERRABORT(PETSC_COMM_WORLD, ierr);
+}
+
 void feLinearSystemPETSc::setToZero()
 {
   if(recomputeMatrix) {
@@ -269,10 +275,9 @@ void feLinearSystemPETSc::assembleMatrices(feSolution *sol)
 {
 #if defined(HAVE_PETSC)
 
-  std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
-
   PetscErrorCode ierr = 0;
 
+  tic();
   for(feInt eq = 0; eq < _numMatrixForms; ++eq) {
     feBilinearForm *f = _formMatrices[eq];
     feCncGeo *cnc = f->getCncGeo();
@@ -360,6 +365,8 @@ void feLinearSystemPETSc::assembleMatrices(feSolution *sol)
   ierr = MatAssemblyEnd(_A, MAT_FINAL_ASSEMBLY);
   CHKERRABORT(PETSC_COMM_WORLD, ierr);
 
+  feInfoCond(FE_VERBOSE > 0, "\t\t\t\tAssembled jacobian matrix in %f s", toc());
+
   // double normMat;
   // ierr = MatNorm(_A, NORM_FROBENIUS, &normMat);
   // CHKERRABORT(PETSC_COMM_WORLD, ierr);
@@ -368,9 +375,9 @@ void feLinearSystemPETSc::assembleMatrices(feSolution *sol)
 
   viewMatrix();
 
-  std::cout << "Assembled matrix in"
-            << std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count() << "[ms]"
-            << std::endl;
+  // std::cout << "Assembled matrix in"
+  //           << std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count() << "[ms]"
+  //           << std::endl;
 
   if(_exportMatrixMatlab) {
     feInfoCond(FE_VERBOSE > 1, "\t\t\tExporting global matrix to Matlab");
@@ -391,8 +398,7 @@ void feLinearSystemPETSc::assembleResiduals(feSolution *sol)
 
   PetscErrorCode ierr = 0;
 
-  std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
-
+  tic();
   for(feInt eq = 0; eq < _numResidualForms; ++eq) {
     feBilinearForm *f = _formResiduals[eq];
     feCncGeo *cnc = f->getCncGeo();
@@ -461,13 +467,13 @@ void feLinearSystemPETSc::assembleResiduals(feSolution *sol)
   ierr = VecAssemblyEnd(_rhs);
   CHKERRABORT(PETSC_COMM_WORLD, ierr);
 
-  std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
+  feInfoCond(FE_VERBOSE > 0, "\t\t\t\tAssembled global residual in %f s", toc());
 
   viewRHS();
 
-  feInfo("Assembled RHS in");
-  std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count() << "[ms]"
-            << std::endl;
+  // feInfo("Assembled RHS in");
+  // std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count() << "[ms]"
+  //           << std::endl;
 
 #endif
 }
@@ -533,9 +539,14 @@ bool feLinearSystemPETSc::solve(double *normSolution, double *normRHS, double *n
   ierr = KSPSetTolerances(ksp, (PetscReal)_rel_tol, (PetscReal)_abs_tol, (PetscReal)_div_tol,
                           (PetscInt)_max_iter);
 
+  ierr = VecNorm(_rhs, NORM_MAX, normRHS);
+  CHKERRABORT(PETSC_COMM_WORLD, ierr);
+
   // Solve
+  tic();
   ierr = KSPSolve(ksp, _rhs, _du);
   CHKERRABORT(PETSC_COMM_WORLD, ierr);
+  feInfoCond(FE_VERBOSE > 0, "\t\t\t\tSolved linear system in %f s", toc());
 
   KSPConvergedReason reason;
   ierr = KSPGetConvergedReason(ksp, &reason);

@@ -40,6 +40,17 @@ add_compile_options(-Wunused-variable)
 add_compile_options(-Wdisabled-optimization)
 # add_compile_options(-Werror)
 
+# file(GENERATE
+#   OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/pch.cpp
+#   CONTENT ""
+# )
+# add_library(pch OBJECT ${CMAKE_CURRENT_BINARY_DIR}/pch.cpp)
+# target_precompile_headers(pch 
+#   PRIVATE 
+#   "${PROJECT_SOURCE_DIR}/src/feMetric.h"
+#   "${PROJECT_SOURCE_DIR}/src/feMetricTools.h"
+# )
+
 ############################################
 #  Macro pour definir une bibliotheque
 ############################################
@@ -49,13 +60,18 @@ macro(feNG_add_library LIBNAME SRC API_H)
   endforeach()
   SET(feNG_API_H ${feNG_API_H} PARENT_SCOPE)
   add_library(${LIBNAME} ${SRC})
+  target_precompile_headers(${LIBNAME} 
+    PRIVATE 
+    "${PROJECT_SOURCE_DIR}/src/feMetric.h"
+    "${PROJECT_SOURCE_DIR}/src/feMetricTools.h"
+  )
   install(TARGETS ${LIBNAME} DESTINATION lib)
 endmacro()
-
 
 #  Macro pour ajouter un executable
 macro(feNG_add_executable EXENAME SRC LIBS)
   add_executable(${EXENAME} ${SRC})
+  target_precompile_headers(${EXENAME} REUSE_FROM feNG)
   target_link_libraries(${EXENAME} ${LIBS} feNG ${feNG_EXTERNAL_LIBS})
   install(TARGETS ${EXENAME} DESTINATION bin)
 endmacro()

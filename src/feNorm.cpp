@@ -86,6 +86,9 @@ double feNorm::compute(normType type)
     case L2_ERROR:
       res = this->computeLpNorm(2, true);
       break;
+    case L2_ERROR_ESTIMATE:
+      res = this->computeLpErrorEstimator(2);
+      break;
     case VECTOR_L2:
       res = this->computeVectorLpNorm(2, false);
       break;
@@ -99,10 +102,13 @@ double feNorm::compute(normType type)
       res = this->computeLInfNorm(true);
       break;
     case SEMI_H1:
-      res = this->computeH1SemiNorm(false);
+      res = this->computeH1SemiNorm(2, false);
       break;
     case SEMI_H1_ERROR:
-      res = this->computeH1SemiNorm(true);
+      res = this->computeH1SemiNorm(2, true);
+      break;
+    case SEMI_H1_ERROR_ESTIMATE:
+      res = this->computeH1SemiNormErrorEstimator();
       break;
     case H1:
       res = this->computeH1Norm(false);
@@ -154,6 +160,32 @@ double feNorm::computeLpNorm(int p, bool error)
       u = error ? _scalarSolution->eval(t, _pos) : 0.0;
 
       res += pow(fabs(u - uh), p) * _J[_nQuad * iElm + k] * _w[k];
+    }
+  }
+  return pow(res, 1. / (double)p);
+}
+
+double feNorm::computeLpErrorEstimator(int p)
+{
+  double res = 0.0, uh, uRec, t = _solution->getCurrentTime();
+
+  if(_rec == nullptr) {
+    feErrorMsg(FE_STATUS_ERROR, "Cannot compute Lp error estimate "
+                                " because feRecovery (solution reconstruction) is NULL");
+    exit(-1);
+  }
+
+  for(int iElm = 0; iElm < _nElm; ++iElm) {
+    this->initializeLocalSolutionOnSpace(0, iElm);
+    _spaces[0]->_mesh->getCoord(_cnc, iElm, _geoCoord);
+
+    for(int k = 0; k < _nQuad; ++k) {
+      uh = _spaces[0]->interpolateFieldAtQuadNode(_localSol[0], k);
+      // _geoSpace->interpolateVectorFieldAtQuadNode(_geoCoord, k, _pos);
+      // uh = _scalarSolution->eval(t, _pos);
+      uRec = _rec->evaluateRecoveryAtQuadNode(PPR::RECOVERY, 0, iElm, k);
+
+      res += pow(fabs(uRec - uh), p) * _J[_nQuad * iElm + k] * _w[k];
     }
   }
   return pow(res, 1. / (double)p);
@@ -261,22 +293,111 @@ double feNorm::computeLInfNorm(bool error)
   return res;
 }
 
-double feNorm::computeH1SemiNorm(bool error)
+double feNorm::computeH1SemiNorm(int p, bool error)
 {
-  double res = 0.0;
+  double res = 0.0, jac, dotProd, t = _solution->getCurrentTime();
+  double graduh[3]  = {0., 0., 0.};
+  std::vector<double> gradu(3, 0.);
 
-  /* ... */
+  if(error && _vectorSolution == nullptr) {
+    feErrorMsg(FE_STATUS_ERROR, "Cannot compute Lp norm of error function"
+                                " because exact solution is NULL");
+    exit(-1);
+  }
 
-  return res;
+  ElementTransformation T;
+
+  for(int iElm = 0; iElm < _nElm; ++iElm) {
+
+    _spaces[0]->_mesh->getCoord(_cnc, iElm, _geoCoord);
+
+    this->initializeLocalSolutionOnSpace(0, iElm);
+
+    for(int k = 0; k < _nQuad; ++k) {
+      jac = _J[_nQuad * iElm + k];
+      _cnc->computeElementTransformation(_geoCoord, k, jac, T);
+
+      _spaces[0]->interpolateFieldAtQuadNode_physicalGradient(_localSol[0], k, T, graduh);
+      _geoSpace->interpolateVectorFieldAtQuadNode(_geoCoord, k, _pos);
+      if(error) _vectorSolution->eval(t, _pos, gradu);
+
+      graduh[0] -= gradu[0];
+      graduh[1] -= gradu[1];
+      graduh[2] -= gradu[2];
+      dotProd = graduh[0]*graduh[0] + graduh[1]*graduh[1] + graduh[2]*graduh[2];
+
+      res += dotProd * jac * _w[k];
+    }
+  }
+  return sqrt(res);
+}
+
+double feNorm::computeH1SemiNormErrorEstimator()
+{
+  double res = 0.0, jac, dotProd, t = _solution->getCurrentTime();
+  double graduh[3] = {0., 0., 0.};
+  double graduRec[3] = {0., 0., 0.};
+  std::vector<double> gradu(3, 0.);
+
+  if(_rec == nullptr) {
+    feErrorMsg(FE_STATUS_ERROR, "Cannot compute H1 error estimate "
+                                " because feRecovery (solution reconstruction) is NULL");
+    exit(-1);
+  }
+
+  // for(int iElm = 0; iElm < _nElm; ++iElm) {
+  //   this->initializeLocalSolutionOnSpace(0, iElm);
+  //   _spaces[0]->_mesh->getCoord(_cnc, iElm, _geoCoord);
+
+  //   for(int k = 0; k < _nQuad; ++k) {
+  //     uh = _spaces[0]->interpolateFieldAtQuadNode(_localSol[0], k);
+  //     // _geoSpace->interpolateVectorFieldAtQuadNode(_geoCoord, k, _pos);
+  //     // uh = _scalarSolution->eval(t, _pos);
+  //     uRec = _rec->evaluateRecoveryAtQuadNode(0, iElm, k);
+
+  //     res += pow(fabs(uRec - uh), p) * _J[_nQuad * iElm + k] * _w[k];
+  //   }
+  // }
+  // return pow(res, 1. / (double)p);
+
+  ElementTransformation T;
+
+  for(int iElm = 0; iElm < _nElm; ++iElm) {
+
+    _spaces[0]->_mesh->getCoord(_cnc, iElm, _geoCoord);
+
+    this->initializeLocalSolutionOnSpace(0, iElm);
+
+    for(int k = 0; k < _nQuad; ++k) {
+      jac = _J[_nQuad * iElm + k];
+      _cnc->computeElementTransformation(_geoCoord, k, jac, T);
+
+      // _spaces[0]->interpolateFieldAtQuadNode_physicalGradient(_localSol[0], k, T, graduh);
+      _geoSpace->interpolateVectorFieldAtQuadNode(_geoCoord, k, _pos);
+      _vectorSolution->eval(t, _pos, gradu);
+
+      graduRec[0] = _rec->evaluateRecoveryAtQuadNode(PPR::DERIVATIVE, 0, iElm, k);
+      graduRec[1] = _rec->evaluateRecoveryAtQuadNode(PPR::DERIVATIVE, 1, iElm, k);
+      graduRec[2] = 0.;
+
+      gradu[2] = 0.;
+
+      graduRec[0] -= gradu[0];
+      graduRec[1] -= gradu[1];
+      graduRec[2] -= gradu[2];
+      dotProd = graduRec[0]*graduRec[0] + graduRec[1]*graduRec[1] + graduRec[2]*graduRec[2];
+
+      res += dotProd * jac * _w[k];
+    }
+  }
+  return sqrt(res);
 }
 
 double feNorm::computeH1Norm(bool error)
 {
-  double res = 0.0;
-
-  /* ... */
-
-  return res;
+  double L2 = this->computeLpNorm(2, error);
+  double SemiH1 = this->computeH1SemiNorm(2, error);
+  return sqrt(L2*L2 + SemiH1*SemiH1);
 }
 
 double feNorm::computeArea()

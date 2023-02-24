@@ -98,13 +98,13 @@ int main(int argc, char **argv)
   // Define the (bi-)linear forms: here we define on the interior a bilinear symmetric "diffusion" form:
   // 
   //                         /
-  // feSysElm_2D_Diffusion = | k*(grad phi)_i*(grad phi)_j dx
+  //    feSysElm_Diffusion = | k*(grad phi)_i*(grad phi)_j dx
   //                         /
   //
   // and a linear "source" form:
   //
   //                      /
-  // feSysElm_2D_Source = | f*phi_i dx
+  //    feSysElm_Source = | f*phi_i dx
   //                      /
   //
   // There is no form to define on the boundary.
@@ -140,7 +140,7 @@ int main(int argc, char **argv)
   TimeIntegrator *solver;
   feTolerances tol{1e-9, 1e-8, 10};
   feCheck(createTimeIntegrator(solver, STATIONARY, tol, system, &numbering, &sol, &mesh, norms, exportData));
-  feCheck(solver->makeSteps(0));
+  feCheck(solver->makeStep());
 
   // Compute L2 norm of the error u-uh
   feNorm *norm;

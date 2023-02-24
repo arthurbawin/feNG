@@ -1782,5 +1782,13 @@ feStatus feMesh2DP1::readGmsh(const std::string meshName, const bool curved, con
   // Initialize the search context structure that is used to search in the RTree
   _searchCtx.elements = &_elements;
 
+  // Add edges pointer to a vector for faster access (is it true tho?)
+  _edgesVec.resize(_edges.size());
+  cnt = 0;
+  for(std::set<Edge, EdgeLessThan>::iterator it = _edges.begin(); it != _edges.end(); ++it)
+  {
+    _edgesVec[cnt++] = &(*it);
+  }
+
   return FE_STATUS_OK;
 }

@@ -3,7 +3,7 @@
 
 #include "feRecovery.h"
 #include "STensor3.h"
-// #include "eigen3/Eigen/Eigen"
+
 #include "../contrib/Eigen/Eigen"
 
 #if defined(HAVE_SOPLEX)

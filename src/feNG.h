@@ -46,7 +46,7 @@ typedef int fePardisoInt;
 typedef long long int feMKLPardisoInt;
 #endif
 
-// void tic(int mode = 0);
-// void toc();
+double tic(int mode = 0);
+double toc();
 
 #endif

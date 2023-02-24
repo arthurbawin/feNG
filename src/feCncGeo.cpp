@@ -222,7 +222,7 @@ feStatus feCncGeo::computeJacobians()
 }
 
 void feCncGeo::computeElementTransformation(std::vector<double> &elementCoord, const int iQuadNode,
-                                            const double jac, ElementTransformation &T)
+                                            const double jac, ElementTransformation &T) const
 {
   T.jac = jac;
   if(_dim == 0) {
@@ -446,5 +446,12 @@ void feCncGeo::colorElements(int coloringAlgorithm)
       break;
     }
   }
+
+  _coloring.numColors = _nbColor;
+  _coloring.elem2Color = _elmToColor;
+  _coloring.numElemPerColor = _nbElmPerColor;
+  _coloring.elementsInColor = _listElmPerColor;
+  
+
   feInfoCond(FE_VERBOSE > 0, "\t\tDone");
 }

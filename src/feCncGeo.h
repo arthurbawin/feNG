@@ -103,6 +103,16 @@ protected:
   std::vector<std::vector<int> > _listElmPerColor;
 
 public:
+  struct coloring {
+    int numColors;
+    std::vector<int> elem2Color;
+    std::vector<int> numElemPerColor;
+    std::vector<std::vector<int> > elementsInColor;
+  };
+
+  coloring _coloring;
+
+public:
   // Create a geometric connectivity. Called when parsing the mesh.
   feCncGeo(const int tag, const int dimension, const int nVerticesPerElement, const int nElements,
            const int nEdgesPerElement, const std::string &ID, const geometryType geometry,
@@ -135,7 +145,7 @@ public:
   const std::vector<double> &getJacobians() const { return _J; }
 
   void computeElementTransformation(std::vector<double> &elementCoord, const int iQuadNode,
-                                    const double jac, ElementTransformation &transformation);
+                                    const double jac, ElementTransformation &transformation) const;
 
   const std::vector<int> &getVerticesConnectivity() const { return _connecVertices; }
   const std::vector<int> &getEdgeConnectivity() const { return _connecEdges; }
