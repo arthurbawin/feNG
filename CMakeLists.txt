@@ -34,22 +34,14 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/lib)
 
 # add_compile_options(-pedantic)
 # add_compile_options(-pedantic-errors)
-# add_compile_options(-Wextra)
 add_compile_options(-Wreturn-type)
 add_compile_options(-Wunused-variable)
 add_compile_options(-Wdisabled-optimization)
-# add_compile_options(-Werror)
+add_compile_options(-Werror)
 
-# file(GENERATE
-#   OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/pch.cpp
-#   CONTENT ""
-# )
-# add_library(pch OBJECT ${CMAKE_CURRENT_BINARY_DIR}/pch.cpp)
-# target_precompile_headers(pch 
-#   PRIVATE 
-#   "${PROJECT_SOURCE_DIR}/src/feMetric.h"
-#   "${PROJECT_SOURCE_DIR}/src/feMetricTools.h"
-# )
+#  Eigen
+# include_directories(${CMAKE_CURRENT_SOURCE_DIR}/contrib/Eigen)
+add_definitions("-DHAVE_EIGEN")
 
 ############################################
 #  Macro pour definir une bibliotheque
@@ -60,18 +52,26 @@ macro(feNG_add_library LIBNAME SRC API_H)
   endforeach()
   SET(feNG_API_H ${feNG_API_H} PARENT_SCOPE)
   add_library(${LIBNAME} ${SRC})
-  target_precompile_headers(${LIBNAME} 
-    PRIVATE 
-    "${PROJECT_SOURCE_DIR}/src/feMetric.h"
-    "${PROJECT_SOURCE_DIR}/src/feMetricTools.h"
-  )
+
+  # target_precompile_headers(${LIBNAME} REUSE_FROM pch)
+
+  target_precompile_headers(${LIBNAME} PRIVATE "${PROJECT_SOURCE_DIR}/contrib/Eigen/Eigen")
+  target_precompile_headers(${LIBNAME} PRIVATE "${PROJECT_SOURCE_DIR}/contrib/Eigen/Eigenvalues")
+  target_precompile_headers(${LIBNAME} PRIVATE "${PROJECT_SOURCE_DIR}/contrib/Eigen/QR")
+  target_precompile_headers(${LIBNAME} PRIVATE "${PROJECT_SOURCE_DIR}/contrib/unsupported/Eigen/MatrixFunctions")
+  target_precompile_headers(${LIBNAME} PRIVATE "${PROJECT_SOURCE_DIR}/contrib/gmsh/fullMatrix.h")
+  target_precompile_headers(${LIBNAME} PRIVATE "${PROJECT_SOURCE_DIR}/contrib/gmsh/SPoint2.h")
+  target_precompile_headers(${LIBNAME} PRIVATE "${PROJECT_SOURCE_DIR}/contrib/gmsh/SPoint3.h")
+  target_precompile_headers(${LIBNAME} PRIVATE "${PROJECT_SOURCE_DIR}/contrib/gmsh/SVector3.h")
+  target_precompile_headers(${LIBNAME} PRIVATE "${PROJECT_SOURCE_DIR}/contrib/gmsh/Numeric.h")
+  target_precompile_headers(${LIBNAME} PRIVATE "${PROJECT_SOURCE_DIR}/contrib/gmsh/STensor3.h")
+
   install(TARGETS ${LIBNAME} DESTINATION lib)
 endmacro()
 
 #  Macro pour ajouter un executable
 macro(feNG_add_executable EXENAME SRC LIBS)
   add_executable(${EXENAME} ${SRC})
-  target_precompile_headers(${EXENAME} REUSE_FROM feNG)
   target_link_libraries(${EXENAME} ${LIBS} feNG ${feNG_EXTERNAL_LIBS})
   install(TARGETS ${EXENAME} DESTINATION bin)
 endmacro()
@@ -218,10 +218,6 @@ if(ENABLE_SOPLEX)
   add_definitions("-DHAVE_SOPLEX")
   MESSAGE(STATUS "SoPlex found (-:")
 endif()
-
-#  Eigen
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/contrib/Eigen)
-add_definitions("-DHAVE_EIGEN")
 
 #  Root-finder (https://github.com/ZhepeiWang/Root-Finder)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/contrib/root-finder)

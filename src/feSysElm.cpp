@@ -398,9 +398,6 @@ template <int dim> void feSysElm_NonlinearAdvection<dim>::computeBe(feBilinearFo
                                                                    _gradPhi.data());
 
     for(int i = 0; i < _nFunctions; ++i) {
-      double u = form->_intSpaces[_idU]->interpolateFieldAtQuadNode(form->_sol[_idU], k);
-      _phiU[i] = form->_intSpaces[_idU]->getFunctionAtQuadNode(i, k);
-
       for(int iDim = 0; iDim < dim; ++iDim) {
         form->_Be[i] += f[iDim] * _gradPhi[i * dim + iDim] * jac * _wQuad[k];
       }

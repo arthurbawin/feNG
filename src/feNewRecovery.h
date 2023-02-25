@@ -8,6 +8,7 @@
 #include "feNumber.h"
 #include "feSolution.h"
 #include "feFunction.h"
+#include "feMatrixInterface.h"
 
 #if defined(HAVE_PETSC)
 #include "petscksp.h"
@@ -49,6 +50,7 @@ public:
 };
 
 typedef std::map<int, Eigen::MatrixXd > matMap;
+typedef std::map<int, SquareMatrix > matMap2;
 
 class feNewRecovery
 {
@@ -109,12 +111,8 @@ protected:
   std::vector<double> _basisRecovery;
   std::vector<double> _basisDerivative;
 
-#if defined(HAVE_EIGEN)
-  matMap _elementMassMatrices;
   matMap _inverseMassMatrices;
-  matMap _inverseMassMatrices2;
-  matMap _inverseMassMatricesEdges2;
-#endif
+  matMap2 _inverseMassSquareMatrices;
 
 public:
   feNewRecovery(feSpace *space, feMesh *mesh, feSolution *sol,
@@ -124,11 +122,11 @@ public:
   feNewRecovery(feSpace *space, feMesh *mesh, std::string recoveryFile);
   ~feNewRecovery() { delete _patch; }
 
-  // int getDim() { return _dim; }
-  // int getDimRecovery() { return _dimRecovery; }
-  // int getDegreeSolution() { return _degSol; }
+  int getDim() { return _dim; }
+  int getDimRecovery() { return _dimRecovery; }
+  int getDegreeSolution() { return _degSol; }
 
-  // std::vector<int> &getVertices() { return _patch->getVertices(); }
+  std::vector<int> &getVertices() { return _patch->getVertices(); }
 
   // std::vector<int> &getXExponentsRecovery() { return _expXRecovery; }
   // std::vector<int> &getYExponentsRecovery() { return _expYRecovery; }
@@ -137,6 +135,8 @@ public:
 
   // void writeRecovery(std::string fileName);
 
+  double evaluateRecovery(PPR recoveredField,
+    const int index, const double *x);
   double evaluateRecoveryAtVertex(PPR recoveredField,
     const int index, const int vertex);
   double evaluateRecoveryAtQuadNode(PPR recoveredField,
@@ -145,8 +145,6 @@ public:
 private:
   void setDimensions();
   void setPolynomialExponents();
-  void computeInverseMatrices2D();
-  void computeElementMassMatrices2D();
   void computeVertexMassMatrices2D();
   void inverseMassMatrices();
   void computeRHSAndSolve(int numRecoveries, int nRecoveredFields, int nRecoveredDerivatives, int iDerivative);
@@ -154,6 +152,7 @@ private:
   double evaluatePolynomial(PPR recoveredField,
     const int index, const int vertex, const double *xLoc);
   void computeErrorPolynomials();
+  void computeRecoveryAtAllElementDOF(PPR recoveredField, const int index, const int iElm);
 };
 
 #endif

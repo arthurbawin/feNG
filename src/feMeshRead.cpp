@@ -1556,16 +1556,6 @@ feStatus feMesh2DP1::readGmsh(const std::string meshName, const bool curved, con
       entity e = x.second;
       for(auto ent : pE.listEntities) {
         if(ent == e.tag) {
-          // printf("In physical %s - geometric entity %d : \n", pE.name.data(), e.tagGmsh);
-          // std::vector<int> tmp = e.connecNodes;
-          // std::sort(tmp.begin(), tmp.end());
-          // tmp.erase( std::unique(tmp.begin(), tmp.end()), tmp.end() );
-          // std::cout<<tmp.size()<<std::endl;
-          // printf("Copying info from entity (%d,%d) with %d elements and cnc %s to physical
-          // (%d,%d) named %s\n",
-          //   e.dim, e.tag, e.nElm, e.cncID.data(), pE.dim, pE.tag, pE.name.data());
-          // printf("Physical has %d elements and connecElem.size() = %d\n", pE.nElm,
-          // pE.connecElem.size());
           for(int iElm = 0; iElm < e.nElm; ++iElm) {
             // Connec elem
             pE.connecElem[countElm] = e.connecElem[iElm];
@@ -1586,45 +1576,12 @@ feStatus feMesh2DP1::readGmsh(const std::string meshName, const bool curved, con
     }
   }
 
-  // Construct a boundary representation (b-rep) for the physical entities
-  // Not used at the moment and only works if the boundary curved of all considered surfaces
-  // are part of a physical entity, so commented for now.
-
-  // if(_gmshVersion >= 4) {
-  //   for(auto const &x : _entities) {
-  //     entity e = x.second;
-  //     if(e.dim > 1) { // Not considering b-rep for curves at the moment
-  //       if(e.numPhysicalTags > 0) { // if e is part of a physical entity
-  //         std::cout<<"Entity "<<e.tag<<" is part of physical : "<<e.physicalTags[0] << std::endl;
-  //         std::cout<<"and is bounded by geometric entities"<<std::endl;
-  //         for(int boundedByE : e.isBoundedBy) { // loop over geometric entities bounding e...
-  //           std::pair<int, int> p = {e.dim - 1, fabs(boundedByE)};
-  //           int pp = (_entities[p].numPhysicalTags > 0) ? _entities[p].physicalTags[0] : -1;
-  //           std::cout<<boundedByE<<" which is part of physical "<< pp << std::endl;
-  //           int tag = e.physicalTags[0] -
-  //                     1; // Physical entities are numbered starting at 1, sequentially by
-  //                     dimension
-  //           int boundedByTag = _entities[p].physicalTags[0] - 1;
-  //           // Basically unique() :
-  //           if(std::find(_physicalEntities[tag].isBoundedBy.begin(),
-  //                        _physicalEntities[tag].isBoundedBy.end(),
-  //                        boundedByTag) == _physicalEntities[tag].isBoundedBy.end())
-  //             _physicalEntities[tag].isBoundedBy.push_back(boundedByTag);
-  //           if(std::find(_physicalEntities[boundedByTag].isBoundaryOf.begin(),
-  //                        _physicalEntities[boundedByTag].isBoundaryOf.end(),
-  //                        tag) == _physicalEntities[boundedByTag].isBoundaryOf.end())
-  //             _physicalEntities[boundedByTag].isBoundaryOf.push_back(tag);
-  //         }
-  //       }
-  //     }
-  //   }
-  // }
-
   // Transfer edge/face connectivity to boundary elements
   int maxDim = 0;
   for(auto &pE : _physicalEntities) {
     maxDim = fmax(maxDim, pE.second.dim);
   }
+
   for(auto &p : _physicalEntities) {
     physicalEntity &pE = p.second;
     if(maxDim == 2) {
@@ -1714,6 +1671,13 @@ feStatus feMesh2DP1::readGmsh(const std::string meshName, const bool curved, con
     _cncGeo.push_back(cnc);
     _cncGeoMap[pE.name] = nCncGeo;
     cnc->getFeSpace()->setCncGeoTag(nCncGeo++);
+
+    // Create a vector of vertices for each Physical Entity
+    std::vector<Vertex> entityVertices(pE.connecNodes.size());
+    for(size_t i = 0; i < pE.connecNodes.size(); ++i){
+      entityVertices[i] = _vertices[pE.connecNodes[i]];
+    }
+    _verticesPerCnc[cnc] = entityVertices;
   }
 
   _nEdges = _edges.size();

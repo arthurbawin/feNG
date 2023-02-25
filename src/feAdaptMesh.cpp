@@ -1,3 +1,4 @@
+#include "feMesh.h"
 #include "feAdaptMesh.h"
 #include "feMetricTools.h"
 
@@ -76,13 +77,16 @@ double errorSquaredCallback(double *xa, double *xb, double *xc, double *xab, dou
   // }
   // // printf("Coucou\n");
   // return e2;
+  return 0.;
 }
 #endif
 
 /* Creates an adapted straight-sided anisotropic mesh based on the computed metric field
  */
-void createAnisoMesh(feMetric *metric, feMetricOptions metricOptions)
+void createAnisoMesh(feMetric *metric, feMetricOptions &metricOptions)
 {
+#if defined(HAVE_GMSH)
+  // // USING A SIZEMAP (DEPRECATED):
   // // Write size map
   // metric->writeSizeFieldSol2D("sizeMapAniso.sol");
   // // Get input and output mesh names
@@ -100,6 +104,85 @@ void createAnisoMesh(feMetric *metric, feMetricOptions metricOptions)
   // // Open mesh
   // cmd = "gmsh " + metricOptions.adaptedMeshName + " &";
   // system(cmd.c_str());
+
+  std::string cmd1 = "mmg2d " + metricOptions.mmgInputMeshfile + " -hgrad -1 -o tmp.mesh";
+  system(cmd1.c_str());
+  std::string cmd2 = "gmsh tmp.mesh -o " + metricOptions.mmgOutputMeshfile + " -0";
+  system(cmd2.c_str());
+
+  // Loop a few times
+  for(int i = 0; i < 5; ++i) {
+    gmsh::open(metricOptions.mmgOutputMeshfile);
+    gmsh::model::getCurrent(metricOptions.modelForMetric);
+    metric->setGmshMetricModel(metricOptions.modelForMetric);
+    // feInfo("Showing gmsh models at iter %d", i);
+    // gmsh::fltk::run();
+    metric->computeMetrics();
+    system(cmd1.c_str());
+    system(cmd2.c_str());
+    // system(cmd3.c_str());
+  };
+#endif
+}
+
+feStatus feMesh2DP1::adapt(feNewRecovery *recoveredField, feMetricOptions &options)
+{
+#if defined(HAVE_GMSH)
+  // Step 1: Set the gmsh background mesh on which the metric tensors are computed
+  gmsh::initialize();
+  gmsh::open(options.backgroundMeshfile);
+  gmsh::model::getCurrent(options.modelForMetric);
+  options.isGmshModelReady = true;
+
+  feMetric metricField(recoveredField, options);
+
+  // Step 2: Create aniso mesh
+  // System command to adapt using MMG2D (gradation is disabled with -1)
+  std::string cmd1 = "mmg2d " + options.mmgInputMeshfile + " -hgrad -1 -o tmp.mesh";
+  // Open MEDIT mesh file and save it according to provided mesh name
+  std::string cmd2 = "gmsh tmp.mesh -o " + options.mmgOutputMeshfile + " -0";
+
+  for(int i = 0; i < options.nLoopsAnisoMesh; ++i){
+
+    // Compute the metric tensor field and write metrics to options.mmgInputMeshfile
+    feStatus s = metricField.computeMetrics();
+    if(s != FE_STATUS_OK){
+      gmsh::finalize();
+      return s;
+    }
+
+    // Create aniso mesh
+    system(cmd1.data());
+    system(cmd2.data());
+    gmsh::open(options.mmgOutputMeshfile);
+    // gmsh::fltk::run();
+    gmsh::model::getCurrent(options.modelForMetric);
+    metricField.setGmshMetricModel(options.modelForMetric);
+  }
+
+  // Step 3: Check physical entities
+  // FIXME MAKE THIS NICER
+  // Get geometric entities and assign physical entities (should be improved)
+  gmsh::vectorpair dimTags;
+  gmsh::model::getEntities(dimTags);
+  std::vector<int> entities1D, entities2D;
+  for(auto p : dimTags) {
+    std::cout << p.first << " - " << p.second << std::endl;
+    if(p.first == 1) entities1D.push_back(p.second);
+    if(p.first == 2) entities2D.push_back(p.second);
+  }
+  gmsh::write("beforePhysical.msh");
+  // Add physical entities
+  gmsh::model::addPhysicalGroup(1, entities1D, 1);
+  gmsh::model::setPhysicalName(1, 1, "Bord");
+  gmsh::model::addPhysicalGroup(2, entities2D, 2);
+  gmsh::model::setPhysicalName(2, 2, "Domaine");
+  gmsh::model::mesh::reverse();
+  gmsh::write("afterPhysical.msh");
+
+  // Step 4: Interpolate solution on new mesh
+#endif
+  return FE_STATUS_OK;
 }
 
 /* Creates a curved mesh based on
@@ -113,169 +196,168 @@ void createCurvedMesh(feFunction *solExact, feMetaNumber *metaNumber, feSolution
                       bool curve)
 {
 #if defined(HAVE_GMSH)
-  // // if(metricOptions.isGmshModelReady){
-  // std::vector<double> pts;
-  // int faceTag = 0;
-  // activeRecovery = recovery;
-  // activeIntSpace = intSpace;
-  // activeNumbering = metaNumber->getNumbering(intSpace->getFieldID());
-  // activeSolution = sol;
-  // exactSolution = solExact;
+  // if(metricOptions.isGmshModelReady){
+  std::vector<double> pts;
+  int faceTag = 0;
+  activeRecovery = recovery;
+  activeIntSpace = intSpace;
+  activeNumbering = metaNumber->getNumbering(intSpace->getFieldID());
+  activeSolution = sol;
+  exactSolution = solExact;
 
-  // gmsh::model::add(metricOptions.modelForMesh);
-  // gmsh::model::setCurrent(metricOptions.modelForMesh);
+  gmsh::model::add(metricOptions.modelForMesh);
+  gmsh::model::setCurrent(metricOptions.modelForMesh);
 
-  // // Aniso mesh with MMG (used to get the boundary vertices only)
-  // // std::string cmd = "mmg2d " + metricOptions.metricMeshNameForMMG + " -hgrad 3 -o " +
-  // // metricOptions.metricMeshNameForMMG_out; std::string cmd1 = "mmg2d " +
-  // // metricOptions.metricMeshNameForMMG + " -hgrad 10 -o tmp.mesh";
-  // std::string cmd1 = "mmg2d " + metricOptions.metricMeshNameForMMG + " -hgrad -1 -o tmp.mesh";
-  // system(cmd1.c_str());
-  // std::string cmd2 = "gmsh tmp.mesh -o " + metricOptions.metricMeshNameForMMG_out + " -0";
-  // system(cmd2.c_str());
-  // std::string cmd3 = "gmsh " + metricOptions.metricMeshNameForMMG_out + " &";
-  // // system(cmd3.c_str());
+  // Aniso mesh with MMG (used to get the boundary vertices only)
+  // std::string cmd = "mmg2d " + metricOptions.mmgInputMeshfile + " -hgrad 3 -o " +
+  // metricOptions.mmgOutputMeshfile; std::string cmd1 = "mmg2d " +
+  // metricOptions.mmgInputMeshfile + " -hgrad 10 -o tmp.mesh";
+  std::string cmd1 = "mmg2d " + metricOptions.mmgInputMeshfile + " -hgrad -1 -o tmp.mesh";
+  system(cmd1.c_str());
+  std::string cmd2 = "gmsh tmp.mesh -o " + metricOptions.mmgOutputMeshfile + " -0";
+  system(cmd2.c_str());
+  std::string cmd3 = "gmsh " + metricOptions.mmgOutputMeshfile + " &";
+  // system(cmd3.c_str());
 
-  // // Loop a few times
-  // for(int i = 0; i < nLoopsAnisoMesh; ++i) {
-  //   gmsh::open(metricOptions.metricMeshNameForMMG_out);
-  //   gmsh::model::getCurrent(metricOptions.modelForMetric);
-  //   metric->setGmshMetricModel(metricOptions.modelForMetric);
-  //   // feInfo("Showing gmsh models at iter %d", i);
-  //   // gmsh::fltk::run();
-  //   metric->computeMetrics();
-  //   system(cmd1.c_str());
-  //   system(cmd2.c_str());
-  //   // system(cmd3.c_str());
-  // };
+  // Loop a few times
+  for(int i = 0; i < nLoopsAnisoMesh; ++i) {
+    gmsh::open(metricOptions.mmgOutputMeshfile);
+    gmsh::model::getCurrent(metricOptions.modelForMetric);
+    metric->setGmshMetricModel(metricOptions.modelForMetric);
+    // feInfo("Showing gmsh models at iter %d", i);
+    // gmsh::fltk::run();
+    metric->computeMetrics();
+    system(cmd1.c_str());
+    system(cmd2.c_str());
+    // system(cmd3.c_str());
+  };
 
-  // // system(cmd3.c_str());
+  // system(cmd3.c_str());
 
-  // gmsh::clear();
-  // gmsh::open(metricOptions.metricMeshNameForMMG_out);
-  // // gmsh::open("thegmshModel.msh");
-  // gmsh::model::getCurrent(metricOptions.modelForMesh);
+  gmsh::clear();
+  gmsh::open(metricOptions.mmgOutputMeshfile);
+  // gmsh::open("thegmshModel.msh");
+  gmsh::model::getCurrent(metricOptions.modelForMesh);
 
-  // gmsh::write("beforeVersion.msh");
-  // gmsh::option::setNumber("Mesh.MshFileVersion", 4.1);
-  // gmsh::write("afterVersion.msh");
+  gmsh::write("beforeVersion.msh");
+  gmsh::option::setNumber("Mesh.MshFileVersion", 4.1);
+  gmsh::write("afterVersion.msh");
 
-  // // Determine if the mesh is reversed (MMG seems to reverse the mesh sometimes, unless I'm doing
-  // // something wrong) Get quadrature rule and interpolation functions on the adapted mesh
-  // int triP1 = gmsh::model::mesh::getElementType("Triangle", 1);
-  // std::vector<double> localCoord;
-  // std::vector<double> weights;
-  // gmsh::model::mesh::getIntegrationPoints(triP1, "Gauss4", localCoord, weights);
-  // // Get the jacobians
-  // std::vector<double> jac, det, points;
-  // gmsh::model::mesh::getJacobians(triP1, localCoord, jac, det, points);
+  // Determine if the mesh is reversed (MMG seems to reverse the mesh sometimes, unless I'm doing
+  // something wrong) Get quadrature rule and interpolation functions on the adapted mesh
+  int triP1 = gmsh::model::mesh::getElementType("Triangle", 1);
+  std::vector<double> localCoord;
+  std::vector<double> weights;
+  gmsh::model::mesh::getIntegrationPoints(triP1, "Gauss4", localCoord, weights);
+  // Get the jacobians
+  std::vector<double> jac, det, points;
+  gmsh::model::mesh::getJacobians(triP1, localCoord, jac, det, points);
 
-  // // for(int i = 0; i < 20; ++i)
-  // //   feInfo("det1 = %f", det[i]);
+  // for(int i = 0; i < 20; ++i)
+  //   feInfo("det1 = %f", det[i]);
 
-  // // Check the first determinant
-  // if(det[0] < 0) {
-  //   feInfo("Adapted aniso mesh is reversed : reversing the numbering BUT NEED TO CHECK NEW API");
-  //   // gmsh::model::mesh::reverse();
-  //   exit(-1);
-  // }
+  // Check the first determinant
+  if(det[0] < 0) {
+    feInfo("Adapted aniso mesh is reversed : reversing the numbering");
+    gmsh::model::mesh::reverse();
+  }
 
-  // gmsh::model::mesh::getJacobians(triP1, localCoord, jac, det, points);
-  // // for(int i = 0; i < 20; ++i)
-  // //   feInfo("det2 = %f", det[i]);
+  gmsh::model::mesh::getJacobians(triP1, localCoord, jac, det, points);
+  // for(int i = 0; i < 20; ++i)
+  //   feInfo("det2 = %f", det[i]);
 
-  // // Get geometric entities and assign physical entities (should be improved)
-  // gmsh::vectorpair dimTags;
-  // gmsh::model::getEntities(dimTags);
-  // std::vector<int> entities1D, entities2D;
-  // for(auto p : dimTags) {
-  //   std::cout << p.first << " - " << p.second << std::endl;
-  //   if(p.first == 1) entities1D.push_back(p.second);
-  //   if(p.first == 2) entities2D.push_back(p.second);
-  // }
+  // Get geometric entities and assign physical entities (should be improved)
+  gmsh::vectorpair dimTags;
+  gmsh::model::getEntities(dimTags);
+  std::vector<int> entities1D, entities2D;
+  for(auto p : dimTags) {
+    std::cout << p.first << " - " << p.second << std::endl;
+    if(p.first == 1) entities1D.push_back(p.second);
+    if(p.first == 2) entities2D.push_back(p.second);
+  }
 
-  // gmsh::write("beforePhysical.msh");
-  // // Add physical entities
-  // gmsh::model::addPhysicalGroup(1, entities1D, 1);
-  // gmsh::model::setPhysicalName(1, 1, "Bord");
-  // gmsh::model::addPhysicalGroup(2, entities2D, 2);
-  // gmsh::model::setPhysicalName(2, 2, "Domaine");
-  // gmsh::write("afterPhysical.msh");
+  gmsh::write("beforePhysical.msh");
+  // Add physical entities
+  gmsh::model::addPhysicalGroup(1, entities1D, 1);
+  gmsh::model::setPhysicalName(1, 1, "Bord");
+  gmsh::model::addPhysicalGroup(2, entities2D, 2);
+  gmsh::model::setPhysicalName(2, 2, "Domaine");
+  gmsh::write("afterPhysical.msh");
 
-  // // For some reason (?) the physical tags added above can be negative, although
-  // // the mesh is numbered in counterclockwise orientation.
-  // // If it's the case, reverse the mesh and keep the negative physical tags.
-  // std::vector<int> physicalTags;
-  // bool atLeastOnePositive = false, atLeastOneNegative = false;
-  // for(auto e : entities1D) {
-  //   gmsh::model::getPhysicalGroupsForEntity(1, e, physicalTags);
-  //   if(physicalTags[0] >= 0) {
-  //     atLeastOnePositive = true;
-  //   } else {
-  //     atLeastOneNegative = true;
-  //   }
-  // }
-  // for(auto e : entities2D) {
-  //   gmsh::model::getPhysicalGroupsForEntity(2, e, physicalTags);
-  //   if(physicalTags[0] >= 0) {
-  //     atLeastOnePositive = true;
-  //   } else {
-  //     atLeastOneNegative = true;
-  //   }
-  // }
-  // if(atLeastOnePositive && atLeastOneNegative) {
-  //   // If this happens then I'm very confused
-  //   feWarning(
-  //     "Some physical tags added to the MMG mesh are positive, whereas some are negative...");
-  //   exit(-1);
-  // }
+  // For some reason (?) the physical tags added above can be negative, although
+  // the mesh is numbered in counterclockwise orientation.
+  // If it's the case, reverse the mesh and keep the negative physical tags.
+  std::vector<int> physicalTags;
+  bool atLeastOnePositive = false, atLeastOneNegative = false;
+  for(auto e : entities1D) {
+    gmsh::model::getPhysicalGroupsForEntity(1, e, physicalTags);
+    if(physicalTags[0] >= 0) {
+      atLeastOnePositive = true;
+    } else {
+      atLeastOneNegative = true;
+    }
+  }
+  for(auto e : entities2D) {
+    gmsh::model::getPhysicalGroupsForEntity(2, e, physicalTags);
+    if(physicalTags[0] >= 0) {
+      atLeastOnePositive = true;
+    } else {
+      atLeastOneNegative = true;
+    }
+  }
+  if(atLeastOnePositive && atLeastOneNegative) {
+    // If this happens then I'm very confused
+    feWarning(
+      "Some physical tags added to the MMG mesh are positive, whereas some are negative...");
+    exit(-1);
+  }
 
-  // if(atLeastOneNegative) {
-  //   // All are negative : reverse the mesh
-  //   feInfo("Physical tags added to the MMG mesh are negative but numbering is positive :"
-  //          " reversing the numbering to match the signs of the physical tags");
-  //   feInfo("CHECK NEW API FOR REVERSE");
-  //   // gmsh::model::mesh::reverse();
-  //   exit(-1);
-  // }
-  // gmsh::write("afterPhysicalCheck.msh");
+  if(atLeastOneNegative) {
+    // All are negative : reverse the mesh
+    feInfo("Physical tags added to the MMG mesh are negative but numbering is positive :"
+           " reversing the numbering to match the signs of the physical tags");
+    gmsh::model::mesh::reverse();
+    exit(-1);
+  }
+  gmsh::write("afterPhysicalCheck.msh");
 
-  // gmsh::write(metricOptions.adaptedMeshName);
+  gmsh::write(metricOptions.adaptedMeshName);
 
-  // // Curve after a few aniso adaptations
-  // if(curve) {
-  //   gmsh::open(metricOptions.metricMeshNameForMMG);
-  //   gmsh::model::getCurrent(metricOptions.modelForMetric);
+  // Curve after a few aniso adaptations
+  if(curve) {
+    gmsh::open(metricOptions.mmgInputMeshfile);
+    gmsh::model::getCurrent(metricOptions.modelForMetric);
 
-  //   gmsh::model::setCurrent(metricOptions.modelForMetric);
-  //   gmsh::model::setCurrent(metricOptions.modelForMesh);
+    gmsh::model::setCurrent(metricOptions.modelForMetric);
+    gmsh::model::setCurrent(metricOptions.modelForMesh);
 
-  //   gmsh::model::getEntities(dimTags, 2);
-  //   if(dimTags.size() > 1) {
-  //     feWarning("Gmsh model has more than one surface");
-  //   } else {
-  //     faceTag = dimTags[0].second;
-  //   }
+    gmsh::model::getEntities(dimTags, 2);
+    if(dimTags.size() > 1) {
+      feWarning("Gmsh model has more than one surface");
+    } else {
+      faceTag = dimTags[0].second;
+    }
 
-  //   std::vector<int> viewTags;
-  //   gmsh::view::getTags(viewTags);
-  //   feInfo("There are %d views in the gmsh model : ", viewTags.size());
-  //   for(auto val : viewTags) {
-  //     feInfo("View %d with index %d", val, gmsh::view::getIndex(val));
-  //   }
+    std::vector<int> viewTags;
+    gmsh::view::getTags(viewTags);
+    feInfo("There are %d views in the gmsh model : ", viewTags.size());
+    for(auto val : viewTags) {
+      feInfo("View %d with index %d", val, gmsh::view::getIndex(val));
+    }
 
-  //   metric->setMetricViewTag(viewTags[0]);
+    metric->setMetricViewTag(viewTags[0]);
 
-  //   computePointsUsingScaledCrossFieldPlanarP2(
-  //     metricOptions.modelForMetric.c_str(), metricOptions.modelForMesh.c_str(),
-  //     metric->getMetricViewTag(), faceTag, pts, errorSquaredCallback, metricOptions.inside, nullptr,
-  //     onlyGenerateVertices, evaluateFieldFromRecoveryCallback, (void *)recovery,
-  //     interpolateMetricP1WithDerivativesWrapper, interpolateMetricP1Wrapper,
-  //     interpolateMetricAndDerivativeOnP2EdgeWrapper, interpolateMetricP1Wrapper1D,
-  //     interpolateMetricAndDerivativeOnP2EdgeWrapper1D, (void *)metric);
+    // computePointsUsingScaledCrossFieldPlanarP2(
+    //   metricOptions.modelForMetric.c_str(), metricOptions.modelForMesh.c_str(),
+    //   metric->getMetricViewTag(), faceTag, pts, errorSquaredCallback, metricOptions.inside, nullptr,
+    //   onlyGenerateVertices, evaluateFieldFromRecoveryCallback, (void *)recovery,
+      // interpolateMetricP1WithDerivativesWrapper, interpolateMetricP1Wrapper,
+      // interpolateMetricAndDerivativeOnP2EdgeWrapper, interpolateMetricP1Wrapper1D,
+      // interpolateMetricAndDerivativeOnP2EdgeWrapper1D,
+      // (void *)metric);
 
-  //   gmsh::write(metricOptions.adaptedMeshName);
-  // }
+    gmsh::write(metricOptions.adaptedMeshName);
+  }
 
 #else
   printf("In feAdaptMesh : Error - Gmsh is required to generate curved meshes.\n");

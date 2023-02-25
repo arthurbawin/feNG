@@ -466,7 +466,6 @@ void feSysElm_VectorConvectiveAcceleration::computeAe(feBilinearForm *form)
 void feSysElm_VectorConvectiveAcceleration::computeBe(feBilinearForm *form)
 {
   double jac, coeff;
-  double dotprod;
   for(int k = 0; k < _nQuad; ++k) {
     jac = form->_J[_nQuad * form->_numElem + k];
     form->_cnc->computeElementTransformation(form->_geoCoord, k, jac, form->_transformation);

@@ -7,7 +7,6 @@ feEZCompressedRowStorage::feEZCompressedRowStorage(int numUnknowns,
   nnz.resize(numUnknowns, 0.);
   nnzset.resize(numUnknowns);
 
-  int nI, nJ;
   std::vector<feInt> adrI;
   std::vector<feInt> adrJ;
 
@@ -78,7 +77,7 @@ feEZCompressedRowStorage::feEZCompressedRowStorage(int numUnknowns,
         for(int i = 0; i < nI; ++i) {
           for(int j = 0; j < nJ; ++j) {
             if(adrI[i] < numUnknowns && adrJ[j] < numUnknowns) {
-              // #pragma omp critical
+              #pragma omp critical
               nnzset[adrI[i]].insert(adrJ[j]);
             }
           }

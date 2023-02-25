@@ -12,8 +12,8 @@ using namespace soplex;
 #include "fullMatrix.h"
 #include "ellipseToolbox.h"
 #include "../contrib/root_finder/root_finder.hpp"
-#include "../contrib/Eigen/Eigen"
-#include "../contrib/unsupported/Eigen/MatrixFunctions"
+// #include "../contrib/Eigen/Eigen"
+// #include "../contrib/unsupported/Eigen/MatrixFunctions"
 
 double evaluateFieldFromRecovery(int indexDerivative, feRecovery *rec, double *x)
 {
@@ -1390,7 +1390,6 @@ void gradationMetriques(double gradation, int nmax, std::vector<double> &coord1,
   FILE *fff = fopen("CHECK.pos", "w");
   fprintf(fff, "View \" CHECK \"{\n");
 
-  size_t maxtag = -1;
   std::pair<std::set<std::pair<size_t, size_t>, gmshEdgeLessThan>::iterator, bool> ret;
 
   for(size_t i = 0; i < elementTags[0].size(); i++) {

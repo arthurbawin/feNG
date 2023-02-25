@@ -93,23 +93,23 @@ int computePointsUsingScaledCrossFieldPlanarP2(
   bool inside(double *, bool), double pointwiseError(double *), int onlyGenerateVertices,
   double evaluateFieldFromRecovery(int, void *, double *), void *recoveryUserPointer,
 
-  void interpolateMetricP1WithDerivativesWrapper(void *, const double *, Eigen::Matrix2d &,
-                                                 Eigen::Matrix2d &, Eigen::Matrix2d &),
+  // void interpolateMetricP1WithDerivativesWrapper(void *, const double *, Eigen::Matrix2d &,
+  //                                                Eigen::Matrix2d &, Eigen::Matrix2d &),
 
-  void interpolateMetricP1Wrapper(void *, const double *, Eigen::Matrix2d &, Eigen::Matrix2d &,
-                                  Eigen::Matrix2d &),
+  // void interpolateMetricP1Wrapper(void *, const double *, Eigen::Matrix2d &, Eigen::Matrix2d &,
+  //                                 Eigen::Matrix2d &),
 
-  void interpolateMetricAndDerivativeOnP2EdgeWrapper(
-    void *, const double, const Eigen::Matrix2d &, const Eigen::Matrix2d &, const Eigen::Matrix2d &,
-    const Eigen::Matrix2d &, const Eigen::Matrix2d &, Eigen::Matrix2d &, Eigen::Matrix2d &,
-    Eigen::Matrix2d &),
+  // void interpolateMetricAndDerivativeOnP2EdgeWrapper(
+  //   void *, const double, const Eigen::Matrix2d &, const Eigen::Matrix2d &, const Eigen::Matrix2d &,
+  //   const Eigen::Matrix2d &, const Eigen::Matrix2d &, Eigen::Matrix2d &, Eigen::Matrix2d &,
+  //   Eigen::Matrix2d &),
 
-  void interpolateMetricP1Wrapper1D(void *, const double *, const double *, Eigen::Matrix2d &,
-                                    Eigen::Matrix2d &),
+  // void interpolateMetricP1Wrapper1D(void *, const double *, const double *, Eigen::Matrix2d &,
+  //                                   Eigen::Matrix2d &),
 
-  void interpolateMetricAndDerivativeOnP2EdgeWrapper1D(
-    void *, const double, const Eigen::Matrix2d &, const Eigen::Matrix2d &, const Eigen::Matrix2d &,
-    const Eigen::Matrix2d &, Eigen::Matrix2d &, Eigen::Matrix2d &),
+  // void interpolateMetricAndDerivativeOnP2EdgeWrapper1D(
+  //   void *, const double, const Eigen::Matrix2d &, const Eigen::Matrix2d &, const Eigen::Matrix2d &,
+  //   const Eigen::Matrix2d &, Eigen::Matrix2d &, Eigen::Matrix2d &),
 
   void *metric);
 

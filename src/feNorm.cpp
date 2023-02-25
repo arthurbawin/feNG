@@ -167,7 +167,7 @@ double feNorm::computeLpNorm(int p, bool error)
 
 double feNorm::computeLpErrorEstimator(int p)
 {
-  double res = 0.0, uh, uRec, t = _solution->getCurrentTime();
+  double res = 0.0, uh, uRec;
 
   if(_rec == nullptr) {
     feErrorMsg(FE_STATUS_ERROR, "Cannot compute Lp error estimate "
@@ -345,21 +345,6 @@ double feNorm::computeH1SemiNormErrorEstimator()
     exit(-1);
   }
 
-  // for(int iElm = 0; iElm < _nElm; ++iElm) {
-  //   this->initializeLocalSolutionOnSpace(0, iElm);
-  //   _spaces[0]->_mesh->getCoord(_cnc, iElm, _geoCoord);
-
-  //   for(int k = 0; k < _nQuad; ++k) {
-  //     uh = _spaces[0]->interpolateFieldAtQuadNode(_localSol[0], k);
-  //     // _geoSpace->interpolateVectorFieldAtQuadNode(_geoCoord, k, _pos);
-  //     // uh = _scalarSolution->eval(t, _pos);
-  //     uRec = _rec->evaluateRecoveryAtQuadNode(0, iElm, k);
-
-  //     res += pow(fabs(uRec - uh), p) * _J[_nQuad * iElm + k] * _w[k];
-  //   }
-  // }
-  // return pow(res, 1. / (double)p);
-
   ElementTransformation T;
 
   for(int iElm = 0; iElm < _nElm; ++iElm) {
@@ -372,7 +357,7 @@ double feNorm::computeH1SemiNormErrorEstimator()
       jac = _J[_nQuad * iElm + k];
       _cnc->computeElementTransformation(_geoCoord, k, jac, T);
 
-      // _spaces[0]->interpolateFieldAtQuadNode_physicalGradient(_localSol[0], k, T, graduh);
+      _spaces[0]->interpolateFieldAtQuadNode_physicalGradient(_localSol[0], k, T, graduh);
       _geoSpace->interpolateVectorFieldAtQuadNode(_geoCoord, k, _pos);
       _vectorSolution->eval(t, _pos, gradu);
 
@@ -476,6 +461,7 @@ double feNorm::computeIntegralDotProduct()
   //   }
   // }
   // return I;
+  return 0.;
 }
 
 /* Estimates the L2 norm of the error taking an external solution as the reference solution. */

@@ -1,7 +1,8 @@
 #include "feNG.h"
 #include "feNewRecovery.h"
+#include "feMatrixInterface.h"
 
-#include "../contrib/Eigen/Dense"
+// #include "../contrib/Eigen/Dense"
 
 extern int FE_VERBOSE;
 
@@ -212,94 +213,6 @@ void feNewRecovery::setPolynomialExponents()
   }
 }
 
-// Compute local mass matrix on each element
-void feNewRecovery::computeElementMassMatrices2D()
-{
-  int nQuad = _geoSpace->getNumQuadPoints();
-  const std::vector<double> &w = _geoSpace->getQuadratureWeights();
-  const std::vector<double> &J = _cnc->getJacobians();
-
-  for(int iColor = 0; iColor < _cnc->_coloring.numColors; ++iColor){
-
-    #if defined(HAVE_OMP)
-    #pragma omp parallel
-    #endif
-    {
-      std::vector<double> geoCoord(3 * _nNodePerElm, 0.);
-      std::vector<double> x(3, 0.0);
-      std::vector<double> monomials(_dimRecovery, 0.);
-
-      #if defined(HAVE_OMP)
-      #pragma omp for
-      #endif
-      for(int iElm = 0; iElm < _cnc->_coloring.numElemPerColor[iColor]; ++iElm) {
-
-        int globalElem = _cnc->_coloring.elementsInColor[iColor][iElm];
-
-        Eigen::MatrixXd massMatrix = Eigen::MatrixXd::Zero(_dimRecovery, _dimRecovery);
-
-        _mesh->getCoord(_intSpace->getCncGeoTag(), globalElem, geoCoord);
-
-        // Loop over quad points and increment mass matrix
-        for(int k = 0; k < nQuad; ++k) {
-          double jac = J[nQuad * globalElem + k];
-
-          _geoSpace->interpolateVectorFieldAtQuadNode(geoCoord, k, x);
-
-          for(int i = 0; i < _dimRecovery; ++i) {
-            monomials[i] = myPow(x[0], _expX_recov[i]) * myPow(x[1], _expY_recov[i]);
-          }
-
-          for(int i = 0; i < _dimRecovery; ++i) {
-            for(int j = 0; j < _dimRecovery; ++j) {
-              massMatrix(i, j) += jac * w[k] * monomials[i] * monomials[j];
-            }
-          }
-        }
-        // #if defined(HAVE_OMP)
-        // #pragma omp critical
-        // #endif
-        _elementMassMatrices[globalElem] = massMatrix;
-      }
-    }
-  }
-}
-
-// Sum mass matrices around vertices/edges and compute inverse
-void feNewRecovery::inverseMassMatrices()
-{
-  const std::vector<int> vertices = _patch->getVertices();
-  #if defined(HAVE_OMP)
-  #pragma omp parallel for
-  #endif
-  for(size_t i = 0; i < vertices.size(); ++i) {
-    int v = vertices[i];
-    // Get patch of elements
-    const std::set<int> &elemPatch = _patch->getPatch(v);
-    Eigen::MatrixXd I = Eigen::MatrixXd::Zero(_dimRecovery, _dimRecovery);
-    for(auto elem : elemPatch) {
-      I += _elementMassMatrices[elem];
-    }
-    _inverseMassMatrices2[v] = I.inverse();
-  }
-
-  const std::vector<const Edge*> &edges = _mesh->getEdges();
-  #if defined(HAVE_OMP)
-  #pragma omp parallel for
-  #endif
-  for(size_t i = 0; i < edges.size(); ++i) {
-    const Edge* e = edges[i];
-    // Get patch of elements
-    const std::set<int> &elemPatch = _patch->getEdgePatch(e->getTag());
-
-    Eigen::MatrixXd I = Eigen::MatrixXd::Zero(_dimRecovery, _dimRecovery);
-    for(auto elem : elemPatch) {
-      I += _elementMassMatrices[elem];
-    }
-    _inverseMassMatricesEdges2[e->getTag()] = I.inverse();
-  }
-}
-
 void feNewRecovery::computeVertexMassMatrices2D()
 {
   int nQuad = _geoSpace->getNumQuadPoints();
@@ -328,7 +241,11 @@ void feNewRecovery::computeVertexMassMatrices2D()
       // Get patch of elements
       const std::set<int> &elemPatch = _patch->getPatch(v);
 
+      #if defined(TEST_WITH_EIGEN)
       Eigen::MatrixXd massMatrix = Eigen::MatrixXd::Zero(_dimRecovery, _dimRecovery);
+      #else
+      SquareMatrix massMatrix(_dimRecovery);
+      #endif
 
       for(auto elem : elemPatch) {
 
@@ -354,13 +271,22 @@ void feNewRecovery::computeVertexMassMatrices2D()
           }
         }
       }
-      
+
       // We should try initializing the map beforehand and remove the critical,
       // there seems to be data race when it's not initialized
       #pragma omp critical
-      _inverseMassMatrices2[v] = massMatrix.inverse();
+      {
+        #if defined(TEST_WITH_EIGEN)
+        _inverseMassMatrices[v] = massMatrix.inverse();
+        #else
+        _inverseMassSquareMatrices[v] = massMatrix.inverse();
+        #endif
+      }
     }
   }
+
+  // std::cout << _inverseMassMatrices[3] << std::endl;
+  // _inverseMassSquareMatrices[3].print();
 
   // Mass matrices centered on edges
   // const std::vector<const Edge*> &edges = _mesh->getEdges();
@@ -429,7 +355,6 @@ void feNewRecovery::computeRHSAndSolve(int numRecoveries, int nRecoveredFields, 
 
   std::vector<int> &vertices = _patch->getVertices();
 
-  int _nEdgePerElm = _cnc->getNumEdgesPerElem();
   int _nVertPerElm = _nNodePerElm;
 
   std::vector<double> &solVec = _sol->getSolutionReference();
@@ -445,7 +370,9 @@ void feNewRecovery::computeRHSAndSolve(int numRecoveries, int nRecoveredFields, 
     std::vector<double> xLoc(3, 0.0);
     std::vector<double> monomials(_dimRecovery, 0.);
     std::vector<double> recoveryVector(_dimRecovery, 0.);
+    #if defined(TEST_WITH_EIGEN)
     Eigen::VectorXd sol;
+    #endif
     std::vector<double> u(numRecoveries, 0.);
 
     #if defined(HAVE_OMP)
@@ -455,7 +382,14 @@ void feNewRecovery::computeRHSAndSolve(int numRecoveries, int nRecoveredFields, 
       double xv = _mesh->getVertex(v)->x();
       double yv = _mesh->getVertex(v)->y();
 
+      #if defined(TEST_WITH_EIGEN)
       std::vector<Eigen::VectorXd> RHS(numRecoveries, Eigen::VectorXd::Zero(_dimRecovery));
+      #else
+      std::vector<Vector> RHS;
+      RHS.clear();
+      for(int i = 0; i < numRecoveries; ++i)
+        RHS.push_back(Vector(_dimRecovery));
+      #endif
 
       // Get patch of elements
       std::set<int> &elemPatch = _patch->getPatch(v);
@@ -530,7 +464,11 @@ void feNewRecovery::computeRHSAndSolve(int numRecoveries, int nRecoveredFields, 
       }
 
       for(int iComp = 0; iComp < numRecoveries; ++iComp) {
-        sol = _inverseMassMatrices2[v] * RHS[iComp];
+        #if defined(TEST_WITH_EIGEN)
+        sol = _inverseMassMatrices[v] * RHS[iComp];
+        #else
+        Vector sol = _inverseMassSquareMatrices[v] * RHS[iComp];
+        #endif
         for(int i = 0; i < _dimRecovery; ++i) {
           recoveryVector[i] = sol(i);
         }
@@ -741,11 +679,9 @@ double feNewRecovery::evaluateRecoveryAtVertex(PPR recoveredField, const int ind
   }
 }
 
-// Interpolates the recovered solution or its derivatives at point x.
-double feNewRecovery::evaluateRecoveryAtQuadNode(PPR recoveredField, const int index, const int iElm, const int iQuadNode)
+void feNewRecovery::computeRecoveryAtAllElementDOF(PPR recoveredField, const int index, const int iElm)
 {
-  _mesh->getCoord(_intSpace->getCncGeoTag(), iElm, _geoCoord);
-  // _geoSpace->interpolateVectorFieldAtQuadNode(_geoCoord, iQuadNode, x);
+  _mesh->getCoord(_cnc, iElm, _geoCoord);
   
   const std::vector<double> &refCoord = _intSpace->getLcoor();
   double refCoordAtDOF[3];
@@ -778,8 +714,63 @@ double feNewRecovery::evaluateRecoveryAtQuadNode(PPR recoveredField, const int i
     _geoSpace->interpolateField(p, 3, refCoordAtDOF, shape, val);
     _FIELD[iDOF] = val;
   }
+}
 
+// Interpolates the recovered solution or its derivatives at point x.
+double feNewRecovery::evaluateRecoveryAtQuadNode(PPR recoveredField, const int index, const int iElm, const int iQuadNode)
+{
+  // _mesh->getCoord(_intSpace->getCncGeoTag(), iElm, _geoCoord);
+  // // _geoSpace->interpolateVectorFieldAtQuadNode(_geoCoord, iQuadNode, x);
+  
+  // const std::vector<double> &refCoord = _intSpace->getLcoor();
+  // double refCoordAtDOF[3];
+
+  // int nFunctions = _intSpace->getNumFunctions();
+
+  // int v0 = _cnc->getVertexConnectivity(iElm, 0);
+  // int v1 = _cnc->getVertexConnectivity(iElm, 1);
+  // int v2 = _cnc->getVertexConnectivity(iElm, 2);
+  // int V[3] = {v0, v1, v2};
+
+  // // Evaluation of each of the 3 polynomials at xDOF
+  // double p[3], shape[3], xLoc[3], val;
+
+  // for(int iDOF = 0; iDOF < nFunctions; ++iDOF)
+  // { 
+  //   refCoordAtDOF[0] = refCoord[iDOF * 3 + 0];
+  //   refCoordAtDOF[1] = refCoord[iDOF * 3 + 1];
+  //   refCoordAtDOF[2] = refCoord[iDOF * 3 + 2];
+  //   _geoSpace->interpolateVectorField(_geoCoord, refCoordAtDOF, _pos);
+
+  //   for(int iv = 0; iv < 3; ++iv){
+  //     // Local coordinates in the frame centered at vertex iv
+  //     xLoc[0] = _pos[0] - _geoCoord[3*iv + 0];
+  //     xLoc[1] = _pos[1] - _geoCoord[3*iv + 1];
+  //     p[iv] = evaluatePolynomial(recoveredField, index, V[iv], xLoc);
+  //   }
+
+  //   // Interpolate using the Geometric interpolant
+  //   _geoSpace->interpolateField(p, 3, refCoordAtDOF, shape, val);
+  //   _FIELD[iDOF] = val;
+  // }
+
+  computeRecoveryAtAllElementDOF(recoveredField, index, iElm);
   return _intSpace->interpolateFieldAtQuadNode(_FIELD, iQuadNode);
+}
+
+static double UVW[3];
+
+double feNewRecovery::evaluateRecovery(PPR recoveredField, const int index, const double *x)
+{
+  int elm;
+  bool isFound = static_cast<feMesh2DP1 *>(_mesh)->locateVertex(x, elm, UVW);
+  if(!isFound) {
+    feWarning("Point (%f, %f) was not found in the mesh.\n", x[0], x[1]);
+    return 0.0;
+  } else {
+    computeRecoveryAtAllElementDOF(recoveredField, index, elm);
+    return _intSpace->interpolateField(_FIELD, UVW);
+  }
 }
 
 feNewRecovery::feNewRecovery(feSpace *space, feMesh *mesh, feSolution *sol,
@@ -878,13 +869,6 @@ feNewRecovery::feNewRecovery(feSpace *space, feMesh *mesh, feSolution *sol,
 
     nRecoveredFields += numRecoveries;
   }
-
-  feInfo("rec.size() = %d", recoveryCoeff.size());
-  feInfo("rec.size() = %d", recoveryCoeff.size());
-  feInfo("rec.size() = %d", recoveryCoeff.size());
-  feInfo("rec.size() = %d", recoveryCoeff.size());
-  feInfo("rec.size() = %d", recoveryCoeff.size());
-  feInfo("rec.size() = %d", recoveryCoeff.size());
 
   if(_dim > 1) fbOut.close();
 

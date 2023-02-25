@@ -3,7 +3,7 @@
 
 #include "feMetric.h"
 
-void createAnisoMesh(feMetric *metric, feMetricOptions metricOptions);
+void createAnisoMesh(feMetric *metric, feMetricOptions &metricOptions);
 
 /* The meteaNumber, solution, interpolation space and recovery are needed to
 define the error callback, the objective function to minimize. */

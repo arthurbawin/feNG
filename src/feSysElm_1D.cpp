@@ -466,13 +466,13 @@ void feSysElm_0D_EulerFlux::computeAe(feBilinearForm *form)
 void feSysElm_0D_EulerFlux::computeBe(feBilinearForm *form)
 {
   double gamma = 1.4;
-  double jac, rhoA, rhouA, eA;
+  // double jac, rhoA, rhouA, eA;
   double cs;
-  double rhob, ub, pb, eb;
+  double rhob, ub, pb;
   double flux[3];
 
   form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, 0, _pos);
-  double A = area(_pos[0]);
+  // double A = area(_pos[0]);
 
   if(_boundaryType == 1) {
     // Inlet
@@ -485,14 +485,14 @@ void feSysElm_0D_EulerFlux::computeBe(feBilinearForm *form)
 
     // Extrapolate values from solNext: 2nd element on interior domain
     // Initialize solution at vertices
-    double rLeft[3] = {-1.0, 0., 0.};
+    // double rLeft[3] = {-1.0, 0., 0.};
     double rRight[3] = {+1.0, 0., 0.};
 
-    double rhoA_l =
-      form->_intSpaces[_idrhoA_dom]->interpolateField(form->_solNext[_idrhoA_dom], rLeft);
-    double rhouA_l =
-      form->_intSpaces[_idrhouA_dom]->interpolateField(form->_solNext[_idrhouA_dom], rLeft);
-    double eA_l = form->_intSpaces[_ideA_dom]->interpolateField(form->_solNext[_ideA_dom], rLeft);
+    // double rhoA_l =
+    //   form->_intSpaces[_idrhoA_dom]->interpolateField(form->_solNext[_idrhoA_dom], rLeft);
+    // double rhouA_l =
+    //   form->_intSpaces[_idrhouA_dom]->interpolateField(form->_solNext[_idrhouA_dom], rLeft);
+    // double eA_l = form->_intSpaces[_ideA_dom]->interpolateField(form->_solNext[_ideA_dom], rLeft);
 
     double rhoA_r =
       form->_intSpaces[_idrhoA_dom]->interpolateField(form->_solNext[_idrhoA_dom], rRight);
@@ -570,14 +570,14 @@ void feSysElm_0D_EulerFlux::computeBe(feBilinearForm *form)
 
     // Extrapolate values from solNext: 2nd element on interior domain
     // Initialize solution at vertices
-    double rLeft[3] = {-1.0, 0., 0.};
+    // double rLeft[3] = {-1.0, 0., 0.};
     double rRight[3] = {+1.0, 0., 0.};
 
-    double rhoA_l =
-      form->_intSpaces[_idrhoA_dom]->interpolateField(form->_solPrev[_idrhoA_dom], rLeft);
-    double rhouA_l =
-      form->_intSpaces[_idrhouA_dom]->interpolateField(form->_solPrev[_idrhouA_dom], rLeft);
-    double eA_l = form->_intSpaces[_ideA_dom]->interpolateField(form->_solPrev[_ideA_dom], rLeft);
+    // double rhoA_l =
+    //   form->_intSpaces[_idrhoA_dom]->interpolateField(form->_solPrev[_idrhoA_dom], rLeft);
+    // double rhouA_l =
+    //   form->_intSpaces[_idrhouA_dom]->interpolateField(form->_solPrev[_idrhouA_dom], rLeft);
+    // double eA_l = form->_intSpaces[_ideA_dom]->interpolateField(form->_solPrev[_ideA_dom], rLeft);
 
     double rhoA_r =
       form->_intSpaces[_idrhoA_dom]->interpolateField(form->_solPrev[_idrhoA_dom], rRight);

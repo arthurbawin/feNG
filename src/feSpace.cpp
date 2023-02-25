@@ -743,17 +743,17 @@ void feSpace::interpolateVectorFieldAtQuadNode_physicalGradient(std::vector<doub
     }
   } else if(nComponents == 3) {
     for(int i = 0; i < _nFunctions; ++i) {
-      double dphi_i_dx = _dLdr[_nFunctions * iQuadNode + i] * T.drdx[0] +
-                         _dLds[_nFunctions * iQuadNode + i] * T.drdx[1] +
-                         _dLdt[_nFunctions * iQuadNode + i] * T.drdx[2];
+      // double dphi_i_dx = _dLdr[_nFunctions * iQuadNode + i] * T.drdx[0] +
+      //                    _dLds[_nFunctions * iQuadNode + i] * T.drdx[1] +
+      //                    _dLdt[_nFunctions * iQuadNode + i] * T.drdx[2];
 
-      double dphi_i_dy = _dLdr[_nFunctions * iQuadNode + i] * T.drdy[0] +
-                         _dLds[_nFunctions * iQuadNode + i] * T.drdy[1] +
-                         _dLdt[_nFunctions * iQuadNode + i] * T.drdy[2];
+      // double dphi_i_dy = _dLdr[_nFunctions * iQuadNode + i] * T.drdy[0] +
+      //                    _dLds[_nFunctions * iQuadNode + i] * T.drdy[1] +
+      //                    _dLdt[_nFunctions * iQuadNode + i] * T.drdy[2];
 
-      double dphi_i_dz = _dLdr[_nFunctions * iQuadNode + i] * T.drdz[0] +
-                         _dLds[_nFunctions * iQuadNode + i] * T.drdz[1] +
-                         _dLdt[_nFunctions * iQuadNode + i] * T.drdz[2];
+      // double dphi_i_dz = _dLdr[_nFunctions * iQuadNode + i] * T.drdz[0] +
+      //                    _dLds[_nFunctions * iQuadNode + i] * T.drdz[1] +
+      //                    _dLdt[_nFunctions * iQuadNode + i] * T.drdz[2];
 
       // FIXME
       // grad[0] += field[i] * dphi_i_dx;

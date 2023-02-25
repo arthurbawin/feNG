@@ -1,12 +1,7 @@
 #ifndef _FEMESH_
 #define _FEMESH_
 
-#include <map>
-#include <string>
-#include <vector>
-#include <iostream>
-#include <set>
-
+#include "feNG.h"
 #include "feMessage.h"
 #include "feCncGeo.h"
 #include "feSpace.h"
@@ -43,10 +38,12 @@ protected:
   // Number of boundary elements
   int _nBoundaryElm;
 
-  // Mesh vertices
+  // Mesh vertices (all)
   std::vector<Vertex> _vertices;
   // Map from non-sequential Gmsh vertices tag to sequential tag
   std::map<int, int> _verticesMap;
+  // Mesh vertices for each Physical Entity (geometric connectivity)
+  std::map<const feCncGeo*, std::vector<Vertex>> _verticesPerCnc;
 
   // Number, vector and map of geometric connectivities (domains) in the mesh
   int _nCncGeo;
@@ -206,6 +203,8 @@ public:
 
 class feMetaNumber;
 class feSolutionContainer;
+class feMetricOptions;
+class feNewRecovery;
 
 typedef struct rtreeSearchCtxStruct {
   std::vector<Triangle *> *elements;
@@ -360,6 +359,9 @@ public:
                 feSolutionContainer *solutionContainer, const std::vector<feSpace *> &mySpaces,
                 const std::vector<feSpace *> &mySpacesEssBC,
                 const std::vector<feSpace *> &otherSpaces);
+
+  // Default argument is a feMetricOptions initialized by default, see feAdaptMesh.cpp
+  feStatus adapt(feNewRecovery *recoveredField, feMetricOptions &options);
 };
 
 #endif

@@ -50,11 +50,8 @@ feStatus solveQNBDF(feSolutionContainer *solDot, feTolerances tol, feMetaNumber 
 {
   feInfoCond(FE_VERBOSE > 0, "\t\t\tNONLINEAR SOLVER:");
   bool stop = false;
-  bool status = linearSystem->getRecomputeStatus();
-  bool prev_status = status;
   int iter = 0, linearSystemIter;
   double normDx, normResidual, normAxb;
-  int nIterSinceMatrixComputation = 0;
 
   // Newton-Rapshon iteration
   while(!stop) {

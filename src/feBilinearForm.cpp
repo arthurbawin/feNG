@@ -48,7 +48,7 @@ feStatus createBilinearForm(feBilinearForm *&form, const std::vector<feSpace *> 
 
   // Check that the number of FE spaces match the required
   // number of spaces to compute the weak form
-  if(spaces.size() != elementarySystem->getNumFields()) {
+  if(spaces.size() != (size_t) elementarySystem->getNumFields()) {
     return feErrorMsg(FE_STATUS_ERROR, "(Bi-)linear form %s expects %d FE space(s) (given: %d)\n",
                       elementarySystem->getWeakFormName().data(), elementarySystem->getNumFields(),
                       spaces.size());
@@ -198,7 +198,6 @@ feBilinearForm::feBilinearForm(const feBilinearForm &f)
 
   // Elementary system has to be cloned to be thread-safe
   _sysElm = f._sysElm->clone();
-  int dim = f._sysElm->getDim();
   _sysElm->_nQuad = _intSpaces[0]->getNumQuadPoints();
   _sysElm->_wQuad = _intSpaces[0]->getQuadratureWeights();
   _sysElm->_rQuad = _intSpaces[0]->getRQuadraturePoints();

@@ -405,7 +405,6 @@ void feLinearSystemPETSc::assembleResiduals(feSolution *sol)
     int numColors = cnc->getNbColor();
     const std::vector<int> &numElemPerColor = cnc->getNbElmPerColor();
     const std::vector<std::vector<int> > &listElmPerColor = cnc->getListElmPerColor();
-    int numElementsInColor;
     std::vector<int> listElmC;
 
     for(int iColor = 0; iColor < numColors; ++iColor) {
@@ -489,7 +488,6 @@ void feLinearSystemPETSc::assemble(feSolution *sol)
 void feLinearSystemPETSc::constraintEssentialComponents(feSolution *sol)
 {
   std::vector<PetscInt> rowsToConstraint;
-  PetscScalar val;
   std::vector<feInt> adr;
   for(auto space : sol->_spaces) {
     int nComponents = space->getNumComponents();
@@ -500,8 +498,6 @@ void feLinearSystemPETSc::constraintEssentialComponents(feSolution *sol)
           for(int iElm = 0; iElm < space->getNumElements(); ++iElm) {
             // Constraint matrix and RHS
             space->initializeAddressingVector(iElm, adr);
-            // for(auto val : adr)
-            //   feInfo("adr = %d", val);
             for(int j = 0; j < space->getNumFunctions(); ++j) {
               if(j % nComponents == i) {
                 PetscInt DOF = adr[j];

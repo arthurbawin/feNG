@@ -18,6 +18,7 @@
 #include <assert.h>
 #include <sstream>
 #include <map>
+#include <set>
 #include <iomanip>
 #include <limits>
 #include <tuple>

@@ -1,4 +1,5 @@
-set(feNG_SRC ellipseToolbox.cpp
+set(feNG_SRC
+    ellipseToolbox.cpp
     feAdaptMesh.cpp
     feBilinearForm.cpp
     feCncGeo.cpp
@@ -10,6 +11,7 @@ set(feNG_SRC ellipseToolbox.cpp
     feLinearSystem.cpp
     feLinearSystemMklPardiso.cpp
     feLinearSystemPETSc.cpp
+    feMatrixInterface.cpp
     feMesh.cpp
     feMeshRead.cpp
     feMessage.cpp
@@ -63,10 +65,11 @@ set(feNG_API
     feGraphics.h
     feFunction.h
     feLinearSystem.h
+    feMatrixInterface.h
     feMesh.h
     feMessage.h
-    # feMetric.h
-    # feMetricTools.h
+    feMetric.h
+    feMetricTools.h
     feNG.h
     feNorm.h
     feNumber.h
