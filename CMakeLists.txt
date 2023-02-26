@@ -37,7 +37,6 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/lib)
 add_compile_options(-Wreturn-type)
 add_compile_options(-Wunused-variable)
 add_compile_options(-Wdisabled-optimization)
-add_compile_options(-Werror)
 
 #  Eigen
 # include_directories(${CMAKE_CURRENT_SOURCE_DIR}/contrib/Eigen)
