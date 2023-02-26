@@ -5,8 +5,12 @@
 
 // A small interface for fixed sizes/small matrices to avoid
 // including Eigen everywhere and slowing down compilation
-
+//
 // IMPORTANT: Classes use the PIMPL idiom and are not copyable
+//
+// "Reference" for copy/move destructors/assignment operators:
+// https://stackoverflow.com/questions/71104545/constructor-
+// and-destructor-in-c-when-using-the-pimpl-idiom
 
 class MetricTensor
 {

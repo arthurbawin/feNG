@@ -151,7 +151,7 @@ private:
   void computeDerivative(int nRecoveredFields, int indexRecovery, int iDerivative, std::ostream &output);
   double evaluatePolynomial(PPR recoveredField,
     const int index, const int vertex, const double *xLoc);
-  void computeErrorPolynomials();
+  void computeHomogeneousErrorPolynomials();
   void computeRecoveryAtAllElementDOF(PPR recoveredField, const int index, const int iElm);
 };
 

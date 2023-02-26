@@ -603,51 +603,52 @@ void feNewRecovery::computeDerivative(int nRecoveredFields, int indexRecovery, i
   }
 }
 
-void feNewRecovery::computeErrorPolynomials()
+void numYExponents(int pos, int nLoc, int &ny) {
+  if(nLoc == 1){
+    return;
+  } else{
+    if(pos >= nLoc/2) {
+      ny++;
+      pos -= nLoc/2;
+    }
+    numYExponents(pos, nLoc/2, ny);
+  }
+}
+
+void feNewRecovery::computeHomogeneousErrorPolynomials()
 {
   if(_dim == 2) {
     std::vector<int> &vertices = _patch->getVertices();
     std::vector<double> error(_degSol + 2, 0.);
-    switch(_degSol) {
-      case 1:
-        for(auto v : vertices) {
-          error[0] = derivativeCoeff[v][0][0];
-          error[1] = derivativeCoeff[v][1][0] + derivativeCoeff[v][2][0];
-          error[2] = derivativeCoeff[v][3][0];
-          errorCoeff[v] = error;
-        }
-        break;
-      case 2:
-        for(auto v : vertices) {
-          error[0] = derivativeCoeff[v][0][0];
-          error[1] = derivativeCoeff[v][1][0] + derivativeCoeff[v][2][0] + derivativeCoeff[v][4][0];
-          error[2] = derivativeCoeff[v][3][0] + derivativeCoeff[v][5][0] + derivativeCoeff[v][6][0];
-          error[3] = derivativeCoeff[v][7][0];
-          errorCoeff[v] = error;
-        }
-        break;
-      case 3:
-        for(auto v : vertices) {
-          error[0] = derivativeCoeff[v][0][0];
-          error[1] = derivativeCoeff[v][1][0] + derivativeCoeff[v][2][0] +
-                     derivativeCoeff[v][4][0] + derivativeCoeff[v][8][0];
-          error[2] = derivativeCoeff[v][3][0] + derivativeCoeff[v][5][0] +
-                     derivativeCoeff[v][6][0] + derivativeCoeff[v][9][0] +
-                     derivativeCoeff[v][10][0] + derivativeCoeff[v][12][0];
-          error[3] = derivativeCoeff[v][7][0] + derivativeCoeff[v][11][0] +
-                     derivativeCoeff[v][13][0] + derivativeCoeff[v][14][0];
-          error[4] = derivativeCoeff[v][15][0];
-          errorCoeff[v] = error;
-        }
-        break;
-      default:
-        printf("Error : Computation of error coefficients is not implemented for this solution "
-               "polynomial degree (%d).\n",
-               _degSol);
+
+    // Number of derivatives of the highest order
+    int nDerivatives = pow(2, _degSol+1);
+    std::vector<int> target(nDerivatives);
+
+    // High order derivatives contributes to the
+    // entry in the error vector according to
+    // its y exponent:
+    // Example for cubic homogeneous polynomial:
+    // error[0] = x^3 * y^0 coefficient
+    // error[1] = x^2 * y^1 coefficient
+    // error[2] = x^1 * y^2 coefficient
+    // error[3] = x^0 * y^3 coefficient
+    for(int i = 0; i < nDerivatives; ++i){
+      int ny = 0;
+      numYExponents(i, nDerivatives, ny);
+      target[i] = ny;
     }
-  } else {
-    feErrorMsg(FE_STATUS_ERROR, "Cannot compute error polynomials for dim = %d", _dim);
-    exit(-1);
+
+    // Number of computed derivatives of lower order
+    int offset = pow(2, _degSol+2) - 2 - nDerivatives;
+
+    for(auto v : vertices) {
+      std::fill(error.begin(), error.end(), 0.);
+      for(int i = 0; i < nDerivatives; ++i){
+        error[ target[i] ] += derivativeCoeff[v][offset + i][0];
+      }
+      errorCoeff[v] = error;
+    }
   }
 }
 
@@ -872,5 +873,6 @@ feNewRecovery::feNewRecovery(feSpace *space, feMesh *mesh, feSolution *sol,
 
   if(_dim > 1) fbOut.close();
 
-  this->computeErrorPolynomials();
+  // Compute coefficients of the homogeneous error polynomials
+  this->computeHomogeneousErrorPolynomials();
 }
