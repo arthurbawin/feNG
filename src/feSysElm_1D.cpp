@@ -1,5 +1,4 @@
 #include "feSysElm.h"
-#include "feSysElm_Ext.h"
 #include "feBilinearForm.h"
 
 // -----------------------------------------------------------------------------

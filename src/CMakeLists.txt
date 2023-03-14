@@ -4,7 +4,6 @@ set(feNG_SRC
     feBilinearForm.cpp
     feCncGeo.cpp
     feCompressedRowStorage.cpp
-    feCurvedAdapt.cpp
     feEigenProblem.cpp
     feExporter.cpp
     feGraphics.cpp
@@ -35,7 +34,6 @@ set(feNG_SRC
     feSpace_1D.cpp
     feSpace_2D.cpp
     feSysElm.cpp
-    feSysElm_0D.cpp
     feSysElm_1D.cpp
     feSysElm_2D.cpp
     feTriangle.cpp
@@ -57,7 +55,6 @@ set(feNG_API
     feBilinearForm.h
     feCncGeo.h
     feCompressedRowStorage.h
-    feCurvedAdapt.h
     feEdge.h
     feEigenProblem.h
     feElement.h
@@ -84,7 +81,6 @@ set(feNG_API
     feSolver.h
     feSpace.h
     feSysElm.h
-    feSysElm_Ext.h
     feTriangle.h
     feVertex.h
     glfem.h)

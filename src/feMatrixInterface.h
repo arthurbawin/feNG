@@ -1,6 +1,7 @@
 #ifndef _FEMETRICINTERFACE_
 #define _FEMETRICINTERFACE_
 
+#include "feNG.h"
 #include <memory>
 
 // A small interface for fixed sizes/small matrices to avoid

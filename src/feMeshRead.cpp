@@ -1,7 +1,6 @@
 #include "feMesh.h"
 #include "feElement.h"
 #include "feTriangle.h"
-#include "feLine.h"
 
 #include <iostream>
 #include <fstream>
