@@ -52,8 +52,8 @@ public:
 
 private:
   void writeHeader(std::ostream &output);
-  void writeNodes(std::ostream &output, feCncGeo *cnc);
-  void writeElementsConnectivity(std::ostream &output, feCncGeo *cnc);
+  void writeNodes(std::ostream &output);
+  void writeElementsConnectivity(std::ostream &output);
   void writeField(std::ostream &output, feCncGeo *cnc, feSpace *intSpace, std::string fieldID,
                   bool loopOverCnc = false);
   void writeEigenvector(std::ostream &output, feCncGeo *cnc, feSpace *intSpace, std::string fieldID,

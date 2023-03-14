@@ -300,7 +300,7 @@ double feNorm::computeH1SemiNorm(int p, bool error)
   std::vector<double> gradu(3, 0.);
 
   if(error && _vectorSolution == nullptr) {
-    feErrorMsg(FE_STATUS_ERROR, "Cannot compute Lp norm of error function"
+    feErrorMsg(FE_STATUS_ERROR, "Cannot compute H1 seminorm of error function"
                                 " because exact solution is NULL");
     exit(-1);
   }

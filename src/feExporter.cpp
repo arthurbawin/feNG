@@ -65,7 +65,7 @@ void feExporterVTK::writeHeader(std::ostream &output)
   output << "ASCII\n";
 }
 
-void feExporterVTK::writeNodes(std::ostream &output, feCncGeo *cnc)
+void feExporterVTK::writeNodes(std::ostream &output)
 {
   int nVertices = _mesh->getNumVertices();
   output << "DATASET UNSTRUCTURED_GRID\n";
@@ -98,44 +98,64 @@ void feExporterVTK::writeNodes(std::ostream &output, feCncGeo *cnc)
   _writtenNodes = cnt;
 }
 
-void feExporterVTK::writeElementsConnectivity(std::ostream &output, feCncGeo *cnc)
+void feExporterVTK::writeElementsConnectivity(std::ostream &output)
 {
-  int nElm = cnc->getNumElements();
-  int nNodePerElem = _addP2Nodes ? 6 : cnc->getNumVerticesPerElem();
-  output << "CELLS " << nElm << " " << nElm * (nNodePerElem + 1) << std::endl;
-  for(int iElm = 0; iElm < nElm; ++iElm) {
-    output << nNodePerElem << " ";
+  int nElm = 0;
+  for(auto *cnc : _mesh->getCncGeo()){
+    if(cnc->getDim() == 2){
+      nElm += cnc->getNumElements();
+    }
+  }
 
-    if(_addP2Nodes) {
-      // Mid-points were added and do not exist in the mesh
-      // Vertices
-      for(int j = 0; j < 3; ++j) {
-        int node = cnc->getVertexConnectivity(iElm, j);
-        output << node << " ";
-      }
-      // Edges
-      for(int j = 0; j < 3; ++j) {
-        int iEdge = fabs(cnc->getEdgeConnectivity(iElm, j));
-        int node = edgeToMid[iEdge];
-        output << node << " ";
-      }
-    } else {
-      // Regular case : all nodes exist in the mesh
-      for(int j = 0; j < nNodePerElem; ++j) {
-        int node = cnc->getVertexConnectivity(iElm, j);
-        output << node << " ";
+  int nNodePerElem = _addP2Nodes ? 6 : 3;
+
+  // Write elements connectivities for each cnc wih dim = 2
+  output << "CELLS " << nElm << " " << nElm * (nNodePerElem + 1) << std::endl;
+
+  for(auto *cnc : _mesh->getCncGeo()){
+    if(cnc->getDim() == 2){
+      for(int iElm = 0; iElm < cnc->getNumElements(); ++iElm) {
+        output << nNodePerElem << " ";
+
+        if(_addP2Nodes) {
+          // Mid-points were added and do not exist in the mesh
+          // Vertices
+          for(int j = 0; j < 3; ++j) {
+            int node = cnc->getVertexConnectivity(iElm, j);
+            output << node << " ";
+          }
+          // Edges
+          for(int j = 0; j < 3; ++j) {
+            int iEdge = fabs(cnc->getEdgeConnectivity(iElm, j));
+            int node = edgeToMid[iEdge];
+            output << node << " ";
+          }
+        } else {
+          // Regular case : all nodes exist in the mesh
+          for(int j = 0; j < cnc->getNumVerticesPerElem(); ++j) {
+            int node = cnc->getVertexConnectivity(iElm, j);
+            output << node << " ";
+          }
+        }
+
+        output << std::endl;
       }
     }
-
-    output << std::endl;
   }
+
+  // Write element types
   output << "CELL_TYPES " << nElm << std::endl;
-  int vtkElem = cncToVTKmap[cnc->getInterpolant()];
-  for(int iElm = 0; iElm < nElm; ++iElm) {
-    if(_addP2Nodes)
-      output << VTK_QUADRATIC_TRIANGLE << std::endl;
-    else
-      output << vtkElem << std::endl;
+  
+  for(auto *cnc : _mesh->getCncGeo()){
+    if(cnc->getDim() == 2){
+      int vtkElem = cncToVTKmap[cnc->getInterpolant()];
+      for(int iElm = 0; iElm < cnc->getNumElements(); ++iElm) {
+        if(_addP2Nodes)
+          output << VTK_QUADRATIC_TRIANGLE << std::endl;
+        else
+          output << vtkElem << std::endl;
+      }
+    }
   }
 }
 
@@ -247,14 +267,6 @@ feStatus feExporterVTK::writeStep(std::string fileName)
       }
     }
 
-    // For now we only print one domain connectivity, assuming all fields are defined on the same
-    // connectivity. To fix this, we have to join the connectivities : check which nodes are shared,
-    // and use a global numbering.
-    if(cncToExport.size() > 1) {
-      feWarning("Multiple domains visualization is not implemented. Only the first domain will be "
-                "exported.");
-    }
-
     // Grab the connectivity from any matching fespace
     feCncGeo *cnc;
     for(feSpace *fS : spacesToExport) {
@@ -292,8 +304,8 @@ feStatus feExporterVTK::writeStep(std::string fileName)
     _addP2Nodes = (geometryPolynomialDegree == 1) && (highestFieldPolynomialDegree >= 2);
 
     // Write nodes and elements
-    writeNodes(output, cnc);
-    writeElementsConnectivity(output, cnc);
+    writeNodes(output);
+    writeElementsConnectivity(output);
 
     output << "POINT_DATA " << _writtenNodes << std::endl;
     output << "FIELD FieldData " << spacesToExport.size() << std::endl;
@@ -468,8 +480,9 @@ feStatus feExporterVTK::writeEigenvectors(std::string fileName)
 
     size_t nEigenPairs = _eigenProblem->getNumConvergedPairs();
 
-    writeNodes(output, cnc);
-    writeElementsConnectivity(output, cnc);
+    writeNodes(output);
+    writeElementsConnectivity(output);
+
     output << "POINT_DATA " << _writtenNodes << std::endl;
     output << "FIELD FieldData " << nEigenPairs << std::endl;
 
