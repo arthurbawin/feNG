@@ -145,7 +145,7 @@ void feExporterVTK::writeElementsConnectivity(std::ostream &output)
 
   // Write element types
   output << "CELL_TYPES " << nElm << std::endl;
-  
+
   for(auto *cnc : _mesh->getCncGeo()){
     if(cnc->getDim() == 2){
       int vtkElem = cncToVTKmap[cnc->getInterpolant()];
@@ -159,13 +159,107 @@ void feExporterVTK::writeElementsConnectivity(std::ostream &output)
   }
 }
 
+// void feExporterVTK::writeField(std::ostream &output, feCncGeo *cnc, feSpace *intSpace,
+//                                std::string fieldID, bool loopOverCnc)
+// {
+//   std::vector<double> &solVec = _sol->getSolutionReference();
+//   std::vector<feInt> adr(intSpace->getNumFunctions());
+//   std::vector<double> sol(intSpace->getNumFunctions());
+//   // int nVertices = loopOverCnc ? cnc->getNumVertices() : _mesh->getNumVertices();
+//   int nVertices = _mesh->getNumVertices();
+//   feNumber *n = _metaNumber->getNumbering(fieldID);
+//   int nComponents = intSpace->getNumComponents();
+
+//   // output << "POINT_DATA " << _writtenNodes << std::endl;
+//   // output << "SCALARS " << fieldID << " double 1" << std::endl;
+//   // output << "LOOKUP_TABLE default" << std::endl;
+
+//   output << fieldID << " " << nComponents << " " << _writtenNodes << " double" << std::endl;
+
+//   int iDOF, elm;
+//   Vertex *v;
+//   std::vector<double> x;
+//   std::vector<double> res(3, 0.);
+//   double r[3], val;
+
+//   // Write field(s) to a text file
+//   std::string fileName = "solution" + fieldID + ".txt";
+//   FILE *f = fopen(fileName.c_str(), "w");
+//   for(int iVertex = 0; iVertex < nVertices; ++iVertex) {
+//     // Loop over components for vector-valued FE spaces
+//     for(int iComp = 0; iComp < nComponents; ++iComp) {
+//       iDOF = n->getDOFNumberAtVertex(iVertex, iComp);
+
+//       if(iDOF >= 0) {
+//         // There is a degree of freedom at this mesh vertex
+
+//         // FIXME: This is only valid for Lagrange type elements,
+//         // where to DOF is the function evaluation. We should interpolate.
+//         output << solVec[iDOF] << std::endl;
+
+//       } else {
+//         /* No dof associated to the mesh vertex.
+//         Interpolate solution at vertex. */
+//         v = _mesh->getVertex(iVertex);
+//         x = {v->x(), v->y(), v->z()};
+//         _mesh->locateVertex(x.data(), elm, r);
+//         intSpace->initializeAddressingVector(elm, adr);
+
+//         for(size_t i = 0; i < adr.size(); ++i) {
+//           sol[i] = solVec[adr[i]];
+//         }
+
+//         if(intSpace->useGlobalFunctions()) {
+//           val = intSpace->interpolateField(sol, elm, x);
+//         } else {
+//           val = intSpace->interpolateField(sol, r);
+//         }
+
+//         output << val << std::endl;
+//       }
+//       fprintf(f, "%+-16.16e\n", solVec[iDOF]);
+//     }
+//   }
+//   fclose(f);
+
+//   /* Write the additional P2 nodes. Interpolation is not required if the
+//   field is quadratic, but it's easier to just interpolate for all fields. */
+//   if(_addP2Nodes) {
+//     /* Additional nodes are added in the order of the edges,
+//     like in feExporterVTK::writeNodes. Both must be modified together. */
+//     Vertex *v0, *v1;
+//     for(auto e : _mesh->_edges) {
+//       v0 = e.getVertex(0);
+//       v1 = e.getVertex(1);
+//       x = {(v0->x() + v1->x()) / 2., (v0->y() + v1->y()) / 2., (v0->z() + v1->z()) / 2.};
+//       _mesh->locateVertex(x.data(), elm, r);
+//       intSpace->initializeAddressingVector(elm, adr);
+//       for(size_t i = 0; i < adr.size(); ++i) sol[i] = solVec[adr[i]];
+//       if(intSpace->useGlobalFunctions()) {
+//         val = intSpace->interpolateField(sol, elm, x);
+//         output << val << std::endl;
+//       } else {
+//         if(nComponents > 1) {
+//           intSpace->interpolateVectorField(sol, nComponents, r, res);
+//           for(int i = 0; i < nComponents; ++i) output << res[i] << std::endl;
+//         } else {
+//           val = intSpace->interpolateField(sol, r);
+//           // output << val << std::endl;
+//           output << 1.17 << std::endl;
+//         }
+//       }
+//     }
+//   }
+// }
+
 void feExporterVTK::writeField(std::ostream &output, feCncGeo *cnc, feSpace *intSpace,
                                std::string fieldID, bool loopOverCnc)
 {
   std::vector<double> &solVec = _sol->getSolutionReference();
   std::vector<feInt> adr(intSpace->getNumFunctions());
   std::vector<double> sol(intSpace->getNumFunctions());
-  int nVertices = loopOverCnc ? cnc->getNumVertices() : _mesh->getNumVertices();
+  // int nVertices = loopOverCnc ? cnc->getNumVertices() : _mesh->getNumVertices();
+  int nVertices = _mesh->getNumVertices();
   feNumber *n = _metaNumber->getNumbering(fieldID);
   int nComponents = intSpace->getNumComponents();
 
@@ -182,8 +276,9 @@ void feExporterVTK::writeField(std::ostream &output, feCncGeo *cnc, feSpace *int
   double r[3], val;
 
   // Write field(s) to a text file
-  std::string fileName = "solution" + fieldID + ".txt";
-  FILE *f = fopen(fileName.c_str(), "w");
+  // std::string fileName = "solution" + fieldID + ".txt";
+  // FILE *f = fopen(fileName.c_str(), "w");
+
   for(int iVertex = 0; iVertex < nVertices; ++iVertex) {
     // Loop over components for vector-valued FE spaces
     for(int iComp = 0; iComp < nComponents; ++iComp) {
@@ -216,10 +311,10 @@ void feExporterVTK::writeField(std::ostream &output, feCncGeo *cnc, feSpace *int
 
         output << val << std::endl;
       }
-      fprintf(f, "%+-16.16e\n", solVec[iDOF]);
+      // fprintf(f, "%+-16.16e\n", solVec[iDOF]);
     }
   }
-  fclose(f);
+  // fclose(f);
 
   /* Write the additional P2 nodes. Interpolation is not required if the
   field is quadratic, but it's easier to just interpolate for all fields. */
@@ -260,10 +355,12 @@ feStatus feExporterVTK::writeStep(std::string fileName)
     // For now, we only print spaces of maximal dimension (non boundary)
     std::vector<feSpace *> spacesToExport;
     std::set<std::string> cncToExport;
+    std::set<std::string> fieldsToExport;
     for(feSpace *fS : _spaces) {
-      if(fS->getDim() == _mesh->getDim()) {
+      if(fS->getDim() == 2) {
         spacesToExport.push_back(fS);
         cncToExport.insert(fS->getCncGeoID());
+        fieldsToExport.insert(fS->getFieldID());
       }
     }
 
@@ -308,11 +405,14 @@ feStatus feExporterVTK::writeStep(std::string fileName)
     writeElementsConnectivity(output);
 
     output << "POINT_DATA " << _writtenNodes << std::endl;
-    output << "FIELD FieldData " << spacesToExport.size() << std::endl;
+    output << "FIELD FieldData " << fieldsToExport.size() << std::endl;
     // Write the field associated to each fespace in spacesToExport
     for(feSpace *fS : spacesToExport) {
+      feInfo("Exporting %s - %s", fS->getFieldID().data(), fS->getCncGeoID().data());
       writeField(output, cnc, fS, fS->getFieldID(), false);
+      break;
     }
+    // writeField(output, cnc, fS, fS->getFieldID(), false);
 
     fb.close();
   } else {
