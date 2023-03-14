@@ -29,34 +29,13 @@ typedef enum {
   GLS_STOKES_STABILIZATION,
   GLS_NS_STABILIZATION,
 
-  // 0D weak forms
-  STIFFSPRING_0D,
-  STIFF2_0D,
-  STIFF3_0D,
-  WEAKBC_0D,
-  WEAKBC_EDO1_0D,
-  WEAKBC_EDO1_V2_0D,
-  WEAKBC_EDO2_0D,
-  MASS_0D,
-  SOURCE_0D,
-  SOURCE_CROSSED_0D,
-  EULER_0D_FLUX,
-
   // 1D weak forms
-  WEAKBC_EDO1_1D,
   NEUMANN_1D,
-  ADVECTION_1D,
-  DG_ADVECTION_1D,
   SUPG_STABILIZATION_1D,
-  BEAM_1D,
-  EULER_1D,
 
   // 2D weak forms
-  ADVECTION_2D,
   SUPG_STABILIZATION_2D,
-  STOKES_2D,
-  NAVIERSTOKES_2D,
-  EULER_2D
+
 } elementSystemType;
 
 inline const std::string toString(elementSystemType t)
@@ -98,28 +77,10 @@ inline const std::string toString(elementSystemType t)
       return "ZERO_BLOCK";
     case NEUMANN_1D:
       return "NEUMANN_1D";
-    case ADVECTION_1D:
-      return "ADVECTION_1D";
-    case DG_ADVECTION_1D:
-      return "DG_ADVECTION_1D";
     case SUPG_STABILIZATION_1D:
       return "SUPG_STABILIZATION_1D";
-    case BEAM_1D:
-      return "BEAM_1D";
-    case EULER_1D:
-      return "EULER_1D";
-    case EULER_0D_FLUX:
-      return "EULER_0D_FLUX";
-    case ADVECTION_2D:
-      return "ADVECTION_2D";
-    case STOKES_2D:
-      return "STOKES_2D";
-    case NAVIERSTOKES_2D:
-      return "NAVIERSTOKES_2D";
     case SUPG_STABILIZATION_2D:
       return "SUPG_STABILIZATION_2D";
-    case EULER_2D:
-      return "EULER_2D";
     default:
       return "[Unknown elementSystemType]";
   }
@@ -517,43 +478,6 @@ public:
   CLONEABLE(feSysElm_DivergenceNewtonianStress)
 };
 
-//
-// Galerkin least-squares stabilization for the Stokes equations
-//
-class feSysElm_GLS_Stokes_Stab : public feSysElm
-{
-protected:
-  feFunction *_coeff;
-  feFunction *_density;
-  feFunction *_viscosity;
-  feVectorFunction *_volumeForce;
-  int _idU;
-  int _idP;
-  int _nFunctionsU;
-  int _nFunctionsP;
-  std::vector<double> _f;
-  std::vector<double> _residual;
-  std::vector<double> _u;
-  std::vector<double> _gradu;
-  std::vector<double> _gradp;
-  std::vector<double> _gradPhiU;
-  std::vector<double> _gradPhiP;
-
-public:
-  feSysElm_GLS_Stokes_Stab(feFunction *coeff, feFunction *density, feFunction *viscosity,
-                           feVectorFunction *volumeForce)
-    : feSysElm(-1, 2, GLS_STOKES_STABILIZATION, true), _coeff(coeff), _density(density),
-      _viscosity(viscosity), _volumeForce(volumeForce)
-  {
-    _computeMatrixWithFD = true;
-  };
-  ~feSysElm_GLS_Stokes_Stab(){};
-  void createElementarySystem(std::vector<feSpace *> &space);
-  void computeAe(feBilinearForm *form);
-  void computeBe(feBilinearForm *form);
-  CLONEABLE(feSysElm_GLS_Stokes_Stab)
-};
-
 // Weak form of grad(f) cdot v, with f scalar and v vector-valued
 //
 // Integral of -f div(v)
@@ -701,38 +625,6 @@ public:
 };
 
 //
-// 1D Advection term weak form
-// Matrix and residual
-//
-//    /
-//  - | c * dudx * v dx
-//    /
-//
-// with c an imposed velocity field
-//
-// # fields: 1 (FE solution and test functions)
-//                        U
-// Fields layout: phi_U [   ]
-//
-class feSysElm_1D_Advection : public feSysElm
-{
-protected:
-  feFunction *_cVelocity;
-  int _idU;
-  std::vector<double> _feU;
-  std::vector<double> _feUdx;
-
-public:
-  feSysElm_1D_Advection(feFunction *cVelocity)
-    : feSysElm(1, 1, ADVECTION_1D, true), _cVelocity(cVelocity){};
-  ~feSysElm_1D_Advection() {}
-  void createElementarySystem(std::vector<feSpace *> &space);
-  void computeAe(feBilinearForm *form);
-  void computeBe(feBilinearForm *form);
-  CLONEABLE(feSysElm_1D_Advection)
-};
-
-//
 // 1D SUPG stabilization for the advection-diffusion equation.
 // Matrix and residual
 //
@@ -809,145 +701,40 @@ public:
 };
 
 //
-// 1D DG discretization of the advection weak form.
-// Matrix and residual
+// Galerkin least-squares stabilization for the Stokes equations
 //
-// # fields: 1 (FE solution and test functions)
-//
-// Parameters:
-//                        U
-// Fields layout: phi_U [   ]
-//
-class feSysElm_1D_DG_Advection : public feSysElm
+class feSysElm_GLS_Stokes_Stab : public feSysElm
 {
 protected:
-  feVectorFunction *_velocity;
-  feFunction *_pdeFlux;
-  feFunction *_pdedFlux;
+  feFunction *_coeff;
+  feFunction *_density;
+  feFunction *_viscosity;
+  feVectorFunction *_volumeForce;
   int _idU;
-  std::vector<double> _feU;
-  std::vector<double> _feUdx;
-
-public:
-  feSysElm_1D_DG_Advection(feVectorFunction *velocity, feFunction *pdeFlux, feFunction *pdedFlux)
-    : feSysElm(1, 1, DG_ADVECTION_1D, true), _velocity(velocity), _pdeFlux(pdeFlux),
-      _pdedFlux(pdedFlux)
-  {
-    _computeMatrixWithFD = true;
-  };
-  ~feSysElm_1D_DG_Advection() {}
-  void createElementarySystem(std::vector<feSpace *> &space);
-  void computeAe(feBilinearForm *form);
-  void computeBe(feBilinearForm *form);
-  CLONEABLE(feSysElm_1D_DG_Advection)
-};
-
-class feSysElm_1D_Beam : public feSysElm
-{
-protected:
-  feFunction *_fct;
-  double _par;
-  int _idU;
-  std::vector<double> _feU;
-  std::vector<double> _feUdx2;
-
-public:
-  feSysElm_1D_Beam(double EI) : feSysElm(1, 1, BEAM_1D, true), _par(EI)
-  {
-    _computeMatrixWithFD = true;
-  };
-  ~feSysElm_1D_Beam() {}
-
-  void createElementarySystem(std::vector<feSpace *> &space);
-  void computeAe(feBilinearForm *form);
-  void computeBe(feBilinearForm *form);
-  CLONEABLE(feSysElm_1D_Beam)
-};
-
-class feSysElm_2D_Advection : public feSysElm
-{
-protected:
-  // Imposed velocity field
-  feVectorFunction *_velocity;
-  int _idU;
-  std::vector<double> _feU;
-  std::vector<double> _feUdx;
-  std::vector<double> _feUdy;
-  std::vector<double> _dxdr;
-  std::vector<double> _dxds;
-
-public:
-  feSysElm_2D_Advection(feVectorFunction *velocity)
-    : feSysElm(2, 1, ADVECTION_2D, true), _velocity(velocity)
-  {
-    _computeMatrixWithFD = true;
-  };
-  ~feSysElm_2D_Advection() {}
-
-  void createElementarySystem(std::vector<feSpace *> &space);
-  void computeAe(feBilinearForm *form);
-  void computeBe(feBilinearForm *form);
-  CLONEABLE(feSysElm_2D_Advection)
-};
-
-class feSysElm_2D_Stokes : public feSysElm
-{
-protected:
-  feVectorFunction *_fct;
-  std::vector<double> &_par;
-  int _idU;
-  int _idV;
   int _idP;
-  std::vector<double> _feU;
-  std::vector<double> _feUdx;
-  std::vector<double> _feUdy;
-  std::vector<double> _feV;
-  std::vector<double> _feVdx;
-  std::vector<double> _feVdy;
-  std::vector<double> _feP;
-  std::vector<double> _dxdr;
-  std::vector<double> _dxds;
+  int _nFunctionsU;
+  int _nFunctionsP;
+  std::vector<double> _f;
+  std::vector<double> _residual;
+  std::vector<double> _u;
+  std::vector<double> _gradu;
+  std::vector<double> _gradp;
+  std::vector<double> _gradPhiU;
+  std::vector<double> _gradPhiP;
 
 public:
-  feSysElm_2D_Stokes(std::vector<double> &par, feVectorFunction *fct)
-    : feSysElm(2, 3, STOKES_2D, true), _fct(fct), _par(par){};
-  ~feSysElm_2D_Stokes() {}
-
+  feSysElm_GLS_Stokes_Stab(feFunction *coeff, feFunction *density, feFunction *viscosity,
+                           feVectorFunction *volumeForce)
+    : feSysElm(-1, 2, GLS_STOKES_STABILIZATION, true), _coeff(coeff), _density(density),
+      _viscosity(viscosity), _volumeForce(volumeForce)
+  {
+    _computeMatrixWithFD = true;
+  };
+  ~feSysElm_GLS_Stokes_Stab(){};
   void createElementarySystem(std::vector<feSpace *> &space);
   void computeAe(feBilinearForm *form);
   void computeBe(feBilinearForm *form);
-  CLONEABLE(feSysElm_2D_Stokes)
-};
-
-class feSysElm_2D_NavierStokes : public feSysElm
-{
-protected:
-  feVectorFunction *_fct;
-  feFunction *_viscosityFct;
-  std::vector<double> &_par;
-  int _idU;
-  int _idV;
-  int _idP;
-  std::vector<double> _feU;
-  std::vector<double> _feUdx;
-  std::vector<double> _feUdy;
-  std::vector<double> _feV;
-  std::vector<double> _feVdx;
-  std::vector<double> _feVdy;
-  std::vector<double> _feP;
-  std::vector<double> _dxdr;
-  std::vector<double> _dxds;
-
-public:
-  feSysElm_2D_NavierStokes(std::vector<double> &par, feVectorFunction *fct,
-                           feFunction *viscosityFct = nullptr)
-    : feSysElm(2, 3, NAVIERSTOKES_2D, true), _fct(fct), _par(par), _viscosityFct(viscosityFct){};
-  ~feSysElm_2D_NavierStokes() {}
-
-  void createElementarySystem(std::vector<feSpace *> &space);
-  void computeAe(feBilinearForm *form);
-  void computeBe(feBilinearForm *form);
-  CLONEABLE(feSysElm_2D_NavierStokes)
+  CLONEABLE(feSysElm_GLS_Stokes_Stab)
 };
 
 #endif
