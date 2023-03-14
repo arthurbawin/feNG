@@ -4,7 +4,6 @@ project(feNG)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-option(ENABLE_METRIC        "Enable metric tensor computations" OFF)
 option(ENABLE_OPENMP        "Enable OpenMP"                     OFF)
 option(ENABLE_MPI           "Enable MPI"                        ON )
 option(ENABLE_PETSC         "Enable PETSc"                      ON )

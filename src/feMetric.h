@@ -149,50 +149,50 @@ public:
                       const std::vector<std::size_t> &nodeTags, const std::vector<double> &coord,
                       double sizeFactor, int nPoints);
 
-  // // With gradient wrt to physical coordinates x,y
-  // void interpolateMetricP1WithDerivatives(const double *x, Eigen::Matrix2d &M,
-  //                                         Eigen::Matrix2d &dMdx, Eigen::Matrix2d &dMdy);
+  // With gradient wrt to physical coordinates x,y
+  void interpolateMetricP1WithDerivatives(const double *x, Eigen::Matrix2d &M,
+                                          Eigen::Matrix2d &dMdx, Eigen::Matrix2d &dMdy);
 
-  // // With gradient of M wrt 2d position alpha (a1,a2)
-  // void interpolateMetricP1(const double *x, Eigen::Matrix2d &M, Eigen::Matrix2d &sumduda1M,
-  //                          Eigen::Matrix2d &sumduda2M);
-  // void interpolateMetricAndDerivativeOnP2Edge(const double t, const Eigen::Matrix2d &M11,
-  //                                             const Eigen::Matrix2d &M20,
-  //                                             const Eigen::Matrix2d &M02,
-  //                                             const Eigen::Matrix2d &sumduda1M,
-  //                                             const Eigen::Matrix2d &sumduda2M, Eigen::Matrix2d
-  //                                             &M, Eigen::Matrix2d &dMda1, Eigen::Matrix2d
-  //                                             &dMda2);
+  // With gradient of M wrt 2d position alpha (a1,a2)
+  void interpolateMetricP1(const double *x, Eigen::Matrix2d &M, Eigen::Matrix2d &sumduda1M,
+                           Eigen::Matrix2d &sumduda2M);
+  void interpolateMetricAndDerivativeOnP2Edge(const double t, const Eigen::Matrix2d &M11,
+                                              const Eigen::Matrix2d &M20,
+                                              const Eigen::Matrix2d &M02,
+                                              const Eigen::Matrix2d &sumduda1M,
+                                              const Eigen::Matrix2d &sumduda2M, Eigen::Matrix2d
+                                              &M, Eigen::Matrix2d &dMda1, Eigen::Matrix2d
+                                              &dMda2);
 
-  // // With derivative of M wrt 1D alpha (dMda)
-  // void interpolateMetricP1(const double *x, const double *gammaOrth, Eigen::Matrix2d &M,
-  //                          Eigen::Matrix2d &sumdudaM);
-  // void interpolateMetricAndDerivativeOnP2Edge(double t, const Eigen::Matrix2d &M11,
-  //                                             const Eigen::Matrix2d &M20,
-  //                                             const Eigen::Matrix2d &M02,
-  //                                             const Eigen::Matrix2d &sumdudaM, Eigen::Matrix2d
-  //                                             &M, Eigen::Matrix2d &dMda);
+  // With derivative of M wrt 1D alpha (dMda)
+  void interpolateMetricP1(const double *x, const double *gammaOrth, Eigen::Matrix2d &M,
+                           Eigen::Matrix2d &sumdudaM);
+  void interpolateMetricAndDerivativeOnP2Edge(double t, const Eigen::Matrix2d &M11,
+                                              const Eigen::Matrix2d &M20,
+                                              const Eigen::Matrix2d &M02,
+                                              const Eigen::Matrix2d &sumdudaM, Eigen::Matrix2d
+                                              &M, Eigen::Matrix2d &dMda);
 };
 
-// void interpolateMetricP1WithDerivativesWrapper(void *metric, const double *x, Eigen::Matrix2d &M,
-//                                                Eigen::Matrix2d &dMdx, Eigen::Matrix2d &dMdy);
+void interpolateMetricP1WithDerivativesWrapper(void *metric, const double *x, Eigen::Matrix2d &M,
+                                               Eigen::Matrix2d &dMdx, Eigen::Matrix2d &dMdy);
 
-// void interpolateMetricP1Wrapper(void *metric, const double *x, Eigen::Matrix2d &M,
-//                                 Eigen::Matrix2d &sumduda1M, Eigen::Matrix2d &sumduda2M);
+void interpolateMetricP1Wrapper(void *metric, const double *x, Eigen::Matrix2d &M,
+                                Eigen::Matrix2d &sumduda1M, Eigen::Matrix2d &sumduda2M);
 
-// void interpolateMetricP1Wrapper1D(void *metric, const double *x, const double *gammaOrth,
-//                                   Eigen::Matrix2d &M, Eigen::Matrix2d &sumdudaM);
+void interpolateMetricP1Wrapper1D(void *metric, const double *x, const double *gammaOrth,
+                                  Eigen::Matrix2d &M, Eigen::Matrix2d &sumdudaM);
 
-// void interpolateMetricAndDerivativeOnP2EdgeWrapper(
-//   void *metric, const double t, const Eigen::Matrix2d &M11, const Eigen::Matrix2d &M20,
-//   const Eigen::Matrix2d &M02, const Eigen::Matrix2d &sumduda1M, const Eigen::Matrix2d &sumduda2M,
-//   Eigen::Matrix2d &M, Eigen::Matrix2d &dMda1, Eigen::Matrix2d &dMda2);
+void interpolateMetricAndDerivativeOnP2EdgeWrapper(
+  void *metric, const double t, const Eigen::Matrix2d &M11, const Eigen::Matrix2d &M20,
+  const Eigen::Matrix2d &M02, const Eigen::Matrix2d &sumduda1M, const Eigen::Matrix2d &sumduda2M,
+  Eigen::Matrix2d &M, Eigen::Matrix2d &dMda1, Eigen::Matrix2d &dMda2);
 
-// void interpolateMetricAndDerivativeOnP2EdgeWrapper1D(void *metric, const double t,
-//                                                      const Eigen::Matrix2d &M11,
-//                                                      const Eigen::Matrix2d &M20,
-//                                                      const Eigen::Matrix2d &M02,
-//                                                      const Eigen::Matrix2d &sumdudaM,
-//                                                      Eigen::Matrix2d &M, Eigen::Matrix2d &dMda);
+void interpolateMetricAndDerivativeOnP2EdgeWrapper1D(void *metric, const double t,
+                                                     const Eigen::Matrix2d &M11,
+                                                     const Eigen::Matrix2d &M20,
+                                                     const Eigen::Matrix2d &M02,
+                                                     const Eigen::Matrix2d &sumdudaM,
+                                                     Eigen::Matrix2d &M, Eigen::Matrix2d &dMda);
 
 #endif

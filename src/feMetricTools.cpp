@@ -1,5 +1,4 @@
 #include "feMetricTools.h"
-#include "feSimplex.h"
 
 #if defined(HAVE_GMSH)
 #include "gmsh.h"

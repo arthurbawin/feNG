@@ -7,7 +7,7 @@
 // A small interface for fixed sizes/small matrices to avoid
 // including Eigen everywhere and slowing down compilation
 //
-// IMPORTANT: Classes use the PIMPL idiom and are not copyable
+// IMPORTANT: Classes use the PIMPL idiom, hence instantiated objets are *not* copyable
 //
 // "Reference" for copy/move destructors/assignment operators:
 // https://stackoverflow.com/questions/71104545/constructor-
@@ -55,7 +55,6 @@ public:
   Vector(const int size);
 
   // Default, copy/move constructors/assignments
-  // To make insertion in e.g. maps safe
   Vector();
   ~Vector();
   Vector(Vector const &) = delete;
@@ -81,7 +80,6 @@ public:
   SquareMatrix(const int size);
 
   // Default, copy/move constructors/assignments
-  // To make insertion in e.g. maps safe
   SquareMatrix();
   ~SquareMatrix();
   SquareMatrix(SquareMatrix const &) = delete;
