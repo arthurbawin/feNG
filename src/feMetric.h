@@ -8,14 +8,10 @@
 
 #include "STensor3.h"
 
-enum class adaptationMethod {
-  ANISO_P1,
-  ANISO_PN,
-  CURVED_LS,
-  CURVED_EXTREME_SIZES
-};
+enum class adaptationMethod { ANISO_P1, ANISO_PN, CURVED_LS, CURVED_EXTREME_SIZES };
 
-class feMetricOptions {
+class feMetricOptions
+{
 public:
   // These members are default-initialized but should be changed:
   //
@@ -70,7 +66,7 @@ public:
   int directionFieldFromDerivativesOfOrder = 1;
   // Number of points for unit circle discretization
   int nPhi = 51;
-  // Callback that returns true if a point is inside the 
+  // Callback that returns true if a point is inside the
   // domain to be meshed
   bool (*inside)(double *, bool) = nullptr;
 
@@ -102,14 +98,14 @@ protected:
 
   // Ultimately, the "good" type: mapping nodeTags to "Eigen-agnostic" MetricTensors
   std::map<int, MetricTensor> _metricTensorAtNodetags;
-  
-  std::map<const Vertex*, Eigen::Matrix2d> _metricsOnGmshModelP1;
+
+  std::map<const Vertex *, Eigen::Matrix2d> _metricsOnGmshModelP1;
 
   std::map<int, Eigen::Matrix2d> _metricsOnGmshModel_eigen;
 
   // Vertex to nodeTag map (and inverse)
-  std::map<const Vertex*, int> _v2n;
-  std::map<int, const Vertex*> _n2v;
+  std::map<const Vertex *, int> _v2n;
+  std::map<int, const Vertex *> _n2v;
 
   // The tag of the gmsh view in which the metric field is stored (if using Gmsh)
   int _metricViewTag = -1;
@@ -133,24 +129,25 @@ public:
   void metricScaling();
   void metricScalingFromGmshSubstitute();
 
-  template<class MetricType>
+  template <class MetricType>
   void metricScalingFromGmshSubstitute(std::map<int, MetricType> &metrics,
-    const std::vector<size_t> &nodeTags, 
-    double exponentInIntegral, double exponentForDeterminant);
+                                       const std::vector<size_t> &nodeTags,
+                                       double exponentInIntegral, double exponentForDeterminant);
 
   // Intersecter avec un autre feMetric
   void writeSizeFieldSol2D(std::string solFileName);
   void writeSizeFieldSol3D(std::string solFileName);
   void writeSizeFieldGmsh(std::string meshName, std::string metricMeshName);
 
-  template<class MetricType>
-  void drawEllipsoids(const std::string &posFile, 
-  const std::map<const Vertex*, MetricType> &metrics, double sizeFactor, int nPoints);
+  template <class MetricType>
+  void drawEllipsoids(const std::string &posFile,
+                      const std::map<const Vertex *, MetricType> &metrics, double sizeFactor,
+                      int nPoints);
 
-  template<class MetricType>
-  void drawEllipsoids(const std::string &posFile, 
-  std::map<int, MetricType> &metrics, const std::vector<std::size_t> &nodeTags,
-  const std::vector<double> &coord, double sizeFactor, int nPoints);
+  template <class MetricType>
+  void drawEllipsoids(const std::string &posFile, std::map<int, MetricType> &metrics,
+                      const std::vector<std::size_t> &nodeTags, const std::vector<double> &coord,
+                      double sizeFactor, int nPoints);
 
   // // With gradient wrt to physical coordinates x,y
   // void interpolateMetricP1WithDerivatives(const double *x, Eigen::Matrix2d &M,
@@ -163,8 +160,9 @@ public:
   //                                             const Eigen::Matrix2d &M20,
   //                                             const Eigen::Matrix2d &M02,
   //                                             const Eigen::Matrix2d &sumduda1M,
-  //                                             const Eigen::Matrix2d &sumduda2M, Eigen::Matrix2d &M,
-  //                                             Eigen::Matrix2d &dMda1, Eigen::Matrix2d &dMda2);
+  //                                             const Eigen::Matrix2d &sumduda2M, Eigen::Matrix2d
+  //                                             &M, Eigen::Matrix2d &dMda1, Eigen::Matrix2d
+  //                                             &dMda2);
 
   // // With derivative of M wrt 1D alpha (dMda)
   // void interpolateMetricP1(const double *x, const double *gammaOrth, Eigen::Matrix2d &M,
@@ -172,8 +170,8 @@ public:
   // void interpolateMetricAndDerivativeOnP2Edge(double t, const Eigen::Matrix2d &M11,
   //                                             const Eigen::Matrix2d &M20,
   //                                             const Eigen::Matrix2d &M02,
-  //                                             const Eigen::Matrix2d &sumdudaM, Eigen::Matrix2d &M,
-  //                                             Eigen::Matrix2d &dMda);
+  //                                             const Eigen::Matrix2d &sumdudaM, Eigen::Matrix2d
+  //                                             &M, Eigen::Matrix2d &dMda);
 };
 
 // void interpolateMetricP1WithDerivativesWrapper(void *metric, const double *x, Eigen::Matrix2d &M,

@@ -51,6 +51,9 @@ typedef enum {
   BEAM_1D,
   EULER_1D,
 
+  LDG,
+  LDG_EDGE_U,
+
   // 2D weak forms
   ADVECTION_2D,
   SUPG_STABILIZATION_2D,
@@ -1109,6 +1112,63 @@ public:
   void computeAe(feBilinearForm *form);
   void computeBe(feBilinearForm *form);
   CLONEABLE(feSysElm_1D_Coupled)
+};
+
+//
+// Local DG forms
+//
+class feSysElm_LDG1 : public feSysElm
+{
+protected:
+  double _velocity;
+  int _idQ;
+  int _idU;
+  int _nFunctionsQ;
+  int _nFunctionsU;
+  std::vector<double> _phiQ;
+  std::vector<double> _phiU;
+  std::vector<double> _gradPhiQ;
+  std::vector<double> _gradPhiU;
+  std::vector<double> _gradPhi;
+
+public:
+  feSysElm_LDG1(double velocity)
+    : feSysElm(1, 2, LDG_EDGE_U, true), _velocity(velocity)
+  {
+    _computeMatrixWithFD = true;
+  };
+  ~feSysElm_LDG1() {}
+  void createElementarySystem(std::vector<feSpace *> &space);
+  void computeAe(feBilinearForm *form);
+  void computeBe(feBilinearForm *form);
+  CLONEABLE(feSysElm_LDG1)
+};
+
+class feSysElm_LDG2 : public feSysElm
+{
+protected:
+  double _velocity;
+  int _idQ;
+  int _idU;
+  int _nFunctionsQ;
+  int _nFunctionsU;
+  std::vector<double> _phiQ;
+  std::vector<double> _phiU;
+  std::vector<double> _gradPhiQ;
+  std::vector<double> _gradPhiU;
+  std::vector<double> _gradPhi;
+
+public:
+  feSysElm_LDG2(double velocity)
+    : feSysElm(1, 2, LDG, true), _velocity(velocity)
+  {
+    _computeMatrixWithFD = false;
+  };
+  ~feSysElm_LDG2() {}
+  void createElementarySystem(std::vector<feSpace *> &space);
+  void computeAe(feBilinearForm *form);
+  void computeBe(feBilinearForm *form);
+  CLONEABLE(feSysElm_LDG2)
 };
 
 #endif

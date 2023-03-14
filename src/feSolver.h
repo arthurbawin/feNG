@@ -103,7 +103,7 @@ public:
 
   std::vector<double> &getNorm(int iNorm) { return _normL2[iNorm]; };
 
-  feStatus makeStep() { return FE_STATUS_OK; };
+  feStatus makeStep();
   feStatus makeSteps(int nSteps);
 };
 

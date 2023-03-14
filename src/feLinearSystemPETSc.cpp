@@ -365,7 +365,7 @@ void feLinearSystemPETSc::assembleMatrices(feSolution *sol)
   ierr = MatAssemblyEnd(_A, MAT_FINAL_ASSEMBLY);
   CHKERRABORT(PETSC_COMM_WORLD, ierr);
 
-  feInfoCond(FE_VERBOSE > 0, "\t\t\t\tAssembled jacobian matrix in %f s", toc());
+  feInfoCond(FE_VERBOSE > 1, "\t\t\t\tAssembled jacobian matrix in %f s", toc());
 
   // double normMat;
   // ierr = MatNorm(_A, NORM_FROBENIUS, &normMat);
@@ -466,7 +466,7 @@ void feLinearSystemPETSc::assembleResiduals(feSolution *sol)
   ierr = VecAssemblyEnd(_rhs);
   CHKERRABORT(PETSC_COMM_WORLD, ierr);
 
-  feInfoCond(FE_VERBOSE > 0, "\t\t\t\tAssembled global residual in %f s", toc());
+  feInfoCond(FE_VERBOSE > 1, "\t\t\t\tAssembled global residual in %f s", toc());
 
   viewRHS();
 
@@ -542,7 +542,7 @@ bool feLinearSystemPETSc::solve(double *normSolution, double *normRHS, double *n
   tic();
   ierr = KSPSolve(ksp, _rhs, _du);
   CHKERRABORT(PETSC_COMM_WORLD, ierr);
-  feInfoCond(FE_VERBOSE > 0, "\t\t\t\tSolved linear system in %f s", toc());
+  feInfoCond(FE_VERBOSE > 1, "\t\t\t\tSolved linear system in %f s", toc());
 
   KSPConvergedReason reason;
   ierr = KSPGetConvergedReason(ksp, &reason);

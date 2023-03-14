@@ -21,7 +21,7 @@
 #include "../contrib/Eigen/Dense"
 #endif
 
-enum class PPR {RECOVERY, DERIVATIVE};
+enum class PPR { RECOVERY, DERIVATIVE };
 
 // Patches of elements around vertices of a single connectivity
 class feNewPatch
@@ -49,8 +49,8 @@ public:
   std::set<int> &getEdgePatch(int iEdge) { return edgeToElems[iEdge]; }
 };
 
-typedef std::map<int, Eigen::MatrixXd > matMap;
-typedef std::map<int, SquareMatrix > matMap2;
+typedef std::map<int, Eigen::MatrixXd> matMap;
+typedef std::map<int, SquareMatrix> matMap2;
 
 class feNewRecovery
 {
@@ -88,6 +88,7 @@ public:
   std::vector<std::vector<double> > derivAtVertices;
   // All recovered functions evaluated at the edges dof : #derivative : {#edge-1 : val}
   std::vector<std::vector<double> > derivAtEdges;
+
 protected:
   int _degSol; // The degree of the FE solution : degree of recovery = deg of the FE solution +1
   int _degRec;
@@ -115,10 +116,8 @@ protected:
   matMap2 _inverseMassSquareMatrices;
 
 public:
-  feNewRecovery(feSpace *space, feMesh *mesh, feSolution *sol,
-             std::string meshName = "",
-             std::string metricMeshName = "",
-             bool append = false);
+  feNewRecovery(feSpace *space, feMesh *mesh, feSolution *sol, std::string meshName = "",
+                std::string metricMeshName = "", bool append = false);
   feNewRecovery(feSpace *space, feMesh *mesh, std::string recoveryFile);
   ~feNewRecovery() { delete _patch; }
 
@@ -135,22 +134,22 @@ public:
 
   // void writeRecovery(std::string fileName);
 
-  double evaluateRecovery(PPR recoveredField,
-    const int index, const double *x);
-  double evaluateRecoveryAtVertex(PPR recoveredField,
-    const int index, const int vertex);
-  double evaluateRecoveryAtQuadNode(PPR recoveredField,
-    const int index, const int iElm, const int iQuadNode);
+  double evaluateRecovery(PPR recoveredField, const int index, const double *x);
+  double evaluateRecoveryAtVertex(PPR recoveredField, const int index, const int vertex);
+  double evaluateRecoveryAtQuadNode(PPR recoveredField, const int index, const int iElm,
+                                    const int iQuadNode);
 
 private:
   void setDimensions();
   void setPolynomialExponents();
   void computeVertexMassMatrices2D();
   void inverseMassMatrices();
-  void computeRHSAndSolve(int numRecoveries, int nRecoveredFields, int nRecoveredDerivatives, int iDerivative);
-  void computeDerivative(int nRecoveredFields, int indexRecovery, int iDerivative, std::ostream &output);
-  double evaluatePolynomial(PPR recoveredField,
-    const int index, const int vertex, const double *xLoc);
+  void computeRHSAndSolve(int numRecoveries, int nRecoveredFields, int nRecoveredDerivatives,
+                          int iDerivative);
+  void computeDerivative(int nRecoveredFields, int indexRecovery, int iDerivative,
+                         std::ostream &output);
+  double evaluatePolynomial(PPR recoveredField, const int index, const int vertex,
+                            const double *xLoc);
   void computeHomogeneousErrorPolynomials();
   void computeRecoveryAtAllElementDOF(PPR recoveredField, const int index, const int iElm);
 };

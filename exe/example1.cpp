@@ -6,7 +6,7 @@
 
   on a 2D domain subject to Dirichlet boundary conditions.
   The domain is discretized in space using a simplcial (triangle) mesh.
-  
+
 */
 
 #include "feAPI.h"
@@ -66,7 +66,7 @@ int main(int argc, char **argv)
   // These functions are used to initialize the degrees of freedom (unknown and
   // boundary conditions).
   double k = 1.0;
-  feFunction funSol(fSol,    {});
+  feFunction funSol(fSol, {});
   feFunction funSource(fSource, {k});
   feConstantFunction funZero(0.);
   feConstantFunction funOne(1.);
@@ -80,23 +80,27 @@ int main(int argc, char **argv)
   // element space, with parameter "degreeQuadrature" governing the number of quadrature nodes.
   // The feFunction provided is used to initialize the degrees of freedom on the feSpace.
   feSpace *uBord, *uDomaine;
-  feCheck(createFiniteElementSpace(   uBord, &mesh, elementType::LAGRANGE, order, "U",    "Bord", degreeQuadrature, &funSol));
-  feCheck(createFiniteElementSpace(uDomaine, &mesh, elementType::LAGRANGE, order, "U", "Domaine", degreeQuadrature, &funZero));
+  feCheck(createFiniteElementSpace(uBord, &mesh, elementType::LAGRANGE, order, "U", "Bord",
+                                   degreeQuadrature, &funSol));
+  feCheck(createFiniteElementSpace(uDomaine, &mesh, elementType::LAGRANGE, order, "U", "Domaine",
+                                   degreeQuadrature, &funZero));
 
   // Define the set of all finite elements spaces and the set of FE spaces
   // forming the essential (Dirichlet) boundary conditions. The second set must always be
   // a subset of the first.
-  std::vector<feSpace*> spaces = {uBord, uDomaine};
-  std::vector<feSpace*> essentialSpaces = {uBord};
+  std::vector<feSpace *> spaces = {uBord, uDomaine};
+  std::vector<feSpace *> essentialSpaces = {uBord};
 
   // Create the DOFs numbering for each field. Here there is only one field U.
   feMetaNumber numbering(&mesh, spaces, essentialSpaces);
 
-  // Create the solution structure (it is essentially a wrapper containing the solution at each DOF).
+  // Create the solution structure (it is essentially a wrapper containing the solution at each
+  // DOF).
   feSolution sol(numbering.getNbDOFs(), spaces, essentialSpaces);
 
-  // Define the (bi-)linear forms: here we define on the interior a bilinear symmetric "diffusion" form:
-  // 
+  // Define the (bi-)linear forms: here we define on the interior a bilinear symmetric "diffusion"
+  // form:
+  //
   //                         /
   //    feSysElm_Diffusion = | k*(grad phi)_i*(grad phi)_j dx
   //                         /
@@ -109,8 +113,8 @@ int main(int argc, char **argv)
   //
   // There is no form to define on the boundary.
   feBilinearForm *diff, *source;
-  feCheck(createBilinearForm(  diff, {uDomaine}, new feSysElm_Diffusion<2>(&diffusivity)  ));
-  feCheck(createBilinearForm(source, {uDomaine}, new feSysElm_Source(&funSource) ));
+  feCheck(createBilinearForm(diff, {uDomaine}, new feSysElm_Diffusion<2>(&diffusivity)));
+  feCheck(createBilinearForm(source, {uDomaine}, new feSysElm_Source(&funSource)));
 
   // Create the linear system. Assembly of the elementary matrices and RHS is
   // performed in the solve step below ("makeSteps"). Two linear solvers are available:
@@ -134,12 +138,13 @@ int main(int argc, char **argv)
   // Newton-Raphson nonlinear solver (tolerance on the solution correction dx, tolerance on the
   // residual, max number of iterations). Here the PDE is linear in u: the nonlinear solver should
   // converge in 2 iterations. The TimeIntegrator can be STATIONARY, BDF1, BDF2 or a
-  // deferred-correction method (DC2F, DC3, DC3F, still experimental). The solution will be 
-  // exported for visualization according to the exportData structure. The linear system is 
+  // deferred-correction method (DC2F, DC3, DC3F, still experimental). The solution will be
+  // exported for visualization according to the exportData structure. The linear system is
   // assembled and solved in the "makeSteps()" call.
   TimeIntegrator *solver;
   feTolerances tol{1e-9, 1e-8, 10};
-  feCheck(createTimeIntegrator(solver, STATIONARY, tol, system, &numbering, &sol, &mesh, norms, exportData));
+  feCheck(createTimeIntegrator(solver, STATIONARY, tol, system, &numbering, &sol, &mesh, norms,
+                               exportData));
   feCheck(solver->makeStep());
 
   // Compute L2 norm of the error u-uh

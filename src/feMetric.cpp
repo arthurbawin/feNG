@@ -1,4 +1,5 @@
 #include "feMetric.h"
+
 #include "fullMatrix.h"
 
 #if defined(HAVE_GMSH)
@@ -9,10 +10,10 @@
 using namespace soplex;
 #endif
 
-#include "ellipseToolbox.h"
-#include "feMetricTools.h"
 #include "../contrib/Eigen/Eigen"
 #include "../contrib/Eigen/Eigenvalues"
+#include "ellipseToolbox.h"
+#include "feMetricTools.h"
 
 void metricHechtKuate(int nbpoints, double *x, double *y, double &A, double &B, double &C,
                       double epsilon, double *xNew, double *yNew);
@@ -27,8 +28,8 @@ feMetric::feMetric(feNewRecovery *recovery, feMetricOptions metricOptions)
 {
 }
 
-// Scale the metric field to fit N vertices in the final mesh. Interpolation is performed on the
-// initial mesh, not on the Gmsh subsitute (gmshModel).
+// Scale the metric field to fit N vertices in the final mesh. Interpolation is
+// performed on the initial mesh, not on the Gmsh subsitute (gmshModel).
 void feMetric::metricScaling()
 {
   std::vector<double> &w = _recovery->_geoSpace->getQuadratureWeights();
@@ -88,10 +89,10 @@ void feMetric::metricScaling()
 void feMetric::metricScalingFromGmshSubstitute()
 {
 #if defined(HAVE_GMSH)
-  double N = (double) _options.nTargetVertices;
+  double N = (double)_options.nTargetVertices;
   double p = _options.LpNorm;
-  double deg = (double) _recovery->getDegreeSolution();
-  double dim = (double) _recovery->getDim();
+  double deg = (double)_recovery->getDegreeSolution();
+  double dim = (double)_recovery->getDim();
 
   // double exponent = p * (deg + 1.0) / (2.0 * (p * (deg + 1.0) + dim));
   double exponent = p * (deg + 1.0) / (p * (deg + 1.0) + dim);
@@ -171,8 +172,9 @@ void feMetric::metricScalingFromGmshSubstitute()
 // performed on the Gmsh subsitute (gmshModel).
 template <class MetricType>
 void feMetric::metricScalingFromGmshSubstitute(std::map<int, MetricType> &metrics,
-    const std::vector<size_t> &nodeTags, 
-    double exponentInIntegral, double exponentForDeterminant)
+                                               const std::vector<size_t> &nodeTags,
+                                               double exponentInIntegral,
+                                               double exponentForDeterminant)
 {
 #if defined(HAVE_GMSH)
 
@@ -201,8 +203,8 @@ void feMetric::metricScalingFromGmshSubstitute(std::map<int, MetricType> &metric
   double area = 0.0;
   int nQuad = weights.size();
 
-  double N = (double) _options.nTargetVertices;
-  double dim = (double) _newRecovery->getDim();
+  double N = (double)_options.nTargetVertices;
+  double dim = (double)_newRecovery->getDim();
 
   feInfo("Computing integral of det(Q) - Looping over %d elements tags", elementTags.size());
   feInfo("Computing integral of det(Q) - Looping over %d elements", elementTags[0].size());
@@ -214,20 +216,20 @@ void feMetric::metricScalingFromGmshSubstitute(std::map<int, MetricType> &metric
   feInfo("Target = %f", N);
 
   for(size_t iElm = 0; iElm < elementTags[0].size(); iElm++) {
-
     for(size_t i = 0; i < nQuad; i++) {
-
       double interpolatedDet = 0.;
       // Interpolate det(H) or det(Q) at quad nodes
       for(size_t j = 0; j < 3; j++) {
-
         // Get vertex associated to Gmsh local nodetag
         // const Vertex *v = _n2v[ elemNodeTags[0][3 * iElm + j] ];
         // interpolatedDet += basisFunctions[3 * i + j]
         //  * pow( metrics[v].determinant(), exponentInIntegral);
 
-        // interpolatedDet += basisFunctions[3 * i + j] * pow( metrics[elemNodeTags[0][3 * iElm + j]].determinant(), exponentInIntegral);
-        interpolatedDet += basisFunctions[3 * i + j] * metrics[elemNodeTags[0][3 * iElm + j]].determinant();
+        // interpolatedDet += basisFunctions[3 * i + j] * pow(
+        // metrics[elemNodeTags[0][3 * iElm + j]].determinant(),
+        // exponentInIntegral);
+        interpolatedDet +=
+          basisFunctions[3 * i + j] * metrics[elemNodeTags[0][3 * iElm + j]].determinant();
       }
 
       interpolatedDet = pow(interpolatedDet, exponentInIntegral);
@@ -240,12 +242,11 @@ void feMetric::metricScalingFromGmshSubstitute(std::map<int, MetricType> &metric
   feInfo("Computed integral   I = %1.5e", I);
   feInfo("Computed area = %1.5e", area);
 
-  // const std::vector<Vertex> &meshVertices = _newRecovery->_mesh->getVertices();
-  // for(auto &v : meshVertices) {
+  // const std::vector<Vertex> &meshVertices =
+  // _newRecovery->_mesh->getVertices(); for(auto &v : meshVertices) {
   //   MetricType M = metrics[&v];
-  //   double factor = pow(N / I, 2.0 / dim) * pow(M.determinant(), exponentForDeterminant);
-  //   M *= factor;
-  //   metrics[&v] = M;
+  //   double factor = pow(N / I, 2.0 / dim) * pow(M.determinant(),
+  //   exponentForDeterminant); M *= factor; metrics[&v] = M;
   // }
 
   for(size_t i = 0; i < nodeTags.size(); i++) {
@@ -297,7 +298,8 @@ void feMetric::writeSizeFieldSol3D(std::string solFileName)
     SMetric3 M = _metrics[v];
     if(dim == 2)
       fprintf(myfile,
-              "%+-10.12f \t %+-10.12f \t %+-10.12f \t %+-10.12f \t %+-10.12f \t %+-10.12f\n",
+              "%+-10.12f \t %+-10.12f \t %+-10.12f \t %+-10.12f \t %+-10.12f "
+              "\t %+-10.12f\n",
               M(0, 0), M(0, 1), M(1, 1), M(0, 2), M(1, 2), M(2, 2));
   }
 
@@ -308,7 +310,8 @@ void feMetric::writeSizeFieldSol3D(std::string solFileName)
 void feMetric::writeSizeFieldGmsh(std::string meshName, std::string metricMeshName)
 {
   // Write the size field as NodeData in a copy of the .msh file.
-  // For now, the mesh file is simply copied and the NodeData is written at the end.
+  // For now, the mesh file is simply copied and the NodeData is written at the
+  // end.
   feMesh2DP1 *mesh = dynamic_cast<feMesh2DP1 *>(_recovery->_mesh);
 
   if(mesh->isMeshFileBinary()) {
@@ -316,8 +319,8 @@ void feMetric::writeSizeFieldGmsh(std::string meshName, std::string metricMeshNa
     return;
   }
   // if(mesh->getGmshVersion() != 2.2) {
-  //   printf("In readGmsh : Error - Anisotropic size field can only be written to a msh 2.2 file
-  //   for "
+  //   printf("In readGmsh : Error - Anisotropic size field can only be written
+  //   to a msh 2.2 file for "
   //          "MMG compatibility.\n");
   //   return;
   // }
@@ -364,8 +367,9 @@ void feMetric::writeSizeFieldGmsh(std::string meshName, std::string metricMeshNa
 }
 
 template <class MetricType>
-void feMetric::drawEllipsoids(const std::string &posFile, 
-  const std::map<const Vertex*, MetricType> &metrics, double sizeFactor, int nPoints)
+void feMetric::drawEllipsoids(const std::string &posFile,
+                              const std::map<const Vertex *, MetricType> &metrics,
+                              double sizeFactor, int nPoints)
 {
   FILE *f = fopen(posFile.data(), "w");
   fprintf(f, "View \"%s\"{\n", posFile.data());
@@ -378,8 +382,8 @@ void feMetric::drawEllipsoids(const std::string &posFile,
   for(auto pair : metrics) {
     const Vertex *v = pair.first;
     MetricType m = pair.second;
-    getEllipsePoints(factor * m(0, 0), factor * 2.0 * m(0, 1), factor * m(1, 1), v->x(), v->y(),
-                     xP, yP);
+    getEllipsePoints(factor * m(0, 0), factor * 2.0 * m(0, 1), factor * m(1, 1), v->x(), v->y(), xP,
+                     yP);
     for(int i = 0; i < nt; ++i) {
       if(i != nt - 1) {
         fprintf(f, "SL(%.16g,%.16g,%.16g,%.16g,%.16g,%.16g){%u, %u};\n", xP[i], yP[i], 0.,
@@ -395,9 +399,9 @@ void feMetric::drawEllipsoids(const std::string &posFile,
 }
 
 template <class MetricType>
-void feMetric::drawEllipsoids(const std::string &posFile, 
-  std::map<int, MetricType> &metrics, const std::vector<std::size_t> &nodeTags,
-  const std::vector<double> &coord, double sizeFactor, int nPoints)
+void feMetric::drawEllipsoids(const std::string &posFile, std::map<int, MetricType> &metrics,
+                              const std::vector<std::size_t> &nodeTags,
+                              const std::vector<double> &coord, double sizeFactor, int nPoints)
 {
   FILE *f = fopen(posFile.data(), "w");
   fprintf(f, "View \"%s\"{\n", posFile.data());
@@ -409,8 +413,8 @@ void feMetric::drawEllipsoids(const std::string &posFile,
 
   for(size_t i = 0; i < nodeTags.size(); i++) {
     MetricType &m = metrics[nodeTags[i]];
-    const double x = coord[3*i+0];
-    const double y = coord[3*i+1];
+    const double x = coord[3 * i + 0];
+    const double y = coord[3 * i + 1];
     getEllipsePoints(factor * m(0, 0), factor * 2.0 * m(0, 1), factor * m(1, 1), x, y, xP, yP);
     for(int i = 0; i < nt; ++i) {
       if(i != nt - 1) {
@@ -527,7 +531,8 @@ feStatus feMetric::computeMetricsLogSimplex()
 {
 #if defined(HAVE_GMSH) && defined(HAVE_SOPLEX)
   if(!_options.isGmshModelReady) {
-    printf("In feMetric : Error - No Gmsh model available to compute a metric field.\n"
+    printf("In feMetric : Error - No Gmsh model available to compute a metric "
+           "field.\n"
            "In feMetric : Error - Create a Gmsh geometry and mesh it first.\n");
     return;
   }
@@ -553,10 +558,11 @@ feStatus feMetric::computeMetricsLogSimplex()
 
   // Create a nodeTags to feVertex->tag map (brute-force for now)
 
-  // On ne peut pas créer le map pour les maillages aniso intermédiaires, puisqu'il n'y a pas de
-  // feMesh associé. Il faut recréer le maillage dans la boucle d'intégration pour pouvoir
-  // interpoler les métriques. C'est-à-dire : il faut lancer avec -nLoop 0 -nAdapt N, puisque si
-  // -nLoop est autre que 0 on boucle sur le maillage aniso avec la même reconstruction.
+  // On ne peut pas créer le map pour les maillages aniso intermédiaires,
+  // puisqu'il n'y a pas de feMesh associé. Il faut recréer le maillage dans la
+  // boucle d'intégration pour pouvoir interpoler les métriques. C'est-à-dire :
+  // il faut lancer avec -nLoop 0 -nAdapt N, puisque si -nLoop est autre que 0
+  // on boucle sur le maillage aniso avec la même reconstruction.
   double tol = 1e-5;
   _v2n.clear();
   _n2v.clear();
@@ -580,7 +586,8 @@ feStatus feMetric::computeMetricsLogSimplex()
       exit(-1);
     }
     // else{
-    //   feInfo("Associated tag %d to vertex %f - %f - check : %f - %f ", _v2n[&v], v.x(), v.y(),
+    //   feInfo("Associated tag %d to vertex %f - %f - check : %f - %f ",
+    //   _v2n[&v], v.x(), v.y(),
     //     coord[3*_v2n[&v]], coord[3*_v2n[&v]+1]);
     // }
   }
@@ -613,8 +620,8 @@ feStatus feMetric::computeMetricsLogSimplex()
         computeDirectionFieldFromHessian(xpos, C, S, 1e-8, _recovery, nullptr);
         break;
       default:
-        printf(
-          "In feMetric : Error - Cannot compute direction field from derivatives of this order.\n");
+        printf("In feMetric : Error - Cannot compute direction field from "
+               "derivatives of this order.\n");
     }
     COS[nodeTags[i]] = C;
     SIN[nodeTags[i]] = S;
@@ -700,7 +707,8 @@ feStatus feMetric::computeMetricsLogSimplex()
     res = computeMetricLogSimplexCurved(xpos, C, S, _recovery, Q, maxIter, nThetaPerQuadrant, tol,
                                         numIter, myLP);
     if(res) {
-      feInfo("Metric (%+-1.5e - %+-1.5e - %+-1.5e) found in %2d iterations (log-simplex method) "
+      feInfo("Metric (%+-1.5e - %+-1.5e - %+-1.5e) found in %2d iterations "
+             "(log-simplex method) "
              "(vertex %d/%d) - Target vertices = %d",
              Q(0, 0), Q(1, 0), Q(1, 1), numIter, i, nodeTags.size(), _options.nTargetVertices);
 
@@ -712,7 +720,9 @@ feStatus feMetric::computeMetricsLogSimplex()
       Q = es.eigenvectors().real() * D * es.eigenvectors().transpose().real();
 
     } else {
-      feWarning("Could not compute a metric at (%+-1.5e - %+-1.5e). Setting Q = lmax*I.", x, y);
+      feWarning("Could not compute a metric at (%+-1.5e - %+-1.5e). Setting Q = "
+                "lmax*I.",
+                x, y);
       feInfo("C = %f - S = %f", C, S);
       Q = 1. / (lMax * lMax) * Eigen::Matrix2d::Identity();
       exit(-1);
@@ -862,9 +872,9 @@ feStatus feMetric::computeMetricsLogSimplex()
 
   // // Write metrics for Matlab tests
   // int NN = 100;
-  // std::string filename = "metricsForMatlab_a10_n" + std::to_string(NN) + ".txt";
-  // FILE *fMatlab = fopen(filename.c_str(), "w");
-  // for(size_t i = 0; i < nodeTags.size(); i++) {
+  // std::string filename = "metricsForMatlab_a10_n" + std::to_string(NN) +
+  // ".txt"; FILE *fMatlab = fopen(filename.c_str(), "w"); for(size_t i = 0; i <
+  // nodeTags.size(); i++) {
   //   const double x = coord[3 * i + 0];
   //   const double y = coord[3 * i + 1];
 
@@ -874,7 +884,8 @@ feStatus feMetric::computeMetricsLogSimplex()
   //   double J = round((x + 1.)/dx) + 1;
 
   //   SMetric3 M = _metricsOnGmshModel[nodeTags[i]];
-  //   fprintf(fMatlab, "%d %d %f %f %f %f\n", (int) I, (int) J, M(0,0), M(0,1), M(1,0), M(1,1));
+  //   fprintf(fMatlab, "%d %d %f %f %f %f\n", (int) I, (int) J, M(0,0), M(0,1),
+  //   M(1,0), M(1,1));
   // }
   // fclose(fMatlab);
 
@@ -913,49 +924,57 @@ feStatus feMetric::computeMetricsLogSimplex()
 
       // Interpolate metric at P2 midnode
       double x12[2] = {(p0[0] + p1[0]) / 2. + a[0], (p0[1] + p1[1]) / 2. + a[1]};
-      // interpolateMetricP1(x12, logM11, M0, M1, M2, sumduda1M, sumduda2M, false);
+      // interpolateMetricP1(x12, logM11, M0, M1, M2, sumduda1M, sumduda2M,
+      // false);
 
       // for(int it = 0; it <= 10; ++it){
       //   double tt = (double) it / 10.;
-      //   double pos[2] = {p0[0] + gamma[0]*tt + 4.*tt*(1.-tt)*a[0], p0[1] + gamma[1]*tt
+      //   double pos[2] = {p0[0] + gamma[0]*tt + 4.*tt*(1.-tt)*a[0], p0[1] +
+      //   gamma[1]*tt
       //   + 4.*tt*(1.-tt)*a[1]};
 
-      //   interpolateMetricAndDerivativeOnP2Edge(tt, logM11, M0, M1, sumduda1M, sumduda2M, myM,
-      //   dMda1, dMda2);
+      //   interpolateMetricAndDerivativeOnP2Edge(tt, logM11, M0, M1, sumduda1M,
+      //   sumduda2M, myM, dMda1, dMda2);
 
       //   factor = 100.;
-      //   bool res = getEllipsePoints(factor * myM(0, 0), factor * 2.0 * myM(0, 1), factor * myM(1,
-      //   1), pos[0], pos[1], xP, yP); if(res){
+      //   bool res = getEllipsePoints(factor * myM(0, 0), factor * 2.0 * myM(0,
+      //   1), factor * myM(1, 1), pos[0], pos[1], xP, yP); if(res){
       //     for(int j = 0; j < nt; ++j) {
       //       if(j != nt - 1) {
-      //         fprintf(f3, "SL(%.16g,%.16g,%.16g,%.16g,%.16g,%.16g){%u, %u};\n", xP[j], yP[j],
+      //         fprintf(f3, "SL(%.16g,%.16g,%.16g,%.16g,%.16g,%.16g){%u,
+      //         %u};\n", xP[j], yP[j],
       //                 0., xP[j + 1], yP[j + 1], 0., 1, 1);
       //       } else {
-      //         fprintf(f3, "SL(%.16g,%.16g,%.16g,%.16g,%.16g,%.16g){%u, %u};\n", xP[j], yP[j],
+      //         fprintf(f3, "SL(%.16g,%.16g,%.16g,%.16g,%.16g,%.16g){%u,
+      //         %u};\n", xP[j], yP[j],
       //                 0., xP[0], yP[0], 0., 1, 1);
       //       }
       //     }
       //   }
-      //   res = getEllipsePoints(factor * dMda1(0, 0), factor * 2.0 * dMda1(0, 1), factor *
-      //   dMda1(1, 1), pos[0], pos[1], xP, yP); if(res){
+      //   res = getEllipsePoints(factor * dMda1(0, 0), factor * 2.0 * dMda1(0,
+      //   1), factor * dMda1(1, 1), pos[0], pos[1], xP, yP); if(res){
       //     for(int j = 0; j < nt; ++j) {
       //       if(j != nt - 1) {
-      //         fprintf(f1, "SL(%.16g,%.16g,%.16g,%.16g,%.16g,%.16g){%u, %u};\n", xP[j], yP[j],
+      //         fprintf(f1, "SL(%.16g,%.16g,%.16g,%.16g,%.16g,%.16g){%u,
+      //         %u};\n", xP[j], yP[j],
       //                 0., xP[j + 1], yP[j + 1], 0., 1, 1);
       //       } else {
-      //         fprintf(f1, "SL(%.16g,%.16g,%.16g,%.16g,%.16g,%.16g){%u, %u};\n", xP[j], yP[j],
+      //         fprintf(f1, "SL(%.16g,%.16g,%.16g,%.16g,%.16g,%.16g){%u,
+      //         %u};\n", xP[j], yP[j],
       //                 0., xP[0], yP[0], 0., 1, 1);
       //       }
       //     }
       //   }
-      //   res = getEllipsePoints(factor * dMda2(0, 0), factor * 2.0 * dMda2(0, 1), factor *
-      //   dMda2(1, 1), pos[0], pos[1], xP, yP); if(res){
+      //   res = getEllipsePoints(factor * dMda2(0, 0), factor * 2.0 * dMda2(0,
+      //   1), factor * dMda2(1, 1), pos[0], pos[1], xP, yP); if(res){
       //     for(int j = 0; j < nt; ++j) {
       //       if(j != nt - 1) {
-      //         fprintf(f2, "SL(%.16g,%.16g,%.16g,%.16g,%.16g,%.16g){%u, %u};\n", xP[j], yP[j],
+      //         fprintf(f2, "SL(%.16g,%.16g,%.16g,%.16g,%.16g,%.16g){%u,
+      //         %u};\n", xP[j], yP[j],
       //                 0., xP[j + 1], yP[j + 1], 0., 1, 1);
       //       } else {
-      //         fprintf(f2, "SL(%.16g,%.16g,%.16g,%.16g,%.16g,%.16g){%u, %u};\n", xP[j], yP[j],
+      //         fprintf(f2, "SL(%.16g,%.16g,%.16g,%.16g,%.16g,%.16g){%u,
+      //         %u};\n", xP[j], yP[j],
       //                 0., xP[0], yP[0], 0., 1, 1);
       //       }
       //     }
@@ -1008,8 +1027,9 @@ feStatus feMetric::computeMetricsLogSimplex()
   return FE_STATUS_OK;
 
 #else
-  return feErrorMsg(FE_STATUS_ERROR, "Gmsh is required to create a metric field and SoPlex is required "
-         "to compute the metric tensors.\n");
+  return feErrorMsg(FE_STATUS_ERROR,
+                    "Gmsh is required to create a metric field and SoPlex is required "
+                    "to compute the metric tensors.\n");
 #endif
 }
 
@@ -1020,7 +1040,7 @@ feStatus feMetric::computeMetricsExtremeSizesOnly()
 #if defined(HAVE_GMSH)
   if(!_options.isGmshModelReady) {
     return feErrorMsg(FE_STATUS_ERROR, "No Gmsh model available to compute a metric field.\n"
-           "Create a Gmsh geometry and mesh it first.\n");
+                                       "Create a Gmsh geometry and mesh it first.\n");
   }
 
   feInfo("Computing metrics on Gmsh model %s", _options.modelForMetric.c_str());
@@ -1043,10 +1063,11 @@ feStatus feMetric::computeMetricsExtremeSizesOnly()
 
   // Create a nodeTags to feVertex->tag map (brute-force for now)
 
-  // On ne peut pas créer le map pour les maillages aniso intermédiaires, puisqu'il n'y a pas de
-  // feMesh associé. Il faut recréer le maillage dans la boucle d'intégration pour pouvoir
-  // interpoler les métriques. C'est-à-dire : il faut lancer avec -nLoop 0 -nAdapt N, puisque si
-  // -nLoop est autre que 0 on boucle sur le maillage aniso avec la même reconstruction.
+  // On ne peut pas créer le map pour les maillages aniso intermédiaires,
+  // puisqu'il n'y a pas de feMesh associé. Il faut recréer le maillage dans la
+  // boucle d'intégration pour pouvoir interpoler les métriques. C'est-à-dire :
+  // il faut lancer avec -nLoop 0 -nAdapt N, puisque si -nLoop est autre que 0
+  // on boucle sur le maillage aniso avec la même reconstruction.
   double tol = 1e-5;
   _v2n.clear();
   _n2v.clear();
@@ -1066,7 +1087,8 @@ feStatus feMetric::computeMetricsExtremeSizesOnly()
   // Check
   for(auto &v : meshVertices) {
     if(_v2n[&v] == -1) {
-      return feErrorMsg(FE_STATUS_ERROR, "No Gmsh tag was associated to vertex %f - %f", v.x(), v.y());
+      return feErrorMsg(FE_STATUS_ERROR, "No Gmsh tag was associated to vertex %f - %f", v.x(),
+                        v.y());
     }
   }
 
@@ -1104,8 +1126,8 @@ feStatus feMetric::computeMetricsExtremeSizesOnly()
         computeDirectionFieldFromHessian(xpos, C, S, 1e-8, _recovery, nullptr);
         break;
       default:
-        printf(
-          "In feMetric : Error - Cannot compute direction field from derivatives of this order.\n");
+        printf("In feMetric : Error - Cannot compute direction field from "
+               "derivatives of this order.\n");
     }
     COS[nodeTags[i]] = C;
     SIN[nodeTags[i]] = S;
@@ -1169,7 +1191,8 @@ feStatus feMetric::computeMetricsExtremeSizesOnly()
         break;
       }
       default: {
-        return feErrorMsg(FE_STATUS_ERROR, "In feMetric : Error - No metric computation scheme for deg != 2\n");
+        return feErrorMsg(FE_STATUS_ERROR, "In feMetric : Error - No metric computation scheme "
+                                           "for deg != 2\n");
       }
     }
 
@@ -1236,7 +1259,6 @@ feStatus feMetric::computeMetricsExtremeSizesOnly()
   }
 
   for(size_t i = 0; i < nodeTags.size(); i++) {
-
     SMetric3 M = _metricsOnGmshModel[nodeTags[i]];
 
     Eigen::Matrix2d m;
@@ -1293,20 +1315,109 @@ feStatus feMetric::computeMetricsExtremeSizesOnly()
   return FE_STATUS_OK;
 
 #else
-  return feErrorMsg(FE_STATUS_ERROR, "Gmsh is required to create a metric field and SoPlex is required "
-         "to compute the metric tensors.\n");
+  return feErrorMsg(FE_STATUS_ERROR,
+                    "Gmsh is required to create a metric field and SoPlex is required "
+                    "to compute the metric tensors.\n");
 #endif
 }
 
-template<class MetricType>
-static SMetric3 convert2metric3(const MetricType &other)
+template <class MetricType> static SMetric3 convert2metric3(const MetricType &other)
 {
   SMetric3 M(1.0);
-  M(0,0) = other(0,0);
-  M(1,0) = other(1,0);
-  M(0,1) = other(0,1);
-  M(1,1) = other(1,1);
+  M(0, 0) = other(0, 0);
+  M(1, 0) = other(1, 0);
+  M(0, 1) = other(0, 1);
+  M(1, 1) = other(1, 1);
   return M;
+}
+
+static feStatus computeAbsHessianAtVertices(std::map<int, MetricTensor> &metrics,
+                                            const std::vector<std::size_t> &nodeTags,
+                                            const std::vector<double> &coord,
+                                            feNewRecovery *recovery, const double lambdaMin,
+                                            const double lambdaMax)
+{
+  double x[2];
+  double fxx, fxy, fyx, fyy;
+  MetricTensor H2;
+  // Compute hessian at vertices
+  for(size_t i = 0; i < nodeTags.size(); i++) {
+    x[0] = coord[3 * i + 0];
+    x[1] = coord[3 * i + 1];
+
+    fxx = recovery->evaluateRecovery(PPR::DERIVATIVE, 2, x);
+    fxy = recovery->evaluateRecovery(PPR::DERIVATIVE, 3, x);
+    fyx = recovery->evaluateRecovery(PPR::DERIVATIVE, 4, x);
+    fyy = recovery->evaluateRecovery(PPR::DERIVATIVE, 5, x);
+
+    // H(0,0) = fxx;
+    // H(0,1) = (fxy+fyx)/2.;
+    // H(1,0) = (fxy+fyx)/2.;
+    // H(1,1) = fyy;
+
+    // // Bound the eigenvalues of H
+    // es.compute(H, true);
+    // ev = es.eigenvalues();
+    // D(0, 0) = fmin(lambdaMax, fmax(lambdaMin, fabs(ev(0).real()) ));
+    // D(1, 1) = fmin(lambdaMax, fmax(lambdaMin, fabs(ev(1).real()) ));
+    // H = es.eigenvectors().real() * D * es.eigenvectors().transpose().real();
+
+    // _metricsP1AtNodeTags[nodeTags[i]] = H;
+
+    H2(0, 0) = fxx;
+    H2(0, 1) = (fxy + fyx) / 2.;
+    H2(1, 0) = (fxy + fyx) / 2.;
+    H2(1, 1) = fyy;
+    metrics[nodeTags[i]] = H2.boundEigenvaluesOfAbs(lambdaMin, lambdaMax);
+  }
+  return FE_STATUS_OK;
+}
+
+//
+// Compute upper bound Q of the homogeneous error polynomial
+// for straight Pn anisotropic adaptation
+//
+static feStatus computeQAtVertices(std::map<int, MetricTensor> &metrics,
+                                   const std::vector<std::size_t> &nodeTags,
+                                   const std::vector<double> &coord, feNewRecovery *recovery,
+                                   const double lambdaMin, const double lambdaMax)
+{
+  double x[2];
+  MetricTensor Q;
+  double fxx, fxy, fyx, fyy;
+  for(size_t i = 0; i < nodeTags.size(); i++) {
+    x[0] = coord[3 * i + 0];
+    x[1] = coord[3 * i + 1];
+
+    std::vector<double> myvec;
+
+    fxx = recovery->evaluateRecovery(PPR::DERIVATIVE, 2, x);
+    fxy = recovery->evaluateRecovery(PPR::DERIVATIVE, 3, x);
+    fyx = recovery->evaluateRecovery(PPR::DERIVATIVE, 4, x);
+    fyy = recovery->evaluateRecovery(PPR::DERIVATIVE, 5, x);
+
+    // H(0,0) = fxx;
+    // H(0,1) = (fxy+fyx)/2.;
+    // H(1,0) = (fxy+fyx)/2.;
+    // H(1,1) = fyy;
+
+    // // Bound the eigenvalues of H
+    // es.compute(H, true);
+    // ev = es.eigenvalues();
+    // D(0, 0) = fmin(lambdaMax, fmax(lambdaMin, fabs(ev(0).real()) ));
+    // D(1, 1) = fmin(lambdaMax, fmax(lambdaMin, fabs(ev(1).real()) ));
+    // H = es.eigenvectors().real() * D * es.eigenvectors().transpose().real();
+
+    // _metricsP1AtNodeTags[nodeTags[i]] = H;
+
+    // H2(0, 0) = fxx;
+    // H2(0, 1) = (fxy + fyx) / 2.;
+    // H2(1, 0) = (fxy + fyx) / 2.;
+    // H2(1, 1) = fyy;
+    // metrics[nodeTags[i]] = H2.boundEigenvaluesOfAbs(lambdaMin, lambdaMax);
+  }
+
+  return FE_STATUS_OK;
 }
 
 //
@@ -1317,7 +1428,7 @@ feStatus feMetric::computeMetricsP1()
 #if defined(HAVE_GMSH)
   if(!_options.isGmshModelReady) {
     return feErrorMsg(FE_STATUS_ERROR, "No Gmsh model available to compute a metric field.\n"
-           "Create a Gmsh geometry and mesh it first.\n");
+                                       "Create a Gmsh geometry and mesh it first.\n");
   }
 
   feInfo("Computing metrics on Gmsh model %s", _options.modelForMetric.c_str());
@@ -1348,63 +1459,39 @@ feStatus feMetric::computeMetricsP1()
   std::vector<std::vector<double> > metricData;
   std::vector<std::vector<double> > recoveryData;
 
-  double fxx, fxy, fyx, fyy;
-  MetricTensor H2;
-  Eigen::Matrix2d H, D = Eigen::Matrix2d::Identity();
-  Eigen::EigenSolver<Eigen::Matrix2d> es;
-  Eigen::EigenSolver<Eigen::Matrix2d>::EigenvalueType ev;
+  // double fxx, fxy, fyx, fyy;
+  // MetricTensor H2;
+  // Eigen::Matrix2d H, D = Eigen::Matrix2d::Identity();
+  // Eigen::EigenSolver<Eigen::Matrix2d> es;
+  // Eigen::EigenSolver<Eigen::Matrix2d>::EigenvalueType ev;
 
-  double x[2];
-  // Compute hessian at vertices
-  for(size_t i = 0; i < nodeTags.size(); i++) {
-    x[0] = coord[3 * i + 0];
-    x[1] = coord[3 * i + 1];
+  computeAbsHessianAtVertices(_metricTensorAtNodetags, nodeTags, coord, _newRecovery, lambdaMin,
+                              lambdaMax);
 
-    fxx = _newRecovery->evaluateRecovery(PPR::DERIVATIVE, 2, x);
-    fxy = _newRecovery->evaluateRecovery(PPR::DERIVATIVE, 3, x);
-    fyx = _newRecovery->evaluateRecovery(PPR::DERIVATIVE, 4, x);
-    fyy = _newRecovery->evaluateRecovery(PPR::DERIVATIVE, 5, x);
-
-    H(0,0) = fxx;
-    H(0,1) = (fxy+fyx)/2.;
-    H(1,0) = (fxy+fyx)/2.;
-    H(1,1) = fyy;
-
-    // Bound the eigenvalues of H
-    es.compute(H, true);
-    ev = es.eigenvalues();
-    D(0, 0) = fmin(lambdaMax, fmax(lambdaMin, fabs(ev(0).real()) ));
-    D(1, 1) = fmin(lambdaMax, fmax(lambdaMin, fabs(ev(1).real()) ));
-    H = es.eigenvectors().real() * D * es.eigenvectors().transpose().real();
-
-    _metricsP1AtNodeTags[nodeTags[i]] = H;
-
-    H2(0,0) = fxx;
-    H2(0,1) = (fxy+fyx)/2.;
-    H2(1,0) = (fxy+fyx)/2.;
-    H2(1,1) = fyy;
-    _metricTensorAtNodetags[nodeTags[i]] = H2.boundEigenvaluesOfAbs(lambdaMin, lambdaMax);
-  }
-
-  // drawEllipsoids("ellipses.pos", _metricsP1AtNodeTags, nodeTags, coord, 100, 30);
+  // drawEllipsoids("ellipses.pos", _metricsP1AtNodeTags, nodeTags, coord, 100,
+  // 30);
   drawEllipsoids("ellipses.pos", _metricTensorAtNodetags, nodeTags, coord, 100, 30);
 
-  double N = (double) _options.nTargetVertices;
+  double N = (double)_options.nTargetVertices;
   double p = _options.LpNorm;
   feInfo("Targetting %f vertices in L%f norm", N, p);
   double n = 2.; // Space dimension
-  double exponentInIntegral =       p / (2.*p + n);
-  double exponentForDeterminant = -1. / (2.*p + n);
+  double exponentInIntegral = p / (2. * p + n);
+  double exponentForDeterminant = -1. / (2. * p + n);
 
-  // metricScalingFromGmshSubstitute(_metricsP1AtNodeTags, nodeTags, exponentInIntegral, exponentForDeterminant);
-  metricScalingFromGmshSubstitute(_metricTensorAtNodetags, nodeTags, exponentInIntegral, exponentForDeterminant);
+  // metricScalingFromGmshSubstitute(_metricsP1AtNodeTags, nodeTags,
+  // exponentInIntegral, exponentForDeterminant);
+  metricScalingFromGmshSubstitute(_metricTensorAtNodetags, nodeTags, exponentInIntegral,
+                                  exponentForDeterminant);
 
-  // drawEllipsoids("afterScaling.pos", _metricsP1AtNodeTags, nodeTags, coord, 100, 30);
+  // drawEllipsoids("afterScaling.pos", _metricsP1AtNodeTags, nodeTags, coord,
+  // 100, 30);
   drawEllipsoids("afterScaling.pos", _metricTensorAtNodetags, nodeTags, coord, 100, 30);
 
   // Transfer from one map to the other to compute gradation (FIXME)
   for(size_t i = 0; i < nodeTags.size(); i++) {
-    // _metricsP1[nodeTags[i]] = convert2metric3(_metricsP1AtNodeTags[nodeTags[i]]);
+    // _metricsP1[nodeTags[i]] =
+    // convert2metric3(_metricsP1AtNodeTags[nodeTags[i]]);
     _metricsP1[nodeTags[i]] = convert2metric3(_metricTensorAtNodetags[nodeTags[i]]);
   }
 
@@ -1418,15 +1505,17 @@ feStatus feMetric::computeMetricsP1()
     // _metricsP1AtNodeTags[nodeTags[i]](1,0) = _metricsP1[nodeTags[i]](1,0);
     // _metricsP1AtNodeTags[nodeTags[i]](0,1) = _metricsP1[nodeTags[i]](0,1);
     // _metricsP1AtNodeTags[nodeTags[i]](1,1) = _metricsP1[nodeTags[i]](1,1);
-    _metricTensorAtNodetags[nodeTags[i]](0,0) = _metricsP1[nodeTags[i]](0,0);
-    _metricTensorAtNodetags[nodeTags[i]](1,0) = _metricsP1[nodeTags[i]](1,0);
-    _metricTensorAtNodetags[nodeTags[i]](0,1) = _metricsP1[nodeTags[i]](0,1);
-    _metricTensorAtNodetags[nodeTags[i]](1,1) = _metricsP1[nodeTags[i]](1,1);
+    _metricTensorAtNodetags[nodeTags[i]](0, 0) = _metricsP1[nodeTags[i]](0, 0);
+    _metricTensorAtNodetags[nodeTags[i]](1, 0) = _metricsP1[nodeTags[i]](1, 0);
+    _metricTensorAtNodetags[nodeTags[i]](0, 1) = _metricsP1[nodeTags[i]](0, 1);
+    _metricTensorAtNodetags[nodeTags[i]](1, 1) = _metricsP1[nodeTags[i]](1, 1);
   }
 
-  // drawEllipsoids("afterGradation.pos", _metricsP1AtNodeTags, nodeTags, coord, 100, 30);
+  // drawEllipsoids("afterGradation.pos", _metricsP1AtNodeTags, nodeTags, coord,
+  // 100, 30);
   drawEllipsoids("afterGradation.pos", _metricTensorAtNodetags, nodeTags, coord, 100, 30);
 
+  double x[2];
   std::vector<double> vMetric(9);
   std::vector<double> vRecovery(1);
   for(size_t i = 0; i < nodeTags.size(); i++) {
@@ -1450,7 +1539,8 @@ feStatus feMetric::computeMetricsP1()
     vMetric[6] = 0;
     vMetric[7] = 0;
     vMetric[8] = 1.0;
-    vRecovery[0] = _newRecovery->evaluateRecovery(PPR::RECOVERY, 0, x);;
+    vRecovery[0] = _newRecovery->evaluateRecovery(PPR::RECOVERY, 0, x);
+    ;
 
     metricData.push_back(vMetric);
     recoveryData.push_back(vRecovery);
@@ -1468,8 +1558,9 @@ feStatus feMetric::computeMetricsP1()
   return FE_STATUS_OK;
 
 #else
-  return feErrorMsg(FE_STATUS_ERROR, "Gmsh is required to create a metric field and SoPlex is required "
-         "to compute the metric tensors.\n");
+  return feErrorMsg(FE_STATUS_ERROR,
+                    "Gmsh is required to create a metric field and SoPlex is required "
+                    "to compute the metric tensors.\n");
 #endif
 }
 

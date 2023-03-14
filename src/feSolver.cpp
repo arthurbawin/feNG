@@ -218,6 +218,61 @@ BDF2Solver::BDF2Solver(feTolerances tol, feMetaNumber *metaNumber, feLinearSyste
   for(auto &n : _normL2) n.resize(_nTimeSteps, 0.);
 }
 
+feStatus BDF2Solver::makeStep()
+{
+  feInfoCond(FE_VERBOSE > 0, "\t\tAdvancing 1 step from t = %1.3e to t = %1.3e (dt = %1.3e)",
+             _tCurrent, _tCurrent + _dt, _dt);
+
+  if(_currentStep == 0) {
+    // Initialization and first step
+
+    if(_CodeIni == "BDF1/DCF") {
+      printf("\n");
+      printf(" ----------------------------- \n");
+      printf("Using DC2F to initialize BDF2 \n");
+      printf(" ----------------------------- \n");
+      printf("\n");
+      double _t_ini = _t0 + _dt;
+      std::vector<feNorm*> norms = {};
+      DC2FSolver solver(_tol, _metaNumber, _linearSystem, _sol, norms, _mesh, _exportData, _t0, _t_ini, 1);
+      solver.makeSteps(1);
+      feSolutionContainer *_solutionContainerDC2F = solver.getSolutionContainer();
+      _solutionContainer->rotate(_dt);
+      _solutionContainer->setSol(0, _solutionContainerDC2F->getSolution(0));
+      _solutionContainer->setSol(1, _solutionContainerDC2F->getSolution(1));
+      delete _solutionContainerDC2F;
+    } else {
+      _solutionContainer->rotate(_dt);
+      _sol->setSolFromContainer(_solutionContainer);
+      _solutionContainer->initialize(_sol, _mesh, _metaNumber);
+    }
+
+    _linearSystem->setRecomputeStatus(true);
+    _sol->setSolFromContainer(_solutionContainer);
+  }
+
+  _solutionContainer->rotate(_dt);
+  initializeBDF2(_sol, _metaNumber, _mesh, dynamic_cast<feSolutionBDF2 *>(_solutionContainer));
+
+  feStatus s = solveQNBDF(_solutionContainer, _tol, _metaNumber, _linearSystem, _sol, _mesh);
+  if(s != FE_STATUS_OK) {
+    return s;
+  }
+
+  fePstClc(_sol, _linearSystem, _solutionContainer);
+  _sol->setSolFromContainer(_solutionContainer);
+
+  _tCurrent += _dt;
+  ++_currentStep;
+
+  if(_exportData.exporter != nullptr && (_currentStep % _exportData.exportEveryNSteps) == 0) {
+    std::string fileName = _exportData.fileNameRoot + std::to_string(_currentStep) + ".vtk";
+    _exportData.exporter->writeStep(fileName);
+  }
+
+  return FE_STATUS_OK;
+}
+
 feStatus BDF2Solver::makeSteps(int nSteps)
 {
   printf("BDF2 : Advancing %d steps from t = %f to t = %f\n", nSteps, _tCurrent,

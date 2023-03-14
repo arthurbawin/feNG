@@ -803,7 +803,7 @@ void feRecovery::matrixInverseEigen2D()
       case 2:
         lsInvAtVertices10[v] = myMat10.inverse();
         feInfo("Mat10 at %d = ", v);
-        std::cout<< myMat10 << std::endl;
+        std::cout << myMat10 << std::endl;
         exit(-1);
         break;
     }

@@ -278,27 +278,27 @@ void feBilinearForm::initialize(feSolution *sol, int numElem)
       _solNext[i][k] = solRef[_adr[i][k]];
     }
     // ------------------------------------------------------------------
-    if(fS->getDOFInitialization() == dofInitialization::EXTRAPOLATED_EULER_0D) {
-      // Initialize the corresponding domain FE space to extrapolate on this boundary
-      if(_intSpaces[i + 3]->getCncGeo()->getNumElements() < 3) {
-        feErrorMsg(
-          FE_STATUS_ERROR,
-          "Cannot initialize solution on next and/or previous element to extrapolate"
-          " field \"%s\" on boundary because interior connectivity \"%s\" only has %d elements.",
-          _intSpaces[i + 3]->getFieldID().data(), _intSpaces[i + 3]->getCncGeo()->getID().data(),
-          _intSpaces[i + 3]->getCncGeo()->getNumElements());
-        exit(-1);
-      }
-      _intSpaces[i + 3]->initializeAddressingVector(2, _adr[i]);
-      for(size_t k = 0; k < _adr[i].size(); ++k) {
-        _solNext[i][k] = solRef[_adr[i][k]];
-      }
-      _intSpaces[i + 3]->initializeAddressingVector(
-        _intSpaces[i + 3]->getCncGeo()->getNumElements() - 3, _adr[i]);
-      for(size_t k = 0; k < _adr[i].size(); ++k) {
-        _solPrev[i][k] = solRef[_adr[i][k]];
-      }
-    }
+    // if(fS->getDOFInitialization() == dofInitialization::EXTRAPOLATED_EULER_0D) {
+    //   // Initialize the corresponding domain FE space to extrapolate on this boundary
+    //   if(_intSpaces[i + 3]->getCncGeo()->getNumElements() < 3) {
+    //     feErrorMsg(
+    //       FE_STATUS_ERROR,
+    //       "Cannot initialize solution on next and/or previous element to extrapolate"
+    //       " field \"%s\" on boundary because interior connectivity \"%s\" only has %d elements.",
+    //       _intSpaces[i + 3]->getFieldID().data(), _intSpaces[i + 3]->getCncGeo()->getID().data(),
+    //       _intSpaces[i + 3]->getCncGeo()->getNumElements());
+    //     exit(-1);
+    //   }
+    //   _intSpaces[i + 3]->initializeAddressingVector(2, _adr[i]);
+    //   for(size_t k = 0; k < _adr[i].size(); ++k) {
+    //     _solNext[i][k] = solRef[_adr[i][k]];
+    //   }
+    //   _intSpaces[i + 3]->initializeAddressingVector(
+    //     _intSpaces[i + 3]->getCncGeo()->getNumElements() - 3, _adr[i]);
+    //   for(size_t k = 0; k < _adr[i].size(); ++k) {
+    //     _solPrev[i][k] = solRef[_adr[i][k]];
+    //   }
+    // }
 
     // Initialize solution and its time derivative on current element
     fS->initializeAddressingVector(numElem, _adr[i]);
@@ -328,8 +328,13 @@ void feBilinearForm::initialize(feSolution *sol, int numElem)
 void feBilinearForm::computeMatrix(feSolution *sol, int numElem)
 {
   (this->*feBilinearForm::ptrComputeMatrix)(sol, numElem);
-  // if(_sysElm->getID() == VECTOR_CONVECTIVE_ACCELERATION){
-  //   feInfo("Matrice sur elm %d", numElem);
+  // if(_sysElm->getID() == LDG_EDGE_U){
+  //   this->computeMatrixFiniteDifference(sol, numElem);
+  //   feInfo("Matrice differences finies sur elm %d", numElem);
+  //   printMatrix(_M, _N, &_Ae);
+
+  //   this->computeMatrixAnalytical(sol, numElem);
+  //   feInfo("Matrice analytique sur elm %d", numElem);
   //   printMatrix(_M, _N, &_Ae);
   //   exit(-1);
   // }
