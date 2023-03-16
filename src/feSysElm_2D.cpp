@@ -46,49 +46,5 @@ static double tau2DTri(int dim, double velocity[3], double diffusivity, int nFun
 
 void feSysElm_2D_SUPGStab::computeBe(feBilinearForm *form)
 {
-  double jac, u, grad_u[3] = {0., 0., 0.}, tau, diffusivity, source, reaction;
-  std::vector<double> c(2, 0.0);
-  for(int k = 0; k < _nQuad; ++k) {
-    jac = form->_J[_nQuad * form->_numElem + k];
-    form->_cnc->computeElementTransformation(form->_geoCoord, k, jac, form->_transformation);
-
-    // Evaluate the imposed velocity field, diffusivity, reaction coefficient and source term
-    form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, _pos);
-    (*_velocity)(form->_tn, _pos, c);
-    diffusivity = (*_diffusivity)(form->_tn, _pos);
-    reaction = (*_reactionCoeff)(form->_tn, _pos);
-    source = (*_source)(form->_tn, _pos);
-
-    // Compute u
-    u = form->_intSpaces[_idU]->interpolateFieldAtQuadNode(form->_sol[_idU], k);
-
-    // Compute grad(u)
-    form->_intSpaces[_idU]->interpolateFieldAtQuadNode_physicalGradient(
-      form->_sol[_idU], k, form->_transformation, grad_u);
-
-    // Compute grad(phi)
-    form->_intSpaces[_idU]->getFunctionsPhysicalGradientAtQuadNode(k, form->_transformation,
-                                                                   _gradPhiU.data());
-
-    // Compute stabilization parameter tau
-    tau = tau2DTri(2, c.data(), diffusivity, _nFunctions, _gradPhiU);
-
-    // Compute PDE residual:
-    // Reaction term
-    double residual = reaction * u;
-    // Convection term
-    for(int iDim = 0; iDim < 2; ++iDim) {
-      residual += c[iDim] * grad_u[iDim];
-    }
-    // Diffusion term (0 for linear elements)
-    // ...
-    /// Source term
-    residual += source;
-
-    for(int i = 0; i < _nFunctions; ++i) {
-      for(int iDim = 0; iDim < 2; ++iDim) {
-        form->_Be[i] -= residual * tau * c[iDim] * _gradPhiU[i * 2 + iDim] * jac * _wQuad[k];
-      }
-    }
-  }
+  // ...
 }
