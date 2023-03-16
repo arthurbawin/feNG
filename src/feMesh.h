@@ -43,7 +43,7 @@ protected:
   // Map from non-sequential Gmsh vertices tag to sequential tag
   std::map<int, int> _verticesMap;
   // Mesh vertices for each Physical Entity (geometric connectivity)
-  std::map<const feCncGeo*, std::vector<Vertex>> _verticesPerCnc;
+  std::map<const feCncGeo *, std::vector<Vertex> > _verticesPerCnc;
 
   // Number, vector and map of geometric connectivities (domains) in the mesh
   int _nCncGeo;
@@ -54,7 +54,8 @@ public:
   // Set of (unique) edges
   std::set<Edge, EdgeLessThan> _edges;
   // Unordered vector of edges
-  std::vector<const Edge*> _edgesVec;
+  std::vector<const Edge *> _edgesVec;
+  std::map<int, const Edge *> _edgesMap;
   // Mesh elements, hardcoded triangles for now
   std::vector<Triangle *> _elements;
 
@@ -82,9 +83,9 @@ public:
   {
     return &_vertices[_verticesMap[gmshNodeTag]];
   }
+  const Edge *getEdge(int edgeTag) { return _edgesMap[edgeTag]; }
   std::vector<Vertex> &getVertices() { return _vertices; }
-  std::vector<const Edge*> &getEdges() { return _edgesVec; }
-
+  std::vector<const Edge *> &getEdges() { return _edgesVec; }
 
   // Write in geoCoord the physical coordinates of the nodes on the
   // element with LOCAL tag numElem on the connectivity named
@@ -144,7 +145,16 @@ public:
   //    u: the rst (or xi-eta-zeta) coordinates of x on the reference element
   //      with u[0] = r, u[1] = s, u[2] = t
   //    tol: tolerance (applies only to 2D+ search in tree)
-  virtual bool locateVertex(const double *x, int &iElm, double *u, double tol = 1e-5) = 0;
+  //
+  // If returnLocalElmTag = true, iElm is the local element number in the
+  // connectivity on which the vertex was found.
+  //
+  // If targetConnectivity is the name of an existing 2D connectivity in
+  // the mesh, we look for the vertex on this connectivity only, and 
+  // return false if it was not found on this one (even if it can be found on
+  // another connectivity).
+  virtual bool locateVertex(const double *x, int &iElm, double *u, double tol = 1e-5,
+                            bool returnLocalElmTag = false, std::string targetConnectivity = "") = 0;
 };
 
 //
@@ -166,7 +176,8 @@ public:
   feMesh0DP0(double xA, int nElm, std::string domID);
   virtual ~feMesh0DP0();
 
-  virtual bool locateVertex(const double *x, int &iElm, double *u, double tol = 1e-5)
+  virtual bool locateVertex(const double *x, int &iElm, double *u, double tol = 1e-5,
+                            bool returnLocalElmTag = false, std::string targetConnectivity = "")
   {
     u[0] = 1.;
     return true;
@@ -198,7 +209,8 @@ public:
              const std::string &domainName);
   virtual ~feMesh1DP1();
 
-  virtual bool locateVertex(const double *x, int &iElm, double *u, double tol = 1e-5);
+  virtual bool locateVertex(const double *x, int &iElm, double *u, double tol = 1e-5,
+                            bool returnLocalElmTag = false, std::string targetConnectivity = "");
 };
 
 class feMetaNumber;
@@ -214,7 +226,11 @@ typedef struct rtreeSearchCtxStruct {
   double min[2];
   double max[2];
   int iElm;
+  int iElmLocal;
+  int physicalTag;
   bool isFound;
+  bool enforceConnectivity = false;
+  int targetPhysicalTag;
 } rtreeSearchCtx;
 
 //
@@ -351,7 +367,8 @@ public:
 
   int getGmshNodeTag(int iVertex) { return _sequentialNodeToGmshNode[iVertex]; }
 
-  bool locateVertex(const double *x, int &iElm, double *u, double tol = 1e-5);
+  bool locateVertex(const double *x, int &iElm, double *u, double tol = 1e-5,
+                    bool returnLocalElmTag = false, std::string targetConnectivity = "");
 
   // Transfer whole FE solution(s) associated to the current mesh to another mesh.
   // The solution(s) are stored in solutionContainer and are transferred in place.

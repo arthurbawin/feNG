@@ -66,9 +66,37 @@ feCncGeo::feCncGeo(const int tag, const int dimension, const int nVerticesPerEle
   std::sort(connecVertices.begin(), connecVertices.end());
   _nVertices = std::unique(connecVertices.begin(), connecVertices.end()) - connecVertices.begin();
 
+  // Create the connectivity of unique vertices
+  // (_connecVertices has size nElm * nVerticesperElm)
+  _connecVerticesOnly = connecVertices;
+  std::sort(_connecVerticesOnly.begin(), _connecVerticesOnly.end());
+  auto last = std::unique(_connecVerticesOnly.begin(), _connecVerticesOnly.end());
+  _connecVerticesOnly.erase(last, _connecVerticesOnly.end());
+
+  // Create the connectivity of unique edges
+  _connecEdgesOnly = connecEdges;
+  for(size_t i = 0; i < _connecEdgesOnly.size(); ++i)
+    _connecEdgesOnly[i] = fabs(_connecEdgesOnly[i]);
+  std::sort(_connecEdgesOnly.begin(), _connecEdgesOnly.end());
+  last = std::unique(_connecEdgesOnly.begin(), _connecEdgesOnly.end());
+  _connecEdgesOnly.erase(last, _connecEdgesOnly.end());
+  _nEdges = _connecEdgesOnly.size();
+
   // Color the elements for partitioning
   colorElements(1);
 };
+
+int feCncGeo::getUniqueVertexConnectivity(const int iVertex) const
+{
+#if defined(FENG_DEBUG)
+  if(iVertex >= _connecVerticesOnly.size())
+    feErrorMsg(FE_STATUS_ERROR,
+               "Out of bounds: accessing entry %d in _connecVerticesOnly"
+               " of size %u",
+               iVertex, _connecVerticesOnly.size());
+#endif
+  return _connecVerticesOnly[iVertex];
+}
 
 int feCncGeo::getVertexConnectivity(const int iVertex) const
 {
@@ -128,6 +156,18 @@ void feCncGeo::setElementConnectivity(const int numElem, const int val)
                numElem, _connecElem.size());
 #endif
   _connecElem[numElem] = val;
+}
+
+int feCncGeo::getUniqueEdgeConnectivity(const int iEdge) const
+{
+#if defined(FENG_DEBUG)
+  if(iEdge >= _connecEdgesOnly.size())
+    feErrorMsg(FE_STATUS_ERROR,
+               "Out of bounds: accessing entry %d in _connecEdgesOnly"
+               " of size %u",
+               iEdge, _connecEdgesOnly.size());
+#endif
+  return _connecEdgesOnly[iEdge];
 }
 
 int feCncGeo::getEdgeConnectivity(const int numElem, const int iEdge) const

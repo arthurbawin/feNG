@@ -28,6 +28,8 @@ public:
   ~Edge() {}
 
   inline Vertex *getVertex(int i) { return (i == 0) ? _v0 : _v1; }
+  inline const Vertex *getVertex(int i) const { return (i == 0) ? _v0 : _v1; }
+  
   // Edge's own tag
   inline int getTag() const { return _tag; }
   // Physical tag of the associated Line

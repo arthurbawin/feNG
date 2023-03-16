@@ -71,15 +71,24 @@ protected:
   int _nVerticesPerElm;
   // Number of elements
   int _nElements;
+  // Number of edges
+  int _nEdges;
   // Number of facets (edges for now) per element
   int _nEdgesPerElem;
 
   // Global numbering of the entities (vertex/edge/element)
   // on this connectivity.
+
+  // The global tag of vertices classified on this connectivity: size = nVertices
+  std::vector<int> _connecVerticesOnly;
+  // The global tag of vertices of elements on this connectivity: size = nElm * nVerticesPerElm
   std::vector<int> _connecVertices;
-  std::vector<int> _connecElem;
+  // The global tag of edges classified on this connectivity: size = nEdges
+  std::vector<int> _connecEdgesOnly;
+  // The global tag of edges of elements on this connectivity: size = nElm * nEdgesPerElm
   std::vector<int> _connecEdges;
   std::vector<int> _connecFaces;
+  std::vector<int> _connecElem;
 
   // Pointers to the FE space used to interpolate the geometry
   // and to the mesh
@@ -128,6 +137,7 @@ public:
   int getNumVertices() const { return _nVertices; }
   int getNumVerticesPerElem() const { return _nVerticesPerElm; }
   int getNumElements() const { return _nElements; }
+  int getNumEdges() const { return _nEdges; }
   int getNumEdgesPerElem() const { return _nEdgesPerElem; }
 
   geometryType getGeometry() const { return _geometry; };
@@ -152,6 +162,7 @@ public:
   const std::vector<int> &getElemConnectivity() const { return _connecElem; }
 
   // Get and set vertex connectivity
+  int getUniqueVertexConnectivity(const int iVertex) const;
   int getVertexConnectivity(const int iVertex) const;
   int getVertexConnectivity(const int numElem, const int iVertex) const;
   void setVertexConnectivity(const int numElem, const int iVertex, const int val);
@@ -161,6 +172,7 @@ public:
   void setElementConnectivity(const int numElem, const int val);
 
   // Get and set edge connectivity
+  int getUniqueEdgeConnectivity(const int iEdge) const;
   int getEdgeConnectivity(const int numElem, const int iEdge) const;
   void setEdgeConnectivity(const int numElem, const int iEdge, const int val);
 

@@ -1704,7 +1704,8 @@ feStatus feMesh2DP1::readGmsh(const std::string meshName, const bool curved, con
         v2 = &_vertices[pE.connecNodes[pE.nNodePerElem * i + 2]];
         // The triangle tag is i because it is local to the pE's cncgeo, hence the tag is not
         // unique...
-        _elements[cnt++] = new Triangle(v0, v1, v2, i, pE.tag);
+        _elements[cnt] = new Triangle(v0, v1, v2, cnt, i, pE.tag);
+        cnt++;
       }
     }
   }
@@ -1751,6 +1752,13 @@ feStatus feMesh2DP1::readGmsh(const std::string meshName, const bool curved, con
   for(std::set<Edge, EdgeLessThan>::iterator it = _edges.begin(); it != _edges.end(); ++it)
   {
     _edgesVec[cnt++] = &(*it);
+  }
+
+  // Ordered map of edges for visualization lookup
+  for(auto *edge : _edgesVec)
+  {
+    _edgesMap[edge->getTag()] = edge;
+    feInfo("Added edge at map pos %d", edge->getTag());
   }
 
   return FE_STATUS_OK;

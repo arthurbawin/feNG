@@ -11,6 +11,27 @@
 /* Supported visualization formats */
 typedef enum { VTK } visualizationFormat;
 
+// A hardcoded size for now to avoid mallocs
+#define MAX_EXPORTED_FIELDS 8
+
+// A visualization node containing its coordinates
+// and its data.
+typedef struct vtkNodeStruct {
+  double pos[3];
+  int globalTag;
+  double data[MAX_EXPORTED_FIELDS][3] = 
+    {
+      {-99., -99., -99.},
+      {-99., -99., -99.},
+      {-99., -99., -99.},
+      {-99., -99., -99.},
+      {-99., -99., -99.},
+      {-99., -99., -99.},
+      {-99., -99., -99.},
+      {-99., -99., -99.}
+    };
+} vtkNode;
+
 class feExporter
 {
 public:
@@ -24,7 +45,9 @@ public:
   bool _addP2Nodes;
   int _writtenNodes;
 
-  std::map<int, int> edgeToMid;
+  std::map<int, int> _edgeGlobalTag;
+
+  std::set<feCncGeo*> _exportedConnectivities;
 
 public:
   feExporter(feMesh *mesh, feSolution *sol, feMetaNumber *metaNumber,
@@ -39,6 +62,8 @@ public:
 class feExporterVTK : public feExporter
 {
 protected:
+  std::vector<vtkNode> _vtkNodes;
+
 public:
   feExporterVTK(feMesh *mesh, feSolution *sol, feMetaNumber *metaNumber,
                 const std::vector<feSpace *> &feSpaces)
@@ -52,6 +77,11 @@ public:
 
 private:
   void writeHeader(std::ostream &output);
+  
+  feStatus createVTKNodes(std::vector<feSpace*> &spacesToExport, std::unordered_map<std::string, int> &fieldTags);
+  void writeMesh(std::ostream &output);
+  void writeVTKNodes(std::ostream &output, std::unordered_map<std::string, std::pair<int, int>> &fields);
+
   void writeNodes(std::ostream &output);
   void writeElementsConnectivity(std::ostream &output);
   void writeField(std::ostream &output, feCncGeo *cnc, feSpace *intSpace, std::string fieldID,

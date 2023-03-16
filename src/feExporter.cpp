@@ -92,7 +92,7 @@ void feExporterVTK::writeNodes(std::ostream &output)
       Vertex *v1 = e.getVertex(1);
       output << (v0->x() + v1->x()) / 2. << " " << (v0->y() + v1->y()) / 2. << " "
              << (v0->z() + v1->z()) / 2. << std::endl;
-      edgeToMid[e.getTag()] = cnt++;
+      _edgeGlobalTag[e.getTag()] = cnt++;
     }
   }
   _writtenNodes = cnt;
@@ -127,7 +127,7 @@ void feExporterVTK::writeElementsConnectivity(std::ostream &output)
           // Edges
           for(int j = 0; j < 3; ++j) {
             int iEdge = fabs(cnc->getEdgeConnectivity(iElm, j));
-            int node = edgeToMid[iEdge];
+            int node = _edgeGlobalTag[iEdge];
             output << node << " ";
           }
         } else {
@@ -279,6 +279,8 @@ void feExporterVTK::writeField(std::ostream &output, feCncGeo *cnc, feSpace *int
   // std::string fileName = "solution" + fieldID + ".txt";
   // FILE *f = fopen(fileName.c_str(), "w");
 
+  // CHAQUE SOMMET DOIT SAVOIR SUR QUELLE CNC IL EST POUR INTERPOLER
+
   for(int iVertex = 0; iVertex < nVertices; ++iVertex) {
     // Loop over components for vector-valued FE spaces
     for(int iComp = 0; iComp < nComponents; ++iComp) {
@@ -345,6 +347,244 @@ void feExporterVTK::writeField(std::ostream &output, feCncGeo *cnc, feSpace *int
   }
 }
 
+feStatus feExporterVTK::createVTKNodes(std::vector<feSpace *> &spacesToExport, std::unordered_map<std::string, int> &fieldTags)
+{
+  if(_addP2Nodes)
+    _vtkNodes.resize(_mesh->getNumVertices() + _mesh->getNumEdges());
+  else
+    _vtkNodes.resize(_mesh->getNumVertices());
+
+  // Create nodes with tag and coordinates
+  for(auto *cnc : _exportedConnectivities) {
+    for(int i = 0; i < cnc->getNumVertices(); ++i) {
+      vtkNode node;
+      int globalTag = cnc->getUniqueVertexConnectivity(i);
+      node.globalTag = globalTag;
+      Vertex *v = _mesh->getVertex(globalTag);
+      node.pos[0] = v->x();
+      node.pos[1] = v->y();
+      node.pos[2] = v->z();
+
+      _vtkNodes[globalTag] = node;
+    }
+  }
+
+  int cnt = _mesh->getNumVertices();
+  // Add visualization nodes at mid-edges
+  if(_addP2Nodes) {
+    for(auto e : _mesh->_edges)
+    {
+      vtkNode node;
+      int globalTag = cnt++;
+      node.globalTag = globalTag;
+      Vertex *v0 = e.getVertex(0);
+      Vertex *v1 = e.getVertex(1);
+      node.pos[0] = (v0->x() + v1->x()) / 2.;
+      node.pos[1] = (v0->y() + v1->y()) / 2.;
+      node.pos[2] = (v0->z() + v1->z()) / 2.;
+
+      _edgeGlobalTag[e.getTag()] = globalTag;
+      _vtkNodes[globalTag] = node;
+    }
+  }
+
+  int iDOF, elm;
+  std::vector<double> x;
+  std::vector<double> res(3, 0.);
+  double r[3], val;
+
+  std::vector<double> &solVec = _sol->getSolutionReference();
+
+  // Set vtkNodes data
+  for(auto *space : spacesToExport) {
+
+    std::string field = space->getFieldID();
+    int iField = fieldTags[field];
+    int nComponents = space->getNumComponents();
+    feNumber *numbering = _metaNumber->getNumbering(field);
+    std::vector<feInt> adr(space->getNumFunctions());
+    std::vector<double> sol(space->getNumFunctions());
+
+    feInfo("Exporting field %s on connectivity %s", field.data(), space->getCncGeoID().data());
+
+    const feCncGeo *cnc = space->getCncGeo();
+
+    // Loop over mesh vertices on this connectivity
+    // and evaluate field
+    for(int i = 0; i < cnc->getNumVertices(); ++i) {
+
+      int globalTag = cnc->getUniqueVertexConnectivity(i);
+
+      // Loop over components for vector-valued FE spaces
+      for(int iComp = 0; iComp < nComponents; ++iComp)
+      {
+        iDOF = numbering->getDOFNumberAtVertex(globalTag, iComp);
+
+        if(iDOF >= 0) {
+          // There is a degree of freedom at this mesh vertex
+
+          // FIXME: This is only valid for Lagrange type elements,
+          // where to DOF is the function evaluation. We should interpolate.
+          _vtkNodes[globalTag].data[iField][iComp] = solVec[iDOF];
+
+        } else {
+          /* No dof associated to the mesh vertex.
+          Interpolate solution at vertex. */
+          vtkNode node = _vtkNodes[globalTag];
+          x = {node.pos[0], node.pos[1], node.pos[2]};
+          _mesh->locateVertex(x.data(), elm, r);
+          space->initializeAddressingVector(elm, adr);
+
+          for(size_t i = 0; i < adr.size(); ++i) {
+            sol[i] = solVec[adr[i]];
+          }
+
+          if(space->useGlobalFunctions()) {
+            val = space->interpolateField(sol, elm, x);
+          } else {
+            val = space->interpolateField(sol, r);
+          }
+
+          _vtkNodes[globalTag].data[iField][iComp] = val;
+        }
+      }
+    }
+
+    /* Write the additional P2 nodes. Interpolation is not required if the
+    field is quadratic, but it's easier to just interpolate for all fields. */
+    if(_addP2Nodes) {
+      // for(auto e : _mesh->_edges)
+      for(int iEdge = 0; iEdge < cnc->getNumEdges(); ++iEdge)
+      {
+        int edgeTag = fabs(cnc->getUniqueEdgeConnectivity(iEdge));
+        const Edge *e = _mesh->getEdge(edgeTag);
+        int globalTag = _edgeGlobalTag[e->getTag()];
+        const Vertex *v0 = e->getVertex(0);
+        const Vertex *v1 = e->getVertex(1);
+        x = { (v0->x() + v1->x()) / 2.,
+              (v0->y() + v1->y()) / 2.,
+              (v0->z() + v1->z()) / 2. };
+
+        bool returnLocalElmTag = true;
+        std::string targetConnectivity = cnc->getID();
+        bool ret = _mesh->locateVertex(x.data(), elm, r, 1e-5, returnLocalElmTag, targetConnectivity);
+
+        if(!ret){
+          return feErrorMsg(FE_STATUS_ERROR, "Could not find edge vertex (%f,%f,%f) in the mesh", x[0], x[1], x[2]);
+        }
+
+        feInfo("%f - %f - %f", r[0], r[1], r[2]);
+
+        space->initializeAddressingVector(elm, adr);
+
+        for(size_t i = 0; i < adr.size(); ++i)
+          sol[i] = solVec[adr[i]];
+
+        if(space->useGlobalFunctions())
+        {
+          val = space->interpolateField(sol, elm, x);
+          // FIXME: vector field with global functions?
+          _vtkNodes[globalTag].data[iField][0] = val;
+        }
+        else {
+          if(nComponents > 1)
+          {
+            space->interpolateVectorField(sol, nComponents, r, res);
+            for(int i = 0; i < nComponents; ++i){
+              _vtkNodes[globalTag].data[iField][i] = res[i];
+            }
+          } else {
+            val = space->interpolateField(sol, r);
+            _vtkNodes[globalTag].data[iField][0] = val;
+            feInfo("Found midedge (%f,%f) of %d on elm %d on cnc %s : val = %f", x[0], x[1], e->getTag(), elm, cnc->getID().data(), val);
+          }
+        }
+      }
+    }
+  }
+  return FE_STATUS_OK;
+}
+
+// Write the mesh from VTK nodes
+void feExporterVTK::writeMesh(std::ostream &output)
+{
+  output << "DATASET UNSTRUCTURED_GRID\n";
+  output << "POINTS " << _vtkNodes.size() << " double\n";
+
+  for(auto node : _vtkNodes) {
+    output << node.pos[0] << " " << node.pos[1] << " " << node.pos[2] << std::endl;
+  }
+
+  int nElm = 0;
+  for(auto *cnc :_exportedConnectivities){
+    nElm += cnc->getNumElements();
+  }
+
+  int nNodePerElem = _addP2Nodes ? 6 : 3;
+
+  // Write elements connectivities for each cnc wih dim = 2
+  output << "CELLS " << nElm << " " << nElm * (nNodePerElem + 1) << std::endl;
+
+  for(auto *cnc : _exportedConnectivities){
+    for(int iElm = 0; iElm < cnc->getNumElements(); ++iElm) {
+      output << nNodePerElem << " ";
+
+      if(_addP2Nodes) {
+        // Mid-points were added and do not exist in the mesh
+        // Vertices
+        for(int j = 0; j < 3; ++j) {
+          int node = cnc->getVertexConnectivity(iElm, j);
+          output << node << " ";
+        }
+        // Edges
+        for(int j = 0; j < 3; ++j) {
+          int iEdge = fabs(cnc->getEdgeConnectivity(iElm, j));
+          int node = _edgeGlobalTag[iEdge];
+          output << node << " ";
+        }
+      } else {
+        // Regular case : all nodes exist in the mesh
+        for(int j = 0; j < cnc->getNumVerticesPerElem(); ++j) {
+          int node = cnc->getVertexConnectivity(iElm, j);
+          output << node << " ";
+        }
+      }
+      output << std::endl;
+    }
+  }
+
+  // Write element types
+  output << "CELL_TYPES " << nElm << std::endl;
+
+  for(auto *cnc : _exportedConnectivities){
+    int vtkElem = cncToVTKmap[cnc->getInterpolant()];
+    for(int iElm = 0; iElm < cnc->getNumElements(); ++iElm) {
+      if(_addP2Nodes)
+        output << VTK_QUADRATIC_TRIANGLE << std::endl;
+      else
+        output << vtkElem << std::endl;
+    }
+  }
+}
+
+void feExporterVTK::writeVTKNodes(std::ostream &output, std::unordered_map<std::string, std::pair<int, int>> &fields)
+{
+  for(auto pair : fields) {
+
+    std::string name = pair.first;
+    int tag = pair.second.first;
+    int numComponents = pair.second.second;
+
+    output << name << " " << numComponents << " " << _vtkNodes.size() << " double" << std::endl;
+
+    for(auto node : _vtkNodes) {
+      for(int iComp = 0; iComp < numComponents; ++iComp) {
+        output << node.data[tag][iComp] << std::endl;
+      }
+    }
+  }
+}
+
 feStatus feExporterVTK::writeStep(std::string fileName)
 {
   std::filebuf fb;
@@ -356,11 +596,22 @@ feStatus feExporterVTK::writeStep(std::string fileName)
     std::vector<feSpace *> spacesToExport;
     std::set<std::string> cncToExport;
     std::set<std::string> fieldsToExport;
+    std::unordered_map<std::string, int> fieldTags;
+
+    std::unordered_map<std::string, std::pair<int, int>> fields;
+
     for(feSpace *fS : _spaces) {
       if(fS->getDim() == 2) {
         spacesToExport.push_back(fS);
         cncToExport.insert(fS->getCncGeoID());
         fieldsToExport.insert(fS->getFieldID());
+        _exportedConnectivities.insert(fS->getCncGeo());
+
+        std::pair<std::string, std::pair<int, int>> f;
+        f.first = fS->getFieldID();
+        // f.second.first = fS->getFieldTag(); // Not assigned in feSpace...
+        f.second.second = fS->getNumComponents();
+        fields.insert(f);
       }
     }
 
@@ -371,6 +622,12 @@ feStatus feExporterVTK::writeStep(std::string fileName)
         cnc = fS->getCncGeo();
         break;
       }
+    }
+
+    int cnt = 0;
+    for(auto field : fieldsToExport) {
+      fieldTags[field] = cnt++;
+      fields[field].first = fieldTags[field];
     }
 
     feInfoCond(FE_VERBOSE > 0, "\t\tExporting geometric connectivity \"%s\" to file \"%s\"",
@@ -400,19 +657,44 @@ feStatus feExporterVTK::writeStep(std::string fileName)
 
     _addP2Nodes = (geometryPolynomialDegree == 1) && (highestFieldPolynomialDegree >= 2);
 
-    // Write nodes and elements
-    writeNodes(output);
-    writeElementsConnectivity(output);
+    // ///////////////////////////////////////
+    // // Write nodes and elements
+    // writeNodes(output);
+    // writeElementsConnectivity(output);
 
-    output << "POINT_DATA " << _writtenNodes << std::endl;
-    output << "FIELD FieldData " << fieldsToExport.size() << std::endl;
-    // Write the field associated to each fespace in spacesToExport
-    for(feSpace *fS : spacesToExport) {
-      feInfo("Exporting %s - %s", fS->getFieldID().data(), fS->getCncGeoID().data());
-      writeField(output, cnc, fS, fS->getFieldID(), false);
-      break;
+    // output << "POINT_DATA " << _writtenNodes << std::endl;
+    // output << "FIELD FieldData " << fieldsToExport.size() << std::endl;
+    // // Write the field associated to each fespace in spacesToExport
+    // for(feSpace *fS : spacesToExport) {
+    //   feInfo("Exporting %s - %s", fS->getFieldID().data(), fS->getCncGeoID().data());
+    //   writeField(output, cnc, fS, fS->getFieldID(), false);
+    //   break;
+    // }
+    // // writeField(output, cnc, fS, fS->getFieldID(), false);
+    // ////////////////////////////////////////
+
+
+    ////////////////////////////////
+    feStatus s = createVTKNodes(spacesToExport, fieldTags);
+    if(s != FE_STATUS_OK) {
+      return s;
     }
-    // writeField(output, cnc, fS, fS->getFieldID(), false);
+
+    // for(auto node : _vtkNodes){
+    //   feInfo("Created node %d : (%f,%f,%f) - data = [%f,%f,%f], [%f,%f,%f], [%f,%f,%f]",
+    //     node.globalTag,
+    //     node.pos[0], node.pos[1], node.pos[2],
+    //     node.data[0][0], node.data[0][1], node.data[0][2], 
+    //     node.data[1][0], node.data[1][1], node.data[1][2], 
+    //     node.data[2][0], node.data[2][1], node.data[2][2]
+    //   );
+    // }
+
+    writeMesh(output);
+    output << "POINT_DATA " << _vtkNodes.size() << std::endl;
+    output << "FIELD FieldData " << fieldsToExport.size() << std::endl;
+    writeVTKNodes(output, fields);
+    ////////////////////////////////
 
     fb.close();
   } else {
