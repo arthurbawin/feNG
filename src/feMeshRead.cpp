@@ -1758,7 +1758,6 @@ feStatus feMesh2DP1::readGmsh(const std::string meshName, const bool curved, con
   for(auto *edge : _edgesVec)
   {
     _edgesMap[edge->getTag()] = edge;
-    feInfo("Added edge at map pos %d", edge->getTag());
   }
 
   return FE_STATUS_OK;
