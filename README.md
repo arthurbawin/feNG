@@ -10,4 +10,4 @@ To create a Makefile with CMake and build :
  	mkdir build
  	cd build
  	cmake -DPETSC_DIR=/path/to/petsc -DPETSC_ARCH=architecture ..
-   make
+  make
