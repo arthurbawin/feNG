@@ -373,8 +373,6 @@ feStatus feExporterVTK::createVTKNodes(std::vector<feSpace *> &spacesToExport,
                             x[0], x[1], x[2]);
         }
 
-        feInfo("%f - %f - %f", r[0], r[1], r[2]);
-
         space->initializeAddressingVector(elm, adr);
 
         for(size_t i = 0; i < adr.size(); ++i) sol[i] = solVec[adr[i]];

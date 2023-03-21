@@ -315,9 +315,8 @@ static bool rtreeCallback(int id, void *ctx)
   Triangle *t = (*searchCtx->elements)[id];
   t->xyz2uvw(searchCtx->x, searchCtx->r);
   if(t->isInside(searchCtx->r[0], searchCtx->r[1], searchCtx->r[2])) {
-
     // Check if vertex was found on prescribed connectivity, if applicable
-    if(searchCtx->enforceConnectivity && t->getPhysicalTag() != searchCtx->targetPhysicalTag){
+    if(searchCtx->enforceConnectivity && (t->getPhysicalTag() != searchCtx->targetPhysicalTag)) {
       // Keep looking
       return true;
     }
@@ -393,161 +392,162 @@ bool feMesh2DP1::locateVertex(const double *x, int &iElm, double *u, double tol,
     }
   }
 
-    _rtree2d.Search(_searchCtx.min, _searchCtx.max, rtreeCallback, &_searchCtx);
+  _rtree2d.Search(_searchCtx.min, _searchCtx.max, rtreeCallback, &_searchCtx);
 
-    if(_searchCtx.isFound) {
-      if(returnLocalElmTag)
-        iElm = _searchCtx.iElmLocal;
-      else
-        iElm = _searchCtx.iElm;
+  if(_searchCtx.isFound) {
+    if(returnLocalElmTag)
+      iElm = _searchCtx.iElmLocal;
+    else
+      iElm = _searchCtx.iElm;
 
-      u[0] = _searchCtx.uvw[0];
-      u[1] = _searchCtx.uvw[1];
-      u[2] = _searchCtx.uvw[2];
+    u[0] = _searchCtx.uvw[0];
+    u[1] = _searchCtx.uvw[1];
+    u[2] = _searchCtx.uvw[2];
 
-      // Check if vertex was found on the prescribed connectivity
-      if(targetConnectivity != "") {
-        for(auto p : _physicalEntities) {
-          if(p.first.first == 2 && p.first.second == _searchCtx.physicalTag) {
-            feInfo("Found vertex (%f - %f) on physical entity %d named %s", x[0], x[1],
-                   _searchCtx.physicalTag, p.second.name.data());
-          }
-        }
-      }
-    }
-
-    return _searchCtx.isFound;
+    // Check if vertex was found on the prescribed connectivity
+    // if(targetConnectivity != "") {
+    //   for(auto p : _physicalEntities) {
+    //     if(p.first.first == 2 && p.first.second == _searchCtx.physicalTag) {
+    //       feInfo("Found vertex (%f - %f) on physical entity %d named %s", x[0], x[1],
+    //              _searchCtx.physicalTag, p.second.name.data());
+    //     }
+    //   }
+    // }
   }
 
-  void feMesh2DP1::transfer(
-    feMesh2DP1 * otherMesh, feMetaNumber * myMN, feMetaNumber * otherMN,
-    feSolutionContainer * solutionContainer, const std::vector<feSpace *> &mySpaces,
-    const std::vector<feSpace *> &mySpacesEssBC, const std::vector<feSpace *> &otherSpaces)
-  {
-    // A temporary solutionContainer in which the interpolated values are stored
-    feSolutionContainer *scTmp = new feSolutionContainer(*solutionContainer);
-    int nSol = scTmp->getNbSol();
-    int nDOF = otherMN->getNbDOFs();
-    // Resize to the new number of DOFs
-    for(int iSol = 0; iSol < nSol; ++iSol) {
-      scTmp->_sol[iSol].resize(nDOF);
+  return _searchCtx.isFound;
+}
+
+void feMesh2DP1::transfer(feMesh2DP1 *otherMesh, feMetaNumber *myMN, feMetaNumber *otherMN,
+                          feSolutionContainer *solutionContainer,
+                          const std::vector<feSpace *> &mySpaces,
+                          const std::vector<feSpace *> &mySpacesEssBC,
+                          const std::vector<feSpace *> &otherSpaces)
+{
+  // A temporary solutionContainer in which the interpolated values are stored
+  feSolutionContainer *scTmp = new feSolutionContainer(*solutionContainer);
+  int nSol = scTmp->getNbSol();
+  int nDOF = otherMN->getNbDOFs();
+  // Resize to the new number of DOFs
+  for(int iSol = 0; iSol < nSol; ++iSol) {
+    scTmp->_sol[iSol].resize(nDOF);
+  }
+
+  // The rtree structure in which the elements of the old mesh are stored
+  RTree<int, double, 3> rtree;
+
+  // Add domain (not boundary) elements to the rtree
+  for(size_t j = 0; j < _elements.size(); ++j) {
+    Triangle *t = _elements[j];
+    SBoundingBox3d bbox;
+    // printf("element %2d : %2d - %2d - %2d\n", t->getTag(), t->getVertex(0)->getTag(),
+    // t->getVertex(1)->getTag(), t->getVertex(2)->getTag());
+    for(int i = 0; i < 3; ++i) {
+      Vertex *v = t->getVertex(i);
+      SPoint3 pt(v->x(), v->y(), v->z());
+      bbox += pt;
     }
+    rtree.Insert((double *)(bbox.min()), (double *)(bbox.max()), j);
+  }
 
-    // The rtree structure in which the elements of the old mesh are stored
-    RTree<int, double, 3> rtree;
+  double tol = 1e-8;
 
-    // Add domain (not boundary) elements to the rtree
-    for(size_t j = 0; j < _elements.size(); ++j) {
-      Triangle *t = _elements[j];
-      SBoundingBox3d bbox;
-      // printf("element %2d : %2d - %2d - %2d\n", t->getTag(), t->getVertex(0)->getTag(),
-      // t->getVertex(1)->getTag(), t->getVertex(2)->getTag());
-      for(int i = 0; i < 3; ++i) {
-        Vertex *v = t->getVertex(i);
-        SPoint3 pt(v->x(), v->y(), v->z());
-        bbox += pt;
-      }
-      rtree.Insert((double *)(bbox.min()), (double *)(bbox.max()), j);
+  // Check which spaces need to be interpolated
+  std::vector<std::pair<std::string, std::string> > fieldsToInterpolate;
+  for(feSpace *fS1 : mySpaces) {
+    bool isBC = false;
+    if(fS1->getDim() < this->_dim) {
+      // printf("Not interpolating boundary field of dimension %d\n", fS1->getDim());
+      continue;
     }
-
-    double tol = 1e-8;
-
-    // Check which spaces need to be interpolated
-    std::vector<std::pair<std::string, std::string> > fieldsToInterpolate;
-    for(feSpace *fS1 : mySpaces) {
-      bool isBC = false;
-      if(fS1->getDim() < this->_dim) {
-        // printf("Not interpolating boundary field of dimension %d\n", fS1->getDim());
-        continue;
+    for(feSpace *feEss : mySpacesEssBC) {
+      if(fS1->getFieldID() == feEss->getFieldID() && fS1->getCncGeoID() == feEss->getCncGeoID()) {
+        isBC = true;
+        // std::cout << "Not interpolating essential BC field " << fS1->getFieldID()
+        //           << " on connectivity " << fS1->getCncGeoID() << std::endl;
       }
-      for(feSpace *feEss : mySpacesEssBC) {
-        if(fS1->getFieldID() == feEss->getFieldID() && fS1->getCncGeoID() == feEss->getCncGeoID()) {
-          isBC = true;
-          // std::cout << "Not interpolating essential BC field " << fS1->getFieldID()
-          //           << " on connectivity " << fS1->getCncGeoID() << std::endl;
-        }
-      }
-      if(!isBC) {
-        for(feSpace *fS2 : otherSpaces) {
-          if(fS1->getFieldID() == fS2->getFieldID() && fS1->getCncGeoID() == fS2->getCncGeoID()) {
-            std::cout << "INTERPOLATING FIELD " << fS1->getFieldID() << " on connectivity "
-                      << fS1->getCncGeoID() << std::endl;
-            fieldsToInterpolate.emplace_back(fS1->getFieldID(), fS1->getCncGeoID());
+    }
+    if(!isBC) {
+      for(feSpace *fS2 : otherSpaces) {
+        if(fS1->getFieldID() == fS2->getFieldID() && fS1->getCncGeoID() == fS2->getCncGeoID()) {
+          std::cout << "INTERPOLATING FIELD " << fS1->getFieldID() << " on connectivity "
+                    << fS1->getCncGeoID() << std::endl;
+          fieldsToInterpolate.emplace_back(fS1->getFieldID(), fS1->getCncGeoID());
 
-            int nElm = fS2->getNumElements();
-            int nDOFPerElem = fS2->getNumFunctions();
-            int cncGeoTag = fS2->getCncGeoTag();
-            const std::vector<double> &Lcoor = fS2->getLcoor();
-            // feNumber *number1 = myMN->getNumbering(fS1->getFieldID());
-            // feNumber *number2 = otherMN->getNumbering(fS2->getFieldID());
-            feSpace *geoSpace2 = fS2->getCncGeo()->getFeSpace();
+          int nElm = fS2->getNumElements();
+          int nDOFPerElem = fS2->getNumFunctions();
+          int cncGeoTag = fS2->getCncGeoTag();
+          const std::vector<double> &Lcoor = fS2->getLcoor();
+          // feNumber *number1 = myMN->getNumbering(fS1->getFieldID());
+          // feNumber *number2 = otherMN->getNumbering(fS2->getFieldID());
+          feSpace *geoSpace2 = fS2->getCncGeo()->getFeSpace();
 
-            std::vector<feInt> adr1(fS1->getNumFunctions());
-            std::vector<feInt> adr2(fS2->getNumFunctions());
-            feInfo("taille %d", 3 * fS2->getCncGeo()->getNumVerticesPerElem());
-            std::vector<double> geoCoord(3 * fS2->getCncGeo()->getNumVerticesPerElem(), 0.);
-            for(int iElm = 0; iElm < nElm; ++iElm) {
-              fS2->initializeAddressingVector(iElm, adr2);
-              otherMesh->getCoord(cncGeoTag, iElm, geoCoord);
-              // Loop over the DOFs of the element of the new mesh
-              for(int j = 0; j < nDOFPerElem; ++j) {
-                // Get coordinates
-                std::vector<double> x(3, 0.);
-                double r1[3] = {Lcoor[3 * j + 0], Lcoor[3 * j + 1], Lcoor[3 * j + 2]};
-                geoSpace2->interpolateVectorField(geoCoord, r1, x);
-                // Locate DOF in old mesh
-                double min[3] = {x[0] - tol, x[1] - tol, x[2] - tol};
-                double max[3] = {x[0] + tol, x[1] + tol, x[2] + tol};
-                std::vector<int> candidates;
-                _rtree.Search(min, max, rtreeCallback, &candidates);
+          std::vector<feInt> adr1(fS1->getNumFunctions());
+          std::vector<feInt> adr2(fS2->getNumFunctions());
+          feInfo("taille %d", 3 * fS2->getCncGeo()->getNumVerticesPerElem());
+          std::vector<double> geoCoord(3 * fS2->getCncGeo()->getNumVerticesPerElem(), 0.);
+          for(int iElm = 0; iElm < nElm; ++iElm) {
+            fS2->initializeAddressingVector(iElm, adr2);
+            otherMesh->getCoord(cncGeoTag, iElm, geoCoord);
+            // Loop over the DOFs of the element of the new mesh
+            for(int j = 0; j < nDOFPerElem; ++j) {
+              // Get coordinates
+              std::vector<double> x(3, 0.);
+              double r1[3] = {Lcoor[3 * j + 0], Lcoor[3 * j + 1], Lcoor[3 * j + 2]};
+              geoSpace2->interpolateVectorField(geoCoord, r1, x);
+              // Locate DOF in old mesh
+              double min[3] = {x[0] - tol, x[1] - tol, x[2] - tol};
+              double max[3] = {x[0] + tol, x[1] + tol, x[2] + tol};
+              std::vector<int> candidates;
+              _rtree.Search(min, max, rtreeCallback, &candidates);
 
-                for(int val : candidates) {
-                  Triangle *t = _elements[val];
-                  // printf("element %2d : %2d - %2d - %2d", t->getTag(), t->getVertex(0)->getTag(),
-                  // t->getVertex(1)->getTag(), t->getVertex(2)->getTag());
-                  double r2[3];
-                  t->xyz2uvw(x.data(), r2);
-                  bool isInside = t->isInside(r2[0], r2[1], r2[2]);
-                  if(isInside) {
-                    // ATTENTION : I give the triangle tag as element number.
-                    // Only works on triangles, not on 1D boundary elements.
-                    fS1->initializeAddressingVector(t->getTag(), adr1);
+              for(int val : candidates) {
+                Triangle *t = _elements[val];
+                // printf("element %2d : %2d - %2d - %2d", t->getTag(), t->getVertex(0)->getTag(),
+                // t->getVertex(1)->getTag(), t->getVertex(2)->getTag());
+                double r2[3];
+                t->xyz2uvw(x.data(), r2);
+                bool isInside = t->isInside(r2[0], r2[1], r2[2]);
+                if(isInside) {
+                  // ATTENTION : I give the triangle tag as element number.
+                  // Only works on triangles, not on 1D boundary elements.
+                  fS1->initializeAddressingVector(t->getTag(), adr1);
 
-                    for(int iSol = 0; iSol < nSol; ++iSol) {
-                      std::vector<double> sol1(adr1.size());
-                      std::vector<double> &solVec1 = solutionContainer->getSolution(iSol);
-                      for(size_t i = 0; i < adr1.size(); ++i) {
-                        feInfo("iSol = %d - Accessing %d in sol1 of size %d from %d in solVec1 of "
-                               "size %d",
-                               iSol, i, sol1.size(), adr1[i], solVec1.size());
-                        sol1[i] = solVec1[adr1[i]];
-                      }
-
-                      double solInt = fS1->interpolateField(sol1, r2);
-                      scTmp->_sol[iSol][adr2[j]] = solInt;
-                      // TODO : Interpoler le _fresidual du solutionContainer
+                  for(int iSol = 0; iSol < nSol; ++iSol) {
+                    std::vector<double> sol1(adr1.size());
+                    std::vector<double> &solVec1 = solutionContainer->getSolution(iSol);
+                    for(size_t i = 0; i < adr1.size(); ++i) {
+                      feInfo("iSol = %d - Accessing %d in sol1 of size %d from %d in solVec1 of "
+                             "size %d",
+                             iSol, i, sol1.size(), adr1[i], solVec1.size());
+                      sol1[i] = solVec1[adr1[i]];
                     }
+
+                    double solInt = fS1->interpolateField(sol1, r2);
+                    scTmp->_sol[iSol][adr2[j]] = solInt;
+                    // TODO : Interpoler le _fresidual du solutionContainer
                   }
                 }
               }
-            } // for iElm
-          } else { // if fields match
-          }
+            }
+          } // for iElm
+        } else { // if fields match
         }
       }
     }
-
-    // Resize the solutionContainer
-    solutionContainer->setNbDOFs(nDOF);
-    solutionContainer->_d.resize(nDOF);
-
-    // Replace solutionContainer by scTmp
-    for(int iSol = 0; iSol < nSol; ++iSol) {
-      solutionContainer->_sol[iSol].resize(nDOF);
-      solutionContainer->_fResidual[iSol].resize(nDOF);
-      for(int iDOF = 0; iDOF < nDOF; ++iDOF)
-        solutionContainer->_sol[iSol][iDOF] = scTmp->_sol[iSol][iDOF];
-    }
-
-    delete scTmp;
   }
+
+  // Resize the solutionContainer
+  solutionContainer->setNbDOFs(nDOF);
+  solutionContainer->_d.resize(nDOF);
+
+  // Replace solutionContainer by scTmp
+  for(int iSol = 0; iSol < nSol; ++iSol) {
+    solutionContainer->_sol[iSol].resize(nDOF);
+    solutionContainer->_fResidual[iSol].resize(nDOF);
+    for(int iDOF = 0; iDOF < nDOF; ++iDOF)
+      solutionContainer->_sol[iSol][iDOF] = scTmp->_sol[iSol][iDOF];
+  }
+
+  delete scTmp;
+}
