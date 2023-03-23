@@ -32,8 +32,10 @@ feStatus createLinearSystem(feLinearSystem *&system, linearSolverType type,
       return feErrorMsg(FE_STATUS_ERROR,
                         "feNG must be compiled with Intel MKL to solve with MKL Pardiso.");
 #endif
-    case PETSC: {
+
+    case PETSC:
 #if defined(HAVE_PETSC)
+    {
       if(argc == 0 || argv == nullptr) {
         return feErrorMsg(FE_STATUS_ERROR,
                           "Please provide argc and argv to create a PETSc linear system.");
@@ -65,7 +67,7 @@ feLinearSystem::feLinearSystem(std::vector<feBilinearForm *> bilinearForms) : re
 #if defined(HAVE_OMP)
   int nThreads = omp_get_max_threads();
 #else
-    int nThreads = 1;
+  int nThreads = 1;
 #endif
 
   for(int i = 0; i < nThreads; ++i) {
@@ -75,8 +77,8 @@ feLinearSystem::feLinearSystem(std::vector<feBilinearForm *> bilinearForms) : re
       _formResiduals.push_back(fCpy);
       if(f->hasMatrix()) _formMatrices.push_back(fCpy);
 #else
-        _formResiduals.push_back(f);
-        if(f->hasMatrix()) _formMatrices.push_back(f);
+      _formResiduals.push_back(f);
+      if(f->hasMatrix()) _formMatrices.push_back(f);
 #endif
       if(f->hasMatrix() && i == 0) _numMatrixForms++;
     }

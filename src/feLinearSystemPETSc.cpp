@@ -243,8 +243,10 @@ void feLinearSystemPETSc::viewRHS()
 
 void feLinearSystemPETSc::getResidualMaxNorm(double *norm)
 {
+#if defined(HAVE_PETSC)
   PetscErrorCode ierr = VecNorm(_rhs, NORM_MAX, norm);
   CHKERRABORT(PETSC_COMM_WORLD, ierr);
+#endif
 }
 
 void feLinearSystemPETSc::setToZero()
@@ -487,6 +489,7 @@ void feLinearSystemPETSc::assemble(feSolution *sol)
 
 void feLinearSystemPETSc::constraintEssentialComponents(feSolution *sol)
 {
+#if defined(HAVE_PETSC)
   std::vector<PetscInt> rowsToConstraint;
   std::vector<feInt> adr;
   for(auto space : sol->_spaces) {
@@ -521,6 +524,7 @@ void feLinearSystemPETSc::constraintEssentialComponents(feSolution *sol)
   PetscErrorCode ierr = MatZeroRowsColumns(_A, rowsToConstraint.size(), rowsToConstraint.data(), 1.,
                                            _constrainedDOFValue, _rhs);
   CHKERRABORT(PETSC_COMM_WORLD, ierr);
+#endif
 }
 
 // Solve the linear system and compute max norms of solution and residuals

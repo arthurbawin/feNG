@@ -171,7 +171,13 @@ public:
                       int numUnknowns);
   ~feLinearSystemPETSc();
 
-  feInt getSystemSize() { return (feInt)_nInc; };
+  feInt getSystemSize() {
+    #if defined(HAVE_PETSC)
+    return (feInt)_nInc;
+    #else 
+    return 0;
+    #endif
+  };
 
   void getResidualMaxNorm(double *norm);
 
