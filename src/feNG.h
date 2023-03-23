@@ -18,6 +18,7 @@
 #include <assert.h>
 #include <sstream>
 #include <map>
+#include <unordered_map>
 #include <set>
 #include <iomanip>
 #include <limits>
