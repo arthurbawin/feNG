@@ -77,7 +77,9 @@ feEZCompressedRowStorage::feEZCompressedRowStorage(int numUnknowns,
         for(int i = 0; i < nI; ++i) {
           for(int j = 0; j < nJ; ++j) {
             if(adrI[i] < numUnknowns && adrJ[j] < numUnknowns) {
+              #if defined(HAVE_OMP)
               #pragma omp critical
+              #endif
               nnzset[adrI[i]].insert(adrJ[j]);
             }
           }

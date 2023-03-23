@@ -274,7 +274,9 @@ void feNewRecovery::computeVertexMassMatrices2D()
 
       // We should try initializing the map beforehand and remove the critical,
       // there seems to be data race when it's not initialized
+      #if defined(HAVE_OMP)
       #pragma omp critical
+      #endif
       {
         #if defined(TEST_WITH_EIGEN)
         _inverseMassMatrices[v] = massMatrix.inverse();

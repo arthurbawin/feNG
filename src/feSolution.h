@@ -5,7 +5,9 @@
 #include "feSpace.h"
 #include "feNumber.h"
 #include "feSolutionContainer.h"
+#if defined(HAVE_OMP)
 #include "omp.h"
+#endif
 
 class feSolutionContainer;
 
