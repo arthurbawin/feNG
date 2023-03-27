@@ -1,6 +1,15 @@
 #include "feSysElm.h"
 #include "feBilinearForm.h"
 
+void feSysElm_ZeroBlock::createElementarySystem(std::vector<feSpace *> &space)
+{
+  _idV = 0;
+  _idU = 1;
+  _fieldsLayoutI = {_idV};
+  _fieldsLayoutJ = {_idU};
+  _nFunctions = space[_idU]->getNumFunctions();
+}
+
 // -----------------------------------------------------------------------------
 // Linear form: vector-valued source term
 // -----------------------------------------------------------------------------
@@ -618,11 +627,30 @@ void feSysElm_GLS_Stokes_Stab::computeBe(feBilinearForm *form)
   // ...
 }
 
-void feSysElm_ZeroBlock::createElementarySystem(std::vector<feSpace *> &space)
+void feSysElm_GLS_NavierStokes_Stab::createElementarySystem(std::vector<feSpace *> &space)
 {
-  _idV = 0;
-  _idU = 1;
-  _fieldsLayoutI = {_idV};
-  _fieldsLayoutJ = {_idU};
-  _nFunctions = space[_idU]->getNumFunctions();
+  _idU = 0;
+  _idP = 1;
+  _fieldsLayoutI = {_idU, _idP};
+  _fieldsLayoutJ = {_idU, _idP};
+  _nComponents = space[_idU]->getNumComponents();
+  _nFunctionsU = space[_idU]->getNumFunctions();
+  _nFunctionsP = space[_idP]->getNumFunctions();
+  _f.resize(_nComponents);
+  _residual.resize(_nComponents);
+  _u.resize(_nComponents);
+  _gradu.resize(_nComponents * _nComponents);
+  _gradp.resize(_nComponents);
+  _gradPhiU.resize(_nComponents * _nFunctionsU);
+  _gradPhiP.resize(_nComponents * _nFunctionsP);
+}
+
+void feSysElm_GLS_NavierStokes_Stab::computeAe(feBilinearForm *form)
+{
+  // ...
+}
+
+void feSysElm_GLS_NavierStokes_Stab::computeBe(feBilinearForm *form)
+{
+  // ...
 }

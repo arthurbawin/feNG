@@ -27,7 +27,7 @@ typedef enum {
   ZERO_BLOCK,
 
   GLS_STOKES_STABILIZATION,
-  GLS_NS_STABILIZATION,
+  GLS_NAVIERSTOKES_STABILIZATION,
 
   // 1D weak forms
   NEUMANN_1D,
@@ -81,6 +81,10 @@ inline const std::string toString(elementSystemType t)
       return "SUPG_STABILIZATION_1D";
     case SUPG_STABILIZATION_2D:
       return "SUPG_STABILIZATION_2D";
+    case GLS_STOKES_STABILIZATION:
+      return "GLS_STOKES_STABILIZATION";
+    case GLS_NAVIERSTOKES_STABILIZATION:
+      return "GLS_NAVIERSTOKES_STABILIZATION";
     default:
       return "[Unknown elementSystemType]";
   }
@@ -735,6 +739,43 @@ public:
   void computeAe(feBilinearForm *form);
   void computeBe(feBilinearForm *form);
   CLONEABLE(feSysElm_GLS_Stokes_Stab)
+};
+
+//
+// Galerkin least-squares stabilization for the Navier-Stokes equations
+//
+class feSysElm_GLS_NavierStokes_Stab : public feSysElm
+{
+protected:
+  feFunction *_coeff;
+  feFunction *_density;
+  feFunction *_viscosity;
+  feVectorFunction *_volumeForce;
+  int _idU;
+  int _idP;
+  int _nFunctionsU;
+  int _nFunctionsP;
+  std::vector<double> _f;
+  std::vector<double> _residual;
+  std::vector<double> _u;
+  std::vector<double> _gradu;
+  std::vector<double> _gradp;
+  std::vector<double> _gradPhiU;
+  std::vector<double> _gradPhiP;
+
+public:
+  feSysElm_GLS_NavierStokes_Stab(feFunction *coeff, feFunction *density, feFunction *viscosity,
+                           feVectorFunction *volumeForce)
+    : feSysElm(-1, 2, GLS_NAVIERSTOKES_STABILIZATION, true), _coeff(coeff), _density(density),
+      _viscosity(viscosity), _volumeForce(volumeForce)
+  {
+    _computeMatrixWithFD = true;
+  };
+  ~feSysElm_GLS_NavierStokes_Stab(){};
+  void createElementarySystem(std::vector<feSpace *> &space);
+  void computeAe(feBilinearForm *form);
+  void computeBe(feBilinearForm *form);
+  CLONEABLE(feSysElm_GLS_NavierStokes_Stab)
 };
 
 #endif
