@@ -58,20 +58,20 @@ feStatus solveQNBDF(feSolutionContainer *solDot, feTolerances tol, feMetaNumber 
     // Reset, assemble and solve the linear system J(u) * du = -NL(u)
     linearSystem->setToZero();
     solDot->computeSolTimeDerivative(sol, linearSystem);
-    // linearSystem->assemble(sol);
+    linearSystem->assemble(sol);
 
-    linearSystem->assembleResiduals(sol);
+    // linearSystem->assembleResiduals(sol);
 
-    // Check residual norm and exit if tolerance is reached
-    linearSystem->getResidualMaxNorm(&normResidual);
-    if(normResidual <= tol.tolResidual) {
-      feInfoCond(FE_VERBOSE > 0,
-               "\t\t\t\tNonlinear solver has stopped because residual norm ||NL(u)|| = %10.10e is below tolerance (%10.4e)",
-               normResidual, tol.tolResidual);
-      break;
-    }
+    // // Check residual norm and exit if tolerance is reached
+    // linearSystem->getResidualMaxNorm(&normResidual);
+    // if(normResidual <= tol.tolResidual) {
+    //   feInfoCond(FE_VERBOSE > 0,
+    //            "\t\t\t\tNonlinear solver has stopped because residual norm ||NL(u)|| = %10.10e is below tolerance (%10.4e)",
+    //            normResidual, tol.tolResidual);
+    //   break;
+    // }
 
-    linearSystem->assembleMatrices(sol);
+    // linearSystem->assembleMatrices(sol);
     linearSystem->constraintEssentialComponents(sol);
     bool successSolve = linearSystem->solve(&normDx, &normResidual, &normAxb, &linearSystemIter);
 
@@ -92,7 +92,7 @@ feStatus solveQNBDF(feSolutionContainer *solDot, feTolerances tol, feMetaNumber 
                ++iter, normAxb, linearSystemIter, normDx, normResidual,
                linearSystem->getRecomputeStatus() ? "true" : "false");
 
-    stop = (normDx <= tol.tolDx) || (iter > tol.maxIter);
+    stop = (normResidual <= tol.tolResidual) || (normDx <= tol.tolDx) || (iter > tol.maxIter);
   }
 
   if(iter > tol.maxIter) {
