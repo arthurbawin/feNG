@@ -26,6 +26,8 @@ typedef enum {
   MIXED_CURL,
   ZERO_BLOCK,
 
+  SUPG_PSPG_NAVIERSTOKES,
+
   GLS_STOKES_STABILIZATION,
   GLS_NAVIERSTOKES_STABILIZATION,
 
@@ -81,6 +83,8 @@ inline const std::string toString(elementSystemType t)
       return "SUPG_STABILIZATION_1D";
     case SUPG_STABILIZATION_2D:
       return "SUPG_STABILIZATION_2D";
+    case SUPG_PSPG_NAVIERSTOKES:
+      return "SUPG_PSPG_NAVIERSTOKES";
     case GLS_STOKES_STABILIZATION:
       return "GLS_STOKES_STABILIZATION";
     case GLS_NAVIERSTOKES_STABILIZATION:
@@ -238,7 +242,7 @@ protected:
 public:
   feSysElm_VectorMass(feFunction *coeff) : feSysElm(-1, 1, VECTOR_MASS, true), _coeff(coeff)
   {
-    _computeMatrixWithFD = true;
+    _computeMatrixWithFD = false;
   };
   ~feSysElm_VectorMass(){};
   void createElementarySystem(std::vector<feSpace *> &space);
@@ -310,14 +314,15 @@ public:
 class feSysElm_VectorDiffusion : public feSysElm
 {
 protected:
+  feFunction *_coeff;
   feFunction *_diffusivity;
   int _idU;
   std::vector<double> _gradu;
   std::vector<double> _gradPhi;
 
 public:
-  feSysElm_VectorDiffusion(feFunction *diffusivity)
-    : feSysElm(-1, 1, VECTOR_DIFFUSION, true), _diffusivity(diffusivity)
+  feSysElm_VectorDiffusion(feFunction *coeff, feFunction *diffusivity)
+    : feSysElm(-1, 1, VECTOR_DIFFUSION, true), _coeff(coeff), _diffusivity(diffusivity)
   {
     _computeMatrixWithFD = false;
   };
@@ -443,7 +448,7 @@ public:
   feSysElm_VectorConvectiveAcceleration(feFunction *coeff)
     : feSysElm(-1, 1, VECTOR_CONVECTIVE_ACCELERATION, true), _coeff(coeff)
   {
-    _computeMatrixWithFD = true;
+    _computeMatrixWithFD = false;
   };
   ~feSysElm_VectorConvectiveAcceleration(){};
   void createElementarySystem(std::vector<feSpace *> &space);
@@ -550,7 +555,7 @@ public:
   feSysElm_MixedDivergence(feFunction *coeff)
     : feSysElm(-1, 2, MIXED_DIVERGENCE, true), _coeff(coeff)
   {
-    _computeMatrixWithFD = true;
+    _computeMatrixWithFD = false;
   };
   ~feSysElm_MixedDivergence(){};
   void createElementarySystem(std::vector<feSpace *> &space);
@@ -705,6 +710,46 @@ public:
 };
 
 //
+// SUPG + PSPG stabilization for the Navier-Stokes equations
+//
+class feSysElm_NS_SUPG_PSPG : public feSysElm
+{
+protected:
+  feFunction *_coeff;
+  feFunction *_density;
+  feFunction *_viscosity;
+  feVectorFunction *_volumeForce;
+  int _idU;
+  int _idP;
+  int _nFunctionsU;
+  int _nFunctionsP;
+  std::vector<double> _f;
+  std::vector<double> _residual;
+  std::vector<double> _u;
+  std::vector<double> _gradu;
+  std::vector<double> _hessu;
+  std::vector<double> _gradp;
+  std::vector<double> _gradPhiU;
+  std::vector<double> _gradPhiP;
+  std::vector<double> _uDotGradu;
+  std::vector<double> _uDotGradPhiu;
+
+public:
+  feSysElm_NS_SUPG_PSPG(feFunction *coeff, feFunction *density, feFunction *viscosity,
+                           feVectorFunction *volumeForce)
+    : feSysElm(-1, 2, SUPG_PSPG_NAVIERSTOKES, true), _coeff(coeff), _density(density),
+      _viscosity(viscosity), _volumeForce(volumeForce)
+  {
+    _computeMatrixWithFD = true;
+  };
+  ~feSysElm_NS_SUPG_PSPG(){};
+  void createElementarySystem(std::vector<feSpace *> &space);
+  void computeAe(feBilinearForm *form);
+  void computeBe(feBilinearForm *form);
+  CLONEABLE(feSysElm_NS_SUPG_PSPG)
+};
+
+//
 // Galerkin least-squares stabilization for the Stokes equations
 //
 class feSysElm_GLS_Stokes_Stab : public feSysElm
@@ -722,8 +767,10 @@ protected:
   std::vector<double> _residual;
   std::vector<double> _u;
   std::vector<double> _gradu;
+  std::vector<double> _hessu;
   std::vector<double> _gradp;
   std::vector<double> _gradPhiU;
+  std::vector<double> _hessPhiU;
   std::vector<double> _gradPhiP;
 
 public:
@@ -759,9 +806,13 @@ protected:
   std::vector<double> _residual;
   std::vector<double> _u;
   std::vector<double> _gradu;
+  std::vector<double> _hessu;
   std::vector<double> _gradp;
   std::vector<double> _gradPhiU;
+  std::vector<double> _hessPhiU;
   std::vector<double> _gradPhiP;
+  std::vector<double> _uDotGradu;
+  std::vector<double> _uDotGradPhiu;
 
 public:
   feSysElm_GLS_NavierStokes_Stab(feFunction *coeff, feFunction *density, feFunction *viscosity,

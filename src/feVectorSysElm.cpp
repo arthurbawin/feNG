@@ -139,7 +139,7 @@ void feSysElm_VectorDiffusion::createElementarySystem(std::vector<feSpace *> &sp
 
 void feSysElm_VectorDiffusion::computeAe(feBilinearForm *form)
 {
-  double jac, doubleContraction, diffusivity;
+  double jac, doubleContraction, coeff, diffusivity;
   for(int k = 0; k < _nQuad; ++k) {
     jac = form->_J[_nQuad * form->_numElem + k];
     form->_cnc->computeElementTransformation(form->_geoCoord, k, jac, form->_transformation);
@@ -147,6 +147,7 @@ void feSysElm_VectorDiffusion::computeAe(feBilinearForm *form)
     // Evaluate scalar diffusivity k(t,x)
     form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, _pos);
     diffusivity = (*_diffusivity)(form->_tn, _pos);
+    coeff = (*_coeff)(form->_tn, _pos);
 
     // Compute compacted grad(phi) without the trivial zeros
     form->_intSpaces[_idU]->getFunctionsPhysicalGradientAtQuadNode(k, form->_transformation,
@@ -167,7 +168,7 @@ void feSysElm_VectorDiffusion::computeAe(feBilinearForm *form)
           for(int m = 0; m < _nComponents; ++m) {
             doubleContraction += _gradPhi[iOffset + m] * _gradPhi[jOffset + m];
           }
-          form->_Ae[i][j] -= diffusivity * doubleContraction * jac * _wQuad[k];
+          form->_Ae[i][j] -= coeff * diffusivity * doubleContraction * jac * _wQuad[k];
         }
       }
     }
@@ -184,6 +185,7 @@ void feSysElm_VectorDiffusion::computeBe(feBilinearForm *form)
     // Evaluate scalar diffusivity k(t,x)
     form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, _pos);
     double diffusivity = (*_diffusivity)(form->_tn, _pos);
+    double coeff = (*_coeff)(form->_tn, _pos);
 
     // Compute gradient of current solution:
     // gradu = [grad(u_1) ... grad(u_nComponents)]
@@ -202,7 +204,7 @@ void feSysElm_VectorDiffusion::computeBe(feBilinearForm *form)
       for(int m = 0; m < _nComponents; ++m) {
         doubleContraction += _gradu[(i % _nComponents) * _nComponents + m] * _gradPhi[offset + m];
       }
-      form->_Be[i] += diffusivity * doubleContraction * jac * _wQuad[k];
+      form->_Be[i] += coeff * diffusivity * doubleContraction * jac * _wQuad[k];
     }
   }
 }
@@ -294,7 +296,29 @@ void feSysElm_MixedDivergence::createElementarySystem(std::vector<feSpace *> &sp
 
 void feSysElm_MixedDivergence::computeAe(feBilinearForm *form)
 {
-  // ...
+  double jac, coeff, div_phiU;
+  for(int k = 0; k < _nQuad; ++k) {
+    jac = form->_J[_nQuad * form->_numElem + k];
+    form->_cnc->computeElementTransformation(form->_geoCoord, k, jac, form->_transformation);
+
+    // Evaluate scalar coefficient
+    form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, _pos);
+    coeff = (*_coeff)(form->_tn, _pos);
+
+    // Get _phiV
+    form->_intSpaces[_idV]->getFunctionsAtQuadNode(k, _phiV);
+
+    // Get _gradPhiU
+    form->_intSpaces[_idU]->getFunctionsPhysicalGradientAtQuadNode(k, form->_transformation,
+                                                                   _gradPhiU.data());
+
+    for(int i = 0; i < _nFunctionsV; ++i) {
+      for(int j = 0; j < _nFunctionsU; ++j) {
+        div_phiU = _gradPhiU[j * _nComponents + (j % _nComponents)];
+        form->_Ae[i][j] += coeff * _phiV[i] * div_phiU * jac * _wQuad[k];
+      }
+    }
+  }
 }
 
 void feSysElm_MixedDivergence::computeBe(feBilinearForm *form)
@@ -524,12 +548,12 @@ void feSysElm_DivergenceNewtonianStress::computeBe(feBilinearForm *form)
 }
 
 // -----------------------------------------------------------------------------
-// Bilinear form: GLS stabilization for the Stokes equations
+// Bilinear form: GLS stabilization for the (Navier-)Stokes equations
 // -----------------------------------------------------------------------------
-static double compute_hTau(int dim, const double velocity[3], double normVelocity, int nFunctions,
+static double hFortin(int dim, const double velocity[3], double normVelocity, int nFunctions,
                            const std::vector<double> &gradphi)
 {
-  // Compute hTau from (13.17) in Fortin & Garon
+  // Compute h from (13.17) in Fortin & Garon
   double res = 0., dotprod;
   for(int i = 0; i < nFunctions; ++i) {
     dotprod = 0.;
@@ -538,7 +562,7 @@ static double compute_hTau(int dim, const double velocity[3], double normVelocit
     }
     res += dotprod * dotprod;
   }
-  res = fmax(1e-10, res);
+
   return sqrt(2.) / sqrt(res);
 }
 
@@ -574,29 +598,171 @@ static double getOuterRadius(const std::vector<double> &triCoord)
   return dist[0] * dist[1] * dist[2] / (4 * area);
 }
 
-static double compute_hEquivalent(const std::vector<double> &triCoord)
+static double hCircumInscr(const std::vector<double> &triCoord)
 {
-  double hInscribed = getInnerRadius(triCoord);
-  double hCircumscribed = getOuterRadius(triCoord);
+  double hInscribed = 2. * getInnerRadius(triCoord);
+  double hCircumscribed = 2. * getOuterRadius(triCoord);
   return (hInscribed + hCircumscribed) / 2.;
 }
 
-static double compute_tauStokes(const std::vector<double> &triCoord, int dim, double velocity[3],
-                                double viscosity, int nFunctions, std::vector<double> &gradphi)
+// Diameter of circle of equivalent area
+inline double hEquivalentCircle(const double jac)
 {
-  double normV =
-    sqrt(velocity[0] * velocity[0] + velocity[1] * velocity[1] + velocity[2] * velocity[2]);
-  // double hTau = compute_hTau(dim, velocity, normV, nFunctions, gradphi);
-  double hTau = compute_hEquivalent(triCoord);
-  if(fabs(sqrt((2 * normV / hTau) * (2 * normV / hTau) + (4. * viscosity / (3. * hTau)))) < 1e-14 ||
-     fabs(hTau) > 1e10) {
-    feInfo("v = %f - %f - %f", velocity[0], velocity[1], velocity[2]);
-    for(auto val : gradphi) feInfo("gradphi = %f", val);
-    feInfo("hTau = %f", hTau);
+  return 2. * sqrt(jac / (2. * M_PI));
+}
+
+static double compute_tau(const std::vector<double> &triCoord, int dim, double velocity[3],
+                                double viscosity, int nFunctions, std::vector<double> &gradphi,
+                                double jac)
+{
+  double normV = 0.;
+  for(int i = 0; i < dim; ++i){
+    normV += velocity[i]*velocity[i];
   }
-  // return 1./ sqrt((2 * normV / hTau) * (2 * normV / hTau) + (4. * viscosity / (3. * hTau)));
-  return 1. / sqrt((2 * normV / hTau) * (2 * normV / hTau) +
-                   (4. * viscosity / (hTau * hTau)) * (4. * viscosity / (hTau * hTau)));
+  normV = sqrt(normV);
+
+  double h1 = hFortin(dim, velocity, normV, nFunctions, gradphi);
+  if(normV < 1e-12){
+    return 0.;
+  }
+  double h2 = hCircumInscr(triCoord);
+  double h3 = hEquivalentCircle(jac);
+
+  double h = h3;
+
+  double r1 = 2. * normV / h;
+  double r2 = 4. * viscosity / (h * h);
+
+  return 1. / sqrt(r1 * r1 + 9. * r2 * r2);
+}
+
+void feSysElm_NS_SUPG_PSPG::createElementarySystem(std::vector<feSpace *> &space)
+{
+  _idU = 0;
+  _idP = 1;
+  _fieldsLayoutI = {_idU, _idP};
+  _fieldsLayoutJ = {_idU, _idP};
+  _nComponents = space[_idU]->getNumComponents();
+  _nFunctionsU = space[_idU]->getNumFunctions();
+  _nFunctionsP = space[_idP]->getNumFunctions();
+  _f.resize(_nComponents);
+  _residual.resize(_nComponents);
+  _u.resize(_nComponents);
+  _gradu.resize(_nComponents * _nComponents);
+  _gradp.resize(_nComponents);
+  _gradPhiU.resize(_nComponents * _nFunctionsU);
+  _gradPhiP.resize(_nComponents * _nFunctionsP);
+  _uDotGradu.resize(_nComponents);
+  _uDotGradPhiu.resize(_nComponents);
+
+  int numUniqueMixedDerivatives[3] = {1, 3, 6};
+  _hessu.resize(numUniqueMixedDerivatives[_nComponents-1] * _nComponents);
+}
+
+void feSysElm_NS_SUPG_PSPG::computeAe(feBilinearForm *form)
+{
+  // ...
+}
+
+void feSysElm_NS_SUPG_PSPG::computeBe(feBilinearForm *form)
+{
+  double jac, coeff, rho, mu, tau;
+  double dotProdU, dotProdP;
+  double residualV[2], residualQ[2];
+  int cnt;
+  for(int k = 0; k < _nQuad; ++k) {
+    jac = form->_J[_nQuad * form->_numElem + k];
+    form->_cnc->computeElementTransformation(form->_geoCoord, k, jac, form->_transformation);
+
+    // Evaluate scalar coefficients
+    form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, _pos);
+    coeff = (*_coeff)(form->_tn, _pos);
+    rho = (*_density)(form->_tn, _pos);
+    mu = (*_viscosity)(form->_tn, _pos);
+    (*_volumeForce)(form->_tn, _pos, _f);
+
+    // Get u, grad_u, grad_p, gradphiU, gradphiP and _hessu (2nd order derivatives)
+    // u
+    form->_intSpaces[_idU]->interpolateVectorFieldAtQuadNode(form->_sol[_idU], k, _u, _nComponents);
+
+    // grad_u
+    form->_intSpaces[_idU]->interpolateVectorFieldAtQuadNode_physicalGradient(form->_sol[_idU],
+      _nComponents, k, form->_transformation, _gradu.data());
+
+    // grad_p
+    form->_intSpaces[_idP]->interpolateFieldAtQuadNode_physicalGradient(form->_sol[_idP],
+      k, form->_transformation, _gradp.data());
+
+    // grad_phiU
+    form->_intSpaces[_idU]->getFunctionsPhysicalGradientAtQuadNode(k, form->_transformation, _gradPhiU.data());
+
+    // grad_phiP
+    form->_intSpaces[_idP]->getFunctionsPhysicalGradientAtQuadNode(k, form->_transformation, _gradPhiP.data());
+
+    // hess_u
+    form->_intSpaces[_idU]->interpolateVectorFieldAtQuadNode_physicalHessian(form->_sol[_idU],
+      _nComponents, k, form->_transformation, _hessu.data());
+
+    // Stabilization parameter
+    tau = compute_tau(form->_geoCoord, _nComponents, _u.data(), mu, _nFunctionsU, _gradPhiU, jac);
+
+    // Compute the residual: ============================================
+
+    // Compute (u dot gradu)
+    // std::fill(_uDotGradu.begin(), _uDotGradu.end(), 0.);
+    _uDotGradu[0] = 0.;
+    _uDotGradu[1] = 0.;
+    // for(int m = 0; m < _nComponents; ++m) {
+    //   for(int n = 0; n < _nComponents; ++n) {
+    //     _uDotGradu[m] += _u[n] * _gradu[m * _nComponents + n];
+    //   }
+    // }
+
+    double dudx = _gradu[0];
+    double dudy = _gradu[1];
+    double dvdx = _gradu[2];
+    double dvdy = _gradu[3];
+
+    _uDotGradu[0] = _u[0] * dudx + _u[1] * dudy;
+    _uDotGradu[1] = _u[0] * dvdx + _u[1] * dvdy;
+
+    double lapu[2] = {_hessu[0] + _hessu[2], _hessu[3] + _hessu[5]};
+
+    _residual[0] = _uDotGradu[0] + _gradp[0] - mu * lapu[0] - _f[0];
+    _residual[1] = _uDotGradu[1] + _gradp[1] - mu * lapu[1] - _f[1];
+
+    cnt = 0;
+    for(int iU = 0; iU < _nFunctionsU; ++iU) {
+
+      // Compute (u dot grad_v)
+      // std::fill(_uDotGradPhiu.begin(), _uDotGradPhiu.end(), 0.);
+      _uDotGradPhiu[0] = 0.;
+      _uDotGradPhiu[1] = 0.;
+      for(int n = 0; n < _nComponents; ++n) {
+        _uDotGradPhiu[iU % _nComponents] += _u[n] * _gradPhiU[iU * _nComponents + n];
+      }
+
+      residualV[0] = _uDotGradPhiu[0];
+      residualV[1] = _uDotGradPhiu[1];
+
+      dotProdU = _residual[0]*residualV[0] + _residual[1]*residualV[1];
+
+      form->_Be[cnt++] -=  coeff * tau * dotProdU * jac * _wQuad[k];
+      // cnt++;
+    }
+
+    assert(cnt == _nFunctionsU);
+
+    for(int iP = 0; iP < _nFunctionsP; ++iP) {
+
+      residualQ[0] = _gradPhiP[iP * _nComponents + 0];
+      residualQ[1] = _gradPhiP[iP * _nComponents + 1];
+
+      dotProdP = _residual[0]*residualQ[0] + _residual[1]*residualQ[1]; 
+
+      form->_Be[cnt++] -= coeff * tau * dotProdP * jac * _wQuad[k];
+    }
+  }
 }
 
 void feSysElm_GLS_Stokes_Stab::createElementarySystem(std::vector<feSpace *> &space)
@@ -615,6 +781,10 @@ void feSysElm_GLS_Stokes_Stab::createElementarySystem(std::vector<feSpace *> &sp
   _gradp.resize(_nComponents);
   _gradPhiU.resize(_nComponents * _nFunctionsU);
   _gradPhiP.resize(_nComponents * _nFunctionsP);
+
+  int numUniqueMixedDerivatives[3] = {1, 3, 6};
+  _hessu.resize(numUniqueMixedDerivatives[_nComponents-1] * _nComponents);
+  _hessPhiU.resize(numUniqueMixedDerivatives[_nComponents-1] * _nFunctionsU);
 }
 
 void feSysElm_GLS_Stokes_Stab::computeAe(feBilinearForm *form)
@@ -624,7 +794,79 @@ void feSysElm_GLS_Stokes_Stab::computeAe(feBilinearForm *form)
 
 void feSysElm_GLS_Stokes_Stab::computeBe(feBilinearForm *form)
 {
-  // ...
+    double jac, coeff, rho, mu, tau;
+  double dotProdU, dotProdP;
+  double residualV[2], residualQ[2];
+  int cnt;
+  for(int k = 0; k < _nQuad; ++k) {
+    jac = form->_J[_nQuad * form->_numElem + k];
+    form->_cnc->computeElementTransformation(form->_geoCoord, k, jac, form->_transformation);
+
+    // Evaluate scalar coefficients
+    form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, _pos);
+    coeff = (*_coeff)(form->_tn, _pos);
+    rho = (*_density)(form->_tn, _pos);
+    mu = (*_viscosity)(form->_tn, _pos);
+    (*_volumeForce)(form->_tn, _pos, _f);
+
+    // Get u, grad_u, grad_p, gradphiU, gradphiP and _hessu (2nd order derivatives)
+    // u
+    form->_intSpaces[_idU]->interpolateVectorFieldAtQuadNode(form->_sol[_idU], k, _u, _nComponents);
+    // grad_u
+    form->_intSpaces[_idU]->interpolateVectorFieldAtQuadNode_physicalGradient(form->_sol[_idU],
+      _nComponents, k, form->_transformation, _gradu.data());
+    // grad_p
+    form->_intSpaces[_idP]->interpolateFieldAtQuadNode_physicalGradient(form->_sol[_idP],
+      k, form->_transformation, _gradp.data());
+    // grad_phiU
+    form->_intSpaces[_idU]->getFunctionsPhysicalGradientAtQuadNode(k, form->_transformation, _gradPhiU.data());
+    // grad_phiP
+    form->_intSpaces[_idP]->getFunctionsPhysicalGradientAtQuadNode(k, form->_transformation, _gradPhiP.data());
+    // hess_u
+    form->_intSpaces[_idU]->interpolateVectorFieldAtQuadNode_physicalHessian(form->_sol[_idU],
+      _nComponents, k, form->_transformation, _hessu.data());
+    // hessPhiU
+    form->_intSpaces[_idU]->getFunctionsPhysicalHessianAtQuadNode(k, form->_transformation, _hessPhiU.data());
+
+    // Stabilization parameter
+    tau = compute_tau(form->_geoCoord, _nComponents, _u.data(), mu, _nFunctionsU, _gradPhiU, jac);
+
+    // Compute the residual: ============================================
+    double lapu[2] = {_hessu[0] + _hessu[2], _hessu[3] + _hessu[5]};
+    _residual[0] = - _gradp[0] + mu * lapu[0] + rho * _f[0];
+    _residual[1] = - _gradp[1] + mu * lapu[1] + rho * _f[1];
+    // ===================================================================
+
+    cnt = 0;
+    for(int iU = 0; iU < _nFunctionsU; ++iU) {
+
+      double d2phidx2 = _hessPhiU[iU * 3 + 0];
+      double d2phidy2 = _hessPhiU[iU * 3 + 2];
+      double lap_phiU = d2phidx2 + d2phidy2;
+
+      if(iU % _nComponents == 0){
+        residualV[0] = mu * lap_phiU;
+        residualV[1] = 0.;
+      } else{
+        residualV[0] = 0.;
+        residualV[1] = mu * lap_phiU;
+      }
+
+      dotProdU = _residual[0]*residualV[0] + _residual[1]*residualV[1];
+
+      form->_Be[cnt++] +=  coeff * tau * dotProdU * jac * _wQuad[k];
+    }
+
+    for(int iP = 0; iP < _nFunctionsP; ++iP) {
+
+      residualQ[0] = - _gradPhiP[iP * _nComponents + 0];
+      residualQ[1] = - _gradPhiP[iP * _nComponents + 1];
+
+      dotProdP = _residual[0]*residualQ[0] + _residual[1]*residualQ[1]; 
+
+      form->_Be[cnt++] -= coeff * tau * dotProdP * jac * _wQuad[k];
+    }
+  }
 }
 
 void feSysElm_GLS_NavierStokes_Stab::createElementarySystem(std::vector<feSpace *> &space)
@@ -643,6 +885,12 @@ void feSysElm_GLS_NavierStokes_Stab::createElementarySystem(std::vector<feSpace 
   _gradp.resize(_nComponents);
   _gradPhiU.resize(_nComponents * _nFunctionsU);
   _gradPhiP.resize(_nComponents * _nFunctionsP);
+  _uDotGradu.resize(_nComponents);
+  _uDotGradPhiu.resize(_nComponents);
+
+  int numUniqueMixedDerivatives[3] = {1, 3, 6};
+  _hessu.resize(numUniqueMixedDerivatives[_nComponents-1] * _nComponents);
+  _hessPhiU.resize(numUniqueMixedDerivatives[_nComponents-1] * _nFunctionsU);
 }
 
 void feSysElm_GLS_NavierStokes_Stab::computeAe(feBilinearForm *form)
@@ -652,5 +900,178 @@ void feSysElm_GLS_NavierStokes_Stab::computeAe(feBilinearForm *form)
 
 void feSysElm_GLS_NavierStokes_Stab::computeBe(feBilinearForm *form)
 {
-  // ...
+  double jac, coeff, rho, mu, tau;
+  double dotProdU, dotProdP;
+  double residualV[2], residualQ[2];
+  int cnt;
+  for(int k = 0; k < _nQuad; ++k) {
+    jac = form->_J[_nQuad * form->_numElem + k];
+    form->_cnc->computeElementTransformation(form->_geoCoord, k, jac, form->_transformation);
+
+    // Evaluate scalar coefficients
+    form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, _pos);
+    coeff = (*_coeff)(form->_tn, _pos);
+    rho = (*_density)(form->_tn, _pos);
+    mu = (*_viscosity)(form->_tn, _pos);
+    (*_volumeForce)(form->_tn, _pos, _f);
+
+    // Get u, grad_u, grad_p, gradphiU, gradphiP and _hessu (2nd order derivatives)
+    // u
+    form->_intSpaces[_idU]->interpolateVectorFieldAtQuadNode(form->_sol[_idU], k, _u, _nComponents);
+
+    // grad_u
+    form->_intSpaces[_idU]->interpolateVectorFieldAtQuadNode_physicalGradient(form->_sol[_idU],
+      _nComponents, k, form->_transformation, _gradu.data());
+
+    // grad_p
+    form->_intSpaces[_idP]->interpolateFieldAtQuadNode_physicalGradient(form->_sol[_idP],
+      k, form->_transformation, _gradp.data());
+
+    // grad_phiU
+    form->_intSpaces[_idU]->getFunctionsPhysicalGradientAtQuadNode(k, form->_transformation, _gradPhiU.data());
+
+    // grad_phiP
+    form->_intSpaces[_idP]->getFunctionsPhysicalGradientAtQuadNode(k, form->_transformation, _gradPhiP.data());
+
+    // hess_u
+    form->_intSpaces[_idU]->interpolateVectorFieldAtQuadNode_physicalHessian(form->_sol[_idU],
+      _nComponents, k, form->_transformation, _hessu.data());
+
+    // hessPhiU
+    form->_intSpaces[_idU]->getFunctionsPhysicalHessianAtQuadNode(k, form->_transformation, _hessPhiU.data());
+
+    // Stabilization parameter
+    tau = compute_tau(form->_geoCoord, _nComponents, _u.data(), mu, _nFunctionsU, _gradPhiU, jac);
+
+    // Compute the residual: ============================================
+
+    // Compute (u dot gradu)
+    // std::fill(_uDotGradu.begin(), _uDotGradu.end(), 0.);
+    _uDotGradu[0] = 0.;
+    _uDotGradu[1] = 0.;
+    // for(int m = 0; m < _nComponents; ++m) {
+    //   for(int n = 0; n < _nComponents; ++n) {
+    //     _uDotGradu[m] += _u[n] * _gradu[m * _nComponents + n];
+    //   }
+    // }
+
+    double dudx = _gradu[0];
+    double dudy = _gradu[1];
+    double dvdx = _gradu[2];
+    double dvdy = _gradu[3];
+
+    _uDotGradu[0] = _u[0] * dudx + _u[1] * dudy;
+    _uDotGradu[1] = _u[0] * dvdx + _u[1] * dvdy;
+
+    // Compute the residual: ============================================
+    double lapu[2] = {_hessu[0] + _hessu[2], _hessu[3] + _hessu[5]};
+    _residual[0] = - _uDotGradu[0] - _gradp[0] + mu * lapu[0] + rho * _f[0];
+    _residual[1] = - _uDotGradu[1] - _gradp[1] + mu * lapu[1] + rho * _f[1];
+    // ===================================================================
+
+    cnt = 0;
+    for(int iU = 0; iU < _nFunctionsU; ++iU) {
+
+      // Compute (u dot grad_v)
+      double uDotGradPhiU = 0.;
+      for(int n = 0; n < _nComponents; ++n) {
+        uDotGradPhiU += _u[n] * _gradPhiU[iU * _nComponents + n];
+      }
+
+      double d2phidx2 = _hessPhiU[iU * 3 + 0];
+      double d2phidy2 = _hessPhiU[iU * 3 + 2];
+      double lap_phiU = d2phidx2 + d2phidy2;
+
+      if(iU % _nComponents == 0){
+        residualV[0] = - uDotGradPhiU + mu * lap_phiU;
+        residualV[1] = 0.;
+      } else{
+        residualV[0] = 0.;
+        residualV[1] = - uDotGradPhiU + mu * lap_phiU;
+      }
+
+      dotProdU = _residual[0]*residualV[0] + _residual[1]*residualV[1];
+
+      form->_Be[cnt++] +=  coeff * tau * dotProdU * jac * _wQuad[k];
+    }
+
+    for(int iP = 0; iP < _nFunctionsP; ++iP) {
+
+      residualQ[0] = - _gradPhiP[iP * _nComponents + 0];
+      residualQ[1] = - _gradPhiP[iP * _nComponents + 1];
+
+      dotProdP = _residual[0]*residualQ[0] + _residual[1]*residualQ[1]; 
+
+      form->_Be[cnt++] -= coeff * tau * dotProdP * jac * _wQuad[k];
+    }
+
+    // // feInfo("Accessing 0 to 5 from size %d", _hessu.size());
+    // double lapu[2] = {_hessu[0] + _hessu[2], _hessu[3] + _hessu[5]};
+
+    // _residual[0] = _uDotGradu[0] + _gradp[0] - mu * lapu[0] - _f[0];
+    // _residual[1] = _uDotGradu[1] + _gradp[1] - mu * lapu[1] - _f[1];
+
+    // // _residual[0] =                 _gradp[0] - mu * lapu[0] - _f[0];
+    // // _residual[1] =                 _gradp[1] - mu * lapu[1] - _f[1];
+    // // ===================================================================
+
+    // cnt = 0;
+    // for(int iU = 0; iU < _nFunctionsU; ++iU) {
+
+    //   // Compute (u dot grad_v)
+    //   // std::fill(_uDotGradPhiu.begin(), _uDotGradPhiu.end(), 0.);
+    //   _uDotGradPhiu[0] = 0.;
+    //   _uDotGradPhiu[1] = 0.;
+    //   for(int n = 0; n < _nComponents; ++n) {
+    //     _uDotGradPhiu[iU % _nComponents] += _u[n] * _gradPhiU[iU * _nComponents + n];
+    //   }
+
+    //   double d2phidx2 = _hessPhiU[iU * 3 + 0];
+    //   // double d2phidxy = _hessPhiU[iU * 3 + 1];
+    //   double d2phidy2 = _hessPhiU[iU * 3 + 2];
+
+    //   if(iU % _nComponents == 0){
+    //     residualV[0] = _uDotGradPhiu[0] - mu * (d2phidx2 + d2phidy2);
+    //     residualV[1] = _uDotGradPhiu[1];
+
+    //     // residualV[0] = _uDotGradPhiu[0];
+    //     // residualV[1] = _uDotGradPhiu[1];
+
+    //     // residualV[0] = - mu * (d2phidx2 + d2phidy2);
+    //     // residualV[1] = 0.;
+
+    //     // residualV[0] = 0.;
+    //     // residualV[1] = 0.;
+    //   } else{
+    //     residualV[0] = _uDotGradPhiu[0];
+    //     residualV[1] = _uDotGradPhiu[1] - mu * (d2phidx2 + d2phidy2);
+
+    //     // residualV[0] = _uDotGradPhiu[0];
+    //     // residualV[1] = _uDotGradPhiu[1];
+
+    //     // residualV[0] = 0.;
+    //     // residualV[1] = - mu * (d2phidx2 + d2phidy2);
+
+    //     // residualV[0] = 0.;
+    //     // residualV[1] = 0.;
+    //   }
+
+    //   dotProdU = _residual[0]*residualV[0] + _residual[1]*residualV[1];
+
+    //   form->_Be[cnt++] -=  coeff * tau * dotProdU * jac * _wQuad[k];
+    //   // cnt++;
+    // }
+
+    // assert(cnt == _nFunctionsU);
+
+    // for(int iP = 0; iP < _nFunctionsP; ++iP) {
+
+    //   residualQ[0] = _gradPhiP[iP * _nComponents + 0];
+    //   residualQ[1] = _gradPhiP[iP * _nComponents + 1];
+
+    //   dotProdP = _residual[0]*residualQ[0] + _residual[1]*residualQ[1]; 
+
+    //   form->_Be[cnt++] -= coeff * tau * dotProdP * jac * _wQuad[k];
+    // }
+  }
 }
