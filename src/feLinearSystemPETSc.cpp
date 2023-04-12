@@ -129,7 +129,7 @@ void feLinearSystemPETSc::initialize()
   // Create the Krylov solver (default is GMRES)
   ierr = KSPCreate(PETSC_COMM_WORLD, &ksp);
   CHKERRABORT(PETSC_COMM_WORLD, ierr);
-  ierr = KSPSetType(ksp, KSPBCGS);
+  ierr = KSPSetType(ksp, KSPGMRES);
   CHKERRABORT(PETSC_COMM_WORLD, ierr);
   ierr = KSPSetOperators(ksp, _A, _A);
   CHKERRABORT(PETSC_COMM_WORLD, ierr);
@@ -216,7 +216,7 @@ void feLinearSystemPETSc::viewMatrix()
 
     PetscViewer viewer;
     PetscDraw draw;
-    ierr = PetscViewerDrawOpen(PETSC_COMM_WORLD, NULL, NULL, 0, 0, 600, 600, &viewer);
+    ierr = PetscViewerDrawOpen(PETSC_COMM_WORLD, NULL, NULL, 0, 0, 1200, 1200, &viewer);
     CHKERRV(ierr);
     ierr = MatView(_A, viewer);
     CHKERRV(ierr);
@@ -538,6 +538,9 @@ bool feLinearSystemPETSc::solve(double *normSolution, double *normRHS, double *n
   // Set tolerances, in case the have changed since creation
   ierr = KSPSetTolerances(ksp, (PetscReal)_rel_tol, (PetscReal)_abs_tol, (PetscReal)_div_tol,
                           (PetscInt)_max_iter);
+  // Override with command line options
+  ierr = KSPSetFromOptions(ksp);
+  CHKERRABORT(PETSC_COMM_WORLD, ierr);
 
   ierr = VecNorm(_rhs, NORM_MAX, normRHS);
   CHKERRABORT(PETSC_COMM_WORLD, ierr);

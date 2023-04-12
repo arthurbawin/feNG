@@ -111,6 +111,7 @@ protected:
   std::vector<double> _dLds;
   std::vector<double> _dLdt;
   std::vector<double> _d2Ldr2;
+  std::vector<double> _d2Ldrs;
   std::vector<double> _d2Lds2;
   std::vector<double> _d2Ldt2;
 
@@ -196,6 +197,7 @@ public:
   virtual std::vector<double> dLds(double *r) { return std::vector<double>(_nFunctions, 0.); };
   virtual std::vector<double> dLdt(double *r) { return std::vector<double>(_nFunctions, 0.); };
   virtual std::vector<double> d2Ldr2(double *r) { return std::vector<double>(_nFunctions, 0.); };
+  virtual std::vector<double> d2Ldrs(double *r) { return std::vector<double>(_nFunctions, 0.); };
   virtual std::vector<double> d2Lds2(double *r) { return std::vector<double>(_nFunctions, 0.); };
   virtual std::vector<double> d2Ldt2(double *r) { return std::vector<double>(_nFunctions, 0.); };
 
@@ -225,6 +227,18 @@ public:
   {
     return _dLdt[_nFunctions * iQuadNode + iFun];
   }
+  double getd2Functiondr2AtQuadNode(const int iFun, const int iQuadNode)
+  {
+    return _d2Ldr2[_nFunctions * iQuadNode + iFun];
+  }
+  double getd2FunctiondrsAtQuadNode(const int iFun, const int iQuadNode)
+  {
+    return _d2Ldrs[_nFunctions * iQuadNode + iFun];
+  }
+  double getd2Functionds2AtQuadNode(const int iFun, const int iQuadNode)
+  {
+    return _d2Lds2[_nFunctions * iQuadNode + iFun];
+  }
 
   // Get the gradient in physical coordinates of the basis functions at quadrature node:
   // gradPhi = [dPhi1dx ... dPhindx, dPhi1dy ... dPhindy, dPhi1dz ... dPhindz]
@@ -232,14 +246,8 @@ public:
   void getFunctionsPhysicalGradientAtQuadNode(const int iQuadNode, const ElementTransformation &T,
                                               double *gradPhi);
 
-  double getd2Functiondr2AtQuadNode(const int iFun, const int iQuadNode)
-  {
-    return _d2Ldr2[_nFunctions * iQuadNode + iFun];
-  }
-  double getd2Functionds2AtQuadNode(const int iFun, const int iQuadNode)
-  {
-    return _d2Lds2[_nFunctions * iQuadNode + iFun];
-  }
+  void getFunctionsPhysicalHessianAtQuadNode(const int iQuadNode, const ElementTransformation &T,
+                                              double *hessPhi);
 
   double getGlobalFunctionAtQuadNode(const int iElm, const int iFun, const int iQuadNode)
   {
@@ -352,10 +360,16 @@ public:
   void interpolateVectorFieldAtQuadNode_tDerivative(std::vector<double> &field, int iNode,
                                                     double res[3]);
 
+  // FIXME: Add comments
   void interpolateVectorFieldAtQuadNode_physicalGradient(std::vector<double> &field,
                                                          const int nComponents, const int iQuadNode,
                                                          const ElementTransformation &T,
                                                          double *grad);
+
+  void interpolateVectorFieldAtQuadNode_physicalHessian(std::vector<double> &field,
+                                                         const int nComponents, const int iQuadNode,
+                                                         const ElementTransformation &T,
+                                                         double *hessian);
 };
 
 class feScalarSpace : public feSpace
@@ -717,6 +731,9 @@ public:
 
   std::vector<double> dLdr(double *r);
   std::vector<double> dLds(double *r);
+  std::vector<double> d2Ldr2(double *r);
+  std::vector<double> d2Ldrs(double *r);
+  std::vector<double> d2Lds2(double *r);
 
   void initializeNumberingUnknowns();
   void initializeNumberingEssential();
@@ -742,6 +759,9 @@ public:
 
   std::vector<double> dLdr(double *r);
   std::vector<double> dLds(double *r);
+  std::vector<double> d2Ldr2(double *r);
+  std::vector<double> d2Ldrs(double *r);
+  std::vector<double> d2Lds2(double *r);
 
   void initializeNumberingUnknowns();
   void initializeNumberingEssential();
@@ -766,6 +786,9 @@ public:
   void L(double *r, double *L);
   std::vector<double> dLdr(double *r);
   std::vector<double> dLds(double *r);
+  std::vector<double> d2Ldr2(double *r);
+  std::vector<double> d2Ldrs(double *r);
+  std::vector<double> d2Lds2(double *r);
 
   void initializeNumberingUnknowns();
   void initializeNumberingEssential();
@@ -791,6 +814,9 @@ public:
   void L(double *r, double *L);
   std::vector<double> dLdr(double *r);
   std::vector<double> dLds(double *r);
+  std::vector<double> d2Ldr2(double *r);
+  std::vector<double> d2Ldrs(double *r);
+  std::vector<double> d2Lds2(double *r);
 
   virtual feStatus Lphys(int iElm, std::vector<double> &x, std::vector<double> &L,
                          std::vector<double> &dLdx, std::vector<double> &dLdy);
@@ -818,6 +844,9 @@ public:
 
   std::vector<double> dLdr(double *r);
   std::vector<double> dLds(double *r);
+  std::vector<double> d2Ldr2(double *r);
+  std::vector<double> d2Ldrs(double *r);
+  std::vector<double> d2Lds2(double *r);
 
   void initializeNumberingUnknowns();
   void initializeNumberingEssential();

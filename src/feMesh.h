@@ -378,7 +378,9 @@ public:
                 const std::vector<feSpace *> &otherSpaces);
 
   // Default argument is a feMetricOptions initialized by default, see feAdaptMesh.cpp
-  feStatus adapt(feNewRecovery *recoveredField, feMetricOptions &options);
+  feStatus adapt(feNewRecovery *recoveredField, feMetricOptions &options, 
+    const std::vector<feSpace*> &spaces,
+    const std::vector<feSpace*> &essentialSpaces);
 };
 
 #endif

@@ -125,12 +125,15 @@ void createAnisoMesh(feMetric *metric, feMetricOptions &metricOptions)
 #endif
 }
 
-feStatus feMesh2DP1::adapt(feNewRecovery *recoveredField, feMetricOptions &options)
+feStatus feMesh2DP1::adapt(feNewRecovery *recoveredField, feMetricOptions &options,
+  const std::vector<feSpace*> &spaces,
+  const std::vector<feSpace*> &essentialSpaces)
 {
 #if defined(HAVE_GMSH)
   // Step 1: Set the gmsh background mesh on which the metric tensors are computed
   gmsh::initialize();
   gmsh::open(options.backgroundMeshfile);
+  // gmsh::fltk::run();
   gmsh::model::getCurrent(options.modelForMetric);
   options.isGmshModelReady = true;
 
@@ -141,6 +144,9 @@ feStatus feMesh2DP1::adapt(feNewRecovery *recoveredField, feMetricOptions &optio
   std::string cmd1 = "mmg2d " + options.mmgInputMeshfile + " -hgrad -1 -o tmp.mesh";
   // Open MEDIT mesh file and save it according to provided mesh name
   std::string cmd2 = "gmsh tmp.mesh -o " + options.mmgOutputMeshfile + " -0";
+
+  // Alternative: Save directly to .msh to preserve Physical Entities
+  cmd1 = "mmg2d " + options.mmgInputMeshfile + " -hgrad -1 -o " + options.mmgOutputMeshfile;
 
   for(int i = 0; i < options.nLoopsAnisoMesh; ++i){
 
@@ -153,34 +159,59 @@ feStatus feMesh2DP1::adapt(feNewRecovery *recoveredField, feMetricOptions &optio
 
     // Create aniso mesh
     system(cmd1.data());
-    system(cmd2.data());
+    // system(cmd2.data());
     gmsh::open(options.mmgOutputMeshfile);
     // gmsh::fltk::run();
     gmsh::model::getCurrent(options.modelForMetric);
     metricField.setGmshMetricModel(options.modelForMetric);
   }
 
-  // Step 3: Check physical entities
-  // FIXME MAKE THIS NICER
-  // Get geometric entities and assign physical entities (should be improved)
-  gmsh::vectorpair dimTags;
-  gmsh::model::getEntities(dimTags);
-  std::vector<int> entities1D, entities2D;
-  for(auto p : dimTags) {
-    std::cout << p.first << " - " << p.second << std::endl;
-    if(p.first == 1) entities1D.push_back(p.second);
-    if(p.first == 2) entities2D.push_back(p.second);
-  }
   gmsh::write("beforePhysical.msh");
-  // Add physical entities
-  gmsh::model::addPhysicalGroup(1, entities1D, 1);
-  gmsh::model::setPhysicalName(1, 1, "Bord");
-  gmsh::model::addPhysicalGroup(2, entities2D, 2);
-  gmsh::model::setPhysicalName(2, 2, "Domaine");
-  gmsh::model::mesh::reverse();
+
+  // Step 3: Check physical entities
+  gmsh::vectorpair physicalGroups;
+  gmsh::model::getPhysicalGroups(physicalGroups);
+
+  std::map<std::pair<int, int>, std::vector<int>> entitiesForPhysical;
+
+  // Get the entities for existing physical groups
+  for(auto pair : physicalGroups){
+    std::vector<int> entities;
+    gmsh::model::getEntitiesForPhysicalGroup(pair.first, pair.second, entities);
+    entitiesForPhysical[pair] = entities;
+  }
+
+  // Remove all the physical groups
+  gmsh::model::removePhysicalGroups();
+
+  // Re-add stored physical groups
+  for(auto pair : _physicalEntitiesDescription){
+    int dim = pair.first.first;
+    int tag = pair.first.second;
+    std::string name = pair.second; 
+
+    bool OK = false;
+    for(auto p : physicalGroups){
+      if(p.first == dim && p.second == tag){
+        gmsh::model::addPhysicalGroup(dim, entitiesForPhysical[p], tag);
+        gmsh::model::setPhysicalName(dim, tag, name);
+        OK = true;
+      }
+    }
+    if(!OK){
+      return feErrorMsg(FE_STATUS_ERROR, "Physical Entity \"%s\" with (dim,tag) = (%d,%d)"
+       " could not be reassigned after mesh adaptation :/", name.data(), dim, tag);
+    }
+  }
+
+  // gmsh::model::mesh::reverse();
   gmsh::write("afterPhysical.msh");
 
   // Step 4: Interpolate solution on new mesh
+  // feMesh2DP1 newMesh("afterPhysical.msh");
+  // feMetaNumber numbering(&newMesh, spaces, essentialSpaces);
+
+
 #endif
   return FE_STATUS_OK;
 }

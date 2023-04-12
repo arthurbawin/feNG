@@ -55,7 +55,7 @@ protected:
   bool recomputeMatrix;
 
   // Options for iterative solver:
-  double _rel_tol = 1e-8;
+  double _rel_tol = 1e-6;
   double _abs_tol = 1e-14;
   double _div_tol = 1e6;
   int _max_iter = 5e3;

@@ -66,12 +66,13 @@ feStatus solveQNBDF(feSolutionContainer *solDot, feTolerances tol, feMetaNumber 
     // linearSystem->getResidualMaxNorm(&normResidual);
     // if(normResidual <= tol.tolResidual) {
     //   feInfoCond(FE_VERBOSE > 0,
-    //            "\t\t\t\tNonlinear solver has stopped because residual norm ||NL(u)|| = %10.10e is below tolerance (%10.4e)",
-    //            normResidual, tol.tolResidual);
+    //            "\t\t\t\tNonlinear solver has stopped because residual norm ||NL(u)|| = %10.10e is
+    //            below tolerance (%10.4e)", normResidual, tol.tolResidual);
     //   break;
     // }
 
     // linearSystem->assembleMatrices(sol);
+
     linearSystem->constraintEssentialComponents(sol);
     bool successSolve = linearSystem->solve(&normDx, &normResidual, &normAxb, &linearSystemIter);
 
@@ -95,19 +96,32 @@ feStatus solveQNBDF(feSolutionContainer *solDot, feTolerances tol, feMetaNumber 
     stop = (normResidual <= tol.tolResidual) || (normDx <= tol.tolDx) || (iter > tol.maxIter);
   }
 
-  if(iter > tol.maxIter) {
+  if(normResidual <= tol.tolResidual) {
+    // Solver converged as expected
+    feInfoCond(
+      FE_VERBOSE > 0,
+      "\t\t\t\tConverged in %2d Newton iterations (Residual converged): ||du|| = %10.10e \t ||NL(u)|| = %10.10e", iter,
+      normDx, normResidual);
+    return FE_STATUS_OK;
+  } else if(normDx <= tol.tolDx) {
+    // Increment is low enough but residual not
+    feInfoCond(
+      FE_VERBOSE > 0,
+      "\t\t\t\tConverged in %2d Newton iterations (Increment converged): ||du|| = %10.10e \t ||NL(u)|| = %10.10e", iter,
+      normDx, normResidual);
+    printf("\n");
+    feWarning("Nonlinear solver converged because increment du = %10.4e is below prescribed tolerance (%1.4e),\n"
+      "but the equation residual NL(u) = %10.4e is not (tol = %1.4e). Consider decreasing the tolerance for du.\n",
+      normDx, tol.tolDx, normResidual, tol.tolResidual);
+    return FE_STATUS_OK;
+  } else {
+    // Did not converge
     return feErrorMsg(FE_STATUS_ERROR,
                       "Nonlinear solver did not converge at iter %2d : ||J*du - NL(u)|| = %10.10e  "
                       "(%4d iter.) \t ||du|| = "
                       "%10.10e \t ||NL(u)|| = %10.10e",
                       iter, normAxb, linearSystemIter, normDx, normResidual);
-  } else {
-    feInfoCond(
-      FE_VERBOSE > 0,
-      "\t\t\t\tConverged in %2d Newton iterations : ||du|| = %10.10e \t ||NL(u)|| = %10.10e", iter,
-      normDx, normResidual);
   }
-  return FE_STATUS_OK;
 }
 
 StationarySolver::StationarySolver(feTolerances tol, feMetaNumber *metaNumber,
@@ -233,8 +247,9 @@ feStatus BDF2Solver::makeStep()
       printf(" ----------------------------- \n");
       printf("\n");
       double _t_ini = _t0 + _dt;
-      std::vector<feNorm*> norms = {};
-      DC2FSolver solver(_tol, _metaNumber, _linearSystem, _sol, norms, _mesh, _exportData, _t0, _t_ini, 1);
+      std::vector<feNorm *> norms = {};
+      DC2FSolver solver(_tol, _metaNumber, _linearSystem, _sol, norms, _mesh, _exportData, _t0,
+                        _t_ini, 1);
       solver.makeSteps(1);
       feSolutionContainer *_solutionContainerDC2F = solver.getSolutionContainer();
       _solutionContainer->rotate(_dt);

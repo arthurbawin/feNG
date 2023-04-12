@@ -304,6 +304,10 @@ void feBilinearForm::initialize(feSolution *sol, int numElem)
 void feBilinearForm::computeMatrix(feSolution *sol, int numElem)
 {
   (this->*feBilinearForm::ptrComputeMatrix)(sol, numElem);
+  // if(this->_sysElm->getID() == MIXED_DIVERGENCE){
+  //   printMatrix(_M, _N, &_Ae);
+  //   exit(-1);
+  // }
 }
 
 void feBilinearForm::computeResidual(feSolution *sol, int numElem)

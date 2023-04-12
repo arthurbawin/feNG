@@ -259,6 +259,7 @@ feStatus feSpace::setQuadratureRule(feQuadrature *rule)
   _dLds.resize(_nFunctions * _nQuad, 0.0);
   _dLdt.resize(_nFunctions * _nQuad, 0.0);
   _d2Ldr2.resize(_nFunctions * _nQuad, 0.0);
+  _d2Ldrs.resize(_nFunctions * _nQuad, 0.0);
   _d2Lds2.resize(_nFunctions * _nQuad, 0.0);
   _d2Ldt2.resize(_nFunctions * _nQuad, 0.0);
 
@@ -271,6 +272,7 @@ feStatus feSpace::setQuadratureRule(feQuadrature *rule)
     std::vector<double> dlds = dLds(r);
     std::vector<double> dldt = dLdt(r);
     std::vector<double> d2ldr2 = d2Ldr2(r);
+    std::vector<double> d2ldrs = d2Ldrs(r);
     std::vector<double> d2lds2 = d2Lds2(r);
     std::vector<double> d2ldt2 = d2Ldt2(r);
     for(int j = 0; j < _nFunctions; ++j) _L[_nFunctions * i + j] = l[j];
@@ -278,6 +280,7 @@ feStatus feSpace::setQuadratureRule(feQuadrature *rule)
     for(int j = 0; j < _nFunctions; ++j) _dLds[_nFunctions * i + j] = dlds[j];
     for(int j = 0; j < _nFunctions; ++j) _dLdt[_nFunctions * i + j] = dldt[j];
     for(int j = 0; j < _nFunctions; ++j) _d2Ldr2[_nFunctions * i + j] = d2ldr2[j];
+    for(int j = 0; j < _nFunctions; ++j) _d2Ldrs[_nFunctions * i + j] = d2ldrs[j];
     for(int j = 0; j < _nFunctions; ++j) _d2Lds2[_nFunctions * i + j] = d2lds2[j];
     for(int j = 0; j < _nFunctions; ++j) _d2Ldt2[_nFunctions * i + j] = d2ldt2[j];
   }
@@ -421,6 +424,76 @@ void feSpace::getFunctionsPhysicalGradientAtQuadNode(const int iQuadNode,
       gradPhi[i * _dim + 2] = _dLdr[_nFunctions * iQuadNode + i] * T.drdz[0] +
                               _dLds[_nFunctions * iQuadNode + i] * T.drdz[1] +
                               _dLdt[_nFunctions * iQuadNode + i] * T.drdz[2];
+    }
+  }
+}
+
+#include "feMatrixInterface.h"
+
+void feSpace::getFunctionsPhysicalHessianAtQuadNode(const int iQuadNode,
+                                                    const ElementTransformation &T, double *hessPhi)
+{
+  // Size hessPhi = nFunctions * [1, 3 or 6]
+  if(_dim == 0) {
+    hessPhi[0] = 0.;
+  } else if(_dim == 1) {
+    for(int i = 0; i < _nFunctions; ++i) {
+      hessPhi[i] = _d2Ldr2[_nFunctions * iQuadNode + i] * T.drdx[0] * T.drdx[0];
+    }
+  } else if(_dim == 2) {
+    for(int i = 0; i < _nFunctions; ++i) {
+      hessPhi[i * 3 + 0] = _d2Ldr2[_nFunctions * iQuadNode + i] * T.drdx[0] * T.drdx[0] +
+                           2.0 * _d2Ldrs[_nFunctions * iQuadNode + i] * T.drdx[0] * T.drdx[1] +
+                           _d2Lds2[_nFunctions * iQuadNode + i] * T.drdx[1] * T.drdx[1];
+
+      hessPhi[i * 3 + 1] = _d2Ldr2[_nFunctions * iQuadNode + i] * T.drdx[0] * T.drdy[0] +
+                           _d2Ldrs[_nFunctions * iQuadNode + i] * T.drdx[1] * T.drdy[0] +
+                           _d2Ldrs[_nFunctions * iQuadNode + i] * T.drdx[0] * T.drdy[1] +
+                           _d2Lds2[_nFunctions * iQuadNode + i] * T.drdx[1] * T.drdy[1];
+
+      hessPhi[i * 3 + 2] = _d2Ldr2[_nFunctions * iQuadNode + i] * T.drdy[0] * T.drdy[0] +
+                           2.0 * _d2Ldrs[_nFunctions * iQuadNode + i] * T.drdy[0] * T.drdy[1] +
+                           _d2Lds2[_nFunctions * iQuadNode + i] * T.drdy[1] * T.drdy[1];
+
+
+      // 2nd order derivatives can also be obtained by solving the
+      // following system: (only for linear triangles, otherwise there
+      // are additional terms in the RHS, see e.g. 
+      // https://scicomp.stackexchange.com/questions/25196/implementing-higher-order-derivatives-for-finite-element
+      
+      /*
+      SquareMatrix mat(3);
+      mat(0,0) = pow(T.dxdr[0], 2);
+      mat(0,1) = pow(T.dxdr[1], 2);
+      mat(0,2) = 2. * T.dxdr[0] * T.dxdr[1];
+
+      mat(1,0) = pow(T.dxds[0], 2);
+      mat(1,1) = pow(T.dxds[1], 2);
+      mat(1,2) = 2. * T.dxds[0] * T.dxds[1];
+
+      mat(2,0) = T.dxdr[0] * T.dxds[0];
+      mat(2,1) = T.dxdr[1] * T.dxds[1];
+      mat(2,2) = T.dxdr[0] * T.dxds[1] + T.dxds[0] * T.dxdr[1];
+
+      Vector vec(3);
+      vec(0) = _d2Ldr2[_nFunctions * iQuadNode + i];
+      vec(1) = _d2Lds2[_nFunctions * iQuadNode + i];
+      vec(2) = _d2Ldrs[_nFunctions * iQuadNode + i];
+
+      Vector sol = mat.inverse() * vec;
+      feInfo("Comparons:");
+      sol.print();
+      */
+    }
+  } else if(_dim == 3) {
+    for(int i = 0; i < _nFunctions; ++i) {
+      // TODO, one day
+      hessPhi[i * 6 + 0] = 0.;
+      hessPhi[i * 6 + 1] = 0.;
+      hessPhi[i * 6 + 2] = 0.;
+      hessPhi[i * 6 + 3] = 0.;
+      hessPhi[i * 6 + 4] = 0.;
+      hessPhi[i * 6 + 5] = 0.;
     }
   }
 }
@@ -676,16 +749,22 @@ void feSpace::interpolateFieldAtQuadNode_physicalGradient(std::vector<double> &f
                                                           const ElementTransformation &T,
                                                           double *grad)
 {
-  grad[0] = grad[1] = grad[2] = 0.;
-  if(_dim == 0) {
+  if(_dim == 0)
+  {
     grad[0] = 0.;
-  } else if(_dim == 1) {
+  } 
+  else if(_dim == 1)
+  {
+    grad[0] = 0.;
     for(int i = 0; i < _nFunctions; ++i) {
       double dphi_i_dx = _dLdr[_nFunctions * iQuadNode + i] * T.drdx[0];
       grad[0] += field[i] * dphi_i_dx;
     }
     // grad[0] /= jac;
-  } else if(_dim == 2) {
+  }
+  else if(_dim == 2)
+  {
+    grad[0] = grad[1] = 0.;
     for(int i = 0; i < _nFunctions; ++i) {
       double dphi_i_dx = _dLdr[_nFunctions * iQuadNode + i] * T.drdx[0] +
                          _dLds[_nFunctions * iQuadNode + i] * T.drdx[1];
@@ -697,6 +776,7 @@ void feSpace::interpolateFieldAtQuadNode_physicalGradient(std::vector<double> &f
     // grad[0] /= jac;
     // grad[1] /= jac;
   } else if(_dim == 3) {
+    grad[0] = grad[1] = grad[2] = 0.;
     for(int i = 0; i < _nFunctions; ++i) {
       double dphi_i_dx = _dLdr[_nFunctions * iQuadNode + i] * T.drdx[0] +
                          _dLds[_nFunctions * iQuadNode + i] * T.drdx[1] +
@@ -738,8 +818,8 @@ void feSpace::interpolateVectorFieldAtQuadNode_physicalGradient(std::vector<doub
       double dphi_i_dy = _dLdr[_nFunctions * iQuadNode + i] * T.drdy[0] +
                          _dLds[_nFunctions * iQuadNode + i] * T.drdy[1];
 
-      grad[i % nComponents * nComponents + 0] += field[i] * dphi_i_dx;
-      grad[i % nComponents * nComponents + 1] += field[i] * dphi_i_dy;
+      grad[(i % nComponents) * nComponents + 0] += field[i] * dphi_i_dx;
+      grad[(i % nComponents) * nComponents + 1] += field[i] * dphi_i_dy;
     }
   } else if(nComponents == 3) {
     for(int i = 0; i < _nFunctions; ++i) {
@@ -759,6 +839,53 @@ void feSpace::interpolateVectorFieldAtQuadNode_physicalGradient(std::vector<doub
       // grad[0] += field[i] * dphi_i_dx;
       // grad[1] += field[i] * dphi_i_dy;
       // grad[2] += field[i] * dphi_i_dz;
+    }
+  }
+}
+
+void feSpace::interpolateVectorFieldAtQuadNode_physicalHessian(std::vector<double> &field,
+                                                               const int nComponents,
+                                                               const int iQuadNode,
+                                                               const ElementTransformation &T,
+                                                               double *hessian)
+{
+  // Size of hessian is nComponents x [1, 3 or 6]: derivatives are computed
+  // assuming the highest space dimension is the number of vector components.
+  // The resulting hessian array is:
+  //  hessian = [ hess(u1), ..., hess(u_nComponents) ]
+  // with e.g.
+  //  hess(u1) = [u1_xx, u1_xy, u1_yy] in 2D (only unique mixed derivatives)
+  int numUniqueMixedDerivatives[3] = {1, 3, 6};
+  for(int i = 0; i < numUniqueMixedDerivatives[nComponents-1] * nComponents; ++i)
+    hessian[i] = 0.;
+
+  if(nComponents == 1) {
+    for(int i = 0; i < _nFunctions; ++i) {
+      double d2phi_i_dx2 = _d2Ldr2[_nFunctions * iQuadNode + i] * T.drdx[0] * T.drdx[0];
+      hessian[0] += field[i] * d2phi_i_dx2;
+    }
+  } else if(nComponents == 2) {
+    for(int i = 0; i < _nFunctions; ++i) {
+      double d2phi_i_dx2 = _d2Ldr2[_nFunctions * iQuadNode + i] * T.drdx[0] * T.drdx[0] +
+                           2.0 * _d2Ldrs[_nFunctions * iQuadNode + i] * T.drdx[0] * T.drdx[1] +
+                           _d2Lds2[_nFunctions * iQuadNode + i] * T.drdx[1] * T.drdx[1];
+
+      double d2phi_i_dxy = _d2Ldr2[_nFunctions * iQuadNode + i] * T.drdx[0] * T.drdy[0] +
+                           _d2Ldrs[_nFunctions * iQuadNode + i] * T.drdx[1] * T.drdy[0] +
+                           _d2Ldrs[_nFunctions * iQuadNode + i] * T.drdx[0] * T.drdy[1] +
+                           _d2Lds2[_nFunctions * iQuadNode + i] * T.drdx[1] * T.drdy[1];
+
+      double d2phi_i_dy2 = _d2Ldr2[_nFunctions * iQuadNode + i] * T.drdy[0] * T.drdy[0] +
+                           2.0 * _d2Ldrs[_nFunctions * iQuadNode + i] * T.drdy[0] * T.drdy[1] +
+                           _d2Lds2[_nFunctions * iQuadNode + i] * T.drdy[1] * T.drdy[1];
+
+      hessian[(i % nComponents) * 3 + 0] += field[i] * d2phi_i_dx2;
+      hessian[(i % nComponents) * 3 + 1] += field[i] * d2phi_i_dxy;
+      hessian[(i % nComponents) * 3 + 2] += field[i] * d2phi_i_dy2;
+    }
+  } else if(nComponents == 3) {
+    for(int i = 0; i < _nFunctions; ++i) {
+      // TODO, one day
     }
   }
 }
