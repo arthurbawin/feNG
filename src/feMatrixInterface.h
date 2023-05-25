@@ -7,7 +7,7 @@
 // A small interface for fixed sizes/small matrices to avoid
 // including Eigen everywhere and slowing down compilation
 //
-// IMPORTANT: Classes use the PIMPL idiom, hence instantiated objets are *not* copyable
+// IMPORTANT: Classes use the PIMPL idiom, so instantiated objects are *not* copyable
 //
 // "Reference" for copy/move destructors/assignment operators:
 // https://stackoverflow.com/questions/71104545/constructor-
@@ -30,10 +30,17 @@ public:
   double &operator()(int i, int j);
   double operator()(int i, int j) const;
   MetricTensor &operator*=(const double &val);
+  MetricTensor operator*(const double &val) const;
+  MetricTensor operator+(const MetricTensor &other) const;
 
-  MetricTensor inverse() const;
   double determinant() const;
+  MetricTensor inverse() const;
+  MetricTensor log() const;
+  MetricTensor exp() const;
 
+  // Compute diagonalization M = R * |D| * Rt
+  // with |D| = diag( |lambda1|, |lambda2| )
+  MetricTensor absoluteValueEigen() const;
   // Compute diagonalization M = R * |D| * Rt
   // with |D| = diag( |lambda1|, |lambda2| )
   // and bound the eigenvalues between lMin and lMax

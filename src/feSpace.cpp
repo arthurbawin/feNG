@@ -502,6 +502,7 @@ void feSpace::interpolateField(double *field, int fieldSize, double *r, double *
 {
   res = 0.0;
   L(r, shape);
+  feInfo("shape = %f - %f - %f", shape[0], shape[1], shape[2]);
   for(int i = 0; i < fieldSize; ++i) {
     res += field[i] * shape[i];
   }

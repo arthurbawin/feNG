@@ -30,10 +30,35 @@ feCncGeo *feMesh::getCncGeoByTag(int cncGeoTag) const
   return _cncGeo[cncGeoTag];
 }
 
+double feMesh::getMaxEdgeDisplacement()
+{
+  if(_edge2alpha.empty()) return 0.;
+  double alphaMax = 0.;
+  for(auto p : _edge2alpha) {
+    alphaMax = fmax(alphaMax, p.second);
+  }
+  return alphaMax;
+}
+
+double feMesh::getLpNormEdgeDisplacement(int p)
+{
+  if(_edge2alpha.empty()) return 0.;
+  double norm = 0.;
+  for(auto pair : _edge2alpha) {
+    norm += pow(pair.second, p);
+  }
+  return pow(norm, 1./ (double) p);
+}
+
 void feMesh::getCoord(const feCncGeo *cnc, const int numElem, std::vector<double> &geoCoord)
 {
-  int nNodePerElem = cnc->getNumVerticesPerElem();
-  for(int i = 0; i < nNodePerElem; ++i) {
+  int nVerticesPerElem = cnc->getNumVerticesPerElem();
+#ifdef FENG_DEBUG
+  if(geoCoord.size() != 3 * nVerticesPerElem) {
+    feErrorMsg(FE_STATUS_ERROR, " In feMesh::getCoord : Wrong size for vector geoCoord\n");
+  }
+#endif
+  for(int i = 0; i < nVerticesPerElem; ++i) {
     Vertex V = _vertices[cnc->getVertexConnectivity(numElem, i)];
     geoCoord[3 * i + 0] = V.x();
     geoCoord[3 * i + 1] = V.y();
@@ -44,13 +69,13 @@ void feMesh::getCoord(const feCncGeo *cnc, const int numElem, std::vector<double
 void feMesh::getCoord(std::string const &cncGeoID, const int numElem, std::vector<double> &geoCoord)
 {
   feCncGeo *cnc = getCncGeoByName(cncGeoID);
-  int nNodePerElem = cnc->getNumVerticesPerElem();
+  int nVerticesPerElem = cnc->getNumVerticesPerElem();
 #ifdef FENG_DEBUG
-  if(geoCoord.size() != 3 * nNodePerElem) {
+  if(geoCoord.size() != 3 * nVerticesPerElem) {
     printf(" In feMesh::getCoord : Wrong size for vector geoCoord\n");
   }
 #endif
-  for(int i = 0; i < nNodePerElem; ++i) {
+  for(int i = 0; i < nVerticesPerElem; ++i) {
     Vertex V = _vertices[cnc->getVertexConnectivity(numElem, i)];
     geoCoord[3 * i + 0] = V.x();
     geoCoord[3 * i + 1] = V.y();
@@ -61,18 +86,60 @@ void feMesh::getCoord(std::string const &cncGeoID, const int numElem, std::vecto
 void feMesh::getCoord(const int cncGeoTag, const int numElem, std::vector<double> &geoCoord)
 {
   feCncGeo *cnc = getCncGeoByTag(cncGeoTag);
-  int nNodePerElem = cnc->getNumVerticesPerElem();
+  int nVerticesPerElem = cnc->getNumVerticesPerElem();
 #ifdef FENG_DEBUG
-  if(geoCoord.size() != 3 * nNodePerElem) {
+  if(geoCoord.size() != 3 * nVerticesPerElem) {
     printf(" In feMesh::getCoord : Wrong Size for vector geoCoord\n");
   }
 #endif
-  for(int i = 0; i < nNodePerElem; ++i) {
+  for(int i = 0; i < nVerticesPerElem; ++i) {
     Vertex V = _vertices[cnc->getVertexConnectivity(numElem, i)];
     geoCoord[3 * i + 0] = V.x();
     geoCoord[3 * i + 1] = V.y();
     geoCoord[3 * i + 2] = V.z();
   }
+}
+
+void feMesh::getVertexCoord(const int iVertex, double coord[3])
+{
+#ifdef FENG_DEBUG
+  if(iVertex > _vertices.size()) {
+    feErrorMsg(FE_STATUS_ERROR,
+               "Out of bounds: accessing entry %d in mesh->_vertices"
+               " of size %u",
+               iVertex, _vertices.size());
+  }
+#endif
+  Vertex &v = _vertices[iVertex];
+  coord[0] = v(0);
+  coord[1] = v(1);
+  coord[2] = v(2);
+}
+
+feStatus feMesh::setVertexCoord(const int iVertex, const double coord[3])
+{
+#ifdef FENG_DEBUG
+  if(iVertex > _vertices.size()) {
+    feErrorMsg(FE_STATUS_ERROR,
+               "Out of bounds: accessing entry %d in mesh->_vertices"
+               " of size %u",
+               iVertex, _vertices.size());
+  }
+#endif
+  Vertex &v = _vertices[iVertex];
+  v(0) = coord[0];
+  v(1) = coord[1];
+  v(2) = coord[2];
+
+  // Recompute the jacobians on all connectivities
+  // CHANGED: done directly in feAdaptMesh at the 2 relevant elements when curving an edge
+  // for(auto *cnc : _cncGeo){
+  //   feStatus s = cnc->computeJacobians();
+  //   if(s != FE_STATUS_OK)
+  //     return s;
+  // }
+
+  return FE_STATUS_OK;
 }
 
 int feMesh::getNumVerticesPerElem(std::string const &cncGeoID)

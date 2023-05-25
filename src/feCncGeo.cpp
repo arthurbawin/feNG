@@ -50,6 +50,30 @@ std::string toString(geometricInterpolant t)
   }
 }
 
+int getGeometricInterpolantDegree(geometricInterpolant t)
+{
+  switch(t) {
+    case geometricInterpolant::NONE:
+      return -1;
+    case geometricInterpolant::POINTP0:
+      return 0;
+    case geometricInterpolant::LINEP1:
+      return 1;
+    case geometricInterpolant::LINEP2:
+      return 2;
+    case geometricInterpolant::LINEP3:
+      return 3;
+    case geometricInterpolant::TRIP1:
+      return 1;
+    case geometricInterpolant::TRIP2:
+      return 2;
+    case geometricInterpolant::TRIP3:
+      return 3;
+    default:
+      return -1;
+  }
+}
+
 feCncGeo::feCncGeo(const int tag, const int dimension, const int nVerticesPerElement,
                    const int nElements, const int nEdgesPerElement, const std::string &ID,
                    const geometryType geometry, const geometricInterpolant interpolant,
@@ -206,6 +230,11 @@ feStatus feCncGeo::computeJacobians()
 
   std::vector<double> geoCoord(3 * _nVerticesPerElm);
 
+  // FILE *myfile = fopen("jacobians.pos", "w");
+  // fprintf(myfile, "View \"jacobians\"{\n");
+
+  bool atLeastOneNegative = false;
+
   switch(_dim) {
     case 0:
       for(int iElm = 0; iElm < _nElements; ++iElm) {
@@ -231,22 +260,29 @@ feStatus feCncGeo::computeJacobians()
     case 2: {
       std::vector<double> dxdr(3, 0.0); // [dx/dr, dy/dr, dz/dr]
       std::vector<double> dxds(3, 0.0); // [dx/ds, dy/ds, dz/ds]
-      for(int iElm = 0; iElm < _nElements; ++iElm) {
+      for(int iElm = 0; iElm < _nElements; ++iElm)
+      {
         _mesh->getCoord(_tag, iElm, geoCoord);
+
+        double jMin = 1e22;
         for(int k = 0; k < nQuad; ++k) {
           _geometricInterpolant->interpolateVectorFieldAtQuadNode_rDerivative(geoCoord, k, dxdr);
           _geometricInterpolant->interpolateVectorFieldAtQuadNode_sDerivative(geoCoord, k, dxds);
           _J[nQuad * iElm + k] = dxdr[0] * dxds[1] - dxdr[1] * dxds[0];
+          jMin = fmin(jMin, _J[nQuad * iElm + k]);
 
           if(_J[nQuad * iElm + k] <= 0) {
-            return feErrorMsg(FE_STATUS_ERROR,
-                              "Negative or zero jacobian = %+-12.12e on elm %d with coordinates "
-                              "(%+-1.4e - %+-1.4e) - (%+-1.4e - %+-1.4e) - (%+-1.4e - %+-1.4e)\n",
-                              _J[nQuad * iElm + k], iElm, geoCoord[3 * 0 + 0], geoCoord[3 * 0 + 1],
-                              geoCoord[3 * 1 + 0], geoCoord[3 * 1 + 1], geoCoord[3 * 2 + 0],
-                              geoCoord[3 * 2 + 1]);
+            atLeastOneNegative = true;
+            feWarning("Negative or zero jacobian = %+-12.12e on elm %d with coordinates "
+                       "(%+-1.4e - %+-1.4e) - (%+-1.4e - %+-1.4e) - (%+-1.4e - %+-1.4e)\n",
+                       _J[nQuad * iElm + k], iElm, geoCoord[3 * 0 + 0], geoCoord[3 * 0 + 1],
+                       geoCoord[3 * 1 + 0], geoCoord[3 * 1 + 1], geoCoord[3 * 2 + 0],
+                       geoCoord[3 * 2 + 1]);
           }
         }
+
+        // Plot jacobian
+        // writeElementToPOS(myfile, geoCoord, jMin);
       }
       break;
     }
@@ -256,6 +292,76 @@ feStatus feCncGeo::computeJacobians()
                         "Element jacobian not implemented "
                         "for elements with dim = %d.\n",
                         _dim);
+  }
+
+  if(atLeastOneNegative){
+    return feErrorMsg(FE_STATUS_ERROR, "Negative or zero jacobian on at least one element )-:");
+  }
+
+  // fprintf(myfile, "};\n"); fclose(myfile);
+
+  return FE_STATUS_OK;
+}
+
+feStatus feCncGeo::recomputeElementJacobian(const int iElm)
+{
+  int nQuad = _geometricInterpolant->getNumQuadPoints();
+  std::vector<double> geoCoord(3 * _nVerticesPerElm);
+
+  bool atLeastOneNegative = false;
+
+  switch(_dim) {
+    case 0:
+      for(int iElm = 0; iElm < _nElements; ++iElm) {
+        for(int k = 0; k < nQuad; ++k) {
+          _J[nQuad * iElm + k] = 1.0;
+        }
+      }
+      break;
+
+    case 1: {
+      std::vector<double> dxdr(3, 0.0);
+
+      for(int iElm = 0; iElm < _nElements; ++iElm) {
+        _mesh->getCoord(_tag, iElm, geoCoord);
+        for(int k = 0; k < nQuad; ++k) {
+          _geometricInterpolant->interpolateVectorFieldAtQuadNode_rDerivative(geoCoord, k, dxdr);
+          _J[nQuad * iElm + k] = sqrt(dxdr[0] * dxdr[0] + dxdr[1] * dxdr[1]);
+        }
+      }
+      break;
+    }
+
+    case 2: {
+      std::vector<double> dxdr(3, 0.0); // [dx/dr, dy/dr, dz/dr]
+      std::vector<double> dxds(3, 0.0); // [dx/ds, dy/ds, dz/ds]
+
+      _mesh->getCoord(_tag, iElm, geoCoord);
+
+      double jMin = 1e22;
+      for(int k = 0; k < nQuad; ++k) {
+        _geometricInterpolant->interpolateVectorFieldAtQuadNode_rDerivative(geoCoord, k, dxdr);
+        _geometricInterpolant->interpolateVectorFieldAtQuadNode_sDerivative(geoCoord, k, dxds);
+        _J[nQuad * iElm + k] = dxdr[0] * dxds[1] - dxdr[1] * dxds[0];
+        jMin = fmin(jMin, _J[nQuad * iElm + k]);
+
+        if(_J[nQuad * iElm + k] <= 0) {
+          atLeastOneNegative = true;
+        }
+      }
+
+      break;
+    }
+
+    default:
+      return feErrorMsg(FE_STATUS_ERROR,
+                        "Element jacobian not implemented "
+                        "for elements with dim = %d.\n",
+                        _dim);
+  }
+
+  if(atLeastOneNegative){
+    return FE_STATUS_FAILED;
   }
 
   return FE_STATUS_OK;
@@ -491,7 +597,46 @@ void feCncGeo::colorElements(int coloringAlgorithm)
   _coloring.elem2Color = _elmToColor;
   _coloring.numElemPerColor = _nbElmPerColor;
   _coloring.elementsInColor = _listElmPerColor;
-  
 
   feInfoCond(FE_VERBOSE > 0, "\t\tDone");
+}
+
+void feCncGeo::writeElementToPOS(FILE *posFile, const std::vector<double> &elementCoord,
+                                 const double value) const
+{
+  switch(_interpolant) {
+    case geometricInterpolant::NONE:
+      // Do nothing
+      break;
+    case geometricInterpolant::POINTP0:
+      fprintf(posFile, "SP(%g,%g,%g){%g};\n", elementCoord[0], elementCoord[1], elementCoord[2],
+              value);
+      break;
+    case geometricInterpolant::LINEP1:
+      fprintf(posFile, "SL(%g,%g,%g,%g,%g,%g){%g,%g};\n", elementCoord[0], elementCoord[1],
+              elementCoord[2], elementCoord[3], elementCoord[4], elementCoord[5], value, value);
+      break;
+    case geometricInterpolant::LINEP2:
+      fprintf(posFile, "SL2(%g,%g,%g,%g,%g,%g,%g,%g,%g){%g,%g,%g};\n", elementCoord[0],
+              elementCoord[1], elementCoord[2], elementCoord[3], elementCoord[4], elementCoord[5],
+              elementCoord[6], elementCoord[7], elementCoord[8], value, value, value);
+      break;
+    case geometricInterpolant::TRIP1:
+      fprintf(posFile, "ST(%g,%g,%g,%g,%g,%g,%g,%g,%g){%g,%g,%g};\n", elementCoord[0],
+              elementCoord[1], elementCoord[2], elementCoord[3], elementCoord[4], elementCoord[5],
+              elementCoord[6], elementCoord[7], elementCoord[8], value, value, value);
+      break;
+    case geometricInterpolant::TRIP2:
+      fprintf(posFile,
+              "ST2(%g,%g,%g,%g,%g,%g,%g,%g,%g,%g,%g,%g,%g,%g,%g,%g,%g,%g){%g,%g,%g,%g,%g,%g};\n",
+              elementCoord[0], elementCoord[1], elementCoord[2], elementCoord[3], elementCoord[4],
+              elementCoord[5], elementCoord[6], elementCoord[7], elementCoord[8], elementCoord[9],
+              elementCoord[10], elementCoord[11], elementCoord[12], elementCoord[13],
+              elementCoord[14], elementCoord[15], elementCoord[16], elementCoord[17], value, value,
+              value, value, value, value);
+      break;
+    default:
+      feWarning(
+        "Cannot write element to POS file because geometry and/or order is not supported :/");
+  }
 }

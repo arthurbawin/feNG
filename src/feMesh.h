@@ -40,8 +40,6 @@ protected:
 
   // Mesh vertices (all)
   std::vector<Vertex> _vertices;
-  // Map from non-sequential Gmsh vertices tag to sequential tag
-  std::map<int, int> _verticesMap;
   // Mesh vertices for each Physical Entity (geometric connectivity)
   std::map<const feCncGeo *, std::vector<Vertex> > _verticesPerCnc;
 
@@ -51,11 +49,15 @@ protected:
   std::map<std::string, int> _cncGeoMap;
 
 public:
+  // Map from non-sequential Gmsh vertices tag to internal sequential tag
+  std::map<int, int> _verticesMap;
   // Set of (unique) edges
   std::set<Edge, EdgeLessThan> _edges;
   // Unordered vector of edges
   std::vector<const Edge *> _edgesVec;
   std::map<int, const Edge *> _edgesMap;
+  // The P2 displacement vector xMid - (x0+x1)/2 for each edge
+  std::map<const Edge*, double> _edge2alpha;
   // Mesh elements, hardcoded triangles for now
   std::vector<Triangle *> _elements;
 
@@ -86,6 +88,8 @@ public:
   const Edge *getEdge(int edgeTag) { return _edgesMap[edgeTag]; }
   std::vector<Vertex> &getVertices() { return _vertices; }
   std::vector<const Edge *> &getEdges() { return _edgesVec; }
+  double getMaxEdgeDisplacement();
+  double getLpNormEdgeDisplacement(int p);
 
   // Write in geoCoord the physical coordinates of the nodes on the
   // element with LOCAL tag numElem on the connectivity named
@@ -97,6 +101,12 @@ public:
   void getCoord(const feCncGeo *cnc, const int numElem, std::vector<double> &geoCoord);
   void getCoord(std::string const &cncGeoID, const int numElm, std::vector<double> &geoCoord);
   void getCoord(const int cncGeoTag, const int numElm, std::vector<double> &geoCoord);
+
+  // Get/set the coordinates of mesh vertex numbered iVertex to coord (size = 3)
+  void getVertexCoord(const int iVertex, double coord[3]);
+  // Return an error status if the new vertex position causes one or more jacobian
+  // determinant to become negative
+  feStatus setVertexCoord(const int iVertex, const double coord[3]);
 
   // Return the tag (unique >=0 integer identifier) of connectivity named cncGeoID
   int getCncGeoTag(std::string const &cncGeoID) const;
@@ -216,6 +226,7 @@ public:
 class feMetaNumber;
 class feSolutionContainer;
 class feMetricOptions;
+class feRecovery;
 class feNewRecovery;
 
 typedef struct rtreeSearchCtxStruct {
@@ -380,7 +391,14 @@ public:
   // Default argument is a feMetricOptions initialized by default, see feAdaptMesh.cpp
   feStatus adapt(feNewRecovery *recoveredField, feMetricOptions &options, 
     const std::vector<feSpace*> &spaces,
-    const std::vector<feSpace*> &essentialSpaces);
+    const std::vector<feSpace*> &essentialSpaces,
+    feSpace *spaceForAdaptation,
+    feSolution *discreteSolution,
+    feFunction *exactSolution,
+    feVectorFunction *exactGradient,
+    bool curve, feRecovery *oldRecovery = nullptr);
+
+  void drawConnectivityToPOSfile(const std::string &cncName, const std::string &fileName);
 };
 
 #endif

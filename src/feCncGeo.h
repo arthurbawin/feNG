@@ -30,6 +30,7 @@ enum class geometricInterpolant {
 
 std::string toString(geometryType t);
 std::string toString(geometricInterpolant t);
+int getGeometricInterpolantDegree(geometricInterpolant t);
 
 // Reference-to-physical transformation jacobian matrix dx(r)/dr
 // and its inverse dr(x)/dx.
@@ -152,6 +153,7 @@ public:
   void setMeshPtr(feMesh *mesh) { _mesh = mesh; }
 
   feStatus computeJacobians();
+  feStatus recomputeElementJacobian(const int iElm);
   const std::vector<double> &getJacobians() const { return _J; }
 
   void computeElementTransformation(std::vector<double> &elementCoord, const int iQuadNode,
@@ -185,6 +187,9 @@ public:
   int getNbElmPerColorI(int i) const { return _nbElmPerColor[i]; };
   const std::vector<int> &getListElmPerColorI(int i) const { return _listElmPerColor[i]; };
   int getElmColored(int iColor, int iElmC) const { return _listElmPerColor[iColor][iElmC]; };
+
+  // Write constant field on an element to a .pos file (Gmsh visualization)
+  void writeElementToPOS(FILE *posFile, const std::vector<double> &elementCoord, const double value) const;
 };
 
 #endif

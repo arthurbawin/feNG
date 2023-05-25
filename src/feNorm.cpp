@@ -150,19 +150,107 @@ double feNorm::computeLpNorm(int p, bool error)
     exit(-1);
   }
 
+  // FILE *myfile = fopen("errorOnElements.pos", "w");
+  // fprintf(myfile, "View \"errorOnElements\"{\n");
+
   for(int iElm = 0; iElm < _nElm; ++iElm) {
     this->initializeLocalSolutionOnSpace(0, iElm);
     _spaces[0]->_mesh->getCoord(_cnc, iElm, _geoCoord);
 
+    double eLocPowP = 0.;
     for(int k = 0; k < _nQuad; ++k) {
       uh = _spaces[0]->interpolateFieldAtQuadNode(_localSol[0], k);
       _geoSpace->interpolateVectorFieldAtQuadNode(_geoCoord, k, _pos);
       u = error ? _scalarSolution->eval(t, _pos) : 0.0;
 
-      res += pow(fabs(u - uh), p) * _J[_nQuad * iElm + k] * _w[k];
+      eLocPowP += pow(fabs(u - uh), p) * _J[_nQuad * iElm + k] * _w[k];
+    }
+
+    res += eLocPowP;
+
+    double eLoc = pow(eLocPowP, 1. / (double)p);
+    // Plot error
+    // _cnc->writeElementToPOS(myfile, _geoCoord, eLoc);
+  }
+
+  // fprintf(myfile, "};\n"); fclose(myfile);
+
+  return pow(res, 1. / (double)p);
+}
+
+double feNorm::computeLpNormOnElement(int p, bool error, int iElm)
+{
+  double uh, u, t = _solution->getCurrentTime();
+
+  if(error && _scalarSolution == nullptr) {
+    feErrorMsg(FE_STATUS_ERROR, "Cannot compute Lp norm of error function"
+                                " because exact solution is NULL");
+    exit(-1);
+  }
+
+  this->initializeLocalSolutionOnSpace(0, iElm);
+  _spaces[0]->_mesh->getCoord(_cnc, iElm, _geoCoord);
+
+  double eLocPowP = 0.;
+    // #if defined(HAVE_OMP)
+  // #pragma omp parallel for private(_geoCoord) reduction(+ : res) schedule(dynamic)
+  // #endif
+  for(int k = 0; k < _nQuad; ++k) {
+    uh = _spaces[0]->interpolateFieldAtQuadNode(_localSol[0], k);
+    _geoSpace->interpolateVectorFieldAtQuadNode(_geoCoord, k, _pos);
+    u = error ? _scalarSolution->eval(t, _pos) : 0.0;
+
+    eLocPowP += pow(fabs(u - uh), p) * _J[_nQuad * iElm + k] * _w[k];
+  }
+
+  return eLocPowP;
+}
+
+double area(const std::vector<double> &triCoord)
+{
+  // radius of circle circumscribing a triangle
+  double dist[3], k = 0.0;
+  for(int i = 0; i < 3; i++) {
+    double x0 = triCoord[3 * i + 0];
+    double y0 = triCoord[3 * i + 1];
+    double x1 = triCoord[3 * ((i + 1) % 3) + 0];
+    double y1 = triCoord[3 * ((i + 1) % 3) + 1];
+    dist[i] = sqrt((x1 - x0) * (x1 - x0) + (y1 - y0) * (y1 - y0));
+    k += 0.5 * dist[i];
+  }
+  double const area = std::sqrt(k * (k - dist[0]) * (k - dist[1]) * (k - dist[2]));
+  return area;
+}
+
+thread_local std::vector<double> POS(3, 0.);
+
+double feNorm::computeSquaredErrorOnElement(int iElm)
+{
+  double t = _solution->getCurrentTime();
+
+  this->initializeLocalSolutionOnSpace(0, iElm);
+  _spaces[0]->_mesh->getCoord(_cnc, iElm, _geoCoord);
+
+  double eLocPowP = 0.;
+  #if defined(HAVE_OMP)
+  #pragma omp parallel
+  #endif
+  {
+    double u, uh;
+
+    #if defined(HAVE_OMP)
+    #pragma omp for reduction(+:eLocPowP)
+    #endif
+    for(int k = 0; k < _nQuad; ++k) {
+      uh = _spaces[0]->interpolateFieldAtQuadNode(_localSol[0], k);
+      _geoSpace->interpolateVectorFieldAtQuadNode(_geoCoord, k, POS);
+      u = _scalarSolution->eval(t, POS);
+      eLocPowP += (u - uh) * (u - uh) * _J[_nQuad * iElm + k] * _w[k];
     }
   }
-  return pow(res, 1. / (double)p);
+
+
+  return eLocPowP;
 }
 
 double feNorm::computeLpErrorEstimator(int p)
@@ -190,6 +278,31 @@ double feNorm::computeLpErrorEstimator(int p)
   }
   return pow(res, 1. / (double)p);
 }
+
+double feNorm::computeLpErrorExactVsEstimator(int p)
+{
+  double res = 0.0, uExact, uRec, t = _solution->getCurrentTime();
+
+  if(_rec == nullptr) {
+    feErrorMsg(FE_STATUS_ERROR, "Cannot compute Lp error estimate "
+                                " because feRecovery (solution reconstruction) is NULL");
+    exit(-1);
+  }
+
+  for(int iElm = 0; iElm < _nElm; ++iElm) {
+    _spaces[0]->_mesh->getCoord(_cnc, iElm, _geoCoord);
+
+    for(int k = 0; k < _nQuad; ++k) {
+      _geoSpace->interpolateVectorFieldAtQuadNode(_geoCoord, k, _pos);
+      uExact = _scalarSolution->eval(t, _pos);
+      uRec = _rec->evaluateRecoveryAtQuadNode(PPR::RECOVERY, 0, iElm, k);
+
+      res += pow(fabs(uRec - uExact), p) * _J[_nQuad * iElm + k] * _w[k];
+    }
+  }
+  return pow(res, 1. / (double)p);
+}
+
 
 double feNorm::computeVectorLpNorm(int p, bool error)
 {

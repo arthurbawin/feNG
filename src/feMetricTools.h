@@ -1,6 +1,7 @@
 #ifndef _FEMETRICTOOLS_
 #define _FEMETRICTOOLS_
 
+#include "feMatrixInterface.h"
 #include "feRecovery.h"
 #include "STensor3.h"
 
@@ -16,10 +17,23 @@ typedef struct linearProblemStruct {
   soplex::LPRow lprow;
   soplex::LPRowSet lprowset;
   soplex::DVector prim;
+  size_t numConstraints;
   std::vector<double> lvl1;
   std::vector<double> constraints;
+  MetricTensor Hij;
 } linearProblem;
 #endif
+
+typedef struct {
+  int nElements;
+  std::vector<int> whichElements;
+  int iVertexToMove_globalTag;
+  std::vector<int> iVertexToMove_localTag;
+  double modifiedCoord[2];
+  double gradient[2];
+  double initialCost;
+  double finalCost;
+} edgeAndVertexData;
 
 struct gmshEdgeLessThan {
   bool operator()(const std::pair<int, int> &e1, const std::pair<int, int> &e2) const
@@ -35,6 +49,13 @@ struct gmshEdgeLessThan {
     return false;
   }
 };
+
+template <class MetricType>
+void drawSingleEllipse(FILE *file, const double *x, MetricType &M, double sizeFactor, int nPoints);
+template <class MetricType>
+void drawEllipsoids(const std::string &posFile, std::map<int, MetricType> &metrics,
+                    const std::vector<std::size_t> &nodeTags, const std::vector<double> &coord,
+                    double sizeFactor, int nPoints);
 
 double evaluateFieldFromRecovery(int indexDerivative, feRecovery *rec, double *x);
 
@@ -82,37 +103,57 @@ void metricHechtKuate(int nbpoints, double *x, double *y, double &A, double &B, 
                       int degreeSolution);
 
 #if defined(HAVE_SOPLEX)
+bool computeMetricLogSimplexStraight(const double *x, const std::vector<double> &errorCoefficients,
+                                     const int degree, const int nThetaPerQuadrant,
+                                     const int maxIter, const double tol, MetricTensor &Qres,
+                                     int &numIter, linearProblem &myLP);
+
 bool computeMetricLogSimplexCurved(double *x, double cG, double sG, feRecovery *rec,
                                    Eigen::Matrix2d &Q, int maxIter, int nThetaPerQuadrant,
                                    double tol, int &numIter, linearProblem &myLP);
 #endif
 
 int computePointsUsingScaledCrossFieldPlanarP2(
-  const char *modelForMetric, const char *modelForMesh, int VIEW_TAG, int faceTag,
-  std::vector<double> &pts, double er(double *, double *, double *, double *, double *, double *),
-  bool inside(double *, bool), double pointwiseError(double *), int onlyGenerateVertices,
-  double evaluateFieldFromRecovery(int, void *, double *), void *recoveryUserPointer,
+  const char *modelForMetric,
+  const char *modelForMesh,
+  int VIEW_TAG,
+  int faceTag,
+  std::vector<double> &pts,
+  // double computeInterpolationError(const int whichElements[2],
+  //                                  const int iVertexToMove_globalTag,
+  //                                  const int iVertexToMove_localTag[2],
+  //                                  double *modifiedCoord),
+  double computeInterpolationError(const edgeAndVertexData &data, double *modifiedCoord),
+  void computeInterpolationErrorGradient(const edgeAndVertexData &data,
+                                         const double *modifiedCoord,
+                                         double gradient[2]),
+  void applyCurvatureToFeMesh(const edgeAndVertexData &data, const double *modifiedCoord),
+  void getMidnodeTags(const SPoint2 edge[2], const double tol, int &elementTag, int &localTag, int &globalTag),
+  void getPolyMeshVertexTags(const SPoint2 &p, const double tol, 
+                             std::vector<int> &elementTags, std::vector<int> &localTags, int &globalTag),
+  bool inside(double *, bool), double pointwiseError(double *),
+  int onlyGenerateVertices,
+  double evaluateFieldFromRecovery(int, void *, double *),
+  void *recoveryUserPointer,
 
-  // void interpolateMetricP1WithDerivativesWrapper(void *, const double *, Eigen::Matrix2d &,
-  //                                                Eigen::Matrix2d &, Eigen::Matrix2d &),
+  void interpolateMetricP1WithDerivativesWrapper(void *, const double *, Eigen::Matrix2d &,
+                                                 Eigen::Matrix2d &, Eigen::Matrix2d &),
 
-  // void interpolateMetricP1Wrapper(void *, const double *, Eigen::Matrix2d &, Eigen::Matrix2d &,
-  //                                 Eigen::Matrix2d &),
+  void interpolateMetricP1Wrapper(void *, const double *, Eigen::Matrix2d &, Eigen::Matrix2d &,
+                                  Eigen::Matrix2d &),
 
-  // void interpolateMetricAndDerivativeOnP2EdgeWrapper(
-  //   void *, const double, const Eigen::Matrix2d &, const Eigen::Matrix2d &, const Eigen::Matrix2d &,
-  //   const Eigen::Matrix2d &, const Eigen::Matrix2d &, Eigen::Matrix2d &, Eigen::Matrix2d &,
-  //   Eigen::Matrix2d &),
+  void interpolateMetricAndDerivativeOnP2EdgeWrapper(
+    void *, const double, const Eigen::Matrix2d &, const Eigen::Matrix2d &, const Eigen::Matrix2d &,
+    const Eigen::Matrix2d &, const Eigen::Matrix2d &, Eigen::Matrix2d &, Eigen::Matrix2d &,
+    Eigen::Matrix2d &),
 
-  // void interpolateMetricP1Wrapper1D(void *, const double *, const double *, Eigen::Matrix2d &,
-  //                                   Eigen::Matrix2d &),
+  void interpolateMetricP1Wrapper1D(void *, const double *, const double *, Eigen::Matrix2d &,
+                                    Eigen::Matrix2d &),
 
-  // void interpolateMetricAndDerivativeOnP2EdgeWrapper1D(
-  //   void *, const double, const Eigen::Matrix2d &, const Eigen::Matrix2d &, const Eigen::Matrix2d &,
-  //   const Eigen::Matrix2d &, Eigen::Matrix2d &, Eigen::Matrix2d &),
+  void interpolateMetricAndDerivativeOnP2EdgeWrapper1D(
+    void *, const double, const Eigen::Matrix2d &, const Eigen::Matrix2d &, const Eigen::Matrix2d &,
+    const Eigen::Matrix2d &, Eigen::Matrix2d &, Eigen::Matrix2d &),
 
   void *metric);
-
-void fooTestStuff();
 
 #endif

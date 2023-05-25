@@ -1,6 +1,7 @@
 #include "feMatrixInterface.h"
 
 #include "../contrib/Eigen/Dense"
+#include "../contrib/unsupported/Eigen/MatrixFunctions"
 
 // ============================================================
 // Implementation of MetricTensor
@@ -45,8 +46,22 @@ MetricTensor &MetricTensor::operator*=(const double &val)
   _impl->_m *= val;
   return *this;
 }
+MetricTensor MetricTensor::operator*(const double &val) const
+{
+  MetricTensor tmp(1.0);
+  tmp._impl->setMatrix(_impl->_m * val);
+  return tmp;
+}
+MetricTensor MetricTensor::operator+(const MetricTensor &other) const
+{
+  MetricTensor tmp(1.0);
+  tmp._impl->setMatrix(_impl->_m + other._impl->_m);
+  return tmp;
+}
 
 void MetricTensor::print() const { std::cout << _impl->_m << std::endl; }
+
+double MetricTensor::determinant() const { return _impl->_m.determinant(); }
 
 MetricTensor MetricTensor::inverse() const
 {
@@ -55,7 +70,33 @@ MetricTensor MetricTensor::inverse() const
   return inv;
 }
 
-double MetricTensor::determinant() const { return _impl->_m.determinant(); }
+MetricTensor MetricTensor::log() const
+{
+  MetricTensor logm(1.0);
+  logm._impl->setMatrix(this->_impl->_m.log());
+  return logm;
+}
+
+MetricTensor MetricTensor::exp() const
+{
+  MetricTensor expm(1.0);
+  expm._impl->setMatrix(this->_impl->_m.exp());
+  return expm;
+}
+
+MetricTensor MetricTensor::absoluteValueEigen() const
+{
+  Eigen::EigenSolver<Eigen::Matrix2d> es;
+  Eigen::EigenSolver<Eigen::Matrix2d>::EigenvalueType ev;
+  es.compute(_impl->_m, true);
+  ev = es.eigenvalues();
+  Eigen::Matrix2d D = Eigen::Matrix2d::Identity();
+  D(0, 0) = fabs(ev(0).real());
+  D(1, 1) = fabs(ev(1).real());
+  MetricTensor res(1.0);
+  res._impl->setMatrix(es.eigenvectors().real() * D * es.eigenvectors().transpose().real());
+  return res;
+}
 
 MetricTensor MetricTensor::boundEigenvaluesOfAbs(const double lMin, const double lMax) const
 {

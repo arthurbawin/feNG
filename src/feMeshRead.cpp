@@ -1039,6 +1039,7 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, const bool curved, const bool
             if(curved && _entities[p].interp == geometricInterpolant::NONE) {
               _entities[p].interp = geometricInterpolant::TRIP2;
             }
+
             [[gnu::fallthrough]]; //  6-node triangle (2nd order)
           case 21:
             [[gnu::fallthrough]]; // 10-node triangle (3rd order)
@@ -1056,6 +1057,14 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, const bool curved, const bool
             [[gnu::fallthrough]]; // 55-node triangle (9th order)
           case 46: // 66-node triangle (10th order)
           {
+            // For now we assume the mesh is only P1 or only P2
+            if(!curved && elemType != 2) {
+              return feErrorMsg(
+                FE_STATUS_ERROR,
+                "Curved mesh is disabled, but there are 6-node triangles"
+                " in the mesh. For now high-order meshes must be read with curve = true.");
+            }
+
             if(!curved) {
               _entities[p].interp = geometricInterpolant::TRIP1;
             }
@@ -1255,6 +1264,8 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, const bool curved, const bool
             case 46: // 66-node triangle (10th order)
             {
               if(curved) {
+
+                // Reverse if required or if Physical Entity is negative
                 if(reversed || _entities[p].physicalTags[0] < 0) {
                   _entities[p].connecNodes[nElemNodes * iElm + 0] = elemNodes[0];
                   _entities[p].connecNodes[nElemNodes * iElm + 1] = elemNodes[2];
@@ -1301,6 +1312,8 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, const bool curved, const bool
                 }
 
               } else {
+
+                // Reverse if required or if Physical Entity is negative
                 if(reversed || _entities[p].physicalTags[0] < 0) {
                   _entities[p].connecNodes[nElemNodes * iElm + 0] = elemNodes[0];
                   _entities[p].connecNodes[nElemNodes * iElm + 1] = elemNodes[2];
@@ -1313,7 +1326,7 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, const bool curved, const bool
               }
 
               // Construct the triangle edges :
-              Vertex *v0, *v1;
+              Vertex *v0, *v1, *vMid;
               for(int k = 0; k < 3; ++k) {
                 if(reversed || _entities[p].physicalTags[0] < 0) {
                   if(k == 0) {
@@ -1327,20 +1340,32 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, const bool curved, const bool
                     v1 = &_vertices[_verticesMap[elemNodesGmsh[0]]];
                   }
                 } else {
-                  if(k == 2) {
-                    v0 = &_vertices[_verticesMap[elemNodesGmsh[2]]];
-                    v1 = &_vertices[_verticesMap[elemNodesGmsh[0]]];
-                  } else {
-                    v0 = &_vertices[_verticesMap[elemNodesGmsh[k]]];
-                    v1 = &_vertices[_verticesMap[elemNodesGmsh[k + 1]]];
-                  }
+                  // if(k == 2) {
+                  //   v0 = &_vertices[_verticesMap[elemNodesGmsh[2]]];
+                  //   v1 = &_vertices[_verticesMap[elemNodesGmsh[0]]];
+                  // } else {
+                  //   v0 = &_vertices[_verticesMap[elemNodesGmsh[k]]];
+                  //   v1 = &_vertices[_verticesMap[elemNodesGmsh[k + 1]]];
+                  // }
+                  v0 = &_vertices[_verticesMap[elemNodesGmsh[ k ]]];
+                  v1 = &_vertices[_verticesMap[elemNodesGmsh[(k + 1) % 3]]];
                 }
                 std::pair<std::set<Edge, EdgeLessThan>::iterator, bool> ret;
                 Edge e(v0, v1, nEdges, _entities[p].physicalTags[0]);
                 ret = _edges.insert(e);
-                if(ret.second) {
+                if(ret.second)
+                {
                   // Edge was added to the set : nEdges is added to connecEdges
                   _entities[p].connecEdges[3 * iElm + k] = nEdges++;
+
+                  // Compute displacement of midnode (alpha)
+                  vMid = &_vertices[_verticesMap[elemNodesGmsh[ k + 3 ]]];
+                  double xMid = (v0->x() + v1->x())/2.;
+                  double yMid = (v0->y() + v1->y())/2.;
+                  double normAlpha = sqrt( (vMid->x() - xMid)*(vMid->x() - xMid) + (vMid->y() - yMid)*(vMid->y() - yMid) );
+                  auto it = _edges.find(e);
+                  _edge2alpha[&(*it)] = normAlpha;
+
                 } else {
                   // Edge is already in the set : the negative is added to connecEdges
                   // Assumes an edge is shared by only two triangles in 2D

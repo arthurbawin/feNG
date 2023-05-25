@@ -129,11 +129,24 @@ public:
 
   // Assign a reconstructed solution
   void setRecovery(feNewRecovery *recovery){ _rec = recovery; };
+  feNewRecovery *getRecovery(){ return _rec; };
 
   // Compute and return the norm or integral matching the type 'type' (see enum above)
   double compute(normType type);
   // Compute and return the norm of integral matching the norm's _type attribute
   double compute();
+
+  double computeSquaredErrorOnElement(int iElm);
+  double computeLpNormOnElement(int p, bool error, int iElm);
+  double computeLpErrorExactVsEstimator(int p);
+
+  void computeInterpolationErrorGradientRochery(const int whichElements[2],
+                                                const int whichControlPoint_localTag[2],
+                                                double gradient[2]);
+
+  void computeInterpolationErrorGradient(const std::vector<int> &whichElements,
+                                         const std::vector<int> &whichControlPoint_localTag,
+                                         double gradient[2]);
 
 private:
   void initializeLocalSolutionOnSpace(int iSpace, int iElm);

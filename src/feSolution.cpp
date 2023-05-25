@@ -242,25 +242,6 @@ void feSolution::initializeEssentialBC(feMesh *mesh, feSolutionContainer *solCon
       exit(-1);
     }
   }
-
-  // if(fS->getDOFInitialization() == dofInitialization::EXTRAPOLATED_EULER_0D) {
-  //   // Extrapolate solution from inside the domain to the boundary
-  //   // Only in 1D for Euler equations for now
-
-  //   for(int iElm = 0; iElm < nElm; ++iElm) {
-  //     fS->initializeAddressingVector(iElm, adr);
-
-  //     for(int j = 0; j < fS->getNumFunctions(); ++j) {
-  //       double r[3] = {coor[3 * j], coor[3 * j + 1], coor[3 * j + 2]};
-  //       geoSpace->interpolateVectorField(localCoord, r, x);
-
-  //       // Extrapolate solution
-
-  //       _sol[adr[j]] = val;
-  //     }
-
-  //   }
-  // }
 }
 
 void feSolution::copySpace(feMesh *mesh, feSpace *s1, feSpace *s2)

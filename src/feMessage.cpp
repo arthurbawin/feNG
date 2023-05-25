@@ -12,11 +12,7 @@
 #endif
 #include "feMessage.h"
 
-/* Verbosity level :
-  - 0 : No information messages, only print warnings and errors
-  - 1 (default) : Moderate information messages
-  - 2 : All information messages */
-int FE_VERBOSE = 1;
+int FE_VERBOSE = VERBOSE_MODERATE;
 
 void setVerbose(int level) { FE_VERBOSE = level; }
 

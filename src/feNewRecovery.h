@@ -23,6 +23,8 @@
 
 enum class PPR { RECOVERY, DERIVATIVE };
 
+class feMetric;
+
 // Patches of elements around vertices of a single connectivity
 class feNewPatch
 {
@@ -41,7 +43,7 @@ protected:
   std::map<int, std::set<int> > edgeToElems; // A set of element tags for each mesh edge
 
 public:
-  feNewPatch(const feCncGeo *cnc, feMesh *mesh);
+  feNewPatch(const feCncGeo *cnc, feMesh *mesh, bool reconstructAtHighOrderNodes, feMetric *metricField = nullptr);
   ~feNewPatch() {}
 
   std::vector<int> &getVertices() { return _vertices; }
@@ -51,6 +53,7 @@ public:
 
 typedef std::map<int, Eigen::MatrixXd> matMap;
 typedef std::map<int, SquareMatrix> matMap2;
+
 
 class feNewRecovery
 {
@@ -100,24 +103,35 @@ protected:
   int _dimDerivation;
   int _dim2Derivation;
 
+  bool _reconstructAtHighOrderNodes;
+
   std::vector<int> _expX_recov;
   std::vector<int> _expY_recov;
   std::vector<int> _expX_deriv;
   std::vector<int> _expY_deriv;
 
+  // 1D quadrature rule to compute transformed edges lengths
+  int _nQuad1d;
+  std::vector<double> _wQuad1d;
+  std::vector<double> _xQuad1d;
+
   // To interpolate the recovery/derivatives
-  std::vector<double> _FIELD;
-  std::vector<double> _geoCoord;
-  std::vector<double> _pos;
-  std::vector<double> _basisRecovery;
-  std::vector<double> _basisDerivative;
+  // std::vector<double> _FIELD;
+  // std::vector<double> _geoCoord;
+  // std::vector<double> _pos;
 
   matMap _inverseMassMatrices;
   matMap2 _inverseMassSquareMatrices;
 
 public:
-  feNewRecovery(feSpace *space, feMesh *mesh, feSolution *sol, std::string meshName = "",
-                std::string metricMeshName = "", bool append = false);
+  feNewRecovery(feSpace *space,
+                feMesh *mesh,
+                feSolution *sol,
+                std::string meshName = "",
+                std::string metricMeshName = "",
+                bool reconstructAtHighOrderNodes = false,
+                bool append = false,
+                feMetric *metricField = nullptr);
   feNewRecovery(feSpace *space, feMesh *mesh, std::string recoveryFile);
   ~feNewRecovery() { delete _patch; }
 
@@ -130,7 +144,7 @@ public:
   // std::vector<int> &getXExponentsRecovery() { return _expXRecovery; }
   // std::vector<int> &getYExponentsRecovery() { return _expYRecovery; }
   // std::vector<int> &getZExponentsRecovery() { return _expZRecovery; }
-  // std::map<int, std::vector<double> > &getErrorCoefficients() { return errorCoeff; }
+  std::map<int, std::vector<double> > &getErrorCoefficients() { return errorCoeff; }
 
   // void writeRecovery(std::string fileName);
 
@@ -151,7 +165,18 @@ private:
   double evaluatePolynomial(PPR recoveredField, const int index, const int vertex,
                             const double *xLoc);
   void computeHomogeneousErrorPolynomials();
-  void computeRecoveryAtAllElementDOF(PPR recoveredField, const int index, const int iElm);
+  void computeTransformedEdgeLength(std::vector<double> &geoCoord,
+                                    std::vector<double> &dxdr,
+                                    std::vector<double> &dxds,
+                                    int whichEdge, double &firstHalf, double &secondHalf);
+  void computeRecoveryAtAllElementDOF(PPR recoveredField,
+                                      const int index,
+                                      const int iElm,
+                                      std::vector<double> &recoveryAtDOFS);
+  void computeRecoveryAtAllElementDOF2(PPR recoveredField,
+                                      const int index,
+                                      const int iElm,
+                                      std::vector<double> &recoveryAtDOFS);
 };
 
 #endif

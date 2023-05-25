@@ -7,15 +7,12 @@
 
 static double UVW[3];
 static double GRADUVW[6];
-// static Eigen::Matrix2d logM0;
-// static Eigen::Matrix2d logM1;
-// static Eigen::Matrix2d logM2;
 
 void feMetric::interpolateMetricP1WithDerivatives(const double *x, Eigen::Matrix2d &M,
                                                   Eigen::Matrix2d &dMdx, Eigen::Matrix2d &dMdy)
 {
   int elm;
-  bool isFound = static_cast<feMesh2DP1 *>(_recovery->_mesh)->locateVertex(x, elm, UVW);
+  bool isFound = static_cast<feMesh2DP1 *>(_newRecovery->_mesh)->locateVertex(x, elm, UVW);
   if(!isFound) {
     feWarning("In interpolateMetricP1 : Point (%f, %f) was not found in the mesh.\n", x[0], x[1]);
     M = Eigen::Matrix2d::Identity();
@@ -25,7 +22,7 @@ void feMetric::interpolateMetricP1WithDerivatives(const double *x, Eigen::Matrix
     double s = UVW[1];
 
     // Interpolate the log-metric and take exponential
-    Triangle *t = _recovery->_mesh->_elements[elm];
+    Triangle *t = _newRecovery->_mesh->_elements[elm];
 
     int t0 = _v2n[t->getVertex(0)];
     int t1 = _v2n[t->getVertex(1)];
@@ -35,9 +32,9 @@ void feMetric::interpolateMetricP1WithDerivatives(const double *x, Eigen::Matrix
     Eigen::Matrix2d M1 = _metricsOnGmshModel_eigen[t1];
     Eigen::Matrix2d M2 = _metricsOnGmshModel_eigen[t2];
 
-    // std::cout << "M0 = " << M0 <<std::endl;
-    // std::cout << "M1 = " << M1 <<std::endl;
-    // std::cout << "M2 = " << M2 <<std::endl;
+    // std::cout << "M0 (at " << t0 << ") = " << M0 << std::endl;
+    // std::cout << "M1 (at " << t1 << ") = " << M1 << std::endl;
+    // std::cout << "M2 (at " << t2 << ") = " << M2 << std::endl;
 
     // std::cout << "r = " << r <<std::endl;
     // std::cout << "s = " << s <<std::endl;
@@ -184,14 +181,14 @@ void feMetric::interpolateMetricP1(const double *x, Eigen::Matrix2d &M, Eigen::M
                                    Eigen::Matrix2d &sumduda2M)
 {
   int elm;
-  bool isFound = static_cast<feMesh2DP1 *>(_recovery->_mesh)->locateVertex(x, elm, UVW);
+  bool isFound = static_cast<feMesh2DP1 *>(_newRecovery->_mesh)->locateVertex(x, elm, UVW);
   if(!isFound) {
     feWarning("In interpolateMetricP1 : Point (%f, %f) was not found in the mesh.\n", x[0], x[1]);
     M = Eigen::Matrix2d::Identity();
     return;
   } else {
     // Interpolate the log-metric and take exponential
-    Triangle *t = _recovery->_mesh->_elements[elm];
+    Triangle *t = _newRecovery->_mesh->_elements[elm];
 
     int t0 = _v2n[t->getVertex(0)];
     int t1 = _v2n[t->getVertex(1)];

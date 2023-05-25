@@ -74,7 +74,6 @@ protected:
   PetscScalar *valb;
 #endif
 
-#if defined(HAVE_EIGEN)
   std::map<int, Eigen::Matrix<double, 3, 3> > lsInvAtVertices3;
   std::map<int, Eigen::Matrix<double, 3, 3> > lsInvAtVertices3OnEdges;
   std::map<int, Eigen::Matrix<double, 4, 4> > lsInvAtVertices4;
@@ -88,7 +87,6 @@ protected:
   std::map<int, Eigen::Matrix<double, 6, 6> > lsInvAtVertices6OnEdges;
   std::map<int, Eigen::Matrix<double, 10, 10> > lsInvAtVertices10;
   std::map<int, Eigen::Matrix<double, 10, 10> > lsInvAtVertices10OnEdges;
-#endif
 
 public:
   int _nElm;

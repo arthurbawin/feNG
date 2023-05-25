@@ -7,6 +7,14 @@
 #ifndef _FEMESSAGE_
 #define _FEMESSAGE_
 
+/* Verbosity level :
+  - 0 : No information messages, only print warnings and errors
+  - 1 (default) : Moderate information messages
+  - 2 : All information messages */
+#define VERBOSE_NONE 0
+#define VERBOSE_MODERATE 1
+#define VERBOSE_ALL 2
+
 typedef enum {
   FE_MSGLEVEL_INFO = 0,
   FE_MSGLEVEL_DEBUG = 1,

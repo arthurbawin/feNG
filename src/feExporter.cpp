@@ -308,7 +308,8 @@ feStatus feExporterVTK::createVTKNodes(std::vector<feSpace *> &spacesToExport,
     std::vector<feInt> adr(space->getNumFunctions());
     std::vector<double> sol(space->getNumFunctions());
 
-    feInfo("Exporting field %s on connectivity %s", field.data(), space->getCncGeoID().data());
+    feInfoCond(FE_VERBOSE >= VERBOSE_MODERATE, 
+      "Exporting field %s on connectivity %s", field.data(), space->getCncGeoID().data());
 
     const feCncGeo *cnc = space->getCncGeo();
 
