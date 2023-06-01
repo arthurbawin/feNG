@@ -72,6 +72,15 @@ void drawEllipsoids(const std::string &posFile, std::map<int, MetricType> &metri
   }
   fprintf(f, "};");
   fclose(f);
+
+  // Also print the metric tensors to text file
+  std::string textfile = posFile + ".txt";
+  f = fopen(textfile.data(), "w");
+  for(size_t i = 0; i < nodeTags.size(); i++) {
+    MetricType &m = metrics[nodeTags[i]];
+    fprintf(f, "%+-1.16e \t %+-1.16e \t %+-1.16e \n", m(0,0), m(0,1), m(1,1));
+  }
+  fclose(f);
 }
 
 // Explicit instantiation
@@ -442,10 +451,10 @@ void gradationMetriques(double gradation, int nmax, std::vector<double> &coord1,
 #endif
 }
 
-static Eigen::VectorXd CMINUS(7);
-static Eigen::VectorXd CPLUS(7);
+Eigen::VectorXd CMINUS(7);
+Eigen::VectorXd CPLUS(7);
 
-static double solveErrorFunction(double k, double *v, double *w, double H[2][2], double C[2][2][2],
+double solveErrorFunction(double k, double *v, double *w, double H[2][2], double C[2][2][2],
                                  std::set<double> &roots)
 {
   double a1 = k * w[0];
@@ -523,7 +532,7 @@ static double solveErrorFunction(double k, double *v, double *w, double H[2][2],
 
 #if defined(HAVE_SOPLEX)
 
-// static MetricTensor Hij = MetricTensor(1.0);
+// MetricTensor Hij = MetricTensor(1.0);
 
 double evaluateHomogeneousErrorPolynomial(const std::vector<double> &errorCoefficients,
                                                  const int degree, const double xLoc, const double yLoc, MetricTensor &Hij)
@@ -534,14 +543,7 @@ double evaluateHomogeneousErrorPolynomial(const std::vector<double> &errorCoeffi
   double res1 = 0.;
   for(int i = degree-1, j = 0, cnt = 0; i >= 0; --i, ++j, ++cnt){
   	if(i+j == degree-1){
-	  	// for(int m = 0; m < 2; ++m){
-	  	// 	for(int n = 0; n < 2; ++n){
-	  	// 		HIJ[cnt][m][n] = errorCoefficients[ cnt + m + n ];
-	  	// 	}
-	  	// }
-
   		
-  		// FIXME: include binomial coefficients for P2+
 	  	Hij(0,0) = errorCoefficients[ cnt + 0 + 0 ];
 	  	Hij(0,1) = errorCoefficients[ cnt + 0 + 1 ];
 	  	Hij(1,0) = errorCoefficients[ cnt + 1 + 0 ];
@@ -557,8 +559,25 @@ double evaluateHomogeneousErrorPolynomial(const std::vector<double> &errorCoeffi
   // Classical polynomial evaluation
   double res2 = 0.;
   int expx = errorCoefficients.size() - 1, expy = 0;
+
+  // Quick and dirty binomial coefficients
+  int coeff[4];
+  if(degree == 1) {
+    coeff[0] = 1.;
+    coeff[1] = 2.;
+    coeff[2] = 1.;
+  } else if(degree == 2) {
+    coeff[0] = 1.;
+    coeff[1] = 3.;
+    coeff[2] = 3.;
+    coeff[3] = 1.;
+  } else {
+    feInfo("Implement binomial coefficients for P3+ recoveries");
+    exit(-1);
+  }
+
   for(int i = 0; i < errorCoefficients.size(); i++, expx--, expy++) {
-    res2 += errorCoefficients[i] * pow(xLoc, expx) * pow(yLoc, expy);
+    res2 += coeff[i] * errorCoefficients[i] * pow(xLoc, expx) * pow(yLoc, expy);
   }
   return res2;
 }
@@ -570,15 +589,50 @@ void computeLvl1(const std::vector<double> &errorCoefficients, const int degree,
                         linearProblem &myLP)
 {
   double theta, xi, yi, error, root;
+
   for(size_t i = 0; i < myLP.numConstraints; ++i) {
-    theta = 2. * M_PI * (double)i / (double)myLP.numConstraints;
+    theta = 2. * M_PI * (double) i / (double) myLP.numConstraints;
     xi = cos(theta);
     yi = sin(theta);
     error = fmax(1e-14, fabs(evaluateHomogeneousErrorPolynomial(errorCoefficients, degree, xi, yi, myLP.Hij)));
     root = fabs(pow(error, 1. / (degree + 1)));
     myLP.lvl1[2 * i] = xi / root;
     myLP.lvl1[2 * i + 1] = yi / root;
-    // feInfo("error = %f - p(u) = %f", error, evaluateHomogeneousErrorPolynomial(errorCoefficients, degree, xi/root, yi/root));
+  }
+
+  if(myLP.uniformErrorCurve) {
+    // Split so that ellipse arc = lengthCurve/N approximately
+    double lengthCurve = 0.;
+    for(size_t i = 0; i < myLP.numConstraints; ++i) {
+      double x0 = myLP.lvl1[2 * i];
+      double y0 = myLP.lvl1[2 * i + 1];
+      double x1 = myLP.lvl1[2 * ((i + 1) % myLP.numConstraints)];
+      double y1 = myLP.lvl1[2 * ((i + 1) % myLP.numConstraints) + 1];
+      double distCurve = sqrt( (x0-x1)*(x0-x1) + (y0-y1)*(y0-y1) );
+      lengthCurve += distCurve;
+    }
+
+    // Scaling factor
+    double sumTargetTheta = 0.;
+    for(size_t i = 0; i < myLP.numConstraints; ++i) {
+      double x0 = myLP.lvl1[2 * i];
+      double y0 = myLP.lvl1[2 * i + 1];
+      sumTargetTheta += lengthCurve / (myLP.numConstraints * sqrt(x0*x0 + y0*y0));
+    }
+
+    theta = 0.;
+    for(size_t i = 0; i < myLP.numConstraints; ++i) {
+      double x0 = myLP.lvl1[2 * i];
+      double y0 = myLP.lvl1[2 * i + 1];
+      xi = cos(theta);
+      yi = sin(theta);
+      double dtheta = lengthCurve / (myLP.numConstraints * sqrt(x0*x0 + y0*y0)) / sumTargetTheta * 2. * M_PI;
+      theta += dtheta;
+      error = fmax(1e-14, fabs(evaluateHomogeneousErrorPolynomial(errorCoefficients, degree, xi, yi, myLP.Hij)));
+      root = fabs(pow(error, 1. / (degree + 1)));
+      myLP.lvl1[2 * i] = xi / root;
+      myLP.lvl1[2 * i + 1] = yi / root;
+    }
   }
 }
 
@@ -647,11 +701,8 @@ void computeLvl1(double K1, double K2, double *g1, double *g2, double Hij[2][2],
 
 bool solveLP(linearProblem &myLP, Eigen::Matrix2d &L)
 {
-  // DSVector row(3);
-  // LPRow lprow(3);
-  // LPRowSet lpRowSet(4*nPhi,3);
-  // lprow.setRhs(infinity);
-
+  // Removing/adding constraint rows seems to be much faster
+  // than changing rows from one solve to the next
   double xi, yi, normSquared, lhs;
   for(int i = 0; i < myLP.numConstraints; ++i) {
     xi = myLP.constraints[2 * i];
@@ -664,16 +715,13 @@ bool solveLP(linearProblem &myLP, Eigen::Matrix2d &L)
     myLP.lprow.setLhs(lhs);
     myLP.lprow.setRowVector(myLP.row);
     myLP.lprowset.add(myLP.lprow);
-    // problem.changeRowReal(i, lprow);
-    // problem.changeRowReal(i, LPRow(lhs, row, infinity));
     myLP.row.clear();
   }
   myLP.problem.removeRowRangeReal(0, myLP.numConstraints - 1);
   myLP.problem.addRowsReal(myLP.lprowset);
   myLP.lprowset.clear();
-  /* solve LP */
-  // SPxSolver::Status stat;
 
+  /* Solve LP */
   myLP.stat = myLP.problem.optimize();
 
   if(myLP.stat == SPxSolver::OPTIMAL) {
@@ -684,10 +732,29 @@ bool solveLP(linearProblem &myLP, Eigen::Matrix2d &L)
     L(1, 1) = myLP.prim[2];
     return true;
   } else {
-    // L(0, 0) = 1.0;
-    // L(0, 1) = 0.0;
-    // L(1, 0) = 0.0;
-    // L(1, 1) = 1.0;
+    switch(myLP.stat) {
+      case SPxSolver::ERROR: feInfo("Soplex status: an error occured"); break;
+      case SPxSolver::NO_RATIOTESTER: feInfo("No ratiotester loaded"); break;
+      case SPxSolver::NO_PRICER: feInfo("No pricer loaded"); break;
+      case SPxSolver::NO_SOLVER: feInfo("No linear solver loaded"); break;
+      case SPxSolver::NOT_INIT: feInfo("not initialised error"); break;
+      case SPxSolver::ABORT_EXDECOMP: feInfo("solve() aborted to exit decomposition simplex"); break;
+      case SPxSolver::ABORT_DECOMP: feInfo("solve() aborted due to commence decomposition simplex"); break;
+      case SPxSolver::ABORT_CYCLING: feInfo("solve() aborted due to detection of cycling."); break;
+      case SPxSolver::ABORT_TIME: feInfo("solve() aborted due to time limit."); break;
+      case SPxSolver::ABORT_ITER: feInfo("solve() aborted due to iteration limit."); break;
+      case SPxSolver::ABORT_VALUE: feInfo("solve() aborted due to objective limit."); break;
+      case SPxSolver::SINGULAR: feInfo("Basis is singular, numerical troubles?"); break;
+      case SPxSolver::NO_PROBLEM: feInfo("No Problem has been loaded."); break;
+      case SPxSolver::REGULAR: feInfo("LP has a usable Basis (maybe LP is changed)."); break;
+      case SPxSolver::RUNNING: feInfo("algorithm is running"); break;
+      case SPxSolver::UNKNOWN: feInfo("nothing known on loaded problem."); break;
+      case SPxSolver::OPTIMAL: feInfo("LP has been solved to optimality."); break;
+      case SPxSolver::UNBOUNDED: feInfo("LP has been proven to be primal unbounded."); break;
+      case SPxSolver::INFEASIBLE: feInfo("LP has been proven to be primal infeasible."); break;
+      case SPxSolver::INForUNBD: feInfo("LP is primal infeasible or unbounded."); break;
+      case SPxSolver::OPTIMAL_UNSCALED_VIOLATIONS: feInfo("LP has beed solved to optimality but unscaled solution contains violations."); break;
+    }
     return false;
   }
 }
@@ -703,10 +770,21 @@ bool computeMetricLogSimplexStraight(const double *x, const std::vector<double> 
   computeLvl1(errorCoefficients, degree, myLP);
 
   // for(size_t i = 0; i < myLP.numConstraints; ++i) {
-  //   fprintf(ff, "SP(%g,%g,0){%g,%g,0};",
+  //   fprintf(ff, "SP(%g,%g,0){%g};",
   //   	x[0] + myLP.lvl1[2 * i],
   //   	x[1] + myLP.lvl1[2 * i + 1],
-  //   	1., 1.);
+  //   	1.);
+  //   double theta = 2. * M_PI * (double)i / (double)myLP.numConstraints;
+  //   fprintf(ff, "SP(%g,%g,0){%g};",
+  //     x[0] + cos(theta),
+  //     x[1] + sin(theta),
+  //     1.);
+  //   fprintf(ff, "SL(%g,%g,0, %g,%g,0){%g,%g};",
+  //     x[0] + cos(theta),
+  //     x[1] + sin(theta),
+  //     x[0] + myLP.lvl1[2 * i],
+  //     x[1] + myLP.lvl1[2 * i + 1],
+  //     1., 1.);
   // }
   // fprintf(ff, "};\n"); fclose(ff);
 
@@ -740,7 +818,9 @@ bool computeMetricLogSimplexStraight(const double *x, const std::vector<double> 
     }
 
     // Solve the linear optimization problem for L
-    bool success = solveLP(myLP, L);
+    bool success = false;
+    // #pragma omp critical
+    success = solveLP(myLP, L);
 
     if(success) {
     	// Recover Q from L
@@ -749,7 +829,7 @@ bool computeMetricLogSimplexStraight(const double *x, const std::vector<double> 
      	// drawSingleEllipse(myfile, x, Q, 1, 30);
 
       diff = Q - Qprev;
-      if(diff.norm() < tol) {
+      if((diff.norm() / Q.norm()) < tol) {
         numIter = iter;
         Qres(0,0) = Q(0,0);
         Qres(0,1) = Q(0,1);
@@ -790,7 +870,7 @@ bool computeMetricLogSimplexStraight(const double *x, const std::vector<double> 
   return true;
 }
 
-static bool logSimplexCurved(double *x, double k1, double k2, double g1[2], double g2[2],
+bool logSimplexCurved(double *x, double k1, double k2, double g1[2], double g2[2],
                              double Hij[2][2], double Cijk[2][2][2], int maxIter,
                              int nThetaPerQuadrant, double tol, Eigen::Matrix2d &Q, int &numIter,
                              linearProblem &myLP)

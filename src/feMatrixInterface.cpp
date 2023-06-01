@@ -142,7 +142,7 @@ Vector::Vector(Vector &&) noexcept = default;
 Vector &Vector::operator=(Vector &&) noexcept = default;
 
 // "Real" constructor
-Vector::Vector(const int size) : _impl(std::make_unique<VectorImpl>(size)) {}
+Vector::Vector(const int size = 1) : _impl(std::make_unique<VectorImpl>(size)) {}
 
 // =============== Vector member functions ===============
 int Vector::getSize() const { return _impl->_size; }
@@ -204,4 +204,80 @@ SquareMatrix SquareMatrix::inverse() const
   SquareMatrix inv(_impl->_size);
   inv._impl->setMatrix(this->_impl->_m.inverse());
   return inv;
+}
+
+// ============================================================
+// Implementation of Matrix
+// ============================================================
+class Matrix::MatrixImpl
+{
+public:
+  int _sizeM;
+  int _sizeN;
+  Eigen::MatrixXd _m;
+
+  // Default, copy/move constructor/assignment
+  MatrixImpl() = default;
+  ~MatrixImpl() = default;
+  MatrixImpl(MatrixImpl const &) = default;
+  MatrixImpl &operator=(MatrixImpl const &) = default;
+  MatrixImpl(MatrixImpl &&) noexcept = default;
+  MatrixImpl &operator=(MatrixImpl &&) noexcept = default;
+
+  // "Real" constructor
+  MatrixImpl(const int sizeM, const int sizeN) : _sizeM(sizeM), _sizeN(sizeN)
+    { _m = Eigen::MatrixXd::Zero(sizeM, sizeN); }
+
+  void setMatrix(const Eigen::MatrixXd &other) { _m = other; };
+};
+
+// Default, copy/move constructor/assignment
+Matrix::Matrix() : _impl(new MatrixImpl{}) {}
+Matrix::~Matrix() = default;
+Matrix::Matrix(Matrix &&) noexcept = default;
+Matrix &Matrix::operator=(Matrix &&) noexcept = default;
+
+// "Real" constructor
+Matrix::Matrix(const int sizeM, const int sizeN) : _impl(std::make_unique<MatrixImpl>(sizeM, sizeN)) {}
+
+// =============== Matrix member functions ===============
+int Matrix::getSizeM() const { return _impl->_sizeM; }
+int Matrix::getSizeN() const { return _impl->_sizeN; }
+
+double &Matrix::operator()(int i, int j) { return _impl->_m(i, j); }
+
+// Matrix-vector product
+Vector Matrix::operator*(const Vector &v) const
+{
+#if defined(FENG_DEBUG)
+  assert(_impl->_sizeM == v.getSize());
+#endif
+  Vector res(this->_impl->_sizeM);
+  res._impl->setVector(_impl->_m * v._impl->_v);
+  return res;
+}
+
+void Matrix::print() const { std::cout << _impl->_m << std::endl; }
+
+SquareMatrix Matrix::multiplyByTranspose() const
+{
+  SquareMatrix res(_impl->_sizeN);
+  res._impl->setMatrix(this->_impl->_m.transpose() * this->_impl->_m);
+  return res;
+}
+
+Matrix Matrix::getLeastSquaresMatrix() const
+{
+  Matrix res(_impl->_sizeN, _impl->_sizeM);
+  SquareMatrix inv(_impl->_sizeN);
+  inv._impl->setMatrix(this->_impl->_m.transpose() * this->_impl->_m);
+  inv._impl->setMatrix(inv._impl->_m.inverse());
+  res._impl->setMatrix(inv._impl->_m * this->_impl->_m.transpose());
+  return res;
+}
+
+int Matrix::rank() const
+{
+  Eigen::FullPivLU<Eigen::MatrixXd> lu_decomp(this->_impl->_m);
+  return lu_decomp.rank();
 }

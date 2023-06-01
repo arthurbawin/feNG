@@ -1358,13 +1358,15 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, const bool curved, const bool
                   // Edge was added to the set : nEdges is added to connecEdges
                   _entities[p].connecEdges[3 * iElm + k] = nEdges++;
 
-                  // Compute displacement of midnode (alpha)
-                  vMid = &_vertices[_verticesMap[elemNodesGmsh[ k + 3 ]]];
-                  double xMid = (v0->x() + v1->x())/2.;
-                  double yMid = (v0->y() + v1->y())/2.;
-                  double normAlpha = sqrt( (vMid->x() - xMid)*(vMid->x() - xMid) + (vMid->y() - yMid)*(vMid->y() - yMid) );
-                  auto it = _edges.find(e);
-                  _edge2alpha[&(*it)] = normAlpha;
+                  if(curved) {
+                    // Compute displacement of midnode (alpha)
+                    vMid = &_vertices[_verticesMap[elemNodesGmsh[ k + 3 ]]];
+                    double xMid = (v0->x() + v1->x())/2.;
+                    double yMid = (v0->y() + v1->y())/2.;
+                    double normAlpha = sqrt( (vMid->x() - xMid)*(vMid->x() - xMid) + (vMid->y() - yMid)*(vMid->y() - yMid) );
+                    auto it = _edges.find(e);
+                    _edge2alpha[&(*it)] = normAlpha;
+                  }
 
                 } else {
                   // Edge is already in the set : the negative is added to connecEdges

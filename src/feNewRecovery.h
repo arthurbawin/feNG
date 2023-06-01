@@ -40,20 +40,30 @@ protected:
   int _nEdgePerElm;
 
   std::map<int, std::set<int> > vertToElems; // A set of element tags for each mesh vertex
+  std::map<int, std::set<int> > vertToVerts; // A set of vertices tags for mesh vertices (the vertices of its elem patch)
+  std::map<int, std::set<int> > vertToInteriorVerts; // A set of interior vertices tags for boundary mesh vertices (the interior vertices of its elem patch)
   std::map<int, std::set<int> > edgeToElems; // A set of element tags for each mesh edge
+  std::unordered_map<int, bool> isOnEdge;
+
+  std::map<int, bool> _isVertexBoundary;
+  std::map<int, std::pair<double, double>> _scaling;
 
 public:
   feNewPatch(const feCncGeo *cnc, feMesh *mesh, bool reconstructAtHighOrderNodes, feMetric *metricField = nullptr);
   ~feNewPatch() {}
 
   std::vector<int> &getVertices() { return _vertices; }
+  std::map<int, std::set<int>> &getElementPatches() { return vertToElems; };
+  std::map<int, std::set<int>> &getVerticesPatches() { return vertToVerts; };
   std::set<int> &getPatch(int iVertex) { return vertToElems[iVertex]; }
+  std::set<int> &getPatchOfInteriorVertices(int iVertex) { return vertToInteriorVerts.at(iVertex); }
   std::set<int> &getEdgePatch(int iEdge) { return edgeToElems[iEdge]; }
+  std::map<int, bool> &getBoundaryVertices() { return _isVertexBoundary; };
+  std::map<int, std::pair<double, double>> &getScaling() { return _scaling; };
+
+  bool isVertexBoundary(int iVertex) { return _isVertexBoundary.at(iVertex); };
+  bool isVertexOnEdge(int iVertex) { return isOnEdge.at(iVertex); };
 };
-
-typedef std::map<int, Eigen::MatrixXd> matMap;
-typedef std::map<int, SquareMatrix> matMap2;
-
 
 class feNewRecovery
 {
@@ -67,6 +77,7 @@ public:
 
   feMesh *_mesh;
   feSolution *_sol;
+  feMetaNumber *_numbering;
 
   feSpace *_intSpace;
   feSpace *_geoSpace;
@@ -120,8 +131,9 @@ protected:
   // std::vector<double> _geoCoord;
   // std::vector<double> _pos;
 
-  matMap _inverseMassMatrices;
-  matMap2 _inverseMassSquareMatrices;
+  std::map<int, Eigen::MatrixXd> _inverseMassMatrices;
+  std::map<int, SquareMatrix> _inverseMassSquareMatrices;
+  std::map<int, Matrix> _leastSquaresMatrices;
 
 public:
   feNewRecovery(feSpace *space,
@@ -131,7 +143,8 @@ public:
                 std::string metricMeshName = "",
                 bool reconstructAtHighOrderNodes = false,
                 bool append = false,
-                feMetric *metricField = nullptr);
+                feMetric *metricField = nullptr,
+                feMetaNumber *numbering = nullptr);
   feNewRecovery(feSpace *space, feMesh *mesh, std::string recoveryFile);
   ~feNewRecovery() { delete _patch; }
 
@@ -157,13 +170,20 @@ private:
   void setDimensions();
   void setPolynomialExponents();
   void computeVertexMassMatrices2D();
+  void computeVertexLeastSquareMatrices2D();
   void inverseMassMatrices();
   void computeRHSAndSolve(int numRecoveries, int nRecoveredFields, int nRecoveredDerivatives,
+                          int iDerivative);
+  void computeRHSAndSolve_noIntegral(int numRecoveries, int nRecoveredFields, int nRecoveredDerivatives,
                           int iDerivative);
   void computeDerivative(int nRecoveredFields, int indexRecovery, int iDerivative,
                          std::ostream &output);
   double evaluatePolynomial(PPR recoveredField, const int index, const int vertex,
                             const double *xLoc);
+  double evaluatePolynomialAtBoundaryVertex(PPR recoveredField, const int index, const int vertex,
+                                            const std::set<int> &connectedInteriorVertices);
+  double averageRecoveryEvaluationsAtQuadNode(PPR recoveredField, const int index,
+                                                 const int iElm, const int iQuadNode);
   void computeHomogeneousErrorPolynomials();
   void computeTransformedEdgeLength(std::vector<double> &geoCoord,
                                     std::vector<double> &dxdr,

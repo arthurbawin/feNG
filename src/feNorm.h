@@ -139,6 +139,9 @@ public:
   double computeSquaredErrorOnElement(int iElm);
   double computeLpNormOnElement(int p, bool error, int iElm);
   double computeLpErrorExactVsEstimator(int p);
+  double computeSemiH1ErrorExactVsEstimator(int p);
+  double computeErrorHessianExactVsEstimator(int p);
+  double computeErrorThirdDerivativesExactVsEstimator(int p);
 
   void computeInterpolationErrorGradientRochery(const int whichElements[2],
                                                 const int whichControlPoint_localTag[2],

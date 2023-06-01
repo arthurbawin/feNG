@@ -396,7 +396,7 @@ public:
     feSolution *discreteSolution,
     feFunction *exactSolution,
     feVectorFunction *exactGradient,
-    bool curve, feRecovery *oldRecovery = nullptr);
+    bool curve, bool isBackmeshP2, feRecovery *oldRecovery = nullptr);
 
   void drawConnectivityToPOSfile(const std::string &cncName, const std::string &fileName);
 };

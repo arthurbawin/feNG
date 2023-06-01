@@ -1,5 +1,8 @@
 #include "feNorm.h"
 
+thread_local std::vector<double> MY_POS(3, 0.);
+thread_local std::vector<double> MY_GEOCOORD(18, 0.);
+
 feStatus createNorm(feNorm *&norm, normType type, const std::vector<feSpace *> &spaces,
                     feSolution *sol, feFunction *scalarSolution, feVectorFunction *vectorSolution)
 {
@@ -222,8 +225,6 @@ double area(const std::vector<double> &triCoord)
   return area;
 }
 
-thread_local std::vector<double> POS(3, 0.);
-
 double feNorm::computeSquaredErrorOnElement(int iElm)
 {
   double t = _solution->getCurrentTime();
@@ -243,8 +244,8 @@ double feNorm::computeSquaredErrorOnElement(int iElm)
     #endif
     for(int k = 0; k < _nQuad; ++k) {
       uh = _spaces[0]->interpolateFieldAtQuadNode(_localSol[0], k);
-      _geoSpace->interpolateVectorFieldAtQuadNode(_geoCoord, k, POS);
-      u = _scalarSolution->eval(t, POS);
+      _geoSpace->interpolateVectorFieldAtQuadNode(_geoCoord, k, MY_POS);
+      u = _scalarSolution->eval(t, MY_POS);
       eLocPowP += (u - uh) * (u - uh) * _J[_nQuad * iElm + k] * _w[k];
     }
   }
@@ -301,6 +302,177 @@ double feNorm::computeLpErrorExactVsEstimator(int p)
     }
   }
   return pow(res, 1. / (double)p);
+}
+
+thread_local std::vector<double> GRAD_U_EXACT(2, 0.);
+
+double feNorm::computeSemiH1ErrorExactVsEstimator(int p)
+{
+  double res = 0.0, t = _solution->getCurrentTime();
+  std::vector<double> graduExact(2, 0.);
+
+  if(_rec == nullptr) {
+    feErrorMsg(FE_STATUS_ERROR, "Cannot compute Lp error estimate "
+                                " because feRecovery (solution reconstruction) is NULL");
+    exit(-1);
+  }
+
+  tic();
+
+  #if defined(HAVE_OMP)
+  #pragma omp parallel
+  #endif
+  {
+    double normSquared, gradRec[2];
+
+    #if defined(HAVE_OMP)
+    #pragma omp for reduction (+:res)
+    #endif
+    for(int iElm = 0; iElm < _nElm; ++iElm) {
+      _spaces[0]->_mesh->getCoord(_cnc, iElm, MY_GEOCOORD);
+
+      for(int k = 0; k < _nQuad; ++k) {
+        _geoSpace->interpolateVectorFieldAtQuadNode(MY_GEOCOORD, k, MY_POS);
+        _vectorSolution->eval(t, MY_POS, GRAD_U_EXACT);
+        gradRec[0] = _rec->evaluateRecoveryAtQuadNode(PPR::DERIVATIVE, 0, iElm, k);
+        gradRec[1] = _rec->evaluateRecoveryAtQuadNode(PPR::DERIVATIVE, 1, iElm, k);
+
+        normSquared = (GRAD_U_EXACT[0] - gradRec[0]) * (GRAD_U_EXACT[0] - gradRec[0])
+                    + (GRAD_U_EXACT[1] - gradRec[1]) * (GRAD_U_EXACT[1] - gradRec[1]);
+
+        res += normSquared * _J[_nQuad * iElm + k] * _w[k];
+      }
+    }
+  }
+
+  feInfo("Computed norm of gradient error in %f s", toc());
+
+  return sqrt(res);
+}
+
+thread_local std::vector<double> HESS_U_EXACT(4, 0.);
+
+double feNorm::computeErrorHessianExactVsEstimator(int p)
+{
+  double res = 0.0, t = _solution->getCurrentTime();
+
+  if(_rec == nullptr) {
+    feErrorMsg(FE_STATUS_ERROR, "Cannot compute Lp error estimate "
+                                " because feRecovery (solution reconstruction) is NULL");
+    exit(-1);
+  }
+
+  tic();
+
+  #if defined(HAVE_OMP)
+  #pragma omp parallel
+  #endif
+  {
+    double normSquared, hessRec[4];
+
+    #if defined(HAVE_OMP)
+    #pragma omp for reduction(+:res)
+    #endif
+    for(int iElm = 0; iElm < _nElm; ++iElm) {
+      _spaces[0]->_mesh->getCoord(_cnc, iElm, MY_GEOCOORD);
+
+      for(int k = 0; k < _nQuad; ++k) {
+        _geoSpace->interpolateVectorFieldAtQuadNode(MY_GEOCOORD, k, MY_POS);
+        _vectorSolution->eval(t, MY_POS, HESS_U_EXACT);
+
+        // Averaged derivatives-wise
+        hessRec[0] =  _rec->evaluateRecoveryAtQuadNode(PPR::DERIVATIVE, 2, iElm, k);
+        hessRec[1] = (_rec->evaluateRecoveryAtQuadNode(PPR::DERIVATIVE, 3, iElm, k) + 
+                      _rec->evaluateRecoveryAtQuadNode(PPR::DERIVATIVE, 4, iElm, k))/2.;
+        hessRec[2] =  _rec->evaluateRecoveryAtQuadNode(PPR::DERIVATIVE, 5, iElm, k); 
+
+        normSquared =      (HESS_U_EXACT[0] - hessRec[0]) * (HESS_U_EXACT[0] - hessRec[0]) + 
+                    + 2. * (HESS_U_EXACT[1] - hessRec[1]) * (HESS_U_EXACT[1] - hessRec[1]) +
+                         + (HESS_U_EXACT[3] - hessRec[2]) * (HESS_U_EXACT[3] - hessRec[2]);
+
+        // Component-wise
+        // hessRec[0] = _rec->evaluateRecoveryAtQuadNode(PPR::DERIVATIVE, 2, iElm, k);
+        // hessRec[1] = _rec->evaluateRecoveryAtQuadNode(PPR::DERIVATIVE, 3, iElm, k);
+        // hessRec[2] = _rec->evaluateRecoveryAtQuadNode(PPR::DERIVATIVE, 4, iElm, k); 
+        // hessRec[3] = _rec->evaluateRecoveryAtQuadNode(PPR::DERIVATIVE, 5, iElm, k);
+
+        // normSquared = 0.;
+        // for(int i = 0; i < 4; ++i)
+        //   normSquared += (HESS_U_EXACT[i] - hessRec[i]) * (HESS_U_EXACT[i] - hessRec[i]);
+
+        res += normSquared * _J[_nQuad * iElm + k] * _w[k];
+      }
+    }
+  }
+
+  feInfo("Computed norm of hessian error in %f s", toc());
+
+  return sqrt(res);
+}
+
+thread_local std::vector<double> D3U_EXACT(8, 0.);
+
+double feNorm::computeErrorThirdDerivativesExactVsEstimator(int p)
+{
+  double res = 0.0, t = _solution->getCurrentTime();
+
+  if(_rec == nullptr) {
+    feErrorMsg(FE_STATUS_ERROR, "Cannot compute Lp error estimate "
+                                " because feRecovery (solution reconstruction) is NULL");
+    exit(-1);
+  }
+
+  tic();
+
+  #if defined(HAVE_OMP)
+  #pragma omp parallel
+  #endif
+  {
+    double normSquared, d3Rec[4];
+
+    #if defined(HAVE_OMP)
+    #pragma omp for reduction(+:res)
+    #endif
+    for(int iElm = 0; iElm < _nElm; ++iElm) {
+      _spaces[0]->_mesh->getCoord(_cnc, iElm, MY_GEOCOORD);
+
+      for(int k = 0; k < _nQuad; ++k) {
+        _geoSpace->interpolateVectorFieldAtQuadNode(MY_GEOCOORD, k, MY_POS);
+        _vectorSolution->eval(t, MY_POS, D3U_EXACT);
+
+        // Averaged derivatives-wise
+        // Be careful for the order of mixed derivatives:
+        // it's xxx, [xxy, xyx, xyy, yxx, yxy, yyx], yyy
+        // so 7-8-10 and 9-11-12 (first 6 positions are 2 first and 4 second derivatives)
+        d3Rec[0] =  _rec->evaluateRecoveryAtQuadNode(PPR::DERIVATIVE, 6, iElm, k);
+        d3Rec[1] = (_rec->evaluateRecoveryAtQuadNode(PPR::DERIVATIVE, 7, iElm, k) +
+                    _rec->evaluateRecoveryAtQuadNode(PPR::DERIVATIVE, 8, iElm, k) +  
+                    _rec->evaluateRecoveryAtQuadNode(PPR::DERIVATIVE, 10, iElm, k))/3.; 
+        d3Rec[2] = (_rec->evaluateRecoveryAtQuadNode(PPR::DERIVATIVE, 9, iElm, k) +
+                    _rec->evaluateRecoveryAtQuadNode(PPR::DERIVATIVE, 11, iElm, k) +  
+                    _rec->evaluateRecoveryAtQuadNode(PPR::DERIVATIVE, 12, iElm, k))/3.; 
+        d3Rec[3] =  _rec->evaluateRecoveryAtQuadNode(PPR::DERIVATIVE, 13, iElm, k);
+
+        normSquared =  (D3U_EXACT[0] - d3Rec[0]) * (D3U_EXACT[0] - d3Rec[0])
+                + 3. * (D3U_EXACT[1] - d3Rec[1]) * (D3U_EXACT[1] - d3Rec[1])
+                + 3. * (D3U_EXACT[3] - d3Rec[2]) * (D3U_EXACT[3] - d3Rec[2])
+                +      (D3U_EXACT[7] - d3Rec[3]) * (D3U_EXACT[7] - d3Rec[3]) ;
+
+        // // Component-wise
+        // normSquared = 0.;
+        // for(int ii = 0; ii < 8; ++ii) {
+        //   d3Rec[ii] =  _rec->evaluateRecoveryAtQuadNode(PPR::DERIVATIVE, 6+ii, iElm, k);
+        //   normSquared += (D3U_EXACT[ii] - d3Rec[ii]) * (D3U_EXACT[ii] - d3Rec[ii]);
+        // }
+
+        res += normSquared * _J[_nQuad * iElm + k] * _w[k];
+      }
+    }
+  }
+
+  feInfo("Computed norm of d3u error in %f s", toc());
+
+  return sqrt(res);
 }
 
 

@@ -79,6 +79,7 @@ public:
     int maxIter = 50;
     // Tolerance on the difference Q-Qprev
     double tol = 1e-5;
+    bool uniformErrorCurve = false;
   } logSimplexOptions;
   
   // Callback that returns true if a point is inside the

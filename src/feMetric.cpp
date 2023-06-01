@@ -13,8 +13,8 @@
 using namespace soplex;
 #endif
 
-#include "../contrib/Eigen/Eigen"
-#include "../contrib/Eigen/Eigenvalues"
+// #include "../contrib/Eigen/Eigen"
+// #include "../contrib/Eigen/Eigenvalues"
 
 extern int FE_VERBOSE;
 
@@ -93,7 +93,7 @@ void feMetric::metricScalingFromGmshSubstitute(std::map<int, MetricType> &metric
 
 	int nVerticesPerElement = _newRecovery->_cnc->getNumVerticesPerElem();
 
-   // Get the mesh elements
+  // Get the mesh elements
   std::vector<int> elementTypes;
   std::vector<std::vector<std::size_t> > elementTags;
   std::vector<std::vector<std::size_t> > elemNodeTags;
@@ -128,80 +128,67 @@ void feMetric::metricScalingFromGmshSubstitute(std::map<int, MetricType> &metric
 
   // Compute integral of det^exponent
   double I = 0.0;
-  double area = 0.0;
   int nQuad = weights.size();
+  size_t nElm = elementTags[0].size();
 
-  double N = (double)_options.nTargetVertices;
+  double N = (double) _options.nTargetVertices;
   double dim = 2.;
-  MetricType M_interpolated;
-  double xsi[2];
-  std::vector<int> tags(_nVerticesPerElmOnBackmesh);
 
-  for(size_t iElm = 0; iElm < elementTags[0].size(); iElm++) {
+  #define MAX_VERTICES_BACKMESH 6
 
-  	for(size_t i = 0; i < _nVerticesPerElmOnBackmesh; ++i) {
-  		tags[i] = elemNodeTags[0][_nVerticesPerElmOnBackmesh * iElm + i];
-  	}
+  #if defined(HAVE_OMP)
+  #pragma omp parallel
+  #endif
+  {
+    MetricType M_interpolated;
+    double xsi[2];
+    int tags[MAX_VERTICES_BACKMESH];
 
-    for(size_t i = 0; i < nQuad; i++) {
+    #if defined(HAVE_OMP)
+    #pragma omp for reduction(+:I)
+    #endif
+    for(size_t iElm = 0; iElm < nElm; iElm++) {
 
-      // double interpolatedDet = 0.;
-
-      // Interpolate det(H) or det(Q) at quad nodes
-      // for(size_t j = 0; j < nVerticesPerElement; j++)
-      // {
-      // 	int sequentialTag = _nodeTag2sequentialTag[ elemNodeTags[0][nVerticesPerElement * iElm + j] ];
-
-      //   // Interpolate det^exp
-      //   interpolatedDet += basisFunctions[nVerticesPerElement * i + j] * pow(
-      //   metrics[sequentialTag].determinant(),
-      //   exponentInIntegral);
-
-      //   // Interpolate det then take exponent after
-      //   // interpolatedDet +=
-      //   //   basisFunctions[nVerticesPerElement * i + j] * 
-      //   //   metrics[elemNodeTags[0][nVerticesPerElement * iElm + j]].determinant();
-      // }
-      // feInfo("Adding %f", interpolatedDet);
-
-      //   if(interpolatedDet > 1e5){
-      //   	exit(-1);
-      // 	}
-
-    	xsi[0] = localCoord[3 * i + 0];
-    	xsi[1] = localCoord[3 * i + 1];
-
-    	if(_nVerticesPerElmOnBackmesh == 3){
-    		MetricTensor &M0 = metrics.at(tags[0]);
-    		MetricTensor &M1 = metrics.at(tags[1]);
-    		MetricTensor &M2 = metrics.at(tags[2]);
-    		logEuclidianP1Interpolation(xsi, M0, M1, M2, M_interpolated);
+    	for(size_t i = 0; i < _nVerticesPerElmOnBackmesh; ++i) {
+    		tags[i] = elemNodeTags[0][_nVerticesPerElmOnBackmesh * iElm + i];
     	}
 
-    	if(_nVerticesPerElmOnBackmesh == 6){
-    		MetricTensor &M0 = metrics.at(tags[0]);
-    		MetricTensor &M1 = metrics.at(tags[1]);
-    		MetricTensor &M2 = metrics.at(tags[2]);
-    		MetricTensor &M3 = metrics.at(tags[3]);
-    		MetricTensor &M4 = metrics.at(tags[4]);
-    		MetricTensor &M5 = metrics.at(tags[5]);
-    		logEuclidianP2Interpolation(xsi, M0, M1, M2, M3, M4, M5, M_interpolated);
-    	}
+      for(size_t i = 0; i < nQuad; i++) {
 
-    	double interpolatedDet = M_interpolated.determinant();
+      	xsi[0] = localCoord[3 * i + 0];
+      	xsi[1] = localCoord[3 * i + 1];
 
-    	if(interpolatedDet <= 0. || interpolatedDet > 1e10) {
-    		M_interpolated.print();
-    		exit(-1);
-    	}
+      	if(_nVerticesPerElmOnBackmesh == 3){
+      		MetricTensor &M0 = metrics.at(tags[0]);
+      		MetricTensor &M1 = metrics.at(tags[1]);
+      		MetricTensor &M2 = metrics.at(tags[2]);
+      		logEuclidianP1Interpolation(xsi, M0, M1, M2, M_interpolated);
+      	}
 
-      I += weights[i] * det[iElm * nQuad + i] * pow( interpolatedDet, exponentInIntegral);
-      area += weights[i] * det[iElm * nQuad + i];
+      	if(_nVerticesPerElmOnBackmesh == 6){
+      		MetricTensor &M0 = metrics.at(tags[0]);
+      		MetricTensor &M1 = metrics.at(tags[1]);
+      		MetricTensor &M2 = metrics.at(tags[2]);
+      		MetricTensor &M3 = metrics.at(tags[3]);
+      		MetricTensor &M4 = metrics.at(tags[4]);
+      		MetricTensor &M5 = metrics.at(tags[5]);
+      		logEuclidianP2Interpolation(xsi, M0, M1, M2, M3, M4, M5, M_interpolated);
+      	}
+
+      	double interpolatedDet = M_interpolated.determinant();
+
+      	if(interpolatedDet <= 0. ) {
+          feInfo("Negative metric determinant:");
+      		M_interpolated.print();
+      		exit(-1);
+      	}
+
+        I += weights[i] * det[iElm * nQuad + i] * pow( interpolatedDet, exponentInIntegral);
+      }
     }
   }
 
-  feInfo("Scaling : Integral of determinant = %+-1.6e", I);
-  feInfo("Scaling : Check area              = %+-1.6e", area);
+  feInfo("Scaling : Integral of determinant = %+-1.16e", I);
 
   // Apply scaling
   for(size_t i = 0; i < nodeTags.size(); i++) {
@@ -215,7 +202,7 @@ void feMetric::metricScalingFromGmshSubstitute(std::map<int, MetricType> &metric
 //////////////////////////////////////////////////////////////
 // Begining of metric interpolation convergence tests
 //
-static double matNorm2(const MetricTensor &m1, const MetricTensor &m2)
+double matNorm2(const MetricTensor &m1, const MetricTensor &m2)
 {
   double sqr = 0;
   for(int i = 0; i < 2; i++) {
@@ -454,7 +441,7 @@ void feMetric::interpolationTest(const std::vector<size_t> &nodeTags, std::vecto
 
 // Return a SMetric3 (Gmsh type for symmetric matrix) from a MetricType
 // MetricType can be either an Eigen::Matrix2d or a MetricTensor (our custom type)
-template <class MetricType> static SMetric3 convert2metric3(const MetricType &other)
+template <class MetricType> SMetric3 convert2metric3(const MetricType &other)
 {
   SMetric3 M(1.0);
   M(0, 0) = other(0, 0);
@@ -464,15 +451,15 @@ template <class MetricType> static SMetric3 convert2metric3(const MetricType &ot
   return M;
 }
 
-template <class MetricType> static Eigen::Matrix2d convert2eigenMatrix(const MetricType &other)
-{
-  Eigen::Matrix2d M = Eigen::Matrix2d::Identity();
-  M(0, 0) = other(0, 0);
-  M(1, 0) = other(1, 0);
-  M(0, 1) = other(0, 1);
-  M(1, 1) = other(1, 1);
-  return M;
-}
+// template <class MetricType> Eigen::Matrix2d convert2eigenMatrix(const MetricType &other)
+// {
+//   Eigen::Matrix2d M = Eigen::Matrix2d::Identity();
+//   M(0, 0) = other(0, 0);
+//   M(1, 0) = other(1, 0);
+//   M(0, 1) = other(0, 1);
+//   M(1, 1) = other(1, 1);
+//   return M;
+// }
 
 // Apply Alauzet's metric gradation
 // FIXME: gradation is computed for SMetric3 metric for now, so
@@ -514,7 +501,8 @@ void feMetric::writeMetricField(std::vector<std::size_t> &nodeTags, std::vector<
     MetricTensor &M = _metricTensorAtNodetags[nodeTags[i]];
 
     // For interpolation in curved mesh (still requires Eigen matrices)
-    _metricsOnGmshModel_eigen[nodeTags[i]] = convert2eigenMatrix(M);
+    // REMOVED TO USE LOGEUCLIDIAN INTERPOLATION?
+    // _metricsOnGmshModel_eigen[nodeTags[i]] = convert2eigenMatrix(M);
 
     vMetric[0] = M(0, 0);
     vMetric[1] = M(0, 1);
@@ -578,65 +566,82 @@ feStatus feMetric::computeMetricsP1(std::vector<std::size_t> &nodeTags, std::vec
   return FE_STATUS_OK;
 }
 
+#if defined(HAVE_SOPLEX)
+void setUpLinearProblem(linearProblem &myLP, feMetricOptions &options, int nTheta, bool reset = false)
+{
+  if(reset) {
+    myLP.problem.clearLPReal();
+    myLP.lprowset.clear();
+  }
+  // Set up the optimization problem structure
+  int numConstraints = 4 * nTheta;
+  size_t size = 2 * numConstraints; // 2 coordonnees * 4 quadrants * nTheta angles/quadrant
+  myLP.lvl1.resize(size, 0.);
+  myLP.constraints.resize(size, 0.);
+  myLP.numConstraints = numConstraints;
+  myLP.uniformErrorCurve = options.logSimplexOptions.uniformErrorCurve;
+
+  // Set generic LP solver data
+  myLP.problem.setIntParam(SoPlex::VERBOSITY, SoPlex::VERBOSITY_ERROR);
+  myLP.problem.setIntParam(SoPlex::OBJSENSE, SoPlex::OBJSENSE_MINIMIZE);
+  DSVector dummycol(0);
+  double infty = 1e+100;
+  myLP.problem.addColReal(LPCol(1.0, dummycol, infty, -infty));
+  myLP.problem.addColReal(LPCol(0.0, dummycol, infty, -infty));
+  myLP.problem.addColReal(LPCol(1.0, dummycol, infty, -infty));
+
+  myLP.row.setMax(3);
+  myLP.prim.reDim(3);
+  myLP.lprow = LPRow(3);
+  myLP.lprow.setRhs(infty);
+  myLP.lprowset = LPRowSet(numConstraints, 3);
+
+  for(int i = 0; i < numConstraints; ++i) {
+    DSVector row(3);
+    row.add(0, 1.0);
+    row.add(1, 1.0);
+    row.add(2, 1.0);
+    myLP.problem.addRowReal(LPRow(1.0, row, infty));
+  }
+}
+#endif
+
 // Compute scaled optimal metric field for Pn elements
 // according to Coulaud & Loseille using the log-simplex method
 feStatus feMetric::computeMetricsPn(std::vector<std::size_t> &nodeTags, std::vector<double> &coord)
 {
 #if defined(HAVE_SOPLEX)
-  // Min and max eigenvalues based on sizes
-  double lambdaMax = 1. / (_options.hMin * _options.hMin);
-  double lambdaMin = 1. / (_options.hMax * _options.hMax);
 
   std::map<int, std::vector<double> > &errorCoeffAtVertices = _newRecovery->getErrorCoefficients();
 
   bool OK = true;
 
+  size_t numVertices = nodeTags.size();
+  int cnter = 0, maxThreads = omp_get_max_threads();
+
   #if defined(HAVE_OMP)
-  #pragma omp parallel
+  #pragma omp parallel shared(cnter)
   #endif
   {
+      // Min and max eigenvalues based on sizes
+    double lambdaMax = 1. / (_options.hMin * _options.hMin);
+    double lambdaMin = 1. / (_options.hMax * _options.hMax);
   	double x[2];
   	MetricTensor Q;
 
-	  // Set up the optimization problem structure
-	  linearProblem myLP;
-	  int numIter;
-	  int nTheta = _options.logSimplexOptions.nThetaPerQuadrant;
-	  int maxIter = _options.logSimplexOptions.maxIter;
-	  double tol = _options.logSimplexOptions.tol;
-	  int numConstraints = 4 * nTheta;
-	  size_t size = 2 * numConstraints; // 2 coordonnees * 4 quadrants * nTheta angles/quadrant
-	  myLP.lvl1.resize(size, 0.);
-	  myLP.constraints.resize(size, 0.);
-	  myLP.numConstraints = numConstraints;
-
-	  // Set generic LP solver data
-	  myLP.problem.setIntParam(SoPlex::VERBOSITY, SoPlex::VERBOSITY_ERROR);
-	  myLP.problem.setIntParam(SoPlex::OBJSENSE, SoPlex::OBJSENSE_MINIMIZE);
-	  DSVector dummycol(0);
-	  myLP.problem.addColReal(LPCol(1.0, dummycol, infinity, -infinity));
-	  myLP.problem.addColReal(LPCol(0.0, dummycol, infinity, -infinity));
-	  myLP.problem.addColReal(LPCol(1.0, dummycol, infinity, -infinity));
-
-	  myLP.row.setMax(3);
-	  myLP.prim.reDim(3);
-	  myLP.lprow = LPRow(3);
-	  myLP.lprow.setRhs(infinity);
-	  myLP.lprowset = LPRowSet(numConstraints, 3);
-
-	  for(int i = 0; i < numConstraints; ++i) {
-	    DSVector row(3);
-	    row.add(0, 1.0);
-	    row.add(1, 1.0);
-	    row.add(2, 1.0);
-	    myLP.problem.addRowReal(LPRow(1.0, row, infinity));
-	  }
+    int numIter;
+    int nTheta = _options.logSimplexOptions.nThetaPerQuadrant;
+    int maxIter = _options.logSimplexOptions.maxIter;
+    double tol = _options.logSimplexOptions.tol;
+    
+    linearProblem myLP;
+    setUpLinearProblem(myLP, _options, nTheta);
 
 	  // Compute bounded absolute value of upper bound Q at vertices (at nodetags)
 	  #if defined(HAVE_OMP)
     #pragma omp for
     #endif
-	  for(size_t i = 0; i < nodeTags.size(); i++) {
+	  for(size_t i = 0; i < numVertices; i++) {
 	    x[0] = coord[3 * i + 0];
 	    x[1] = coord[3 * i + 1];
 
@@ -656,18 +661,29 @@ feStatus feMetric::computeMetricsPn(std::vector<std::size_t> &nodeTags, std::vec
 		  bool res = computeMetricLogSimplexStraight(x, errorCoeff, _options.polynomialDegree, nTheta,
 		                                               maxIter, tol, Q, numIter, myLP);
 
+      int retry = 0, maxTry = 1;
+      while(!res && retry < maxTry) {
+        nTheta *= 2;
+        feInfoCond(FE_VERBOSE >= VERBOSE_MODERATE, "Could not compute metric. Trying again with %d constraints.", nTheta);
+        setUpLinearProblem(myLP, _options, nTheta);
+        res = computeMetricLogSimplexStraight(x, errorCoeff, _options.polynomialDegree, nTheta,
+                                                   maxIter, tol, Q, numIter, myLP);
+      }
+
+      // Restore initial number of constraints
+      nTheta = _options.logSimplexOptions.nThetaPerQuadrant;
+
 	    if(res) {
 	      feInfoCond(FE_VERBOSE >= VERBOSE_MODERATE, 
-	      			 "Metric (%+-1.5e - %+-1.5e - %+-1.5e) found in %2d iterations "
-	             "(log-simplex method) (vertex %d/%d)"
+	      			 "Computed metric in %2d iterations  - vertex %6d/%6d"
 	             #if defined(HAVE_OMP)
-	             " (thread %d/%d) "
+	             " (thread %2d/%2d) "
 	             #endif
 	             ,
-	             Q(0, 0), Q(1, 0), Q(1, 1), numIter, i, nodeTags.size()
+	             numIter, ++cnter, numVertices
 	             #if defined(HAVE_OMP)
 	             , omp_get_thread_num()
-	             , omp_get_num_threads()
+	             , maxThreads
 	             #endif
 	             );
 
@@ -679,19 +695,19 @@ feStatus feMetric::computeMetricsPn(std::vector<std::size_t> &nodeTags, std::vec
 
 	    } else {
 	    	OK = false;
-	    	// feWarning("Could not compute a metric at (%+-1.5e - %+-1.5e) (vertex %d/%d)",
-	      //           x[0], x[1], i, nodeTags.size());
 	      // return feErrorMsg(FE_STATUS_ERROR, "Could not compute a metric at (%+-1.5e - %+-1.5e) (vertex %d/%d)",
 	      //           x[0], x[1], i, nodeTags.size());
-	      // Q = MetricTensor(1. / (lambdaMin * lambdaMin));
 	    }
 	  }
 	}
 
 	if(!OK) {
-		FIXME : retest speed and dont error when curving
 		return feErrorMsg(FE_STATUS_ERROR, "Could not compute at least one metric tensor");
 	}
+
+  // for(auto &p : _metricTensorAtNodetags) {
+  //   feInfo("Computed metric %+-1.16e - %+-1.16e - %+-1.16e", p.second(0,0), p.second(0,1), p.second(1,1));
+  // }
 
   return FE_STATUS_OK;
 #else
@@ -708,7 +724,7 @@ feStatus feMetric::computeMetrics()
 {
 #if defined(HAVE_GMSH)
 
-  bool debug = true;
+  bool debug = false;
 
   if(!_options.isGmshModelReady) {
     return feErrorMsg(FE_STATUS_ERROR, "No Gmsh model available to compute a metric field.\n"
@@ -725,7 +741,7 @@ feStatus feMetric::computeMetrics()
   if(s != FE_STATUS_OK) return s;
 
   //////////////////////////////////////////////////////////////
-  // To test convergence of the metric interpolation:
+  // To test convergence of the metric interpolation (for the thesis?):
   // interpolationTest(nodeTags, coord);
   // return FE_STATUS_OK;
   //////////////////////////////////////////////////////////////

@@ -56,6 +56,7 @@ private:
 class Vector
 {
 public:
+  friend class Matrix;
   friend class SquareMatrix;
 
   // "Real" constructor, for us mere mortals
@@ -83,6 +84,8 @@ private:
 class SquareMatrix
 {
 public:
+  friend class Matrix;
+
   // "Real" constructor, for us mere mortals
   SquareMatrix(const int size);
 
@@ -106,6 +109,39 @@ public:
 private:
   class SquareMatrixImpl;
   std::unique_ptr<SquareMatrixImpl> _impl;
+};
+
+class Matrix
+{
+public:
+  // "Real" constructor, for us mere mortals
+  Matrix(const int sizeM, const int sizeN);
+
+  // Default, copy/move constructors/assignments
+  Matrix();
+  ~Matrix();
+  Matrix(Matrix const &) = delete;
+  Matrix &operator=(Matrix const &) = delete;
+  Matrix(Matrix &&) noexcept;
+  Matrix &operator=(Matrix &&) noexcept;
+
+  int getSizeM() const;
+  int getSizeN() const;
+  int rank() const;
+
+  double &operator()(int i, int j);
+  Vector operator*(const Vector &v) const;
+
+  void print() const;
+
+  // Compute A^T*A (dim = NxN if A is MxN)
+  SquareMatrix multiplyByTranspose() const;
+  // Compute (A^T*A)^-1 * A^T (dim = NxM if A is MxN)
+  Matrix getLeastSquaresMatrix() const;
+
+private:
+  class MatrixImpl;
+  std::unique_ptr<MatrixImpl> _impl;
 };
 
 #endif

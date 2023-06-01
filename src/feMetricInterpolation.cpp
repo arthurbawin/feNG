@@ -11,6 +11,9 @@ static double GRADUVW[6];
 void feMetric::interpolateMetricP1WithDerivatives(const double *x, Eigen::Matrix2d &M,
                                                   Eigen::Matrix2d &dMdx, Eigen::Matrix2d &dMdy)
 {
+  feErrorMsg(FE_STATUS_ERROR, " SHOULD NOT USE THIS INTERPOLATION. USE LOGEUCLIDIAN INTERPOLATION ON NEW BACKGROUND MESH INSTEAD");
+  exit(-1);
+
   int elm;
   bool isFound = static_cast<feMesh2DP1 *>(_newRecovery->_mesh)->locateVertex(x, elm, UVW);
   if(!isFound) {

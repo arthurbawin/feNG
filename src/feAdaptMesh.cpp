@@ -807,7 +807,7 @@ feStatus feMesh2DP1::adapt(feNewRecovery *recoveredField, feMetricOptions &optio
                            feSolution *discreteSolution,
                            feFunction *exactSolution,
                            feVectorFunction *exactGradient,
-                           bool curve, feRecovery *oldRecovery)
+                           bool curve, bool isBackmeshP2, feRecovery *oldRecovery)
 {
 
 #if defined(HAVE_GMSH)
@@ -863,13 +863,22 @@ feStatus feMesh2DP1::adapt(feNewRecovery *recoveredField, feMetricOptions &optio
   // Assign old feRecovery structure (for curved adaptation, temporary)
   metricField.setRecovery(oldRecovery);
 
+  // The back feMesh can be P2, but we need to write a P1 view in the gmsh model
+  // to give mmg for aniso adaptation. So what decides on the number of vertices
+  // when metrics are computed is whether we curve (and dont have to give a mesh to mmg)
+  // and not whether isP2backmesh is true
   metricField._nVerticesPerElmOnBackmesh = curve ? 6 : 3;
+
+  if(curve && !isBackmeshP2) {
+    return feErrorMsg(FE_STATUS_ERROR, "Backmesh must be P2 when curving the mesh.");
+  }
 
   // Compute the metric tensor field and write metrics to options.mmgInputMeshfile
   tic();
   feStatus s = metricField.computeMetrics();
   options.userValue = metricField._options.userValue;
   feInfoCond(FE_VERBOSE > 0, "\t\tComputed metric tensors in %f s", toc());
+  exit(-1);
   if(s != FE_STATUS_OK) {
     gmsh::finalize();
     return s;
