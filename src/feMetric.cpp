@@ -13,9 +13,6 @@
 using namespace soplex;
 #endif
 
-// #include "../contrib/Eigen/Eigen"
-// #include "../contrib/Eigen/Eigenvalues"
-
 extern int FE_VERBOSE;
 
 feMetric::feMetric(feRecovery *recovery, feMetricOptions metricOptions)
@@ -580,6 +577,7 @@ void setUpLinearProblem(linearProblem &myLP, feMetricOptions &options, int nThet
   myLP.constraints.resize(size, 0.);
   myLP.numConstraints = numConstraints;
   myLP.uniformErrorCurve = options.logSimplexOptions.uniformErrorCurve;
+  myLP.numLoopsUniformErrorCurve = options.logSimplexOptions.numLoopsUniformErrorCurve;
 
   // Set generic LP solver data
   myLP.problem.setIntParam(SoPlex::VERBOSITY, SoPlex::VERBOSITY_ERROR);
@@ -620,7 +618,7 @@ feStatus feMetric::computeMetricsPn(std::vector<std::size_t> &nodeTags, std::vec
   int cnter = 0, maxThreads = omp_get_max_threads();
 
   #if defined(HAVE_OMP)
-  #pragma omp parallel shared(cnter)
+  #pragma omp parallel shared(cnter, OK)
   #endif
   {
       // Min and max eigenvalues based on sizes
@@ -642,6 +640,9 @@ feStatus feMetric::computeMetricsPn(std::vector<std::size_t> &nodeTags, std::vec
     #pragma omp for
     #endif
 	  for(size_t i = 0; i < numVertices; i++) {
+
+      if(!OK) continue;
+
 	    x[0] = coord[3 * i + 0];
 	    x[1] = coord[3 * i + 1];
 
@@ -661,17 +662,17 @@ feStatus feMetric::computeMetricsPn(std::vector<std::size_t> &nodeTags, std::vec
 		  bool res = computeMetricLogSimplexStraight(x, errorCoeff, _options.polynomialDegree, nTheta,
 		                                               maxIter, tol, Q, numIter, myLP);
 
-      int retry = 0, maxTry = 1;
-      while(!res && retry < maxTry) {
-        nTheta *= 2;
-        feInfoCond(FE_VERBOSE >= VERBOSE_MODERATE, "Could not compute metric. Trying again with %d constraints.", nTheta);
-        setUpLinearProblem(myLP, _options, nTheta);
-        res = computeMetricLogSimplexStraight(x, errorCoeff, _options.polynomialDegree, nTheta,
-                                                   maxIter, tol, Q, numIter, myLP);
-      }
+      // int retry = 0, maxTry = 1;
+      // while(!res && retry < maxTry) {
+      //   nTheta *= 2;
+      //   feInfoCond(FE_VERBOSE >= VERBOSE_MODERATE, "Could not compute metric. Trying again with %d constraints.", nTheta);
+      //   setUpLinearProblem(myLP, _options, nTheta);
+      //   res = computeMetricLogSimplexStraight(x, errorCoeff, _options.polynomialDegree, nTheta,
+      //                                              maxIter, tol, Q, numIter, myLP);
+      // }
 
       // Restore initial number of constraints
-      nTheta = _options.logSimplexOptions.nThetaPerQuadrant;
+      // nTheta = _options.logSimplexOptions.nThetaPerQuadrant;
 
 	    if(res) {
 	      feInfoCond(FE_VERBOSE >= VERBOSE_MODERATE, 
@@ -704,10 +705,6 @@ feStatus feMetric::computeMetricsPn(std::vector<std::size_t> &nodeTags, std::vec
 	if(!OK) {
 		return feErrorMsg(FE_STATUS_ERROR, "Could not compute at least one metric tensor");
 	}
-
-  // for(auto &p : _metricTensorAtNodetags) {
-  //   feInfo("Computed metric %+-1.16e - %+-1.16e - %+-1.16e", p.second(0,0), p.second(0,1), p.second(1,1));
-  // }
 
   return FE_STATUS_OK;
 #else

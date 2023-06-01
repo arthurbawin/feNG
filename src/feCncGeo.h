@@ -100,6 +100,8 @@ protected:
   // transformation, stored at all quadrature nodes of all elements
   // on this connectivity. Size = nQuad x nElm
   std::vector<double> _J;
+  std::vector<double> _elementsVolume;
+  std::vector<double> _minimumScaledJacobianControlCoeffs;
 
   // Mesh coloring
   std::vector<int> _nbElmPerNode;
@@ -155,6 +157,11 @@ public:
   feStatus computeJacobians();
   feStatus recomputeElementJacobian(const int iElm);
   const std::vector<double> &getJacobians() const { return _J; }
+  const std::vector<double> &getElementsVolume() const
+    { return _elementsVolume; };
+  feStatus computeMinimumScaledJacobianControlCoefficients();
+  const std::vector<double> &getMinimumScaledJacobianControlCoeffs() const
+    { return _minimumScaledJacobianControlCoeffs; };
 
   void computeElementTransformation(std::vector<double> &elementCoord, const int iQuadNode,
                                     const double jac, ElementTransformation &transformation) const;

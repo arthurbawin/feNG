@@ -78,8 +78,9 @@ public:
     int nThetaPerQuadrant = 25;
     int maxIter = 50;
     // Tolerance on the difference Q-Qprev
-    double tol = 1e-5;
+    double tol = 5e-2;
     bool uniformErrorCurve = false;
+    int numLoopsUniformErrorCurve = 1;
   } logSimplexOptions;
   
   // Callback that returns true if a point is inside the

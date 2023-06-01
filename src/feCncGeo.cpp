@@ -3,6 +3,7 @@
 #include "feSpace.h"
 #include "feMesh.h"
 #include "feQuadrature.h"
+#include "SPoint2.h"
 
 extern int FE_VERBOSE;
 
@@ -86,6 +87,9 @@ feCncGeo::feCncGeo(const int tag, const int dimension, const int nVerticesPerEle
 {
   if(connecElem.size() == 0) _connecElem.resize(nElements);
   if(connecEdges.size() == 0) _connecEdges.resize(nElements * nEdgesPerElement);
+
+  _elementsVolume.resize(_nElements, 0.);
+  _minimumScaledJacobianControlCoeffs.resize(nElements, 0.);
 
   std::sort(connecVertices.begin(), connecVertices.end());
   _nVertices = std::unique(connecVertices.begin(), connecVertices.end()) - connecVertices.begin();
@@ -226,6 +230,7 @@ feStatus feCncGeo::setQuadratureRule(feQuadrature *rule)
 feStatus feCncGeo::computeJacobians()
 {
   int nQuad = _geometricInterpolant->getNumQuadPoints();
+  std::vector<double> &wQuad = _geometricInterpolant->getQuadratureWeights();
   _J.resize(_nElements * nQuad);
 
   std::vector<double> geoCoord(3 * _nVerticesPerElm);
@@ -239,36 +244,41 @@ feStatus feCncGeo::computeJacobians()
     case 0:
       for(int iElm = 0; iElm < _nElements; ++iElm) {
         for(int k = 0; k < nQuad; ++k) {
-          _J[nQuad * iElm + k] = 1.0;
+          _J[nQuad * iElm + k] = 1.;
         }
+        _elementsVolume[iElm] = 1.;
       }
       break;
 
     case 1: {
-      std::vector<double> dxdr(3, 0.0);
+      std::vector<double> dxdr(3, 0.);
 
       for(int iElm = 0; iElm < _nElements; ++iElm) {
         _mesh->getCoord(_tag, iElm, geoCoord);
+        _elementsVolume[iElm] = 0.;
         for(int k = 0; k < nQuad; ++k) {
           _geometricInterpolant->interpolateVectorFieldAtQuadNode_rDerivative(geoCoord, k, dxdr);
           _J[nQuad * iElm + k] = sqrt(dxdr[0] * dxdr[0] + dxdr[1] * dxdr[1]);
+          _elementsVolume[iElm] += wQuad[k] * _J[nQuad * iElm + k];
         }
       }
       break;
     }
 
     case 2: {
-      std::vector<double> dxdr(3, 0.0); // [dx/dr, dy/dr, dz/dr]
-      std::vector<double> dxds(3, 0.0); // [dx/ds, dy/ds, dz/ds]
+      std::vector<double> dxdr(3, 0.); // [dx/dr, dy/dr, dz/dr]
+      std::vector<double> dxds(3, 0.); // [dx/ds, dy/ds, dz/ds]
       for(int iElm = 0; iElm < _nElements; ++iElm)
       {
         _mesh->getCoord(_tag, iElm, geoCoord);
+        _elementsVolume[iElm] = 0.;
 
         double jMin = 1e22;
         for(int k = 0; k < nQuad; ++k) {
           _geometricInterpolant->interpolateVectorFieldAtQuadNode_rDerivative(geoCoord, k, dxdr);
           _geometricInterpolant->interpolateVectorFieldAtQuadNode_sDerivative(geoCoord, k, dxds);
           _J[nQuad * iElm + k] = dxdr[0] * dxds[1] - dxdr[1] * dxds[0];
+          _elementsVolume[iElm] += wQuad[k] * _J[nQuad * iElm + k];
           jMin = fmin(jMin, _J[nQuad * iElm + k]);
 
           if(_J[nQuad * iElm + k] <= 0) {
@@ -306,6 +316,7 @@ feStatus feCncGeo::computeJacobians()
 feStatus feCncGeo::recomputeElementJacobian(const int iElm)
 {
   int nQuad = _geometricInterpolant->getNumQuadPoints();
+  std::vector<double> &wQuad = _geometricInterpolant->getQuadratureWeights();
   std::vector<double> geoCoord(3 * _nVerticesPerElm);
 
   bool atLeastOneNegative = false;
@@ -324,9 +335,11 @@ feStatus feCncGeo::recomputeElementJacobian(const int iElm)
 
       for(int iElm = 0; iElm < _nElements; ++iElm) {
         _mesh->getCoord(_tag, iElm, geoCoord);
+        _elementsVolume[iElm] = 0.;
         for(int k = 0; k < nQuad; ++k) {
           _geometricInterpolant->interpolateVectorFieldAtQuadNode_rDerivative(geoCoord, k, dxdr);
           _J[nQuad * iElm + k] = sqrt(dxdr[0] * dxdr[0] + dxdr[1] * dxdr[1]);
+          _elementsVolume[iElm] += wQuad[k] * _J[nQuad * iElm + k];
         }
       }
       break;
@@ -337,12 +350,14 @@ feStatus feCncGeo::recomputeElementJacobian(const int iElm)
       std::vector<double> dxds(3, 0.0); // [dx/ds, dy/ds, dz/ds]
 
       _mesh->getCoord(_tag, iElm, geoCoord);
+      _elementsVolume[iElm] = 0.;
 
       double jMin = 1e22;
       for(int k = 0; k < nQuad; ++k) {
         _geometricInterpolant->interpolateVectorFieldAtQuadNode_rDerivative(geoCoord, k, dxdr);
         _geometricInterpolant->interpolateVectorFieldAtQuadNode_sDerivative(geoCoord, k, dxds);
         _J[nQuad * iElm + k] = dxdr[0] * dxds[1] - dxdr[1] * dxds[0];
+        _elementsVolume[iElm] += wQuad[k] * _J[nQuad * iElm + k];
         jMin = fmin(jMin, _J[nQuad * iElm + k]);
 
         if(_J[nQuad * iElm + k] <= 0) {
@@ -362,6 +377,106 @@ feStatus feCncGeo::recomputeElementJacobian(const int iElm)
 
   if(atLeastOneNegative){
     return FE_STATUS_FAILED;
+  }
+
+  return FE_STATUS_OK;
+}
+
+// Lagrange points are given as {L200, L020, L002, L110, L011, L101}
+void getBezierControlPoints(const SPoint2 L[6], SPoint2 P[6])
+{
+  P[0] = L[0]; // P_200
+  P[1] = L[1]; // P_020
+  P[2] = L[2]; // P_002
+  P[3] = (L[0] * (-1.) + L[3] * 4. - L[1]) * 0.5; // P_110
+  P[4] = (L[1] * (-1.) + L[4] * 4. - L[2]) * 0.5; // P_011
+  P[5] = (L[2] * (-1.) + L[5] * 4. - L[0]) * 0.5; // P_101
+}
+
+// Compute determinant of the 2x2 matrix |P0 P1|,
+// points are column vectors.
+inline double computeDeterminant(const SPoint2 &P0, const SPoint2 &P1)
+{
+  return (P0[0] * P1[1]) - (P1[0] * P0[1]);
+}
+
+double controlCoefficientN200(const SPoint2 &P200, const SPoint2 &P011,
+                                     const SPoint2 &P020, const SPoint2 &P101,
+                                     const SPoint2 &P002, const SPoint2 &P110)
+{
+  return 4. * computeDeterminant(P200 - P110, P200 - P101);
+}
+
+double controlCoefficientN110(const SPoint2 &P200, const SPoint2 &P011,
+                                     const SPoint2 &P020, const SPoint2 &P101,
+                                     const SPoint2 &P002, const SPoint2 &P110)
+{
+  return 2. * computeDeterminant(P200 - P101, P020 - P011) + 2. * computeDeterminant(P110 - P011, P110 - P101);
+}
+
+// Bezier points are given as {P200, P020, P002, P110, P011, P101}
+void getJacobianControlCoefficients(const SPoint2 P[6], double N[6])
+{
+  const SPoint2 &P200 = P[0];
+  const SPoint2 &P020 = P[1];
+  const SPoint2 &P002 = P[2];
+  const SPoint2 &P110 = P[3];
+  const SPoint2 &P011 = P[4];
+  const SPoint2 &P101 = P[5];
+  N[0] = controlCoefficientN200(P200, P011, P020, P101, P002, P110);
+  N[1] = controlCoefficientN200(P020, P101, P002, P110, P200, P011);
+  N[2] = controlCoefficientN200(P002, P110, P200, P011, P020, P101);
+  N[3] = controlCoefficientN110(P200, P011, P020, P101, P002, P110);
+  N[4] = controlCoefficientN110(P020, P101, P002, P110, P200, P011);
+  N[5] = controlCoefficientN110(P002, P110, P200, P011, P020, P101);
+}
+
+// uvw are the barycentric coordinates: in 2D triangle:
+// uvw[0] = 1. - xsi - eta;
+// uvw[1] = xsi;
+// uvw[2] = eta;
+void getP2BernsteinBasis(const double uvw[3], double basis[6])
+{
+  double u = uvw[0];
+  double v = uvw[1];
+  double w = uvw[2];
+  basis[0] = u*u;
+  basis[1] = 2.*u*v;
+  basis[2] = v*v;
+  basis[3] = 2.*v*w;
+  basis[4] = w*w;
+  basis[5] = 2.*w*u;
+}
+
+feStatus feCncGeo::computeMinimumScaledJacobianControlCoefficients()
+{
+  if(_dim != 2 || _nVerticesPerElm != 6) {
+    return feErrorMsg(FE_STATUS_ERROR, "Only computing scaled jacobian control coefficients for P2 triangles.");
+  }
+
+  std::vector<double> geoCoord(3 * 6);
+  SPoint2 lagrangePoints[6], bezierPoints[6];
+  double N[6];
+
+  for(int iElm = 0; iElm < _nElements; ++iElm)
+  {
+    _mesh->getCoord(_tag, iElm, geoCoord);
+
+    // Get Lagrange and Bezier control points
+    for(int i = 0; i < 6; ++i) {
+      lagrangePoints[i] = SPoint2(geoCoord[i * 3 + 0], geoCoord[i * 3 + 1]);
+    }
+    getBezierControlPoints(lagrangePoints, bezierPoints);
+
+    // Get control coefficients
+    getJacobianControlCoefficients(bezierPoints, N);
+
+    double minControlCoeff = 1e22;
+    for(int i = 0; i < 6; ++i) {
+      minControlCoeff = fmin(minControlCoeff, N[i]);
+    }
+
+    _minimumScaledJacobianControlCoeffs[iElm] = minControlCoeff/(2. * _elementsVolume[iElm]);
   }
 
   return FE_STATUS_OK;

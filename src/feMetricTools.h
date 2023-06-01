@@ -22,6 +22,7 @@ typedef struct linearProblemStruct {
   std::vector<double> constraints;
   MetricTensor Hij;
   bool uniformErrorCurve;
+  int numLoopsUniformErrorCurve;
 } linearProblem;
 #endif
 

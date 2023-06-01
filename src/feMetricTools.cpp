@@ -586,7 +586,7 @@ double evaluateHomogeneousErrorPolynomial(const std::vector<double> &errorCoeffi
 // Compute a discretization of the error curve 1 for straight aniso adaptation
 //
 void computeLvl1(const std::vector<double> &errorCoefficients, const int degree,
-                        linearProblem &myLP)
+                 linearProblem &myLP)
 {
   double theta, xi, yi, error, root;
 
@@ -600,38 +600,40 @@ void computeLvl1(const std::vector<double> &errorCoefficients, const int degree,
     myLP.lvl1[2 * i + 1] = yi / root;
   }
 
+  // Split so that ellipse arc = lengthCurve/N approximately
   if(myLP.uniformErrorCurve) {
-    // Split so that ellipse arc = lengthCurve/N approximately
-    double lengthCurve = 0.;
-    for(size_t i = 0; i < myLP.numConstraints; ++i) {
-      double x0 = myLP.lvl1[2 * i];
-      double y0 = myLP.lvl1[2 * i + 1];
-      double x1 = myLP.lvl1[2 * ((i + 1) % myLP.numConstraints)];
-      double y1 = myLP.lvl1[2 * ((i + 1) % myLP.numConstraints) + 1];
-      double distCurve = sqrt( (x0-x1)*(x0-x1) + (y0-y1)*(y0-y1) );
-      lengthCurve += distCurve;
-    }
+    for(int iter = 0; iter < myLP.numLoopsUniformErrorCurve; ++iter) {
+      double lengthCurve = 0.;
+      for(size_t i = 0; i < myLP.numConstraints; ++i) {
+        double x0 = myLP.lvl1[2 * i];
+        double y0 = myLP.lvl1[2 * i + 1];
+        double x1 = myLP.lvl1[2 * ((i + 1) % myLP.numConstraints)];
+        double y1 = myLP.lvl1[2 * ((i + 1) % myLP.numConstraints) + 1];
+        double distCurve = sqrt( (x0-x1)*(x0-x1) + (y0-y1)*(y0-y1) );
+        lengthCurve += distCurve;
+      }
 
-    // Scaling factor
-    double sumTargetTheta = 0.;
-    for(size_t i = 0; i < myLP.numConstraints; ++i) {
-      double x0 = myLP.lvl1[2 * i];
-      double y0 = myLP.lvl1[2 * i + 1];
-      sumTargetTheta += lengthCurve / (myLP.numConstraints * sqrt(x0*x0 + y0*y0));
-    }
+      // Scaling factor
+      double sumTargetTheta = 0.;
+      for(size_t i = 0; i < myLP.numConstraints; ++i) {
+        double x0 = myLP.lvl1[2 * i];
+        double y0 = myLP.lvl1[2 * i + 1];
+        sumTargetTheta += lengthCurve / (myLP.numConstraints * sqrt(x0*x0 + y0*y0));
+      }
 
-    theta = 0.;
-    for(size_t i = 0; i < myLP.numConstraints; ++i) {
-      double x0 = myLP.lvl1[2 * i];
-      double y0 = myLP.lvl1[2 * i + 1];
-      xi = cos(theta);
-      yi = sin(theta);
-      double dtheta = lengthCurve / (myLP.numConstraints * sqrt(x0*x0 + y0*y0)) / sumTargetTheta * 2. * M_PI;
-      theta += dtheta;
-      error = fmax(1e-14, fabs(evaluateHomogeneousErrorPolynomial(errorCoefficients, degree, xi, yi, myLP.Hij)));
-      root = fabs(pow(error, 1. / (degree + 1)));
-      myLP.lvl1[2 * i] = xi / root;
-      myLP.lvl1[2 * i + 1] = yi / root;
+      theta = 0.;
+      for(size_t i = 0; i < myLP.numConstraints; ++i) {
+        double x0 = myLP.lvl1[2 * i];
+        double y0 = myLP.lvl1[2 * i + 1];
+        xi = cos(theta);
+        yi = sin(theta);
+        double dtheta = lengthCurve / (myLP.numConstraints * sqrt(x0*x0 + y0*y0)) / sumTargetTheta * 2. * M_PI;
+        theta += dtheta;
+        error = fmax(1e-14, fabs(evaluateHomogeneousErrorPolynomial(errorCoefficients, degree, xi, yi, myLP.Hij)));
+        root = fabs(pow(error, 1. / (degree + 1)));
+        myLP.lvl1[2 * i] = xi / root;
+        myLP.lvl1[2 * i + 1] = yi / root;
+      }
     }
   }
 }
@@ -759,34 +761,29 @@ bool solveLP(linearProblem &myLP, Eigen::Matrix2d &L)
   }
 }
 
+// #define LOG_SIMPLEX_DEBUG
+
 bool computeMetricLogSimplexStraight(const double *x, const std::vector<double> &errorCoefficients,
                                      const int degree, const int nThetaPerQuadrant,
                                      const int maxIter, const double tol, MetricTensor &Qres,
                                      int &numIter, linearProblem &myLP)
 {
-	// FILE *ff = fopen("lvl1.pos", "w");
-  // fprintf(ff, "View\"lvl1\"{\n");
+  #if defined(LOG_SIMPLEX_DEBUG)
+	FILE *ff = fopen("lvl1.pos", "w");
+  fprintf(ff, "View\"lvl1\"{\n");
+  #endif
 
   computeLvl1(errorCoefficients, degree, myLP);
 
-  // for(size_t i = 0; i < myLP.numConstraints; ++i) {
-  //   fprintf(ff, "SP(%g,%g,0){%g};",
-  //   	x[0] + myLP.lvl1[2 * i],
-  //   	x[1] + myLP.lvl1[2 * i + 1],
-  //   	1.);
-  //   double theta = 2. * M_PI * (double)i / (double)myLP.numConstraints;
-  //   fprintf(ff, "SP(%g,%g,0){%g};",
-  //     x[0] + cos(theta),
-  //     x[1] + sin(theta),
-  //     1.);
-  //   fprintf(ff, "SL(%g,%g,0, %g,%g,0){%g,%g};",
-  //     x[0] + cos(theta),
-  //     x[1] + sin(theta),
-  //     x[0] + myLP.lvl1[2 * i],
-  //     x[1] + myLP.lvl1[2 * i + 1],
-  //     1., 1.);
-  // }
-  // fprintf(ff, "};\n"); fclose(ff);
+  #if defined(LOG_SIMPLEX_DEBUG)
+  for(size_t i = 0; i < myLP.numConstraints; ++i) {
+    fprintf(ff, "SP(%g,%g,0){%g};",
+    	x[0] + myLP.lvl1[2 * i],
+    	x[1] + myLP.lvl1[2 * i + 1],
+    	1.);
+  }
+  fprintf(ff, "};\n"); fclose(ff);
+  #endif
 
   Eigen::Matrix2d Q, Qprev, Q12, Qm12, L, diff;
 
@@ -795,8 +792,10 @@ bool computeMetricLogSimplexStraight(const double *x, const std::vector<double> 
 
   double xi, yi;
 
-  // FILE *myfile = fopen("logSimplexDebug.pos", "w");
-  // fprintf(myfile, "View\"logSimplexDebug\"{\n");
+  #if defined(LOG_SIMPLEX_DEBUG)
+  FILE *myfile = fopen("logSimplexDebug.pos", "w");
+  fprintf(myfile, "View\"logSimplexDebug\"{\n");
+  #endif
 
   for(int iter = 0; iter < maxIter; ++iter) {
     Qprev = Q;
@@ -818,27 +817,34 @@ bool computeMetricLogSimplexStraight(const double *x, const std::vector<double> 
     }
 
     // Solve the linear optimization problem for L
-    bool success = false;
-    // #pragma omp critical
-    success = solveLP(myLP, L);
+    bool success = solveLP(myLP, L);
 
     if(success) {
     	// Recover Q from L
      	Q = Q12 * L.exp() * Q12;
 
-     	// drawSingleEllipse(myfile, x, Q, 1, 30);
+      #if defined(LOG_SIMPLEX_DEBUG)
+     	drawSingleEllipse(myfile, x, Q, 1, 30);
+      #endif
 
       diff = Q - Qprev;
       if((diff.norm() / Q.norm()) < tol) {
+
+        // Metric converged to a solution
         numIter = iter;
         Qres(0,0) = Q(0,0);
         Qres(0,1) = Q(0,1);
         Qres(1,0) = Q(1,0);
         Qres(1,1) = Q(1,1);
-        // fprintf(myfile, "};\n"); fclose(myfile);
+
+        #if defined(LOG_SIMPLEX_DEBUG)
+        fprintf(myfile, "};\n"); fclose(myfile);
+        #endif
+
         return true;
       }
     } else {
+
       // LP solver returned an error : return the last valid Q
       feWarning("LP solver returned an error at iteration %d.", iter);
       numIter = iter;
@@ -846,28 +852,30 @@ bool computeMetricLogSimplexStraight(const double *x, const std::vector<double> 
       Qres(0,1) = Q(0,1);
       Qres(1,0) = Q(1,0);
       Qres(1,1) = Q(1,1);
-      // drawSingleEllipse(myfile, x, Q, 1, 30);
 
-      // FILE *f = fopen("lvl1_check.pos", "w");
-      // fprintf(f, "View\"lvl1\"{\n");
-      // for(int i = 0; i < myLP.numConstraints; ++i) {
-      //   fprintf(f, "SP(%g,%g,0){%g,%g,0};", x[0] + myLP.lvl1[2 * i], x[1] + myLP.lvl1[2 * i + 1], 1., 1.);
-      // }
-      // drawSingleEllipse(f, x, Q, 1, 30);
-      // fprintf(f, "};\n"); fclose(f);
-      // fprintf(myfile, "};\n"); fclose(myfile);
+      #if defined(LOG_SIMPLEX_DEBUG)
+      drawSingleEllipse(myfile, x, Q, 1, 30);
+      fprintf(myfile, "};\n"); fclose(myfile);
+      #endif
+
       return false;
     }
   }
 
   // Warning: maxIter reached
+  feWarning("Max number of iterations (%d) reached when computing log-simplex metric.", maxIter);
+
   Qres(0,0) = Q(0,0);
   Qres(0,1) = Q(0,1);
   Qres(1,0) = Q(1,0);
   Qres(1,1) = Q(1,1);
-  // drawSingleEllipse(myfile, x, Q, 1, 30);
-  // fprintf(myfile, "};\n"); fclose(myfile);
-  return true;
+
+  #if defined(LOG_SIMPLEX_DEBUG)
+  drawSingleEllipse(myfile, x, Q, 1, 30);
+  fprintf(myfile, "};\n"); fclose(myfile);
+  #endif
+
+  return false;
 }
 
 bool logSimplexCurved(double *x, double k1, double k2, double g1[2], double g2[2],

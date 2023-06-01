@@ -878,7 +878,6 @@ feStatus feMesh2DP1::adapt(feNewRecovery *recoveredField, feMetricOptions &optio
   feStatus s = metricField.computeMetrics();
   options.userValue = metricField._options.userValue;
   feInfoCond(FE_VERBOSE > 0, "\t\tComputed metric tensors in %f s", toc());
-  exit(-1);
   if(s != FE_STATUS_OK) {
     gmsh::finalize();
     return s;
