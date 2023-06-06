@@ -15,6 +15,8 @@ using namespace soplex;
 
 extern int FE_VERBOSE;
 
+// #define ONLY_TEST_METRIC_INTERPOLATION_CONVERGENCE
+
 feMetric::feMetric(feRecovery *recovery, feMetricOptions metricOptions)
   : _recovery(recovery), _options(metricOptions)
 {
@@ -253,10 +255,19 @@ void feMetric::interpolationTest(const std::vector<size_t> &nodeTags, std::vecto
                                        numOrientations);
 
   // Get the mesh elements
-  std::vector<int> elementTypes;
-  std::vector<std::vector<std::size_t> > elementTags;
-  std::vector<std::vector<std::size_t> > elemNodeTags;
-  gmsh::model::mesh::getElements(elementTypes, elementTags, elemNodeTags, 2);
+  // std::vector<int> elementTypes;
+  // std::vector<std::vector<std::size_t> > elementTags;
+  // std::vector<std::vector<std::size_t> > elemNodeTags;
+  // gmsh::model::mesh::getElements(elementTypes, elementTags, elemNodeTags, 2);
+  std::vector<std::size_t> elementTags;
+  std::vector<std::size_t> elemNodeTags;
+  gmsh::model::mesh::getElementsByType(elementType, elementTags, elemNodeTags);
+
+  if(elementTags.empty()) {
+    feErrorMsg(FE_STATUS_ERROR, "There are no P2 elements in the Gmsh model. It's probably because the Gmsh model is still P1 for MMG.");
+    exit(-1);
+  }
+  feInfo("Number of elements in the Gmsh model = %d", elementTags.size());
 
   // Get the jacobians
   std::vector<double> jac, det, pts;
@@ -284,14 +295,14 @@ void feMetric::interpolationTest(const std::vector<size_t> &nodeTags, std::vecto
   fprintf(myfile3, "View\"metricInterp\"{\n");
   fprintf(myfile4, "View\"metricSommets\"{\n");
 
-  for(size_t iElm = 0; iElm < elementTags[0].size(); iElm++)
+  for(size_t iElm = 0; iElm < elementTags.size(); iElm++)
   {
-  	int v0 = elemNodeTags[0][nVerticesPerElement * iElm + 0] - 1;
-  	int v1 = elemNodeTags[0][nVerticesPerElement * iElm + 1] - 1;
-  	int v2 = elemNodeTags[0][nVerticesPerElement * iElm + 2] - 1;
-  	int v3 = elemNodeTags[0][nVerticesPerElement * iElm + 3] - 1;
-  	int v4 = elemNodeTags[0][nVerticesPerElement * iElm + 4] - 1;
-  	int v5 = elemNodeTags[0][nVerticesPerElement * iElm + 5] - 1;
+  	int v0 = elemNodeTags[nVerticesPerElement * iElm + 0] - 1;
+  	int v1 = elemNodeTags[nVerticesPerElement * iElm + 1] - 1;
+  	int v2 = elemNodeTags[nVerticesPerElement * iElm + 2] - 1;
+  	int v3 = elemNodeTags[nVerticesPerElement * iElm + 3] - 1;
+  	int v4 = elemNodeTags[nVerticesPerElement * iElm + 4] - 1;
+  	int v5 = elemNodeTags[nVerticesPerElement * iElm + 5] - 1;
 
   	double x0 = coord[3 * v0];
   	double y0 = coord[3 * v0+1];
@@ -608,6 +619,17 @@ void setUpLinearProblem(linearProblem &myLP, feMetricOptions &options, int nThet
 // according to Coulaud & Loseille using the log-simplex method
 feStatus feMetric::computeMetricsPn(std::vector<std::size_t> &nodeTags, std::vector<double> &coord)
 {
+#if defined(ONLY_TEST_METRIC_INTERPOLATION_CONVERGENCE)
+  // Just assign analytic metric and exit
+  // To test convergence of metric interpolation
+  for(size_t i = 0; i < numVertices; i++) {
+    double X = coord[3 * i + 0];
+    double Y = coord[3 * i + 1];
+    _metricTensorAtNodetags[nodeTags[i]] = analyticMetric(X, Y);
+  }
+  return FE_STATUS_OK;
+#endif
+
 #if defined(HAVE_SOPLEX)
 
   std::map<int, std::vector<double> > &errorCoeffAtVertices = _newRecovery->getErrorCoefficients();
@@ -762,6 +784,8 @@ feStatus feMetric::computeMetrics()
 
   if(s != FE_STATUS_OK) return s;
 
+  #if !defined(ONLY_TEST_METRIC_INTERPOLATION_CONVERGENCE)
+  // Apply scaling and gradation only when not testing for metric interpolation convergence
   if(debug) drawEllipsoids("rawMetrics.pos", _metricTensorAtNodetags, nodeTags, coord, 100, 30);
 
   // Scale the metric field
@@ -789,12 +813,6 @@ feStatus feMetric::computeMetrics()
   metricScalingFromGmshSubstitute(_metricTensorAtNodetags, nodeTags, exponentInIntegral,
                                   exponentForDeterminant);
 
-
-  // computeMetricsPn(nodeTags, coord);
-  // metricScalingFromGmshSubstitute(_metricTensorAtNodetags, nodeTags, exponentInIntegral,
-  //                                 exponentForDeterminant);
-  // exit(-1);
-
   if(debug)
     drawEllipsoids("metricsAfterScaling.pos", _metricTensorAtNodetags, nodeTags, coord, 100, 30);
 
@@ -807,6 +825,7 @@ feStatus feMetric::computeMetrics()
 
   if(debug)
     drawEllipsoids("metricsAfterGradation.pos", _metricTensorAtNodetags, nodeTags, coord, 100, 30);
+  #endif
 
   // Write the metric field as a view in the Gmsh model
   writeMetricField(nodeTags, coord);

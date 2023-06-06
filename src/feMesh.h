@@ -165,6 +165,8 @@ public:
   // another connectivity).
   virtual bool locateVertex(const double *x, int &iElm, double *u, double tol = 1e-5,
                             bool returnLocalElmTag = false, std::string targetConnectivity = "") = 0;
+  virtual bool locateVertexInElements(feCncGeo *cnc, const double *x, const std::vector<int> &elementsToSearch, int &iElm,
+                                      double *u, double tol = 1e-5) = 0;
 };
 
 //
@@ -186,12 +188,20 @@ public:
   feMesh0DP0(double xA, int nElm, std::string domID);
   virtual ~feMesh0DP0();
 
-  virtual bool locateVertex(const double *x, int &iElm, double *u, double tol = 1e-5,
+  bool locateVertex(const double *x, int &iElm, double *u, double tol = 1e-5,
                             bool returnLocalElmTag = false, std::string targetConnectivity = "")
   {
+    iElm = 0;
     u[0] = 1.;
     return true;
   };
+  bool locateVertexInElements(feCncGeo *cnc, const double *x, const std::vector<int> &elementsToSearch, int &iElm,
+                                      double *u, double tol = 1e-5)
+  {
+    iElm = 0;
+    u[0] = 1.;
+    return true;
+  }
 };
 
 //
@@ -219,8 +229,10 @@ public:
              const std::string &domainName);
   virtual ~feMesh1DP1();
 
-  virtual bool locateVertex(const double *x, int &iElm, double *u, double tol = 1e-5,
-                            bool returnLocalElmTag = false, std::string targetConnectivity = "");
+  bool locateVertex(const double *x, int &iElm, double *u, double tol = 1e-5,
+                    bool returnLocalElmTag = false, std::string targetConnectivity = "");
+  bool locateVertexInElements(feCncGeo *cnc, const double *x, const std::vector<int> &elementsToSearch, int &iElm,
+                                      double *u, double tol = 1e-5);
 };
 
 class feMetaNumber;
@@ -380,6 +392,8 @@ public:
 
   bool locateVertex(const double *x, int &iElm, double *u, double tol = 1e-5,
                     bool returnLocalElmTag = false, std::string targetConnectivity = "");
+  bool locateVertexInElements(feCncGeo *cnc, const double *x, const std::vector<int> &elementsToSearch, int &iElm,
+                                      double *u, double tol = 1e-5);
 
   // Transfer whole FE solution(s) associated to the current mesh to another mesh.
   // The solution(s) are stored in solutionContainer and are transferred in place.
@@ -396,7 +410,7 @@ public:
     feSolution *discreteSolution,
     feFunction *exactSolution,
     feVectorFunction *exactGradient,
-    bool curve, bool isBackmeshP2, feRecovery *oldRecovery = nullptr);
+    bool curve, bool isBackmeshP2, bool setGmshModelToP1, feRecovery *oldRecovery = nullptr);
 
   void drawConnectivityToPOSfile(const std::string &cncName, const std::string &fileName);
 };

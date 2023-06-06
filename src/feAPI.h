@@ -21,7 +21,6 @@
 #include "feMetric.h"
 #include "feRecovery.h"
 #include "feNewRecovery.h"
-#include "feAdaptMesh.h"
 #include "feNorm.h"
 #include "feGraphics.h"
 

@@ -10,6 +10,11 @@
 #if defined(HAVE_SOPLEX)
 #include "soplex.h"
 
+#if defined(HAVE_GMSH)
+#include "gmsh.h"
+#include "curvedMesh_structs.h"
+#endif
+
 typedef struct linearProblemStruct {
   soplex::SoPlex problem;
   soplex::SPxSolver::Status stat;
@@ -25,17 +30,6 @@ typedef struct linearProblemStruct {
   int numLoopsUniformErrorCurve;
 } linearProblem;
 #endif
-
-typedef struct {
-  int nElements;
-  std::vector<int> whichElements;
-  int iVertexToMove_globalTag;
-  std::vector<int> iVertexToMove_localTag;
-  double modifiedCoord[2];
-  double gradient[2];
-  double initialCost;
-  double finalCost;
-} edgeAndVertexData;
 
 struct gmshEdgeLessThan {
   bool operator()(const std::pair<int, int> &e1, const std::pair<int, int> &e2) const
@@ -115,47 +109,71 @@ bool computeMetricLogSimplexCurved(double *x, double cG, double sG, feRecovery *
                                    double tol, int &numIter, linearProblem &myLP);
 #endif
 
-int computePointsUsingScaledCrossFieldPlanarP2(
-  const char *modelForMetric,
-  const char *modelForMesh,
-  int VIEW_TAG,
-  int faceTag,
-  std::vector<double> &pts,
-  // double computeInterpolationError(const int whichElements[2],
-  //                                  const int iVertexToMove_globalTag,
-  //                                  const int iVertexToMove_localTag[2],
-  //                                  double *modifiedCoord),
-  double computeInterpolationError(const edgeAndVertexData &data, double *modifiedCoord),
-  void computeInterpolationErrorGradient(const edgeAndVertexData &data,
-                                         const double *modifiedCoord,
-                                         double gradient[2]),
-  void applyCurvatureToFeMesh(const edgeAndVertexData &data, const double *modifiedCoord),
-  void getMidnodeTags(const SPoint2 edge[2], const double tol, int &elementTag, int &localTag, int &globalTag),
-  void getPolyMeshVertexTags(const SPoint2 &p, const double tol, 
-                             std::vector<int> &elementTags, std::vector<int> &localTags, int &globalTag),
-  bool inside(double *, bool), double pointwiseError(double *),
-  int onlyGenerateVertices,
-  double evaluateFieldFromRecovery(int, void *, double *),
-  void *recoveryUserPointer,
+// int computePointsUsingScaledCrossFieldPlanarP2(
+//   const char *modelForMetric,
+//   const char *modelForMesh,
+//   int VIEW_TAG,
+//   int faceTag,
+//   std::vector<double> &pts,
+//   // double computeInterpolationError(const int whichElements[2],
+//   //                                  const int iVertexToMove_globalTag,
+//   //                                  const int iVertexToMove_localTag[2],
+//   //                                  double *modifiedCoord),
+//   double computeInterpolationError(const edgeAndVertexData &data, double *modifiedCoord),
+//   void computeInterpolationErrorGradient(const edgeAndVertexData &data,
+//                                          const double *modifiedCoord,
+//                                          double gradient[2]),
+//   void applyCurvatureToFeMesh(const edgeAndVertexData &data, const double *modifiedCoord),
+//   void getMidnodeTags(const SPoint2 edge[2], const double tol, int &elementTag, int &localTag, int &globalTag),
+//   void getPolyMeshVertexTags(const SPoint2 &p, const double tol, 
+//                              std::vector<int> &elementTags, std::vector<int> &localTags, int &globalTag),
+//   bool inside(double *, bool), double pointwiseError(double *),
+//   int onlyGenerateVertices,
+//   double evaluateFieldFromRecovery(int, void *, double *),
+//   void *recoveryUserPointer,
 
-  void interpolateMetricP1WithDerivativesWrapper(void *, const double *, Eigen::Matrix2d &,
-                                                 Eigen::Matrix2d &, Eigen::Matrix2d &),
+//   void interpolateMetricP1WithDerivativesWrapper(void *, const double *, Eigen::Matrix2d &,
+//                                                  Eigen::Matrix2d &, Eigen::Matrix2d &),
 
-  void interpolateMetricP1Wrapper(void *, const double *, Eigen::Matrix2d &, Eigen::Matrix2d &,
-                                  Eigen::Matrix2d &),
+//   void interpolateMetricP1Wrapper(void *, const double *, Eigen::Matrix2d &, Eigen::Matrix2d &,
+//                                   Eigen::Matrix2d &),
 
-  void interpolateMetricAndDerivativeOnP2EdgeWrapper(
-    void *, const double, const Eigen::Matrix2d &, const Eigen::Matrix2d &, const Eigen::Matrix2d &,
-    const Eigen::Matrix2d &, const Eigen::Matrix2d &, Eigen::Matrix2d &, Eigen::Matrix2d &,
-    Eigen::Matrix2d &),
+//   void interpolateMetricAndDerivativeOnP2EdgeWrapper(
+//     void *, const double, const Eigen::Matrix2d &, const Eigen::Matrix2d &, const Eigen::Matrix2d &,
+//     const Eigen::Matrix2d &, const Eigen::Matrix2d &, Eigen::Matrix2d &, Eigen::Matrix2d &,
+//     Eigen::Matrix2d &),
 
-  void interpolateMetricP1Wrapper1D(void *, const double *, const double *, Eigen::Matrix2d &,
-                                    Eigen::Matrix2d &),
+//   void interpolateMetricP1Wrapper1D(void *, const double *, const double *, Eigen::Matrix2d &,
+//                                     Eigen::Matrix2d &),
 
-  void interpolateMetricAndDerivativeOnP2EdgeWrapper1D(
-    void *, const double, const Eigen::Matrix2d &, const Eigen::Matrix2d &, const Eigen::Matrix2d &,
-    const Eigen::Matrix2d &, Eigen::Matrix2d &, Eigen::Matrix2d &),
+//   void interpolateMetricAndDerivativeOnP2EdgeWrapper1D(
+//     void *, const double, const Eigen::Matrix2d &, const Eigen::Matrix2d &, const Eigen::Matrix2d &,
+//     const Eigen::Matrix2d &, Eigen::Matrix2d &, Eigen::Matrix2d &),
 
-  void *metric);
+//   void *metric);
+
+    // Old example call:
+    // createCurvedMesh(
+    //   options.modelForMetric.c_str(),
+    //   options.modelForMetric.c_str(),
+    //   metricField.getMetricViewTag(),
+    //   faceTag,
+    //   pts,
+    //   computeInterpolationError,
+    //   computeInterpolationErrorGradient,
+    //   applyCurvatureToFeMesh,
+    //   getMidnodeTags,
+    //   getPolyMeshVertexTags,
+    //   options.insideCallback,
+    //   nullptr,
+    //   onlyGenerateVertices, 
+    //   evaluateFieldFromRecoveryCallback, 
+    //   (void *) oldRecovery,
+    //   interpolateMetricP1WithDerivativesWrapper,
+    //   interpolateMetricP1Wrapper,
+    //   interpolateMetricAndDerivativeOnP2EdgeWrapper,
+    //   interpolateMetricP1Wrapper1D,
+    //   interpolateMetricAndDerivativeOnP2EdgeWrapper1D,
+    //   (void *) &metricField);
 
 #endif

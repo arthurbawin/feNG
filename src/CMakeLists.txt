@@ -17,6 +17,7 @@ set(feNG_SRC
     feMetric.cpp
     feMetricInterpolation.cpp
     feMetricTools.cpp
+    feMinimizeInterpolationError.cpp
     feNG.cpp
     feNorm.cpp
     feNumber.cpp
@@ -47,7 +48,6 @@ list(APPEND feNG_SRC ${CMAKE_SOURCE_DIR}/contrib/gmsh/fullMatrix.cpp
 
 set(feNG_API
     ellipseToolbox.h
-    feAdaptMesh.h
     feAPI.h
     feBilinearForm.h
     feCncGeo.h
@@ -64,6 +64,7 @@ set(feNG_API
     feMessage.h
     feMetric.h
     feMetricTools.h
+    feMinimizeInterpolationError.h
     feNG.h
     feNorm.h
     feNumber.h

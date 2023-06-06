@@ -331,6 +331,13 @@ bool feMesh1DP1::locateVertex(const double *x, int &iElm, double *u, double tol,
   return false;
 }
 
+bool feMesh1DP1::locateVertexInElements(feCncGeo *cnc, const double *x, const std::vector<int> &elementsToSearch, int &iElm,
+                                      double *u, double tol)
+{
+  feErrorMsg(FE_STATUS_ERROR, "locateVertexInElements not implemented for 1D meshes :/");
+  return false;
+}
+
 feMesh0DP0::feMesh0DP0(double xA, int nElm, std::string domID)
   : feMesh(1, 0, 1, "0D"), _nElm(nElm), _xA(xA), _domID(domID), _nElmDomain(nElm), _nElmBoundary(1),
     _nNodDomain(1), _nNodBoundary(1)
@@ -421,6 +428,7 @@ feMesh2DP1::~feMesh2DP1()
   }
 }
 
+// NOT THREAD SAFE!
 /* Locates the vertex with coordinates x in the mesh using an RTree.
    The search is performed in elements of the highest dimension only.
    The element number is assigned to iElm and the reference coordinates
@@ -483,6 +491,59 @@ bool feMesh2DP1::locateVertex(const double *x, int &iElm, double *u, double tol,
   }
 
   return _searchCtx.isFound;
+}
+
+// From gmsh and feTriangle.cpp
+void xyz2uvw(const double v0[2], const double v1[2], const double v2[2], const double xyz[2], double uvw[2])
+{
+  const double O[3] = {v0[0], v0[1], 0.};
+
+  const double d[3] = {xyz[0] - O[0], xyz[1] - O[1], 0.};
+  const double d1[3] = {v1[0] - O[0], v1[1] - O[1], 0.};
+  const double d2[3] = {v2[0] - O[0], v2[1] - O[1], 0.};
+
+  const double Jxy = d1[0] * d2[1] - d1[1] * d2[0];
+  const double Jxz = d1[0] * d2[2] - d1[2] * d2[0];
+  const double Jyz = d1[1] * d2[2] - d1[2] * d2[1];
+
+  if((fabs(Jxy) > fabs(Jxz)) && (fabs(Jxy) > fabs(Jyz))) {
+    uvw[0] = (d[0] * d2[1] - d[1] * d2[0]) / Jxy;
+    uvw[1] = (d[1] * d1[0] - d[0] * d1[1]) / Jxy;
+  } else if(fabs(Jxz) > fabs(Jyz)) {
+    uvw[0] = (d[0] * d2[2] - d[2] * d2[0]) / Jxz;
+    uvw[1] = (d[2] * d1[0] - d[0] * d1[2]) / Jxz;
+  } else {
+    uvw[0] = (d[1] * d2[2] - d[2] * d2[1]) / Jyz;
+    uvw[1] = (d[2] * d1[1] - d[1] * d1[2]) / Jyz;
+  }
+}
+
+bool isInsideTriangle(double u, double v, double w)
+{
+  double tol = 1e-6;
+  if(u < (-tol) || v < (-tol) || u > ((1. + tol) - v) || fabs(w) > tol) return false;
+  return true;
+}
+
+thread_local std::vector<double> ELEM_COORD(18,0.);
+
+bool feMesh2DP1::locateVertexInElements(feCncGeo *cnc, const double *x, const std::vector<int> &elementsToSearch, int &iElm,
+                                      double *u, double tol)
+{
+  size_t numElem = elementsToSearch.size();
+  for(size_t i = 0; i < numElem; ++i) {
+    feInfo("Searching %d/%d elements: %d", i+1, numElem, elementsToSearch[i]);
+    this->getCoord(cnc, elementsToSearch[i], ELEM_COORD);
+    double v0[2] = {ELEM_COORD[0], ELEM_COORD[1]};
+    double v1[2] = {ELEM_COORD[3], ELEM_COORD[4]};
+    double v2[2] = {ELEM_COORD[6], ELEM_COORD[7]};
+    xyz2uvw(v0, v1, v2, x, u);
+    if(isInsideTriangle(u[0], u[1], 0.)) {
+      iElm = elementsToSearch[i];
+      return true;
+    }
+  }
+  return false;
 }
 
 void feMesh2DP1::transfer(feMesh2DP1 *otherMesh, feMetaNumber *myMN, feMetaNumber *otherMN,

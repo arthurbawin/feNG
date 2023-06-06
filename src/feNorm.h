@@ -137,16 +137,19 @@ public:
   double compute();
 
   double computeSquaredErrorOnElement(int iElm);
+  double computeSquaredErrorFromEstimatorOnElement(int iElm);
   double computeLpNormOnElement(int p, bool error, int iElm);
   double computeLpErrorExactVsEstimator(int p);
+  double computeLInfErrorExactVsEstimator();
   double computeSemiH1ErrorExactVsEstimator(int p);
   double computeErrorHessianExactVsEstimator(int p);
   double computeErrorThirdDerivativesExactVsEstimator(int p);
 
-  void computeInterpolationErrorGradientRochery(const int whichElements[2],
-                                                const int whichControlPoint_localTag[2],
-                                                double gradient[2]);
+  // void computeInterpolationErrorGradientRochery(const int whichElements[2],
+  //                                               const int whichControlPoint_localTag[2],
+  //                                               double gradient[2]);
 
+  // Implemented in feMinimizeInterpolation.cpp
   void computeInterpolationErrorGradient(const std::vector<int> &whichElements,
                                          const std::vector<int> &whichControlPoint_localTag,
                                          double gradient[2]);

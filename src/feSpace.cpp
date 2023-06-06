@@ -263,6 +263,8 @@ feStatus feSpace::setQuadratureRule(feQuadrature *rule)
   _d2Lds2.resize(_nFunctions * _nQuad, 0.0);
   _d2Ldt2.resize(_nFunctions * _nQuad, 0.0);
 
+  _barycentricCoordinates.resize(3 * _nQuad, 0.);
+
   /* Reference frame discretization : shape functions are computed once on the reference element,
   then evaluated at the quadrature nodes. */
   for(size_t i = 0; i < _xQuad.size(); ++i) {
@@ -283,6 +285,10 @@ feStatus feSpace::setQuadratureRule(feQuadrature *rule)
     for(int j = 0; j < _nFunctions; ++j) _d2Ldrs[_nFunctions * i + j] = d2ldrs[j];
     for(int j = 0; j < _nFunctions; ++j) _d2Lds2[_nFunctions * i + j] = d2lds2[j];
     for(int j = 0; j < _nFunctions; ++j) _d2Ldt2[_nFunctions * i + j] = d2ldt2[j];
+
+    _barycentricCoordinates[3 * i + 0] = 1. - r[0] - r[1];
+    _barycentricCoordinates[3 * i + 1] = r[0];
+    _barycentricCoordinates[3 * i + 2] = r[1];
   }
 
   if(_fieldID != "GEO" && _useGlobalShapeFunctions) {
@@ -508,6 +514,8 @@ void feSpace::interpolateField(double *field, int fieldSize, double *r, double *
   }
 }
 
+thread_local double SHAPE_FUNCTIONS[18];
+
 double feSpace::interpolateField(std::vector<double> &field, double *r)
 {
   double res = 0.0;
@@ -518,7 +526,9 @@ double feSpace::interpolateField(std::vector<double> &field, double *r)
     return res;
   }
 #endif
-  for(int i = 0; i < _nFunctions; ++i) res += field[i] * L(r)[i];
+  L(r, SHAPE_FUNCTIONS);
+  // for(int i = 0; i < _nFunctions; ++i) res += field[i] * L(r)[i];
+  for(int i = 0; i < _nFunctions; ++i) res += field[i] * SHAPE_FUNCTIONS[i];
   return res;
 }
 

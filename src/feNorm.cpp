@@ -250,6 +250,43 @@ double feNorm::computeSquaredErrorOnElement(int iElm)
     }
   }
 
+  return eLocPowP;
+}
+
+double feNorm::computeSquaredErrorFromEstimatorOnElement(int iElm)
+{
+  if(_rec == nullptr) {
+    feErrorMsg(FE_STATUS_ERROR, "Cannot compute Lp error estimate "
+                                " because feRecovery (solution reconstruction) is NULL");
+    exit(-1);
+  }
+
+  double t = _solution->getCurrentTime();
+
+  this->initializeLocalSolutionOnSpace(0, iElm);
+  _spaces[0]->_mesh->getCoord(_cnc, iElm, _geoCoord);
+
+  double eLocPowP = 0.;
+  // #if defined(HAVE_OMP)
+  // #pragma omp parallel
+  // #endif
+  {
+    double uRec, uh;
+
+    // #if defined(HAVE_OMP)
+    // #pragma omp for reduction(+:eLocPowP)
+    // #endif
+    for(int k = 0; k < _nQuad; ++k) {
+      uh = _spaces[0]->interpolateFieldAtQuadNode(_localSol[0], k);
+      _geoSpace->interpolateVectorFieldAtQuadNode(_geoCoord, k, MY_POS);
+
+      // uRec = _rec->evaluateRecoveryAtQuadNode(PPR::RECOVERY, 0, iElm, k);
+      // #pragma omp critical // Localization in the mesh is not yet thread safe :(
+      uRec = _rec->evaluateRecovery(PPR::RECOVERY, 0, MY_POS.data());
+
+      eLocPowP += (uRec - uh) * (uRec - uh) * _J[_nQuad * iElm + k] * _w[k];
+    }
+  }
 
   return eLocPowP;
 }
@@ -302,6 +339,30 @@ double feNorm::computeLpErrorExactVsEstimator(int p)
     }
   }
   return pow(res, 1. / (double)p);
+}
+
+double feNorm::computeLInfErrorExactVsEstimator()
+{
+  double res = -1., uExact, uRec, t = _solution->getCurrentTime();
+
+  if(_rec == nullptr) {
+    feErrorMsg(FE_STATUS_ERROR, "Cannot compute Lp error estimate "
+                                " because feRecovery (solution reconstruction) is NULL");
+    exit(-1);
+  }
+
+  for(int iElm = 0; iElm < _nElm; ++iElm) {
+    _spaces[0]->_mesh->getCoord(_cnc, iElm, _geoCoord);
+
+    for(int k = 0; k < _nQuad; ++k) {
+      _geoSpace->interpolateVectorFieldAtQuadNode(_geoCoord, k, _pos);
+      uExact = _scalarSolution->eval(t, _pos);
+      uRec = _rec->evaluateRecoveryAtQuadNode(PPR::RECOVERY, 0, iElm, k);
+
+      res = fmax(res, fabs(uRec - uExact));
+    }
+  }
+  return res;
 }
 
 thread_local std::vector<double> GRAD_U_EXACT(2, 0.);

@@ -86,10 +86,18 @@ public:
 
   std::map<int, std::map<int, std::vector<double> > > recoveryCoeff; // #vert : {#rec , coeffs}
 
+  // All recoveries' independant term condensed in a vector
+  // The ith recovery at vertex vertex is at position recoveryIndependantTerm[ numTotalRecoveries * vertex + i ]
+  std::vector<double> recoveryIndependantTerm; 
+
   std::map<int, std::map<int, std::map<int, std::vector<double> > > >
     recoveryCoeffOnEdges; // #edge : {#dof : {#rec , coeffs}}
 
   std::map<int, std::map<int, std::vector<double> > > derivativeCoeff; // #vert : {#der , coeffs}
+
+  // All derivatives' independant term condensed in a vector
+  // The ith recovery at vertex vertex is at position derivativeIndependantTerm[ numTotalRecoveries * vertex + i ]
+  std::vector<double> derivativeIndependantTerm;
 
   std::map<int, std::map<int, std::map<int, std::vector<double> > > >
     derivativeCoeffOnEdges; // #edge : {#dof : {#rec , coeffs}}
@@ -108,8 +116,10 @@ protected:
   int _degRec;
 
   int _dim;
-  int _nTotalRecoveries;
-  int _nTotalDerivations;
+
+  int _numTotalRecoveries;
+  int _numTotalDerivatives;
+
   int _dimRecovery;
   int _dimDerivation;
   int _dim2Derivation;
@@ -161,9 +171,13 @@ public:
 
   // void writeRecovery(std::string fileName);
 
-  double evaluateRecovery(PPR recoveredField, const int index, const double *x);
+  double evaluateRecovery(PPR recoveredField, const int index, const double *x, bool averageEvaluations = false);
+  double evaluateRecovery(PPR recoveredField, const int index, const double *x, const std::vector<int> &elementsToSearch);
+  double evaluateRecoveryLinear(PPR recoveredField, const int index, const double *x);
   double evaluateRecoveryAtVertex(PPR recoveredField, const int index, const int vertex);
   double evaluateRecoveryAtQuadNode(PPR recoveredField, const int index, const int iElm,
+                                    const int iQuadNode);
+  double evaluateRecoveryAtQuadNodeLinear(PPR recoveredField, const int index, const int iElm,
                                     const int iQuadNode);
 
 private:
@@ -182,6 +196,7 @@ private:
                             const double *xLoc);
   double evaluatePolynomialAtBoundaryVertex(PPR recoveredField, const int index, const int vertex,
                                             const std::set<int> &connectedInteriorVertices);
+  double averageRecoveryEvaluations(PPR recoveredField, const int index, const int iElm, double *r);
   double averageRecoveryEvaluationsAtQuadNode(PPR recoveredField, const int index,
                                                  const int iElm, const int iQuadNode);
   void computeHomogeneousErrorPolynomials();
@@ -192,7 +207,8 @@ private:
   void computeRecoveryAtAllElementDOF(PPR recoveredField,
                                       const int index,
                                       const int iElm,
-                                      std::vector<double> &recoveryAtDOFS);
+                                      std::vector<double> &recoveryAtDOFS,
+                                      bool computeAtP1VerticesOnly = false);
   void computeRecoveryAtAllElementDOF2(PPR recoveredField,
                                       const int index,
                                       const int iElm,

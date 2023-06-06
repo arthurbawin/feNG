@@ -115,6 +115,9 @@ protected:
   std::vector<double> _d2Lds2;
   std::vector<double> _d2Ldt2;
 
+  // Barycentric (linear) coordinates at quadrature nodes
+  std::vector<double> _barycentricCoordinates;
+
   // Use global (physical) interpolation functions (experimental, do not use yet)
   bool _useGlobalShapeFunctions = false;
   // Global shape functions and derivatives evaluated at quadrature points on each element
@@ -189,6 +192,8 @@ public:
   double innerProductBasisFunctions(int iElm, int ex, int ey);
 
   const std::vector<double> &getLcoor() { return _Lcoor; }
+
+  const std::vector<double> &getBarycentricCoordinatesAtQuadNode() { return _barycentricCoordinates; }
 
   // Evaluate the local shape functions and derivatives at quadrature nodes
   virtual std::vector<double> L(double *r) = 0;

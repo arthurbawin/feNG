@@ -16,7 +16,7 @@ extern int FE_VERBOSE;
 #define ORIGINAL_ZHANG_NAGA
 // #define TREAT_BOUNDARIES
 // #define APPLY_SCALING
-// #define AVERAGE_EVALUATIONS_FROM_DOFS
+#define AVERAGE_EVALUATIONS_FROM_DOFS
 
 // The names of the reconstructed fields
 static std::map<std::pair<int, int>, std::string> suffix = {
@@ -1232,21 +1232,46 @@ thread_local std::vector<double> X2(3, 0.);
 
 void feNewRecovery::computeRecoveryAtAllElementDOF(PPR recoveredField, const int index,
                                                    const int iElm,
-                                                   std::vector<double> &recoveryAtDOFS)
+                                                   std::vector<double> &recoveryAtDOFS,
+                                                   bool computeAtP1VerticesOnly)
 {
   // Simply evaluate the recoveries at (0,0)
   // if there is one recovery at each DOF (i.e. linear interpolation
   // on P1 mesh or P2 interpolation on P2 mesh)
   int nFunctions = _intSpace->getNumFunctions();
 
+  // Only fill the first 3 entries (even if triangle is P2)
+  // To use when the P2 edge vertices are optimized and moved
+  if(computeAtP1VerticesOnly) {
+    for(int iDOF = 0; iDOF < 3; ++iDOF) {
+      int vertex = _cnc->getVertexConnectivity(iElm, iDOF);
+      if(recoveredField == PPR::RECOVERY)
+        recoveryAtDOFS[iDOF] = recoveryIndependantTerm[_numTotalRecoveries * vertex+index];
+      else
+        recoveryAtDOFS[iDOF] = derivativeIndependantTerm[_numTotalDerivatives * vertex+index];
+    }
+    return;
+  }
+
   if(_reconstructAtHighOrderNodes || nFunctions == 3) {
     for(int iDOF = 0; iDOF < nFunctions; ++iDOF) {
       int vertex = _cnc->getVertexConnectivity(iElm, iDOF);
-      // feInfo("size at vertex %d = %d - %d", vertex, recoveryCoeff[vertex][index].size(), derivativeCoeff[vertex][index].size());
-      if(recoveredField == PPR::RECOVERY)
-        recoveryAtDOFS[iDOF] = recoveryCoeff[vertex][index][0];
-      else
-        recoveryAtDOFS[iDOF] = derivativeCoeff[vertex][index][0];
+      if(recoveredField == PPR::RECOVERY) {
+        recoveryAtDOFS[iDOF] = recoveryIndependantTerm[_numTotalRecoveries * vertex+index];
+        // recoveryAtDOFS[iDOF] = (recoveryCoeff.at(vertex)).at(index)[0];
+        // if(fabs((recoveryCoeff.at(vertex)).at(index)[0] - recoveryIndependantTerm[_numTotalRecoveries * vertex+index]) > 1e-13){
+        //   feInfo("error");
+        //   exit(-1);
+        // }
+      }
+      else {
+        recoveryAtDOFS[iDOF] = derivativeIndependantTerm[_numTotalDerivatives * vertex+index];
+        // recoveryAtDOFS[iDOF] = (derivativeCoeff.at(vertex)).at(index)[0];
+        // if(fabs((derivativeCoeff.at(vertex)).at(index)[0] - derivativeIndependantTerm[_numTotalDerivatives * vertex+index]) > 1e-13){
+        //   feInfo("error");
+        //   exit(-1);
+        // }
+      }
     }
   } else {
     // Evaluate the recoveries at (0,0) for the 3 dof at P1 vertices
@@ -1274,9 +1299,9 @@ void feNewRecovery::computeRecoveryAtAllElementDOF(PPR recoveredField, const int
     for(int iDOF = 0; iDOF < 3; ++iDOF) {
       int vertex = _cnc->getVertexConnectivity(iElm, iDOF);
       if(recoveredField == PPR::RECOVERY)
-        recoveryAtDOFS[iDOF] = recoveryCoeff[vertex][index][0];
+        recoveryAtDOFS[iDOF] = recoveryIndependantTerm[_numTotalRecoveries * vertex+index];
       else
-        recoveryAtDOFS[iDOF] = derivativeCoeff[vertex][index][0];
+        recoveryAtDOFS[iDOF] = derivativeIndependantTerm[_numTotalDerivatives * vertex+index];
     }
 
     for(int iDOF = 3; iDOF < nFunctions; ++iDOF) {
@@ -1381,8 +1406,29 @@ double feNewRecovery::averageRecoveryEvaluationsAtQuadNode(PPR recoveredField, c
   _geoSpace->interpolateVectorFieldAtQuadNode(GEOCOORD, iQuadNode, POS_VEC);
   double val = 0., xLoc[2];
   if(_reconstructAtHighOrderNodes) {
-    std::vector<double> res(_nNodePerElm, 0.);
-    for(int i = 0; i < _nNodePerElm; ++i) {
+
+    // // Option 1: average the 6 recoveries
+    // // Not great because we need some brycentric-like coordinates to average
+    // std::vector<double> res(_nNodePerElm, 0.);
+    // for(int i = 0; i < _nNodePerElm; ++i) {
+    //   int vertex = _cnc->getVertexConnectivity(iElm, i);
+    //   xLoc[0] = POS_VEC[0] - GEOCOORD[3 * i + 0];
+    //   xLoc[1] = POS_VEC[1] - GEOCOORD[3 * i + 1];
+    //   #if defined(APPLY_SCALING)
+    //   xLoc[0] /= scaling.at(vertex).first;
+    //   xLoc[1] /= scaling.at(vertex).second;
+    //   #endif
+    //   res[i] = evaluatePolynomial(recoveredField, index, vertex, xLoc);
+    // }
+
+    // // Interpolate evaluations? Ideally it should be barycentric weighting?
+    // val = _intSpace->interpolateFieldAtQuadNode(res, iQuadNode);
+
+    // Option 2: average 3 recoveries and use barycentric coordinates
+    const std::vector<double> barycentricCoord = _intSpace->getBarycentricCoordinatesAtQuadNode();
+
+    val = 0.;
+    for(int i = 0; i < 3; ++i) {
       int vertex = _cnc->getVertexConnectivity(iElm, i);
       xLoc[0] = POS_VEC[0] - GEOCOORD[3 * i + 0];
       xLoc[1] = POS_VEC[1] - GEOCOORD[3 * i + 1];
@@ -1390,11 +1436,41 @@ double feNewRecovery::averageRecoveryEvaluationsAtQuadNode(PPR recoveredField, c
       xLoc[0] /= scaling.at(vertex).first;
       xLoc[1] /= scaling.at(vertex).second;
       #endif
-      res[i] = evaluatePolynomial(recoveredField, index, vertex, xLoc);
+      val += barycentricCoord[3 * iQuadNode + i] * evaluatePolynomial(recoveredField, index, vertex, xLoc);
     }
+    return val;
 
-    // Interpolate evaluations? Ideally it should be barycentric weighting?
-    val = _intSpace->interpolateFieldAtQuadNode(res, iQuadNode);
+  } else {
+    feInfo("averageRecoveryEvaluationsAtQuadNode not ready");
+    exit(-1);
+  }
+  
+  return val;
+}
+
+double feNewRecovery::averageRecoveryEvaluations(PPR recoveredField, const int index,
+                                                 const int iElm, double *r)
+{
+  _mesh->getCoord(_cnc, iElm, GEOCOORD);
+  _geoSpace->interpolateVectorField(GEOCOORD, r, POS_VEC);
+  double val = 0., xLoc[2];
+  if(_reconstructAtHighOrderNodes) {
+
+    // Option 2: average 3 recoveries and use barycentric coordinates
+    double barycentricCoord[3] = {1. - r[0] - r[1], r[0], r[1]};
+
+    val = 0.;
+    for(int i = 0; i < 3; ++i) {
+      int vertex = _cnc->getVertexConnectivity(iElm, i);
+      xLoc[0] = POS_VEC[0] - GEOCOORD[3 * i + 0];
+      xLoc[1] = POS_VEC[1] - GEOCOORD[3 * i + 1];
+      #if defined(APPLY_SCALING)
+      xLoc[0] /= scaling.at(vertex).first;
+      xLoc[1] /= scaling.at(vertex).second;
+      #endif
+      val += barycentricCoord[i] * evaluatePolynomial(recoveredField, index, vertex, xLoc);
+    }
+    return val;
 
   } else {
     feInfo("averageRecoveryEvaluationsAtQuadNode not ready");
@@ -1425,7 +1501,46 @@ double feNewRecovery::evaluateRecoveryAtQuadNode(PPR recoveredField, const int i
   #endif
 }
 
-double feNewRecovery::evaluateRecovery(PPR recoveredField, const int index, const double *x)
+// Evaluate recovered field (recovery or derivative)
+// Point x has to be located in the mesh: expensive
+double feNewRecovery::evaluateRecovery(PPR recoveredField, const int index, const double *x, bool averageEvaluations)
+{
+  int elm;
+  double UVW[3];
+  bool isFound = static_cast<feMesh2DP1 *>(_mesh)->locateVertex(x, elm, UVW);
+  if(!isFound) {
+    feWarning("Point (%+-1.6e, %+-1.6e) was not found in the mesh.\n", x[0], x[1]);
+    return 0.0;
+  } else {
+    if(averageEvaluations) {
+      return averageRecoveryEvaluations(recoveredField, index, elm, UVW);
+    } else {
+      // The "classic" Zhang and Naga method: interpolate the data at DOFS using the interpolation functions
+      computeRecoveryAtAllElementDOF(recoveredField, index, elm, RECOVERY_AT_DOFS);
+      return _intSpace->interpolateField(RECOVERY_AT_DOFS, UVW);
+    }
+  }
+}
+
+// Evaluate recovery and provide a list of elements to search to locate the point
+// to speed up the localization
+double feNewRecovery::evaluateRecovery(PPR recoveredField, const int index, const double *x,
+  const std::vector<int> &elementsToSearch)
+{
+  int elm;
+  double UVW[3];
+  bool isFound = static_cast<feMesh2DP1 *>(_mesh)->locateVertexInElements(_cnc, x, elementsToSearch, elm, UVW);
+  if(!isFound) {
+    feWarning("Point (%+-1.6e, %+-1.6e) was not found in the mesh.\n", x[0], x[1]);
+    exit(-1);
+  } else {
+    computeRecoveryAtAllElementDOF(recoveredField, index, elm, RECOVERY_AT_DOFS);
+    return _intSpace->interpolateField(RECOVERY_AT_DOFS, UVW);
+  }
+}
+
+// Evaluate recovered field using only the information from P1 vertices
+double feNewRecovery::evaluateRecoveryLinear(PPR recoveredField, const int index, const double *x)
 {
   int elm;
   double UVW[3];
@@ -1434,9 +1549,16 @@ double feNewRecovery::evaluateRecovery(PPR recoveredField, const int index, cons
     feWarning("Point (%f, %f) was not found in the mesh.\n", x[0], x[1]);
     return 0.0;
   } else {
-    std::vector<double> recoveryAtDOFS(_intSpace->getNumFunctions());
-    computeRecoveryAtAllElementDOF(recoveredField, index, elm, recoveryAtDOFS);
-    return _intSpace->interpolateField(recoveryAtDOFS, UVW);
+
+    // Get recovery only at P1 vertices even is triangle is P2
+    computeRecoveryAtAllElementDOF(recoveredField, index, elm, RECOVERY_AT_DOFS, true);
+    // Interpolate using barycentric coordinates
+    double barycentricCoord[3] = {1. - UVW[0] - UVW[1], UVW[0], UVW[1]};
+    double res = 0.;
+    for(int i = 0; i < 3; ++i) {
+      res += barycentricCoord[i] * RECOVERY_AT_DOFS[i];
+    } 
+    return res;
   }
 }
 
@@ -1469,10 +1591,6 @@ feNewRecovery::feNewRecovery(feSpace *space, feMesh *mesh, feSolution *sol, std:
   _nQuad1d = rule1d.getNumQuadPoints();
   _wQuad1d = rule1d.getWeights();
   _xQuad1d = rule1d.getXPoints();
-
-  // Set total number of recoveries/derivations
-  _nTotalRecoveries = pow(_dim, _degSol); // TODO : A verifier
-  _nTotalDerivations = pow(_dim, _degSol + 1);
 
   this->setDimensions();
   this->setPolynomialExponents();
@@ -1516,9 +1634,14 @@ feNewRecovery::feNewRecovery(feSpace *space, feMesh *mesh, feSolution *sol, std:
   int nRecoveredDerivatives = 0;
   int numRecoveries;
   int maxDerivativeDegree = 3;
+  _numTotalRecoveries = 0;
+  _numTotalDerivatives = 0;
+
   for(int iDerivative = 0; iDerivative < maxDerivativeDegree; ++iDerivative) {
     // Reconstruct solution (for i = 0) or derivatives (i > 0)
     numRecoveries = pow(_dim, iDerivative);
+    _numTotalRecoveries += numRecoveries;
+    _numTotalDerivatives += 2. * numRecoveries;
 
     if(iDerivative == 0) {
       feInfoCond(FE_VERBOSE > 0, "\t\tRecovering solution...");
@@ -1551,6 +1674,19 @@ feNewRecovery::feNewRecovery(feSpace *space, feMesh *mesh, feSolution *sol, std:
     }
 
     nRecoveredFields += numRecoveries;
+  }
+
+  // Condense the independant terms in a vector
+  size_t nVertices = _patch->getVertices().size();
+  recoveryIndependantTerm.resize(nVertices * _numTotalRecoveries);
+  derivativeIndependantTerm.resize(nVertices * _numTotalDerivatives);
+  for(size_t i = 0; i < nVertices; ++i) {
+    for(size_t j = 0; j < _numTotalRecoveries; ++j) {
+      recoveryIndependantTerm[_numTotalRecoveries * i + j] = recoveryCoeff[i][j][0];
+    }
+    for(size_t j = 0; j < _numTotalDerivatives; ++j) {
+      derivativeIndependantTerm[_numTotalDerivatives * i + j] = derivativeCoeff[i][j][0];
+    }
   }
 
   if(_dim > 1) fbOut.close();

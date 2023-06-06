@@ -140,13 +140,13 @@ int feCncGeo::getVertexConnectivity(const int iVertex) const
 
 int feCncGeo::getVertexConnectivity(const int numElem, const int iVertex) const
 {
-#if defined(FENG_DEBUG)
+// #if defined(FENG_DEBUG)
   if(_nVerticesPerElm * numElem + iVertex >= _connecVertices.size())
     feErrorMsg(FE_STATUS_ERROR,
                "Out of bounds: accessing entry %d in _connecVertices"
                " of size %u",
                _nVerticesPerElm * numElem + iVertex, _connecVertices.size());
-#endif
+// #endif
   return _connecVertices[_nVerticesPerElm * numElem + iVertex];
 }
 
