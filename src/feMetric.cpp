@@ -659,7 +659,7 @@ feStatus feMetric::computeMetricsPn(std::vector<std::size_t> &nodeTags, std::vec
 
 	  // Compute bounded absolute value of upper bound Q at vertices (at nodetags)
 	  #if defined(HAVE_OMP)
-    #pragma omp for
+    #pragma omp for schedule(dynamic,1)
     #endif
 	  for(size_t i = 0; i < numVertices; i++) {
 
@@ -698,17 +698,8 @@ feStatus feMetric::computeMetricsPn(std::vector<std::size_t> &nodeTags, std::vec
 
 	    if(res) {
 	      feInfoCond(FE_VERBOSE >= VERBOSE_MODERATE, 
-	      			 "Computed metric in %2d iterations  - vertex %6d/%6d"
-	             #if defined(HAVE_OMP)
-	             " (thread %2d/%2d) "
-	             #endif
-	             ,
-	             numIter, ++cnter, numVertices
-	             #if defined(HAVE_OMP)
-	             , omp_get_thread_num()
-	             , maxThreads
-	             #endif
-	             );
+	      			 "Computed metric in %2d iterations  - vertex %6d/%6d",
+	             numIter, ++cnter, numVertices);
 
 	      // Bound the eigenvalues of Q
 	      #if defined(HAVE_OMP)

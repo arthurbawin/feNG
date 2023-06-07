@@ -180,6 +180,11 @@ public:
   double evaluateRecoveryAtQuadNodeLinear(PPR recoveredField, const int index, const int iElm,
                                     const int iQuadNode);
 
+  // Recompute recovery and gradient during curving
+  void recomputeLeastSquareMatrix(const int vertex);
+  void recomputeRHSAndSolve(const int vertex);
+  void recomputeFirstDerivative(const int vertex);
+
 private:
   void setDimensions();
   void setPolynomialExponents();

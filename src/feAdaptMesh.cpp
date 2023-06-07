@@ -205,8 +205,8 @@ feStatus feMesh2DP1::adapt(feNewRecovery *recoveredField, feMetricOptions &optio
     activeConnectivity = activeMesh->getCncGeoByName("Domaine");
     activeIntSpace = spaceForAdaptation;
     activeSolution = discreteSolution;
-    // activeExactSolution = exactSolution;
-    activeExactSolution = nullptr;
+    activeExactSolution = exactSolution;
+    // activeExactSolution = nullptr;
     // activeExactSolutionGradient = exactGradient;
     activeExactSolutionGradient = nullptr;
 
@@ -264,6 +264,8 @@ feStatus feMesh2DP1::adapt(feNewRecovery *recoveredField, feMetricOptions &optio
     feInfoCond(FE_VERBOSE > 0, "\t\tGenerated curved mesh in %f s", toc());
 
     // Metric interpolation error
+    // Or
+    // Final error after curving when minimizing interpolation error
     options.userValue = meshOptions.userValue;
 
     gmsh::model::setCurrent(options.modelForMetric.data());

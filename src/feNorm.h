@@ -137,7 +137,7 @@ public:
   double compute();
 
   double computeSquaredErrorOnElement(int iElm);
-  double computeSquaredErrorFromEstimatorOnElement(int iElm);
+  double computeSquaredErrorFromEstimatorOnElement(int iElm, bool useAverageEvaluations);
   double computeLpNormOnElement(int p, bool error, int iElm);
   double computeLpErrorExactVsEstimator(int p);
   double computeLInfErrorExactVsEstimator();

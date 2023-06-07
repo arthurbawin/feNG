@@ -253,7 +253,7 @@ double feNorm::computeSquaredErrorOnElement(int iElm)
   return eLocPowP;
 }
 
-double feNorm::computeSquaredErrorFromEstimatorOnElement(int iElm)
+double feNorm::computeSquaredErrorFromEstimatorOnElement(int iElm, bool useAverageEvaluations)
 {
   if(_rec == nullptr) {
     feErrorMsg(FE_STATUS_ERROR, "Cannot compute Lp error estimate "
@@ -282,7 +282,7 @@ double feNorm::computeSquaredErrorFromEstimatorOnElement(int iElm)
 
       // uRec = _rec->evaluateRecoveryAtQuadNode(PPR::RECOVERY, 0, iElm, k);
       // #pragma omp critical // Localization in the mesh is not yet thread safe :(
-      uRec = _rec->evaluateRecovery(PPR::RECOVERY, 0, MY_POS.data());
+      uRec = _rec->evaluateRecovery(PPR::RECOVERY, 0, MY_POS.data(), useAverageEvaluations);
 
       eLocPowP += (uRec - uh) * (uRec - uh) * _J[_nQuad * iElm + k] * _w[k];
     }

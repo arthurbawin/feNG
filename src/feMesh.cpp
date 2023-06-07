@@ -130,15 +130,6 @@ feStatus feMesh::setVertexCoord(const int iVertex, const double coord[3])
   v(0) = coord[0];
   v(1) = coord[1];
   v(2) = coord[2];
-
-  // Recompute the jacobians on all connectivities
-  // CHANGED: done directly in feAdaptMesh at the 2 relevant elements when curving an edge
-  // for(auto *cnc : _cncGeo){
-  //   feStatus s = cnc->computeJacobians();
-  //   if(s != FE_STATUS_OK)
-  //     return s;
-  // }
-
   return FE_STATUS_OK;
 }
 
