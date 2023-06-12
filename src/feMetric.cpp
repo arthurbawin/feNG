@@ -16,6 +16,7 @@ using namespace soplex;
 extern int FE_VERBOSE;
 
 // #define ONLY_TEST_METRIC_INTERPOLATION_CONVERGENCE
+#define TEST_ANALYTIC_METRIC
 
 feMetric::feMetric(feRecovery *recovery, feMetricOptions metricOptions)
   : _recovery(recovery), _options(metricOptions)
@@ -615,6 +616,24 @@ void setUpLinearProblem(linearProblem &myLP, feMetricOptions &options, int nThet
 }
 #endif
 
+static MetricTensor metricAparicioEstrems(double x, double y)
+{
+  double c = sqrt(100. + 4.*M_PI*M_PI);
+  MetricTensor gradPhi(0.);
+  gradPhi(0,0) = 1.;
+  gradPhi(0,1) = 0.;
+  gradPhi(1,0) = 2.*M_PI * sin(2.*M_PI*x)/c;
+  gradPhi(1,1) = 10./c;
+
+  MetricTensor D(0.);
+  double HMIN = 0.1;
+  double h = HMIN + 2. * fabs(y);
+  D(0,0) = 1.;
+  D(1,1) = 1./(h*h);
+
+  return gradPhi.transpose() * D * gradPhi;
+}
+
 // Compute scaled optimal metric field for Pn elements
 // according to Coulaud & Loseille using the log-simplex method
 feStatus feMetric::computeMetricsPn(std::vector<std::size_t> &nodeTags, std::vector<double> &coord)
@@ -622,10 +641,21 @@ feStatus feMetric::computeMetricsPn(std::vector<std::size_t> &nodeTags, std::vec
 #if defined(ONLY_TEST_METRIC_INTERPOLATION_CONVERGENCE)
   // Just assign analytic metric and exit
   // To test convergence of metric interpolation
-  for(size_t i = 0; i < numVertices; i++) {
+  for(size_t i = 0; i < nodeTags.size(); i++) {
     double X = coord[3 * i + 0];
     double Y = coord[3 * i + 1];
     _metricTensorAtNodetags[nodeTags[i]] = analyticMetric(X, Y);
+  }
+  return FE_STATUS_OK;
+#endif
+
+#if defined(TEST_ANALYTIC_METRIC)
+  // Just assign analytic metric and exit
+  // To test convergence of metric interpolation
+  for(size_t i = 0; i < nodeTags.size(); i++) {
+    double X = coord[3 * i + 0];
+    double Y = coord[3 * i + 1];
+    _metricTensorAtNodetags[nodeTags[i]] = metricAparicioEstrems(X, Y);
   }
   return FE_STATUS_OK;
 #endif

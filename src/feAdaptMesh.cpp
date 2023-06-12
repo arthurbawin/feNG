@@ -207,8 +207,8 @@ feStatus feMesh2DP1::adapt(feNewRecovery *recoveredField, feMetricOptions &optio
     activeSolution = discreteSolution;
     activeExactSolution = exactSolution;
     // activeExactSolution = nullptr;
-    // activeExactSolutionGradient = exactGradient;
-    activeExactSolutionGradient = nullptr;
+    activeExactSolutionGradient = exactGradient;
+    // activeExactSolutionGradient = nullptr;
 
     computeInterpolationErrorOnEachElement();
 

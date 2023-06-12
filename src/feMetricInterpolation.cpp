@@ -24,7 +24,8 @@ void feMetric::interpolateMetricP2(const double *x, Eigen::Matrix2d &M,
   int elm;
   bool isFound = static_cast<feMesh2DP1 *>(_newRecovery->_mesh)->locateVertex(x, elm, UVW);
   if(!isFound) {
-    feWarning("In interpolateMetricP1 : Point (%f, %f) was not found in the mesh.\n", x[0], x[1]);
+    feWarning("In interpolateMetricP2 : Point (%f, %f) was not found in the mesh.\n", x[0], x[1]);
+    exit(-1);
     M = Eigen::Matrix2d::Identity();
     dMdx = Eigen::Matrix2d::Zero();
     dMdy = Eigen::Matrix2d::Zero();

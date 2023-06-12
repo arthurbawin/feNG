@@ -32,9 +32,11 @@ public:
   MetricTensor &operator*=(const double &val);
   MetricTensor operator*(const double &val) const;
   MetricTensor operator+(const MetricTensor &other) const;
+  MetricTensor operator*(const MetricTensor &other) const;
 
   double determinant() const;
   MetricTensor inverse() const;
+  MetricTensor transpose() const;
   MetricTensor log() const;
   MetricTensor exp() const;
 

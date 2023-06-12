@@ -46,16 +46,25 @@ MetricTensor &MetricTensor::operator*=(const double &val)
   _impl->_m *= val;
   return *this;
 }
+
 MetricTensor MetricTensor::operator*(const double &val) const
 {
   MetricTensor tmp(1.0);
   tmp._impl->setMatrix(_impl->_m * val);
   return tmp;
 }
+
 MetricTensor MetricTensor::operator+(const MetricTensor &other) const
 {
   MetricTensor tmp(1.0);
   tmp._impl->setMatrix(_impl->_m + other._impl->_m);
+  return tmp;
+}
+
+MetricTensor MetricTensor::operator*(const MetricTensor &other) const
+{
+  MetricTensor tmp(1.0);
+  tmp._impl->setMatrix(_impl->_m * other._impl->_m);
   return tmp;
 }
 
@@ -68,6 +77,13 @@ MetricTensor MetricTensor::inverse() const
   MetricTensor inv(1.0);
   inv._impl->setMatrix(this->_impl->_m.inverse());
   return inv;
+}
+
+MetricTensor MetricTensor::transpose() const
+{
+  MetricTensor tr(1.0);
+  tr._impl->setMatrix(this->_impl->_m.transpose());
+  return tr;
 }
 
 MetricTensor MetricTensor::log() const
