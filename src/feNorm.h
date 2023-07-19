@@ -159,6 +159,9 @@ public:
   double computeErrorHessianExactVsEstimator(int p);
   double computeErrorThirdDerivativesExactVsEstimator(int p);
 
+  // iComponent = 0 : e_x
+  // iComponent = 1 : e_y
+  double computeForcesFromLagrangeMultiplier(int iComponent = 0);
   double computeViscousDrag(double viscosity, feNewRecovery *recU, feNewRecovery *recV);
 
   double computeLpErrorFromTransferredSolution(int p, feSolution *otherSol);

@@ -296,9 +296,7 @@ feStatus BDF2Solver::makeStep()
   initializeBDF2(_sol, _metaNumber, _mesh, dynamic_cast<feSolutionBDF2 *>(_solutionContainer));
 
   feStatus s = solveQNBDF(_solutionContainer, _tol, _metaNumber, _linearSystem, _sol, _mesh);
-  if(s != FE_STATUS_OK) {
-    return s;
-  }
+  if(s != FE_STATUS_OK) { return s; }
 
   fePstClc(_sol, _linearSystem, _solutionContainer);
   _sol->setSolFromContainer(_solutionContainer);

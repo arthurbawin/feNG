@@ -1083,3 +1083,32 @@ double feNorm::computeViscousDrag(double viscosity, feNewRecovery *recU, feNewRe
 
   return res;
 }
+
+double feNorm::computeForcesFromLagrangeMultiplier(int iComponent)
+{
+  double res = 0.0;
+
+  if(_cnc->getDim() != 1) {
+    feErrorMsg(FE_STATUS_ERROR, "Can only compute forces on 1D connectivities for now.");
+    exit(-1);
+  }
+  if(_spaces[0]->getNumComponents() == 1) {
+    feErrorMsg(FE_STATUS_ERROR, "Can only compute forces from a vector-valued FE space (lagrange multiplier).");
+    exit(-1);
+  }
+
+  double lambda;
+
+  for(int iElm = 0; iElm < _nElm; ++iElm) {
+    this->initializeLocalSolutionOnSpace(0, iElm);
+    _spaces[0]->_mesh->getCoord(_cnc, iElm, _geoCoord);
+
+    for(int k = 0; k < _nQuad; ++k) {
+      double jac = _J[_nQuad * iElm + k];
+      lambda = _spaces[0]->interpolateVectorFieldComponentAtQuadNode_fullField(_localSol[0], k, iComponent);
+      res += lambda * _J[_nQuad * iElm + k] * _w[k];
+    }
+  }
+
+  return res;
+}

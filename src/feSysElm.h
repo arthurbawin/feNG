@@ -19,6 +19,7 @@ typedef enum {
   MIXED_VECTOR_MASS,
   MIXED_SCALAR_VECTOR_MASS,
   TRANSIENT_MASS,
+  TRANSIENT_VECTOR_MASS,
   DIFFUSION,
   VECTOR_DIFFUSION,
   NONLINEAR_DIFFUSION,
@@ -71,6 +72,8 @@ inline const std::string toString(elementSystemType t)
       return "MIXED_SCALAR_VECTOR_MASS";
     case TRANSIENT_MASS:
       return "TRANSIENT_MASS";
+    case TRANSIENT_VECTOR_MASS:
+      return "TRANSIENT_VECTOR_MASS";
     case DIFFUSION:
       return "DIFFUSION";
     case VECTOR_DIFFUSION:
@@ -410,13 +413,47 @@ protected:
   std::vector<double> _feU;
 
 public:
-  feSysElm_TransientMass(double coeff) : feSysElm(-1, 1, TRANSIENT_MASS, true), _coeff(coeff){};
+  feSysElm_TransientMass(double coeff) : feSysElm(-1, 1, TRANSIENT_MASS, true), _coeff(coeff){
+    _computeMatrixWithFD = true;
+  };
   ~feSysElm_TransientMass(){};
   void createElementarySystem(std::vector<feSpace *> &space);
   void computeAe(feBilinearForm *form);
   void computeBe(feBilinearForm *form);
   CLONEABLE(feSysElm_TransientMass)
 };
+
+//
+// Transient term weak form (transient mass matrix) for vector-valued field
+// Matrix and residual
+//
+//  /
+//  | coeff * dudt dot v dx
+//  /
+//
+// # fields: 1 (FE solution and test functions)
+//                        U
+// Fields layout: phi_U [   ]
+//
+class feSysElm_TransientVectorMass : public feSysElm
+{
+protected:
+  double _coeff;
+  int _idU;
+  std::vector<double> _dudt, _phiU;
+
+public:
+  feSysElm_TransientVectorMass(double coeff) : feSysElm(-1, 1, TRANSIENT_VECTOR_MASS, true), _coeff(coeff)
+  {
+    _computeMatrixWithFD = true;
+  };
+  ~feSysElm_TransientVectorMass(){};
+  void createElementarySystem(std::vector<feSpace *> &space);
+  void computeAe(feBilinearForm *form);
+  void computeBe(feBilinearForm *form);
+  CLONEABLE(feSysElm_TransientVectorMass)
+};
+
 
 //
 // Diffusion term weak form (stiffness matrix).

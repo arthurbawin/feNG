@@ -98,6 +98,7 @@ void feSysElm_VectorMass::computeAe(feBilinearForm *form)
     for(int i = 0; i < _nFunctions; ++i)
       _phiU[i] = form->_intSpaces[_idU]->getFunctionAtQuadNode(i, k);
 
+    // TODO: CHECK THE DOT PRODUCT, CFR MIXEDVECTORMASS BELOW
     for(int i = 0; i < _nFunctions; ++i)
       for(int j = 0; j < _nFunctions; ++j)
         form->_Ae[i][j] += coeff * _phiU[i] * _phiU[j] * jac * _wQuad[k];
@@ -237,6 +238,60 @@ void feSysElm_MixedScalarVectorMass::computeBe(feBilinearForm *form)
       _phiV[i] = form->_intSpaces[_idV]->getFunctionAtQuadNode(i, k);
       form->_Be[i] -= coeff * _phiV[i] * _u[i % _nComponentsU] * jac * _wQuad[k];
     }
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Bilinear form: transient mass matrix for vector-valued field
+// -----------------------------------------------------------------------------
+void feSysElm_TransientVectorMass::createElementarySystem(std::vector<feSpace *> &space)
+{
+  _idU = 0;
+  _fieldsLayoutI[0] = _idU;
+  _fieldsLayoutJ[0] = _idU;
+  _nFunctions = space[_idU]->getNumFunctions();
+  _nComponents = space[_idU]->getNumComponents();
+  _phiU.resize(_nFunctions);
+  _dudt.resize(_nComponents);
+}
+
+void feSysElm_TransientVectorMass::computeAe(feBilinearForm *form)
+{
+  double jac;
+  for(int k = 0; k < _nQuad; ++k) {
+    jac = form->_J[_nQuad * form->_numElem + k];
+
+    for(int i = 0; i < _nFunctions; ++i)
+      _phiU[i] = form->_intSpaces[_idU]->getFunctionAtQuadNode(i, k);
+
+    for(int i = 0; i < _nFunctions; ++i)
+      for(int j = 0; j < _nFunctions; ++j)
+        form->_Ae[i][j] += _phiU[i] * _coeff * form->_c0 * _phiU[j] * jac * _wQuad[k];
+  }
+}
+
+void feSysElm_TransientVectorMass::computeBe(feBilinearForm *form)
+{
+  double jac;
+  for(int k = 0; k < _nQuad; ++k) {
+    jac = form->_J[_nQuad * form->_numElem + k];
+
+    form->_intSpaces[_idU]->interpolateVectorFieldAtQuadNode(form->_solDot[_idU], k, _dudt, _nComponents);
+
+    for(int i = 0; i < _nFunctions; ++i) {
+      _phiU[i] = form->_intSpaces[_idU]->getFunctionAtQuadNode(i, k);
+      form->_Be[i] -= _coeff * _dudt[i % _nComponents] * _phiU[i] * jac * _wQuad[k];
+    }
+
+    // Pour la matrice jacobienne
+    // for(int i = 0; i < _nFunctionsV; ++i) {
+    //   for(int j = 0; j < _nFunctionsU; ++j) {
+    //     // The dot product du * v is nonzero only when the components match
+    //     if(i % _nComponentsU != j % _nComponentsV) continue;
+    //     form->_Ae[i][j] += coeff * _phiV[i] * _phiU[j] * jac * _wQuad[k];
+    //   }
+    // }
+
   }
 }
 
