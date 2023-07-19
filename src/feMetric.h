@@ -5,12 +5,36 @@
 #include "feNewRecovery.h"
 
 #include "../contrib/Eigen/Eigen"
+#include "../contrib/unsupported/Eigen/MatrixFunctions"
 
 #include "STensor3.h"
 
-enum class adaptationMethod { ANISO_P1, ANISO_PN, CURVED_LS, CURVED_EXTREME_SIZES };
-
-
+enum class adaptationMethod
+{ 
+  // Isotropic adaptation minimizing linear interpolation error
+  // The metric is simply the most critical size from the ANISO_P1
+  // computation times the identity matrix.
+  ISO_P1,
+  // Anisotropic adaptation minimizing linear interpolation error
+  ANISO_P1,
+  // Same but for any order on straight meshes
+  ISO_PN,
+  ANISO_PN,
+  // Goal-oriented anisotropic adaptation for linear interpolant
+  // Requires the computation of the adjoint solution p
+  GOAL_ORIENTED_ANISO_P1,
+  // Metric for curved adaptation minimizing P2 interpolation error on P2 meshes.
+  // Extension of ANISO_PN to P2 meshes with the log-simplex method, may or may not be correct...
+  CURVED_LS,
+  // Metric for curved adaptation minimizing P2 interpolation error on P2 meshes.
+  // Principal sizes are computed from the CURVED_LS metric
+  // Principal directions are those of the induced metric (gradient/isolines)
+  CURVED_LS_INDUCED_DIRECTIONS,
+  // Metric for curved adaptation minimizing P2 interpolation error on P2 meshes.
+  // Principal directions (eigenvectors) are the recovered gradient/isolines of the solution
+  // Principal sizes are computed from a Taylor expansion on curves approximating grad/iso
+  CURVED_EXTREME_SIZES
+};
 
 class feMetricOptions
 {
@@ -110,7 +134,10 @@ public:
 
 protected:
   feRecovery *_recovery;
-  feNewRecovery *_newRecovery;
+  std::vector<feNewRecovery*> _recoveredFields;
+
+  double _lambdaMin = 1e-14;
+  double _lambdaMax = 1e22;
 
   std::map<int, SMetric3> _metrics;
   std::map<int, SMetric3> _metricsOnGmshModel;
@@ -122,6 +149,8 @@ protected:
   // New interface uses only those types:
   // Ultimately, the "good" type: mapping nodeTags to "Eigen-agnostic" MetricTensors
   std::map<int, MetricTensor> _metricTensorAtNodetags;
+  std::map<int, MetricTensor> _logMetricTensorAtNodetags;
+  std::vector<Eigen::Matrix2d> _logMetricTensorAtNodetags_eigen;
   std::map<int, SMetric3> _smetric3AtNodetags;
   // =========================================================
 
@@ -143,7 +172,7 @@ protected:
 
 public:
   feMetric(feRecovery *recovery, feMetricOptions metricOptions);
-  feMetric(feNewRecovery *recovery, feMetricOptions metricOptions);
+  feMetric(std::vector<feNewRecovery*> &recoveredFields, feMetricOptions metricOptions);
   ~feMetric() {}
 
   void setGmshMetricModel(std::string metricModel) { _options.modelForMetric = metricModel; }
@@ -169,8 +198,14 @@ public:
   // ====================
   // New interface
   feStatus createVertex2NodeMap(std::vector<std::size_t> &nodeTags, std::vector<double> &coord);
-  feStatus computeMetricsP1(std::vector<std::size_t> &nodeTags, std::vector<double> &coord);
-  feStatus computeMetricsPn(std::vector<std::size_t> &nodeTags, std::vector<double> &coord);
+  feStatus computeMetricsP1(std::vector<std::size_t> &nodeTags, std::vector<double> &coord, bool isotropic = false);
+  feStatus computeMetricsPn(std::vector<std::size_t> &nodeTags, std::vector<double> &coord, bool isotropic = false);
+  feStatus computeMetricsGoalOrientedP1(std::vector<std::size_t> &nodeTags, std::vector<double> &coord);
+  feStatus computeMetricsCurvedLogSimplex(std::vector<std::size_t> &nodeTags, std::vector<double> &coord, bool useInducedDirections = false);
+  void computeDirectionFieldFromGradient(const int vertex, double directionV1[2], const double tol);
+  double dttt(const int vertex, double directionV1[2], const int direction);
+  feStatus computeMetricsExtremeSizesOnly(std::vector<std::size_t> &nodeTags, std::vector<double> &coord);
+
   void applyGradation(std::vector<std::size_t> &nodeTags, std::vector<double> &coord);
   void writeMetricField(std::vector<std::size_t> &nodeTags, std::vector<double> &coord);
 
@@ -218,26 +253,26 @@ public:
 
   template <class MetricType>
   void logEuclidianP1Interpolation(const double *xsi,
-                                   const MetricType &M0,
-                                   const MetricType &M1,
-                                   const MetricType &M2,
+                                   const MetricType &logM0,
+                                   const MetricType &logM1,
+                                   const MetricType &logM2,
                                    MetricType &result)
   {
     // Hardcoded P1 Lagrange basis functions for simplicity
     double phi[3] = {1. - xsi[0] - xsi[1], xsi[0], xsi[1]};
     // Interpolate log(M) then take exponential
-    MetricType tmp = M0.log() * phi[0] + M1.log() * phi[1] + M2.log() * phi[2];
-    result = tmp.exp();
+    result = logM0 * phi[0] + logM1 * phi[1] + logM2 * phi[2];
+    result = result.exp();
   }
 
   template <class MetricType>
   void logEuclidianP2Interpolation(const double *xsi,
-                                   const MetricType &M0,
-                                   const MetricType &M1,
-                                   const MetricType &M2,
-                                   const MetricType &M3,
-                                   const MetricType &M4,
-                                   const MetricType &M5,
+                                   const MetricType &logM0,
+                                   const MetricType &logM1,
+                                   const MetricType &logM2,
+                                   const MetricType &logM3,
+                                   const MetricType &logM4,
+                                   const MetricType &logM5,
                                    MetricType &result)
   {
     // Hardcoded P2 Lagrange basis functions for simplicity
@@ -248,9 +283,8 @@ public:
                       4. * xsi[0] * xsi[1],
                       4. * xsi[1] * (1. - xsi[0] - xsi[1])};
     // Interpolate log(M) then take exponential
-    MetricType tmp = M0.log() * phi[0] + M1.log() * phi[1] + M2.log() * phi[2] + 
-                     M3.log() * phi[3] + M4.log() * phi[4] + M5.log() * phi[5];
-    result = tmp.exp();
+    result = (logM0 * phi[0] + logM1 * phi[1] + logM2 * phi[2] + 
+              logM3 * phi[3] + logM4 * phi[4] + logM5 * phi[5]).exp();
   }
 
   void interpolationTest(const std::vector<size_t> &nodeTags, std::vector<double> &coord);
@@ -258,8 +292,58 @@ public:
 
   ///////////////////////////////////////////////////////////
   // Metric interpolation on background mesh
+  void interpolateMetricP1(const double *x, Eigen::Matrix2d &M,
+                           Eigen::Matrix2d &dMdx, Eigen::Matrix2d &dMdy);
   void interpolateMetricP2(const double *x, Eigen::Matrix2d &M,
                            Eigen::Matrix2d &dMdx, Eigen::Matrix2d &dMdy);
+  void interpolateMetricP2Log(const double *x, Eigen::Matrix2d &M,
+                                   Eigen::Matrix2d &dMdx, Eigen::Matrix2d &dMdy,
+                                   Eigen::Matrix2d &L,
+                                   Eigen::Matrix2d &dLdx, Eigen::Matrix2d &dLdy,
+                                   double &l1,
+                                   double &dl1dx,
+                                   double &dl1dy,
+                                   double &l2,
+                                   double &dl2dx,
+                                   double &dl2dy,
+                                   Eigen::Vector2d &u1,
+                                   Eigen::Vector2d &du1dx,
+                                   Eigen::Vector2d &du1dy,
+                                   Eigen::Vector2d &u2,
+                                   Eigen::Vector2d &du2dx,
+                                   Eigen::Vector2d &du2dy);
+  void gradLogEuclidianP1Interpolation(const double *xsi,
+                                       const int element,
+                                       const MetricTensor &logM0,
+                                       const MetricTensor &logM1,
+                                       const MetricTensor &logM2,
+                                       Eigen::Matrix2d &dMdx,
+                                       Eigen::Matrix2d &dMdy);
+  void gradLogEuclidianP2Interpolation(const double xsi[2],
+                                       const int element,
+                                       const Eigen::Matrix2d &logM0,
+                                       const Eigen::Matrix2d &logM1,
+                                       const Eigen::Matrix2d &logM2,
+                                       const Eigen::Matrix2d &logM3,
+                                       const Eigen::Matrix2d &logM4,
+                                       const Eigen::Matrix2d &logM5,
+                                       Eigen::Matrix2d &dMdx,
+                                       Eigen::Matrix2d &dMdy,
+                                       Eigen::Matrix2d &LRES,
+                                       Eigen::Matrix2d &DLDXRES,
+                                       Eigen::Matrix2d &DLDYRES,
+                                       double &l1res,
+                                       double &dl1dxres,
+                                       double &dl1dyres,
+                                       double &l2res,
+                                       double &dl2dxres,
+                                       double &dl2dyres,
+                                       Eigen::Vector2d &u1res,
+                                       Eigen::Vector2d &du1dxres,
+                                       Eigen::Vector2d &du1dyres,
+                                       Eigen::Vector2d &u2res,
+                                       Eigen::Vector2d &du2dxres,
+                                       Eigen::Vector2d &du2dyres);
 
   // With gradient wrt to physical coordinates x,y
   // void interpolateMetricP1WithDerivatives(const double *x, Eigen::Matrix2d &M,
@@ -287,8 +371,26 @@ public:
 };
 
 // Non-class wrapper
+void interpolateMetricP1Callback(void *metricPtr, const double *x, Eigen::Matrix2d &M,
+                           Eigen::Matrix2d &dMdx, Eigen::Matrix2d &dMdy);
 void interpolateMetricP2Callback(void *metricPtr, const double *x, Eigen::Matrix2d &M,
                            Eigen::Matrix2d &dMdx, Eigen::Matrix2d &dMdy);
+void interpolateMetricP2CallbackLog(void *metricPtr, const double *x, Eigen::Matrix2d &M,
+                           Eigen::Matrix2d &dMdx, Eigen::Matrix2d &dMdy,
+                           Eigen::Matrix2d &L,
+                           Eigen::Matrix2d &dLdx, Eigen::Matrix2d &dLdy,
+                           double &l1,
+                           double &dl1dx,
+                           double &dl1dy,
+                           double &l2,
+                           double &dl2dx,
+                           double &dl2dy,
+                           Eigen::Vector2d &u1,
+                           Eigen::Vector2d &du1dx,
+                           Eigen::Vector2d &du1dy,
+                           Eigen::Vector2d &u2,
+                           Eigen::Vector2d &du2dx,
+                           Eigen::Vector2d &du2dy);
 
 // void interpolateMetricP1WithDerivativesWrapper(void *metric, const double *x, Eigen::Matrix2d &M,
 //                                                Eigen::Matrix2d &dMdx, Eigen::Matrix2d &dMdy);

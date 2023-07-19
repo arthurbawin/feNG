@@ -50,7 +50,11 @@ typedef enum {
   //         /
   // Compute |    f dx, with f a user-defined scalar field at t = 0
   //         / cnc
-  INTEGRAL_F
+  INTEGRAL_F,
+  PRESSURE_LIFT_FORCE,
+  PRESSURE_DRAG_FORCE,
+  VISCOUS_LIFT_FORCE,
+  VISCOUS_DRAG_FORCE
 } normType;
 
 class feNorm;
@@ -116,6 +120,11 @@ protected:
   feVectorFunction *_vectorSolution = nullptr;
 
   bool _cncOnly;
+  // Plot error in Gmsh .pos file?
+  bool _plotErrorToFile = false;
+  std::string _errorPlotFileName = "errorOnElements.pos";
+
+  double _viscosity = 1.0;
 
 public:
   // Create a norm. To perform safety checks, create a norm using createNorm instead.
@@ -131,6 +140,11 @@ public:
   void setRecovery(feNewRecovery *recovery){ _rec = recovery; };
   feNewRecovery *getRecovery(){ return _rec; };
 
+  void setErrorPlotFlag(bool flag) { _plotErrorToFile = flag; };
+  void setErrorPlotFilename(std::string &name) { _errorPlotFileName = name; };
+
+  void setViscosity(double viscosity){ _viscosity = viscosity; };
+
   // Compute and return the norm or integral matching the type 'type' (see enum above)
   double compute(normType type);
   // Compute and return the norm of integral matching the norm's _type attribute
@@ -144,6 +158,10 @@ public:
   double computeSemiH1ErrorExactVsEstimator(int p);
   double computeErrorHessianExactVsEstimator(int p);
   double computeErrorThirdDerivativesExactVsEstimator(int p);
+
+  double computeViscousDrag(double viscosity, feNewRecovery *recU, feNewRecovery *recV);
+
+  double computeLpErrorFromTransferredSolution(int p, feSolution *otherSol);
 
   // void computeInterpolationErrorGradientRochery(const int whichElements[2],
   //                                               const int whichControlPoint_localTag[2],
@@ -169,6 +187,9 @@ private:
   double computeIntegral();
   double computeIntegralUserFunction();
   double computeIntegralDotProduct();
+  double computePressureLift();
+  double computePressureDrag();
+  double computeViscousLift();
   feStatus computeErrorNormFromExternalSolution(feMetaNumber *metaNumber, feSolution *sol,
                                                 feMesh *mesh, feMetaNumber *refMN,
                                                 feSolution *refSol, feMesh *refMesh,

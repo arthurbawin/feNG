@@ -162,6 +162,7 @@ public:
   // boundary conditions are applied.
   feMetaNumber(feMesh *mesh, const std::vector<feSpace *> &spaces,
                const std::vector<feSpace *> &essentialSpaces);
+  feMetaNumber(){};
   ~feMetaNumber();
 
   int getNbUnknowns() { return _nInc; }

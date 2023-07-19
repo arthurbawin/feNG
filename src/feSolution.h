@@ -47,6 +47,7 @@ public:
   feSolution(int numDOF, const std::vector<feSpace *> &spaces,
              const std::vector<feSpace *> &essentialSpaces);
   // Create a solution wrapper from a solution file. See printSol function for parsing.
+  feSolution(){};
   feSolution(std::string solutionFile);
   ~feSolution() {}
 

@@ -19,8 +19,11 @@ public:
   std::vector<std::vector<double> > _sol; // U
   std::vector<std::vector<double> > _fResidual; // F
 public:
+  feSolutionContainer(){};
   feSolutionContainer(int nSol, double tn, feMetaNumber *metaNumber);
   virtual ~feSolutionContainer() {}
+
+  void copy(const feSolutionContainer &other);
 
   int getNbDOFs() { return _nDofs; }
   void setNbDOFs(int nDofs) { _nDofs = nDofs; }

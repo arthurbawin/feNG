@@ -90,6 +90,7 @@ public:
   bool getRecomputeStatus() { return recomputeMatrix; }
   void setRecomputeStatus(bool status) { recomputeMatrix = status; }
 
+  virtual void getRHSMaxNorm(double *norm) = 0;
   virtual void getResidualMaxNorm(double *norm) = 0;
 
   // Reset the matrix and/or the right-hand side
@@ -102,7 +103,7 @@ public:
   virtual void assembleMatrices(feSolution *sol) = 0;
   virtual void assembleResiduals(feSolution *sol) = 0;
 
-  virtual void constraintEssentialComponents(feSolution *sol) = 0;
+  virtual void constrainEssentialComponents(feSolution *sol) = 0;
 
   // Solve the linear system Ax = b, which is J*du = -NL(u) (or -R(u)) in a Newton step
   //
@@ -128,6 +129,8 @@ public:
   virtual void viewMatrix() = 0;
   // Print the RHS to the console
   virtual void viewRHS() = 0;
+  // Print the current solution vector (Newton residual)
+  virtual void viewResidual() = 0;
 };
 
 //
@@ -179,6 +182,7 @@ public:
     #endif
   };
 
+  void getRHSMaxNorm(double *norm);
   void getResidualMaxNorm(double *norm);
 
   // See doc in feLinearSystem.h
@@ -188,13 +192,14 @@ public:
   void assemble(feSolution *sol);
   void assembleMatrices(feSolution *sol);
   void assembleResiduals(feSolution *sol);
-  void constraintEssentialComponents(feSolution *sol);
+  void constrainEssentialComponents(feSolution *sol);
   bool solve(double *normSolution, double *normRHS, double *normResidualAxMinusb, int *nIter);
   void correctSolution(feSolution *sol);
   void assignResidualToDCResidual(feSolutionContainer *solContainer);
   void applyCorrectionToResidual(double coeff, std::vector<double> &d);
   void viewMatrix();
   void viewRHS();
+  void viewResidual();
 
 private:
   void initialize();
@@ -268,7 +273,7 @@ public:
   void assemble(feSolution *sol);
   void assembleMatrices(feSolution *sol);
   void assembleResiduals(feSolution *sol);
-  void constraintEssentialComponents(feSolution *sol){};
+  void constrainEssentialComponents(feSolution *sol){};
   bool solve(double *normDx, double *normResidual, double *normAxb, int *nIter);
   void assignResidualToDCResidual(feSolutionContainer *solContainer);
   void applyCorrectionToResidual(double coeff, std::vector<double> &d);

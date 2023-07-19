@@ -12,6 +12,23 @@ feSolutionContainer::feSolutionContainer(int nSol, double tn, feMetaNumber *meta
   _d.resize(_nDofs);
 }
 
+void feSolutionContainer::copy(const feSolutionContainer &other) 
+{
+  std::copy(other._t.begin(), other._t.end(), std::back_inserter(this->_t));
+  std::copy(other._sol.begin(), other._sol.end(), std::back_inserter(this->_sol));
+  _sol.resize(other._sol.size());
+  for(size_t i = 0; i < other._sol.size(); ++i) {
+    this->_sol[i].resize(other._sol[i].size());
+    feInfo("Copying solution with %d dofs", other._sol[i].size());
+    for(size_t j = 0; j < other._sol[i].size(); ++j) {
+      this->_sol[i][j] = other._sol[i][j];
+    }
+  }
+  std::copy(other._fResidual.begin(), other._fResidual.end(), std::back_inserter(this->_fResidual));
+  std::copy(other._cn.begin(), other._cn.end(), std::back_inserter(this->_cn));
+  std::copy(other._d.begin(), other._d.end(), std::back_inserter(this->_d));
+}
+
 void feSolutionContainer::initialize(feSolution *sol, feMesh *mesh, feMetaNumber *metaNumber)
 {
   sol->setCurrentTime(_t[0]);

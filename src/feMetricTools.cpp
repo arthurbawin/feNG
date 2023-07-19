@@ -1,4 +1,5 @@
 #include "feMetricTools.h"
+#include "feNewRecovery.h"
 
 #if defined(HAVE_GMSH)
 #include "gmsh.h"
@@ -451,11 +452,8 @@ void gradationMetriques(double gradation, int nmax, std::vector<double> &coord1,
 #endif
 }
 
-Eigen::VectorXd CMINUS(7);
-Eigen::VectorXd CPLUS(7);
-
 double solveErrorFunction(double k, double *v, double *w, double H[2][2], double C[2][2][2],
-                                 std::set<double> &roots)
+  std::set<double> &roots, linearProblem &myLP)
 {
   double a1 = k * w[0];
   double a2 = k * w[1];
@@ -469,14 +467,13 @@ double solveErrorFunction(double k, double *v, double *w, double H[2][2], double
   double H21 = H[1][0];
   double H22 = H[1][1];
 
-  double C111 = C[0][0][0];
+  double C111 =  C[0][0][0];
   double C112 = (C[0][0][1] + C[0][1][0] + C[1][0][0]) / 3.;
   double C122 = (C[0][1][1] + C[1][0][1] + C[1][1][0]) / 3.;
-  double C222 = C[1][1][1];
+  double C222 =  C[1][1][1];
 
   double cs6 = (C111 * a1 * a1 * a1 + 3. * C112 * a1 * a1 * a2 + 3. * C122 * a1 * a2 * a2 +
-                C222 * a2 * a2 * a2) /
-               120.;
+                C222 * a2 * a2 * a2) / 120.;
   double cs5 = C111 * a1 * a1 * v1 / 20. + C112 * a1 * a1 * v2 / 20. + C122 * a2 * a2 * v1 / 20. +
                C222 * a2 * a2 * v2 / 20. + C112 * a1 * a2 * v1 / 10. + C122 * a1 * a2 * v2 / 10.;
   double cs4 = C111 * a1 * v1 * v1 / 8. + C112 * a2 * v1 * v1 / 8. + C122 * a1 * v2 * v2 / 8. +
@@ -499,29 +496,41 @@ double solveErrorFunction(double k, double *v, double *w, double H[2][2], double
   cs5 += (a2 * a2 / 20.) * (C122 * v1 + C222 * v2); // C221*v1 + C222*v2
   cs4 += (v2 * a2 / 8.) * (C122 * v1 + C222 * v2);
 
-  CMINUS(0) = cs6;
-  CMINUS(1) = cs5;
-  CMINUS(2) = cs4;
-  CMINUS(3) = cs3;
-  CMINUS(4) = 0.;
-  CMINUS(5) = 0.;
-  CMINUS(6) = 1.;
+  myLP.lvl1PolynomialCoeffs_minus(0) = cs6;
+  myLP.lvl1PolynomialCoeffs_minus(1) = cs5;
+  myLP.lvl1PolynomialCoeffs_minus(2) = cs4;
+  myLP.lvl1PolynomialCoeffs_minus(3) = cs3;
+  myLP.lvl1PolynomialCoeffs_minus(4) = 0.;
+  myLP.lvl1PolynomialCoeffs_minus(5) = 0.;
+  myLP.lvl1PolynomialCoeffs_minus(6) = 1.;
 
-  CPLUS(0) = cs6;
-  CPLUS(1) = cs5;
-  CPLUS(2) = cs4;
-  CPLUS(3) = cs3;
-  CPLUS(4) = 0.;
-  CPLUS(5) = 0.;
-  CPLUS(6) = -1.;
+  myLP.lvl1PolynomialCoeffs_plus(0) = cs6;
+  myLP.lvl1PolynomialCoeffs_plus(1) = cs5;
+  myLP.lvl1PolynomialCoeffs_plus(2) = cs4;
+  myLP.lvl1PolynomialCoeffs_plus(3) = cs3;
+  myLP.lvl1PolynomialCoeffs_plus(4) = 0.;
+  myLP.lvl1PolynomialCoeffs_plus(5) = 0.;
+  myLP.lvl1PolynomialCoeffs_plus(6) = -1.;
+
+  // myLP.lvl1PolynomialCoeffs_minus = Eigen::VectorXd::Zero(4);
+  // myLP.lvl1PolynomialCoeffs_minus(0) = cs3;
+  // myLP.lvl1PolynomialCoeffs_minus(1) = 0.;
+  // myLP.lvl1PolynomialCoeffs_minus(2) = 0.;
+  // myLP.lvl1PolynomialCoeffs_minus(3) = 1.;
+
+  // myLP.lvl1PolynomialCoeffs_plus = Eigen::VectorXd::Zero(4);
+  // myLP.lvl1PolynomialCoeffs_plus(0) = cs3;
+  // myLP.lvl1PolynomialCoeffs_plus(1) = 0.;
+  // myLP.lvl1PolynomialCoeffs_plus(2) = 0.;
+  // myLP.lvl1PolynomialCoeffs_plus(3) = -1.;
 
   double s = 1e10;
-  roots = RootFinder::solvePolynomial(CMINUS, 0., INFINITY, 1e-8);
+  roots = RootFinder::solvePolynomial(myLP.lvl1PolynomialCoeffs_minus, 0., INFINITY, 1e-8);
   for(auto it = roots.begin(); it != roots.end(); it++) {
     s = fmin(s, *it);
   }
 
-  roots = RootFinder::solvePolynomial(CPLUS, 0., INFINITY, 1e-8);
+  roots = RootFinder::solvePolynomial(myLP.lvl1PolynomialCoeffs_plus, 0., INFINITY, 1e-8);
   for(auto it = roots.begin(); it != roots.end(); it++) {
     s = fmin(s, *it);
   }
@@ -531,8 +540,6 @@ double solveErrorFunction(double k, double *v, double *w, double H[2][2], double
 }
 
 #if defined(HAVE_SOPLEX)
-
-// MetricTensor Hij = MetricTensor(1.0);
 
 double evaluateHomogeneousErrorPolynomial(const std::vector<double> &errorCoefficients,
                                                  const int degree, const double xLoc, const double yLoc, MetricTensor &Hij)
@@ -641,8 +648,8 @@ void computeLvl1(const std::vector<double> &errorCoefficients, const int degree,
 //
 // Compute a discretization of the error curve 1 for curved aniso adaptation
 //
-void computeLvl1(double K1, double K2, double *g1, double *g2, double Hij[2][2],
-                        double Cijk[2][2][2], int nPhi, linearProblem &myLP)
+void computeLvl1Curved(double K1, double K2, double *g1, double *g2, double Hij[2][2],
+                        double Cijk[2][2][2], int nThetaPerQuadrant, linearProblem &myLP)
 {
   double v1[2], v2[2], k1, k2, theta, k, v[2], w[2], s, x0[2] = {0., 0.};
 
@@ -684,19 +691,19 @@ void computeLvl1(double K1, double K2, double *g1, double *g2, double Hij[2][2],
         break;
     }
 
-    for(int i = 0; i < nPhi; ++i) {
-      theta = M_PI / 2. * (double)i / (double)nPhi;
+    for(int i = 0; i < nThetaPerQuadrant; ++i) {
+      theta = M_PI / 2. * (double)i / (double)nThetaPerQuadrant;
       k = k1 * cos(theta) * cos(theta) + k2 * sin(theta) * sin(theta);
       v[0] = v1[0] * cos(theta) + v2[0] * sin(theta);
       v[1] = v1[1] * cos(theta) + v2[1] * sin(theta);
       w[0] = -v[1];
-      w[1] = v[0];
+      w[1] =  v[0];
 
-      s = solveErrorFunction(k, v, w, Hij, Cijk, roots);
+      s = solveErrorFunction(k, v, w, Hij, Cijk, roots, myLP);
 
-      // Shoot :
-      myLP.lvl1[iDir * 2 * nPhi + 2 * i + 0] = x0[0] + s * v[0] + s * s / 2. * k * w[0];
-      myLP.lvl1[iDir * 2 * nPhi + 2 * i + 1] = x0[1] + s * v[1] + s * s / 2. * k * w[1];
+      // Shoot along the parameterization in s:
+      myLP.lvl1[iDir * 2 * nThetaPerQuadrant + 2 * i + 0] = x0[0] + s * v[0] + s * s / 2. * k * w[0];
+      myLP.lvl1[iDir * 2 * nThetaPerQuadrant + 2 * i + 1] = x0[1] + s * v[1] + s * s / 2. * k * w[1];
     }
   }
 }
@@ -726,16 +733,21 @@ bool solveLP(linearProblem &myLP, Eigen::Matrix2d &L)
   /* Solve LP */
   myLP.stat = myLP.problem.optimize();
 
-  if(myLP.stat == SPxSolver::OPTIMAL) {
+  if(myLP.stat == SPxSolver::OPTIMAL || myLP.stat == SPxSolver::OPTIMAL_UNSCALED_VIOLATIONS) {
+
+    if(myLP.stat == SPxSolver::OPTIMAL_UNSCALED_VIOLATIONS) {
+      feWarning("LP has beed solved to optimality but unscaled solution contains violations.");
+    }
     myLP.problem.getPrimal(myLP.prim);
     L(0, 0) = myLP.prim[0];
     L(0, 1) = myLP.prim[1];
     L(1, 0) = myLP.prim[1];
     L(1, 1) = myLP.prim[2];
+    // feInfo("L = %+-1.16e - %+-1.16e - %+-1.16e", L(0,0), L(0,1), L(1,1));
     return true;
   } else {
     switch(myLP.stat) {
-      case SPxSolver::ERROR: feInfo("Soplex status: an error occured"); break;
+      case SPxSolver::ERROR:feInfo("Soplex status: an error occured"); break;
       case SPxSolver::NO_RATIOTESTER: feInfo("No ratiotester loaded"); break;
       case SPxSolver::NO_PRICER: feInfo("No pricer loaded"); break;
       case SPxSolver::NO_SOLVER: feInfo("No linear solver loaded"); break;
@@ -768,8 +780,14 @@ bool computeMetricLogSimplexStraight(const double *x, const std::vector<double> 
                                      const int maxIter, const double tol, MetricTensor &Qres,
                                      int &numIter, linearProblem &myLP)
 {
+  // feInfo("Error : %+-1.16e - %+-1.16e - %+-1.16e - %+-1.16e", 
+  //   errorCoefficients[0],
+  //   errorCoefficients[1],
+  //   errorCoefficients[2],
+  //   errorCoefficients[3]);
+  
   #if defined(LOG_SIMPLEX_DEBUG)
-	FILE *ff = fopen("lvl1.pos", "w");
+	FILE *ff = fopen("lvl1_straight.pos", "w");
   fprintf(ff, "View\"lvl1\"{\n");
   #endif
 
@@ -777,7 +795,7 @@ bool computeMetricLogSimplexStraight(const double *x, const std::vector<double> 
 
   #if defined(LOG_SIMPLEX_DEBUG)
   for(size_t i = 0; i < myLP.numConstraints; ++i) {
-    fprintf(ff, "SP(%g,%g,0){%g};",
+    fprintf(ff, "SP(%g,%g,0){%g};\n",
     	x[0] + myLP.lvl1[2 * i],
     	x[1] + myLP.lvl1[2 * i + 1],
     	1.);
@@ -793,7 +811,7 @@ bool computeMetricLogSimplexStraight(const double *x, const std::vector<double> 
   double xi, yi;
 
   #if defined(LOG_SIMPLEX_DEBUG)
-  FILE *myfile = fopen("logSimplexDebug.pos", "w");
+  FILE *myfile = fopen("logSimplexDebug_straight.pos", "w");
   fprintf(myfile, "View\"logSimplexDebug\"{\n");
   #endif
 
@@ -878,83 +896,154 @@ bool computeMetricLogSimplexStraight(const double *x, const std::vector<double> 
   return false;
 }
 
-bool logSimplexCurved(double *x, double k1, double k2, double g1[2], double g2[2],
-                             double Hij[2][2], double Cijk[2][2][2], int maxIter,
-                             int nThetaPerQuadrant, double tol, Eigen::Matrix2d &Q, int &numIter,
-                             linearProblem &myLP)
-{
-  int nPhi = nThetaPerQuadrant;
-  // int size = 2 * myLP.numConstraints; // 2 coordonnees * 4 quadrants * nPhi angles/quadrant
-  // std::vector<double> lvl1(size, 0.), constraints(size, 0.);
-  computeLvl1(k1, k2, g1, g2, Hij, Cijk, nPhi, myLP);
+// #define LOG_SIMPLEX_DEBUG
 
-  Eigen::Matrix2d Qprev, Q12, L, diff;
+bool computeMetricLogSimplexCurved(const int vertex, double *x, double directionGradient[2], feNewRecovery *rec,
+                                   MetricTensor &Qres, int maxIter, int nThetaPerQuadrant,
+                                   double tol, int &numIter, linearProblem &myLP)
+{
+  double c = directionGradient[0];
+  double s = directionGradient[1];
+  double g1[2] = { c, s};
+  double g2[2] = {-s, c};
+
+  double fx = rec->evaluateRecoveryAtVertex(PPR::DERIVATIVE, 0, vertex);
+  double fy = rec->evaluateRecoveryAtVertex(PPR::DERIVATIVE, 1, vertex);
+
+  double fxx =  rec->evaluateRecoveryAtVertex(PPR::DERIVATIVE, 2, vertex);
+  double fxy = (rec->evaluateRecoveryAtVertex(PPR::DERIVATIVE, 3, vertex) +
+                rec->evaluateRecoveryAtVertex(PPR::DERIVATIVE, 4, vertex)) / 2.;
+  double fyy =  rec->evaluateRecoveryAtVertex(PPR::DERIVATIVE, 5, vertex);
+
+  double fxxx =  rec->evaluateRecoveryAtVertex(PPR::DERIVATIVE, 6, vertex);
+  double fxxy = (rec->evaluateRecoveryAtVertex(PPR::DERIVATIVE, 7, vertex) + 
+                 rec->evaluateRecoveryAtVertex(PPR::DERIVATIVE, 8, vertex) + 
+                 rec->evaluateRecoveryAtVertex(PPR::DERIVATIVE, 10, vertex)) / 3.;
+  double fxyy = (rec->evaluateRecoveryAtVertex(PPR::DERIVATIVE, 9, vertex) + 
+                 rec->evaluateRecoveryAtVertex(PPR::DERIVATIVE, 11, vertex) + 
+                 rec->evaluateRecoveryAtVertex(PPR::DERIVATIVE, 12, vertex)) / 3.;
+  double fyyy =  rec->evaluateRecoveryAtVertex(PPR::DERIVATIVE, 13, vertex);
+
+  double Hij[2][2] = {{fxx, fxy},
+                      {fxy, fyy}};
+  double Cijk[2][2][2] = {{{fxxx, fxxy}, {fxxy, fxyy}},
+                          {{fxxy, fxyy}, {fxyy, fyyy}}};
+
+  double kappa1 = (- fy * fy * fxx + 2.0 * fx * fy * fxy - fx * fx * fyy) / (pow(fx * fx + fy * fy, 3. / 2.));
+  double kappa2 =     (fx * fy * (fyy - fxx) + (fx * fx - fy * fy) * fxy) / (pow(fx * fx + fy * fy, 3. / 2.));
+
+  //
+  // Apply the log-simplex algorithm
+  //
+  #if defined(LOG_SIMPLEX_DEBUG)
+  FILE *ff = fopen("lvl1_curved.pos", "w");
+  fprintf(ff, "View\"lvl1\"{\n");
+  #endif
+
+  // computeLvl1(errorCoefficients, degree, myLP);
+  computeLvl1Curved(kappa1, kappa2, g1, g2, Hij, Cijk, nThetaPerQuadrant, myLP);
+
+  #if defined(LOG_SIMPLEX_DEBUG)
+  for(size_t i = 0; i < myLP.numConstraints; ++i) {
+    fprintf(ff, "SP(%g,%g,0){%g};",
+      x[0] + myLP.lvl1[2 * i],
+      x[1] + myLP.lvl1[2 * i + 1],
+      1.);
+  }
+  fprintf(ff, "};\n"); fclose(ff);
+  #endif
+
+  Eigen::Matrix2d Q, Qprev, Q12, Qm12, L, diff;
 
   Q = Eigen::Matrix2d::Identity();
+  L = Eigen::Matrix2d::Identity();
 
   double xi, yi;
-  bool res;
+
+  #if defined(LOG_SIMPLEX_DEBUG)
+  FILE *myfile = fopen("logSimplexDebug_curved.pos", "w");
+  fprintf(myfile, "View\"logSimplexDebug\"{\n");
+  #endif
 
   for(int iter = 0; iter < maxIter; ++iter) {
     Qprev = Q;
     Q12 = Q.sqrt();
 
     // Apply transformation Q12 to the initial constraints
-    for(int i = 0; i < myLP.numConstraints; ++i) {
+    for(size_t i = 0; i < myLP.numConstraints; ++i) {
       xi = myLP.lvl1[2 * i];
       yi = myLP.lvl1[2 * i + 1];
       myLP.constraints[2 * i] = Q12(0, 0) * xi + Q12(0, 1) * yi;
       myLP.constraints[2 * i + 1] = Q12(1, 0) * xi + Q12(1, 1) * yi;
+
+      // Verification: les nouvelles contraintes doivent être sur la courbe 1 de p o Q^(-1/2)
+      // Trivial puisque Q^(-1/2) annule la transformation, et p(xi) = 1.
+      // fprintf(myfile, "SP(%g,%g,0){%g,%g,0};",
+      //  x[0] + myLP.constraints[2 * i],
+      //  x[1] + myLP.constraints[2 * i + 1],
+      //  (double) iter, (double) iter);
     }
 
     // Solve the linear optimization problem for L
-    res = solveLP(myLP, L);
+    bool success = solveLP(myLP, L);
 
-    if(res) {
+    if(success) {
       // Recover Q from L
       Q = Q12 * L.exp() * Q12;
 
+      #if defined(LOG_SIMPLEX_DEBUG)
+      drawSingleEllipse(myfile, x, Q, 1, 30);
+      #endif
+
       diff = Q - Qprev;
-      if(diff.norm() < tol) {
+      if((diff.norm() / Q.norm()) < tol) {
+
+        // Metric converged to a solution
         numIter = iter;
-        break;
+        Qres(0,0) = Q(0,0);
+        Qres(0,1) = Q(0,1);
+        Qres(1,0) = Q(1,0);
+        Qres(1,1) = Q(1,1);
+
+        #if defined(LOG_SIMPLEX_DEBUG)
+        fprintf(myfile, "};\n"); fclose(myfile);
+        #endif
+
+        return true;
       }
     } else {
-      // LP solver returned an error : return the last valid Q
-      if(iter == 0) {
-        feWarning("In logSimplexCurved : LP solver returned an error at iteration %d. Returning "
-                  "identity matrix.",
-                  iter);
-        FILE *f = fopen("lvl1_check.pos", "w");
-        fprintf(f, "View\"lvl1\"{\n");
-        for(int i = 0; i < myLP.numConstraints; ++i) {
-          // feInfo("%f - %f", myLP.lvl1[2*i], myLP.lvl1[2*i+1]);
-          fprintf(f, "SP(%g,%g,0){%g,%g,0};", x[0] + myLP.lvl1[2 * i], x[1] + myLP.lvl1[2 * i + 1],
-                  1., 1.);
-        }
-        int nt = 30;
-        std::vector<double> xP(nt, 0.);
-        std::vector<double> yP(nt, 0.);
-        double factor = 1.;
-        getEllipsePoints(factor * Q(0, 0), factor * 2.0 * Q(0, 1), factor * Q(1, 1), x[0], x[1], xP,
-                         yP);
-        for(int j = 0; j < nt; ++j) {
-          if(j != nt - 1) {
-            fprintf(f, "SL(%.16g,%.16g,%.16g,%.16g,%.16g,%.16g){%u, %u};\n", xP[j], yP[j], 0.,
-                    xP[j + 1], yP[j + 1], 0., 1, 1);
-          } else {
-            fprintf(f, "SL(%.16g,%.16g,%.16g,%.16g,%.16g,%.16g){%u, %u};\n", xP[j], yP[j], 0.,
-                    xP[0], yP[0], 0., 1, 1);
-          }
-        }
-        fprintf(f, "};\n");
-        fclose(f);
-        return false;
-      }
 
-      return true;
+      // LP solver returned an error : return the last valid Q
+      feWarning("LP solver returned an error at iteration %d.", iter);
+      numIter = iter;
+      Qres(0,0) = Q(0,0);
+      Qres(0,1) = Q(0,1);
+      Qres(1,0) = Q(1,0);
+      Qres(1,1) = Q(1,1);
+
+      #if defined(LOG_SIMPLEX_DEBUG)
+      drawSingleEllipse(myfile, x, Q, 1, 30);
+      fprintf(myfile, "};\n"); fclose(myfile);
+      #endif
+
+      return false;
     }
   }
-  return true;
+
+  // Warning: maxIter reached
+  feWarning("Max number of iterations (%d) reached when computing log-simplex metric.", maxIter);
+
+  Qres(0,0) = Q(0,0);
+  Qres(0,1) = Q(0,1);
+  Qres(1,0) = Q(1,0);
+  Qres(1,1) = Q(1,1);
+
+  #if defined(LOG_SIMPLEX_DEBUG)
+  drawSingleEllipse(myfile, x, Q, 1, 30);
+  fprintf(myfile, "};\n"); fclose(myfile);
+  #endif
+
+  return false;
 }
 #endif
+

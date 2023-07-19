@@ -11,6 +11,9 @@
 #include "feTriangle.h"
 #include "rtree.h"
 
+#if defined(HAVE_GMSH)
+#include "curvedMesh_structs.h"
+#endif
 //
 // Abstract mesh class. Meshes are defined through the derived
 // classes according to their highest space dimension:
@@ -163,10 +166,10 @@ public:
   // the mesh, we look for the vertex on this connectivity only, and 
   // return false if it was not found on this one (even if it can be found on
   // another connectivity).
-  virtual bool locateVertex(const double *x, int &iElm, double *u, double tol = 1e-5,
+  virtual bool locateVertex(const double *x, int &iElm, double *u, double tol = 1e-12,
                             bool returnLocalElmTag = false, std::string targetConnectivity = "") = 0;
   virtual bool locateVertexInElements(feCncGeo *cnc, const double *x, const std::vector<int> &elementsToSearch, int &iElm,
-                                      double *u, double tol = 1e-5) = 0;
+                                      double *u, double tol = 1e-12) = 0;
 };
 
 //
@@ -188,7 +191,7 @@ public:
   feMesh0DP0(double xA, int nElm, std::string domID);
   virtual ~feMesh0DP0();
 
-  bool locateVertex(const double *x, int &iElm, double *u, double tol = 1e-5,
+  bool locateVertex(const double *x, int &iElm, double *u, double tol = 1e-12,
                             bool returnLocalElmTag = false, std::string targetConnectivity = "")
   {
     iElm = 0;
@@ -196,7 +199,7 @@ public:
     return true;
   };
   bool locateVertexInElements(feCncGeo *cnc, const double *x, const std::vector<int> &elementsToSearch, int &iElm,
-                                      double *u, double tol = 1e-5)
+                                      double *u, double tol = 1e-12)
   {
     iElm = 0;
     u[0] = 1.;
@@ -229,10 +232,10 @@ public:
              const std::string &domainName);
   virtual ~feMesh1DP1();
 
-  bool locateVertex(const double *x, int &iElm, double *u, double tol = 1e-5,
+  bool locateVertex(const double *x, int &iElm, double *u, double tol = 1e-12,
                     bool returnLocalElmTag = false, std::string targetConnectivity = "");
   bool locateVertexInElements(feCncGeo *cnc, const double *x, const std::vector<int> &elementsToSearch, int &iElm,
-                                      double *u, double tol = 1e-5);
+                                      double *u, double tol = 1e-12);
 };
 
 class feMetaNumber;
@@ -390,27 +393,33 @@ public:
 
   int getGmshNodeTag(int iVertex) { return _sequentialNodeToGmshNode[iVertex]; }
 
-  bool locateVertex(const double *x, int &iElm, double *u, double tol = 1e-5,
+  bool locateVertex(const double *x, int &iElm, double *u, double tol = 1e-12,
                     bool returnLocalElmTag = false, std::string targetConnectivity = "");
   bool locateVertexInElements(feCncGeo *cnc, const double *x, const std::vector<int> &elementsToSearch, int &iElm,
-                                      double *u, double tol = 1e-5);
+                                      double *u, double tol = 1e-12);
 
   // Transfer whole FE solution(s) associated to the current mesh to another mesh.
   // The solution(s) are stored in solutionContainer and are transferred in place.
-  void transfer(feMesh2DP1 *otherMesh, feMetaNumber *myMN, feMetaNumber *otherMN,
-                feSolutionContainer *solutionContainer, const std::vector<feSpace *> &mySpaces,
-                const std::vector<feSpace *> &mySpacesEssBC,
-                const std::vector<feSpace *> &otherSpaces);
+  feStatus transfer(feMesh2DP1 *otherMesh, feMetaNumber *myMN, feMetaNumber *otherMN,
+                    feSolutionContainer *solutionContainer, const std::vector<feSpace *> &mySpaces,
+                    const std::vector<feSpace *> &mySpacesEssBC,
+                    const std::vector<feSpace *> &otherSpaces);
 
   // Default argument is a feMetricOptions initialized by default, see feAdaptMesh.cpp
-  feStatus adapt(feNewRecovery *recoveredField, feMetricOptions &options, 
-    const std::vector<feSpace*> &spaces,
-    const std::vector<feSpace*> &essentialSpaces,
-    feSpace *spaceForAdaptation,
-    feSolution *discreteSolution,
-    feFunction *exactSolution,
-    feVectorFunction *exactGradient,
-    bool curve, bool isBackmeshP2, bool setGmshModelToP1, feRecovery *oldRecovery = nullptr);
+  feStatus adapt(std::vector<feNewRecovery*> recoveredFields,
+                 feMetricOptions &options, 
+                 const std::vector<feSpace*> &spaces,
+                 const std::vector<feSpace*> &essentialSpaces,
+                 feSpace *spaceForAdaptation,
+                 feSolution *discreteSolution,
+                 feFunction *exactSolution,
+                 feVectorFunction *exactGradient,
+                 bool curve,
+                 bool isBackmeshP2,
+                 bool setGmshModelToP1,
+                 bool curveMMGmesh,
+                 curveToMinimize target,
+                 feRecovery *oldRecovery = nullptr);
 
   void drawConnectivityToPOSfile(const std::string &cncName, const std::string &fileName);
 };

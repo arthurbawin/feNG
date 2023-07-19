@@ -152,6 +152,7 @@ public:
   // Triggers the computation of jacobian determinants.
   feStatus setQuadratureRule(feQuadrature *rule);
 
+  feMesh *getMeshPtr() { return _mesh; }
   void setMeshPtr(feMesh *mesh) { _mesh = mesh; }
 
   feStatus computeJacobians();
@@ -165,6 +166,8 @@ public:
 
   void computeElementTransformation(std::vector<double> &elementCoord, const int iQuadNode,
                                     const double jac, ElementTransformation &transformation) const;
+
+  feStatus computeNormalVectors(std::vector<double> &normalVectors) const;
 
   const std::vector<int> &getVerticesConnectivity() const { return _connecVertices; }
   const std::vector<int> &getEdgeConnectivity() const { return _connecEdges; }

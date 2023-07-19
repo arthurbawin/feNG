@@ -241,10 +241,25 @@ void feLinearSystemPETSc::viewRHS()
 #endif
 }
 
-void feLinearSystemPETSc::getResidualMaxNorm(double *norm)
+void feLinearSystemPETSc::viewResidual()
+{
+#if defined(HAVE_PETSC)
+  VecView(_du, PETSC_VIEWER_STDOUT_WORLD);
+#endif
+}
+
+void feLinearSystemPETSc::getRHSMaxNorm(double *norm)
 {
 #if defined(HAVE_PETSC)
   PetscErrorCode ierr = VecNorm(_rhs, NORM_MAX, norm);
+  CHKERRABORT(PETSC_COMM_WORLD, ierr);
+#endif
+}
+
+void feLinearSystemPETSc::getResidualMaxNorm(double *norm)
+{
+#if defined(HAVE_PETSC)
+  PetscErrorCode ierr = VecNorm(_du, NORM_MAX, norm);
   CHKERRABORT(PETSC_COMM_WORLD, ierr);
 #endif
 }
@@ -487,7 +502,7 @@ void feLinearSystemPETSc::assemble(feSolution *sol)
   this->assembleResiduals(sol);
 }
 
-void feLinearSystemPETSc::constraintEssentialComponents(feSolution *sol)
+void feLinearSystemPETSc::constrainEssentialComponents(feSolution *sol)
 {
 #if defined(HAVE_PETSC)
   std::vector<PetscInt> rowsToConstraint;

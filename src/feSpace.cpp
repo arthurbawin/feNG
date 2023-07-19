@@ -964,6 +964,21 @@ void feSpace::interpolateVectorField(std::vector<double> &field, int nComponents
   }
 }
 
+// Same as interpolateVectorField if _nComponents = 1 and iComponent = 1
+// Here the field has the same size as the number of element DOFs, 
+// so it contains all the components and we select which one to interpolate.
+// This is not the case in interpolateVectorFieldComponentAtQuadnode for now, 
+// where the field there has length _nFunctions / _nComponents (only one component)
+double feSpace::interpolateVectorFieldComponent(std::vector<double> &field, int iComponent, double *r)
+{
+  double res = 0.;
+  std::vector<double> l = L(r);
+  for(int i = 0; i < _nFunctions / _nComponents; ++i) {
+    res += field[i * _nComponents + iComponent] * l[i * _nComponents + iComponent];
+  }
+  return res;
+}
+
 void feSpace::interpolateVectorField_rDerivative(std::vector<double> &field, double *r,
                                                  std::vector<double> &res)
 {
@@ -1035,6 +1050,25 @@ void feSpace::interpolateVectorFieldAtQuadNode(std::vector<double> &field, int i
   for(int i = 0; i < _nFunctions; ++i) {
     res[i % nComponents] += field[i] * _L[_nFunctions * iNode + i];
   }
+}
+
+double feSpace::interpolateVectorFieldComponentAtQuadNode(std::vector<double> &field, int iNode, int iComponent)
+{
+  double res = 0.;
+  for(int i = 0; i < _nFunctions / _nComponents; ++i) {
+    res += field[i] * _L[_nFunctions * iNode + _nComponents * i];
+  }
+  return res;
+}
+
+// Same as above but the "field" vector as the same size as the number of DOFs of the space
+double feSpace::interpolateVectorFieldComponentAtQuadNode_fullField(std::vector<double> &field, int iNode, int iComponent)
+{
+  double res = 0.;
+  for(int i = 0; i < _nFunctions / _nComponents; ++i) {
+    res += field[i * _nComponents + iComponent] * _L[_nFunctions * iNode + _nComponents * i];
+  }
+  return res;
 }
 
 // Field structure : [fx0 fy0 fz0 fx1 fy1 fz1 ... fxn fyn fzn]

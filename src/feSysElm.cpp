@@ -27,6 +27,42 @@ void feSysElm_Source::computeBe(feBilinearForm *form)
 }
 
 // -----------------------------------------------------------------------------
+// Linear form: scalar source term where the source term is the Dirac delta
+// -----------------------------------------------------------------------------
+void feSysElm_SourceDirac::createElementarySystem(std::vector<feSpace *> &space)
+{
+  _idU = 0;
+  _fieldsLayoutI[0] = _idU;
+  _fieldsLayoutJ[0] = _idU;
+  _nFunctions = space[_idU]->getNumFunctions();
+  _phiAtX0.resize(_nFunctions);
+}
+
+void feSysElm_SourceDirac::computeBe(feBilinearForm *form)
+{
+  #if defined(HAVE_OMP)
+  #pragma omp critical
+  #endif
+  {
+    // Locate x0 in the element
+    int elm;
+    double xsi[3];
+    bool isFound = form->_cnc->getMeshPtr()->locateVertex(_x0.data(), elm, xsi, 1e-12);
+
+    if(!isFound)
+      feWarning("Could not locate Dirac vertex (%+-1.4e - %+-1.4e) in the mesh!", _x0[0], _x0[1]);
+
+    if(isFound && elm == form->_numElem) {
+      // Evaluate shape functions at x0
+      form->_intSpaces[_idU]->L(xsi, _phiAtX0.data());
+      for(int i = 0; i < _nFunctions; ++i) {
+        form->_Be[i] -= _phiAtX0[i];
+      }
+    }
+  }
+}
+
+// -----------------------------------------------------------------------------
 // Bilinear form: mass matrix for scalar field
 // -----------------------------------------------------------------------------
 void feSysElm_Mass::createElementarySystem(std::vector<feSpace *> &space)
@@ -70,6 +106,60 @@ void feSysElm_Mass::computeBe(feBilinearForm *form)
     for(int i = 0; i < _nFunctions; ++i) {
       _phiU[i] = form->_intSpaces[_idU]->getFunctionAtQuadNode(i, k);
       form->_Be[i] -= coeff * u * _phiU[i] * jac * _wQuad[k];
+    }
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Bilinear form: mixed mass matrix for scalar field (unknown and tests functions
+//                from different variables)
+// -----------------------------------------------------------------------------
+void feSysElm_MixedMass::createElementarySystem(std::vector<feSpace *> &space)
+{
+  _idV = 0;
+  _idU = 1;
+  _fieldsLayoutI = {_idV}; // Rectangular local matrix
+  _fieldsLayoutJ = {_idU};
+  _nFunctionsU = space[_idU]->getNumFunctions();
+  _nFunctionsV = space[_idV]->getNumFunctions();
+  _phiU.resize(_nFunctionsU);
+  _phiV.resize(_nFunctionsV);
+}
+
+void feSysElm_MixedMass::computeAe(feBilinearForm *form)
+{
+  double jac, coeff;
+  for(int k = 0; k < _nQuad; ++k) {
+    jac = form->_J[_nQuad * form->_numElem + k];
+
+    form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, _pos);
+    coeff = (*_coeff)(form->_tn, _pos);
+
+    for(int i = 0; i < _nFunctionsU; ++i)
+      _phiU[i] = form->_intSpaces[_idU]->getFunctionAtQuadNode(i, k);
+    for(int i = 0; i < _nFunctionsV; ++i)
+      _phiV[i] = form->_intSpaces[_idV]->getFunctionAtQuadNode(i, k);
+
+    for(int i = 0; i < _nFunctionsV; ++i)
+      for(int j = 0; j < _nFunctionsU; ++j)
+        form->_Ae[i][j] += coeff * _phiV[i] * _phiU[j] * jac * _wQuad[k];
+  }
+}
+
+void feSysElm_MixedMass::computeBe(feBilinearForm *form)
+{
+  double jac, u, coeff;
+  for(int k = 0; k < _nQuad; ++k) {
+    jac = form->_J[_nQuad * form->_numElem + k];
+
+    form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, _pos);
+    coeff = (*_coeff)(form->_tn, _pos);
+
+    u = form->_intSpaces[_idU]->interpolateFieldAtQuadNode(form->_sol[_idU], k);
+
+    for(int i = 0; i < _nFunctionsV; ++i) {
+      _phiV[i] = form->_intSpaces[_idV]->getFunctionAtQuadNode(i, k);
+      form->_Be[i] -= coeff * u * _phiV[i] * jac * _wQuad[k];
     }
   }
 }

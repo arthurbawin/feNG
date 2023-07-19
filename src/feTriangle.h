@@ -32,7 +32,7 @@ public:
   void xyz2uvw(double xyz[3], double uvw[3]);
   bool isInside(double u, double v, double w)
   {
-    double tol = 1e-6;
+    double tol = 1e-12;
     if(u < (-tol) || v < (-tol) || u > ((1. + tol) - v) || fabs(w) > tol) return false;
     return true;
   }

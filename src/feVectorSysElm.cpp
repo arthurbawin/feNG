@@ -124,6 +124,123 @@ void feSysElm_VectorMass::computeBe(feBilinearForm *form)
 }
 
 // -----------------------------------------------------------------------------
+// Bilinear form: mixed mass matrix for two vector-valued fields
+// -----------------------------------------------------------------------------
+void feSysElm_MixedVectorMass::createElementarySystem(std::vector<feSpace *> &space)
+{
+  _idV = 0;
+  _idU = 1;
+  _fieldsLayoutI = {_idV}; // Rectangular local matrix
+  _fieldsLayoutJ = {_idU};
+  _nFunctionsU = space[_idU]->getNumFunctions();
+  _nFunctionsV = space[_idV]->getNumFunctions();
+  _nComponentsU = space[_idU]->getNumComponents();
+  _nComponentsV = space[_idV]->getNumComponents();
+  _u.resize(_nComponentsU);
+  _phiU.resize(_nFunctionsU);
+  _phiV.resize(_nFunctionsV);
+}
+
+void feSysElm_MixedVectorMass::computeAe(feBilinearForm *form)
+{
+  double jac, coeff;
+  for(int k = 0; k < _nQuad; ++k) {
+    jac = form->_J[_nQuad * form->_numElem + k];
+
+    form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, _pos);
+    coeff = (*_coeff)(form->_tn, _pos);
+
+    for(int i = 0; i < _nFunctionsU; ++i)
+      _phiU[i] = form->_intSpaces[_idU]->getFunctionAtQuadNode(i, k);
+    for(int i = 0; i < _nFunctionsV; ++i)
+      _phiV[i] = form->_intSpaces[_idV]->getFunctionAtQuadNode(i, k);
+
+    for(int i = 0; i < _nFunctionsV; ++i) {
+      for(int j = 0; j < _nFunctionsU; ++j) {
+        // The dot product du * v is nonzero only when the components match
+        if(i % _nComponentsU != j % _nComponentsV) continue;
+        form->_Ae[i][j] += coeff * _phiV[i] * _phiU[j] * jac * _wQuad[k];
+      }
+    }
+  }
+}
+
+void feSysElm_MixedVectorMass::computeBe(feBilinearForm *form)
+{
+  double jac, coeff;
+
+  for(int k = 0; k < _nQuad; ++k) {
+    jac = form->_J[_nQuad * form->_numElem + k];
+
+    form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, _pos);
+    coeff = (*_coeff)(form->_tn, _pos);
+
+    form->_intSpaces[_idU]->interpolateVectorFieldAtQuadNode(form->_sol[_idU], k, _u, _nComponentsU);
+
+    for(int i = 0; i < _nFunctionsV; ++i) {
+      _phiV[i] = form->_intSpaces[_idV]->getFunctionAtQuadNode(i, k);
+      form->_Be[i] -= coeff * _phiV[i] * _u[i % _nComponentsU] * jac * _wQuad[k];
+    }
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Bilinear form: mixed scalar-vector mass matrix
+// -----------------------------------------------------------------------------
+void feSysElm_MixedScalarVectorMass::createElementarySystem(std::vector<feSpace *> &space)
+{
+  _idV = 0;
+  _idU = 1;
+  _fieldsLayoutI = {_idV};
+  _fieldsLayoutJ = {_idU};
+  _nFunctionsV = space[_idV]->getNumFunctions();
+  _nFunctionsU = space[_idU]->getNumFunctions();
+  _nComponentsU = space[_idU]->getNumComponents();
+  _phiV.resize(_nFunctionsV);
+  _phiU.resize(_nFunctionsU);
+  _u.resize(_nComponentsU);
+}
+
+void feSysElm_MixedScalarVectorMass::computeAe(feBilinearForm *form)
+{
+  double jac, coeff;
+  for(int k = 0; k < _nQuad; ++k) {
+    jac = form->_J[_nQuad * form->_numElem + k];
+
+    form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, _pos);
+    coeff = (*_coeff)(form->_tn, _pos);
+
+    for(int i = 0; i < _nFunctionsU; ++i)
+      _phiU[i] = form->_intSpaces[_idU]->getFunctionAtQuadNode(i, k);
+    for(int i = 0; i < _nFunctionsV; ++i)
+      _phiV[i] = form->_intSpaces[_idV]->getFunctionAtQuadNode(i, k);
+
+    for(int i = 0; i < _nFunctionsV; ++i)
+      for(int j = 0; j < _nFunctionsU; ++j)
+        form->_Ae[i][j] += coeff * _phiV[i] * _phiU[j] * jac * _wQuad[k];
+  }
+}
+
+void feSysElm_MixedScalarVectorMass::computeBe(feBilinearForm *form)
+{
+  double jac, coeff;
+
+  for(int k = 0; k < _nQuad; ++k) {
+    jac = form->_J[_nQuad * form->_numElem + k];
+
+    form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, _pos);
+    coeff = (*_coeff)(form->_tn, _pos);
+
+    form->_intSpaces[_idU]->interpolateVectorFieldAtQuadNode(form->_sol[_idU], k, _u, _nComponentsU);
+
+    for(int i = 0; i < _nFunctionsV; ++i) {
+      _phiV[i] = form->_intSpaces[_idV]->getFunctionAtQuadNode(i, k);
+      form->_Be[i] -= coeff * _phiV[i] * _u[i % _nComponentsU] * jac * _wQuad[k];
+    }
+  }
+}
+
+// -----------------------------------------------------------------------------
 // Bilinear form: diffusion of vector-valued field
 // -----------------------------------------------------------------------------
 void feSysElm_VectorDiffusion::createElementarySystem(std::vector<feSpace *> &space)

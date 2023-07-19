@@ -7,15 +7,15 @@
 
 #include "../contrib/Eigen/Eigen"
 
-#if defined(HAVE_SOPLEX)
-#include "soplex.h"
-
 #if defined(HAVE_GMSH)
 #include "gmsh.h"
 #include "curvedMesh_structs.h"
 #endif
 
-typedef struct linearProblemStruct {
+#if defined(HAVE_SOPLEX)
+#include "soplex.h"
+
+typedef struct {
   soplex::SoPlex problem;
   soplex::SPxSolver::Status stat;
   soplex::DSVector row;
@@ -28,6 +28,8 @@ typedef struct linearProblemStruct {
   MetricTensor Hij;
   bool uniformErrorCurve;
   int numLoopsUniformErrorCurve;
+  Eigen::VectorXd lvl1PolynomialCoeffs_minus;
+  Eigen::VectorXd lvl1PolynomialCoeffs_plus;
 } linearProblem;
 #endif
 
@@ -57,21 +59,21 @@ double evaluateFieldFromRecovery(int indexDerivative, feRecovery *rec, double *x
 
 double evaluateFieldFromRecoveryCallback(int indexDerivative, void *recUserPtr, double *x);
 
-double f(feRecovery *rec, double *x);
-double fx(feRecovery *rec, double *x);
-double fy(feRecovery *rec, double *x);
-double fxx(feRecovery *rec, double *x);
-double fxy(feRecovery *rec, double *x);
-double fyx(feRecovery *rec, double *x);
-double fyy(feRecovery *rec, double *x);
-double fxxx(feRecovery *rec, double *x);
-double fxxy(feRecovery *rec, double *x);
-double fxyx(feRecovery *rec, double *x);
-double fxyy(feRecovery *rec, double *x);
-double fyxx(feRecovery *rec, double *x);
-double fyxy(feRecovery *rec, double *x);
-double fyyx(feRecovery *rec, double *x);
-double fyyy(feRecovery *rec, double *x);
+// double f(feRecovery *rec, double *x);
+// double fx(feRecovery *rec, double *x);
+// double fy(feRecovery *rec, double *x);
+// double fxx(feRecovery *rec, double *x);
+// double fxy(feRecovery *rec, double *x);
+// double fyx(feRecovery *rec, double *x);
+// double fyy(feRecovery *rec, double *x);
+// double fxxx(feRecovery *rec, double *x);
+// double fxxy(feRecovery *rec, double *x);
+// double fxyx(feRecovery *rec, double *x);
+// double fxyy(feRecovery *rec, double *x);
+// double fyxx(feRecovery *rec, double *x);
+// double fyxy(feRecovery *rec, double *x);
+// double fyyx(feRecovery *rec, double *x);
+// double fyyy(feRecovery *rec, double *x);
 
 void computeDirectionFieldFromGradient(double *x, double &C, double &S, double tol, feRecovery *rec,
                                        FILE *F_grad = nullptr, FILE *F_iso = nullptr);
@@ -104,8 +106,8 @@ bool computeMetricLogSimplexStraight(const double *x, const std::vector<double> 
                                      const int maxIter, const double tol, MetricTensor &Qres,
                                      int &numIter, linearProblem &myLP);
 
-bool computeMetricLogSimplexCurved(double *x, double cG, double sG, feRecovery *rec,
-                                   Eigen::Matrix2d &Q, int maxIter, int nThetaPerQuadrant,
+bool computeMetricLogSimplexCurved(const int vertex, double *x, double directionGradient[2], feNewRecovery *rec,
+                                   MetricTensor &Qres, int maxIter, int nThetaPerQuadrant,
                                    double tol, int &numIter, linearProblem &myLP);
 #endif
 

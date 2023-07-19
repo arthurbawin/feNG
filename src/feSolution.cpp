@@ -271,7 +271,9 @@ void feSolution::setSolFromContainer(feSolutionContainer *solContainer, int iSol
     _dsoldt.resize(solFromContainer.size());
   }
   size_t nDOFs = solFromContainer.size();
-  for(size_t i = 0; i < nDOFs; ++i) _sol[i] = solFromContainer[i];
+  for(size_t i = 0; i < nDOFs; ++i) {
+    _sol[i] = solFromContainer[i];
+  }
 }
 
 void feSolution::setSolDotToZero()

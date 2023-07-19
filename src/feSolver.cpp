@@ -55,12 +55,21 @@ feStatus solveQNBDF(feSolutionContainer *solDot, feTolerances tol, feMetaNumber 
 
   // Newton-Rapshon iteration
   while(!stop) {
+
+    // If computing unsteady solution (with more than 1 solution vector),
+    // recompute the jacobian only at first iteration and every N Newton steps
+    // int recomputeJacobianEveryNsteps = 5;
+    // if(iter > 0 && solDot->getNbSol() > 1) {
+    //   if(iter % recomputeJacobianEveryNsteps == 0)
+    //     linearSystem->setRecomputeStatus(true);
+    //   else 
+    //     linearSystem->setRecomputeStatus(false);
+    // }
+
     // Reset, assemble and solve the linear system J(u) * du = -NL(u)
     linearSystem->setToZero();
     solDot->computeSolTimeDerivative(sol, linearSystem);
     linearSystem->assemble(sol);
-
-    // linearSystem->assembleResiduals(sol);
 
     // // Check residual norm and exit if tolerance is reached
     // linearSystem->getResidualMaxNorm(&normResidual);
@@ -71,9 +80,7 @@ feStatus solveQNBDF(feSolutionContainer *solDot, feTolerances tol, feMetaNumber 
     //   break;
     // }
 
-    // linearSystem->assembleMatrices(sol);
-
-    linearSystem->constraintEssentialComponents(sol);
+    linearSystem->constrainEssentialComponents(sol);
     bool successSolve = linearSystem->solve(&normDx, &normResidual, &normAxb, &linearSystemIter);
 
     if(!successSolve) {
@@ -102,6 +109,22 @@ feStatus solveQNBDF(feSolutionContainer *solDot, feTolerances tol, feMetaNumber 
       FE_VERBOSE > 0,
       "\t\t\t\tConverged in %2d Newton iterations (Residual converged): ||du|| = %10.10e \t ||NL(u)|| = %10.10e", iter,
       normDx, normResidual);
+
+    /////////////////////////////
+    // Print residual
+    // feInfo("Residu de NR (rhs)");
+    // linearSystem->setDisplayRHSInConsole(true);
+    // linearSystem->viewRHS();
+    // linearSystem->setDisplayRHSInConsole(false);
+    // feInfo("Solution");
+    // linearSystem->viewResidual();
+    // double resnorm;
+    // linearSystem->getResidualMaxNorm(&resnorm);
+    // linearSystem->getRHSMaxNorm(&resnorm);
+    // feInfo("Residual max norm = %+-1.4e", resnorm);
+    // linearSystem->viewMatrix();
+    /////////////////////////////
+
     return FE_STATUS_OK;
   } else if(normDx <= tol.tolDx) {
     // Increment is low enough but residual not
@@ -237,7 +260,10 @@ feStatus BDF2Solver::makeStep()
   feInfoCond(FE_VERBOSE > 0, "\t\tAdvancing 1 step from t = %1.3e to t = %1.3e (dt = %1.3e)",
              _tCurrent, _tCurrent + _dt, _dt);
 
-  if(_currentStep == 0) {
+  if(_currentStep == 0 || _shouldInitialize) {
+
+    _shouldInitialize = false;
+    
     // Initialization and first step
 
     if(_CodeIni == "BDF1/DCF") {
@@ -293,7 +319,10 @@ feStatus BDF2Solver::makeSteps(int nSteps)
   printf("BDF2 : Advancing %d steps from t = %f to t = %f\n", nSteps, _tCurrent,
          _tCurrent + nSteps * _dt);
 
-  if(_currentStep == 0) {
+  if(_currentStep == 0 || _shouldInitialize) {
+
+    _shouldInitialize = false;
+
     // Initialization and first step
 
     if(_CodeIni == "BDF1/DCF") {
@@ -444,21 +473,21 @@ feStatus BDF1Solver::makeStep()
   feInfoCond(FE_VERBOSE > 0, "\t\tAdvancing 1 step from t = %1.3e to t = %1.3e (dt = %1.3e)",
              _tCurrent, _tCurrent + _dt, _dt);
 
-  if(_currentStep == 0) {
+  _linearSystem->setRecomputeStatus(true);
+
+  if(_currentStep == 0 || _shouldInitialize) {
+
+    _shouldInitialize = false;
+    
     // Initialization and first step
-    _linearSystem->setRecomputeStatus(true);
     _solutionContainer->initialize(_sol, _mesh, _metaNumber);
     _sol->setSolFromContainer(_solutionContainer);
   }
 
   _solutionContainer->rotate(_dt);
   initializeBDF1(_sol, _metaNumber, _mesh, dynamic_cast<feSolutionBDF1 *>(_solutionContainer));
-  // printf("Étape 1 - recomputeMatrix = %s : Solution BDF1 - t = %6.6e\n",
-  // _linearSystem->getRecomputeStatus() ? "true" : "false", _sol->getCurrentTime());
   feStatus s = solveQNBDF(_solutionContainer, _tol, _metaNumber, _linearSystem, _sol, _mesh);
-  if(s != FE_STATUS_OK) {
-    return s;
-  }
+  if(s != FE_STATUS_OK) { return s; }
 
   fePstClc(_sol, _linearSystem, _solutionContainer);
   _sol->setSolFromContainer(_solutionContainer);
@@ -479,7 +508,10 @@ feStatus BDF1Solver::makeSteps(int nSteps)
   printf("BDF1 : Advancing %d steps from t = %f to t = %f\n", nSteps, _tCurrent,
          _tCurrent + nSteps * _dt);
 
-  if(_currentStep == 0) {
+  if(_currentStep == 0 || _shouldInitialize) {
+
+    _shouldInitialize = false;
+    
     // Initialization and first step
     _linearSystem->setRecomputeStatus(true);
     _solutionContainer->initialize(_sol, _mesh, _metaNumber);

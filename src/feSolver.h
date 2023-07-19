@@ -43,6 +43,8 @@ protected:
   double _tCurrent;
   int _currentStep;
 
+  bool _shouldInitialize = true;
+
   std::vector<std::vector<double> > _normL2;
   std::vector<std::vector<double> > _IntBoundary;
 
@@ -72,6 +74,7 @@ public:
   std::vector<double> &getNorm(int iNorm) { return _normL2[iNorm]; };
 
   int getCurrentStep() { return _currentStep; };
+  void setCurrentStep(int step) { _currentStep = step; };
 
   virtual feStatus makeStep() = 0;
   virtual feStatus makeSteps(int nSteps) = 0;

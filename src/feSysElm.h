@@ -9,10 +9,15 @@
 
 typedef enum {
   SOURCE,
+  SOURCE_DIRAC,
   VECTOR_SOURCE,
+  MIXED_SCALAR_VECTOR_SOURCE,
   GRAD_SOURCE,
   MASS,
+  MIXED_MASS,
   VECTOR_MASS,
+  MIXED_VECTOR_MASS,
+  MIXED_SCALAR_VECTOR_MASS,
   TRANSIENT_MASS,
   DIFFUSION,
   VECTOR_DIFFUSION,
@@ -46,14 +51,24 @@ inline const std::string toString(elementSystemType t)
   switch(t) {
     case SOURCE:
       return "SOURCE";
+    case SOURCE_DIRAC:
+      return "SOURCE_DIRAC";
     case VECTOR_SOURCE:
       return "VECTOR_SOURCE";
+    case MIXED_SCALAR_VECTOR_SOURCE:
+      return "MIXED_SCALAR_VECTOR_SOURCE";
     case GRAD_SOURCE:
       return "GRAD_SOURCE";
     case MASS:
       return "MASS";
+    case MIXED_MASS:
+      return "MIXED_MASS";
     case VECTOR_MASS:
       return "VECTOR_MASS";
+    case MIXED_VECTOR_MASS:
+      return "MIXED_VECTOR_MASS";
+    case MIXED_SCALAR_VECTOR_MASS:
+      return "MIXED_SCALAR_VECTOR_MASS";
     case TRANSIENT_MASS:
       return "TRANSIENT_MASS";
     case DIFFUSION:
@@ -123,6 +138,8 @@ protected:
   bool _computeMatrixWithFD = false;
   // Does this form have an elementary matrix to assemble?
   bool _hasMatrix = false;
+  // Is the computation thread safe?
+  bool _isThreadSafe = true;
 
   // Physical coordinates of a node
   std::vector<double> _pos;
@@ -155,6 +172,7 @@ public:
   std::string getWeakFormName() { return toString(_ID); }
   bool computeMatrixWithFD() { return _computeMatrixWithFD; }
   bool hasMatrix() { return _hasMatrix; }
+  bool isThreadSafe() { return _isThreadSafe; }
 
   virtual void createElementarySystem(std::vector<feSpace *> &spaces){};
   virtual void computeAe(feBilinearForm *form){};
@@ -188,6 +206,29 @@ public:
   CLONEABLE(feSysElm_Source)
 };
 
+//
+// A particular case where the source term is the Dirac delta.
+// Used to compute the adjoint solution when the output functional
+// is the solution evaluated at x_0.
+//
+// !!! NOT THREAD SAFE BECAUSE OF THE LOCATE VERTEX CALLS
+//
+class feSysElm_SourceDirac : public feSysElm
+{
+protected:
+  std::vector<double> &_x0;
+  int _idU;
+  std::vector<double> _phiAtX0;
+
+public:
+  feSysElm_SourceDirac(std::vector<double> &x0) : feSysElm(-1, 1, SOURCE, false), _x0(x0)
+  { _isThreadSafe = false; };
+  ~feSysElm_SourceDirac(){};
+  void createElementarySystem(std::vector<feSpace *> &space);
+  void computeBe(feBilinearForm *form);
+  CLONEABLE(feSysElm_SourceDirac)
+};
+
 class feSysElm_VectorSource : public feSysElm
 {
 protected:
@@ -214,6 +255,8 @@ public:
 //  | coeff * u * v dx
 //  /
 //
+// where v is the test function of u.
+//
 // # fields: 1 (FE solution and test functions)
 //                        U
 // Fields layout: phi_U [   ]
@@ -234,6 +277,36 @@ public:
   CLONEABLE(feSysElm_Mass)
 };
 
+//
+// Mass matrix for one variable tested with the test functions of another variable
+// Matrix and residual
+//
+//  /
+//  | coeff * u * v dx
+//  /
+//
+// where v is NOT the test function of u, but of another variable.
+//
+// # fields: 2 (FE solution and distinct test functions)
+//                    U
+// Fields layout: V [   ]
+//
+class feSysElm_MixedMass : public feSysElm
+{
+protected:
+  feFunction *_coeff;
+  int _idU, _idV, _nFunctionsU, _nFunctionsV;
+  std::vector<double> _phiU, _phiV;
+
+public:
+  feSysElm_MixedMass(feFunction *coeff) : feSysElm(-1, 2, MIXED_MASS, true), _coeff(coeff){};
+  ~feSysElm_MixedMass(){};
+  void createElementarySystem(std::vector<feSpace *> &space);
+  void computeAe(feBilinearForm *form);
+  void computeBe(feBilinearForm *form);
+  CLONEABLE(feSysElm_MixedMass)
+};
+
 class feSysElm_VectorMass : public feSysElm
 {
 protected:
@@ -243,15 +316,78 @@ protected:
   std::vector<double> _phiU;
 
 public:
-  feSysElm_VectorMass(feFunction *coeff) : feSysElm(-1, 1, VECTOR_MASS, true), _coeff(coeff)
-  {
-    _computeMatrixWithFD = false;
-  };
+  feSysElm_VectorMass(feFunction *coeff) : feSysElm(-1, 1, VECTOR_MASS, true), _coeff(coeff){};
   ~feSysElm_VectorMass(){};
   void createElementarySystem(std::vector<feSpace *> &space);
   void computeAe(feBilinearForm *form);
   void computeBe(feBilinearForm *form);
   CLONEABLE(feSysElm_VectorMass)
+};
+
+//
+// Mass matrix for one vector-valued variable tested with the test functions 
+// of another vector-valued variable"
+// Matrix and residual
+//
+//  /
+//  | coeff * u dot v dx
+//  /
+//
+// where v is NOT the test function of u, but of another variable.
+//
+// # fields: 2 (FE solution and distinct test functions)
+//                    U
+// Fields layout: V [   ]
+//
+class feSysElm_MixedVectorMass : public feSysElm
+{
+protected:
+  feFunction *_coeff;
+  std::vector<double> _u;
+  int _idU, _idV, _nFunctionsU, _nFunctionsV, _nComponentsU, _nComponentsV;
+  std::vector<double> _phiU, _phiV;
+
+public:
+  feSysElm_MixedVectorMass(feFunction *coeff) : feSysElm(-1, 2, MIXED_VECTOR_MASS, true), _coeff(coeff){};
+  ~feSysElm_MixedVectorMass(){};
+  void createElementarySystem(std::vector<feSpace *> &space);
+  void computeAe(feBilinearForm *form);
+  void computeBe(feBilinearForm *form);
+  CLONEABLE(feSysElm_MixedVectorMass)
+};
+
+//
+// Mass matrix for one vector-valued variable tested with the test functions of 
+// a scalar-valued variable.
+//
+// Matrix and residual
+//
+//  /
+//  | coeff * u * v dx with u vector-valued, v scalar 
+//  /
+//
+// # fields: 2 (FE solution and distinct test functions)
+//                    U
+// Fields layout: V [   ]
+//
+class feSysElm_MixedScalarVectorMass : public feSysElm
+{
+protected:
+  feFunction *_coeff;
+  std::vector<double> _u;
+  int _idU, _idV, _nFunctionsU, _nFunctionsV, _nComponentsU;
+  std::vector<double> _phiU, _phiV;
+
+public:
+  feSysElm_MixedScalarVectorMass(feFunction *coeff) : feSysElm(-1, 2, MIXED_SCALAR_VECTOR_MASS, true), _coeff(coeff)
+  {
+    _computeMatrixWithFD = true;
+  };
+  ~feSysElm_MixedScalarVectorMass(){};
+  void createElementarySystem(std::vector<feSpace *> &space);
+  void computeAe(feBilinearForm *form);
+  void computeBe(feBilinearForm *form);
+  CLONEABLE(feSysElm_MixedScalarVectorMass)
 };
 
 //

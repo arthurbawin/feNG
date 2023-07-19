@@ -382,6 +382,44 @@ feStatus feCncGeo::recomputeElementJacobian(const int iElm)
   return FE_STATUS_OK;
 }
 
+feStatus feCncGeo::computeNormalVectors(std::vector<double> &normalVectors) const
+{
+  int nQuad = _geometricInterpolant->getNumQuadPoints();
+  std::vector<double> &xQuad = _geometricInterpolant->getRQuadraturePoints();
+  normalVectors.resize(3 * _nElements * nQuad);
+
+  std::vector<double> geoCoord(3 * _nVerticesPerElm);
+
+  if(_dim != 1) {
+    return feErrorMsg(FE_STATUS_ERROR, "Only computing normal vectors for 1D connectivities for now.");
+  }
+
+  for(int iElm = 0; iElm < _nElements; ++iElm) {
+    _mesh->getCoord(_tag, iElm, geoCoord);
+    for(int k = 0; k < nQuad; ++k) {
+      double tangent[2] = {1., 0.};
+
+      if(_interpolant == geometricInterpolant::LINEP1) {
+        tangent[0] = geoCoord[3] - geoCoord[0];
+        tangent[1] = geoCoord[4] - geoCoord[1];
+      }
+      if(_interpolant == geometricInterpolant::LINEP2) {
+        // Map quad r-coordinate from [-1,1] to [0,1] 
+        double t = (xQuad[k] + 1.) / 2.;
+        tangent[0] = geoCoord[0] * (4.*t - 3.) + geoCoord[6] * (4. - 8.*t) + geoCoord[3] * (4.*t - 1.);
+        tangent[1] = geoCoord[1] * (4.*t - 3.) + geoCoord[7] * (4. - 8.*t) + geoCoord[4] * (4.*t - 1.);
+      }
+
+      double norm = sqrt(tangent[0]*tangent[0] + tangent[1]*tangent[1]);
+      normalVectors[3 * nQuad * iElm + 3 * k + 0] = -tangent[1] / norm;
+      normalVectors[3 * nQuad * iElm + 3 * k + 1] =  tangent[0] / norm;
+      normalVectors[3 * nQuad * iElm + 3 * k + 2] = 0.;
+    }
+  }
+
+  return FE_STATUS_OK;
+}
+
 // Lagrange points are given as {L200, L020, L002, L110, L011, L101}
 void getBezierControlPoints(const SPoint2 L[6], SPoint2 P[6])
 {

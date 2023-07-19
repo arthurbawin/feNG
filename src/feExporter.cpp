@@ -410,11 +410,12 @@ void feExporterVTK::writeMesh(std::ostream &output)
   }
 
   int nElm = 0;
+  int nNodePerElem = _addP2Nodes ? 6 : 3;
   for(auto *cnc : _exportedConnectivities) {
     nElm += cnc->getNumElements();
+    if(cnc->getInterpolant() == geometricInterpolant::TRIP2)
+      nNodePerElem = 6;
   }
-
-  int nNodePerElem = _addP2Nodes ? 6 : 3;
 
   // Write elements connectivities for each cnc wih dim = 2
   output << "CELLS " << nElm << " " << nElm * (nNodePerElem + 1) << std::endl;

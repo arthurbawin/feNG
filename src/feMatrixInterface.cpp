@@ -19,12 +19,23 @@ public:
   MetricTensorImpl(MetricTensorImpl &&) noexcept = default;
   MetricTensorImpl &operator=(MetricTensorImpl &&) noexcept = default;
 
-  // "Real" constructor
+  // "Real" constructors
   MetricTensorImpl(const double val)
   {
     _m = Eigen::Matrix2d::Identity();
     _m(0, 0) = val;
     _m(1, 1) = val;
+  }
+  MetricTensorImpl(const double eigenvalues[2], const double eigenvector1[2], const double eigenvector2[2])
+  {
+    // Matrix whose columns are the eigenvectors
+    Eigen::Matrix2d V, D;
+    V(0,0) = eigenvector1[0];
+    V(1,0) = eigenvector1[1];
+    V(0,1) = eigenvector2[0];
+    V(1,1) = eigenvector2[1];
+    D << eigenvalues[0], 0., 0., eigenvalues[1];
+    _m = V * D * V.transpose();
   }
 
   void setMatrix(const Eigen::Matrix2d &other) { _m = other; };
@@ -37,6 +48,8 @@ MetricTensor &MetricTensor::operator=(MetricTensor &&) noexcept = default;
 
 // "Real" constructor
 MetricTensor::MetricTensor(const double val) : _impl(std::make_unique<MetricTensorImpl>(val)) {}
+MetricTensor::MetricTensor(const double eigenvalues[2], const double eigenvector1[2], const double eigenvector2[2])
+  : _impl(std::make_unique<MetricTensorImpl>(eigenvalues, eigenvector1, eigenvector2)) {}
 
 // =============== MetricTensor member functions ===============
 double &MetricTensor::operator()(int i, int j) { return _impl->_m(i, j); }
@@ -54,10 +67,24 @@ MetricTensor MetricTensor::operator*(const double &val) const
   return tmp;
 }
 
+MetricTensor MetricTensor::operator/(const double &val) const
+{
+  MetricTensor tmp(1.0);
+  tmp._impl->setMatrix(_impl->_m / val);
+  return tmp;
+}
+
 MetricTensor MetricTensor::operator+(const MetricTensor &other) const
 {
   MetricTensor tmp(1.0);
   tmp._impl->setMatrix(_impl->_m + other._impl->_m);
+  return tmp;
+}
+
+MetricTensor MetricTensor::operator-(const MetricTensor &other) const
+{
+  MetricTensor tmp(1.0);
+  tmp._impl->setMatrix(_impl->_m - other._impl->_m);
   return tmp;
 }
 
@@ -86,10 +113,26 @@ MetricTensor MetricTensor::transpose() const
   return tr;
 }
 
+// #define INLINED_LOG
+
 MetricTensor MetricTensor::log() const
 {
   MetricTensor logm(1.0);
+  #if defined(INLINED_LOG)
+  double a = this->_impl->_m(0,0);
+  double b = this->_impl->_m(0,1);
+  double c = this->_impl->_m(1,1);
+  double r4 = sqrt(a*a - 2.*a*c + 4.*b*b + c*c);
+  double r3 = std::log( (a + c + r4) / 2. );
+  double r2 = std::log( (a + c - r4) / 2. );
+  double r1 = -b * (r2 - r3) / r4;
+  logm(0,0) = (r2 * (c - a + r4) + r3 * (a - c + r4)) / (2.*r4);
+  logm(0,1) = r1;
+  logm(1,0) = r1;
+  logm(1,1) = (r2 * (a - c + r4) + r3 * (c - a + r4)) / (2.*r4);
+  #else
   logm._impl->setMatrix(this->_impl->_m.log());
+  #endif
   return logm;
 }
 
@@ -98,6 +141,11 @@ MetricTensor MetricTensor::exp() const
   MetricTensor expm(1.0);
   expm._impl->setMatrix(this->_impl->_m.exp());
   return expm;
+}
+
+double MetricTensor::maxCoeff() const
+{
+  return this->_impl->_m.maxCoeff();
 }
 
 MetricTensor MetricTensor::absoluteValueEigen() const
@@ -127,6 +175,44 @@ MetricTensor MetricTensor::boundEigenvaluesOfAbs(const double lMin, const double
   res._impl->setMatrix(es.eigenvectors().real() * D * es.eigenvectors().transpose().real());
   return res;
 }
+
+MetricTensor MetricTensor::boundEigenvaluesOfAbsIsotropic(const double lMin, const double lMax) const
+{
+  Eigen::EigenSolver<Eigen::Matrix2d> es;
+  Eigen::EigenSolver<Eigen::Matrix2d>::EigenvalueType ev;
+  es.compute(_impl->_m, true);
+  ev = es.eigenvalues();
+  Eigen::Matrix2d D = Eigen::Matrix2d::Identity();
+  // Take most critical (largest) eigenvalue
+  double lambda = fmax(ev(0).real(), ev(1).real());
+  D(0, 0) = fmin(lMax, fmax(lMin, fabs( lambda )));
+  D(1, 1) = fmin(lMax, fmax(lMin, fabs( lambda )));
+  MetricTensor res(1.0);
+  // res._impl->setMatrix(es.eigenvectors().real() * D * es.eigenvectors().transpose().real());
+  res._impl->setMatrix(D);
+  return res;
+}
+
+MetricTensor MetricTensor::setEigenvectorsAndBoundEigenvalues(const double ev1[2],
+  const double ev2[2],const double lMin, const double lMax) const
+{
+  Eigen::EigenSolver<Eigen::Matrix2d> es;
+  Eigen::EigenSolver<Eigen::Matrix2d>::EigenvalueType ev;
+  es.compute(_impl->_m, true);
+  ev = es.eigenvalues();
+  Eigen::Matrix2d D = Eigen::Matrix2d::Identity();
+  D(0, 0) = fmin(lMax, fmax(lMin, fabs(ev(0).real())));
+  D(1, 1) = fmin(lMax, fmax(lMin, fabs(ev(1).real())));
+  Eigen::Matrix2d newEigenvectors;
+  newEigenvectors(0,0) = ev1[0];
+  newEigenvectors(1,0) = ev1[1];
+  newEigenvectors(0,1) = ev2[0];
+  newEigenvectors(1,1) = ev2[1];
+  MetricTensor res(1.0);
+  res._impl->setMatrix(newEigenvectors * D * newEigenvectors.transpose());
+  return res;
+}
+
 
 // ============================================================
 // Implementation of Vector

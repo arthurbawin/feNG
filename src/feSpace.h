@@ -158,6 +158,7 @@ public:
   void setCncPtr(feCncGeo *cnc) { _cnc = cnc; }
   // Assign the mesh pointer of a geometric space after the mesh has been created
   void setMeshPtr(feMesh *mesh) { _mesh = mesh; }
+  feMesh *getMeshPtr() { return _mesh; }
   // Assign the pointer to the field numbering after the numbering has been created
   void setNumberingPtr(feNumber *numbering) { _numbering = numbering; }
 
@@ -316,6 +317,7 @@ public:
   void interpolateVectorField(std::vector<double> &field, double *r, std::vector<double> &res);
   void interpolateVectorField(std::vector<double> &field, int nComponents, double *r,
                               std::vector<double> &res);
+  double interpolateVectorFieldComponent(std::vector<double> &field, int iComponent, double *r);
   void interpolateVectorField_rDerivative(std::vector<double> &field, double *r,
                                           std::vector<double> &res);
   void interpolateVectorField_sDerivative(std::vector<double> &field, double *r,
@@ -351,6 +353,9 @@ public:
   // Interpolate vector valued function using vector valued FE space
   void interpolateVectorFieldAtQuadNode(std::vector<double> &field, int iNode,
                                         std::vector<double> &res, int nComponents);
+  // Interpolate scalar component of vector valued function using vector valued FE space
+  double interpolateVectorFieldComponentAtQuadNode(std::vector<double> &field, int iNode, int iComponent);
+  double interpolateVectorFieldComponentAtQuadNode_fullField(std::vector<double> &field, int iNode, int iComponent);
 
   void interpolateVectorFieldAtQuadNode_rDerivative(std::vector<double> &field, int iNode,
                                                     std::vector<double> &res);

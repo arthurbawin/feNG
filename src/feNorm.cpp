@@ -131,6 +131,15 @@ double feNorm::compute(normType type)
     case DOT_PRODUCT:
       return this->computeIntegralDotProduct();
       break;
+    case PRESSURE_LIFT_FORCE:
+      return this->computePressureLift();
+      break;
+    case PRESSURE_DRAG_FORCE:
+      return this->computePressureDrag();
+      break;
+    case VISCOUS_LIFT_FORCE:
+      return this->computeViscousLift();
+      break;
   }
   return res;
 }
@@ -153,8 +162,11 @@ double feNorm::computeLpNorm(int p, bool error)
     exit(-1);
   }
 
-  // FILE *myfile = fopen("errorOnElements.pos", "w");
-  // fprintf(myfile, "View \"errorOnElements\"{\n");
+  FILE *myfile;
+  if(_plotErrorToFile) {
+    myfile = fopen(_errorPlotFileName.data(), "w");
+    fprintf(myfile, "View \"errorOnElements\"{\n");
+  }
 
   for(int iElm = 0; iElm < _nElm; ++iElm) {
     this->initializeLocalSolutionOnSpace(0, iElm);
@@ -172,11 +184,16 @@ double feNorm::computeLpNorm(int p, bool error)
     res += eLocPowP;
 
     double eLoc = pow(eLocPowP, 1. / (double)p);
-    // Plot error
-    // _cnc->writeElementToPOS(myfile, _geoCoord, eLoc);
+
+    if(_plotErrorToFile) {
+      // Plot error
+      _cnc->writeElementToPOS(myfile, _geoCoord, eLoc);
+    }
   }
 
-  // fprintf(myfile, "};\n"); fclose(myfile);
+  if(_plotErrorToFile) {
+    fprintf(myfile, "};\n"); fclose(myfile);
+  }
 
   return pow(res, 1. / (double)p);
 }
@@ -536,6 +553,30 @@ double feNorm::computeErrorThirdDerivativesExactVsEstimator(int p)
   return sqrt(res);
 }
 
+double feNorm::computeLpErrorFromTransferredSolution(int p, feSolution *otherSol)
+{
+  double res = 0.0, uh1, uh2;
+  _localSol.resize(2);
+  _localSol[0].resize(_spaces[0]->getNumFunctions());
+  _localSol[1].resize(_spaces[0]->getNumFunctions());
+
+  for(int iElm = 0; iElm < _nElm; ++iElm) {
+
+    // Initialize current and other solutions
+    this->initializeLocalSolutionOnSpace(0, iElm);
+    otherSol->getSolAtDOF(_adr[0], _localSol[1]);
+
+    _spaces[0]->_mesh->getCoord(_cnc, iElm, _geoCoord);
+
+    for(int k = 0; k < _nQuad; ++k) {
+      uh1 = _spaces[0]->interpolateFieldAtQuadNode(_localSol[0], k);
+      uh2 = _spaces[0]->interpolateFieldAtQuadNode(_localSol[1], k);
+
+      res += pow(fabs(uh1 - uh2), p) * _J[_nQuad * iElm + k] * _w[k];
+    }
+  }
+  return pow(res, 1. / (double)p);
+}
 
 double feNorm::computeVectorLpNorm(int p, bool error)
 {
@@ -889,4 +930,156 @@ feStatus feNorm::computeErrorNormFromExternalSolution(feMetaNumber *metaNumber, 
                                        "matches the target space on this connectivity.\n");
 
   return FE_STATUS_OK;
+}
+
+// Compute lift force by evaluating integral of provided field (assumed to be pressure)
+// projected along vertical unit vector.
+double feNorm::computePressureLift()
+{
+  double res = 0.0, ph;
+
+  if(_cnc->getDim() != 1) {
+    feErrorMsg(FE_STATUS_ERROR, "Can only compute lift force on 1D connectivities for now.");
+  }
+
+  // FILE *myf = fopen("NORMALES.pos", "w");
+  // fprintf(myf, "View \"normales\"{\n");
+
+  std::vector<double> normalVectors; // Size = 3 * nQuad * nElm
+  _cnc->computeNormalVectors(normalVectors);
+
+  for(int iElm = 0; iElm < _nElm; ++iElm) {
+    this->initializeLocalSolutionOnSpace(0, iElm);
+    _spaces[0]->_mesh->getCoord(_cnc, iElm, _geoCoord);
+
+    for(int k = 0; k < _nQuad; ++k) {
+      ph = _spaces[0]->interpolateFieldAtQuadNode(_localSol[0], k);
+      _geoSpace->interpolateVectorFieldAtQuadNode(_geoCoord, k, _pos);
+
+      double ny = normalVectors[3*_nQuad*iElm + 3*k + 1];
+
+      res += ph * ny * _J[_nQuad * iElm + k] * _w[k];
+      // fprintf(myf, "VP(%.16g,%.16g,%.16g){%.16g,%.16g,%.16g};\n",_pos[0], _pos[1], 0.,
+      //   normalVectors[3*_nQuad*iElm + 3*k + 0],
+      //   normalVectors[3*_nQuad*iElm + 3*k + 1],
+      //   normalVectors[3*_nQuad*iElm + 3*k + 2]);
+    }
+  }
+
+  // fprintf(myf, "};\n"); fclose(myf);
+
+  return res;
+}
+
+double feNorm::computeViscousLift()
+{
+  double res = 0.0, ph;
+
+  if(_cnc->getDim() != 1) {
+    feErrorMsg(FE_STATUS_ERROR, "Can only compute lift force on 1D connectivities for now.");
+  }
+
+  std::vector<double> normalVectors; // Size = 3 * nQuad * nElm
+  _cnc->computeNormalVectors(normalVectors);
+
+  for(int iElm = 0; iElm < _nElm; ++iElm) {
+    this->initializeLocalSolutionOnSpace(0, iElm);
+    _spaces[0]->_mesh->getCoord(_cnc, iElm, _geoCoord);
+
+    for(int k = 0; k < _nQuad; ++k) {
+      ph = _spaces[0]->interpolateFieldAtQuadNode(_localSol[0], k);
+      _geoSpace->interpolateVectorFieldAtQuadNode(_geoCoord, k, _pos);
+
+      double ny = normalVectors[3*_nQuad*iElm + 3*k + 1];
+
+      res += ph * ny * _J[_nQuad * iElm + k] * _w[k];
+    }
+  }
+
+  return res;
+}
+
+// Compute drag force by evaluating integral of provided field (assumed to be pressure)
+// projected along horizontal unit vector.
+double feNorm::computePressureDrag()
+{
+  double res = 0.0, ph;
+
+  if(_cnc->getDim() != 1) {
+    feErrorMsg(FE_STATUS_ERROR, "Can only compute drag force on 1D connectivities for now.");
+  }
+
+  std::vector<double> normalVectors; // Size = 3 * nQuad * nElm
+  _cnc->computeNormalVectors(normalVectors);
+
+  for(int iElm = 0; iElm < _nElm; ++iElm) {
+    this->initializeLocalSolutionOnSpace(0, iElm);
+    _spaces[0]->_mesh->getCoord(_cnc, iElm, _geoCoord);
+
+    for(int k = 0; k < _nQuad; ++k) {
+      ph = _spaces[0]->interpolateFieldAtQuadNode(_localSol[0], k);
+      _geoSpace->interpolateVectorFieldAtQuadNode(_geoCoord, k, _pos);
+      double nx = normalVectors[3*_nQuad*iElm + 3*k + 0];
+      res += ph * nx * _J[_nQuad * iElm + k] * _w[k];
+    }
+  }
+
+  return res;
+}
+
+double feNorm::computeViscousDrag(double viscosity, feNewRecovery *recU, feNewRecovery *recV)
+{
+  double res = 0.0, uh, vh;
+
+  if(_cnc->getDim() != 1) {
+    feErrorMsg(FE_STATUS_ERROR, "Can only compute drag force on 1D connectivities for now.");
+    exit(-1);
+  }
+  if(_spaces[0]->getNumComponents() == 1) {
+    feErrorMsg(FE_STATUS_ERROR, "Can only compute drag force for a vector-valued FE space (velocity field).");
+    exit(-1);
+  }
+  if(recU == nullptr || recV == nullptr) {
+    feErrorMsg(FE_STATUS_ERROR, "Cannot computeViscousDrag "
+                                " because at least one feRecovery (solution reconstruction) is NULL");
+    exit(-1);
+  }
+
+  std::vector<double> normalVectors; // Size = 3 * nQuad * nElm
+  _cnc->computeNormalVectors(normalVectors);
+
+  double grad_u[4];
+  ElementTransformation transformation;
+
+  for(int iElm = 0; iElm < _nElm; ++iElm) {
+    this->initializeLocalSolutionOnSpace(0, iElm);
+    _spaces[0]->_mesh->getCoord(_cnc, iElm, _geoCoord);
+
+    for(int k = 0; k < _nQuad; ++k) {
+      double jac = _J[_nQuad * iElm + k];
+      // _cnc->computeElementTransformation(_geoCoord, k, jac, transformation);
+      // _spaces[0]->interpolateVectorFieldAtQuadNode_physicalGradient(_localSol[0], 2, k, transformation, grad_u);
+      // double dudx = grad_u[0];
+      // double dudy = grad_u[1];
+      // double dvdx = grad_u[2];
+      // double dvdy = grad_u[3];
+
+      _geoSpace->interpolateVectorFieldAtQuadNode(_geoCoord, k, _pos);
+
+      double dudx = recU->evaluateRecovery(PPR::DERIVATIVE, 0, _pos.data());
+      double dudy = recU->evaluateRecovery(PPR::DERIVATIVE, 1, _pos.data());
+      double dvdx = recV->evaluateRecovery(PPR::DERIVATIVE, 0, _pos.data());
+      double dvdy = recV->evaluateRecovery(PPR::DERIVATIVE, 1, _pos.data());
+
+      double nx = normalVectors[3*_nQuad*iElm + 3*k + 0];
+      double ny = normalVectors[3*_nQuad*iElm + 3*k + 1];
+
+      double tauDotN[2] = {viscosity * (nx * (  2. * dudx) + ny * (dudy + dvdx)),
+                           viscosity * (nx * (dudy + dvdx) + ny * (  2. * dvdy))};
+
+      res += tauDotN[0] * nx * _J[_nQuad * iElm + k] * _w[k];
+    }
+  }
+
+  return res;
 }

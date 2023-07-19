@@ -72,14 +72,14 @@ public:
 
   int _nElm;
   int _nNodePerElm;
-  std::vector<feInt> _adr;
-  std::vector<double> _solution;
 
   feMesh *_mesh;
   feSolution *_sol;
   feMetaNumber *_numbering;
 
   feSpace *_intSpace;
+  // For vector-valued feSpaces
+  int _componentToRecover = 0;
   feSpace *_geoSpace;
 
   feNewPatch *_patch;
@@ -147,6 +147,7 @@ protected:
 
 public:
   feNewRecovery(feSpace *space,
+                int indexComponent,
                 feMesh *mesh,
                 feSolution *sol,
                 std::string meshName = "",
@@ -161,6 +162,8 @@ public:
   int getDim() { return _dim; }
   int getDimRecovery() { return _dimRecovery; }
   int getDegreeSolution() { return _degSol; }
+
+  void setVectorComponentToRecover(int component) { _componentToRecover = component; };
 
   std::vector<int> &getVertices() { return _patch->getVertices(); }
 

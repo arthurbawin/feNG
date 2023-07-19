@@ -6,7 +6,7 @@
 
 extern int FE_VERBOSE;
 
-// #define EXPORT_FIELDS_TO_GMSH
+#define EXPORT_FIELDS_TO_GMSH
 
 #define XLOC_TOL 1e-16
 // #define TRUNCATE_MATRIX
@@ -66,6 +66,11 @@ feNewPatch::feNewPatch(const feCncGeo *cnc, feMesh *mesh, bool reconstructAtHigh
   _nVertices = _vertices.size();
   _nNodePerElm = cnc->getNumVerticesPerElem();
   _nEdgePerElm = cnc->getNumEdgesPerElem();
+
+  if(_nVertices < 10) {
+    feErrorMsg(FE_STATUS_ERROR, "Mesh has too few vertices (%d) to compute solution recovery", _nVertices);
+    exit(-1);
+  }
 
   // If mesh if high-order, keep only the P1 vertices.
   // This is because the Zhang-Naga method reconstructs fields at vertices,
@@ -835,8 +840,6 @@ void feNewRecovery::computeRHSAndSolve_noIntegral(int numRecoveries, int nRecove
   std::map<int, bool> &isVertexBoundary = _patch->getBoundaryVertices();
   std::map<int, std::pair<double, double>> &scaling = _patch->getScaling();
 
-  std::vector<double> &solVec = _sol->getSolutionReference();
-
   std::map<int, Vector> allSOL;
   std::map<int, Vector> allRHS;
 
@@ -844,7 +847,6 @@ void feNewRecovery::computeRHSAndSolve_noIntegral(int numRecoveries, int nRecove
   #pragma omp parallel
   #endif
   {
-    std::vector<double> solution(_intSpace->getNumFunctions());
     std::vector<double> xLoc(3, 0.0);
     std::vector<double> recoveryVector(_dimRecovery, 0.);
     std::vector<double> recoveryVectorOnBoundary(1, 0.);
@@ -892,7 +894,7 @@ void feNewRecovery::computeRHSAndSolve_noIntegral(int numRecoveries, int nRecove
 
           if(iDerivative == 0) {
             // Reconstruct the solution : get solution from feSolution at DOF
-            int iDOF = _numbering->getNumbering("U")->getDOFNumberAtVertex(patchVertex, 0);
+            int iDOF = _numbering->getNumbering(_intSpace->getFieldID())->getDOFNumberAtVertex(patchVertex, _componentToRecover);
             for(int iComp = 0; iComp < numRecoveries; ++iComp) {
               RHS[iComp](iV) = _sol->getSolAtDOF(iDOF);
             }
@@ -979,7 +981,7 @@ void feNewRecovery::recomputeRHSAndSolve(const int vertex)
   int iV = 0;
   for(auto patchVertex : verticesPatch) {
     // Reconstruct the solution : get solution from feSolution at DOF
-    int iDOF = _numbering->getNumbering("U")->getDOFNumberAtVertex(patchVertex, 0);
+    int iDOF = _numbering->getNumbering(_intSpace->getFieldID())->getDOFNumberAtVertex(patchVertex, _componentToRecover);
     RHS(iV) = _sol->getSolAtDOF(iDOF);
     ++iV;
   }
@@ -1222,6 +1224,13 @@ void feNewRecovery::computeHomogeneousErrorPolynomials()
       #if defined(TREAT_BOUNDARIES)
       }
       #endif
+
+      // Set minimum error to threshold
+      for(auto &val : error) {
+        if(val >= 0) val = fmax(1e-10, val);
+        if(val <= 0) val = fmin(-1e-10, val);
+      }
+
       errorCoeff[v] = error;
     }
   }
@@ -1363,7 +1372,7 @@ void feNewRecovery::computeRecoveryAtAllElementDOF(PPR recoveredField, const int
   // Simply evaluate the recoveries at (0,0)
   // if there is one recovery at each DOF (i.e. linear interpolation
   // on P1 mesh or P2 interpolation on P2 mesh)
-  int nFunctions = _intSpace->getNumFunctions();
+  int nFunctions = _intSpace->getNumFunctions() / _intSpace->getNumComponents();
 
   // Only fill the first 3 entries (even if triangle is P2)
   // To use when the P2 edge vertices are optimized and moved
@@ -1626,6 +1635,8 @@ double feNewRecovery::averageRecoveryEvaluations(PPR recoveredField, const int i
 // (not the geometric interpolant)
 // Note: this is *not* equivalent to evaluating each polynomial at the quad node, then averaging
 
+
+// Hardcoded for P2 triangle with 6 DOFs
 thread_local std::vector<double> RECOVERY_AT_DOFS(6);
 
 double feNewRecovery::evaluateRecoveryAtQuadNode(PPR recoveredField, const int index,
@@ -1637,7 +1648,10 @@ double feNewRecovery::evaluateRecoveryAtQuadNode(PPR recoveredField, const int i
   #else
   // The "classic" Zhang and Naga method: interpolate the data at DOFS using the interpolation functions
   computeRecoveryAtAllElementDOF(recoveredField, index, iElm, RECOVERY_AT_DOFS);
-  return _intSpace->interpolateFieldAtQuadNode(RECOVERY_AT_DOFS, iQuadNode);
+  if(_intSpace->getNumComponents() > 1)
+    return _intSpace->interpolateVectorFieldComponentAtQuadNode(RECOVERY_AT_DOFS, iQuadNode, _componentToRecover);
+  else
+    return _intSpace->interpolateFieldAtQuadNode(RECOVERY_AT_DOFS, iQuadNode);
   #endif
 }
 
@@ -1659,7 +1673,10 @@ double feNewRecovery::evaluateRecovery(PPR recoveredField, const int index, cons
     } else {
       // The "classic" Zhang and Naga method: interpolate the data at DOFS using the interpolation functions
       computeRecoveryAtAllElementDOF(recoveredField, index, elm, RECOVERY_AT_DOFS);
-      return _intSpace->interpolateField(RECOVERY_AT_DOFS, UVW);
+      if(_intSpace->getNumComponents() > 1)
+        return _intSpace->interpolateVectorFieldComponent(RECOVERY_AT_DOFS, _componentToRecover, UVW);
+      else
+        return _intSpace->interpolateField(RECOVERY_AT_DOFS, UVW);
     }
   }
 }
@@ -1704,27 +1721,33 @@ double feNewRecovery::evaluateRecoveryLinear(PPR recoveredField, const int index
   }
 }
 
-feNewRecovery::feNewRecovery(feSpace *space, feMesh *mesh, feSolution *sol, std::string meshName,
+feNewRecovery::feNewRecovery(feSpace *space, int indexComponent, feMesh *mesh, feSolution *sol, std::string meshName,
                              std::string metricMeshName, bool reconstructAtHighOrderNodes,
                              bool append, feMetric *metricField, feMetaNumber *numbering)
-  : _mesh(mesh), _sol(sol), _numbering(numbering), _intSpace(space), _cnc(space->getCncGeo()),
+  : _mesh(mesh), _sol(sol), _numbering(numbering), _componentToRecover(indexComponent), _intSpace(space), _cnc(space->getCncGeo()),
     _nElm(_cnc->getNumElements()), _nNodePerElm(_cnc->getNumVerticesPerElem()),
     _geoSpace(_cnc->getFeSpace()), _degSol(space->getPolynomialDegree()), _degRec(_degSol + 1),
     _dim(mesh->getDim()), _reconstructAtHighOrderNodes(reconstructAtHighOrderNodes)
 {
   feInfoCond(FE_VERBOSE > 0, "");
   feInfoCond(FE_VERBOSE > 0, "SOLUTION AND DERIVATIVES RECOVERY:");
-  feInfoCond(FE_VERBOSE > 0, "\t\tRecovered fields will be written to file: \"%s\"",
-             metricMeshName.c_str());
+  feInfoCond(FE_VERBOSE > 0, "\t\tRecovering field: \"%s\"", _intSpace->getFieldID().c_str());
+  feInfoCond(FE_VERBOSE > 0, "\t\tRecovered fields will be written to file: \"%s\"", metricMeshName.c_str());
+
+  // Still have to modify the integral formulation for vector FE space
+  #if !defined(ORIGINAL_ZHANG_NAGA)
+  if(space->getNumComponents() > 1) {
+    feErrorMsg("Must modify the integral formulation of Zhang and Naga for vector-valued FE spaces first.");
+    feErrorMsg("Adjust size of the solution and adr vectors and check indexing.");
+    exit(-1);
+  }
+  #endif
 
   if(reconstructAtHighOrderNodes && getGeometricInterpolantDegree(_cnc->getInterpolant()) == 1) {
     feWarning("The option reconstructAtHighOrderNodes is set to true, but the connectivity is P1.");
     feWarning("Set the mesh to 'curved' to reconstruct on high order nodes.");
     exit(-1);
   }
-
-  _adr.resize(_intSpace->getNumFunctions());
-  _solution.resize(_adr.size());
 
   _patch = new feNewPatch(_cnc, _mesh, reconstructAtHighOrderNodes, metricField);
 

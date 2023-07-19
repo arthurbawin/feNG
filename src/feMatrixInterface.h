@@ -18,6 +18,7 @@ class MetricTensor
 public:
   // "Real" constructor, for us mere mortals
   MetricTensor(const double val = 1.0);
+  MetricTensor(const double eigenvalues[2], const double eigenvector1[2], const double eigenvector2[2]);
 
   // Default, copy/move constructors/assignments
   // To make insertion in e.g. maps safe
@@ -31,7 +32,9 @@ public:
   double operator()(int i, int j) const;
   MetricTensor &operator*=(const double &val);
   MetricTensor operator*(const double &val) const;
+  MetricTensor operator/(const double &val) const;
   MetricTensor operator+(const MetricTensor &other) const;
+  MetricTensor operator-(const MetricTensor &other) const;
   MetricTensor operator*(const MetricTensor &other) const;
 
   double determinant() const;
@@ -40,6 +43,8 @@ public:
   MetricTensor log() const;
   MetricTensor exp() const;
 
+  double maxCoeff() const;
+
   // Compute diagonalization M = R * |D| * Rt
   // with |D| = diag( |lambda1|, |lambda2| )
   MetricTensor absoluteValueEigen() const;
@@ -47,6 +52,8 @@ public:
   // with |D| = diag( |lambda1|, |lambda2| )
   // and bound the eigenvalues between lMin and lMax
   MetricTensor boundEigenvaluesOfAbs(const double lMin, const double lMax) const;
+  MetricTensor boundEigenvaluesOfAbsIsotropic(const double lMin, const double lMax) const;
+  MetricTensor setEigenvectorsAndBoundEigenvalues(const double ev1[2], const double ev2[2], const double lMin, const double lMax) const;
 
   void print() const;
 

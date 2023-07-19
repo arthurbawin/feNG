@@ -35,20 +35,21 @@ inline feStatus checkMMGcall(std::string &command)
   }
 }
 
-feStatus feMesh2DP1::adapt(feNewRecovery *recoveredField, feMetricOptions &options,
+feStatus feMesh2DP1::adapt(std::vector<feNewRecovery*> recoveredFields, feMetricOptions &options,
                            const std::vector<feSpace *> &spaces,
                            const std::vector<feSpace *> &essentialSpaces,
                            feSpace *spaceForAdaptation,
                            feSolution *discreteSolution,
                            feFunction *exactSolution,
                            feVectorFunction *exactGradient,
-                           bool curve, bool isBackmeshP2, bool setGmshModelToP1, feRecovery *oldRecovery)
+                           bool curve, bool isBackmeshP2, bool setGmshModelToP1,
+                           bool curveMMGmesh, curveToMinimize target, feRecovery *oldRecovery)
 {
 
 #if defined(HAVE_GMSH)
 
   activeMesh = this;
-  activeRecovery = recoveredField;
+  activeRecovery = recoveredFields[0];
 
   // Step 1: Set the gmsh background mesh on which the metric tensors are computed
   if(!gmshWasInitialized) {
@@ -71,7 +72,7 @@ feStatus feMesh2DP1::adapt(feNewRecovery *recoveredField, feMetricOptions &optio
 
   gmsh::open(options.backgroundMeshfile);
 
-  int elementOrder = getGeometricInterpolantDegree(recoveredField->_cnc->getInterpolant());
+  int elementOrder = getGeometricInterpolantDegree(recoveredFields[0]->_cnc->getInterpolant());
   if(setGmshModelToP1 && !curve && elementOrder > 1)
   {
     // Set the mesh to P1.
@@ -88,7 +89,7 @@ feStatus feMesh2DP1::adapt(feNewRecovery *recoveredField, feMetricOptions &optio
   gmsh::model::getCurrent(options.modelForMetric);
   options.isGmshModelReady = true;
 
-  feMetric metricField(recoveredField, options);
+  feMetric metricField(recoveredFields, options);
 
   // Step 2: Create aniso mesh
   // Save directly to .msh to preserve Physical Entities
@@ -200,7 +201,7 @@ feStatus feMesh2DP1::adapt(feNewRecovery *recoveredField, feMetricOptions &optio
     // Tools to compute interpolation error while curving
     feNorm *norm;
     createNorm(norm, L2_ERROR, {spaceForAdaptation}, discreteSolution, exactSolution, exactGradient);
-    norm->setRecovery(recoveredField);
+    norm->setRecovery(recoveredFields[0]);
     activeNorm = norm;
     activeConnectivity = activeMesh->getCncGeoByName("Domaine");
     activeIntSpace = spaceForAdaptation;
@@ -210,7 +211,8 @@ feStatus feMesh2DP1::adapt(feNewRecovery *recoveredField, feMetricOptions &optio
     activeExactSolutionGradient = exactGradient;
     // activeExactSolutionGradient = nullptr;
 
-    computeInterpolationErrorOnEachElement();
+    if(target == curveToMinimize::INTERPOLATION_ERROR)
+      computeInterpolationErrorOnEachElement();
 
     if(elementOrder > 1)
     {
@@ -229,11 +231,6 @@ feStatus feMesh2DP1::adapt(feNewRecovery *recoveredField, feMetricOptions &optio
 
     std::vector<int> viewTags;
     gmsh::view::getTags(viewTags);
-    feInfo("There are %d views in the gmsh model : ", viewTags.size());
-    for(auto val : viewTags) {
-      feInfo("View %d with index %d", val, gmsh::view::getIndex(val));
-    }
-
     metricField.setMetricViewTag(viewTags[0]);
 
     // Check there is an "inside" callback
@@ -251,13 +248,18 @@ feStatus feMesh2DP1::adapt(feNewRecovery *recoveredField, feMetricOptions &optio
 
     meshOptions.faceTag = faceTag;
     meshOptions.inside = options.insideCallback;
+    meshOptions.curveMMGmesh = curveMMGmesh;
+    meshOptions.target = target;
     meshOptions.computeInterpolationError = computeInterpolationError;
     meshOptions.computeInterpolationErrorGradient = computeInterpolationErrorGradient;
+    meshOptions.computeInterpolationErrorCallback_EdgesAndVertices = computeInterpolationErrorCallback_EdgesAndVertices;
     meshOptions.applyCurvatureToFeMesh = applyCurvatureToFeMesh;
     meshOptions.getMidnodeTags = getMidnodeTags;
     meshOptions.getPolyMeshVertexTags = getPolyMeshVertexTags;
     meshOptions.metricUserPointer = (void *) &metricField;
+    meshOptions.interpolateMetricP1Callback = interpolateMetricP1Callback;
     meshOptions.interpolateMetricP2Callback = interpolateMetricP2Callback;
+    meshOptions.interpolateMetricP2CallbackLog = interpolateMetricP2CallbackLog;
 
     tic();
     createCurvedMesh(meshOptions);
