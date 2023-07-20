@@ -452,6 +452,7 @@ void gradationMetriques(double gradation, int nmax, std::vector<double> &coord1,
 #endif
 }
 
+#if defined(HAVE_SOPLEX)
 double solveErrorFunction(double k, double *v, double *w, double H[2][2], double C[2][2][2],
   std::set<double> &roots, linearProblem &myLP)
 {
@@ -538,8 +539,6 @@ double solveErrorFunction(double k, double *v, double *w, double H[2][2], double
   // feInfo("lowest root is %1.16e", s);
   return s;
 }
-
-#if defined(HAVE_SOPLEX)
 
 double evaluateHomogeneousErrorPolynomial(const std::vector<double> &errorCoefficients,
                                                  const int degree, const double xLoc, const double yLoc, MetricTensor &Hij)

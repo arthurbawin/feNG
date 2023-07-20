@@ -259,6 +259,13 @@ typedef struct rtreeSearchCtxStruct {
   int targetPhysicalTag;
 } rtreeSearchCtx;
 
+#if !defined(HAVE_GMSH)
+enum class curveToMinimize
+{ 
+  LENGTH, INTERPOLATION_ERROR, DISTORTION
+};
+#endif
+
 //
 // 2-dimensional mesh
 //

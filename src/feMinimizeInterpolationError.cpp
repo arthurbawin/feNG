@@ -6,7 +6,7 @@ feSpace *activeIntSpace;
 feNumber *activeNumbering;
 feSolution *activeSolution;
 feFunction *activeExactSolution;
-feVectorFunction *activeExactSolutionGradient; 
+feVectorFunction *activeExactSolutionGradient;
 
 feMesh *activeMesh;
 feCncGeo *activeConnectivity;
@@ -23,7 +23,10 @@ static std::vector<double> ELEM_ERROR_SQUARED;
 static double INITIAL_ERROR_SQUARED;
 static std::vector<double> GEO_COORD(18, 0.);
 
-feStatus moveVertexAndRecomputeJacobians(const std::vector<int> &whichElements, const int iVertexToMove_globalTag, const double *modifiedCoord)
+#if defined(HAVE_GMSH)
+feStatus moveVertexAndRecomputeJacobians(const std::vector<int> &whichElements,
+                                         const int iVertexToMove_globalTag,
+                                         const double *modifiedCoord)
 {
   activeMesh->setVertexCoord(iVertexToMove_globalTag, modifiedCoord);
   bool failed = false;
@@ -31,8 +34,7 @@ feStatus moveVertexAndRecomputeJacobians(const std::vector<int> &whichElements, 
     feStatus s = activeConnectivity->recomputeElementJacobian(whichElements[i]);
     failed = (s != FE_STATUS_OK);
   }
-  if(failed)
-    return FE_STATUS_FAILED;
+  if(failed) return FE_STATUS_FAILED;
   return FE_STATUS_OK;
 }
 
@@ -42,11 +44,12 @@ void computeInterpolationErrorOnEachElement()
   ELEM_ERROR_SQUARED.resize(activeConnectivity->getNumElements());
   INITIAL_ERROR_SQUARED = 0.;
   for(size_t i = 0; i < activeConnectivity->getNumElements(); ++i) {
-    #if defined(ERROR_FROM_ESTIMATOR)
-    ELEM_ERROR_SQUARED[i] = activeNorm->computeSquaredErrorFromEstimatorOnElement(i, USE_AVERAGED_EVALUATIONS);
-    #else
+#if defined(ERROR_FROM_ESTIMATOR)
+    ELEM_ERROR_SQUARED[i] =
+      activeNorm->computeSquaredErrorFromEstimatorOnElement(i, USE_AVERAGED_EVALUATIONS);
+#else
     ELEM_ERROR_SQUARED[i] = activeNorm->computeSquaredErrorOnElement(i);
-    #endif
+#endif
     INITIAL_ERROR_SQUARED += ELEM_ERROR_SQUARED[i];
   }
 }
@@ -57,11 +60,13 @@ void setNewError(const int nElements, const std::vector<int> &whichElements)
     INITIAL_ERROR_SQUARED -= ELEM_ERROR_SQUARED[whichElements[i]];
   }
   for(size_t i = 0; i < nElements; ++i) {
-    #if defined(ERROR_FROM_ESTIMATOR)
-    ELEM_ERROR_SQUARED[whichElements[i]] = activeNorm->computeSquaredErrorFromEstimatorOnElement(whichElements[i], USE_AVERAGED_EVALUATIONS);
-    #else
-    ELEM_ERROR_SQUARED[whichElements[i]] = activeNorm->computeSquaredErrorOnElement(whichElements[i]);
-    #endif
+#if defined(ERROR_FROM_ESTIMATOR)
+    ELEM_ERROR_SQUARED[whichElements[i]] = activeNorm->computeSquaredErrorFromEstimatorOnElement(
+      whichElements[i], USE_AVERAGED_EVALUATIONS);
+#else
+    ELEM_ERROR_SQUARED[whichElements[i]] =
+      activeNorm->computeSquaredErrorOnElement(whichElements[i]);
+#endif
   }
   for(size_t i = 0; i < nElements; ++i) {
     INITIAL_ERROR_SQUARED += ELEM_ERROR_SQUARED[whichElements[i]];
@@ -75,11 +80,12 @@ double getNewError(const int nElements, const std::vector<int> &whichElements)
     res -= ELEM_ERROR_SQUARED[whichElements[i]];
   }
   for(int i = 0; i < nElements; ++i) {
-    #if defined(ERROR_FROM_ESTIMATOR)
-    res += activeNorm->computeSquaredErrorFromEstimatorOnElement(whichElements[i], USE_AVERAGED_EVALUATIONS);
-    #else
+#if defined(ERROR_FROM_ESTIMATOR)
+    res += activeNorm->computeSquaredErrorFromEstimatorOnElement(whichElements[i],
+                                                                 USE_AVERAGED_EVALUATIONS);
+#else
     res += activeNorm->computeSquaredErrorOnElement(whichElements[i]);
-    #endif
+#endif
   }
   return sqrt(res);
 }
@@ -93,32 +99,35 @@ void applyCurvatureToFeMesh(const edgeAndVertexData &data, const double *modifie
   activeIntSpace->initializeAddressingVector(data.whichElements[0], ADR);
   int vertexDOF = ADR[data.iVertexToMove_localTag[0]];
 
-  feStatus s = moveVertexAndRecomputeJacobians(data.whichElements, data.iVertexToMove_globalTag, modifiedCoord);
+  feStatus s = moveVertexAndRecomputeJacobians(data.whichElements, data.iVertexToMove_globalTag,
+                                               modifiedCoord);
 
   // Compute solution at new location and assign it
   POS[0] = modifiedCoord[0];
   POS[1] = modifiedCoord[1];
   POS[2] = 0.;
 
-  #if defined(ERROR_FROM_ESTIMATOR)
+#if defined(ERROR_FROM_ESTIMATOR)
   // Option 1: New solution will be the evaluation of the current recovery
-  double newUh = activeRecovery->evaluateRecovery(PPR::RECOVERY, 0, POS.data(), USE_AVERAGED_EVALUATIONS);
+  double newUh =
+    activeRecovery->evaluateRecovery(PPR::RECOVERY, 0, POS.data(), USE_AVERAGED_EVALUATIONS);
 
-  // Option 2: Compute a new recovery at the moved vertex (expensive?)
-  // activeRecovery->recomputeLeastSquareMatrix(data.iVertexToMove_globalTag);
-  // activeRecovery->recomputeRHSAndSolve(data.iVertexToMove_globalTag);
-  // activeRecovery->recomputeFirstDerivative(data.iVertexToMove_globalTag);
-  // double newUh = activeRecovery->evaluateRecoveryAtVertex(PPR::RECOVERY, 0, data.iVertexToMove_globalTag);
-  #else
+// Option 2: Compute a new recovery at the moved vertex (expensive?)
+// activeRecovery->recomputeLeastSquareMatrix(data.iVertexToMove_globalTag);
+// activeRecovery->recomputeRHSAndSolve(data.iVertexToMove_globalTag);
+// activeRecovery->recomputeFirstDerivative(data.iVertexToMove_globalTag);
+// double newUh = activeRecovery->evaluateRecoveryAtVertex(PPR::RECOVERY, 0,
+// data.iVertexToMove_globalTag);
+#else
   double newUh = activeExactSolution->eval(0., POS);
-  #endif
+#endif
 
   activeSolution->setSolAtDOF(vertexDOF, newUh);
 
   // Update error vector and total error (substract old error and add new error)
   setNewError(data.nElements, data.whichElements);
 
-  if(s != FE_STATUS_OK){
+  if(s != FE_STATUS_OK) {
     feInfo("Modified vertex caused at least one negative jacobian :/");
     exit(-1);
   }
@@ -127,16 +136,16 @@ void applyCurvatureToFeMesh(const edgeAndVertexData &data, const double *modifie
 void feMesh2DP1::drawConnectivityToPOSfile(const std::string &cncName, const std::string &fileName)
 {
   feCncGeo *cnc = this->getCncGeoByName(cncName);
-  if(cnc){
-    FILE* myfile = fopen(fileName.data(), "w");
+  if(cnc) {
+    FILE *myfile = fopen(fileName.data(), "w");
     fprintf(myfile, "View\"%s\"{\n", cncName.data());
     std::vector<double> geoCoord(cnc->getNumVerticesPerElem() * 3, 0.);
-    for(int iElm = 0; iElm < cnc->getNumElements(); ++iElm)
-    {
+    for(int iElm = 0; iElm < cnc->getNumElements(); ++iElm) {
       this->getCoord(cnc, iElm, geoCoord);
       cnc->writeElementToPOS(myfile, geoCoord, 1.);
     }
-    fprintf(myfile, "};\n"); fclose(myfile);
+    fprintf(myfile, "};\n");
+    fclose(myfile);
   }
 }
 
@@ -145,12 +154,12 @@ static void getP2BernsteinBasis(const double uvw[3], double basis[6])
   double u = uvw[0];
   double v = uvw[1];
   double w = uvw[2];
-  basis[0] = u*u;
-  basis[1] = 2.*u*v;
-  basis[2] = v*v;
-  basis[3] = 2.*v*w;
-  basis[4] = w*w;
-  basis[5] = 2.*w*u;
+  basis[0] = u * u;
+  basis[1] = 2. * u * v;
+  basis[2] = v * v;
+  basis[3] = 2. * v * w;
+  basis[4] = w * w;
+  basis[5] = 2. * w * u;
 }
 
 // Lagrange points are given as {L200, L020, L002, L110, L011, L101}
@@ -176,18 +185,17 @@ inline double computeDeterminant(const SPoint2 &P0, const SPoint2 &P1)
   return (P0[0] * P1[1]) - (P1[0] * P0[1]);
 }
 
-static double controlCoefficientN200(const SPoint2 &P200, const SPoint2 &P011,
-                                     const SPoint2 &P020, const SPoint2 &P101,
-                                     const SPoint2 &P002, const SPoint2 &P110)
+static double controlCoefficientN200(const SPoint2 &P200, const SPoint2 &P011, const SPoint2 &P020,
+                                     const SPoint2 &P101, const SPoint2 &P002, const SPoint2 &P110)
 {
   return 4. * computeDeterminant(P200 - P110, P200 - P101);
 }
 
-static double controlCoefficientN110(const SPoint2 &P200, const SPoint2 &P011,
-                                     const SPoint2 &P020, const SPoint2 &P101,
-                                     const SPoint2 &P002, const SPoint2 &P110)
+static double controlCoefficientN110(const SPoint2 &P200, const SPoint2 &P011, const SPoint2 &P020,
+                                     const SPoint2 &P101, const SPoint2 &P002, const SPoint2 &P110)
 {
-  return 2. * computeDeterminant(P200 - P101, P020 - P011) + 2. * computeDeterminant(P110 - P011, P110 - P101);
+  return 2. * computeDeterminant(P200 - P101, P020 - P011) +
+         2. * computeDeterminant(P110 - P011, P110 - P101);
 }
 
 // Bezier points are given as {P200, P020, P002, P110, P011, P101}
@@ -202,9 +210,10 @@ static void getJacobianControlCoefficients(const SPoint2 P[6], double N[6])
   // N[0] = 4. * computeDeterminant(P200 - P110, P200 - P101); // N200
   // N[1] = 4. * computeDeterminant(P020 - P110, P011 - P110); // N020
   // N[2] = 4. * computeDeterminant(P002 - P011, P101 - P011); // N002
-  // N[3] = 2. * computeDeterminant(P200 - P101, P020 - P011) + 2. * computeDeterminant(P110 - P011, P110 - P101); // N110
-  // N[4] = 2. * computeDeterminant(P020 - P110, P002 - P101) + 2. * computeDeterminant(P011 - P101, P011 - P110); // N011
-  // N[5] = 2. * computeDeterminant(P002 - P011, P200 - P110) + 2. * computeDeterminant(P101 - P110, P101 - P011); // N101
+  // N[3] = 2. * computeDeterminant(P200 - P101, P020 - P011) + 2. * computeDeterminant(P110 - P011,
+  // P110 - P101); // N110 N[4] = 2. * computeDeterminant(P020 - P110, P002 - P101) + 2. *
+  // computeDeterminant(P011 - P101, P011 - P110); // N011 N[5] = 2. * computeDeterminant(P002 -
+  // P011, P200 - P110) + 2. * computeDeterminant(P101 - P110, P101 - P011); // N101
 
   // Or using permutations:
   N[0] = controlCoefficientN200(P200, P011, P020, P101, P002, P110);
@@ -215,10 +224,7 @@ static void getJacobianControlCoefficients(const SPoint2 P[6], double N[6])
   N[5] = controlCoefficientN110(P002, P110, P200, P011, P020, P101);
 }
 
-inline SPoint2 orthogonal(const SPoint2 &P)
-{
-  return SPoint2(P[1], -P[0]);
-}
+inline SPoint2 orthogonal(const SPoint2 &P) { return SPoint2(P[1], -P[0]); }
 
 // The three non-trivial gradients with respect to vertex control point P200
 static SPoint2 gradControlCoefficientP200N200(const SPoint2 &P200, const SPoint2 &P011,
@@ -330,9 +336,7 @@ static void getGradientJacobianControlCoefficients(const SPoint2 P[6], SPoint2 g
   gradN[5][5] = gradControlCoefficientP110N110(P002, P110, P200, P011, P020, P101);
 }
 
-static bool checkValidity(const SPoint2 lagrangePoints[6],
-                          SPoint2 bezierPoints[6],
-                          double N[6])
+static bool checkValidity(const SPoint2 lagrangePoints[6], SPoint2 bezierPoints[6], double N[6])
 {
   getBezierControlPoints(lagrangePoints, bezierPoints);
   getJacobianControlCoefficients(bezierPoints, N);
@@ -357,29 +361,22 @@ static bool checkValidityOnModifiedElements(const std::vector<int> &whichElement
   return valid;
 }
 
-static double computeJacobian(const double uvw[3],
-                              const SPoint2 lagrangePoints[6],
-                              SPoint2 bezierPoints[6],
-                              double N[6],
-                              double basis[6])
+static double computeJacobian(const double uvw[3], const SPoint2 lagrangePoints[6],
+                              SPoint2 bezierPoints[6], double N[6], double basis[6])
 {
   getBezierControlPoints(lagrangePoints, bezierPoints);
   getJacobianControlCoefficients(bezierPoints, N);
   getP2BernsteinBasis(uvw, basis);
   double J = 0.;
-  for(int i = 0; i < 6; ++i){
+  for(int i = 0; i < 6; ++i) {
     J += N[i] * basis[i];
   }
   return J;
 }
 
-static void computeGradientJacobian(const double uvw[3],
-                                    const SPoint2 lagrangePoints[6],
-                                    const int whichControlPoint,
-                                    SPoint2 bezierPoints[6],
-                                    SPoint2 gradN[6][6],
-                                    double basis[6],
-                                    double gradient[2])
+static void computeGradientJacobian(const double uvw[3], const SPoint2 lagrangePoints[6],
+                                    const int whichControlPoint, SPoint2 bezierPoints[6],
+                                    SPoint2 gradN[6][6], double basis[6], double gradient[2])
 {
   getBezierControlPoints(lagrangePoints, bezierPoints);
   getGradientJacobianControlCoefficients(bezierPoints, gradN);
@@ -388,11 +385,11 @@ static void computeGradientJacobian(const double uvw[3],
 
   // The chain rule coefficient dLdP = 1 for the vertices control points
   // (they are identical) and 1/2 for edge control points
-  // since they are given by permutations of 
+  // since they are given by permutations of
   // L110 = 1/4 * (P200 + 2*P110 + P020)
   // It's the inverse for dPdL.
   // double dBezierdLagrange = (whichControlPoint < 3) ? 1. : 2.; //  CHECK COEFFICIENT
-  for(int i = 0; i < 6; ++i){
+  for(int i = 0; i < 6; ++i) {
     // gradJ += gradN[whichControlPoint][i] * basis[i] * dBezierdLagrange;
     gradJ += gradN[whichControlPoint][i] * basis[i];
   }
@@ -400,13 +397,11 @@ static void computeGradientJacobian(const double uvw[3],
   gradient[1] = gradJ[1];
 }
 
-static void getGradientInterpolationErrorAtReferenceNode(const double xsi[2],
-                                                         const std::vector<double> &xPhysQuadratureNode,
-                                                         const std::vector<double> &xPhysControlPoint,
-                                                         const int whichControlPoint,
-                                                         const std::vector<double> &gradUAtQuadratureNode,
-                                                         const std::vector<double> &gradUAtControlPoint,
-                                                         double gradient[2])
+static void getGradientInterpolationErrorAtReferenceNode(
+  const double xsi[2], const std::vector<double> &xPhysQuadratureNode,
+  const std::vector<double> &xPhysControlPoint, const int whichControlPoint,
+  const std::vector<double> &gradUAtQuadratureNode, const std::vector<double> &gradUAtControlPoint,
+  double gradient[2])
 {
   double phi[6] = {(1. - xsi[0] - xsi[1]) * (1. - 2. * xsi[0] - 2. * xsi[1]),
                    xsi[0] * (2. * xsi[0] - 1.),
@@ -459,7 +454,8 @@ static void getGradientInterpolationErrorAtReferenceNode(const double xsi[2],
 //       uvw[2] = eta_quad[k];
 
 //       double jac = computeJacobian(uvw, lagrangePoints, bezierPoints, N, basis);
-//       computeGradientJacobian(uvw, lagrangePoints, whichControlPoint_localTag[iElm], bezierPoints, gradN, basis, gradJ);
+//       computeGradientJacobian(uvw, lagrangePoints, whichControlPoint_localTag[iElm],
+//       bezierPoints, gradN, basis, gradJ);
 
 //       // Verification: compare with precomputed jacobian
 //       // if(fabs(jac - _J[_nQuad * elem + k]) > 1e-13){
@@ -482,16 +478,19 @@ static void getGradientInterpolationErrorAtReferenceNode(const double xsi[2],
 
 //         gradJ_Xj = dydeta * dphi_jdxsi - dydxsi * dphi_jdeta;
 //         gradJ_Yj = dxdxsi * dphi_jdeta - dxdeta * dphi_jdxsi;
-//         // feInfo("Computed jacobian moving %d grad_x %+-1.6e and %+-1.6e", iii, gradJ[0], gradJ_Xj);
-//         // feInfo("Computed jacobian moving %d grad_y %+-1.6e and %+-1.6e", iii, gradJ[1], gradJ_Yj);
+//         // feInfo("Computed jacobian moving %d grad_x %+-1.6e and %+-1.6e", iii, gradJ[0],
+//         gradJ_Xj);
+//         // feInfo("Computed jacobian moving %d grad_y %+-1.6e and %+-1.6e", iii, gradJ[1],
+//         gradJ_Yj);
 //       }
 
 //       xsi[0] = xsi_quad[k];
 //       xsi[1] = eta_quad[k];
 //       _geoSpace->interpolateVectorFieldAtQuadNode(_geoCoord, k, _pos);
-//       getGradientInterpolationErrorAtReferenceNode(xsi, _pos, posControlPoint, whichControlPoint_localTag[iElm],
+//       getGradientInterpolationErrorAtReferenceNode(xsi, _pos, posControlPoint,
+//       whichControlPoint_localTag[iElm],
 //         gradUAtQuadratureNode, gradUAtControlPoint, gradE);
-      
+
 //       uh = _spaces[0]->interpolateFieldAtQuadNode(_localSol[0], k);
 //       u = _scalarSolution->eval(t, _pos);
 //       double error = u - uh;
@@ -528,8 +527,7 @@ void feNorm::computeInterpolationErrorGradient(const std::vector<int> &whichElem
   gradient[1] = 0.;
 
   // Only two elements are affected when moving an edge
-  for(int iElm = 0; iElm < 2; ++iElm)
-  {
+  for(int iElm = 0; iElm < 2; ++iElm) {
     int elem = whichElements[iElm];
     this->initializeLocalSolutionOnSpace(0, elem);
 
@@ -541,17 +539,18 @@ void feNorm::computeInterpolationErrorGradient(const std::vector<int> &whichElem
     posControlPoint[0] = X_j;
     posControlPoint[1] = Y_j;
 
-    // Evaluate gradient at control point
-    #if defined(GRAD_FROM_ESTIMATOR)
-    gradUAtControlPoint[0] = _rec->evaluateRecovery(PPR::DERIVATIVE, 0, posControlPoint.data(), true);
-    gradUAtControlPoint[1] = _rec->evaluateRecovery(PPR::DERIVATIVE, 1, posControlPoint.data(), true);
-    #else
+// Evaluate gradient at control point
+#if defined(GRAD_FROM_ESTIMATOR)
+    gradUAtControlPoint[0] =
+      _rec->evaluateRecovery(PPR::DERIVATIVE, 0, posControlPoint.data(), true);
+    gradUAtControlPoint[1] =
+      _rec->evaluateRecovery(PPR::DERIVATIVE, 1, posControlPoint.data(), true);
+#else
     // Exact gradient
     activeExactSolutionGradient->eval(0., posControlPoint, gradUAtControlPoint);
-    #endif
+#endif
 
-    for(int k = 0; k < _nQuad; ++k)
-    {
+    for(int k = 0; k < _nQuad; ++k) {
       // Compute jacobian and its gradient (jacobian was updated when moving the control point)
       double jac = _J[_nQuad * elem + k];
 
@@ -573,28 +572,31 @@ void feNorm::computeInterpolationErrorGradient(const std::vector<int> &whichElem
       xsi[0] = xsi_quad[k];
       xsi[1] = eta_quad[k];
       _geoSpace->interpolateVectorFieldAtQuadNode(_geoCoord, k, _pos);
-      
+
       uh = _spaces[0]->interpolateFieldAtQuadNode(_localSol[0], k);
 
-      #if defined(ERROR_FROM_ESTIMATOR)
-      uRec  = _rec->evaluateRecovery(PPR::RECOVERY, 0, _pos.data(), USE_AVERAGED_EVALUATIONS);
+#if defined(ERROR_FROM_ESTIMATOR)
+      uRec = _rec->evaluateRecovery(PPR::RECOVERY, 0, _pos.data(), USE_AVERAGED_EVALUATIONS);
       double error = uRec - uh;
-      #else
+#else
       u = _scalarSolution->eval(t, _pos);
       double error = u - uh;
-      #endif
+#endif
 
-      // Evaluate the gradient at quad node
-      #if defined(GRAD_FROM_ESTIMATOR)
-      gradUAtQuadratureNode[0] = _rec->evaluateRecovery(PPR::DERIVATIVE, 0, _pos.data(), USE_AVERAGED_EVALUATIONS);
-      gradUAtQuadratureNode[1] = _rec->evaluateRecovery(PPR::DERIVATIVE, 1, _pos.data(), USE_AVERAGED_EVALUATIONS);
-      #else
+// Evaluate the gradient at quad node
+#if defined(GRAD_FROM_ESTIMATOR)
+      gradUAtQuadratureNode[0] =
+        _rec->evaluateRecovery(PPR::DERIVATIVE, 0, _pos.data(), USE_AVERAGED_EVALUATIONS);
+      gradUAtQuadratureNode[1] =
+        _rec->evaluateRecovery(PPR::DERIVATIVE, 1, _pos.data(), USE_AVERAGED_EVALUATIONS);
+#else
       // Exact gradient
       activeExactSolutionGradient->eval(0., _pos, gradUAtQuadratureNode);
-      #endif
+#endif
 
-      getGradientInterpolationErrorAtReferenceNode(xsi, _pos, posControlPoint, whichControlPoint_localTag[iElm],
-        gradUAtQuadratureNode, gradUAtControlPoint, gradE);
+      getGradientInterpolationErrorAtReferenceNode(
+        xsi, _pos, posControlPoint, whichControlPoint_localTag[iElm], gradUAtQuadratureNode,
+        gradUAtControlPoint, gradE);
 
       gradESquared[0] = 2. * error * gradE[0];
       gradESquared[1] = 2. * error * gradE[1];
@@ -605,8 +607,7 @@ void feNorm::computeInterpolationErrorGradient(const std::vector<int> &whichElem
   }
 }
 
-void computeInterpolationErrorGradient(const edgeAndVertexData &data,
-                                       const double *modifiedCoord,
+void computeInterpolationErrorGradient(const edgeAndVertexData &data, const double *modifiedCoord,
                                        double gradient[2])
 {
   activeMesh->getVertexCoord(data.iVertexToMove_globalTag, INITIAL_COORD);
@@ -616,35 +617,40 @@ void computeInterpolationErrorGradient(const edgeAndVertexData &data,
   int vertexDOF = ADR[data.iVertexToMove_localTag[0]];
   double uh = activeSolution->getSolAtDOF(vertexDOF);
 
-  feStatus s = moveVertexAndRecomputeJacobians(data.whichElements, data.iVertexToMove_globalTag, modifiedCoord);
+  feStatus s = moveVertexAndRecomputeJacobians(data.whichElements, data.iVertexToMove_globalTag,
+                                               modifiedCoord);
 
   // Compute solution at new location and assign it
   POS[0] = modifiedCoord[0];
   POS[1] = modifiedCoord[1];
   POS[2] = 0.;
-  #if defined(ERROR_FROM_ESTIMATOR)
+#if defined(ERROR_FROM_ESTIMATOR)
   // Option 1
-  double newUh = activeRecovery->evaluateRecovery(PPR::RECOVERY, 0, POS.data(), USE_AVERAGED_EVALUATIONS);
-  // Option 2
-  // activeRecovery->recomputeLeastSquareMatrix(data.iVertexToMove_globalTag);
-  // activeRecovery->recomputeRHSAndSolve(data.iVertexToMove_globalTag);
-  // activeRecovery->recomputeFirstDerivative(data.iVertexToMove_globalTag);
-  // double newUh = activeRecovery->evaluateRecoveryAtVertex(PPR::RECOVERY, 0, data.iVertexToMove_globalTag);
-  #else
+  double newUh =
+    activeRecovery->evaluateRecovery(PPR::RECOVERY, 0, POS.data(), USE_AVERAGED_EVALUATIONS);
+// Option 2
+// activeRecovery->recomputeLeastSquareMatrix(data.iVertexToMove_globalTag);
+// activeRecovery->recomputeRHSAndSolve(data.iVertexToMove_globalTag);
+// activeRecovery->recomputeFirstDerivative(data.iVertexToMove_globalTag);
+// double newUh = activeRecovery->evaluateRecoveryAtVertex(PPR::RECOVERY, 0,
+// data.iVertexToMove_globalTag);
+#else
   double newUh = activeExactSolution->eval(0., POS);
-  #endif
+#endif
   activeSolution->setSolAtDOF(vertexDOF, newUh);
 
   // Compute gradient at modified vertex
-  activeNorm->computeInterpolationErrorGradient(data.whichElements, data.iVertexToMove_localTag, gradient);
+  activeNorm->computeInterpolationErrorGradient(data.whichElements, data.iVertexToMove_localTag,
+                                                gradient);
 
   double res = getNewError(data.nElements, data.whichElements);
 
-  gradient[0] *= 1. / (2.*res);
-  gradient[1] *= 1. / (2.*res);
+  gradient[0] *= 1. / (2. * res);
+  gradient[1] *= 1. / (2. * res);
 
   // Restore position and solution at initial vertex
-  s = moveVertexAndRecomputeJacobians(data.whichElements, data.iVertexToMove_globalTag, INITIAL_COORD);
+  s = moveVertexAndRecomputeJacobians(data.whichElements, data.iVertexToMove_globalTag,
+                                      INITIAL_COORD);
   activeSolution->setSolAtDOF(vertexDOF, uh);
 }
 
@@ -653,8 +659,7 @@ void computeInterpolationErrorGradient(const edgeAndVertexData &data,
 // to the new position "modifiedCoord". The vertex position is restored
 // before exiting.
 // The mesh pointer in the norm has to match this mesh pointer.
-double computeInterpolationErrorCallback(const edgeAndVertexData &data,
-                                         const double *modifiedCoord,
+double computeInterpolationErrorCallback(const edgeAndVertexData &data, const double *modifiedCoord,
                                          bool &valid)
 {
   activeMesh->getVertexCoord(data.iVertexToMove_globalTag, INITIAL_COORD);
@@ -664,7 +669,8 @@ double computeInterpolationErrorCallback(const edgeAndVertexData &data,
   int vertexDOF = ADR[data.iVertexToMove_localTag[0]];
   double uh = activeSolution->getSolAtDOF(vertexDOF);
 
-  feStatus s = moveVertexAndRecomputeJacobians(data.whichElements, data.iVertexToMove_globalTag, modifiedCoord);
+  feStatus s = moveVertexAndRecomputeJacobians(data.whichElements, data.iVertexToMove_globalTag,
+                                               modifiedCoord);
 
   valid = checkValidityOnModifiedElements(data.whichElements);
   if(!valid) return LARGE_VALUE_WHEN_FAILED;
@@ -673,22 +679,25 @@ double computeInterpolationErrorCallback(const edgeAndVertexData &data,
   POS[0] = modifiedCoord[0];
   POS[1] = modifiedCoord[1];
   POS[2] = 0.;
-  #if defined(ERROR_FROM_ESTIMATOR)
-  double newUh = activeRecovery->evaluateRecovery(PPR::RECOVERY, 0, POS.data(), USE_AVERAGED_EVALUATIONS);
-  // activeRecovery->recomputeLeastSquareMatrix(data.iVertexToMove_globalTag);
-  // activeRecovery->recomputeRHSAndSolve(data.iVertexToMove_globalTag);
-  // activeRecovery->recomputeFirstDerivative(data.iVertexToMove_globalTag);
-  // double newUh = activeRecovery->evaluateRecoveryAtVertex(PPR::RECOVERY, 0, data.iVertexToMove_globalTag);
-  #else
+#if defined(ERROR_FROM_ESTIMATOR)
+  double newUh =
+    activeRecovery->evaluateRecovery(PPR::RECOVERY, 0, POS.data(), USE_AVERAGED_EVALUATIONS);
+// activeRecovery->recomputeLeastSquareMatrix(data.iVertexToMove_globalTag);
+// activeRecovery->recomputeRHSAndSolve(data.iVertexToMove_globalTag);
+// activeRecovery->recomputeFirstDerivative(data.iVertexToMove_globalTag);
+// double newUh = activeRecovery->evaluateRecoveryAtVertex(PPR::RECOVERY, 0,
+// data.iVertexToMove_globalTag);
+#else
   double newUh = activeExactSolution->eval(0., POS);
-  #endif
+#endif
   activeSolution->setSolAtDOF(vertexDOF, newUh);
 
   double res = getNewError(data.nElements, data.whichElements);
 
   valid = checkValidityOnModifiedElements(data.whichElements);
 
-  s = moveVertexAndRecomputeJacobians(data.whichElements, data.iVertexToMove_globalTag, INITIAL_COORD);
+  s = moveVertexAndRecomputeJacobians(data.whichElements, data.iVertexToMove_globalTag,
+                                      INITIAL_COORD);
 
   // Restore solution at initial vertex
   activeSolution->setSolAtDOF(vertexDOF, uh);
@@ -705,10 +714,10 @@ double computeInterpolationError(const edgeAndVertexData &data, double *modified
 
 // Square [-1,1]
 static double BBOX = 1.;
-static double XMIN =  -BBOX;
-static double YMIN =  -BBOX;
-static double XMAX =  BBOX;
-static double YMAX =  BBOX;
+static double XMIN = -BBOX;
+static double YMIN = -BBOX;
+static double XMAX = BBOX;
+static double YMAX = BBOX;
 
 static int whichBoundary(PolyMesh::Vertex *v)
 {
@@ -719,8 +728,8 @@ static int whichBoundary(PolyMesh::Vertex *v)
   bool isR = fabs(x - XMAX) < tol;
   bool isT = fabs(y - YMAX) < tol;
   bool isL = fabs(x - XMIN) < tol;
-  bool isBBoxCorner = fabs(x - 1.1*XMIN) < tol || fabs(x - 1.1*XMAX) < tol ||
-                      fabs(x - 1.1*YMIN) < tol || fabs(x - 1.1*YMAX) < tol;
+  bool isBBoxCorner = fabs(x - 1.1 * XMIN) < tol || fabs(x - 1.1 * XMAX) < tol ||
+                      fabs(x - 1.1 * YMIN) < tol || fabs(x - 1.1 * YMAX) < tol;
   if(isB) return 0;
   if(isR) return 1;
   if(isT) return 2;
@@ -737,10 +746,10 @@ bool SHOULD_RESIZE = true;
 
 // Same as callback above, but all the edges and vertices are modified
 // The mesh pointer in the norm has to match this mesh pointer.
-double computeInterpolationErrorCallback_EdgesAndVertices(const std::vector<double> &newPositions,
-                                                          const curvedAdaptData &adaptData,
-                                                          const std::vector<PolyMesh::Vertex*> &verticesToMove,
-                                                          const std::vector<PolyMesh::HalfEdge*> &edgesToMove)
+double computeInterpolationErrorCallback_EdgesAndVertices(
+  const std::vector<double> &newPositions, const curvedAdaptData &adaptData,
+  const std::vector<PolyMesh::Vertex *> &verticesToMove,
+  const std::vector<PolyMesh::HalfEdge *> &edgesToMove)
 {
   bool valid = true;
 
@@ -759,8 +768,10 @@ double computeInterpolationErrorCallback_EdgesAndVertices(const std::vector<doub
   for(auto v : verticesToMove) {
     // Save position
     activeMesh->getVertexCoord(adaptData.v2globalTag.at(v), INITIAL_COORD);
-    MESH_INITIAL_COORD[cnt] = INITIAL_COORD[0]; cnt++;
-    MESH_INITIAL_COORD[cnt] = INITIAL_COORD[1]; cnt++;
+    MESH_INITIAL_COORD[cnt] = INITIAL_COORD[0];
+    cnt++;
+    MESH_INITIAL_COORD[cnt] = INITIAL_COORD[1];
+    cnt++;
 
     // Get interpolated solution at initial vertex
     activeIntSpace->initializeAddressingVector(adaptData.v2elements.at(v)[0], ADR);
@@ -771,8 +782,10 @@ double computeInterpolationErrorCallback_EdgesAndVertices(const std::vector<doub
   for(auto he : edgesToMove) {
     // Save position
     activeMesh->getVertexCoord(adaptData.he2midnodeGlobalTag.at(he), INITIAL_COORD);
-    MESH_INITIAL_COORD[cnt] = INITIAL_COORD[0]; cnt++;
-    MESH_INITIAL_COORD[cnt] = INITIAL_COORD[1]; cnt++;
+    MESH_INITIAL_COORD[cnt] = INITIAL_COORD[0];
+    cnt++;
+    MESH_INITIAL_COORD[cnt] = INITIAL_COORD[1];
+    cnt++;
 
     // Get interpolated solution at initial vertex
     activeIntSpace->initializeAddressingVector(adaptData.he2element.at(he), ADR);
@@ -788,59 +801,79 @@ double computeInterpolationErrorCallback_EdgesAndVertices(const std::vector<doub
   double modifiedCoord[2];
   std::vector<int> edgeElements(2);
   for(auto v : verticesToMove) {
-
     if(v->data == 1) {
       modifiedCoord[0] = newPositions[cnt];
       MESH_NEW_COORD[cnt2] = newPositions[cnt];
-      cnt++; cnt2++;
+      cnt++;
+      cnt2++;
       modifiedCoord[1] = newPositions[cnt];
       MESH_NEW_COORD[cnt2] = newPositions[cnt];
-      cnt++; cnt2++;
+      cnt++;
+      cnt2++;
 
     } else {
       int bdr = whichBoundary(v);
-      if(bdr == 0 || bdr == 2) { 
+      if(bdr == 0 || bdr == 2) {
         modifiedCoord[0] = newPositions[cnt];
         MESH_NEW_COORD[cnt2] = newPositions[cnt];
-        cnt++; cnt2++;
+        cnt++;
+        cnt2++;
         modifiedCoord[1] = v->position[1];
         MESH_NEW_COORD[cnt2] = v->position[1];
         cnt2++;
       }
-      if(bdr == 1 || bdr == 3) { 
+      if(bdr == 1 || bdr == 3) {
         modifiedCoord[0] = v->position[0];
         MESH_NEW_COORD[cnt2] = v->position[0];
         cnt2++;
         modifiedCoord[1] = newPositions[cnt];
         MESH_NEW_COORD[cnt2] = newPositions[cnt];
-        cnt++; cnt2++;
+        cnt++;
+        cnt2++;
       }
-      if(bdr == -1) { feErrorMsg(FE_STATUS_ERROR, "Unexpected boundary %f - %f", v->position[0], v->position[1]); }
+      if(bdr == -1) {
+        feErrorMsg(FE_STATUS_ERROR, "Unexpected boundary %f - %f", v->position[0], v->position[1]);
+      }
     }
 
-    s = moveVertexAndRecomputeJacobians(adaptData.v2elements.at(v), adaptData.v2globalTag.at(v), modifiedCoord);
-    if(s != FE_STATUS_OK) { feInfo("Could not move vertex during computeInterpolationError"); exit(-1); }
-    if(s != FE_STATUS_OK) { return std::numeric_limits<double>::infinity(); }
+    s = moveVertexAndRecomputeJacobians(adaptData.v2elements.at(v), adaptData.v2globalTag.at(v),
+                                        modifiedCoord);
+    if(s != FE_STATUS_OK) {
+      feInfo("Could not move vertex during computeInterpolationError");
+      exit(-1);
+    }
+    if(s != FE_STATUS_OK) {
+      return std::numeric_limits<double>::infinity();
+    }
     valid &= checkValidityOnModifiedElements(adaptData.v2elements.at(v));
   }
   for(auto he : edgesToMove) {
     modifiedCoord[0] = newPositions[cnt];
     MESH_NEW_COORD[cnt2] = newPositions[cnt];
-    cnt++; cnt2++;
+    cnt++;
+    cnt2++;
     modifiedCoord[1] = newPositions[cnt];
     MESH_NEW_COORD[cnt2] = newPositions[cnt];
-    cnt++; cnt2++;
+    cnt++;
+    cnt2++;
     edgeElements[0] = adaptData.he2element.at(he);
     edgeElements[1] = adaptData.he2element.at(he->opposite);
-    s = moveVertexAndRecomputeJacobians(edgeElements, adaptData.he2midnodeGlobalTag.at(he), modifiedCoord);
-    if(s != FE_STATUS_OK) { feInfo("Could not move edge during computeInterpolationError"); exit(-1); }
-    if(s != FE_STATUS_OK) { return std::numeric_limits<double>::infinity(); }
+    s = moveVertexAndRecomputeJacobians(edgeElements, adaptData.he2midnodeGlobalTag.at(he),
+                                        modifiedCoord);
+    if(s != FE_STATUS_OK) {
+      feInfo("Could not move edge during computeInterpolationError");
+      exit(-1);
+    }
+    if(s != FE_STATUS_OK) {
+      return std::numeric_limits<double>::infinity();
+    }
     valid &= checkValidityOnModifiedElements(edgeElements);
   }
 
   // for(int i = 0; i < MESH_NEW_COORD.size(); ++i) {
   //   if(fabs(MESH_NEW_COORD[i] - MESH_INITIAL_COORD[i]) > 1e-10) {
-  //     feInfo("Not identical : %+-1.12e vs %+-1.12e", MESH_NEW_COORD[i], MESH_INITIAL_COORD[i]); exit(-1);
+  //     feInfo("Not identical : %+-1.12e vs %+-1.12e", MESH_NEW_COORD[i], MESH_INITIAL_COORD[i]);
+  //     exit(-1);
   //   }
   //   else { feInfo("Identical"); };
   // }
@@ -851,21 +884,27 @@ double computeInterpolationErrorCallback_EdgesAndVertices(const std::vector<doub
     cnt = 0, cnt_u = 0;
     POS[2] = 0.;
     for(auto v : verticesToMove) {
-
       if(v->data == 1) {
-        POS[0] = newPositions[cnt]; cnt++;
-        POS[1] = newPositions[cnt]; cnt++;
+        POS[0] = newPositions[cnt];
+        cnt++;
+        POS[1] = newPositions[cnt];
+        cnt++;
       } else {
         int bdr = whichBoundary(v);
-        if(bdr == 0 || bdr == 2) { 
-          POS[0] = newPositions[cnt]; cnt++;
+        if(bdr == 0 || bdr == 2) {
+          POS[0] = newPositions[cnt];
+          cnt++;
           POS[1] = v->position[1];
         }
-        if(bdr == 1 || bdr == 3) { 
+        if(bdr == 1 || bdr == 3) {
           POS[0] = v->position[0];
-          POS[1] = newPositions[cnt]; cnt++;
+          POS[1] = newPositions[cnt];
+          cnt++;
         }
-        if(bdr == -1) { feErrorMsg(FE_STATUS_ERROR, "Unexpected boundary %f - %f", v->position[0], v->position[1]); }
+        if(bdr == -1) {
+          feErrorMsg(FE_STATUS_ERROR, "Unexpected boundary %f - %f", v->position[0],
+                     v->position[1]);
+        }
       }
 
       double newUh = activeExactSolution->eval(0., POS);
@@ -876,8 +915,10 @@ double computeInterpolationErrorCallback_EdgesAndVertices(const std::vector<doub
       activeSolution->setSolAtDOF(vertexDOF, newUh);
     }
     for(auto he : edgesToMove) {
-      POS[0] = newPositions[cnt]; cnt++;
-      POS[1] = newPositions[cnt]; cnt++;
+      POS[0] = newPositions[cnt];
+      cnt++;
+      POS[1] = newPositions[cnt];
+      cnt++;
       double newUh = activeExactSolution->eval(0., POS);
       MESH_NEW_SOL[cnt_u] = newUh;
       cnt_u++;
@@ -895,10 +936,16 @@ double computeInterpolationErrorCallback_EdgesAndVertices(const std::vector<doub
   // Move the DOFs back to initial position
   cnt = 0, cnt_u = 0;
   for(auto v : verticesToMove) {
-    INITIAL_COORD[0] = MESH_INITIAL_COORD[cnt]; cnt++;
-    INITIAL_COORD[1] = MESH_INITIAL_COORD[cnt]; cnt++;
-    s = moveVertexAndRecomputeJacobians(adaptData.v2elements.at(v), adaptData.v2globalTag.at(v), INITIAL_COORD);
-    if(s != FE_STATUS_OK) { feInfo("Could not move vertex BACK during computeInterpolationError"); exit(-1); }
+    INITIAL_COORD[0] = MESH_INITIAL_COORD[cnt];
+    cnt++;
+    INITIAL_COORD[1] = MESH_INITIAL_COORD[cnt];
+    cnt++;
+    s = moveVertexAndRecomputeJacobians(adaptData.v2elements.at(v), adaptData.v2globalTag.at(v),
+                                        INITIAL_COORD);
+    if(s != FE_STATUS_OK) {
+      feInfo("Could not move vertex BACK during computeInterpolationError");
+      exit(-1);
+    }
     valid &= checkValidityOnModifiedElements(edgeElements);
     // if(!valid) return std::numeric_limits<double>::infinity();
 
@@ -909,12 +956,18 @@ double computeInterpolationErrorCallback_EdgesAndVertices(const std::vector<doub
     cnt_u++;
   }
   for(auto he : edgesToMove) {
-    INITIAL_COORD[0] = MESH_INITIAL_COORD[cnt]; cnt++;
-    INITIAL_COORD[1] = MESH_INITIAL_COORD[cnt]; cnt++;
+    INITIAL_COORD[0] = MESH_INITIAL_COORD[cnt];
+    cnt++;
+    INITIAL_COORD[1] = MESH_INITIAL_COORD[cnt];
+    cnt++;
     edgeElements[0] = adaptData.he2element.at(he);
     edgeElements[1] = adaptData.he2element.at(he->opposite);
-    s = moveVertexAndRecomputeJacobians(edgeElements, adaptData.he2midnodeGlobalTag.at(he), INITIAL_COORD);
-    if(s != FE_STATUS_OK) { feInfo("Could not move edge BACK during computeInterpolationError"); exit(-1); }
+    s = moveVertexAndRecomputeJacobians(edgeElements, adaptData.he2midnodeGlobalTag.at(he),
+                                        INITIAL_COORD);
+    if(s != FE_STATUS_OK) {
+      feInfo("Could not move edge BACK during computeInterpolationError");
+      exit(-1);
+    }
     valid &= checkValidityOnModifiedElements(edgeElements);
     // if(!valid) return std::numeric_limits<double>::infinity();
 
@@ -926,7 +979,8 @@ double computeInterpolationErrorCallback_EdgesAndVertices(const std::vector<doub
   }
 
   if(!valid) {
-    feInfo("DOFs relocation did not cause a negative jacobian, but there is at least one invalid element. Should not happen?");
+    feInfo("DOFs relocation did not cause a negative jacobian, but there is at least one invalid "
+           "element. Should not happen?");
     exit(-1);
   }
 
@@ -936,7 +990,8 @@ double computeInterpolationErrorCallback_EdgesAndVertices(const std::vector<doub
 
 // Return the tag of the midnode whose coordinates match to the prescribed tolerance
 // Used in gmsh to identify a HalfEdge to a vertex tag in feNG.
-void getMidnodeTags(const SPoint2 edge[2], const double tol, int &elementTag, int &localTag, int &globalTag)
+void getMidnodeTags(const SPoint2 edge[2], const double tol, int &elementTag, int &localTag,
+                    int &globalTag)
 {
   SPoint2 midnode = (edge[0] + edge[1]) * 0.5;
   std::vector<Vertex> &meshVertices = activeMesh->getVertices();
@@ -948,38 +1003,37 @@ void getMidnodeTags(const SPoint2 edge[2], const double tol, int &elementTag, in
       break;
     }
   }
-  if(!wasFound){
-    feErrorMsg(FE_STATUS_ERROR, "Midnode (%f, %f) was not found in the mesh!",
-      midnode[0], midnode[1]);
+  if(!wasFound) {
+    feErrorMsg(FE_STATUS_ERROR, "Midnode (%f, %f) was not found in the mesh!", midnode[0],
+               midnode[1]);
     exit(-1);
   }
 
   // Get the element on which the edge lies and the local tag of the midnode
   feCncGeo *cnc = activeMesh->getCncGeoByName("Domaine");
   std::vector<double> geoCoord(cnc->getNumVerticesPerElem() * 3, 0.);
-  for(int iElm = 0; iElm < cnc->getNumElements(); ++iElm){
+  for(int iElm = 0; iElm < cnc->getNumElements(); ++iElm) {
     activeMesh->getCoord(cnc, iElm, geoCoord);
-    for(int iEdge = 0; iEdge < 3; ++iEdge){
+    for(int iEdge = 0; iEdge < 3; ++iEdge) {
       double x0 = geoCoord[3 * iEdge + 0];
       double y0 = geoCoord[3 * iEdge + 1];
       double x1 = geoCoord[3 * ((iEdge + 1) % 3) + 0];
       double y1 = geoCoord[3 * ((iEdge + 1) % 3) + 1];
-      if  (fabs(edge[0].x() - x0) < tol && fabs(edge[0].y() - y0) < tol
-        && fabs(edge[1].x() - x1) < tol && fabs(edge[1].y() - y1) < tol)
-      {
+      if(fabs(edge[0].x() - x0) < tol && fabs(edge[0].y() - y0) < tol &&
+         fabs(edge[1].x() - x1) < tol && fabs(edge[1].y() - y1) < tol) {
         elementTag = iElm;
         localTag = iEdge + 3;
         return;
       }
     }
   }
-  feErrorMsg(FE_STATUS_ERROR, "Edge (%f, %f) - (%f, %f) was not found in the mesh!",
-    edge[0].x(), edge[0].y(), edge[1].x(), edge[1].y());
+  feErrorMsg(FE_STATUS_ERROR, "Edge (%f, %f) - (%f, %f) was not found in the mesh!", edge[0].x(),
+             edge[0].y(), edge[1].x(), edge[1].y());
   exit(-1);
 }
 
-void getPolyMeshVertexTags(const SPoint2 &p, const double tol, 
-  std::vector<int> &elementTags, std::vector<int> &localTags, int &globalTag)
+void getPolyMeshVertexTags(const SPoint2 &p, const double tol, std::vector<int> &elementTags,
+                           std::vector<int> &localTags, int &globalTag)
 {
   // Check for vertex global tag
   std::vector<Vertex> &meshVertices = activeMesh->getVertices();
@@ -991,18 +1045,17 @@ void getPolyMeshVertexTags(const SPoint2 &p, const double tol,
       break;
     }
   }
-  if(!wasFound){
-    feErrorMsg(FE_STATUS_ERROR, "PolyMesh::Vertex (%f, %f) was not found in the mesh!",
-      p[0], p[1]);
+  if(!wasFound) {
+    feErrorMsg(FE_STATUS_ERROR, "PolyMesh::Vertex (%f, %f) was not found in the mesh!", p[0], p[1]);
     exit(-1);
   }
 
   // Check for elements containing p
   feCncGeo *cnc = activeMesh->getCncGeoByName("Domaine");
   std::vector<double> geoCoord(cnc->getNumVerticesPerElem() * 3, 0.);
-  for(int iElm = 0; iElm < cnc->getNumElements(); ++iElm){
+  for(int iElm = 0; iElm < cnc->getNumElements(); ++iElm) {
     activeMesh->getCoord(cnc, iElm, geoCoord);
-    for(int iVertex = 0; iVertex < 3; ++iVertex){
+    for(int iVertex = 0; iVertex < 3; ++iVertex) {
       double x = geoCoord[3 * iVertex + 0];
       double y = geoCoord[3 * iVertex + 1];
       if(fabs(p[0] - x) < tol && fabs(p[1] - y) < tol) {
@@ -1012,3 +1065,4 @@ void getPolyMeshVertexTags(const SPoint2 &p, const double tol,
     }
   }
 }
+#endif

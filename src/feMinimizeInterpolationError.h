@@ -20,6 +20,7 @@ extern feMesh *activeMesh;
 extern feCncGeo *activeConnectivity;
 extern feNorm *activeNorm;
 
+#if defined(HAVE_GMSH)
 void computeInterpolationErrorOnEachElement();
 double computeInterpolationError(const edgeAndVertexData &data, double *modifiedCoord);
 void computeInterpolationErrorGradient(const edgeAndVertexData &data,
@@ -33,5 +34,6 @@ void applyCurvatureToFeMesh(const edgeAndVertexData &data, const double *modifie
 void getMidnodeTags(const SPoint2 edge[2], const double tol, int &elementTag, int &localTag, int &globalTag);
 void getPolyMeshVertexTags(const SPoint2 &p, const double tol, 
   std::vector<int> &elementTags, std::vector<int> &localTags, int &globalTag);
+#endif
 
 #endif
