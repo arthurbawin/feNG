@@ -9,6 +9,7 @@ option(ENABLE_MPI           "Enable MPI"                        ON )
 option(ENABLE_PETSC         "Enable PETSc"                      ON )
 option(ENABLE_SLEPC         "Enable SLEPc"                      OFF)
 option(ENABLE_GMSH          "Enable Gmsh"                       OFF)
+option(ENABLE_CURVED_MESH   "Enable curved meshing with Gmsh"   OFF)
 option(ENABLE_MKL           "Enable MKL"                        OFF)
 option(ENABLE_METIS         "Enable Metis"                      OFF)
 option(ENABLE_SOPLEX        "Enable SoPlex"                     OFF)
@@ -209,6 +210,10 @@ if(ENABLE_GMSH)
   list(APPEND feNG_EXTERNAL_LIBS ${GMSH_LIB})
   add_definitions("-DHAVE_GMSH")
   MESSAGE(STATUS "Gmsh found (-:")
+endif()
+
+if(ENABLE_CURVED_MESH)
+  add_definitions("-DGMSH_WITH_CURVED_MESHING")
 endif()
 
 # Gmsh classes for metric tensors and rtree 

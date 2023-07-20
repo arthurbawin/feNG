@@ -198,6 +198,10 @@ feStatus feMesh2DP1::adapt(std::vector<feNewRecovery*> recoveredFields, feMetric
   // Curve after a few aniso adaptations
   if(curve) {
 
+    // Must merge the local Gmsh files first
+    // Quick fix in the meantime
+    #if defined(GMSH_WITH_CURVED_MESHING)
+
     // Tools to compute interpolation error while curving
     feNorm *norm;
     createNorm(norm, L2_ERROR, {spaceForAdaptation}, discreteSolution, exactSolution, exactGradient);
@@ -273,6 +277,11 @@ feStatus feMesh2DP1::adapt(std::vector<feNewRecovery*> recoveredFields, feMetric
     gmsh::model::setCurrent(options.modelForMetric.data());
     gmsh::option::setNumber("Mesh.MshFileVersion", 4.1);
     gmsh::write("curvedMesh.msh");
+    #else
+      return feErrorMsg(FE_STATUS_ERROR,
+                          "Cannot generate curved mesh with this version of Gmsh."
+                          "Merge branch first.");
+    #endif
   }
 
 #endif

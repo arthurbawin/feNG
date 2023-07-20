@@ -210,10 +210,12 @@ static void getJacobianControlCoefficients(const SPoint2 P[6], double N[6])
   // N[0] = 4. * computeDeterminant(P200 - P110, P200 - P101); // N200
   // N[1] = 4. * computeDeterminant(P020 - P110, P011 - P110); // N020
   // N[2] = 4. * computeDeterminant(P002 - P011, P101 - P011); // N002
-  // N[3] = 2. * computeDeterminant(P200 - P101, P020 - P011) + 2. * computeDeterminant(P110 - P011,
-  // P110 - P101); // N110 N[4] = 2. * computeDeterminant(P020 - P110, P002 - P101) + 2. *
-  // computeDeterminant(P011 - P101, P011 - P110); // N011 N[5] = 2. * computeDeterminant(P002 -
-  // P011, P200 - P110) + 2. * computeDeterminant(P101 - P110, P101 - P011); // N101
+  // N[3] = 2. * computeDeterminant(P200 - P101, P020 - P011)
+  //      + 2. * computeDeterminant(P110 - P011, P110 - P101); // N110 
+  // N[4] = 2. * computeDeterminant(P020 - P110, P002 - P101)
+  //      + 2. * computeDeterminant(P011 - P101, P011 - P110); // N011
+  // N[5] = 2. * computeDeterminant(P002 - P011, P200 - P110)
+  //      + 2. * computeDeterminant(P101 - P110, P101 - P011); // N101
 
   // Or using permutations:
   N[0] = controlCoefficientN200(P200, P011, P020, P101, P002, P110);
