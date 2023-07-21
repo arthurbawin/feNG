@@ -279,7 +279,7 @@ public:
   void assemble(feSolution *sol);
   void assembleMatrices(feSolution *sol);
   void assembleResiduals(feSolution *sol);
-  void constrainEssentialComponents(feSolution *sol){};
+  void constrainEssentialComponents(feSolution *sol);
   bool solve(double *normDx, double *normResidual, double *normAxb, int *nIter);
   void assignResidualToDCResidual(feSolutionContainer *solContainer);
   void applyCorrectionToResidual(double coeff, std::vector<double> &d);

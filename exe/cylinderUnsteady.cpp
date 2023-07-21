@@ -96,7 +96,7 @@ int main(int argc, char **argv)
 
     // Start the adaptation loop
     // int nAdaptationCycles = 200 / (nTimeSteps * dt);
-    int nAdaptationCycles = 1;
+    int nAdaptationCycles = 100;
     int nStepsToIncreaseRe = nAdaptationCycles / 2;
 
     double D = 1.;
@@ -106,12 +106,12 @@ int main(int argc, char **argv)
     double dpdx = -1.0;
     feVectorFunction uExact(solU, {h, dpdx});
 
-    double Re = 1.;
+    double Re = 200.;
     double Re_final = 200.;
     double dRe = (Re_final - Re) / nStepsToIncreaseRe;
 
     bool adapt = false;
-    bool curved = false;
+    bool curved = true;
 
     std::vector<double> forces_x(nAdaptationCycles);
     std::vector<double> forces_y(nAdaptationCycles);
@@ -147,30 +147,30 @@ int main(int argc, char **argv)
       feSpace *uDroite = nullptr;
 
       // Cylindre
-      // feCheck(createFiniteElementSpace( uIn, &mesh, elementType::VECTOR_LAGRANGE, orderVelocity, "U",   "Gauche", degreeQuadrature, &inletUniform));
-      // feCheck(createFiniteElementSpace(    uTop, &mesh, elementType::VECTOR_LAGRANGE, orderVelocity, "U",     "Haut", degreeQuadrature, &zeroVector));
-      // feCheck(createFiniteElementSpace( uBottom, &mesh, elementType::VECTOR_LAGRANGE, orderVelocity, "U",      "Bas", degreeQuadrature, &zeroVector));
-      // feCheck(createFiniteElementSpace( uNoSlip, &mesh, elementType::VECTOR_LAGRANGE, orderVelocity, "U", "Cylindre", degreeQuadrature, &zeroVector));
-      // feCheck(createFiniteElementSpace(uDomaine, &mesh, elementType::VECTOR_LAGRANGE, orderVelocity, "U",  "Domaine", degreeQuadrature, &inlet));
-      // feCheck(createFiniteElementSpace(pDomaine, &mesh, elementType::LAGRANGE,        orderPressure, "P",  "Domaine", degreeQuadrature, &zero));
-      // feCheck(createFiniteElementSpace(pCylindre, &mesh, elementType::LAGRANGE,        orderPressure, "P",  "Cylindre", degreeQuadrature, &zero));
-      // // feCheck(createFiniteElementSpace(wDomaine, &mesh, elementType::LAGRANGE,        orderVelocity, "W",  "Domaine", degreeQuadrature, &zero));
-      // // feCheck(createFiniteElementSpace(lambdaCylindre, &mesh, elementType::VECTOR_LAGRANGE, orderVelocity, "L",  "Cylindre", degreeQuadrature, &zeroVector));
-      // std::vector<feSpace*> spaces = {uTop, uBottom, uNoSlip, uDomaine, pDomaine, pCylindre, uIn};
-      // std::vector<feSpace*> essentialSpaces = {uIn, uNoSlip};
-      // uTop->setEssentialComponent(1, true);
-      // uBottom->setEssentialComponent(1, true);
+      feCheck(createFiniteElementSpace(     uIn, &mesh, elementType::VECTOR_LAGRANGE, orderVelocity, "U",   "Gauche", degreeQuadrature, &inletUniform));
+      feCheck(createFiniteElementSpace(    uTop, &mesh, elementType::VECTOR_LAGRANGE, orderVelocity, "U",     "Haut", degreeQuadrature, &zeroVector));
+      feCheck(createFiniteElementSpace( uBottom, &mesh, elementType::VECTOR_LAGRANGE, orderVelocity, "U",      "Bas", degreeQuadrature, &zeroVector));
+      feCheck(createFiniteElementSpace( uNoSlip, &mesh, elementType::VECTOR_LAGRANGE, orderVelocity, "U", "Cylindre", degreeQuadrature, &zeroVector));
+      feCheck(createFiniteElementSpace(uDomaine, &mesh, elementType::VECTOR_LAGRANGE, orderVelocity, "U",  "Domaine", degreeQuadrature, &inlet));
+      feCheck(createFiniteElementSpace(pDomaine, &mesh, elementType::LAGRANGE,        orderPressure, "P",  "Domaine", degreeQuadrature, &zero));
+      feCheck(createFiniteElementSpace(pCylindre, &mesh, elementType::LAGRANGE,        orderPressure, "P",  "Cylindre", degreeQuadrature, &zero));
+      // feCheck(createFiniteElementSpace(wDomaine, &mesh, elementType::LAGRANGE,        orderVelocity, "W",  "Domaine", degreeQuadrature, &zero));
+      // feCheck(createFiniteElementSpace(lambdaCylindre, &mesh, elementType::VECTOR_LAGRANGE, orderVelocity, "L",  "Cylindre", degreeQuadrature, &zeroVector));
+      std::vector<feSpace*> spaces = {uTop, uBottom, uNoSlip, uDomaine, pDomaine, pCylindre, uIn};
+      std::vector<feSpace*> essentialSpaces = {uIn, uNoSlip};
+      uTop->setEssentialComponent(1, true);
+      uBottom->setEssentialComponent(1, true);
 
       // Poiseuille
-      feCheck(createFiniteElementSpace(     uIn, &mesh, elementType::VECTOR_LAGRANGE, orderVelocity, "U",  "Gauche", degreeQuadrature, &inletUniform));
-      feCheck(createFiniteElementSpace( uDroite, &mesh, elementType::VECTOR_LAGRANGE, orderVelocity, "U",  "Droite", degreeQuadrature, &zeroVector));
-      feCheck(createFiniteElementSpace( uNoSlip, &mesh, elementType::VECTOR_LAGRANGE, orderVelocity, "U",  "NoSlip", degreeQuadrature, &zeroVector));
-      feCheck(createFiniteElementSpace(uDomaine, &mesh, elementType::VECTOR_LAGRANGE, orderVelocity, "U", "Domaine", degreeQuadrature, &zeroVector));
-      feCheck(createFiniteElementSpace(pDomaine, &mesh, elementType::LAGRANGE,        orderPressure, "P", "Domaine", degreeQuadrature, &zero));
-      std::vector<feSpace*> spaces = {uIn, uDroite, uNoSlip, uDomaine, pDomaine};
-      std::vector<feSpace*> essentialSpaces = {uIn, uNoSlip};
-      // uDroite->setEssentialComponent(1, true);   
-      // uIn->setEssentialComponent(0, true);   
+      // feCheck(createFiniteElementSpace(     uIn, &mesh, elementType::VECTOR_LAGRANGE, orderVelocity, "U",  "Gauche", degreeQuadrature, &inletUniform));
+      // feCheck(createFiniteElementSpace( uDroite, &mesh, elementType::VECTOR_LAGRANGE, orderVelocity, "U",  "Droite", degreeQuadrature, &zeroVector));
+      // feCheck(createFiniteElementSpace( uNoSlip, &mesh, elementType::VECTOR_LAGRANGE, orderVelocity, "U",  "NoSlip", degreeQuadrature, &zeroVector));
+      // feCheck(createFiniteElementSpace(uDomaine, &mesh, elementType::VECTOR_LAGRANGE, orderVelocity, "U", "Domaine", degreeQuadrature, &zeroVector));
+      // feCheck(createFiniteElementSpace(pDomaine, &mesh, elementType::LAGRANGE,        orderPressure, "P", "Domaine", degreeQuadrature, &zero));
+      // std::vector<feSpace*> spaces = {uIn, uDroite, uNoSlip, uDomaine, pDomaine};
+      // std::vector<feSpace*> essentialSpaces = {uIn, uNoSlip};
+      // // uDroite->setEssentialComponent(1, true);   
+      // // uIn->setEssentialComponent(0, true);   
 
       feMetaNumber numbering(&mesh, spaces, essentialSpaces);
       feSolution sol(numbering.getNbDOFs(), spaces, essentialSpaces);
@@ -212,8 +212,8 @@ int main(int argc, char **argv)
       feLinearSystem *linearSystem;
       // feCheck(createLinearSystem(linearSystem, PETSC, forms, numbering.getNbUnknowns(), argc, argv));
       feCheck(createLinearSystem(linearSystem, MKLPARDISO, forms, numbering.getNbUnknowns()));
-      // feCheck(createLinearSystem(linearSystem, PETSC, forms, numbering.getNbDOFs(), argc, argv));
       // linearSystem->setDisplayRHSInConsole(true);
+      // linearSystem->setDisplayMatrixInConsole(true);
 
       feExporter *exporter;
       feCheck(createVisualizationExporter(exporter, VTK, &numbering, &sol, &mesh, spaces));

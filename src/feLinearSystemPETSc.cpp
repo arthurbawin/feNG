@@ -495,7 +495,7 @@ void feLinearSystemPETSc::assemble(feSolution *sol)
 void feLinearSystemPETSc::constrainEssentialComponents(feSolution *sol)
 {
 #if defined(HAVE_PETSC)
-  std::vector<PetscInt> rowsToConstraint;
+  std::vector<PetscInt> rowsToConstrain;
   std::vector<feInt> adr;
   for(auto space : sol->_spaces) {
     int nComponents = space->getNumComponents();
@@ -504,7 +504,7 @@ void feLinearSystemPETSc::constrainEssentialComponents(feSolution *sol)
       for(int i = 0; i < nComponents; ++i) {
         if(space->isEssentialComponent(i)) {
           for(int iElm = 0; iElm < space->getNumElements(); ++iElm) {
-            // Constraint matrix and RHS
+            // Constrain matrix and RHS
             space->initializeAddressingVector(iElm, adr);
             for(int j = 0; j < space->getNumFunctions(); ++j) {
               if(j % nComponents == i) {
@@ -512,11 +512,11 @@ void feLinearSystemPETSc::constrainEssentialComponents(feSolution *sol)
                 if(adr[j] < _nInc) {
                   // A DOF shared between this space and another
                   // essential space has a tag higher than _nInc,
-                  // hence  we cannot constraint it, but it's
+                  // hence  we cannot constrain it, but it's
                   // already an essential DOF for which there is no
                   // need to solve (its value will be imposed by the
                   // other space though, so check for spaces overlap).
-                  rowsToConstraint.push_back(DOF);
+                  rowsToConstrain.push_back(DOF);
                 }
               }
             }
@@ -526,7 +526,7 @@ void feLinearSystemPETSc::constrainEssentialComponents(feSolution *sol)
     }
   }
 
-  PetscErrorCode ierr = MatZeroRowsColumns(_A, rowsToConstraint.size(), rowsToConstraint.data(), 1.,
+  PetscErrorCode ierr = MatZeroRowsColumns(_A, rowsToConstrain.size(), rowsToConstrain.data(), 1.,
                                            _constrainedDOFValue, _rhs);
   CHKERRABORT(PETSC_COMM_WORLD, ierr);
 #endif

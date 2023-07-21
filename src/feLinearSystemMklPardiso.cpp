@@ -67,13 +67,16 @@ feLinearSystemMklPardiso::feLinearSystemMklPardiso(std::vector<feBilinearForm *>
 
   for(feInt i = 0; i < 64; i++) PT[i] = NULL;
 
-  N = (feInt)matrixOrder;
+  N = (feInt) matrixOrder;
   NRHS = 1;
   // IPARM[2]= num_procs; // nombre de processeurs
   MAXFCT = 1;
   MNUM = 1;
   MSGLVL = 0;
   ERROR = 0;
+
+  feInfoCond(FE_VERBOSE > 0, "\t\tCreated a MKL Pardiso linear system of size %d x %d", N, N);
+  feInfoCond(FE_VERBOSE > 0, "\t\t\tTODO: Add Pardiso options");
 }
 
 double vectorMaxNorm(feInt N, double *V)
@@ -407,9 +410,67 @@ void feLinearSystemMklPardiso::setResidualToZero()
 
 void feLinearSystemMklPardiso::assemble(feSolution *sol)
 {
-  // printf("ICI   feLinearSystemMklPardiso::assemble\n");
-  if(recomputeMatrix) assembleMatrices(sol);
-  assembleResiduals(sol);
+  if(recomputeMatrix) {
+    this->assembleMatrices(sol);
+  }
+  this->assembleResiduals(sol);
+}
+
+void feLinearSystemMklPardiso::constrainEssentialComponents(feSolution *sol)
+{
+  std::vector<feInt> rowsToConstrain;
+  std::vector<feInt> adr;
+  for(auto space : sol->_spaces) {
+    int nComponents = space->getNumComponents();
+    if(nComponents > 1) {
+      adr.resize(space->getNumFunctions(), 0);
+      for(int i = 0; i < nComponents; ++i) {
+        if(space->isEssentialComponent(i)) {
+          for(int iElm = 0; iElm < space->getNumElements(); ++iElm) {
+            // Constrain matrix and RHS
+            space->initializeAddressingVector(iElm, adr);
+            for(int j = 0; j < space->getNumFunctions(); ++j) {
+              if(j % nComponents == i) {
+                feInt DOF = adr[j];
+                if(adr[j] < matrixOrder) {
+                  // A DOF shared between this space and another
+                  // essential space has a tag higher than _nInc,
+                  // hence  we cannot constrain it, but it's
+                  // already an essential DOF for which there is no
+                  // need to solve (its value will be imposed by the
+                  // other space though, so check for spaces overlap).
+                  rowsToConstrain.push_back(DOF);
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // Constrain matrix and RHS
+  for(auto row : rowsToConstrain)
+  {
+    // Constrain columns. Find every occurence of 'row' in ja
+    // and set the associated value to zero
+    for(feInt i = 0; i < nz; ++i) {
+      if(Aj[i] == row) Ax[i] = 0.;
+    }
+
+    // Then constrain rows. Assign 0 to all columns of the row
+    // and set 1 at (row,row)
+    int debut = Ap[row];
+    int fin = Ap[row + 1];
+    for(feInt j = 0; j < fin - debut; ++j) {
+      Ax[debut + j] = 0.;
+      if(Aj[debut + j] == row)
+        Ax[debut + j] = 1.;
+    }
+
+    // Constrain RHS
+    residu[row] = 0.;
+  }
 }
 
 // ====================================================================
