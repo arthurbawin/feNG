@@ -72,7 +72,7 @@ feLinearSystemMklPardiso::feLinearSystemMklPardiso(std::vector<feBilinearForm *>
   // IPARM[2]= num_procs; // nombre de processeurs
   MAXFCT = 1;
   MNUM = 1;
-  MSGLVL = 0;
+  MSGLVL = 1;
   ERROR = 0;
 
   feInfoCond(FE_VERBOSE > 0, "\t\tCreated a MKL Pardiso linear system of size %d x %d", N, N);
@@ -418,6 +418,7 @@ void feLinearSystemMklPardiso::assemble(feSolution *sol)
 
 void feLinearSystemMklPardiso::constrainEssentialComponents(feSolution *sol)
 {
+  tic();
   std::vector<feInt> rowsToConstrain;
   std::vector<feInt> adr;
   for(auto space : sol->_spaces) {
@@ -471,6 +472,7 @@ void feLinearSystemMklPardiso::constrainEssentialComponents(feSolution *sol)
     // Constrain RHS
     residu[row] = 0.;
   }
+  feInfoCond(FE_VERBOSE > 1, "\t\t\t\tConstrained essential DOFs in %f s", toc());
 }
 
 // ====================================================================
