@@ -44,7 +44,8 @@ typedef long int feInt;
 #endif
 
 #if defined(HAVE_MKL)
-typedef long long int PardisoInt;
+// typedef long long int PardisoInt;
+typedef int PardisoInt;
 #endif
 
 double tic(int mode = 0);

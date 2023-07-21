@@ -486,15 +486,19 @@ void feLinearSystemMklPardiso::mklSymbolicFactorization(void)
   // for(feInt i=0;i<matrixOrder;i++) Ax[i] = 1.0;  // dubitatif
   PHASE = 11;
   IPARM[12] = iparm12;
-  pardiso_64(PT, &MAXFCT, &MNUM, &MTYPE, &PHASE, &N, Ax, Ap, Aj, &IDUM, &NRHS, IPARM, &MSGLVL,
+  pardiso(PT, &MAXFCT, &MNUM, &MTYPE, &PHASE, &N, Ax, Ap, Aj, &IDUM, &NRHS, IPARM, &MSGLVL,
              &DDUM, &DDUM, &ERROR);
+  // pardiso_64(PT, &MAXFCT, &MNUM, &MTYPE, &PHASE, &N, Ax, Ap, Aj, &IDUM, &NRHS, IPARM, &MSGLVL,
+  //            &DDUM, &DDUM, &ERROR);
 }
 
 void feLinearSystemMklPardiso::mklFactorization(void)
 {
   PHASE = 22;
-  pardiso_64(PT, &MAXFCT, &MNUM, &MTYPE, &PHASE, &N, Ax, Ap, Aj, &IDUM, &NRHS, IPARM, &MSGLVL,
+  pardiso(PT, &MAXFCT, &MNUM, &MTYPE, &PHASE, &N, Ax, Ap, Aj, &IDUM, &NRHS, IPARM, &MSGLVL,
              &DDUM, &DDUM, &ERROR);
+  // pardiso_64(PT, &MAXFCT, &MNUM, &MTYPE, &PHASE, &N, Ax, Ap, Aj, &IDUM, &NRHS, IPARM, &MSGLVL,
+  //            &DDUM, &DDUM, &ERROR);
 }
 
 void feLinearSystemMklPardiso::mklSolve(void)
@@ -505,8 +509,10 @@ void feLinearSystemMklPardiso::mklSolve(void)
   // Reset solution vector
   for(feInt i = 0; i < matrixOrder; i++) du[i] = 0.0;
 
-  pardiso_64(PT, &MAXFCT, &MNUM, &MTYPE, &PHASE, &N, Ax, Ap, Aj, &IDUM, &NRHS, IPARM, &MSGLVL,
+  pardiso(PT, &MAXFCT, &MNUM, &MTYPE, &PHASE, &N, Ax, Ap, Aj, &IDUM, &NRHS, IPARM, &MSGLVL,
              residu, du, &ERROR);
+// pardiso_64(PT, &MAXFCT, &MNUM, &MTYPE, &PHASE, &N, Ax, Ap, Aj, &IDUM, &NRHS, IPARM, &MSGLVL,
+//              residu, du, &ERROR);
 }
 
 // ====================================================================
