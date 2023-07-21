@@ -1,33 +1,28 @@
 #include "feLinearSystem.h"
 
+extern int FE_VERBOSE;
+
 #if defined(HAVE_MKL)
 #include "mkl.h"
 
 feLinearSystemMklPardiso::feLinearSystemMklPardiso(std::vector<feBilinearForm *> bilinearForms,
-                                                   feMetaNumber *metaNumber, feMesh *mesh)
-  : feLinearSystem(bilinearForms, metaNumber, mesh)
+                                                   int numUnknowns)
+  : feLinearSystem(bilinearForms)
 {
-  // long int cnt = 0;
-  // #pragma omp parallel for private(cnt)
-  // for(int i = 0; i < 100; ++i){
-  //   // printf("Printing %3d from thread %d\n", i, omp_get_thread_num());
-  //   printf("Thread %d has printed %2d times\n", omp_get_thread_num(), cnt++);
-  // }
-
   recomputeMatrix = true;
-  //=================================================================
-  // Structure Creuse CSR de MKL
-  //=================================================================
-  // tic();
-  crsMklPardiso =
-    new feCompressedRowStorageMklPardiso(metaNumber, mesh, _formMatrices, _numMatrixForms);
-  // toc();
-  nz = crsMklPardiso->getNz();
-  Ap = (feMKLPardisoInt *)crsMklPardiso->getAp();
-  Aj = (feMKLPardisoInt *)crsMklPardiso->getAj();
-  Ax = crsMklPardiso->allocateMatrix();
-  crsMklPardiso->zeroMatrix(Ax);
-  matrixOrder = (feMKLPardisoInt)crsMklPardiso->getMatrixOrder();
+
+  matrixOrder = numUnknowns;
+
+  _EZCRS = new feEZCompressedRowStorage(numUnknowns, _formMatrices, _numMatrixForms);
+
+  nz = _EZCRS->getNumNNZ();
+  Ap = new PardisoInt[matrixOrder + 1];
+  Aj = new PardisoInt[nz];
+  _EZCRS->get_ia_Pardiso(&Ap);
+  _EZCRS->get_ja_Pardiso(&Aj);
+  Ax = _EZCRS->allocateMatrixArray();
+  _EZCRS->setMatrixArrayToZero(Ax);
+
   du = new double[matrixOrder];
   residu = new double[matrixOrder];
   symbolicFactorization = true;
@@ -68,19 +63,17 @@ feLinearSystemMklPardiso::feLinearSystemMklPardiso(std::vector<feBilinearForm *>
   IPARM[23] = 1; /* Parallel factorization control - (0) sequential - (1) parallel*/
   IPARM[24] = 0; /* Parallel LU solve control - (0) parallel - (1) sequential */
 
+  IPARM[34] = 1; /* 0-based indexing - (0) Fortran-style (1-based) - (1) C-style (0-based) */
+
   for(feInt i = 0; i < 64; i++) PT[i] = NULL;
 
-  N = (feMKLPardisoInt)matrixOrder;
+  N = (feInt)matrixOrder;
   NRHS = 1;
   // IPARM[2]= num_procs; // nombre de processeurs
   MAXFCT = 1;
   MNUM = 1;
-  MSGLVL = 0; // ou 0
+  MSGLVL = 0;
   ERROR = 0;
-  //=================================================================
-  //  Factorisation symbolique
-  //=================================================================
-  // mklSymbolicFactorization();
 }
 
 double vectorMaxNorm(feInt N, double *V)
@@ -89,227 +82,163 @@ double vectorMaxNorm(feInt N, double *V)
   for(feInt i = 0; i < N; i++) {
     t = fmax(t, fabs(V[i]));
   }
-
   return t;
 }
 
-double vectorL2Norm(feInt N, double *V)
-{
-  double t = 0.0;
-
-#if defined(HAVE_OMP)
-#pragma omp parallel for reduction(+ : t) schedule(dynamic)
-#endif
-  for(feInt i = 0; i < N; i++) {
-    t += V[i] * V[i];
-  }
-  return pow(t, 0.5);
-}
-
+// Print the matrix with a layout similar to PETSc's
 void feLinearSystemMklPardiso::viewMatrix()
 {
-  for(feInt i = 0; i < nz; i++) printf("%ld %g \n", i, Ax[i]);
+  // for(feInt i = 0; i < nz; i++) printf("%ld %g \n", i, Ax[i]);
+  for(feInt i = 0; i < matrixOrder; i++) {
+    printf("Row %ld: ", i);
+    int debut = Ap[i];
+    int fin = Ap[i + 1];
+    for(feInt j = 0; j < fin - debut; ++j) {
+      printf("(%lld, %f)  ", Aj[debut + j], Ax[debut + j]);
+    }
+    printf("\n");
+  }
 }
 
 void feLinearSystemMklPardiso::assembleMatrices(feSolution *sol)
 {
-  feInfo("Assembling the Matrix...");
-  // tic();
-
-  // feInt NumberOfBilinearForms = _formMatrices.size();
-
-  feInfo("Repartition des NNZ: ");
-  for(int i = 0; i < matrixOrder; ++i) {
-    feInfo("NNZ[%d] = %d", i, crsMklPardiso->getNnz()[i]);
-  }
-  feInfo("Repartition de Ap: ");
-  for(int i = 0; i < matrixOrder + 1; ++i) {
-    feInfo("Ap[%d] = %d", i, Ap[i]);
-  }
-  // feInfo("Repartition de Aj: ");
-  // for(int i = 0; i < matrixOrder; ++i){
-  //   feInfo("NNZ[%d] = %d", i, crsMklPardiso->getNnz()[i]);
-  // }
-
-  feInfo("PRINTING INFO");
-  crsMklPardiso->print_info();
-
-  for(feInt eq = 0; eq < _numMatrixForms; eq++) {
+  tic();
+  for(feInt eq = 0; eq < _numMatrixForms; ++eq) {
     feBilinearForm *f = _formMatrices[eq];
     feCncGeo *cnc = f->getCncGeo();
-    int nbColor = cnc->getNbColor();
-    std::vector<int> &nbElmPerColor = cnc->getNbElmPerColor();
-    std::vector<std::vector<int> > &listElmPerColor = cnc->getListElmPerColor();
+    int numColors = cnc->getNbColor();
+    const std::vector<int> &nbElmPerColor = cnc->getNbElmPerColor();
+    const std::vector<std::vector<int> > &listElmPerColor = cnc->getListElmPerColor();
+    int numElementsInColor;
+    std::vector<int> listElmC;
 
-    int nbElmC; // nb elm of the same color
-    std::vector<int> listElmC; // list elm of the same color;
-
-    for(int iColor = 0; iColor < nbColor; iColor++) {
-      nbElmC = nbElmPerColor[iColor]; // nbElmC : nombre d'elm de meme couleur
+    for(int iColor = 0; iColor < numColors; ++iColor) {
+      numElementsInColor = nbElmPerColor[iColor];
       listElmC = listElmPerColor[iColor];
-      // nbElmC = cnc->getNbElmPerColorI(iColor);
-      // listElmC = cnc -> getListElmPerColorI(iColor);
 
-      feInt numThread = 0;
       int elm;
-      int eqt;
-
       double **Ae;
-      feInt nRow;
-      feInt nColumn;
-      std::vector<feInt> Row;
-      std::vector<feInt> Column;
-      feInt I;
-      feInt J;
-
-      feInt debut;
-      feInt fin;
-      feInt ncf;
-      std::vector<feInt> irangee;
+      feInt sizeI;
+      feInt sizeJ;
+      std::vector<feInt> niElm;
+      std::vector<feInt> njElm;
+      std::vector<feInt> adrI;
+      std::vector<feInt> adrJ;
 
 #if defined(HAVE_OMP)
-#pragma omp parallel for private(numThread, elm, eqt, f, nRow, nColumn, Row, Column, Ae, I, J,     \
-                                 debut, fin, ncf, irangee) schedule(dynamic)
+#pragma omp parallel for private(elm, f, niElm, njElm, sizeI, sizeJ, adrI, adrJ, Ae)               \
+  schedule(dynamic)
 #endif
-      for(int iElm = 0; iElm < nbElmC; ++iElm) {
+      for(int iElm = 0; iElm < numElementsInColor; ++iElm) {
 #if defined(HAVE_OMP)
-        numThread = omp_get_thread_num();
-        eqt = eq + numThread * _numMatrixForms;
+        int eqt = eq + omp_get_thread_num() * _numMatrixForms;
         f = _formMatrices[eqt];
 #endif
         elm = listElmC[iElm];
-        f->computeMatrix(_metaNumber, _mesh, sol, elm);
 
-        nRow = f->getNiElm();
-        Row = f->getAdrI();
-
-        feInfo("elm %d SIZE OF ROW is %d - matrixORder = %d", iElm, Row.size(), matrixOrder);
-        for(auto val : Row) feInfo("val = %d", val);
-
-        nColumn = f->getLocalMatrixN();
-        Column = f->getAdrJ();
+        // Compute element-wise matrix
+        f->computeMatrix(sol, elm);
         Ae = f->getAe();
 
-        feInfo("ELEM ADRI & ADRJ");
-        feInfo("%d - %d - %d", Row[0], Row[1], Row[2]);
-        feInfo("%d - %d - %d", Column[0], Column[1], Column[2]);
+        // Determine global assignment indices
+        adrI = f->getAdrI();
+        adrJ = f->getAdrJ();
+        sizeI = adrI.size();
+        niElm.reserve(sizeI);
+        for(feInt i = 0; i < sizeI; ++i) {
+          if(adrI[i] < matrixOrder) niElm.push_back(i);
+        }
+        sizeJ = adrJ.size();
+        njElm.reserve(sizeJ);
+        for(feInt i = 0; i < sizeJ; ++i) {
+          if(adrJ[i] < matrixOrder) njElm.push_back(i);
+        }
 
-        for(feInt i = 0; i < nRow; i++) {
-          irangee.resize(matrixOrder);
-          I = Row[i];
-          debut = 0;
-          fin = 0;
-          ncf = 0;
-          if(I < matrixOrder) {
-            debut = Ap[I] - 1;
-            fin = Ap[I + 1] - 1;
-            ncf = fin - debut;
+        adrI.erase(std::remove_if(adrI.begin(), adrI.end(),
+                                  [this](const int &x) { return x >= this->matrixOrder; }),
+                   adrI.end());
+        adrJ.erase(std::remove_if(adrJ.begin(), adrJ.end(),
+                                  [this](const int &x) { return x >= this->matrixOrder; }),
+                   adrJ.end());
 
-            feInfo("Ligne %d", I);
-            feInfo("DEBUT = %d", debut);
-            feInfo("Fin = %d", fin);
-            feInfo("NCF = %d", ncf);
-            feInfo("NZ = %d au total", nz);
+        // Flatten Ae at relevant indices
+        sizeI = adrI.size();
+        sizeJ = adrJ.size();
 
-            for(feInt j = 0; j < ncf; j++) {
-              // feInfo("Accessing entry %d in vector of size %d", debut + j, nz);
-              // feInfo("Result in Aj is %d ", Aj[debut + j]);
-              // feInfo("irangee.size = %d ", irangee.size());
-              // feInfo("irangee[0] = %d ", irangee[0]);
-              // feInfo("accessing %d ", Aj[debut + j] - 1);
-              int indexx = Aj[debut + j] - 1;
-              // feInfo("Result in irangee is %d ", irangee[indexx]);
-              // irangee[Aj[debut + j] - 1] = debut + j;
-              irangee[indexx] = debut + j;
-              // feInfo("Result in irangee is %d ", irangee[Aj[debut + j] - 1]);
-            }
+        for(feInt i = 0; i < sizeI; i++) {
+          feInt I = adrI[i];
+          feInt debut = Ap[I];
+          feInt fin = Ap[I + 1];
+          feInt numColumns = fin - debut;
 
-            for(feInt j = 0; j < nColumn; j++) {
-              J = Column[j];
-              if(J < matrixOrder) {
-                Ax[irangee[J]] += Ae[i][j];
+          // For each entry of the local matrix,
+          // find the matching column in the sparse matrix.
+          // The entries of the local matrix are not sorted for P2+ elements.
+          for(feInt j = 0; j < sizeJ; ++j) {
+            for(feInt J = 0; J < numColumns; ++J) {
+              if(Aj[debut + J] == adrJ[j]) {
+                Ax[debut + J] += Ae[niElm[i]][njElm[j]];
               }
             }
           }
+          niElm.clear();
+          njElm.clear();
         }
       }
     }
   }
-  // viewMatrix();
-  // double res = 0.0;
-  // for(feInt i = 0; i < nz; i++) res += fabs(Ax[i]);
-  // feInfo("sumMatrix = %f", res);
-  feInfo("Done...");
-  // toc();
+
+  if(_displayMatrixInConsole) viewMatrix();
+
+  feInfoCond(FE_VERBOSE > 1, "\t\t\t\tAssembled jacobian matrix in %f s", toc());
 }
 
 void feLinearSystemMklPardiso::assembleResiduals(feSolution *sol)
 {
-  feInfo("Assembling the residual...");
-  // tic();
-
+  tic();
   for(feInt eq = 0; eq < _numResidualForms; eq++) {
     feBilinearForm *f = _formResiduals[eq];
     feCncGeo *cnc = f->getCncGeo();
-    int nbColor = cnc->getNbColor();
-    std::vector<int> &nbElmPerColor = cnc->getNbElmPerColor();
-    std::vector<std::vector<int> > &listElmPerColor = cnc->getListElmPerColor();
-    // feInfo("Looping over %d colors", nbColor);
-
-    int nbElmC;
+    int numColors = cnc->getNbColor();
+    const std::vector<int> &numElemPerColor = cnc->getNbElmPerColor();
+    const std::vector<std::vector<int> > &listElmPerColor = cnc->getListElmPerColor();
     std::vector<int> listElmC;
 
-    for(int iColor = 0; iColor < nbColor; ++iColor) {
-      nbElmC = nbElmPerColor[iColor]; // nbElmC : nombre d'elm de meme couleur
+    for(int iColor = 0; iColor < numColors; ++iColor) {
+      int numElementsInColor = numElemPerColor[iColor];
       listElmC = listElmPerColor[iColor];
 
-      feInt numThread = 0;
       int elm;
-      int eqt;
-      // feBilinearForm *f_t;
-
       double *Be;
-      feInt nRow;
-      std::vector<feInt> Row;
+      feInt sizeI;
+      std::vector<feInt> niElm;
+      std::vector<feInt> adrI;
 
 #if defined(HAVE_OMP)
-#pragma omp parallel for private(numThread, elm, eqt, nRow, Row, Be, f) schedule(dynamic)
+#pragma omp parallel for private(elm, niElm, Be, f, adrI, sizeI) schedule(dynamic)
 #endif
-      for(int iElm = 0; iElm < nbElmC; ++iElm) {
+      for(int iElm = 0; iElm < numElementsInColor; ++iElm) {
 #if defined(HAVE_OMP)
-        numThread = omp_get_thread_num();
-        eqt = eq + numThread * _numResidualForms;
+        int eqt = eq + omp_get_thread_num() * _numResidualForms;
         f = _formResiduals[eqt];
 #endif
         elm = listElmC[iElm];
-        f->computeResidual(_metaNumber, _mesh, sol, elm);
 
-        nRow = f->getNiElm();
-        Row = f->getAdrI();
-
+        // Compute the element-wise residual
+        f->computeResidual(sol, elm);
         Be = f->getBe();
-
-        for(feInt i = 0; i < nRow; i++) {
-          if(Row[i] < matrixOrder) residu[Row[i]] += Be[i];
+        adrI = f->getAdrI();
+        sizeI = adrI.size();
+        for(feInt i = 0; i < sizeI; i++) {
+          if(adrI[i] < matrixOrder) residu[adrI[i]] += Be[i];
         }
       }
     }
   }
-  // toc();
-  feInfo("Done...");
-  // toc();
-  // for(int i=0;i<matrixOrder;i++){
+  feInfoCond(FE_VERBOSE > 1, "\t\t\t\tAssembled global residual in %f s", toc());
+  // for(int i = 0; i < matrixOrder; ++i){
   //   printf("%g \n",residu[i]);
   // }
-  // double res = 0.0;
-  // for(feInt i = 0; i < matrixOrder; i++){
-  //   res += fabs(residu[i]);
-  // }
-  // feInfo("sumResidu = %f", res);
-  // feInfo("nz = %d", nz);
-  // feInfo("matrixOrder = %d", matrixOrder);
-  // feInfo("max threads = %d", omp_get_max_threads());
-  // feInfo("num threads = %d", omp_get_num_threads());
 }
 
 void feLinearSystemMklPardiso::assignResidualToDCResidual(feSolutionContainer *solContainer)
@@ -335,29 +264,129 @@ void feLinearSystemMklPardiso::correctSolution(double *sol)
   for(feInt i = 0; i < matrixOrder; i++) sol[i] += du[i];
 }
 
-void feLinearSystemMklPardiso::solve(double *normDx, double *normResidual, double *normAxb,
+bool checkPardisoErrorCode(PardisoInt &errorCode, std::string &pardisoStep)
+{
+  switch(errorCode) {
+    case 0:
+      // No error
+      return true;
+    case -1:
+      feErrorMsg(FE_STATUS_ERROR,
+                 "PARDISO %s step failed with error message: input inconsistent (-1)",
+                 pardisoStep.data());
+      return false;
+    case -2:
+      feErrorMsg(FE_STATUS_ERROR,
+                 "PARDISO %s step failed with error message: not enough memory (-2)",
+                 pardisoStep.data());
+      return false;
+    case -3:
+      feErrorMsg(FE_STATUS_ERROR,
+                 "PARDISO %s step failed with error message: reordering problem (-3)",
+                 pardisoStep.data());
+      return false;
+    case -4:
+      feErrorMsg(
+        FE_STATUS_ERROR,
+        "PARDISO %s step failed with error message: zero pivot, numerical factorization or "
+        "iterative refinement problem. If the error appears during the solution phase, "
+        "try to change the pivoting perturbation (iparm[9]) and also increase the number "
+        "of iterative refinement steps. If it does not help, consider changing the "
+        "scaling, matching and pivoting options (iparm[10], iparm[12], iparm[20]) (-4)",
+        pardisoStep.data());
+      return false;
+    case -5:
+      feErrorMsg(FE_STATUS_ERROR,
+                 "PARDISO %s step failed with error message: unclassified (internal) error (-5)",
+                 pardisoStep.data());
+      return false;
+    case -6:
+      feErrorMsg(FE_STATUS_ERROR,
+                 "PARDISO %s step failed with error message: reordering failed "
+                 "(matrix types 11 and 13 only) (-6)",
+                 pardisoStep.data());
+      return false;
+    case -7:
+      feErrorMsg(FE_STATUS_ERROR,
+                 "PARDISO %s step failed with error message: diagonal matrix is singular (-7)",
+                 pardisoStep.data());
+      return false;
+    case -8:
+      feErrorMsg(FE_STATUS_ERROR,
+                 "PARDISO %s step failed with error message: 32-bit integer overflow problem (-8)",
+                 pardisoStep.data());
+      return false;
+    case -9:
+      feErrorMsg(FE_STATUS_ERROR,
+                 "PARDISO %s step failed with error message: not enough memory for OOC (-9)",
+                 pardisoStep.data());
+      return false;
+    case -10:
+      feErrorMsg(FE_STATUS_ERROR,
+                 "PARDISO %s step failed with error message: error opening OOC files (-10)",
+                 pardisoStep.data());
+      return false;
+    case -11:
+      feErrorMsg(FE_STATUS_ERROR,
+                 "PARDISO %s step failed with error message: read/write error with OOC files (-11)",
+                 pardisoStep.data());
+      return false;
+    case -12:
+      feErrorMsg(FE_STATUS_ERROR,
+                 "PARDISO %s step failed with error message: (pardiso_64 only) "
+                 "pardiso_64 called from 32-bit library (-12)",
+                 pardisoStep.data());
+      return false;
+    case -13:
+      feErrorMsg(FE_STATUS_ERROR,
+                 "PARDISO %s step failed with error message: interrupted by the "
+                 "(user-defined) mkl_progress function (-13)",
+                 pardisoStep.data());
+      return false;
+    case -15:
+      feErrorMsg(FE_STATUS_ERROR,
+                 "PARDISO %s step failed with error message: internal error which can appear for "
+                 "iparm[23]=10 "
+                 "and iparm[12]=1. Try switch matching off (set iparm[12]=0 and rerun.) (-15)",
+                 pardisoStep.data());
+      return false;
+    default:
+      feErrorMsg(FE_STATUS_ERROR, "Unexpected error code from PARDISO! This should NOT happen.",
+                 pardisoStep.data());
+      return false;
+  }
+}
+
+bool feLinearSystemMklPardiso::solve(double *normDx, double *normResidual, double *normAxb,
                                      int *nIter)
 {
-  feInfo("Solving ...");
+  std::string pardisoStep;
+
+  tic();
+  // Symbolic factorization and allocation
+  // (only once or when the matrix sparsity changes)
   if(symbolicFactorization) mklSymbolicFactorization();
-  if(recomputeMatrix) {
-    // tic();
-    mklFactorization();
-    // toc();
-  }
+  pardisoStep = "symbolic factorization";
+  if(!checkPardisoErrorCode(ERROR, pardisoStep)) return false;
+
+  // Actual matrix factorization
+  if(recomputeMatrix) mklFactorization();
+  pardisoStep = "factorization";
+  if(!checkPardisoErrorCode(ERROR, pardisoStep)) return false;
+
   mklSolve();
-  feInfo("Done.");
+  pardisoStep = "solve";
+  if(!checkPardisoErrorCode(ERROR, pardisoStep)) return false;
+  feInfoCond(FE_VERBOSE > 1, "\t\t\t\tSolved linear system with MKL Pardiso in %f s", toc());
+
   symbolicFactorization = false;
-
-  // feInfo("matrixOrder : %d",matrixOrder);
-
-  // for (int i=0;i<matrixOrder;i++)
-  //   feInfo("%g",du[i]);
 
   *normDx = vectorMaxNorm(matrixOrder, du);
   *normResidual = vectorMaxNorm(matrixOrder, residu);
   *normAxb = 0.0;
-  *nIter = 0;
+  *nIter = 1;
+
+  return true;
 }
 
 void feLinearSystemMklPardiso::setToZero()
@@ -398,9 +427,6 @@ void feLinearSystemMklPardiso::mklSymbolicFactorization(void)
   IPARM[12] = iparm12;
   pardiso_64(PT, &MAXFCT, &MNUM, &MTYPE, &PHASE, &N, Ax, Ap, Aj, &IDUM, &NRHS, IPARM, &MSGLVL,
              &DDUM, &DDUM, &ERROR);
-  if(ERROR != 0) {
-    printf("feLinearSystemMklPardiso::mklSymbolicFactorization - erreur %ld\n", ERROR);
-  }
 }
 
 void feLinearSystemMklPardiso::mklFactorization(void)
@@ -408,23 +434,18 @@ void feLinearSystemMklPardiso::mklFactorization(void)
   PHASE = 22;
   pardiso_64(PT, &MAXFCT, &MNUM, &MTYPE, &PHASE, &N, Ax, Ap, Aj, &IDUM, &NRHS, IPARM, &MSGLVL,
              &DDUM, &DDUM, &ERROR);
-  if(ERROR != 0) {
-    printf("eLinearSystemMklPardiso::mklFactorization- erreur %ld\n", ERROR);
-  }
 }
 
 void feLinearSystemMklPardiso::mklSolve(void)
 {
   PHASE = 33;
   IPARM[7] = 1;
+
+  // Reset solution vector
   for(feInt i = 0; i < matrixOrder; i++) du[i] = 0.0;
 
   pardiso_64(PT, &MAXFCT, &MNUM, &MTYPE, &PHASE, &N, Ax, Ap, Aj, &IDUM, &NRHS, IPARM, &MSGLVL,
              residu, du, &ERROR);
-  if(ERROR != 0) {
-    printf("feLinearSystemMklPardiso::mklSolve - erreur %ld\n", ERROR);
-    exit(-1);
-  }
 }
 
 // ====================================================================
@@ -432,12 +453,13 @@ void feLinearSystemMklPardiso::mklSolve(void)
 // ====================================================================
 feLinearSystemMklPardiso::~feLinearSystemMklPardiso(void)
 {
-  delete crsMklPardiso;
+  delete[] Ap;
+  delete[] Aj;
   delete[] Ax;
   delete[] du;
   delete[] residu;
 }
 
-void feLinearSystemMklPardiso::setPivot(int pivot) { IPARM[9] = (feMKLPardisoInt)pivot; }
+void feLinearSystemMklPardiso::setPivot(int pivot) { IPARM[9] = (feInt)pivot; }
 
 #endif

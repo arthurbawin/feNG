@@ -51,6 +51,9 @@ protected:
   // The linear forms with only a residual
   std::vector<feBilinearForm *> _formResiduals;
 
+  // Sparse CRS structure
+  feEZCompressedRowStorage *_EZCRS;
+
   // Recompute the jacobian matrix at current Newton-Raphson step?
   bool recomputeMatrix;
 
@@ -167,8 +170,6 @@ protected:
   PC preconditioner;
 #endif
 
-  feEZCompressedRowStorage *_EZCRS;
-
 public:
   feLinearSystemPETSc(int argc, char **argv, std::vector<feBilinearForm *> bilinearForms,
                       int numUnknowns);
@@ -214,33 +215,33 @@ class feLinearSystemMklPardiso : public feLinearSystem
 {
 protected:
   feCompressedRowStorageMklPardiso *crsMklPardiso;
-  feMKLPardisoInt matrixOrder;
+  PardisoInt matrixOrder;
   double *du;
   double *residu;
   feInt iparm12 = 1; // Modification de IPARM[12]
   bool symbolicFactorization = true;
 
   void *PT[64];
-  feMKLPardisoInt MYTPE;
-  feMKLPardisoInt IPARM[64];
+  PardisoInt MYTPE;
+  PardisoInt IPARM[64];
   double DPARM[64];
 
-  feMKLPardisoInt MAXFCT;
-  feMKLPardisoInt MNUM;
-  feMKLPardisoInt MTYPE;
-  feMKLPardisoInt SOLVER;
-  feMKLPardisoInt PHASE;
-  feMKLPardisoInt N;
-  feMKLPardisoInt NRHS;
-  feMKLPardisoInt ERROR;
-  feMKLPardisoInt MSGLVL;
-  feMKLPardisoInt IDUM;
+  PardisoInt MAXFCT;
+  PardisoInt MNUM;
+  PardisoInt MTYPE;
+  PardisoInt SOLVER;
+  PardisoInt PHASE;
+  PardisoInt N;
+  PardisoInt NRHS;
+  PardisoInt ERROR;
+  PardisoInt MSGLVL;
+  PardisoInt IDUM;
   double DDUM;
-  feMKLPardisoInt IPIVOT;
+  PardisoInt IPIVOT;
 
-  feMKLPardisoInt nz;
-  feMKLPardisoInt *Ap; // dimension ordre+1, IA
-  feMKLPardisoInt *Aj; // dimension nz, JA
+  PardisoInt nz;
+  PardisoInt *Ap; // dimension ordre+1, IA
+  PardisoInt *Aj; // dimension nz, JA
   double *Ax; // dimension nz
 
 public:
@@ -267,6 +268,11 @@ public:
     if(symbolicFactorization) recomputeMatrix = true;
   }
 
+  feInt getSystemSize() { return  N; };
+
+  void getRHSMaxNorm(double *norm){ *norm = 0.; };
+  void getResidualMaxNorm(double *norm){ *norm = 0.; };
+
   void setToZero();
   void setMatrixToZero();
   void setResidualToZero();
@@ -279,8 +285,9 @@ public:
   void applyCorrectionToResidual(double coeff, std::vector<double> &d);
   void correctSolution(feSolution *sol);
   void correctSolution(double *sol);
-  void viewMatrix(){};
+  void viewMatrix();
   void viewRHS(){};
+  void viewResidual(){};
 
 private:
   void mklSymbolicFactorization(void);

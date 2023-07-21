@@ -445,7 +445,7 @@ protected:
 public:
   feSysElm_TransientVectorMass(double coeff) : feSysElm(-1, 1, TRANSIENT_VECTOR_MASS, true), _coeff(coeff)
   {
-    _computeMatrixWithFD = true;
+    _computeMatrixWithFD = false;
   };
   ~feSysElm_TransientVectorMass(){};
   void createElementarySystem(std::vector<feSpace *> &space);

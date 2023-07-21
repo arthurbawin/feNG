@@ -8,29 +8,53 @@
 class feEZCompressedRowStorage
 {
 protected:
+  // The total number of nonzero entries
+  feInt _num_nnz;
+  // The number of nonzero for each row (for PETSc)
   std::vector<feInt> nnz;
+  // The set of nonzero entries for each row
   std::vector<std::set<feInt> > nnzset;
-  // std::set<std::pair<feInt,feInt>> allocatedPairs;
+
+  // From Pardiso's doc:
+  // ia_Pardiso[i] (i<n) points to the first column index of row i in the array ja_Pardiso
+  std::vector<feInt> ia_Pardiso;
+
+  // The (continuous) vector of column indices for each row
+  // Columns are given in increasing order and numbered starting at 0
+  std::vector<feInt> ja_Pardiso;
+
 public:
   feEZCompressedRowStorage(int numUnknowns, std::vector<feBilinearForm *> &formMatrices,
                            int numMatrixForms);
   ~feEZCompressedRowStorage(){};
 
+  feInt getNumNNZ() { return _num_nnz; };
   feInt *getNnz() { return nnz.data(); };
   feInt getNnzAt(int i) { return nnz[i]; };
-  // bool findPair(feInt i, feInt j)
-  // {
-  //   for(std::pair<feInt,feInt> pp : allocatedPairs){
-  //     if(pp.first == i && pp.second == j)
-  //     {
-  //       feInfo("Found preallocated pair %d,%d", i, j);
-  //       return true;
-  //     }
-  //   }
-  //   return false;
-  // }
+
+#if defined(HAVE_MKL)
+  void get_ia_Pardiso(PardisoInt **array) {
+    for(feInt i = 0; i < ia_Pardiso.size(); i++)
+      (*array)[i] = (PardisoInt) ia_Pardiso[i];
+  }
+  void get_ja_Pardiso(PardisoInt **array) { 
+  for(feInt i = 0; i < ja_Pardiso.size(); i++)
+      (*array)[i] = (PardisoInt) ja_Pardiso[i];
+  }
+#endif
+
+  double *allocateMatrixArray() { return new double[_num_nnz]; };
+  void freeMatrixArray(double *M)
+  {
+    if(M != NULL) delete[] M;
+  };
+  void setMatrixArrayToZero(double *M)
+  {
+    for(feInt i = 0; i < _num_nnz; i++) M[i] = 0.;
+  };
 };
 
+// Deprecated and should be removed, used only in the eigensolver
 class feCompressedRowStorage
 {
 public:
@@ -109,8 +133,8 @@ public:
   // ================================================================
   feInt *getAp() { return Ap; };
   feInt *getAj() { return Aj; };
-  double *getRangee() { return rangee; };
-  feInt *getIrangee() { return irangee; };
+  // double *getRangee() { return rangee; };
+  // feInt *getIrangee() { return irangee; };
   double *allocateMatrix() { return new double[nz]; };
   void freeMatrix(double *Matrix)
   {
@@ -123,8 +147,8 @@ public:
   // ================================================================
   // Somme des coefficients dans la matrice
   // ================================================================
-  void matrixAddValues(double *Matrix, feInt nRow, feInt *Row, feInt nColumn, feInt *Column,
-                       double **Aij);
+  // void matrixAddValues(double *Matrix, feInt nRow, feInt *Row, feInt nColumn, feInt *Column,
+  //                      double **Aij);
 
 protected:
   double *rangee = NULL;

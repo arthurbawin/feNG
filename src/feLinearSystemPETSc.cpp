@@ -388,13 +388,7 @@ void feLinearSystemPETSc::assembleMatrices(feSolution *sol)
   // ierr = MatNorm(_A, NORM_FROBENIUS, &normMat);
   // CHKERRABORT(PETSC_COMM_WORLD, ierr);
 
-  std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
-
   viewMatrix();
-
-  // std::cout << "Assembled matrix in"
-  //           << std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count() << "[ms]"
-  //           << std::endl;
 
   if(_exportMatrixMatlab) {
     feInfoCond(FE_VERBOSE > 1, "\t\t\tExporting global matrix to Matlab");
@@ -487,10 +481,6 @@ void feLinearSystemPETSc::assembleResiduals(feSolution *sol)
 
   viewRHS();
 
-  // feInfo("Assembled RHS in");
-  // std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count() << "[ms]"
-  //           << std::endl;
-
 #endif
 }
 
@@ -564,7 +554,7 @@ bool feLinearSystemPETSc::solve(double *normSolution, double *normRHS, double *n
   tic();
   ierr = KSPSolve(ksp, _rhs, _du);
   CHKERRABORT(PETSC_COMM_WORLD, ierr);
-  feInfoCond(FE_VERBOSE > 1, "\t\t\t\tSolved linear system in %f s", toc());
+  feInfoCond(FE_VERBOSE > 1, "\t\t\t\tSolved linear system with PETSc in %f s", toc());
 
   KSPConvergedReason reason;
   ierr = KSPGetConvergedReason(ksp, &reason);

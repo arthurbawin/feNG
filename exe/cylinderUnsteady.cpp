@@ -96,7 +96,7 @@ int main(int argc, char **argv)
 
     // Start the adaptation loop
     // int nAdaptationCycles = 200 / (nTimeSteps * dt);
-    int nAdaptationCycles = 100;
+    int nAdaptationCycles = 1;
     int nStepsToIncreaseRe = nAdaptationCycles / 2;
 
     double D = 1.;
@@ -110,7 +110,7 @@ int main(int argc, char **argv)
     double Re_final = 200.;
     double dRe = (Re_final - Re) / nStepsToIncreaseRe;
 
-    bool adapt = true;
+    bool adapt = false;
     bool curved = false;
 
     std::vector<double> forces_x(nAdaptationCycles);
@@ -210,7 +210,8 @@ int main(int argc, char **argv)
       // std::vector<feBilinearForm*> forms = {divSigma, divU, conv, trmass};
 
       feLinearSystem *linearSystem;
-      feCheck(createLinearSystem(linearSystem, PETSC, forms, numbering.getNbUnknowns(), argc, argv));
+      // feCheck(createLinearSystem(linearSystem, PETSC, forms, numbering.getNbUnknowns(), argc, argv));
+      feCheck(createLinearSystem(linearSystem, MKLPARDISO, forms, numbering.getNbUnknowns()));
       // feCheck(createLinearSystem(linearSystem, PETSC, forms, numbering.getNbDOFs(), argc, argv));
       // linearSystem->setDisplayRHSInConsole(true);
 

@@ -35,11 +35,12 @@ int main(int argc, char **argv)
 
   // Set the default parameters.
   const char *meshFile = "../data/square1.msh";
-  int verbosity = 1;
+  int verbosity = 2;
   int order = 1;
   int degreeQuadrature = 4;
 
   // Create an option parser and parse the command line arguments.
+  // The parser is not compatible with the PETSc options for now.
   // Returns an error if a command line argument is ill-formed.
   // If a command line argument is provided, it will overwrite the default parameter.
   // Each parameter added with "addOption" is optional by default, to make it required,
@@ -120,7 +121,8 @@ int main(int argc, char **argv)
   // performed in the solve step below ("makeSteps"). Two linear solvers are available:
   // MKL Pardiso (direct solver) and PETSc (collection of iterative solvers).
   feLinearSystem *system;
-  feCheck(createLinearSystem(system, PETSC, {diff, source}, numbering.getNbUnknowns(), argc, argv));
+  // feCheck(createLinearSystem(system, PETSC, {diff, source}, numbering.getNbUnknowns(), argc, argv));
+  feCheck(createLinearSystem(system, MKLPARDISO, {diff, source}, numbering.getNbUnknowns()));
 
   // Post-processing tools to compute norms and whatnot
   feNorm normU(L2_ERROR, {uDomaine}, &sol, &funSol);

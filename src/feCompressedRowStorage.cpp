@@ -6,11 +6,12 @@ feEZCompressedRowStorage::feEZCompressedRowStorage(int numUnknowns,
 {
   nnz.resize(numUnknowns, 0.);
   nnzset.resize(numUnknowns);
+  ia_Pardiso.resize(numUnknowns + 1);
 
   std::vector<feInt> adrI;
   std::vector<feInt> adrJ;
 
-  for(int i = 0; i < nnzset.size(); ++i) {
+  for(int i = 0; i < numUnknowns; ++i) {
     nnzset[i].clear();
     // To add a zero on diagonal elements
     nnzset[i].insert(i);
@@ -45,16 +46,12 @@ feEZCompressedRowStorage::feEZCompressedRowStorage(int numUnknowns,
     int numElementsInColor;
     std::vector<int> listElmC;
 
-    int nTOTELM = 0;
     for(int iColor = 0; iColor < numColors; ++iColor) {
       numElementsInColor = numElemPerColor[iColor];
       listElmC = listElmPerColor[iColor];
 
       int elm, nI, nJ;
-      std::vector<feInt> adrI;
-      std::vector<feInt> adrJ;
-
-      nTOTELM += numElementsInColor;
+      std::vector<feInt> adrI, adrJ;
 
 #if defined(HAVE_OMP)
 #pragma omp parallel for private(elm, f, adrI, adrJ, nI, nJ)
@@ -88,9 +85,21 @@ feEZCompressedRowStorage::feEZCompressedRowStorage(int numUnknowns,
     }
   }
 
-  for(int i = 0; i < nnzset.size(); ++i) {
+  _num_nnz = 0;
+  for(size_t i = 0; i < numUnknowns; ++i) {
     nnz[i] = fmax(1, nnzset[i].size());
+    _num_nnz += nnz[i];
   }
+
+  // Copy nnzset size_to continuous vector
+  ja_Pardiso.resize(_num_nnz);
+  feInt cnt = 0;
+  for(int i = 0; i < numUnknowns; ++i) {
+    ia_Pardiso[i] = cnt;
+    for(auto &val : nnzset[i])
+      ja_Pardiso[cnt++] = val;
+  }
+  ia_Pardiso[numUnknowns] = _num_nnz;
 }
 
 // ====================================================================
@@ -382,24 +391,24 @@ void feCompressedRowStorageMklPardiso::print_info()
   }
 }
 
-void feCompressedRowStorageMklPardiso::matrixAddValues(double *Matrix, feInt nRow, feInt *Row,
-                                                       feInt nColumn, feInt *Column, double **Aij)
-{
-  for(feInt i = 0; i < nRow; i++) {
-    feInt I = Row[i];
-    if(I < ordre) {
-      feInt debut = Ap[I] - 1;
-      feInt fin = Ap[I + 1] - 1;
-      feInt ncf = fin - debut;
+// void feCompressedRowStorageMklPardiso::matrixAddValues(double *Matrix, feInt nRow, feInt *Row,
+//                                                        feInt nColumn, feInt *Column, double **Aij)
+// {
+//   for(feInt i = 0; i < nRow; i++) {
+//     feInt I = Row[i];
+//     if(I < ordre) {
+//       feInt debut = Ap[I] - 1;
+//       feInt fin = Ap[I + 1] - 1;
+//       feInt ncf = fin - debut;
 
-      for(feInt j = 0; j < ncf; j++) irangee[Aj[debut + j] - 1] = debut + j;
-      for(feInt j = 0; j < nColumn; j++) {
-        feInt J = Column[j];
-        if(J < ordre) {
-          // printf("irangee %ld Aij %g\n", irangee[J], Aij[i][j]);
-          Matrix[irangee[J]] += Aij[i][j];
-        }
-      }
-    }
-  }
-}
+//       for(feInt j = 0; j < ncf; j++) irangee[Aj[debut + j] - 1] = debut + j;
+//       for(feInt j = 0; j < nColumn; j++) {
+//         feInt J = Column[j];
+//         if(J < ordre) {
+//           // printf("irangee %ld Aij %g\n", irangee[J], Aij[i][j]);
+//           Matrix[irangee[J]] += Aij[i][j];
+//         }
+//       }
+//     }
+//   }
+// }
