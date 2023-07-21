@@ -58,13 +58,13 @@ feStatus solveQNBDF(feSolutionContainer *solDot, feTolerances tol, feMetaNumber 
 
     // If computing unsteady solution (with more than 1 solution vector),
     // recompute the jacobian only at first iteration and every N Newton steps
-    // int recomputeJacobianEveryNsteps = 4;
-    // if(solDot->getNbSol() > 1) {
-    //   if(iter % recomputeJacobianEveryNsteps == 0)
-    //     linearSystem->setRecomputeStatus(true);
-    //   else 
-    //     linearSystem->setRecomputeStatus(false);
-    // }
+    int recomputeJacobianEveryNsteps = 4;
+    if(solDot->getNbSol() > 1) {
+      if(iter % recomputeJacobianEveryNsteps == 0)
+        linearSystem->setRecomputeStatus(true);
+      else 
+        linearSystem->setRecomputeStatus(false);
+    }
 
     // Reset, assemble and solve the linear system J(u) * du = -NL(u)
     linearSystem->setToZero();
