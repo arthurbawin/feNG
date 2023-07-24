@@ -51,20 +51,21 @@ feStatus solveQNBDF(feSolutionContainer *solDot, feTolerances tol, feMetaNumber 
   feInfoCond(FE_VERBOSE > 0, "\t\t\tNONLINEAR SOLVER:");
   bool stop = false;
   int iter = 0, linearSystemIter;
-  double normDx, normResidual, normAxb;
+  double normDx, normResidual, normAxb, previousResidual = 1e22;
+  double recomputeMatrixTolerance = 1e-1;
 
   // Newton-Rapshon iteration
   while(!stop) {
 
-    // If computing unsteady solution (with more than 1 solution vector),
-    // recompute the jacobian only at first iteration and every N Newton steps
-    int recomputeJacobianEveryNsteps = 4;
-    if(solDot->getNbSol() > 1) {
-      if(iter % recomputeJacobianEveryNsteps == 0)
-        linearSystem->setRecomputeStatus(true);
-      else 
-        linearSystem->setRecomputeStatus(false);
-    }
+    // // If computing unsteady solution (with more than 1 solution vector),
+    // // recompute the jacobian only at first iteration and every N Newton steps
+    // int recomputeJacobianEveryNsteps = 4;
+    // if(solDot->getNbSol() > 1) {
+    //   if(iter % recomputeJacobianEveryNsteps == 0)
+    //     linearSystem->setRecomputeStatus(true);
+    //   else 
+    //     linearSystem->setRecomputeStatus(false);
+    // }
 
     // Reset, assemble and solve the linear system J(u) * du = -NL(u)
     linearSystem->setToZero();
@@ -99,6 +100,18 @@ feStatus solveQNBDF(feSolutionContainer *solDot, feTolerances tol, feMetaNumber 
                "||NL(u)|| = %10.10e (%s)",
                ++iter, normAxb, linearSystemIter, normDx, normResidual,
                linearSystem->getRecomputeStatus() ? "true" : "false");
+
+    // Decide if we should recompute the tangent matrix at next iteration
+    if(solDot->getNbSol() > 1) {
+      if(normResidual < recomputeMatrixTolerance * previousResidual) {
+        // Residual has decreased enough: keep matrix
+        linearSystem->setRecomputeStatus(false);
+      } else {
+        linearSystem->setRecomputeStatus(true);
+      }
+    }
+
+    previousResidual = normResidual;
 
     stop = (normResidual <= tol.tolResidual) || (normDx <= tol.tolDx) || (iter > tol.maxIter);
   }
