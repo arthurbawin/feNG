@@ -93,7 +93,7 @@ feStatus feMesh2DP1::adapt(std::vector<feNewRecovery*> recoveredFields, feMetric
 
   // Step 2: Create aniso mesh
   // Save directly to .msh to preserve Physical Entities
-  std::string cmd1 = "mmg2d " + options.mmgInputMeshfile + " -hgrad -1 -o " +
+  std::string cmd1 = "mmg2d_O3 " + options.mmgInputMeshfile + " -hgrad -1 -o " +
   options.mmgOutputMeshfile;
   if(FE_VERBOSE == VERBOSE_NONE) {
     // Write MMG console outputs to logMMG.txt
