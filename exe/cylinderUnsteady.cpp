@@ -102,7 +102,7 @@ int main(int argc, char **argv)
     double D = 1.;
     double h = 16.;
     double T0 = 2.; // Time integration starts at 0 from steady solution
-    // feVectorFunction inlet(u1, {h, T0});
+    feVectorFunction inlet(u1, {h, T0});
     double dpdx = -1.0;
     feVectorFunction uExact(solU, {h, dpdx});
 
