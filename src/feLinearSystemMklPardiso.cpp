@@ -7,24 +7,24 @@ extern int FE_VERBOSE;
 
 feLinearSystemMklPardiso::feLinearSystemMklPardiso(std::vector<feBilinearForm *> bilinearForms,
                                                    int numUnknowns)
-  : feLinearSystem(bilinearForms)
+  : feLinearSystem(bilinearForms), _nInc(numUnknowns)
 {
   recomputeMatrix = true;
 
-  matrixOrder = numUnknowns;
+  _nInc = numUnknowns;
 
   _EZCRS = new feEZCompressedRowStorage(numUnknowns, _formMatrices, _numMatrixForms);
 
   nz = _EZCRS->getNumNNZ();
-  Ap = new PardisoInt[matrixOrder + 1];
+  Ap = new PardisoInt[_nInc + 1];
   Aj = new PardisoInt[nz];
   _EZCRS->get_ia_Pardiso(&Ap);
   _EZCRS->get_ja_Pardiso(&Aj);
   Ax = _EZCRS->allocateMatrixArray();
   _EZCRS->setMatrixArrayToZero(Ax);
 
-  du = new double[matrixOrder];
-  residu = new double[matrixOrder];
+  du = new double[_nInc];
+  residu = new double[_nInc];
   symbolicFactorization = true;
   //=================================================================
   //  INITIALISATION - MATRICE NON SYMETRIQUE
@@ -67,15 +67,15 @@ feLinearSystemMklPardiso::feLinearSystemMklPardiso(std::vector<feBilinearForm *>
 
   for(feInt i = 0; i < 64; i++) PT[i] = NULL;
 
-  N = (feInt) matrixOrder;
+  // N = (feInt) _nInc;
   NRHS = 1;
   // IPARM[2]= num_procs; // nombre de processeurs
   MAXFCT = 1;
   MNUM = 1;
-  MSGLVL = 1;
+  MSGLVL = 0;
   ERROR = 0;
 
-  feInfoCond(FE_VERBOSE > 0, "\t\tCreated a MKL Pardiso linear system of size %d x %d", N, N);
+  feInfoCond(FE_VERBOSE > 0, "\t\tCreated a MKL Pardiso linear system of size %d x %d", _nInc, _nInc);
   feInfoCond(FE_VERBOSE > 0, "\t\t\tTODO: Add Pardiso options");
 }
 
@@ -92,12 +92,12 @@ double vectorMaxNorm(feInt N, double *V)
 void feLinearSystemMklPardiso::viewMatrix()
 {
   // for(feInt i = 0; i < nz; i++) printf("%ld %g \n", i, Ax[i]);
-  for(feInt i = 0; i < matrixOrder; i++) {
+  for(feInt i = 0; i < _nInc; i++) {
     printf("Row %ld: ", i);
     int debut = Ap[i];
     int fin = Ap[i + 1];
     for(feInt j = 0; j < fin - debut; ++j) {
-      printf("(%lld, %f)  ", Aj[debut + j], Ax[debut + j]);
+      printf("(%d, %f)  ", Aj[debut + j], Ax[debut + j]);
     }
     printf("\n");
   }
@@ -149,19 +149,19 @@ void feLinearSystemMklPardiso::assembleMatrices(feSolution *sol)
         sizeI = adrI.size();
         niElm.reserve(sizeI);
         for(feInt i = 0; i < sizeI; ++i) {
-          if(adrI[i] < matrixOrder) niElm.push_back(i);
+          if(adrI[i] < _nInc) niElm.push_back(i);
         }
         sizeJ = adrJ.size();
         njElm.reserve(sizeJ);
         for(feInt i = 0; i < sizeJ; ++i) {
-          if(adrJ[i] < matrixOrder) njElm.push_back(i);
+          if(adrJ[i] < _nInc) njElm.push_back(i);
         }
 
         adrI.erase(std::remove_if(adrI.begin(), adrI.end(),
-                                  [this](const int &x) { return x >= this->matrixOrder; }),
+                                  [this](const int &x) { return x >= this->_nInc; }),
                    adrI.end());
         adrJ.erase(std::remove_if(adrJ.begin(), adrJ.end(),
-                                  [this](const int &x) { return x >= this->matrixOrder; }),
+                                  [this](const int &x) { return x >= this->_nInc; }),
                    adrJ.end());
 
         // Flatten Ae at relevant indices
@@ -233,25 +233,25 @@ void feLinearSystemMklPardiso::assembleResiduals(feSolution *sol)
         adrI = f->getAdrI();
         sizeI = adrI.size();
         for(feInt i = 0; i < sizeI; i++) {
-          if(adrI[i] < matrixOrder) residu[adrI[i]] += Be[i];
+          if(adrI[i] < _nInc) residu[adrI[i]] += Be[i];
         }
       }
     }
   }
   feInfoCond(FE_VERBOSE > 1, "\t\t\t\tAssembled global residual in %f s", toc());
-  // for(int i = 0; i < matrixOrder; ++i){
+  // for(int i = 0; i < _nInc; ++i){
   //   printf("%g \n",residu[i]);
   // }
 }
 
 void feLinearSystemMklPardiso::assignResidualToDCResidual(feSolutionContainer *solContainer)
 {
-  for(feInt i = 0; i < matrixOrder; ++i) solContainer->_fResidual[0][i] = residu[i];
+  for(feInt i = 0; i < _nInc; ++i) solContainer->_fResidual[0][i] = residu[i];
 }
 
 void feLinearSystemMklPardiso::applyCorrectionToResidual(double coeff, std::vector<double> &d)
 {
-  for(int i = 0; i < matrixOrder; ++i) residu[i] += coeff * d[i];
+  for(int i = 0; i < _nInc; ++i) residu[i] += coeff * d[i];
 }
 
 void feLinearSystemMklPardiso::correctSolution(feSolution *sol)
@@ -259,12 +259,12 @@ void feLinearSystemMklPardiso::correctSolution(feSolution *sol)
   // Est-ce efficace?
   // Pourquoi ne pas avoir un pointeur sur le vecteur solution;
   // Conversion de feInt à int?
-  for(feInt i = 0; i < matrixOrder; i++) sol->incrementSolAtDOF((int)i, du[i]);
+  for(feInt i = 0; i < _nInc; i++) sol->incrementSolAtDOF((int)i, du[i]);
 }
 
 void feLinearSystemMklPardiso::correctSolution(double *sol)
 {
-  for(feInt i = 0; i < matrixOrder; i++) sol[i] += du[i];
+  for(feInt i = 0; i < _nInc; i++) sol[i] += du[i];
 }
 
 bool checkPardisoErrorCode(PardisoInt &errorCode, std::string &pardisoStep)
@@ -384,8 +384,8 @@ bool feLinearSystemMklPardiso::solve(double *normDx, double *normResidual, doubl
 
   symbolicFactorization = false;
 
-  *normDx = vectorMaxNorm(matrixOrder, du);
-  *normResidual = vectorMaxNorm(matrixOrder, residu);
+  *normDx = vectorMaxNorm(_nInc, du);
+  *normResidual = vectorMaxNorm(_nInc, residu);
   *normAxb = 0.0;
   *nIter = 1;
 
@@ -405,7 +405,7 @@ void feLinearSystemMklPardiso::setMatrixToZero()
 
 void feLinearSystemMklPardiso::setResidualToZero()
 {
-  for(feInt i = 0; i < matrixOrder; i++) residu[i] = 0;
+  for(feInt i = 0; i < _nInc; i++) residu[i] = 0;
 }
 
 void feLinearSystemMklPardiso::assemble(feSolution *sol)
@@ -419,28 +419,35 @@ void feLinearSystemMklPardiso::assemble(feSolution *sol)
 void feLinearSystemMklPardiso::constrainEssentialComponents(feSolution *sol)
 {
   tic();
-  std::vector<feInt> rowsToConstrain;
-  std::vector<feInt> adr;
-  for(auto space : sol->_spaces) {
-    int nComponents = space->getNumComponents();
-    if(nComponents > 1) {
-      adr.resize(space->getNumFunctions(), 0);
-      for(int i = 0; i < nComponents; ++i) {
-        if(space->isEssentialComponent(i)) {
-          for(int iElm = 0; iElm < space->getNumElements(); ++iElm) {
-            // Constrain matrix and RHS
-            space->initializeAddressingVector(iElm, adr);
-            for(int j = 0; j < space->getNumFunctions(); ++j) {
-              if(j % nComponents == i) {
-                feInt DOF = adr[j];
-                if(adr[j] < matrixOrder) {
-                  // A DOF shared between this space and another
-                  // essential space has a tag higher than _nInc,
-                  // hence  we cannot constrain it, but it's
-                  // already an essential DOF for which there is no
-                  // need to solve (its value will be imposed by the
-                  // other space though, so check for spaces overlap).
-                  rowsToConstrain.push_back(DOF);
+  // Initialize data at first pass
+  if(_initializeConstrainData) {
+
+    _initializeConstrainData = false;
+
+    _rowsToConstrain.reserve(_nInc);
+
+    std::vector<feInt> adr;
+    for(auto space : sol->_spaces) {
+      int nComponents = space->getNumComponents();
+      if(nComponents > 1) {
+        adr.resize(space->getNumFunctions(), 0);
+        for(int i = 0; i < nComponents; ++i) {
+          if(space->isEssentialComponent(i)) {
+            for(int iElm = 0; iElm < space->getNumElements(); ++iElm) {
+              // Constrain matrix and RHS
+              space->initializeAddressingVector(iElm, adr);
+              for(int j = 0; j < space->getNumFunctions(); ++j) {
+                if(j % nComponents == i) {
+                  feInt DOF = adr[j];
+                  if(adr[j] < _nInc) {
+                    // A DOF shared between this space and another
+                    // essential space has a tag higher than _nInc,
+                    // hence  we cannot constrain it, but it's
+                    // already an essential DOF for which there is no
+                    // need to solve (its value will be imposed by the
+                    // other space though, so check for spaces overlap).
+                    _rowsToConstrain.push_back(DOF);
+                  }
                 }
               }
             }
@@ -448,15 +455,34 @@ void feLinearSystemMklPardiso::constrainEssentialComponents(feSolution *sol)
         }
       }
     }
+
+    _numOccurencesInJa.resize(_rowsToConstrain.size(), 0);
+    _posOccurencesInJa.resize(_rowsToConstrain.size());
+
+    #if defined(HAVE_OMP)
+    #pragma omp parallel for
+    #endif
+    for(size_t i = 0; i < _rowsToConstrain.size(); ++i)
+    {
+      feInt row = _rowsToConstrain[i];
+      // Find every occurence of 'row' in ja
+      for(feInt j = 0; j < nz; ++j) {
+        if(Aj[j] == row) {
+          _numOccurencesInJa[i]++;
+          _posOccurencesInJa[i].insert(j);
+        }
+      }
+    }
   }
 
   // Constrain matrix and RHS
-  for(auto row : rowsToConstrain)
+  for(size_t iRow = 0; iRow < _rowsToConstrain.size(); ++iRow)
   {
-    // Constrain columns. Find every occurence of 'row' in ja
-    // and set the associated value to zero
-    for(feInt i = 0; i < nz; ++i) {
-      if(Aj[i] == row) Ax[i] = 0.;
+    feInt row = _rowsToConstrain[iRow];
+    // Constrain columns. For every occurence of 'row' in ja,
+    // set the associated value to zero
+    for(auto jRow : _posOccurencesInJa[iRow]) {
+      Ax[jRow] = 0.;
     }
 
     // Then constrain rows. Assign 0 to all columns of the row
@@ -472,6 +498,7 @@ void feLinearSystemMklPardiso::constrainEssentialComponents(feSolution *sol)
     // Constrain RHS
     residu[row] = 0.;
   }
+
   feInfoCond(FE_VERBOSE > 1, "\t\t\t\tConstrained essential DOFs in %f s", toc());
 }
 
@@ -485,10 +512,10 @@ void feLinearSystemMklPardiso::constrainEssentialComponents(feSolution *sol)
 // ====================================================================
 void feLinearSystemMklPardiso::mklSymbolicFactorization(void)
 {
-  // for(feInt i=0;i<matrixOrder;i++) Ax[i] = 1.0;  // dubitatif
+  // for(feInt i=0;i<_nInc;i++) Ax[i] = 1.0;  // dubitatif
   PHASE = 11;
   IPARM[12] = iparm12;
-  pardiso(PT, &MAXFCT, &MNUM, &MTYPE, &PHASE, &N, Ax, Ap, Aj, &IDUM, &NRHS, IPARM, &MSGLVL,
+  pardiso(PT, &MAXFCT, &MNUM, &MTYPE, &PHASE, &_nInc, Ax, Ap, Aj, &IDUM, &NRHS, IPARM, &MSGLVL,
              &DDUM, &DDUM, &ERROR);
   // pardiso_64(PT, &MAXFCT, &MNUM, &MTYPE, &PHASE, &N, Ax, Ap, Aj, &IDUM, &NRHS, IPARM, &MSGLVL,
   //            &DDUM, &DDUM, &ERROR);
@@ -497,7 +524,7 @@ void feLinearSystemMklPardiso::mklSymbolicFactorization(void)
 void feLinearSystemMklPardiso::mklFactorization(void)
 {
   PHASE = 22;
-  pardiso(PT, &MAXFCT, &MNUM, &MTYPE, &PHASE, &N, Ax, Ap, Aj, &IDUM, &NRHS, IPARM, &MSGLVL,
+  pardiso(PT, &MAXFCT, &MNUM, &MTYPE, &PHASE, &_nInc, Ax, Ap, Aj, &IDUM, &NRHS, IPARM, &MSGLVL,
              &DDUM, &DDUM, &ERROR);
   // pardiso_64(PT, &MAXFCT, &MNUM, &MTYPE, &PHASE, &N, Ax, Ap, Aj, &IDUM, &NRHS, IPARM, &MSGLVL,
   //            &DDUM, &DDUM, &ERROR);
@@ -509,17 +536,14 @@ void feLinearSystemMklPardiso::mklSolve(void)
   IPARM[7] = 1;
 
   // Reset solution vector
-  for(feInt i = 0; i < matrixOrder; i++) du[i] = 0.0;
+  for(feInt i = 0; i < _nInc; i++) du[i] = 0.0;
 
-  pardiso(PT, &MAXFCT, &MNUM, &MTYPE, &PHASE, &N, Ax, Ap, Aj, &IDUM, &NRHS, IPARM, &MSGLVL,
+  pardiso(PT, &MAXFCT, &MNUM, &MTYPE, &PHASE, &_nInc, Ax, Ap, Aj, &IDUM, &NRHS, IPARM, &MSGLVL,
              residu, du, &ERROR);
 // pardiso_64(PT, &MAXFCT, &MNUM, &MTYPE, &PHASE, &N, Ax, Ap, Aj, &IDUM, &NRHS, IPARM, &MSGLVL,
 //              residu, du, &ERROR);
 }
 
-// ====================================================================
-// Destructeur/Constructeur de la classe de base dérivée  MKL PARDISO
-// ====================================================================
 feLinearSystemMklPardiso::~feLinearSystemMklPardiso(void)
 {
   delete[] Ap;
@@ -529,6 +553,6 @@ feLinearSystemMklPardiso::~feLinearSystemMklPardiso(void)
   delete[] residu;
 }
 
-void feLinearSystemMklPardiso::setPivot(int pivot) { IPARM[9] = (feInt)pivot; }
+void feLinearSystemMklPardiso::setPivot(int pivot) { IPARM[9] = (feInt) pivot; }
 
 #endif

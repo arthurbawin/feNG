@@ -214,35 +214,43 @@ private:
 class feLinearSystemMklPardiso : public feLinearSystem
 {
 protected:
-  feCompressedRowStorageMklPardiso *crsMklPardiso;
-  PardisoInt matrixOrder;
+  
+  PardisoInt _nInc;
+
   double *du;
   double *residu;
-  feInt iparm12 = 1; // Modification de IPARM[12]
   bool symbolicFactorization = true;
 
+  // CRS data for Pardiso
+  PardisoInt nz;
+  PardisoInt *Ap; // dimension ordre+1, IA
+  PardisoInt *Aj; // dimension nz, JA
+  double *Ax; // dimension nz
+
+  // Data to speedup DOF constraining:
+  // For each row, store the number and positions of its occurences in JA
+  bool _initializeConstrainData = true;
+  std::vector<feInt> _rowsToConstrain;
+  std::vector<size_t> _numOccurencesInJa;
+  std::vector<std::set<feInt>> _posOccurencesInJa;
+
+  // Pardiso options
+  feInt iparm12 = 1; // Modification de IPARM[12]
   void *PT[64];
   PardisoInt MYTPE;
   PardisoInt IPARM[64];
   double DPARM[64];
-
   PardisoInt MAXFCT;
   PardisoInt MNUM;
   PardisoInt MTYPE;
   PardisoInt SOLVER;
   PardisoInt PHASE;
-  PardisoInt N;
   PardisoInt NRHS;
   PardisoInt ERROR;
   PardisoInt MSGLVL;
   PardisoInt IDUM;
   double DDUM;
   PardisoInt IPIVOT;
-
-  PardisoInt nz;
-  PardisoInt *Ap; // dimension ordre+1, IA
-  PardisoInt *Aj; // dimension nz, JA
-  double *Ax; // dimension nz
 
 public:
   feLinearSystemMklPardiso(std::vector<feBilinearForm *> bilinearForms, int numUnknowns);
@@ -268,7 +276,7 @@ public:
     if(symbolicFactorization) recomputeMatrix = true;
   }
 
-  feInt getSystemSize() { return  N; };
+  feInt getSystemSize() { return  _nInc; };
 
   void getRHSMaxNorm(double *norm){ *norm = 0.; };
   void getResidualMaxNorm(double *norm){ *norm = 0.; };

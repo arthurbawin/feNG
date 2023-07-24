@@ -61,7 +61,7 @@ int main(int argc, char **argv)
   bool curveTheMesh = false;
   bool appendToErrorFile = false;
 
-  setVerbose(1);
+  setVerbose(2);
 
   feConstantFunction zero(0.);
   feConstantFunction one(1.);
@@ -89,14 +89,14 @@ int main(int argc, char **argv)
 
     double theT0 = 0.;
     double dt = 0.05;
-    int nTimeSteps = 10;
+    int nTimeSteps = 1000;
     int currentStep = 0;
 
     feVectorFunction inletUniform(u2);
 
     // Start the adaptation loop
     // int nAdaptationCycles = 200 / (nTimeSteps * dt);
-    int nAdaptationCycles = 100;
+    int nAdaptationCycles = 1;
     int nStepsToIncreaseRe = nAdaptationCycles / 2;
 
     double D = 1.;
@@ -111,10 +111,14 @@ int main(int argc, char **argv)
     double dRe = (Re_final - Re) / nStepsToIncreaseRe;
 
     bool adapt = false;
-    bool curved = true;
+    bool curved = false;
 
-    std::vector<double> forces_x(nAdaptationCycles);
-    std::vector<double> forces_y(nAdaptationCycles);
+    std::vector<double> time(nTimeSteps * nAdaptationCycles);
+    std::vector<double> forces_x(nTimeSteps * nAdaptationCycles);
+    std::vector<double> forces_y(nTimeSteps * nAdaptationCycles);
+    // Write forces to file
+    std::ofstream outfile;
+    outfile.open("forces2.txt");
 
     for(int iAdapt = 0; iAdapt < nAdaptationCycles; ++iAdapt)
     {
@@ -126,10 +130,11 @@ int main(int argc, char **argv)
         } else {
           meshFile = "../data/cylindre_P1.msh";
           // meshFile = "../data/poiseuille.msh";
+          // meshFile = "../data/cylindre_P2_fine.msh";
         }
       }
 
-      // meshFile = "../data/cylindreStructured.msh";
+      meshFile = "../data/cylindreStructured.msh";
       // meshFile = "../data/VonKarmanV4.msh";
 
       // meshFile = "../data/cylindreP2_" + std::to_string(iAdapt+1) + ".msh";
@@ -147,17 +152,23 @@ int main(int argc, char **argv)
       feSpace *uDroite = nullptr;
 
       // Cylindre
-      feCheck(createFiniteElementSpace(     uIn, &mesh, elementType::VECTOR_LAGRANGE, orderVelocity, "U",   "Gauche", degreeQuadrature, &inletUniform));
-      feCheck(createFiniteElementSpace(    uTop, &mesh, elementType::VECTOR_LAGRANGE, orderVelocity, "U",     "Haut", degreeQuadrature, &zeroVector));
-      feCheck(createFiniteElementSpace( uBottom, &mesh, elementType::VECTOR_LAGRANGE, orderVelocity, "U",      "Bas", degreeQuadrature, &zeroVector));
-      feCheck(createFiniteElementSpace( uNoSlip, &mesh, elementType::VECTOR_LAGRANGE, orderVelocity, "U", "Cylindre", degreeQuadrature, &zeroVector));
-      feCheck(createFiniteElementSpace(uDomaine, &mesh, elementType::VECTOR_LAGRANGE, orderVelocity, "U",  "Domaine", degreeQuadrature, &inlet));
-      feCheck(createFiniteElementSpace(pDomaine, &mesh, elementType::LAGRANGE,        orderPressure, "P",  "Domaine", degreeQuadrature, &zero));
-      feCheck(createFiniteElementSpace(pCylindre, &mesh, elementType::LAGRANGE,        orderPressure, "P",  "Cylindre", degreeQuadrature, &zero));
+      feCheck(createFiniteElementSpace(           uIn, &mesh, elementType::VECTOR_LAGRANGE, orderVelocity, "U",   "Gauche", degreeQuadrature, &inletUniform));
+      feCheck(createFiniteElementSpace(          uTop, &mesh, elementType::VECTOR_LAGRANGE, orderVelocity, "U",     "Haut", degreeQuadrature, &zeroVector));
+      feCheck(createFiniteElementSpace(       uBottom, &mesh, elementType::VECTOR_LAGRANGE, orderVelocity, "U",      "Bas", degreeQuadrature, &zeroVector));
+      feCheck(createFiniteElementSpace(       uNoSlip, &mesh, elementType::VECTOR_LAGRANGE, orderVelocity, "U", "Cylindre", degreeQuadrature, &zeroVector));
+      feCheck(createFiniteElementSpace(      uDomaine, &mesh, elementType::VECTOR_LAGRANGE, orderVelocity, "U",  "Domaine", degreeQuadrature, &inlet));
+      feCheck(createFiniteElementSpace(      pDomaine, &mesh, elementType::LAGRANGE,        orderPressure, "P",  "Domaine", degreeQuadrature, &zero));
+      feCheck(createFiniteElementSpace(     pCylindre, &mesh, elementType::LAGRANGE,        orderPressure, "P",  "Cylindre", degreeQuadrature, &zero));
+      feCheck(createFiniteElementSpace(lambdaCylindre, &mesh, elementType::VECTOR_LAGRANGE, orderVelocity, "L",  "Cylindre", degreeQuadrature, &zeroVector));
       // feCheck(createFiniteElementSpace(wDomaine, &mesh, elementType::LAGRANGE,        orderVelocity, "W",  "Domaine", degreeQuadrature, &zero));
-      // feCheck(createFiniteElementSpace(lambdaCylindre, &mesh, elementType::VECTOR_LAGRANGE, orderVelocity, "L",  "Cylindre", degreeQuadrature, &zeroVector));
       std::vector<feSpace*> spaces = {uTop, uBottom, uNoSlip, uDomaine, pDomaine, pCylindre, uIn};
-      std::vector<feSpace*> essentialSpaces = {uNoSlip, uIn};
+      if(lambdaCylindre) {
+        spaces.push_back(lambdaCylindre);
+      }
+      std::vector<feSpace*> essentialSpaces = {uIn};
+      if(!lambdaCylindre) {
+        essentialSpaces.push_back(uNoSlip);
+      }
       uTop->setEssentialComponent(1, true);
       uBottom->setEssentialComponent(1, true);
 
@@ -186,34 +197,35 @@ int main(int argc, char **argv)
       feBilinearForm *vorticity = nullptr, *massvorticity = nullptr;
       feBilinearForm *massUL = nullptr, *massLU = nullptr, *srcLambda = nullptr;
       feBilinearForm *divSigma = nullptr;
-      feCheck(createBilinearForm( gradP, {uDomaine, pDomaine}, new feSysElm_MixedGradient(&minusOne)                    ));
-      feCheck(createBilinearForm( diffU,           {uDomaine}, new feSysElm_VectorDiffusion(&one, &viscosity) ));
-      feCheck(createBilinearForm( divSigma, {uDomaine, pDomaine}, new feSysElm_DivergenceNewtonianStress(&minusOne, &viscosity) ));
+      feCheck(createBilinearForm( gradP, {uDomaine, pDomaine}, new feSysElm_MixedGradient(&minusOne)               ));
+      feCheck(createBilinearForm( diffU,           {uDomaine}, new feSysElm_VectorDiffusion(&one, &viscosity)      ));
       feCheck(createBilinearForm(  divU, {pDomaine, uDomaine}, new feSysElm_MixedDivergence(&one)                  ));
       feCheck(createBilinearForm(  conv,           {uDomaine}, new feSysElm_VectorConvectiveAcceleration(&minusOne)));
-      feCheck(createBilinearForm(trmass,           {uDomaine}, new feSysElm_TransientVectorMass(-1.)));
+      feCheck(createBilinearForm(trmass,           {uDomaine}, new feSysElm_TransientVectorMass(-1.)               ));
       // feCheck(createBilinearForm(  supg, {uDomaine, pDomaine}, new feSysElm_NS_SUPG_PSPG(&one, &density, &viscosity, &zeroVector) ));
+      // feCheck(createBilinearForm( divSigma, {uDomaine, pDomaine}, new feSysElm_DivergenceNewtonianStress(&minusOne, &viscosity) ));
       
       // Vorticity equation
       // feCheck(createBilinearForm( vorticity, {wDomaine, uDomaine}, new feSysElm_MixedCurl(&minusOne) ));
       // feCheck(createBilinearForm( massvorticity, {wDomaine}, new feSysElm_Mass(&one) ));
 
       // Enforce no-slip on the cylinder with a Lagrange multiplier
-      // feConstantVectorFunction cylinderVelocity({0.,0.});
-      // feCheck(createBilinearForm(   massUL, {uNoSlip, lambdaCylindre}, new feSysElm_MixedVectorMass(&one) ));
-      // feCheck(createBilinearForm(   massLU, {lambdaCylindre, uNoSlip}, new feSysElm_MixedVectorMass(&one) ));
-      // feCheck(createBilinearForm(srcLambda,          {lambdaCylindre}, new feSysElm_VectorSource(&cylinderVelocity)));
+      feConstantVectorFunction cylinderVelocity({0.,0.});
+      feCheck(createBilinearForm(   massUL, {uNoSlip, lambdaCylindre}, new feSysElm_MixedVectorMass(&one) ));
+      feCheck(createBilinearForm(   massLU, {lambdaCylindre, uNoSlip}, new feSysElm_MixedVectorMass(&one) ));
+      feCheck(createBilinearForm(srcLambda,          {lambdaCylindre}, new feSysElm_VectorSource(&cylinderVelocity)));
 
-      // std::vector<feBilinearForm*> forms = {gradP, diffU, divU, conv, trmass, massUL, massLU, srcLambda};
-      // std::vector<feBilinearForm*> forms = {gradP, diffU, divU, conv, trmass};
       std::vector<feBilinearForm*> forms = {gradP, diffU, divU, conv, trmass};
-      // std::vector<feBilinearForm*> forms = {divSigma, divU, conv, trmass};
+
+      // Weakly enforced essential BC
+      if(lambdaCylindre) {
+        forms.push_back(massUL);
+        forms.push_back(massLU);
+        forms.push_back(srcLambda);
+      }
 
       feLinearSystem *linearSystem;
-      // feCheck(createLinearSystem(linearSystem, PETSC, forms, numbering.getNbUnknowns(), argc, argv));
-      feCheck(createLinearSystem(linearSystem, MKLPARDISO, forms, numbering.getNbUnknowns()));
-      // linearSystem->setDisplayRHSInConsole(true);
-      // linearSystem->setDisplayMatrixInConsole(true);
+      feCheck(createLinearSystem(linearSystem, MKLPARDISO, forms, numbering.getNbUnknowns(), argc, argv));
 
       feExporter *exporter;
       feCheck(createVisualizationExporter(exporter, VTK, &numbering, &sol, &mesh, spaces));
@@ -224,17 +236,9 @@ int main(int argc, char **argv)
         vtkFileRoot = vtkFileRoot + "noAdapt_";
       feExportData exportData = {exporter, exportEveryNSteps, vtkFileRoot};
 
-      sol.initializeUnknowns(&mesh);
-      sol.initializeEssentialBC(&mesh);
-      feCheck(exporter->writeStep("initial.vtk"));
-
-      feNorm *norm, *plift, *pdrag, *vlift, *vdrag, *lambdaNorm;
+      feNorm *norm, *lambdaNorm;
       feCheck(createNorm(norm, VECTOR_L2, {uDomaine}, &sol));
-      // feCheck(createNorm(plift, PRESSURE_LIFT_FORCE, {pCylindre}, &sol));
-      // feCheck(createNorm(vlift,  VISCOUS_LIFT_FORCE, {uNoSlip  }, &sol));
-      // feCheck(createNorm(pdrag, PRESSURE_DRAG_FORCE, {pCylindre}, &sol));
-      // feCheck(createNorm(vdrag,  VISCOUS_DRAG_FORCE, {uNoSlip  }, &sol));
-      // feCheck(createNorm(lambdaNorm,  L2_ERROR, {lambdaCylindre}, &sol));
+      feCheck(createNorm(lambdaNorm,  L2_ERROR, {lambdaCylindre}, &sol));
       std::vector<feNorm*> norms = {norm};
 
       feTolerances tol{1e-10, 1e-10, 200};
@@ -263,9 +267,23 @@ int main(int argc, char **argv)
         }
 
         // Solve
-        for(int ii = 0; ii < nTimeSteps; ++ii) {
+        for(int ii = 0; ii < nTimeSteps; ++ii)
+        {
           feInfo("Solving unsteady for Re = %f", Re);
           feCheck(solver->makeStep());
+
+          // Compute forces on the cylinder at each time step
+          time[iAdapt * nTimeSteps + ii] = sol.getCurrentTime();
+          forces_x[iAdapt * nTimeSteps + ii] = lambdaNorm->computeForcesFromLagrangeMultiplier(0);
+          forces_y[iAdapt * nTimeSteps + ii] = lambdaNorm->computeForcesFromLagrangeMultiplier(1);
+          feInfo("Computed total force %f (ex)", forces_x[iAdapt * nTimeSteps + ii]);
+          feInfo("Computed total force %f (ey)", forces_y[iAdapt * nTimeSteps + ii]);
+
+          feInfo("Writing %f - %f - %f", time[iAdapt * nTimeSteps + ii] ,  forces_x[iAdapt * nTimeSteps + ii] ,  forces_y[iAdapt * nTimeSteps + ii]);
+          outfile << std::setprecision(8) << time[iAdapt * nTimeSteps + ii] << "\t"
+                  << std::setprecision(8) << forces_x[iAdapt * nTimeSteps + ii] << "\t"
+                  << std::setprecision(8) << forces_y[iAdapt * nTimeSteps + ii] << "\n";
+          outfile.flush();
         }
 
         currentStep = solver->getCurrentStep();
@@ -273,14 +291,15 @@ int main(int argc, char **argv)
         container = solver->getSolutionContainer();
       // }
 
+      // feNorm *plift, *pdrag, *vlift, *vdrag;
+      // feCheck(createNorm(plift, PRESSURE_LIFT_FORCE, {pCylindre}, &sol));
+      // feCheck(createNorm(vlift,  VISCOUS_LIFT_FORCE, {uNoSlip  }, &sol));
+      // feCheck(createNorm(pdrag, PRESSURE_DRAG_FORCE, {pCylindre}, &sol));
+      // feCheck(createNorm(vdrag,  VISCOUS_DRAG_FORCE, {uNoSlip  }, &sol));
       // feInfo("Computed pdrag %f (ex)", pdrag->compute());
       // feInfo("Computed plift %f (ey)", plift->compute());
       // feInfo("Computed vdrag %f (ex)", vdrag->computeViscousDrag(D/Re, &recU, &recV));
-      // feInfo("Computed total force %f (ex)", lambdaNorm->computeForcesFromLagrangeMultiplier(0));
-      // feInfo("Computed total force %f (ey)", lambdaNorm->computeForcesFromLagrangeMultiplier(1));
 
-      // forces_x[iAdapt] = lambdaNorm->computeForcesFromLagrangeMultiplier(0);
-      // forces_y[iAdapt] = lambdaNorm->computeForcesFromLagrangeMultiplier(1);
       // ===== Solver ends here ==========================
 
       if(adapt) {
@@ -449,9 +468,11 @@ int main(int argc, char **argv)
       // delete solver;
     }
 
-    for(int i = 0; i < nAdaptationCycles; ++i) {
-      feInfo("F_x = %+-1.10e - F_y = %+-1.10e", forces_x[i], forces_y[i]);
-    }
+    outfile.close();
+
+    // for(int i = 0; i < nAdaptationCycles; ++i) {
+    //   feInfo("F_x = %+-1.10e - F_y = %+-1.10e", forces_x[i], forces_y[i]);
+    // }
 
     if(iV > 0) {
       // Write error to file
