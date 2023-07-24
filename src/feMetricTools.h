@@ -19,7 +19,7 @@ typedef struct {
   soplex::SoPlex problem;
   soplex::SPxSolver::Status stat;
   soplex::DSVector row;
-  soplex::LPRow lprow;
+  // soplex::LPRow lprow;
   soplex::LPRowSet lprowset;
   soplex::DVector prim;
   size_t numConstraints;

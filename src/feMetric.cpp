@@ -652,8 +652,8 @@ void setUpLinearProblem(linearProblem &myLP, feMetricOptions &options, int nThet
 
   myLP.row.setMax(3);
   myLP.prim.reDim(3);
-  myLP.lprow = LPRow(3);
-  myLP.lprow.setRhs(infty);
+  // myLP.lprow = LPRow(3);
+  // myLP.lprow.setRhs(infty);
   myLP.lprowset = LPRowSet(numConstraints, 3);
 
   for(int i = 0; i < numConstraints; ++i) {

@@ -720,9 +720,17 @@ bool solveLP(linearProblem &myLP, Eigen::Matrix2d &L)
     myLP.row.add(0, xi * xi);
     myLP.row.add(1, 2. * xi * yi);
     myLP.row.add(2, yi * yi);
-    myLP.lprow.setLhs(lhs);
-    myLP.lprow.setRowVector(myLP.row);
-    myLP.lprowset.add(myLP.lprow);
+
+    // myLP.lprow.setLhs(lhs);
+    // myLP.lprow.setRowVector(myLP.row);
+    // myLP.lprowset.add(myLP.lprow);
+
+    // Creating lprow (in setupLinearProblem) may create a segmentation fault?
+    // Maybe doing something wrong... Replacing by newLPRow.
+    // It does not seem to impact performances too much.
+    soplex::LPRow newLPRow(myLP.row, soplex::LPRow::GREATER_EQUAL, lhs);
+    myLP.lprowset.add(newLPRow);
+
     myLP.row.clear();
   }
   myLP.problem.removeRowRangeReal(0, myLP.numConstraints - 1);
