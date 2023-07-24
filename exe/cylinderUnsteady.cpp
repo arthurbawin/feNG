@@ -25,12 +25,12 @@ void u1(const double t, const std::vector<double> &pos, const std::vector<double
 
   // double epsilon = (y > h/2.)  ? (1. - fmin(t/t0, 1.)) : 0.;
   // double epsilon = (y >= h/2.) ? sin(2.*M_PI*y/h) : 0.;
-  double epsilon = (y >= h/2.) ? 0.25 : 0.;
+  double epsilon = (y >= h/2.) ? 0.1 : 0.;
 
   // res[0] = 1. + (1. * y/h) * (1. - fmin(t/t0, 1.));
   // res[0] = 1. + fabs(epsilon) * (1. - fmin(t/t0, 1.));
-  // res[0] = 1. + fabs(epsilon);
-  res[0] = 0.25 + y/h;
+  res[0] = 1. + fabs(epsilon);
+  // res[0] = 0.25 + y/h;
   // res[0] = 1. + (1. * y/h) * fmax(0., 1. - t/t0);
   res[1] = 0.;
 }
@@ -152,7 +152,7 @@ int main(int argc, char **argv)
       feSpace *uDroite = nullptr;
 
       // Cylindre
-      feCheck(createFiniteElementSpace(           uIn, &mesh, elementType::VECTOR_LAGRANGE, orderVelocity, "U",   "Gauche", degreeQuadrature, &inletUniform));
+      feCheck(createFiniteElementSpace(           uIn, &mesh, elementType::VECTOR_LAGRANGE, orderVelocity, "U",   "Gauche", degreeQuadrature, &inlet));
       feCheck(createFiniteElementSpace(          uTop, &mesh, elementType::VECTOR_LAGRANGE, orderVelocity, "U",     "Haut", degreeQuadrature, &zeroVector));
       feCheck(createFiniteElementSpace(       uBottom, &mesh, elementType::VECTOR_LAGRANGE, orderVelocity, "U",      "Bas", degreeQuadrature, &zeroVector));
       feCheck(createFiniteElementSpace(       uNoSlip, &mesh, elementType::VECTOR_LAGRANGE, orderVelocity, "U", "Cylindre", degreeQuadrature, &zeroVector));
@@ -356,7 +356,7 @@ int main(int argc, char **argv)
           feSpace *uDomaine = nullptr, *pDomaine = nullptr, *uIn = nullptr, *uTop = nullptr, *uBottom = nullptr, *uNoSlip = nullptr, *wDomaine = nullptr;
 
           // Cylindre
-          feCheck(createFiniteElementSpace(           uIn, &nextMesh, elementType::VECTOR_LAGRANGE, orderVelocity, "U",   "Gauche", degreeQuadrature, &inletUniform));
+          feCheck(createFiniteElementSpace(           uIn, &nextMesh, elementType::VECTOR_LAGRANGE, orderVelocity, "U",   "Gauche", degreeQuadrature, &inlet));
           feCheck(createFiniteElementSpace(          uTop, &nextMesh, elementType::VECTOR_LAGRANGE, orderVelocity, "U",     "Haut", degreeQuadrature, &zeroVector));
           feCheck(createFiniteElementSpace(       uBottom, &nextMesh, elementType::VECTOR_LAGRANGE, orderVelocity, "U",      "Bas", degreeQuadrature, &zeroVector));
           feCheck(createFiniteElementSpace(       uNoSlip, &nextMesh, elementType::VECTOR_LAGRANGE, orderVelocity, "U", "Cylindre", degreeQuadrature, &zeroVector));
