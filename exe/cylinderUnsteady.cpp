@@ -111,7 +111,7 @@ int main(int argc, char **argv)
     double dRe = (Re_final - Re) / nStepsToIncreaseRe;
 
     bool adapt = false;
-    bool curved = false;
+    bool curved = true;
 
     std::vector<double> time(nTimeSteps * nAdaptationCycles);
     std::vector<double> forces_x(nTimeSteps * nAdaptationCycles);
@@ -126,8 +126,9 @@ int main(int argc, char **argv)
         meshFile = "anisoadapted.msh";
       } else {
         if(curved) {
-          meshFile = "../data/cylindre_P2.msh";
-        } else {
+          // meshFile = "../data/cylindre_P2.msh";
+          meshFile = "../data/cylindreStructuredFine.msh";
+	} else {
           meshFile = "../data/cylindre_P1.msh";
           // meshFile = "../data/poiseuille.msh";
           // meshFile = "../data/cylindre_P2_fine.msh";
