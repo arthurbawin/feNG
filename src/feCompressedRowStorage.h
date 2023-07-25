@@ -12,11 +12,13 @@ protected:
   feInt _num_nnz;
   // The number of nonzero for each row (for PETSc)
   std::vector<feInt> nnz;
-  // The set of nonzero entries for each row
-  std::vector<std::set<feInt> > nnzset;
+  // The nonzero entries for each row
+  // Using a vector and then sort/unique seems faster than a set
+  std::vector<std::vector<feInt> > nnzPerRow;
+  // std::vector<std::set<feInt> > nnzPerRow;
 
   // From Pardiso's doc:
-  // ia_Pardiso[i] (i<n) points to the first column index of row i in the array ja_Pardiso
+  // ia_Pardiso[i] (i < n) points to the first column index of row i in the array ja_Pardiso
   std::vector<feInt> ia_Pardiso;
 
   // The (continuous) vector of column indices for each row

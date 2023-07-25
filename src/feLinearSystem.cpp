@@ -26,7 +26,9 @@ feStatus createLinearSystem(feLinearSystem *&system, linearSolverType type,
   switch(type) {
     case MKLPARDISO:
 #if defined(HAVE_MKL)
+      // tic();
       system = new feLinearSystemMklPardiso(bilinearForms, numUnknowns);
+      // feInfo("Created linear system in %f s", toc());
       break;
 #else
       return feErrorMsg(FE_STATUS_ERROR,
