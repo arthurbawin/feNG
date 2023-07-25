@@ -721,7 +721,7 @@ feStatus feMetric::computeMetricsPn(std::vector<std::size_t> &nodeTags, std::vec
 
 #if defined(TEST_ANALYTIC_METRIC)
   // Just assign analytic metric and exit
-  // To test disotrtion minimization
+  // To test distortion minimization
   for(size_t i = 0; i < nodeTags.size(); i++) {
     double X = coord[3 * i + 0];
     double Y = coord[3 * i + 1];

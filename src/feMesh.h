@@ -322,7 +322,7 @@ private:
   // RTrees and context to quickly search for nodes inside the mesh
   RTree<int, double, 3> _rtree;
   RTree<int, double, 2> _rtree2d;
-  rtreeSearchCtx _searchCtx;
+  // rtreeSearchCtx _searchCtx;
 
 public:
   // FIXME : Choose more explicit name, for example "physicalEntitiesDescription"

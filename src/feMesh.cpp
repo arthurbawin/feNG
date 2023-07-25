@@ -373,7 +373,7 @@ feMesh0DP0::~feMesh0DP0()
   }
 }
 
-static bool rtreeCallback(int id, void *ctx)
+bool rtreeCallback(int id, void *ctx)
 
 {
   rtreeSearchCtx *searchCtx = reinterpret_cast<rtreeSearchCtx *>(ctx);
@@ -419,6 +419,8 @@ feMesh2DP1::~feMesh2DP1()
   }
 }
 
+thread_local rtreeSearchCtx SEARCH_CONTEXT;
+
 // NOT THREAD SAFE! Because of the shared search context...
 /* Locates the vertex with coordinates x in the mesh using an RTree.
    The search is performed in elements of the highest dimension only.
@@ -427,25 +429,26 @@ feMesh2DP1::~feMesh2DP1()
 bool feMesh2DP1::locateVertex(const double *x, int &iElm, double *u, double tol,
                               bool returnLocalElmTag, std::string targetConnectivity)
 {
-  _searchCtx.min[0] = x[0] - tol;
-  _searchCtx.min[1] = x[1] - tol;
-  _searchCtx.max[0] = x[0] + tol;
-  _searchCtx.max[1] = x[1] + tol;
+  SEARCH_CONTEXT.elements = &(this->_elements);
+  SEARCH_CONTEXT.min[0] = x[0] - tol;
+  SEARCH_CONTEXT.min[1] = x[1] - tol;
+  SEARCH_CONTEXT.max[0] = x[0] + tol;
+  SEARCH_CONTEXT.max[1] = x[1] + tol;
 
-  _searchCtx.x[0] = x[0];
-  _searchCtx.x[1] = x[1];
-  _searchCtx.x[2] = 0.0;
+  SEARCH_CONTEXT.x[0] = x[0];
+  SEARCH_CONTEXT.x[1] = x[1];
+  SEARCH_CONTEXT.x[2] = 0.0;
 
-  _searchCtx.isFound = false;
+  SEARCH_CONTEXT.isFound = false;
 
   if(targetConnectivity != "") {
-    _searchCtx.enforceConnectivity = true;
+    SEARCH_CONTEXT.enforceConnectivity = true;
 
     bool OK = false;
     for(auto p : _physicalEntities) {
       if(p.first.first == 2) {
         if(p.second.name == targetConnectivity) {
-          _searchCtx.targetPhysicalTag = p.first.second;
+          SEARCH_CONTEXT.targetPhysicalTag = p.first.second;
           OK = true;
         }
       }
@@ -458,30 +461,30 @@ bool feMesh2DP1::locateVertex(const double *x, int &iElm, double *u, double tol,
     }
   }
 
-  _rtree2d.Search(_searchCtx.min, _searchCtx.max, rtreeCallback, &_searchCtx);
+  _rtree2d.Search(SEARCH_CONTEXT.min, SEARCH_CONTEXT.max, rtreeCallback, &SEARCH_CONTEXT);
 
-  if(_searchCtx.isFound) {
+  if(SEARCH_CONTEXT.isFound) {
     if(returnLocalElmTag)
-      iElm = _searchCtx.iElmLocal;
+      iElm = SEARCH_CONTEXT.iElmLocal;
     else
-      iElm = _searchCtx.iElm;
+      iElm = SEARCH_CONTEXT.iElm;
 
-    u[0] = _searchCtx.uvw[0];
-    u[1] = _searchCtx.uvw[1];
-    u[2] = _searchCtx.uvw[2];
+    u[0] = SEARCH_CONTEXT.uvw[0];
+    u[1] = SEARCH_CONTEXT.uvw[1];
+    u[2] = SEARCH_CONTEXT.uvw[2];
 
     // Check if vertex was found on the prescribed connectivity
     // if(targetConnectivity != "") {
     //   for(auto p : _physicalEntities) {
-    //     if(p.first.first == 2 && p.first.second == _searchCtx.physicalTag) {
+    //     if(p.first.first == 2 && p.first.second == SEARCH_CONTEXT.physicalTag) {
     //       feInfo("Found vertex (%f - %f) on physical entity %d named %s", x[0], x[1],
-    //              _searchCtx.physicalTag, p.second.name.data());
+    //              SEARCH_CONTEXT.physicalTag, p.second.name.data());
     //     }
     //   }
     // }
   }
 
-  return _searchCtx.isFound;
+  return SEARCH_CONTEXT.isFound;
 }
 
 // From gmsh and feTriangle.cpp

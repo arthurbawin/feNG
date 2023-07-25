@@ -63,6 +63,7 @@ class feExporterVTK : public feExporter
 {
 protected:
   std::vector<vtkNode> _vtkNodes;
+  bool _recreateVTKNodes = true;
 
 public:
   feExporterVTK(feMesh *mesh, feSolution *sol, feMetaNumber *metaNumber,
@@ -70,10 +71,10 @@ public:
     : feExporter(mesh, sol, metaNumber, feSpaces){};
   feExporterVTK(feMesh *mesh, feSolution *sol, feEigenProblem *eigenProblem,
                 feMetaNumber *metaNumber, const std::vector<feSpace *> &feSpaces);
-  virtual ~feExporterVTK() {}
+  ~feExporterVTK() {}
 
-  virtual feStatus writeStep(std::string fileName);
-  virtual feStatus writeEigenvectors(std::string fileName);
+  feStatus writeStep(std::string fileName);
+  feStatus writeEigenvectors(std::string fileName);
 
 private:
   void writeHeader(std::ostream &output);
