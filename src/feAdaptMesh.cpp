@@ -101,7 +101,7 @@ feStatus feMesh2DP1::adapt(std::vector<feNewRecovery*> recoveredFields, feMetric
   }
 
   // Assign old feRecovery structure (for curved adaptation, temporary)
-  metricField.setRecovery(oldRecovery);
+  // metricField.setRecovery(oldRecovery);
 
   // The back feMesh can be P2, but we need to write a P1 view in the gmsh model
   // to give mmg for aniso adaptation. So what decides on the number of vertices
@@ -117,11 +117,11 @@ feStatus feMesh2DP1::adapt(std::vector<feNewRecovery*> recoveredFields, feMetric
   tic();
   feStatus s = metricField.computeMetrics();
   options.userValue = metricField._options.userValue;
+  feInfoCond(FE_VERBOSE > 0, "\t\tComputed metric tensors in %f s", toc());
 
   // To test interpolation error only
   // return FE_STATUS_OK;
 
-  feInfoCond(FE_VERBOSE > 0, "\t\tComputed metric tensors in %f s", toc());
   if(s != FE_STATUS_OK) {
     gmsh::finalize();
     return s;
@@ -188,12 +188,8 @@ feStatus feMesh2DP1::adapt(std::vector<feNewRecovery*> recoveredFields, feMetric
 
     // Write adapted anisotropic straight mesh with correct Physical Entities
     gmsh::option::setNumber("Mesh.MshFileVersion", 4.1);
-    gmsh::write("aniso" + options.adaptedMeshName);
+    gmsh::write(options.adaptedMeshName);
   }
-
-  // Step 4: Interpolate solution on new mesh (TODO)
-  // feMesh2DP1 newMesh("afterPhysical.msh");
-  // feMetaNumber numbering(&newMesh, spaces, essentialSpaces);
 
   // Curve after a few aniso adaptations
   if(curve) {
@@ -228,6 +224,9 @@ feStatus feMesh2DP1::adapt(std::vector<feNewRecovery*> recoveredFields, feMetric
     gmsh::vectorpair dimTags;
     gmsh::model::getEntities(dimTags, 2);
     if(dimTags.size() > 1) {
+      for(auto pair : dimTags) {
+        feInfo("Gmsh 2D entity: dim = %d - tag = %d", pair.first, pair.second);
+      }
       return feErrorMsg(FE_STATUS_ERROR, "Gmsh model has more than one surface");
     } else {
       faceTag = dimTags[0].second;
@@ -276,7 +275,8 @@ feStatus feMesh2DP1::adapt(std::vector<feNewRecovery*> recoveredFields, feMetric
 
     gmsh::model::setCurrent(options.modelForMetric.data());
     gmsh::option::setNumber("Mesh.MshFileVersion", 4.1);
-    gmsh::write("curvedMesh.msh");
+    gmsh::write(options.adaptedMeshName);
+    system("gmsh adapted.msh");
     #else
       return feErrorMsg(FE_STATUS_ERROR,
                           "Cannot generate curved mesh with this version of Gmsh."

@@ -373,30 +373,6 @@ feMesh0DP0::~feMesh0DP0()
   }
 }
 
-bool rtreeCallback(int id, void *ctx)
-
-{
-  rtreeSearchCtx *searchCtx = reinterpret_cast<rtreeSearchCtx *>(ctx);
-  Triangle *t = (*searchCtx->elements)[id];
-  t->xyz2uvw(searchCtx->x, searchCtx->r);
-  if(t->isInside(searchCtx->r[0], searchCtx->r[1], searchCtx->r[2])) {
-    // Check if vertex was found on prescribed connectivity, if applicable
-    if(searchCtx->enforceConnectivity && (t->getPhysicalTag() != searchCtx->targetPhysicalTag)) {
-      // Keep looking
-      return true;
-    }
-    searchCtx->iElm = id;
-    searchCtx->iElmLocal = t->getLocalTag();
-    searchCtx->physicalTag = t->getPhysicalTag();
-    searchCtx->uvw[0] = searchCtx->r[0];
-    searchCtx->uvw[1] = searchCtx->r[1];
-    searchCtx->uvw[2] = searchCtx->r[2];
-    searchCtx->isFound = true;
-    return false;
-  }
-  return true;
-}
-
 feMesh2DP1::feMesh2DP1(const std::string &meshName, const bool curved, const bool reversed,
                        const mapType &physicalEntitiesDescription)
   : feMesh()
@@ -419,9 +395,45 @@ feMesh2DP1::~feMesh2DP1()
   }
 }
 
+// Callback to give the RTree to locate a physical point in the mesh.
+bool rtreeCallback(int id, void *ctx)
+{
+  rtreeSearchCtx *searchCtx = reinterpret_cast<rtreeSearchCtx *>(ctx);
+  Triangle *t = (*searchCtx->elements)[id];
+  // feInfo("Looking for point %f - %f", searchCtx->x[0], searchCtx->x[1]);
+
+  // Get the reference coordinates (u,v) such that F_K(u,v) = (x,y),
+  // where F_K is the reference-to-physical transformation of element K.
+  // For P1 triangle, success is always true.
+  // For P2 triangle, success is true if the Newton-Raphson method converged
+  // to a pair (u,v).
+  // If success is false, the point should be outside of the P2 triangle.
+  bool success = t->xyz2uvw(searchCtx->x, searchCtx->r);
+  if(!success) {
+    // Keep looking
+    return true;
+  }
+
+  if(t->isInside(searchCtx->r[0], searchCtx->r[1], searchCtx->r[2])) {
+    // Check if vertex was found on prescribed connectivity, if applicable
+    if(searchCtx->enforceConnectivity && (t->getPhysicalTag() != searchCtx->targetPhysicalTag)) {
+      // Keep looking
+      return true;
+    }
+    searchCtx->iElm = id;
+    searchCtx->iElmLocal = t->getLocalTag();
+    searchCtx->physicalTag = t->getPhysicalTag();
+    searchCtx->uvw[0] = searchCtx->r[0];
+    searchCtx->uvw[1] = searchCtx->r[1];
+    searchCtx->uvw[2] = searchCtx->r[2];
+    searchCtx->isFound = true;
+    return false;
+  }
+  return true;
+}
+
 thread_local rtreeSearchCtx SEARCH_CONTEXT;
 
-// NOT THREAD SAFE! Because of the shared search context...
 /* Locates the vertex with coordinates x in the mesh using an RTree.
    The search is performed in elements of the highest dimension only.
    The element number is assigned to iElm and the reference coordinates

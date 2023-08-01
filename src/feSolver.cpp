@@ -319,7 +319,8 @@ feStatus BDF2Solver::makeStep()
 
   if(_exportData.exporter != nullptr && (_currentStep % _exportData.exportEveryNSteps) == 0) {
     std::string fileName = _exportData.fileNameRoot + std::to_string(_currentStep) + ".vtk";
-    _exportData.exporter->writeStep(fileName);
+    s = _exportData.exporter->writeStep(fileName);
+    if(s != FE_STATUS_OK) { return s; }
   }
 
   return FE_STATUS_OK;

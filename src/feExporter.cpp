@@ -283,8 +283,8 @@ feStatus feExporterVTK::createVTKNodes(std::vector<feSpace *> &spacesToExport,
       }
     }
 
+    // Add visualization nodes at mid-edges if necessary
     int cnt = _mesh->getNumVertices();
-    // Add visualization nodes at mid-edges
     if(_addP2Nodes) {
       for(auto e : _mesh->_edges) {
         vtkNode node;
@@ -354,7 +354,11 @@ feStatus feExporterVTK::createVTKNodes(std::vector<feSpace *> &spacesToExport,
             Interpolate solution at vertex. */
             vtkNode node = _vtkNodes[globalTag];
             x = {node.pos[0], node.pos[1], node.pos[2]};
-            _mesh->locateVertex(x.data(), elm, r);
+            bool wasFound = _mesh->locateVertex(x.data(), elm, r);
+            if(!wasFound) {
+              feInfo("Could not find point %f - %f - %f when exporting", x[0], x[1], x[2]);
+              exit(-1);
+            }
             space->initializeAddressingVector(elm, adr);
 
             for(size_t i = 0; i < adr.size(); ++i) {

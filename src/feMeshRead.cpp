@@ -1264,7 +1264,6 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, const bool curved, const bool
             case 46: // 66-node triangle (10th order)
             {
               if(curved) {
-
                 // Reverse if required or if Physical Entity is negative
                 if(reversed || _entities[p].physicalTags[0] < 0) {
                   _entities[p].connecNodes[nElemNodes * iElm + 0] = elemNodes[0];
@@ -1312,7 +1311,6 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, const bool curved, const bool
                 }
 
               } else {
-
                 // Reverse if required or if Physical Entity is negative
                 if(reversed || _entities[p].physicalTags[0] < 0) {
                   _entities[p].connecNodes[nElemNodes * iElm + 0] = elemNodes[0];
@@ -1347,23 +1345,23 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, const bool curved, const bool
                   //   v0 = &_vertices[_verticesMap[elemNodesGmsh[k]]];
                   //   v1 = &_vertices[_verticesMap[elemNodesGmsh[k + 1]]];
                   // }
-                  v0 = &_vertices[_verticesMap[elemNodesGmsh[ k ]]];
+                  v0 = &_vertices[_verticesMap[elemNodesGmsh[k]]];
                   v1 = &_vertices[_verticesMap[elemNodesGmsh[(k + 1) % 3]]];
                 }
                 std::pair<std::set<Edge, EdgeLessThan>::iterator, bool> ret;
                 Edge e(v0, v1, nEdges, _entities[p].physicalTags[0]);
                 ret = _edges.insert(e);
-                if(ret.second)
-                {
+                if(ret.second) {
                   // Edge was added to the set : nEdges is added to connecEdges
                   _entities[p].connecEdges[3 * iElm + k] = nEdges++;
 
                   if(curved) {
                     // Compute displacement of midnode (alpha)
-                    vMid = &_vertices[_verticesMap[elemNodesGmsh[ k + 3 ]]];
-                    double xMid = (v0->x() + v1->x())/2.;
-                    double yMid = (v0->y() + v1->y())/2.;
-                    double normAlpha = sqrt( (vMid->x() - xMid)*(vMid->x() - xMid) + (vMid->y() - yMid)*(vMid->y() - yMid) );
+                    vMid = &_vertices[_verticesMap[elemNodesGmsh[k + 3]]];
+                    double xMid = (v0->x() + v1->x()) / 2.;
+                    double yMid = (v0->y() + v1->y()) / 2.;
+                    double normAlpha = sqrt((vMid->x() - xMid) * (vMid->x() - xMid) +
+                                            (vMid->y() - yMid) * (vMid->y() - yMid));
                     auto it = _edges.find(e);
                     _edge2alpha[&(*it)] = normAlpha;
                   }
@@ -1695,7 +1693,7 @@ feStatus feMesh2DP1::readGmsh(const std::string meshName, const bool curved, con
 
     // Create a vector of vertices for each Physical Entity
     std::vector<Vertex> entityVertices(pE.connecNodes.size());
-    for(size_t i = 0; i < pE.connecNodes.size(); ++i){
+    for(size_t i = 0; i < pE.connecNodes.size(); ++i) {
       entityVertices[i] = _vertices[pE.connecNodes[i]];
     }
     _verticesPerCnc[cnc] = entityVertices;
@@ -1711,7 +1709,8 @@ feStatus feMesh2DP1::readGmsh(const std::string meshName, const bool curved, con
     if(pE.dim == _dim) _nInteriorElm += pE.nElm;
     if(pE.dim == _dim - 1) _nBoundaryElm += pE.nElm;
   }
-  // Add all interior elements (for now only triangles) to the _elements vector
+
+  // Add all interior elements (for now only P1 or P2 triangles) to the _elements vector
   // Physical entities are non-overlapping so we just loop over them and elements shouldn't be
   // duplicated
   _elements.resize(_nInteriorElm);
@@ -1719,14 +1718,30 @@ feStatus feMesh2DP1::readGmsh(const std::string meshName, const bool curved, con
   for(auto &p : _physicalEntities) {
     physicalEntity &pE = p.second;
     if(_dim == 2 && pE.dim == _dim) {
-      Vertex *v0, *v1, *v2;
+      Vertex *v0, *v1, *v2, *v3, *v4, *v5;
       for(int i = 0; i < pE.nElm; ++i) {
-        v0 = &_vertices[pE.connecNodes[pE.nNodePerElem * i]];
-        v1 = &_vertices[pE.connecNodes[pE.nNodePerElem * i + 1]];
-        v2 = &_vertices[pE.connecNodes[pE.nNodePerElem * i + 2]];
-        // The triangle tag is i because it is local to the pE's cncgeo, hence the tag is not
-        // unique...
-        _elements[cnt] = new Triangle(v0, v1, v2, cnt, i, pE.tag);
+        if(pE.interp == geometricInterpolant::TRIP1) {
+          v0 = &_vertices[pE.connecNodes[pE.nNodePerElem * i]];
+          v1 = &_vertices[pE.connecNodes[pE.nNodePerElem * i + 1]];
+          v2 = &_vertices[pE.connecNodes[pE.nNodePerElem * i + 2]];
+          // The triangle tag is i because it is local to the pE's cncgeo, hence the tag is not
+          // unique...
+          _elements[cnt] = new TriangleP1(v0, v1, v2, cnt, i, pE.tag);
+        } else if(pE.interp == geometricInterpolant::TRIP2) {
+          v0 = &_vertices[pE.connecNodes[pE.nNodePerElem * i]];
+          v1 = &_vertices[pE.connecNodes[pE.nNodePerElem * i + 1]];
+          v2 = &_vertices[pE.connecNodes[pE.nNodePerElem * i + 2]];
+          v3 = &_vertices[pE.connecNodes[pE.nNodePerElem * i + 3]];
+          v4 = &_vertices[pE.connecNodes[pE.nNodePerElem * i + 4]];
+          v5 = &_vertices[pE.connecNodes[pE.nNodePerElem * i + 5]];
+          _elements[cnt] = new TriangleP2(v0, v1, v2, v3, v4, v5, cnt, i, pE.tag);
+        } else {
+          return feErrorMsg(FE_STATUS_ERROR,
+                            "Could not create a Triangle for physical entity \"%s\" with geometric "
+                            "interpolant \"%s\"",
+                            pE.name.data(), toString(pE.interp).data());
+        }
+
         cnt++;
       }
     }
@@ -1752,7 +1767,7 @@ feStatus feMesh2DP1::readGmsh(const std::string meshName, const bool curved, con
   for(int i = 0; i < _elements.size(); ++i) {
     Triangle *t = _elements[i];
     SBoundingBox3d bbox;
-    for(int i = 0; i < 3; ++i) {
+    for(int i = 0; i < t->getNumVertices(); ++i) {
       Vertex *v = t->getVertex(i);
       SPoint3 pt(v->x(), v->y(), v->z());
       bbox += pt;
@@ -1771,14 +1786,12 @@ feStatus feMesh2DP1::readGmsh(const std::string meshName, const bool curved, con
   // Add edges pointer to a vector for faster access (is it true tho?)
   _edgesVec.resize(_edges.size());
   cnt = 0;
-  for(std::set<Edge, EdgeLessThan>::iterator it = _edges.begin(); it != _edges.end(); ++it)
-  {
+  for(std::set<Edge, EdgeLessThan>::iterator it = _edges.begin(); it != _edges.end(); ++it) {
     _edgesVec[cnt++] = &(*it);
   }
 
   // Ordered map of edges for visualization lookup
-  for(auto *edge : _edgesVec)
-  {
+  for(auto *edge : _edgesVec) {
     _edgesMap[edge->getTag()] = edge;
   }
 
