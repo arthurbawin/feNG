@@ -24,19 +24,38 @@ public:
   int getPhysicalTag() { return _pTag; }
   virtual int getNumVertices() = 0;
   virtual Vertex *getVertex(int num) = 0;
-  virtual bool xyz2uvw(double xyz[3], double uvw[3]) = 0;
 
-  // Check if physical point xyz is inside triangle
-  // before computing the uvw coordinates.
-  virtual bool isInside(double xyz[3], double tol) = 0;
+  // Compute the reference (u,v) coordinates and returns true on success.
+  // For P1 triangle simply invert the linear transformation, always a success
+  // if the element is valid.
+  // For P2 triangle, invert quadratic transformation with a Newton-Raphson method,
+  // success if converged to the prescribed tolerance.
+  // The tolerance used here should probably be smaller than the tolerance used
+  // to check if the (u,v) coordinates are inside the reference triangle (isInside)
+  virtual bool xyz2uvw(double xyz[3], double uvw[3], double tol = 1e-5) = 0;
+
+  // Check if physical point xyz is inside triangle.
+  // For P1 triangle, we compute the uvw coordinates first to check, although
+  // this is not required (could use half-plane check for example).
+  // For P2 triangle, we check the orientation of the point w.r.t. the 
+  // parabolic edges using their implicit equation.
+  // THERE ARE STILL SOME ISSUES, AND ITS POSSIBLY DEPRECATED BECAUSE
+  // JUST CHECKING THE NEWTON RESULTS SEEMS ROBUST ENOUGH
+  virtual bool isInsidePhysical(double xyz[3], double tol) = 0;
 
   // Reference element is the same for P1 and P2 triangles
-  bool isInside(double u, double v, double w)
+  bool isInsideReference(double u, double v, double w, double tol)
   {
-    double tol = 1e-5;
     if(u < (-tol) || v < (-tol) || u > ((1. + tol) - v) || fabs(w) > tol) return false;
     return true;
   }
+
+protected:
+  // Compute the reference (u,v) coordinates for P1 triangle.
+  // If derived class is P1 triangle, it is the true (u,v) coordinates.
+  // If dervied class is P2 traignel, it is the (u,v) coordinates
+  // of the P1 triangle formed by the 3 first vertices.
+  void getP1ReferenceCoordinates(double xyz[3], double uvw[3], Vertex **v);
 };
 
 class TriangleP1 : public Triangle
@@ -55,8 +74,8 @@ public:
 
   int getNumVertices(){ return 3; };
   Vertex *getVertex(int num) { return _v[num]; }
-  bool isInside(double xyz[3], double tol);
-  bool xyz2uvw(double xyz[3], double uvw[3]);
+  bool isInsidePhysical(double xyz[3], double tol);
+  bool xyz2uvw(double xyz[3], double uvw[3], double tol = 1e-5);
 };
 
 class TriangleP2 : public Triangle
@@ -79,8 +98,10 @@ public:
 
   int getNumVertices(){ return 6; };
   Vertex *getVertex(int num) { return _v[num]; }
-  bool isInside(double xyz[3], double tol);
-  bool xyz2uvw(double xyz[3], double uvw[3]);
+  bool isInsidePhysical(double xyz[3], double tol);
+  bool xyz2uvw(double xyz[3], double uvw[3], double tol = 1e-5);
 };
+
+bool isInConvexRegionOfImplicitParabola(const double implicitParameters[6], double xyz[3]);
 
 #endif

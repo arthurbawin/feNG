@@ -57,10 +57,9 @@ int main(int argc, char **argv)
 {
   petscInitialize(argc, argv);
 
-  int orderVelocity = 2;
-  int orderPressure = 1;
+  int orderVelocity = 3;
+  int orderPressure = 2;
   int degreeQuadrature = 8;
-  bool curveTheMesh = false;
 
   setVerbose(1);
 
@@ -92,14 +91,13 @@ int main(int argc, char **argv)
     double dt = 0.05;
     int nTimeSteps = 10;
     int currentStep = 0;
-    int nAdaptationCycles = 100;
+    int nAdaptationCycles = 50;
 
     double Re = 50.;
 
     double D = 1.;
     double l1 = 15. * D - D/2.;
     feVectorFunction inlet(vInlet, {l1, D, Re});
-
 
     bool adapt = true;
     bool curved = true;
@@ -110,10 +108,12 @@ int main(int argc, char **argv)
     {
       if(adapt && iAdapt > 0) {
         meshFile = "adapted.msh";
+        // meshFile = "anisoadapted.msh";
       } else {
         if(curved) {
-          meshFile = "../data/jetImpactant_P2.msh";
-          // meshFile = "ref_adapted.msh";
+          // meshFile = "../data/jetImpactant_P2.msh";
+          meshFile = "../data/jetImpactant_P2_coarse.msh";
+          // meshFile = "../data/jetImpactant_dummy_P2.msh";
           // meshFile = "ref_curved.msh";
 	      } else {
           meshFile = "../data/jetImpactant.msh";
@@ -170,8 +170,7 @@ int main(int argc, char **argv)
       feLinearSystem *linearSystem;
       feCheck(createLinearSystem(linearSystem, MKLPARDISO, forms, numbering.getNbUnknowns(), argc, argv));
 
-      // curveTheMesh = iAdapt > 0;
-      curveTheMesh = 0;
+      bool curveTheMesh = false;
 
       feExporter *exporter;
       feCheck(createVisualizationExporter(exporter, VTK, &numbering, &sol, &mesh, spaces));
@@ -214,21 +213,21 @@ int main(int argc, char **argv)
         // ===== Mesh adaptation starts here ==========================
         feMetricOptions options(meshFile);
         options.nTargetVertices = targetN[iV];
-        options.LpNorm = 100.;
+        options.LpNorm = 2.;
         options.insideCallback = inside;
         options.hMin = 1e-10;
         options.hMax = 10.;
           
         if(orderVelocity == 1) {
           options.method = adaptationMethod::ANISO_P1;
-          options.enableGradation = true;
+          options.enableGradation = false;
           options.gradation = 1.5;
         } else {
           // if(curveTheMesh) {
-          //   options.method = adaptationMethod::CURVED_EXTREME_SIZES;
-          //   options.enableGradation = true;
-          //   options.gradation = 1.3;
-          //   // options.eTargetError = 1e-3;
+            // options.method = adaptationMethod::CURVED_EXTREME_SIZES;
+            // options.enableGradation = true;
+            // options.gradation = 1.3;
+            // options.eTargetError = 1e-1;
           // } else {
             options.method = adaptationMethod::ANISO_PN;
             options.enableGradation = true;
@@ -240,10 +239,9 @@ int main(int argc, char **argv)
           // }
         }
 
-        bool isBackMeshP2 = true;
-        bool setGmshModelToP1 = true; // Set this to false only to test convergence of metric interpolation
-        bool curveMMGmesh = true;
         bool reconstructAtHighOrderNodes = curved;
+        bool isBackMeshP2 = curved;
+        bool curveMMGmesh = true;
 
         // ============================================================================================================================================================
         // Step 1: Generate aniso mesh with MMG
@@ -252,11 +250,12 @@ int main(int argc, char **argv)
         feNewRecovery recW(wDomaine, 0, &mesh, &sol, meshFile, "recoveredDerivativesW.msh", reconstructAtHighOrderNodes, false, nullptr, &numbering);
         std::vector<feNewRecovery*> recoveredFields = {&recW};
         feCheck(mesh.adapt(recoveredFields, options, spaces, essentialSpaces, uDomaine,
-          nullptr, nullptr, nullptr, curveTheMesh, isBackMeshP2, setGmshModelToP1, curveMMGmesh, curveToMinimize::LENGTH));
+          nullptr, nullptr, nullptr, curveTheMesh, isBackMeshP2, curveMMGmesh, curveToMinimize::LENGTH));
 
         // ============================================================================================================================================================
         // Interpolate solution on adapted mesh
         feMesh2DP1 nextMesh("adapted.msh", curved);
+        // feMesh2DP1 nextMesh("anisoadapted.msh", curved);
         feSpace *uDomaine = nullptr, *pDomaine = nullptr, *uIn = nullptr, *uNoSlip = nullptr, *uBottom = nullptr, *wDomaine = nullptr;
         feCheck(createFiniteElementSpace(     uIn, &nextMesh, elementType::VECTOR_LAGRANGE, orderVelocity, "U",     "Inlet", degreeQuadrature, &inlet));
         feCheck(createFiniteElementSpace( uBottom, &nextMesh, elementType::VECTOR_LAGRANGE, orderVelocity, "U", "NoSlip_Tw", degreeQuadrature, &zeroVector));
@@ -266,44 +265,18 @@ int main(int argc, char **argv)
         feCheck(createFiniteElementSpace(wDomaine, &nextMesh, elementType::LAGRANGE,        orderVelocity, "W",   "Domaine", degreeQuadrature, &zero));
         std::vector<feSpace*> nextSpaces = {uIn, uBottom, uNoSlip, uDomaine, pDomaine, wDomaine};
         std::vector<feSpace*> nextEssentialSpaces = {uNoSlip, uIn, uBottom};
+
         feMetaNumber nextNumbering(&nextMesh, nextSpaces, nextEssentialSpaces);
         feSolution nextSol(nextNumbering.getNbDOFs(), nextSpaces, nextEssentialSpaces);
+
         feCheck(mesh.transfer(&nextMesh, &numbering, &nextNumbering, container, spaces, essentialSpaces, nextSpaces));
         nextSol.setSolFromContainer(container, 0);
+
         feExporter *nextExporter;
         feCheck(createVisualizationExporter(nextExporter, VTK, &nextNumbering, &nextSol, &nextMesh, nextSpaces));
         feCheck(nextExporter->writeStep("afterTransfer.vtk"));
 
-        // ============================================================================================================================================================
-        // Step 2: Curve the MMG mesh
-        // curveMMGmesh = true;
-        // feNewRecovery recW2(wDomaine, 0, &nextMesh, &nextSol, "adapted.msh", "recoveredDerivativesW.msh", reconstructAtHighOrderNodes, false, nullptr, &nextNumbering);
-        // recoveredFields[0] = &recW2;
-
-        // curveTheMesh = 1;
-        // options.backgroundMeshfile = "adapted.msh";
-        // feCheck(mesh.adapt(recoveredFields, options, nextSpaces, nextEssentialSpaces, uDomaine,
-        //   nullptr, nullptr, nullptr, curveTheMesh, isBackMeshP2, setGmshModelToP1, curveMMGmesh, curveToMinimize::LENGTH));
-
-        // ============================================================================================================================================================
-        // Interpolate solution on curved mesh
-        // feMesh2DP1 curvedMesh("adapted.msh", curved);
-        // feSpace *uDomaine2 = nullptr, *pDomaine2 = nullptr, *uIn2 = nullptr, *uNoSlip2 = nullptr, *uBottom2 = nullptr, *wDomaine2 = nullptr;
-        // feCheck(createFiniteElementSpace(     uIn2, &curvedMesh, elementType::VECTOR_LAGRANGE, orderVelocity, "U",     "Inlet", degreeQuadrature, &inlet));
-        // feCheck(createFiniteElementSpace( uBottom2, &curvedMesh, elementType::VECTOR_LAGRANGE, orderVelocity, "U", "NoSlip_Tw", degreeQuadrature, &zeroVector));
-        // feCheck(createFiniteElementSpace( uNoSlip2, &curvedMesh, elementType::VECTOR_LAGRANGE, orderVelocity, "U", "NoSlip_T0", degreeQuadrature, &zeroVector));
-        // feCheck(createFiniteElementSpace(uDomaine2, &curvedMesh, elementType::VECTOR_LAGRANGE, orderVelocity, "U",   "Domaine", degreeQuadrature, &zeroVector));
-        // feCheck(createFiniteElementSpace(pDomaine2, &curvedMesh, elementType::LAGRANGE,        orderPressure, "P",   "Domaine", degreeQuadrature, &zero));
-        // feCheck(createFiniteElementSpace(wDomaine2, &curvedMesh, elementType::LAGRANGE,        orderVelocity, "W",   "Domaine", degreeQuadrature, &zero));
-        // std::vector<feSpace*> curvedSpaces = {uIn2, uBottom2, uNoSlip2, uDomaine2, pDomaine2, wDomaine2};
-        // std::vector<feSpace*> curvedEssentialSpaces = {uNoSlip2, uIn2, uBottom2};
-        // feMetaNumber curvedNumbering(&curvedMesh, curvedSpaces, curvedEssentialSpaces);
-        // feSolution curvedSol(curvedNumbering.getNbDOFs(), curvedSpaces, curvedEssentialSpaces);
-        // feCheck(nextMesh.transfer(&curvedMesh, &nextNumbering, &curvedNumbering, container, nextSpaces, nextEssentialSpaces, curvedSpaces));
-        // curvedSol.setSolFromContainer(container, 0);
-        // feExporter *curvedExporter;
-        // feCheck(createVisualizationExporter(curvedExporter, VTK, &curvedNumbering, &curvedSol, &curvedMesh, curvedSpaces));
-        // feCheck(curvedExporter->writeStep("afterTransferOnCurvedMesh.vtk"));
+        // exit(-1);
 
         // ===== Mesh adaptation and error estimation end here =================================
       } // if adapt

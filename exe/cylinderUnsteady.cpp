@@ -89,14 +89,14 @@ int main(int argc, char **argv)
 
     double theT0 = 0.;
     double dt = 0.05;
-    int nTimeSteps = 1000;
+    int nTimeSteps = 10;
     int currentStep = 0;
 
     feVectorFunction inletUniform(u2);
 
     // Start the adaptation loop
     // int nAdaptationCycles = 200 / (nTimeSteps * dt);
-    int nAdaptationCycles = 1;
+    int nAdaptationCycles = 2;
     int nStepsToIncreaseRe = nAdaptationCycles / 2;
 
     double D = 1.;
@@ -106,11 +106,11 @@ int main(int argc, char **argv)
     double dpdx = -1.0;
     feVectorFunction uExact(solU, {h, dpdx});
 
-    double Re = 200.;
+    double Re = 1.;
     double Re_final = 200.;
     double dRe = (Re_final - Re) / nStepsToIncreaseRe;
 
-    bool adapt = false;
+    bool adapt = true;
     bool curved = true;
 
     std::vector<double> time(nTimeSteps * nAdaptationCycles);
@@ -127,15 +127,18 @@ int main(int argc, char **argv)
       } else {
         if(curved) {
           // meshFile = "../data/cylindre_P2.msh";
-          meshFile = "../data/cylindreStructuredFine.msh";
-	} else {
-          meshFile = "../data/cylindre_P1.msh";
+          // meshFile = "../data/cylindreStructuredFine.msh";
+          meshFile = "../data/squareCylinder_P2.msh";
+          meshFile = "../data/squareCylinder_P2_coarse.msh";
+	      } else {
+          // meshFile = "../data/cylindre_P1.msh";
           // meshFile = "../data/poiseuille.msh";
-          // meshFile = "../data/cylindre_P2_fine.msh";
+          meshFile = "../data/cylindre_P2_superfine.msh";
+          // meshFile = "../data/cylindre_P2_ultrafine.msh";
         }
       }
 
-      meshFile = "../data/cylindreStructured.msh";
+      // meshFile = "../data/cylindreStructured.msh";
       // meshFile = "../data/VonKarmanV4.msh";
 
       // meshFile = "../data/cylindreP2_" + std::to_string(iAdapt+1) + ".msh";
@@ -248,48 +251,47 @@ int main(int argc, char **argv)
 
       // if(iAdapt <= nStepsToIncreaseRe) {
         // Start from steady solution at low Re
-        // TimeIntegrator *solverSteady;
-        // feCheck(createTimeIntegrator(solverSteady, STATIONARY, tol, linearSystem, &numbering, &sol, &mesh, norms, exportData));
-        // feInfo("Solving steady state for Re = %f", Re);
-        // feCheck(solverSteady->makeStep());
-        // for(auto *space : spaces)
-        //   space->setDOFInitialization(dofInitialization::PREVIOUS_SOL);
-        // uIn->setDOFInitialization(dofInitialization::NODEWISE);
-        // container = solverSteady->getSolutionContainer();
-        // exit(-1);
+        TimeIntegrator *solverSteady;
+        feCheck(createTimeIntegrator(solverSteady, STATIONARY, tol, linearSystem, &numbering, &sol, &mesh, norms, exportData));
+        feInfo("Solving steady state for Re = %f", Re);
+        feCheck(solverSteady->makeStep());
+        for(auto *space : spaces)
+          space->setDOFInitialization(dofInitialization::PREVIOUS_SOL);
+        uIn->setDOFInitialization(dofInitialization::NODEWISE);
+        container = solverSteady->getSolutionContainer();
       // } else {
 
-        double t0 = theT0;
-        double t1 = t0 + dt*nTimeSteps;
-        feCheck(createTimeIntegrator(solver, BDF2, tol, linearSystem, &numbering, &sol, &mesh, norms, exportData, t0, t1, nTimeSteps));
+        // double t0 = theT0;
+        // double t1 = t0 + dt*nTimeSteps;
+        // feCheck(createTimeIntegrator(solver, BDF2, tol, linearSystem, &numbering, &sol, &mesh, norms, exportData, t0, t1, nTimeSteps));
 
-        if(iAdapt > 0) {
-          solver->setCurrentStep(currentStep);
-        }
+        // if(iAdapt > 0) {
+        //   solver->setCurrentStep(currentStep);
+        // }
 
-        // Solve
-        for(int ii = 0; ii < nTimeSteps; ++ii)
-        {
-          feInfo("Solving unsteady for Re = %f", Re);
-          feCheck(solver->makeStep());
+        // // Solve
+        // for(int ii = 0; ii < nTimeSteps; ++ii)
+        // {
+        //   feInfo("Solving unsteady for Re = %f", Re);
+        //   feCheck(solver->makeStep());
 
-          // Compute forces on the cylinder at each time step
-          time[iAdapt * nTimeSteps + ii] = sol.getCurrentTime();
-          forces_x[iAdapt * nTimeSteps + ii] = lambdaNorm->computeForcesFromLagrangeMultiplier(0);
-          forces_y[iAdapt * nTimeSteps + ii] = lambdaNorm->computeForcesFromLagrangeMultiplier(1);
-          feInfo("Computed total force %f (ex)", forces_x[iAdapt * nTimeSteps + ii]);
-          feInfo("Computed total force %f (ey)", forces_y[iAdapt * nTimeSteps + ii]);
+        //   // Compute forces on the cylinder at each time step
+        //   time[iAdapt * nTimeSteps + ii] = sol.getCurrentTime();
+        //   forces_x[iAdapt * nTimeSteps + ii] = lambdaNorm->computeForcesFromLagrangeMultiplier(0);
+        //   forces_y[iAdapt * nTimeSteps + ii] = lambdaNorm->computeForcesFromLagrangeMultiplier(1);
+        //   feInfo("Computed total force %f (ex)", forces_x[iAdapt * nTimeSteps + ii]);
+        //   feInfo("Computed total force %f (ey)", forces_y[iAdapt * nTimeSteps + ii]);
 
-          feInfo("Writing %f - %f - %f", time[iAdapt * nTimeSteps + ii] ,  forces_x[iAdapt * nTimeSteps + ii] ,  forces_y[iAdapt * nTimeSteps + ii]);
-          outfile << std::setprecision(8) << time[iAdapt * nTimeSteps + ii] << "\t"
-                  << std::setprecision(8) << forces_x[iAdapt * nTimeSteps + ii] << "\t"
-                  << std::setprecision(8) << forces_y[iAdapt * nTimeSteps + ii] << "\n";
-          outfile.flush();
-        }
+        //   feInfo("Writing %f - %f - %f", time[iAdapt * nTimeSteps + ii] ,  forces_x[iAdapt * nTimeSteps + ii] ,  forces_y[iAdapt * nTimeSteps + ii]);
+        //   outfile << std::setprecision(8) << time[iAdapt * nTimeSteps + ii] << "\t"
+        //           << std::setprecision(8) << forces_x[iAdapt * nTimeSteps + ii] << "\t"
+        //           << std::setprecision(8) << forces_y[iAdapt * nTimeSteps + ii] << "\n";
+        //   outfile.flush();
+        // }
 
-        currentStep = solver->getCurrentStep();
-        theT0 = sol.getCurrentTime();
-        container = solver->getSolutionContainer();
+        // currentStep = solver->getCurrentStep();
+        // theT0 = sol.getCurrentTime();
+        // container = solver->getSolutionContainer();
       // }
 
       // feNorm *plift, *pdrag, *vlift, *vdrag;
@@ -308,7 +310,7 @@ int main(int argc, char **argv)
         // Don't adapt at the last loop, only compute the solution on the last adapted mesh
         if(iAdapt < nAdaptationCycles) {
 
-          bool reconstructAtHighOrderNodes = false;
+          bool reconstructAtHighOrderNodes = curved;
           feNewRecovery recU(uDomaine, 0, &mesh, &sol, meshFile, "recoveredDerivativesU.msh", reconstructAtHighOrderNodes, false, nullptr, &numbering);
           // feNewRecovery recV(uDomaine, 1, &mesh, &sol, meshFile, "recoveredDerivativesV.msh", reconstructAtHighOrderNodes, false, nullptr, &numbering);
           std::vector<feNewRecovery*> recoveredFields = {&recU};
@@ -320,19 +322,19 @@ int main(int argc, char **argv)
           options.hMin = 1e-10;
           options.hMax = 10.;
 
-          curveTheMesh = false;
+          curveTheMesh = iAdapt >= 0;
             
           if(orderVelocity == 1) {
             options.method = adaptationMethod::ANISO_P1;
             options.enableGradation = true;
             options.gradation = 1.5;
           } else {
-            if(curveTheMesh) {
-              options.method = adaptationMethod::CURVED_EXTREME_SIZES;
-              options.enableGradation = true;
-              options.gradation = 1.3;
-              // options.eTargetError = 1e-3;
-            } else {
+            // if(curveTheMesh) {
+            //   options.method = adaptationMethod::CURVED_EXTREME_SIZES;
+            //   options.enableGradation = true;
+            //   options.gradation = 1.3;
+            //   // options.eTargetError = 1e-3;
+            // } else {
               options.method = adaptationMethod::ANISO_PN;
               options.enableGradation = true;
               options.gradation = 1.3;
@@ -340,10 +342,10 @@ int main(int argc, char **argv)
               options.logSimplexOptions.tol = 0.02;
               options.logSimplexOptions.uniformErrorCurve = true;
               options.logSimplexOptions.numLoopsUniformErrorCurve = 5;
-            }
+            // }
           }
 
-          bool isBackMeshP2 = false;
+          bool isBackMeshP2 = true;
           bool setGmshModelToP1 = true; // Set this to false only to test convergence of metric interpolation
           bool curveMMGmesh = true;
 
@@ -351,7 +353,7 @@ int main(int argc, char **argv)
             nullptr, nullptr, nullptr, curveTheMesh, isBackMeshP2, setGmshModelToP1, curveMMGmesh, curveToMinimize::DISTORTION));
 
           // Interpolate solution on adapted mesh
-          feMesh2DP1 nextMesh("anisoadapted.msh");
+          feMesh2DP1 nextMesh("anisoadapted.msh", curved);
           // feMesh2DP1 nextMesh("../data/cylindre.msh");
 
           feSpace *uDomaine = nullptr, *pDomaine = nullptr, *uIn = nullptr, *uTop = nullptr, *uBottom = nullptr, *uNoSlip = nullptr, *wDomaine = nullptr;
@@ -461,16 +463,10 @@ int main(int argc, char **argv)
         // ===== Mesh adaptation and error estimation end here =================================
       }
 
-      if(Re < Re_final)
-        Re += dRe;
-
       delete uDomaine;
       delete diffU;
       delete divU;
       delete gradP;
-      // delete linearSystem;
-      // delete exporter;
-      // delete solver;
     }
 
     outfile.close();

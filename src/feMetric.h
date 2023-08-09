@@ -131,6 +131,7 @@ class feMetric
 public:
   feMetricOptions _options;
   int _nVerticesPerElmOnBackmesh;
+  int _backmeshOrder;
 
 protected:
   feRecovery *_recovery;
@@ -228,16 +229,6 @@ public:
   void writeSizeFieldSol2D(std::string solFileName);
   void writeSizeFieldSol3D(std::string solFileName);
   void writeSizeFieldGmsh(std::string meshName, std::string metricMeshName);
-
-  // template <class MetricType>
-  // void drawEllipsoids(const std::string &posFile,
-  //                     const std::map<const Vertex *, MetricType> &metrics, double sizeFactor,
-  //                     int nPoints);
-
-  // template <class MetricType>
-  // void drawEllipsoids(const std::string &posFile, std::map<int, MetricType> &metrics,
-  //                     const std::vector<std::size_t> &nodeTags, const std::vector<double> &coord,
-  //                     double sizeFactor, int nPoints);
 
   template <class MetricType>
   void classicalP1Interpolation(const double *xsi,

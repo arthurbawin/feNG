@@ -399,8 +399,7 @@ feMesh2DP1::~feMesh2DP1()
 bool rtreeCallback(int id, void *ctx)
 {
   rtreeSearchCtx *searchCtx = reinterpret_cast<rtreeSearchCtx *>(ctx);
-  Triangle *t = (*searchCtx->elements)[id];
-  // feInfo("Looking for point %f - %f", searchCtx->x[0], searchCtx->x[1]);
+  Triangle *t = (*(searchCtx->elements))[id];
 
   // Get the reference coordinates (u,v) such that F_K(u,v) = (x,y),
   // where F_K is the reference-to-physical transformation of element K.
@@ -408,13 +407,15 @@ bool rtreeCallback(int id, void *ctx)
   // For P2 triangle, success is true if the Newton-Raphson method converged
   // to a pair (u,v).
   // If success is false, the point should be outside of the P2 triangle.
-  bool success = t->xyz2uvw(searchCtx->x, searchCtx->r);
+  //
+  // When computing (u,v) in P2 triangle, use smaller tolerance for the Newton
+  bool success = t->xyz2uvw(searchCtx->x, searchCtx->r, searchCtx->tolerance / 10.);
   if(!success) {
     // Keep looking
     return true;
   }
 
-  if(t->isInside(searchCtx->r[0], searchCtx->r[1], searchCtx->r[2])) {
+  if(t->isInsideReference(searchCtx->r[0], searchCtx->r[1], searchCtx->r[2], searchCtx->tolerance)) {
     // Check if vertex was found on prescribed connectivity, if applicable
     if(searchCtx->enforceConnectivity && (t->getPhysicalTag() != searchCtx->targetPhysicalTag)) {
       // Keep looking
@@ -442,16 +443,22 @@ bool feMesh2DP1::locateVertex(const double *x, int &iElm, double *u, double tol,
                               bool returnLocalElmTag, std::string targetConnectivity)
 {
   SEARCH_CONTEXT.elements = &(this->_elements);
+  SEARCH_CONTEXT.tolerance = tol;
   SEARCH_CONTEXT.min[0] = x[0] - tol;
   SEARCH_CONTEXT.min[1] = x[1] - tol;
   SEARCH_CONTEXT.max[0] = x[0] + tol;
   SEARCH_CONTEXT.max[1] = x[1] + tol;
+
+  SEARCH_CONTEXT.uvw[0] = -1.;
+  SEARCH_CONTEXT.uvw[1] = -1.;
+  SEARCH_CONTEXT.uvw[2] = -1.;
 
   SEARCH_CONTEXT.x[0] = x[0];
   SEARCH_CONTEXT.x[1] = x[1];
   SEARCH_CONTEXT.x[2] = 0.0;
 
   SEARCH_CONTEXT.isFound = false;
+  SEARCH_CONTEXT.numFound = 0;
 
   if(targetConnectivity != "") {
     SEARCH_CONTEXT.enforceConnectivity = true;

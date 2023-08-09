@@ -33,23 +33,34 @@ protected:
   int _nVertices;
   // Global indices in mesh->_vertices
   std::vector<int> _vertices;
-  // Number of layers of elements around the vertex
-  int _nLayers;
 
-  int _nNodePerElm; // !!! Modifier pour nVert pour des P2+ geometriques ?
+  int _nNodePerElm;
   int _nEdgePerElm;
 
-  std::map<int, std::set<int> > vertToElems; // A set of element tags for each mesh vertex
-  std::map<int, std::set<int> > vertToVerts; // A set of vertices tags for mesh vertices (the vertices of its elem patch)
-  std::map<int, std::set<int> > vertToInteriorVerts; // A set of interior vertices tags for boundary mesh vertices (the interior vertices of its elem patch)
-  std::map<int, std::set<int> > edgeToElems; // A set of element tags for each mesh edge
+  // Polynomial degree of the field to recover.
+  // Determines the dimension and rank of the target mass/least squares matrix
+  int _degSol;
+
+  bool _reconstructAtHighOrderNodes;
+
+  // A set of element tags for each mesh vertex
+  std::map<int, std::set<int> > vertToElems;
+  // A set of element tags for each mesh vertex - Only the first layer of adjacent elements
+  std::map<int, std::set<int> > vertToElems_singleLayer;
+  // A set of vertices tags for mesh vertices (the vertices of its elem patch)
+  std::map<int, std::set<int> > vertToVerts;
+  // A set of interior vertices tags for boundary mesh vertices (the interior vertices of its elem patch)
+  std::map<int, std::set<int> > vertToInteriorVerts;
+  // A set of element tags for each mesh edge
+  std::map<int, std::set<int> > edgeToElems;
+
   std::unordered_map<int, bool> isOnEdge;
 
   std::map<int, bool> _isVertexBoundary;
   std::map<int, std::pair<double, double>> _scaling;
 
 public:
-  feNewPatch(const feCncGeo *cnc, feMesh *mesh, bool reconstructAtHighOrderNodes, feMetric *metricField = nullptr);
+  feNewPatch(const feCncGeo *cnc, feMesh *mesh, bool reconstructAtHighOrderNodes, int degreeSolution, feMetric *metricField = nullptr);
   ~feNewPatch() {}
 
   std::vector<int> &getVertices() { return _vertices; }
@@ -60,6 +71,8 @@ public:
   std::set<int> &getEdgePatch(int iEdge) { return edgeToElems[iEdge]; }
   std::map<int, bool> &getBoundaryVertices() { return _isVertexBoundary; };
   std::map<int, std::pair<double, double>> &getScaling() { return _scaling; };
+
+  void increasePatchSize(feMesh *mesh, const feCncGeo *cnc, const int vertex);
 
   bool isVertexBoundary(int iVertex) { return _isVertexBoundary.at(iVertex); };
   bool isVertexOnEdge(int iVertex) { return isOnEdge.at(iVertex); };
@@ -211,6 +224,7 @@ private:
   void computeTransformedEdgeLength(std::vector<double> &geoCoord,
                                     std::vector<double> &dxdr,
                                     std::vector<double> &dxds,
+                                    const double tEnd,
                                     int whichEdge, double &firstHalf, double &secondHalf);
   void computeRecoveryAtAllElementDOF(PPR recoveredField,
                                       const int index,

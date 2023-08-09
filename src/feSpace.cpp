@@ -521,7 +521,7 @@ double feSpace::interpolateField(std::vector<double> &field, double *r)
   double res = 0.0;
 #ifdef FENG_DEBUG
   if(field.size() != (unsigned)_nFunctions) {
-    printf(" In feSpace::interpolateField : Erreur - Nombre de valeurs nodales non compatible avec "
+    feInfo("Erreur - Nombre de valeurs nodales non compatible avec "
            "le nombre d'interpolants de l'espace.\n");
     return res;
   }

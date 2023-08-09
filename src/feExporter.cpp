@@ -354,7 +354,7 @@ feStatus feExporterVTK::createVTKNodes(std::vector<feSpace *> &spacesToExport,
             Interpolate solution at vertex. */
             vtkNode node = _vtkNodes[globalTag];
             x = {node.pos[0], node.pos[1], node.pos[2]};
-            bool wasFound = _mesh->locateVertex(x.data(), elm, r);
+            bool wasFound = _mesh->locateVertex(x.data(), elm, r, 1e-6);
             if(!wasFound) {
               feInfo("Could not find point %f - %f - %f when exporting", x[0], x[1], x[2]);
               exit(-1);
@@ -366,9 +366,11 @@ feStatus feExporterVTK::createVTKNodes(std::vector<feSpace *> &spacesToExport,
             }
 
             if(space->useGlobalFunctions()) {
+              feInfo("FIXME: Choose interpolation function for vector field and global functions.");
+              exit(-1);
               val = space->interpolateField(sol, elm, x);
             } else {
-              val = space->interpolateField(sol, r);
+              val = space->interpolateVectorFieldComponent(sol, iComp, r);
             }
 
             _vtkNodes[globalTag].data[iField][iComp] = val;
@@ -601,6 +603,11 @@ feStatus feExporterVTK::writeStep(std::string fileName)
     // Export vtkNodes
     feStatus s = createVTKNodes(spacesToExport, fieldTags);
     if(s != FE_STATUS_OK) { return s; }
+
+    ////////////////////////////////////////////////////////////////////
+    // Test locateMesh for P2 triangles
+    
+    ////////////////////////////////////////////////////////////////////
 
     writeMesh(output);
     output << "POINT_DATA " << _vtkNodes.size() << std::endl;

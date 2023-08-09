@@ -52,6 +52,7 @@ public:
   ~feSolution() {}
 
   // Trivial getters and setters
+  int getNumDOFs() { return _nDOF; }
   double getC0() const { return _c0; }
   void setC0(double c0) { _c0 = c0; }
   double getCurrentTime() const { return _tn; }

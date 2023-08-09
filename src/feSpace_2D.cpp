@@ -29,6 +29,8 @@ static void duplicateScalarArray(const int scalarSize, const int chunkSize,
   for(int j = 0; j < nChunks; ++j) {
     for(int iDim = 0; iDim < dim; ++iDim) {
       for(int i = 0; i < chunkSize; ++i) {
+        feInfo("Writing entry %d of scalararray of size %d at place %d", chunkSize * j + i,
+               scalarSize, cnt + 1);
         vectorArray[cnt++] = scalarArray[chunkSize * j + i];
       }
     }
@@ -44,6 +46,7 @@ feSpaceTriP1::feSpaceTriP1(std::string cncGeoID)
   _nFunctions = 3;
   _Lcoor = {0., 0., 0., 1., 0., 0., 0., 1., 0.};
   _isGeometricInterpolant = true;
+  _dofLocations = {dofLocation::VERTEX, dofLocation::VERTEX, dofLocation::VERTEX};
 }
 
 feSpaceTriP1::feSpaceTriP1(feMesh *mesh, const std::string fieldID, const std::string cncGeoID,
@@ -52,6 +55,7 @@ feSpaceTriP1::feSpaceTriP1(feMesh *mesh, const std::string fieldID, const std::s
 {
   _nFunctions = 3;
   _Lcoor = {0., 0., 0., 1., 0., 0., 0., 1., 0.};
+  _dofLocations = {dofLocation::VERTEX, dofLocation::VERTEX, dofLocation::VERTEX};
 }
 
 std::vector<double> feSpaceTriP1::L(double *r) { return {1.0 - r[0] - r[1], r[0], r[1]}; }
@@ -106,6 +110,8 @@ feSpaceVecTriP1<dim>::feSpaceVecTriP1(feMesh *mesh, const std::string fieldID,
   double coor[9] = {0., 0., 0., 1., 0., 0., 0., 1., 0.};
   _Lcoor.resize(9 * dim);
   duplicateScalarArray(9, 3, coor, dim, _Lcoor);
+  _dofLocations.resize(_nFunctions);
+  for(int i = 0; i < _nFunctions; ++i) _dofLocations[i] = dofLocation::VERTEX;
 }
 
 template <int dim> std::vector<double> feSpaceVecTriP1<dim>::L(double *r)
@@ -207,6 +213,7 @@ feSpaceTri_CR1::feSpaceTri_CR1(feMesh *mesh, std::string fieldID, std::string cn
 {
   _nFunctions = 3;
   _Lcoor = {0.5, 0., 0., 0.5, 0.5, 0., 0., 0.5, 0.};
+  _dofLocations = {dofLocation::EDGE, dofLocation::EDGE, dofLocation::EDGE};
 }
 
 std::vector<double> feSpaceTri_CR1::L(double *r)
@@ -260,6 +267,8 @@ feSpaceTriP2::feSpaceTriP2(std::string cncGeoID)
   _nFunctions = 6;
   _Lcoor = {0., 0., 0., 1., 0., 0., 0., 1., 0., 0.5, 0., 0., 0.5, 0.5, 0., 0., 0.5, 0.};
   _isGeometricInterpolant = true;
+  _dofLocations = {dofLocation::VERTEX, dofLocation::VERTEX, dofLocation::VERTEX,
+                   dofLocation::EDGE,   dofLocation::EDGE,   dofLocation::EDGE};
 }
 
 feSpaceTriP2::feSpaceTriP2(feMesh *mesh, const std::string fieldID, const std::string cncGeoID,
@@ -268,6 +277,8 @@ feSpaceTriP2::feSpaceTriP2(feMesh *mesh, const std::string fieldID, const std::s
 {
   _nFunctions = 6;
   _Lcoor = {0., 0., 0., 1., 0., 0., 0., 1., 0., 0.5, 0., 0., 0.5, 0.5, 0., 0., 0.5, 0.};
+  _dofLocations = {dofLocation::VERTEX, dofLocation::VERTEX, dofLocation::VERTEX,
+                   dofLocation::EDGE,   dofLocation::EDGE,   dofLocation::EDGE};
 }
 
 std::vector<double> feSpaceTriP2::L(double *r)
@@ -473,9 +484,9 @@ std::vector<double> feSpaceTriP2::dLds(double *r)
           4. * (1. - r[0] - 2. * r[1])};
 }
 
-std::vector<double> feSpaceTriP2::d2Ldr2(double *r){ return {4., 4., 0., -8., 0., 0.}; }
-std::vector<double> feSpaceTriP2::d2Ldrs(double *r){ return {4., 0., 0., -4., 4., -4.}; }
-std::vector<double> feSpaceTriP2::d2Lds2(double *r){ return {4., 0., 4.,  0., 0.,-8.}; }
+std::vector<double> feSpaceTriP2::d2Ldr2(double *r) { return {4., 4., 0., -8., 0., 0.}; }
+std::vector<double> feSpaceTriP2::d2Ldrs(double *r) { return {4., 0., 0., -4., 4., -4.}; }
+std::vector<double> feSpaceTriP2::d2Lds2(double *r) { return {4., 0., 4., 0., 0., -8.}; }
 
 void feSpaceTriP2::initializeNumberingUnknowns()
 {
@@ -536,6 +547,10 @@ feSpaceVecTriP2<dim>::feSpaceVecTriP2(feMesh *mesh, const std::string fieldID,
   double coor[6 * 3] = {0., 0., 0., 1., 0., 0., 0., 1., 0., 0.5, 0., 0., 0.5, 0.5, 0., 0., 0.5, 0.};
   _Lcoor.resize(6 * 3 * dim);
   duplicateScalarArray(6 * 3, 3, coor, dim, _Lcoor);
+  _dofLocations.resize(_nFunctions);
+  for(int i = 0; i < _nFunctions; ++i) {
+    _dofLocations[i] = (i < 3 * dim) ? dofLocation::VERTEX : dofLocation::EDGE;
+  }
 }
 
 template <int dim> std::vector<double> feSpaceVecTriP2<dim>::L(double *r)
@@ -598,7 +613,7 @@ template <int dim> std::vector<double> feSpaceVecTriP2<dim>::d2Ldrs(double *r)
 
 template <int dim> std::vector<double> feSpaceVecTriP2<dim>::d2Lds2(double *r)
 {
-  double d2lds2[6] = {4., 0., 4.,  0., 0.,-8.};
+  double d2lds2[6] = {4., 0., 4., 0., 0., -8.};
   std::vector<double> res(_nFunctions);
   duplicateScalarArray(6, 1, d2lds2, dim, res);
   return res;
@@ -675,6 +690,8 @@ feSpaceTri_CR2::feSpaceTri_CR2(feMesh *mesh, std::string fieldID, std::string cn
   _nFunctions = 7;
   _Lcoor = {0., 0.,  0.,  1., 0., 0.,  0., 1.,    0.,    0.5, 0.,
             0., 0.5, 0.5, 0., 0., 0.5, 0., 1 / 3, 1 / 3, 0};
+  _dofLocations = {dofLocation::EDGE, dofLocation::EDGE, dofLocation::EDGE,
+                   dofLocation::EDGE, dofLocation::EDGE, dofLocation::EDGE};
 }
 
 std::vector<double> feSpaceTri_CR2::L(double *r)
@@ -776,6 +793,10 @@ feSpaceTriP3::feSpaceTriP3(std::string cncGeoID)
             0., 0., 2. / 3., 0., 0., 2. / 3., 1. / 3., 0.,      1. / 3., 2. / 3.,
             0., 0., 2. / 3., 0., 0., 1. / 3., 0.,      1. / 3., 1. / 3., 0.};
   _isGeometricInterpolant = true;
+  _dofLocations = {dofLocation::VERTEX, dofLocation::VERTEX, dofLocation::VERTEX,
+                   dofLocation::EDGE, dofLocation::EDGE, dofLocation::EDGE,
+                   dofLocation::EDGE, dofLocation::EDGE, dofLocation::EDGE,
+                   dofLocation::ELEMENT};
 }
 
 feSpaceTriP3::feSpaceTriP3(feMesh *mesh, const std::string fieldID, const std::string cncGeoID,
@@ -786,6 +807,10 @@ feSpaceTriP3::feSpaceTriP3(feMesh *mesh, const std::string fieldID, const std::s
   _Lcoor = {0., 0., 0.,      1., 0., 0.,      0.,      1.,      0.,      1. / 3.,
             0., 0., 2. / 3., 0., 0., 2. / 3., 1. / 3., 0.,      1. / 3., 2. / 3.,
             0., 0., 2. / 3., 0., 0., 1. / 3., 0.,      1. / 3., 1. / 3., 0.};
+  _dofLocations = {dofLocation::VERTEX, dofLocation::VERTEX, dofLocation::VERTEX,
+                   dofLocation::EDGE, dofLocation::EDGE, dofLocation::EDGE,
+                   dofLocation::EDGE, dofLocation::EDGE, dofLocation::EDGE,
+                   dofLocation::ELEMENT};
 }
 
 std::vector<double> feSpaceTriP3::L(double *r)
@@ -943,6 +968,15 @@ feSpaceVecTriP3<dim>::feSpaceVecTriP3(feMesh *mesh, const std::string fieldID,
                          0., 0., 2. / 3., 0., 0., 1. / 3., 0.,      1. / 3., 1. / 3., 0.};
   _Lcoor.resize(10 * 3 * dim);
   duplicateScalarArray(10 * 3, 3, coor, dim, _Lcoor);
+  _dofLocations.resize(_nFunctions);
+  for(int i = 0; i < _nFunctions; ++i) {
+    if(i < 3 * dim)
+      _dofLocations[i] = dofLocation::VERTEX;
+    else if(i < 9 * dim)
+      _dofLocations[i] = dofLocation::EDGE;
+    else
+      _dofLocations[i] = dofLocation::ELEMENT;
+  }
 }
 
 template <int dim> std::vector<double> feSpaceVecTriP3<dim>::L(double *r)
@@ -1143,6 +1177,11 @@ feSpaceTriP4::feSpaceTriP4(std::string cncGeoID)
             x3, y0, 0., x3, y1, 0., x2, y2, 0., x1, y3, 0., y3, x0, 0.,
             y2, x0, 0., y1, x0, 0., x1, y1, 0., x2, y1, 0., x1, y2, 0.};
   _isGeometricInterpolant = true;
+  _dofLocations = {dofLocation::VERTEX, dofLocation::VERTEX, dofLocation::VERTEX,
+                   dofLocation::EDGE, dofLocation::EDGE, dofLocation::EDGE,
+                   dofLocation::EDGE, dofLocation::EDGE, dofLocation::EDGE,
+                   dofLocation::EDGE, dofLocation::EDGE, dofLocation::EDGE,
+                   dofLocation::ELEMENT, dofLocation::ELEMENT, dofLocation::ELEMENT};
 }
 
 feSpaceTriP4::feSpaceTriP4(feMesh *mesh, const std::string fieldID, const std::string cncGeoID,
@@ -1155,6 +1194,11 @@ feSpaceTriP4::feSpaceTriP4(feMesh *mesh, const std::string fieldID, const std::s
   _Lcoor = {x0, y0, 0., x4, y0, 0., x0, y4, 0., x1, y0, 0., x2, y0, 0.,
             x3, y0, 0., x3, y1, 0., x2, y2, 0., x1, y3, 0., y3, x0, 0.,
             y2, x0, 0., y1, x0, 0., x1, y1, 0., x2, y1, 0., x1, y2, 0.};
+  _dofLocations = {dofLocation::VERTEX, dofLocation::VERTEX, dofLocation::VERTEX,
+                   dofLocation::EDGE, dofLocation::EDGE, dofLocation::EDGE,
+                   dofLocation::EDGE, dofLocation::EDGE, dofLocation::EDGE,
+                   dofLocation::EDGE, dofLocation::EDGE, dofLocation::EDGE,
+                   dofLocation::ELEMENT, dofLocation::ELEMENT, dofLocation::ELEMENT};
 }
 
 std::vector<double> feSpaceTriP4::L(double *r)

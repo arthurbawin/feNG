@@ -25,6 +25,12 @@ enum class elementType {
   CROUZEIX_RAVIART
 };
 
+enum class dofLocation {
+  VERTEX,
+  EDGE,
+  ELEMENT
+};
+
 // How the degrees of freedom should be initialized from the provided field f:
 //
 //  PREVIOUS_SOL: dofs are not initialized (use only when using solution from a
@@ -130,6 +136,7 @@ protected:
   feVectorFunction *_vectorFct;
   // How the DOFs should be initialized, see enum above
   dofInitialization _DOFinitialization = dofInitialization::NODEWISE;
+  std::vector<dofLocation> _dofLocations;
 
   // Ptr to the numbering of the field associated to this space
   feNumber *_numbering;
@@ -180,6 +187,9 @@ public:
   elementType getElementType() { return _elementType; };
   dofInitialization getDOFInitialization() { return _DOFinitialization; };
   void setDOFInitialization(dofInitialization init) { _DOFinitialization = init; };
+
+  const std::vector<dofLocation> &getDOFLocations() const { return _dofLocations; }
+  dofLocation getDOFLocation(const int iDOF) const { return _dofLocations[iDOF]; }
 
   bool useGlobalFunctions() { return _useGlobalShapeFunctions; }
   void useGlobalFunctions(bool flag) { _useGlobalShapeFunctions = flag; }

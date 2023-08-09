@@ -24,7 +24,7 @@ feMetric::feMetric(feRecovery *recovery, feMetricOptions metricOptions)
   _options.polynomialDegree = _recovery->getDegreeSolution();
 }
 
-feMetric::feMetric(std::vector<feNewRecovery*> &recoveredFields, feMetricOptions metricOptions)
+feMetric::feMetric(std::vector<feNewRecovery *> &recoveredFields, feMetricOptions metricOptions)
   : _recoveredFields(recoveredFields), _options(metricOptions)
 {
   // Min and max eigenvalues based on sizes
@@ -95,7 +95,7 @@ void feMetric::metricScalingFromGmshSubstitute(std::map<int, MetricType> &metric
 {
 #if defined(HAVE_GMSH)
 
-	int nVerticesPerElement = _recoveredFields[0]->_cnc->getNumVerticesPerElem();
+  int nVerticesPerElement = _recoveredFields[0]->_cnc->getNumVerticesPerElem();
 
   // Get the mesh elements
   std::vector<int> elementTypes;
@@ -103,10 +103,10 @@ void feMetric::metricScalingFromGmshSubstitute(std::map<int, MetricType> &metric
   std::vector<std::vector<std::size_t> > elemNodeTags;
   gmsh::model::mesh::getElements(elementTypes, elementTags, elemNodeTags, 2);
 
-  if(elementTypes.size() > 1){
-  	feErrorMsg(FE_STATUS_ERROR, "Gmsh mesh has more than one element type."
-  		"We expect only P1 or P2 triangles in 2D entities");
-  	exit(-1);
+  if(elementTypes.size() > 1) {
+    feErrorMsg(FE_STATUS_ERROR, "Gmsh mesh has more than one element type."
+                                "We expect only P1 or P2 triangles in 2D entities");
+    exit(-1);
   }
 
   int elementType = elementTypes[0];
@@ -116,14 +116,14 @@ void feMetric::metricScalingFromGmshSubstitute(std::map<int, MetricType> &metric
   std::vector<double> weights;
   std::vector<double> basisFunctions;
   gmsh::model::mesh::getIntegrationPoints(elementType, "Gauss12", localCoord, weights);
-  gmsh::model::mesh::getBasisFunctions(elementType, localCoord, "Lagrange", numComponents, basisFunctions,
-                                       numOrientations);
+  gmsh::model::mesh::getBasisFunctions(elementType, localCoord, "Lagrange", numComponents,
+                                       basisFunctions, numOrientations);
 
   if(_nVerticesPerElmOnBackmesh == 3 && nVerticesPerElement == 6) {
-  	// Linear backmesh with a P2 feMesh : get P1 basis
-  	int triP1 = gmsh::model::mesh::getElementType("Triangle", 1);
-  	gmsh::model::mesh::getBasisFunctions(triP1, localCoord, "Lagrange", numComponents, basisFunctions,
-                                       numOrientations);
+    // Linear backmesh with a P2 feMesh : get P1 basis
+    int triP1 = gmsh::model::mesh::getElementType("Triangle", 1);
+    gmsh::model::mesh::getBasisFunctions(triP1, localCoord, "Lagrange", numComponents,
+                                         basisFunctions, numOrientations);
   }
 
   // Get the jacobians
@@ -135,57 +135,56 @@ void feMetric::metricScalingFromGmshSubstitute(std::map<int, MetricType> &metric
   int nQuad = weights.size();
   size_t nElm = elementTags[0].size();
 
-  double N = (double) _options.nTargetVertices;
+  double N = (double)_options.nTargetVertices;
   double dim = 2.;
 
-  #define MAX_VERTICES_BACKMESH 6
+#define MAX_VERTICES_BACKMESH 6
 
-  #if defined(HAVE_OMP)
-  #pragma omp parallel
-  #endif
+#if defined(HAVE_OMP)
+#pragma omp parallel
+#endif
   {
     MetricType M_interpolated;
     double xsi[2];
     int tags[MAX_VERTICES_BACKMESH];
 
-    #if defined(HAVE_OMP)
-    #pragma omp for reduction(+:I)
-    #endif
+#if defined(HAVE_OMP)
+#pragma omp for reduction(+ : I)
+#endif
     for(size_t iElm = 0; iElm < nElm; iElm++) {
-
-    	for(size_t i = 0; i < _nVerticesPerElmOnBackmesh; ++i) {
-    		tags[i] = elemNodeTags[0][_nVerticesPerElmOnBackmesh * iElm + i];
-    	}
+      for(size_t i = 0; i < _nVerticesPerElmOnBackmesh; ++i) {
+        tags[i] = elemNodeTags[0][_nVerticesPerElmOnBackmesh * iElm + i];
+      }
 
       MetricTensor logM0 = metrics.at(tags[0]).log();
       MetricTensor logM1 = metrics.at(tags[1]).log();
       MetricTensor logM2 = metrics.at(tags[2]).log();
 
       for(size_t i = 0; i < nQuad; i++) {
+        xsi[0] = localCoord[3 * i + 0];
+        xsi[1] = localCoord[3 * i + 1];
 
-      	xsi[0] = localCoord[3 * i + 0];
-      	xsi[1] = localCoord[3 * i + 1];
+        if(_nVerticesPerElmOnBackmesh == 3) {
+          logEuclidianP1Interpolation(xsi, logM0, logM1, logM2, M_interpolated);
+        }
 
-      	if(_nVerticesPerElmOnBackmesh == 3){
-      		logEuclidianP1Interpolation(xsi, logM0, logM1, logM2, M_interpolated);
-      	}
-
-      	if(_nVerticesPerElmOnBackmesh == 6){
-      		MetricTensor logM3 = metrics.at(tags[3]).log();
+        if(_nVerticesPerElmOnBackmesh == 6) {
+          MetricTensor logM3 = metrics.at(tags[3]).log();
           MetricTensor logM4 = metrics.at(tags[4]).log();
           MetricTensor logM5 = metrics.at(tags[5]).log();
-      		logEuclidianP2Interpolation(xsi, logM0, logM1, logM2, logM3, logM4, logM5, M_interpolated);
-      	}
+          logEuclidianP2Interpolation(xsi, logM0, logM1, logM2, logM3, logM4, logM5,
+                                      M_interpolated);
+        }
 
-      	double interpolatedDet = M_interpolated.determinant();
+        double interpolatedDet = M_interpolated.determinant();
 
-      	if(interpolatedDet <= 0. ) {
+        if(interpolatedDet <= 0.) {
           feInfo("Negative metric determinant:");
-      		M_interpolated.print();
-      		exit(-1);
-      	}
+          M_interpolated.print();
+          exit(-1);
+        }
 
-        I += weights[i] * det[iElm * nQuad + i] * pow( interpolatedDet, exponentInIntegral);
+        I += weights[i] * det[iElm * nQuad + i] * pow(interpolatedDet, exponentInIntegral);
       }
     }
   }
@@ -215,34 +214,32 @@ double matNorm2(const MetricTensor &m1, const MetricTensor &m2)
   return sqrt(sqr);
 }
 
-inline double matfun(double x, double y){
-	return 1. + x*x*x + y*y;
-}
+inline double matfun(double x, double y) { return 1. + x * x * x + y * y; }
 
 MetricTensor analyticMetric(double x, double y)
 {
-	MetricTensor res(1.0);
-	SVector3 EX(1., 0., 0.);
-	SVector3 EY(0., 1., 0.);
+  MetricTensor res(1.0);
+  SVector3 EX(1., 0., 0.);
+  SVector3 EY(0., 1., 0.);
 
-	SVector3 e1 = EX *   cos(M_PI*x)  + EY * sin(M_PI*x);
-	SVector3 e2 = EX * (-sin(M_PI*x)) + EY * cos(M_PI*x);
-	SVector3 e3(0., 0., 1.);
-	double h1 = 1 + x*y;
-	double h2 = 5 + x*y*y;
-	SMetric3 tmp(1./(h1*h1), 1./(h2*h2), 1., e1, e2, e3);
-	res(0,0) = tmp(0,0);
-	res(0,1) = tmp(0,1);
-	res(1,0) = tmp(1,0);
-	res(1,1) = tmp(1,1);
-	return res;
+  SVector3 e1 = EX * cos(M_PI * x) + EY * sin(M_PI * x);
+  SVector3 e2 = EX * (-sin(M_PI * x)) + EY * cos(M_PI * x);
+  SVector3 e3(0., 0., 1.);
+  double h1 = 1 + x * y;
+  double h2 = 5 + x * y * y;
+  SMetric3 tmp(1. / (h1 * h1), 1. / (h2 * h2), 1., e1, e2, e3);
+  res(0, 0) = tmp(0, 0);
+  res(0, 1) = tmp(0, 1);
+  res(1, 0) = tmp(1, 0);
+  res(1, 1) = tmp(1, 1);
+  return res;
 }
 
 void feMetric::interpolationTest(const std::vector<size_t> &nodeTags, std::vector<double> &coord)
 {
 #if defined(HAVE_GMSH)
 
-	int nVerticesPerElement = _recoveredFields[0]->_cnc->getNumVerticesPerElem();
+  int nVerticesPerElement = _recoveredFields[0]->_cnc->getNumVerticesPerElem();
 
   // Get quadrature rule and interpolation functions on the Gmsh substitute
   int elementOrder = getGeometricInterpolantDegree(_recoveredFields[0]->_cnc->getInterpolant());
@@ -254,8 +251,8 @@ void feMetric::interpolationTest(const std::vector<size_t> &nodeTags, std::vecto
   std::vector<double> weights;
   std::vector<double> basisFunctions;
   gmsh::model::mesh::getIntegrationPoints(elementType, "Gauss12", localCoord, weights);
-  gmsh::model::mesh::getBasisFunctions(elementType, localCoord, "Lagrange", numComponents, basisFunctions,
-                                       numOrientations);
+  gmsh::model::mesh::getBasisFunctions(elementType, localCoord, "Lagrange", numComponents,
+                                       basisFunctions, numOrientations);
 
   // Get the mesh elements
   // std::vector<int> elementTypes;
@@ -267,7 +264,8 @@ void feMetric::interpolationTest(const std::vector<size_t> &nodeTags, std::vecto
   gmsh::model::mesh::getElementsByType(elementType, elementTags, elemNodeTags);
 
   if(elementTags.empty()) {
-    feErrorMsg(FE_STATUS_ERROR, "There are no P2 elements in the Gmsh model. It's probably because the Gmsh model is still P1 for MMG.");
+    feErrorMsg(FE_STATUS_ERROR, "There are no P2 elements in the Gmsh model. It's probably because "
+                                "the Gmsh model is still P1 for MMG.");
     exit(-1);
   }
   feInfo("Number of elements in the Gmsh model = %d", elementTags.size());
@@ -298,121 +296,124 @@ void feMetric::interpolationTest(const std::vector<size_t> &nodeTags, std::vecto
   fprintf(myfile3, "View\"metricInterp\"{\n");
   fprintf(myfile4, "View\"metricSommets\"{\n");
 
-  for(size_t iElm = 0; iElm < elementTags.size(); iElm++)
-  {
-  	int v0 = elemNodeTags[nVerticesPerElement * iElm + 0] - 1;
-  	int v1 = elemNodeTags[nVerticesPerElement * iElm + 1] - 1;
-  	int v2 = elemNodeTags[nVerticesPerElement * iElm + 2] - 1;
-  	int v3 = elemNodeTags[nVerticesPerElement * iElm + 3] - 1;
-  	int v4 = elemNodeTags[nVerticesPerElement * iElm + 4] - 1;
-  	int v5 = elemNodeTags[nVerticesPerElement * iElm + 5] - 1;
+  for(size_t iElm = 0; iElm < elementTags.size(); iElm++) {
+    int v0 = elemNodeTags[nVerticesPerElement * iElm + 0] - 1;
+    int v1 = elemNodeTags[nVerticesPerElement * iElm + 1] - 1;
+    int v2 = elemNodeTags[nVerticesPerElement * iElm + 2] - 1;
+    int v3 = elemNodeTags[nVerticesPerElement * iElm + 3] - 1;
+    int v4 = elemNodeTags[nVerticesPerElement * iElm + 4] - 1;
+    int v5 = elemNodeTags[nVerticesPerElement * iElm + 5] - 1;
 
-  	double x0 = coord[3 * v0];
-  	double y0 = coord[3 * v0+1];
-  	double x1 = coord[3 * v1];
-  	double y1 = coord[3 * v1+1];
-  	double x2 = coord[3 * v2];
-  	double y2 = coord[3 * v2+1];
-  	double x3 = coord[3 * v3];
-  	double y3 = coord[3 * v3+1];
-  	double x4 = coord[3 * v4];
-  	double y4 = coord[3 * v4+1];
-  	double x5 = coord[3 * v5];
-  	double y5 = coord[3 * v5+1];
+    double x0 = coord[3 * v0];
+    double y0 = coord[3 * v0 + 1];
+    double x1 = coord[3 * v1];
+    double y1 = coord[3 * v1 + 1];
+    double x2 = coord[3 * v2];
+    double y2 = coord[3 * v2 + 1];
+    double x3 = coord[3 * v3];
+    double y3 = coord[3 * v3 + 1];
+    double x4 = coord[3 * v4];
+    double y4 = coord[3 * v4 + 1];
+    double x5 = coord[3 * v5];
+    double y5 = coord[3 * v5 + 1];
 
-  	if(iElm == 0){
-  		fprintf(myfile, "SP(%f,%f,0.){0.};\n", x0, y0);
-  		fprintf(myfile, "SP(%f,%f,0.){1.};\n", x1, y1);
-  		fprintf(myfile, "SP(%f,%f,0.){2.};\n", x2, y2);
-  		fprintf(myfile, "SP(%f,%f,0.){3.};\n", x3, y3);
-  		fprintf(myfile, "SP(%f,%f,0.){4.};\n", x4, y4);
-  		fprintf(myfile, "SP(%f,%f,0.){5.};\n", x5, y5);
-  	}
+    if(iElm == 0) {
+      fprintf(myfile, "SP(%f,%f,0.){0.};\n", x0, y0);
+      fprintf(myfile, "SP(%f,%f,0.){1.};\n", x1, y1);
+      fprintf(myfile, "SP(%f,%f,0.){2.};\n", x2, y2);
+      fprintf(myfile, "SP(%f,%f,0.){3.};\n", x3, y3);
+      fprintf(myfile, "SP(%f,%f,0.){4.};\n", x4, y4);
+      fprintf(myfile, "SP(%f,%f,0.){5.};\n", x5, y5);
+    }
 
-  	double X[6] = {x0, x1, x2, x3, x4, x5};
-  	double Y[6] = {y0, y1, y2, y3, y4, y5};
-  	double U[6] = {matfun(x0,y0), matfun(x1,y1), matfun(x2,y2), matfun(x3,y3), matfun(x4,y4), matfun(x5,y5)};
+    double X[6] = {x0, x1, x2, x3, x4, x5};
+    double Y[6] = {y0, y1, y2, y3, y4, y5};
+    double U[6] = {matfun(x0, y0), matfun(x1, y1), matfun(x2, y2),
+                   matfun(x3, y3), matfun(x4, y4), matfun(x5, y5)};
 
-  	// MetricTensor M0(1.0); M0(0,0) = matfun(x0,y0); M0(1,1) = matfun(x0,y0);
-  	// MetricTensor M1(1.0); M1(0,0) = matfun(x1,y1); M1(1,1) = matfun(x1,y1);
-  	// MetricTensor M2(1.0); M2(0,0) = matfun(x2,y2); M2(1,1) = matfun(x2,y2);
-  	// MetricTensor M3(1.0); M3(0,0) = matfun(x3,y3); M3(1,1) = matfun(x3,y3);
-  	// MetricTensor M4(1.0); M4(0,0) = matfun(x4,y4); M4(1,1) = matfun(x4,y4);
-  	// MetricTensor M5(1.0); M5(0,0) = matfun(x5,y5); M5(1,1) = matfun(x5,y5);
+    // MetricTensor M0(1.0); M0(0,0) = matfun(x0,y0); M0(1,1) = matfun(x0,y0);
+    // MetricTensor M1(1.0); M1(0,0) = matfun(x1,y1); M1(1,1) = matfun(x1,y1);
+    // MetricTensor M2(1.0); M2(0,0) = matfun(x2,y2); M2(1,1) = matfun(x2,y2);
+    // MetricTensor M3(1.0); M3(0,0) = matfun(x3,y3); M3(1,1) = matfun(x3,y3);
+    // MetricTensor M4(1.0); M4(0,0) = matfun(x4,y4); M4(1,1) = matfun(x4,y4);
+    // MetricTensor M5(1.0); M5(0,0) = matfun(x5,y5); M5(1,1) = matfun(x5,y5);
 
-  	MetricTensor M0 = analyticMetric(x0,y0);
-  	MetricTensor M1 = analyticMetric(x1,y1);
-  	MetricTensor M2 = analyticMetric(x2,y2);
-  	MetricTensor M3 = analyticMetric(x3,y3);
-  	MetricTensor M4 = analyticMetric(x4,y4);
-  	MetricTensor M5 = analyticMetric(x5,y5);
+    MetricTensor M0 = analyticMetric(x0, y0);
+    MetricTensor M1 = analyticMetric(x1, y1);
+    MetricTensor M2 = analyticMetric(x2, y2);
+    MetricTensor M3 = analyticMetric(x3, y3);
+    MetricTensor M4 = analyticMetric(x4, y4);
+    MetricTensor M5 = analyticMetric(x5, y5);
 
-  	if(iElm == 0){
-  		double POS0[2] = {x0, y0};
-  		double POS1[2] = {x1, y1};
-  		double POS2[2] = {x2, y2};
-  		double POS3[2] = {x3, y3};
-  		double POS4[2] = {x4, y4};
-  		double POS5[2] = {x5, y5};
-  		drawSingleEllipse(myfile4, POS0, M0, scale, 100);
-  		drawSingleEllipse(myfile4, POS1, M1, scale, 100);
-  		drawSingleEllipse(myfile4, POS2, M2, scale, 100);
-  		drawSingleEllipse(myfile4, POS3, M3, scale, 100);
-  		drawSingleEllipse(myfile4, POS4, M4, scale, 100);
-  		drawSingleEllipse(myfile4, POS5, M5, scale, 100);
-  	}
+    if(iElm == 0) {
+      double POS0[2] = {x0, y0};
+      double POS1[2] = {x1, y1};
+      double POS2[2] = {x2, y2};
+      double POS3[2] = {x3, y3};
+      double POS4[2] = {x4, y4};
+      double POS5[2] = {x5, y5};
+      drawSingleEllipse(myfile4, POS0, M0, scale, 100);
+      drawSingleEllipse(myfile4, POS1, M1, scale, 100);
+      drawSingleEllipse(myfile4, POS2, M2, scale, 100);
+      drawSingleEllipse(myfile4, POS3, M3, scale, 100);
+      drawSingleEllipse(myfile4, POS4, M4, scale, 100);
+      drawSingleEllipse(myfile4, POS5, M5, scale, 100);
+    }
 
     for(size_t i = 0; i < nQuad; i++) {
+      // Interpolate metric at quad node
+      MetricTensor Mk(1.0);
+      xsi[0] = localCoord[3 * i + 0];
+      xsi[1] = localCoord[3 * i + 1];
+      // classicalP1Interpolation(xsi, M0, M1, M2, Mk);
+      // logEuclidianP1Interpolation(xsi, M0, M1, M2, Mk);
+      logEuclidianP2Interpolation(xsi, M0, M1, M2, M3, M4, M5, Mk);
 
-    	// Interpolate metric at quad node
-    	MetricTensor Mk(1.0);
-    	xsi[0] = localCoord[3 * i + 0];
-    	xsi[1] = localCoord[3 * i + 1];
-    	// classicalP1Interpolation(xsi, M0, M1, M2, Mk);
-    	// logEuclidianP1Interpolation(xsi, M0, M1, M2, Mk);
-    	logEuclidianP2Interpolation(xsi, M0, M1, M2, M3, M4, M5, Mk);
+      // Exact metric at quad node
+      double xphys = 0.;
+      double yphys = 0.;
+      double uh = 0.;
+      double sum = 0.;
+      for(int ii = 0; ii < 6; ++ii) {
+        sum += basisFunctions[nVerticesPerElement * i + ii];
+        xphys += basisFunctions[nVerticesPerElement * i + ii] * X[ii];
+        yphys += basisFunctions[nVerticesPerElement * i + ii] * Y[ii];
+        uh += basisFunctions[nVerticesPerElement * i + ii] * U[ii];
+      }
 
-    	// Exact metric at quad node
-    	double xphys = 0.;
-    	double yphys = 0.;
-    	double uh = 0.;
-    	double sum  = 0.;
-    	for(int ii = 0; ii < 6; ++ii){
-    		sum   += basisFunctions[nVerticesPerElement * i + ii];
-    		xphys += basisFunctions[nVerticesPerElement * i + ii] * X[ii];
-    		yphys += basisFunctions[nVerticesPerElement * i + ii] * Y[ii];
-    		uh    += basisFunctions[nVerticesPerElement * i + ii] * U[ii];
-    	}
+      // MetricTensor Mkexact(1.0);
+      // Mkexact(0,0) = matfun(xphys,yphys);
+      // Mkexact(1,1) = matfun(xphys,yphys);
+      MetricTensor Mkexact = analyticMetric(xphys, yphys);
 
-    	// MetricTensor Mkexact(1.0);
-    	// Mkexact(0,0) = matfun(xphys,yphys);
-    	// Mkexact(1,1) = matfun(xphys,yphys);
-    	MetricTensor Mkexact = analyticMetric(xphys,yphys);
+      if(iElm == 0) {
+        double POS_QUAD[2] = {xphys, yphys};
+        drawSingleEllipse(myfile2, POS_QUAD, Mkexact, scale, 100);
+        drawSingleEllipse(myfile3, POS_QUAD, Mk, scale, 100);
+      }
 
-    	if(iElm == 0){
-    		double POS_QUAD[2] = {xphys, yphys};
-    		drawSingleEllipse(myfile2, POS_QUAD, Mkexact, scale, 100);
-    		drawSingleEllipse(myfile3, POS_QUAD, Mk, scale, 100);
-    	}
+      double uexact = matfun(xphys, yphys);
 
-    	double uexact = matfun(xphys,yphys);
+      double frobError = matNorm2(Mk, Mkexact);
 
-    	double frobError = matNorm2(Mk, Mkexact);
+      // Erreur sur l'interpolation des metriques
+      error += frobError * frobError * weights[i] * det[iElm * nQuad + i];
 
-    	// Erreur sur l'interpolation des metriques
-    	error += frobError*frobError * weights[i] * det[iElm * nQuad + i];
-
-    	// Erreur (test de verification) sur l'interpolation d'un champ
-    	// error += (uh-uexact)*(uh-uexact) * weights[i] * det[iElm * nQuad + i];
+      // Erreur (test de verification) sur l'interpolation d'un champ
+      // error += (uh-uexact)*(uh-uexact) * weights[i] * det[iElm * nQuad + i];
 
       area += weights[i] * det[iElm * nQuad + i];
     }
   }
 
-  fprintf(myfile, "};\n"); fclose(myfile);
-  fprintf(myfile2, "};\n"); fclose(myfile2);
-  fprintf(myfile3, "};\n"); fclose(myfile3);
-  fprintf(myfile4, "};\n"); fclose(myfile4);
+  fprintf(myfile, "};\n");
+  fclose(myfile);
+  fprintf(myfile2, "};\n");
+  fclose(myfile2);
+  fprintf(myfile3, "};\n");
+  fclose(myfile3);
+  fprintf(myfile4, "};\n");
+  fclose(myfile4);
 
   error = sqrt(error);
   feInfo("Error is %f", error);
@@ -427,8 +428,8 @@ void feMetric::interpolationTest(const std::vector<size_t> &nodeTags, std::vecto
 
   // Apply scaling
   for(size_t i = 0; i < nodeTags.size(); i++) {
-  	x[0] = coord[3 * i + 0];
-  	x[1] = coord[3 * i + 1];
+    x[0] = coord[3 * i + 0];
+    x[1] = coord[3 * i + 1];
 
     // MetricTensor M(1.0);
     // M(0,0) = 1.0 + x[0]*x[0];
@@ -436,12 +437,13 @@ void feMetric::interpolationTest(const std::vector<size_t> &nodeTags, std::vecto
     // M(1,0) = 0.;
     // M(1,1) = 1.0 + x[0]*x[0];
 
-    MetricTensor M = analyticMetric(x[0],x[1]);
+    MetricTensor M = analyticMetric(x[0], x[1]);
 
     drawSingleEllipse(file, x, M, 500., 30);
   }
 
-  fprintf(file, "};\n"); fclose(file);
+  fprintf(file, "};\n");
+  fclose(file);
   _options.userValue = error;
 
 #endif
@@ -496,24 +498,75 @@ void feMetric::applyGradation(std::vector<std::size_t> &nodeTags, std::vector<do
 void feMetric::writeMetricField(std::vector<std::size_t> &nodeTags, std::vector<double> &coord)
 {
 #if defined(HAVE_GMSH)
+
+  std::vector<std::size_t> P1ToP2;
+  size_t numBGMVertices = nodeTags.size();
+  std::vector<std::size_t> nodeTagsP1;
+  std::string initialMesh;
+  gmsh::model::getCurrent(initialMesh);
+
+  // If the background mesh elements are P2, create a P1 copy of the mesh
+  // and export the metrics on the P1 mesh for MMG.
+  if(_backmeshOrder > 1) {
+    // Write a P1 .msh file to give MMG for aniso straight adaptation
+    // For now copy the mesh and read it again
+    std::string cmd = "cp " + _options.backgroundMeshfile + " tmp_P1_bgm.msh";
+    system(cmd.data());
+    gmsh::open("tmp_P1_bgm.msh");
+
+    gmsh::model::mesh::setOrder(1);
+    gmsh::model::mesh::renumberNodes();
+
+    // Brute-force identification of P1 vertices in P2 mesh
+    double tol = 1e-8;
+    std::vector<double> coordP1;
+    std::vector<double> parametricCoord;
+    int dim = -1;
+    int tag = -1;
+    int includeBoundary = false;
+    gmsh::model::mesh::getNodes(nodeTagsP1, coordP1, parametricCoord, dim, tag, includeBoundary,
+                                false);
+
+    // P1 to P2 nodeTags map
+    numBGMVertices = nodeTagsP1.size();
+    P1ToP2.resize(numBGMVertices);
+
+    for(size_t i = 0; i < numBGMVertices; ++i) {
+      for(size_t j = 0; j < nodeTags.size(); ++j) {
+        double xp1 = coordP1[3 * i + 0];
+        double yp1 = coordP1[3 * i + 1];
+        double xp2 = coord[3 * j + 0];
+        double yp2 = coord[3 * j + 1];
+        if(sqrt((xp1 - xp2) * (xp1 - xp2) + (yp1 - yp2) * (yp1 - yp2)) < tol) {
+          P1ToP2[i] = nodeTags[j];
+          break;
+        }
+      }
+    }
+  }
+
+  std::string bgmToWrite;
+  gmsh::model::getCurrent(bgmToWrite);
+
   // Create a view that contains the metric field
   _metricViewTag = gmsh::view::add(":metric");
-  int recoveryViewTag = gmsh::view::add(":recovery");
+  // int recoveryViewTag = gmsh::view::add(":recovery");
   std::vector<std::vector<double> > metricData;
-  std::vector<std::vector<double> > recoveryData;
+  // std::vector<std::vector<double>> recoveryData;
 
-  double x[2];
+  // double x[2];
+  int tag;
   std::vector<double> vMetric(9);
-  std::vector<double> vRecovery(1);
-  for(size_t i = 0; i < nodeTags.size(); i++) {
-    x[0] = coord[3 * i + 0];
-    x[1] = coord[3 * i + 1];
+  // std::vector<double> vRecovery(1);
 
-    MetricTensor &M = _metricTensorAtNodetags[nodeTags[i]];
+  for(size_t i = 0; i < numBGMVertices; i++) {
+    // x[0] = coord[3 * i + 0];
+    // x[1] = coord[3 * i + 1];
 
-    // For interpolation in curved mesh (still requires Eigen matrices)
-    // REMOVED TO USE LOGEUCLIDIAN INTERPOLATION?
-    // _metricsOnGmshModel_eigen[nodeTags[i]] = convert2eigenMatrix(M);
+    // Get metric at vertex (if P1 background mesh) or at corresponding P2 vertex
+    tag = (_backmeshOrder > 1) ? P1ToP2[i] : nodeTags[i];
+
+    MetricTensor &M = _metricTensorAtNodetags[tag];
 
     vMetric[0] = M(0, 0);
     vMetric[1] = M(0, 1);
@@ -526,28 +579,36 @@ void feMetric::writeMetricField(std::vector<std::size_t> &nodeTags, std::vector<
     vMetric[6] = 0;
     vMetric[7] = 0;
     vMetric[8] = 1.0;
-    vRecovery[0] = _recoveredFields[0]->evaluateRecovery(PPR::RECOVERY, 0, x);
+    // vRecovery[0] = _recoveredFields[0]->evaluateRecovery(PPR::RECOVERY, 0, x);
 
     metricData.push_back(vMetric);
-    recoveryData.push_back(vRecovery);
+    // recoveryData.push_back(vRecovery);
   }
 
-  gmsh::view::addModelData(_metricViewTag, 0, _options.modelForMetric, "NodeData", nodeTags,
-                           metricData);
-  gmsh::view::addModelData(recoveryViewTag, 0, _options.modelForMetric, "NodeData", nodeTags,
-                           recoveryData);
+  if(_backmeshOrder > 1) {
+    gmsh::view::addModelData(_metricViewTag, 0, bgmToWrite, "NodeData", nodeTagsP1, metricData);
+    // gmsh::view::addModelData(recoveryViewTag, 0, bgmToWrite, "NodeData", nodeTags, recoveryData);
+  } else {
+    gmsh::view::addModelData(_metricViewTag, 0, bgmToWrite, "NodeData", nodeTags, metricData);
+    // gmsh::view::addModelData(recoveryViewTag, 0, bgmToWrite, "NodeData", nodeTags, recoveryData);
+  }
 
-  // MMG only take .msh files of version 2.2
+  // MMG only takes .msh files of version 2.2
   gmsh::option::setNumber("Mesh.MshFileVersion", 2.2);
   // Write mesh + metric and mesh + recovery
   gmsh::view::write(_metricViewTag, _options.mmgInputMeshfile);
-  gmsh::view::write(recoveryViewTag, _options.recoveryName);
+  // gmsh::view::write(recoveryViewTag, _options.recoveryName);
+
+  // Reset the initial model as active
+  gmsh::model::setCurrent(initialMesh);
+
 #endif
 }
 
-// Compute unscaled optimal metric field minimizing interpolation error 
+// Compute unscaled optimal metric field minimizing interpolation error
 // in Lp norm for P1 elements according to Alauzet & Loseille
-feStatus feMetric::computeMetricsP1(std::vector<std::size_t> &nodeTags, std::vector<double> &coord, bool isotropic)
+feStatus feMetric::computeMetricsP1(std::vector<std::size_t> &nodeTags, std::vector<double> &coord,
+                                    bool isotropic)
 {
   double x[2], fxx, fxy, fyx, fyy;
   MetricTensor H;
@@ -568,7 +629,8 @@ feStatus feMetric::computeMetricsP1(std::vector<std::size_t> &nodeTags, std::vec
     H(1, 0) = (fxy + fyx) / 2.;
     H(1, 1) = fyy;
     if(isotropic)
-      _metricTensorAtNodetags[nodeTags[i]] = H.boundEigenvaluesOfAbsIsotropic(_lambdaMin, _lambdaMax);
+      _metricTensorAtNodetags[nodeTags[i]] =
+        H.boundEigenvaluesOfAbsIsotropic(_lambdaMin, _lambdaMax);
     else
       _metricTensorAtNodetags[nodeTags[i]] = H.boundEigenvaluesOfAbs(_lambdaMin, _lambdaMax);
   }
@@ -578,11 +640,15 @@ feStatus feMetric::computeMetricsP1(std::vector<std::size_t> &nodeTags, std::vec
 
 // Compute unscaled optimal metric field minimizing the error on a goal functional.
 // The goal functional is represented through the adjoint problem solution p.
-// The optimal metric is the interpolation error metric weighted by the (gradient of the) adjoint solution.
-feStatus feMetric::computeMetricsGoalOrientedP1(std::vector<std::size_t> &nodeTags, std::vector<double> &coord)
+// The optimal metric is the interpolation error metric weighted by the (gradient of the) adjoint
+// solution.
+feStatus feMetric::computeMetricsGoalOrientedP1(std::vector<std::size_t> &nodeTags,
+                                                std::vector<double> &coord)
 {
   if(_recoveredFields.size() < 2) {
-    return feErrorMsg(FE_STATUS_ERROR, "Only one recovery was provided to compute the metric field. "
+    return feErrorMsg(
+      FE_STATUS_ERROR,
+      "Only one recovery was provided to compute the metric field. "
       "The recovered adjoint and its derivatives are also required to compute a metric field for "
       "goal oriented adaptation.");
   }
@@ -592,8 +658,8 @@ feStatus feMetric::computeMetricsGoalOrientedP1(std::vector<std::size_t> &nodeTa
 
   // Test pour la perturbation singuliere
   double epsilon = 1e-2;
-  double velocity[2] = {1. - 2.*epsilon, 1. - 2.*epsilon};
-  double a = 2.*(1 - epsilon);
+  double velocity[2] = {1. - 2. * epsilon, 1. - 2. * epsilon};
+  double a = 2. * (1 - epsilon);
 
   // Compute bounded absolute value of hessian at vertices (at nodetags)
   for(size_t i = 0; i < nodeTags.size(); i++) {
@@ -607,7 +673,7 @@ feStatus feMetric::computeMetricsGoalOrientedP1(std::vector<std::size_t> &nodeTa
     fyy = _recoveredFields[0]->evaluateRecovery(PPR::DERIVATIVE, 5, x);
 
     // Evaluate adjoint and its gradient
-    p  = _recoveredFields[1]->evaluateRecovery(PPR::RECOVERY, 0, x);
+    p = _recoveredFields[1]->evaluateRecovery(PPR::RECOVERY, 0, x);
     px = _recoveredFields[1]->evaluateRecovery(PPR::DERIVATIVE, 0, x);
     py = _recoveredFields[1]->evaluateRecovery(PPR::DERIVATIVE, 1, x);
 
@@ -626,7 +692,8 @@ feStatus feMetric::computeMetricsGoalOrientedP1(std::vector<std::size_t> &nodeTa
 }
 
 #if defined(HAVE_SOPLEX)
-void setUpLinearProblem(linearProblem &myLP, feMetricOptions &options, int nTheta, bool reset = false)
+void setUpLinearProblem(linearProblem &myLP, feMetricOptions &options, int nTheta,
+                        bool reset = false)
 {
   if(reset) {
     myLP.problem.clearLPReal();
@@ -674,7 +741,7 @@ static MetricTensor metricAparicioEstrems(double x, double y)
 {
   double pi = M_PI;
   double A = 10.;
-  double c = sqrt(A*A + 4.*M_PI*M_PI);
+  double c = sqrt(A * A + 4. * M_PI * M_PI);
   double HMIN = 0.1;
   double b = 10.;
 
@@ -683,31 +750,38 @@ static MetricTensor metricAparicioEstrems(double x, double y)
   // double dhdx = 0.;
   // double dhdy = b * sgn(y);
 
-  double h = HMIN + b * fabs((A*y - cos(2.*M_PI*x))/c);
-  double dhdx = b * (2.*pi*sin(2.*pi*x) * sgn(A*y - cos(2.*pi*x))) / c;
-  double dhdy = b * (A *                  sgn(A*y - cos(2.*pi*x))) / c;
+  double h = HMIN + b * fabs((A * y - cos(2. * M_PI * x)) / c);
+  double dhdx = b * (2. * pi * sin(2. * pi * x) * sgn(A * y - cos(2. * pi * x))) / c;
+  double dhdy = b * (A * sgn(A * y - cos(2. * pi * x))) / c;
 
   MetricTensor D(0.);
-  D(0,0) = 1.;
-  D(1,1) = 1./(h*h);
+  D(0, 0) = 1.;
+  D(1, 1) = 1. / (h * h);
 
   // Gradient of (x, (10y - cos(2*pi*x)) / c)
   MetricTensor gradPhi(0.);
-  gradPhi(0,0) = 1.;
-  gradPhi(0,1) = 0.;
-  gradPhi(1,0) = 2.*M_PI * sin(2.*M_PI*x)/c;
-  gradPhi(1,1) = A/c;
+  gradPhi(0, 0) = 1.;
+  gradPhi(0, 1) = 0.;
+  gradPhi(1, 0) = 2. * M_PI * sin(2. * M_PI * x) / c;
+  gradPhi(1, 1) = A / c;
 
   return gradPhi.transpose() * D * gradPhi;
 }
 
 // Compute scaled optimal metric field for Pn elements
 // according to Coulaud & Loseille using the log-simplex method
-feStatus feMetric::computeMetricsPn(std::vector<std::size_t> &nodeTags, std::vector<double> &coord, bool isotropic)
+feStatus feMetric::computeMetricsPn(std::vector<std::size_t> &nodeTags, std::vector<double> &coord,
+                                    bool isotropic)
 {
-  feInfoCond(FE_VERBOSE >= VERBOSE_MODERATE, 
-            "Computing metric tensors (ANISO_PN) for %d vertices...", nodeTags.size());
-  
+  feInfoCond(FE_VERBOSE >= VERBOSE_MODERATE,
+             "Computing metric tensors (ANISO_PN) for %d vertices...", nodeTags.size());
+
+  if(_options.polynomialDegree > 3) {
+    return feErrorMsg(FE_STATUS_ERROR,
+                      "Modify mixed derivative error coefficients for polynomials of order %d",
+                      _options.polynomialDegree);
+  }
+
 #if defined(ONLY_TEST_METRIC_INTERPOLATION_CONVERGENCE)
   // Just assign analytic metric and exit
   // To test convergence of metric interpolation
@@ -732,63 +806,70 @@ feStatus feMetric::computeMetricsPn(std::vector<std::size_t> &nodeTags, std::vec
 
 #if defined(HAVE_SOPLEX)
 
-  std::map<int, std::vector<double> > &errorCoeffAtVertices = _recoveredFields[0]->getErrorCoefficients();
+  std::map<int, std::vector<double> > &errorCoeffAtVertices =
+    _recoveredFields[0]->getErrorCoefficients();
 
   bool OK = true;
 
   size_t numVertices = nodeTags.size();
   int cnter = 0;
 
-  #if defined(HAVE_OMP)
-  #pragma omp parallel shared(cnter, OK)
-  #endif
+#if defined(HAVE_OMP)
+#pragma omp parallel shared(cnter, OK)
+#endif
   {
-  	double x[2];
-  	MetricTensor Q;
+    double x[2];
+    MetricTensor Q;
 
     int numIter;
     int nTheta = _options.logSimplexOptions.nThetaPerQuadrant;
     int maxIter = _options.logSimplexOptions.maxIter;
     double tol = _options.logSimplexOptions.tol;
-    
+
     linearProblem myLP;
     setUpLinearProblem(myLP, _options, nTheta);
 
-	  // Compute bounded absolute value of upper bound Q at vertices (at nodetags)
-	  #if defined(HAVE_OMP)
-    #pragma omp for schedule(dynamic,1)
-    #endif
-	  for(size_t i = 0; i < numVertices; i++) {
-
+// Compute bounded absolute value of upper bound Q at vertices (at nodetags)
+#if defined(HAVE_OMP)
+#pragma omp for schedule(dynamic, 1)
+#endif
+    for(size_t i = 0; i < numVertices; i++) {
       if(!OK) continue;
 
-	    x[0] = coord[3 * i + 0];
-	    x[1] = coord[3 * i + 1];
+      x[0] = coord[3 * i + 0];
+      x[1] = coord[3 * i + 1];
 
-	    // Get the coefficients of the homogeneous error polynomial at vertex
-	    std::vector<double> &errorCoeff = errorCoeffAtVertices[_nodeTag2sequentialTag[nodeTags[i]]];
+      // Get the coefficients of the homogeneous error polynomial at vertex
+      std::vector<double> &errorCoeff = errorCoeffAtVertices[_nodeTag2sequentialTag[nodeTags[i]]];
 
-	    // Mixed derivatives coefficient
-	    if(_options.polynomialDegree == 1){
-	    	errorCoeff[1] /= 2.;
-	    } else if(_options.polynomialDegree == 2){
-	    	errorCoeff[1] /= 3.;
-	    	errorCoeff[2] /= 3.;
-	    } else {
-	    	// return feErrorMsg(FE_STATUS_ERROR, "Modify mixed derivative error coefficients");
-	    }
+      // Divide the mixed derivatives coefficient by the corresponding binomial coefficient.
+      // Coefficients in errorCoeff are the sum of all relevant terms in 
+      // the homogeneous polynomial, counting multiple times repeated exponents,
+      // e.g. x^2*y appears 3 times as xxy, xyx and yxx.
+      if(_options.polynomialDegree == 1) {
+        errorCoeff[1] /= 2.;
+      } else if(_options.polynomialDegree == 2) {
+        errorCoeff[1] /= 3.;
+        errorCoeff[2] /= 3.;
+      } else if(_options.polynomialDegree == 3) {
+        errorCoeff[1] /= 4.;
+        errorCoeff[2] /= 6.;
+        errorCoeff[3] /= 4.;
+      }
 
-		  bool res = computeMetricLogSimplexStraight(x, errorCoeff, _options.polynomialDegree, nTheta,
-		                                               maxIter, tol, Q, numIter, myLP);
+      bool res = computeMetricLogSimplexStraight(x, errorCoeff, _options.polynomialDegree, nTheta,
+                                                 maxIter, tol, Q, numIter, myLP);
 
-      // If metric computation failed, try again by doubling the number of constraints points in each quadrant (x8 total)
+      // If metric computation failed, try again by doubling the number of constraints points in
+      // each quadrant (x8 total)
       int retry = 0, maxTry = 5;
       while(!res && retry < maxTry) {
         nTheta *= 2;
-        feInfoCond(FE_VERBOSE >= VERBOSE_MODERATE, "Could not compute metric. Trying again with %d constraints.", nTheta);
+        feInfoCond(FE_VERBOSE >= VERBOSE_MODERATE,
+                   "Could not compute metric. Trying again with %d constraints.", nTheta);
         setUpLinearProblem(myLP, _options, nTheta, true);
         res = computeMetricLogSimplexStraight(x, errorCoeff, _options.polynomialDegree, nTheta,
-                                                   maxIter, tol, Q, numIter, myLP);
+                                              maxIter, tol, Q, numIter, myLP);
         if(res) feInfoCond(FE_VERBOSE >= VERBOSE_MODERATE, "Success");
         retry++;
       }
@@ -796,34 +877,34 @@ feStatus feMetric::computeMetricsPn(std::vector<std::size_t> &nodeTags, std::vec
       // Restore initial number of constraints
       nTheta = _options.logSimplexOptions.nThetaPerQuadrant;
 
-	    if(res) {
-
-	      // Bound the eigenvalues of Q
-	      #if defined(HAVE_OMP)
-			  #pragma omp critical
-			  #endif
+      if(res) {
+// Bound the eigenvalues of Q
+#if defined(HAVE_OMP)
+#pragma omp critical
+#endif
         {
           if(isotropic) {
-            _metricTensorAtNodetags[nodeTags[i]] = Q.boundEigenvaluesOfAbsIsotropic(_lambdaMin, _lambdaMax);
-          }
-          else
+            _metricTensorAtNodetags[nodeTags[i]] =
+              Q.boundEigenvaluesOfAbsIsotropic(_lambdaMin, _lambdaMax);
+          } else
             _metricTensorAtNodetags[nodeTags[i]] = Q.boundEigenvaluesOfAbs(_lambdaMin, _lambdaMax);
         }
 
-        // feInfoCond(FE_VERBOSE >= VERBOSE_MODERATE, 
+        // feInfoCond(FE_VERBOSE >= VERBOSE_MODERATE,
         //        "Computed metric in %2d iterations - vertex %6d/%6d",
         //        numIter, ++cnter, numVertices);
-	    } else {
-	    	OK = false;
-	      feErrorMsg(FE_STATUS_ERROR, "Could not compute a metric at (%+-1.5e - %+-1.5e) (vertex %d/%d)",
-	                x[0], x[1], i, nodeTags.size());
-	    }
-	  }
-	}
+      } else {
+        OK = false;
+        feErrorMsg(FE_STATUS_ERROR,
+                   "Could not compute a metric at (%+-1.5e - %+-1.5e) (vertex %d/%d)", x[0], x[1],
+                   i, nodeTags.size());
+      }
+    }
+  }
 
-	if(!OK) {
-		return feErrorMsg(FE_STATUS_ERROR, "Could not compute at least one metric tensor");
-	}
+  if(!OK) {
+    return feErrorMsg(FE_STATUS_ERROR, "Could not compute at least one metric tensor");
+  }
 
   return FE_STATUS_OK;
 #else
@@ -856,22 +937,27 @@ double feMetric::dttt(const int vertex, double directionV1[2], const int directi
   double fx = _recoveredFields[0]->evaluateRecoveryAtVertex(PPR::DERIVATIVE, 0, vertex);
   double fy = _recoveredFields[0]->evaluateRecoveryAtVertex(PPR::DERIVATIVE, 1, vertex);
 
-  double fxx =  _recoveredFields[0]->evaluateRecoveryAtVertex(PPR::DERIVATIVE, 2, vertex);
+  double fxx = _recoveredFields[0]->evaluateRecoveryAtVertex(PPR::DERIVATIVE, 2, vertex);
   double fxy = (_recoveredFields[0]->evaluateRecoveryAtVertex(PPR::DERIVATIVE, 3, vertex) +
-                _recoveredFields[0]->evaluateRecoveryAtVertex(PPR::DERIVATIVE, 4, vertex)) / 2.;
-  double fyy =  _recoveredFields[0]->evaluateRecoveryAtVertex(PPR::DERIVATIVE, 5, vertex);
+                _recoveredFields[0]->evaluateRecoveryAtVertex(PPR::DERIVATIVE, 4, vertex)) /
+               2.;
+  double fyy = _recoveredFields[0]->evaluateRecoveryAtVertex(PPR::DERIVATIVE, 5, vertex);
 
-  double fxxx =  _recoveredFields[0]->evaluateRecoveryAtVertex(PPR::DERIVATIVE, 6, vertex);
-  double fxxy = (_recoveredFields[0]->evaluateRecoveryAtVertex(PPR::DERIVATIVE, 7, vertex) + 
-                 _recoveredFields[0]->evaluateRecoveryAtVertex(PPR::DERIVATIVE, 8, vertex) + 
-                 _recoveredFields[0]->evaluateRecoveryAtVertex(PPR::DERIVATIVE, 10, vertex)) / 3.;
-  double fxyy = (_recoveredFields[0]->evaluateRecoveryAtVertex(PPR::DERIVATIVE, 9, vertex) + 
-                 _recoveredFields[0]->evaluateRecoveryAtVertex(PPR::DERIVATIVE, 11, vertex) + 
-                 _recoveredFields[0]->evaluateRecoveryAtVertex(PPR::DERIVATIVE, 12, vertex)) / 3.;
-  double fyyy =  _recoveredFields[0]->evaluateRecoveryAtVertex(PPR::DERIVATIVE, 13, vertex);
+  double fxxx = _recoveredFields[0]->evaluateRecoveryAtVertex(PPR::DERIVATIVE, 6, vertex);
+  double fxxy = (_recoveredFields[0]->evaluateRecoveryAtVertex(PPR::DERIVATIVE, 7, vertex) +
+                 _recoveredFields[0]->evaluateRecoveryAtVertex(PPR::DERIVATIVE, 8, vertex) +
+                 _recoveredFields[0]->evaluateRecoveryAtVertex(PPR::DERIVATIVE, 10, vertex)) /
+                3.;
+  double fxyy = (_recoveredFields[0]->evaluateRecoveryAtVertex(PPR::DERIVATIVE, 9, vertex) +
+                 _recoveredFields[0]->evaluateRecoveryAtVertex(PPR::DERIVATIVE, 11, vertex) +
+                 _recoveredFields[0]->evaluateRecoveryAtVertex(PPR::DERIVATIVE, 12, vertex)) /
+                3.;
+  double fyyy = _recoveredFields[0]->evaluateRecoveryAtVertex(PPR::DERIVATIVE, 13, vertex);
 
-  double kappa1 = (- fy * fy * fxx + 2.0 * fx * fy * fxy - fx * fx * fyy) / (pow(fx * fx + fy * fy, 3. / 2.));
-  double kappa2 =     (fx * fy * (fyy - fxx) + (fx * fx - fy * fy) * fxy) / (pow(fx * fx + fy * fy, 3. / 2.));
+  double kappa1 =
+    (-fy * fy * fxx + 2.0 * fx * fy * fxy - fx * fx * fyy) / (pow(fx * fx + fy * fy, 3. / 2.));
+  double kappa2 =
+    (fx * fy * (fyy - fxx) + (fx * fx - fy * fy) * fxy) / (pow(fx * fx + fy * fy, 3. / 2.));
   double kappa[2] = {kappa1, kappa2};
 
   double C = directionV1[0];
@@ -882,27 +968,26 @@ double feMetric::dttt(const int vertex, double directionV1[2], const int directi
     g[0] = C;
     g[1] = S;
     gOrth[0] = -S;
-    gOrth[1] =  C;
+    gOrth[1] = C;
   } else {
     gOrth[0] = C;
     gOrth[1] = S;
     g[0] = -S;
-    g[1] =  C;
+    g[1] = C;
   }
 
-  double d3 =      g[0] * g[0] * g[0] * fxxx +
-              3. * g[0] * g[0] * g[1] * fxxy +
-              3. * g[0] * g[1] * g[1] * fxyy +
-                   g[1] * g[1] * g[1] * fyyy;
+  double d3 = g[0] * g[0] * g[0] * fxxx + 3. * g[0] * g[0] * g[1] * fxxy +
+              3. * g[0] * g[1] * g[1] * fxyy + g[1] * g[1] * g[1] * fyyy;
 
-  double d2 = 3. * kappa[direction] * ( g[0] * gOrth[0] * fxx +
-                                       (g[0] * gOrth[1] + g[1] * gOrth[0]) * fxy +
-                                        g[1] * gOrth[1] * fyy);
+  double d2 =
+    3. * kappa[direction] *
+    (g[0] * gOrth[0] * fxx + (g[0] * gOrth[1] + g[1] * gOrth[0]) * fxy + g[1] * gOrth[1] * fyy);
 
   return d3 + d2;
 }
 
-feStatus feMetric::computeMetricsExtremeSizesOnly(std::vector<std::size_t> &nodeTags, std::vector<double> &coord)
+feStatus feMetric::computeMetricsExtremeSizesOnly(std::vector<std::size_t> &nodeTags,
+                                                  std::vector<double> &coord)
 {
   size_t numVertices = nodeTags.size();
 
@@ -920,8 +1005,7 @@ feStatus feMetric::computeMetricsExtremeSizesOnly(std::vector<std::size_t> &node
   directions = fopen("directions.pos", "w");
   fprintf(directions, "View \" directions \"{\n");
 
-  for(size_t i = 0; i < numVertices; i++)
-  {
+  for(size_t i = 0; i < numVertices; i++) {
     x[0] = coord[3 * i + 0];
     x[1] = coord[3 * i + 1];
 
@@ -929,11 +1013,13 @@ feStatus feMetric::computeMetricsExtremeSizesOnly(std::vector<std::size_t> &node
 
     double C = directionV1[i][0];
     double S = directionV1[i][1];
-    fprintf(directions, "VP(%g,%g,%g){%g,%g,%g};\n", x[0], x[1], 0.,  C, S, 0.);
+    fprintf(directions, "VP(%g,%g,%g){%g,%g,%g};\n", x[0], x[1], 0., C, S, 0.);
     fprintf(directions, "VP(%g,%g,%g){%g,%g,%g};\n", x[0], x[1], 0., -S, C, 0.);
 
-    double derivativeAlongGradient = fabs(dttt(_nodeTag2sequentialTag[nodeTags[i]], directionV1[i], 0));
-    double derivativeAlongIsoline = fabs(dttt(_nodeTag2sequentialTag[nodeTags[i]], directionV1[i], 1));
+    double derivativeAlongGradient =
+      fabs(dttt(_nodeTag2sequentialTag[nodeTags[i]], directionV1[i], 0));
+    double derivativeAlongIsoline =
+      fabs(dttt(_nodeTag2sequentialTag[nodeTags[i]], directionV1[i], 1));
     // double derivativeAlongGradient = fabs(dttt(i, directionV1[i], -1));
     // double foo[2] = {-S,C};
     // double derivativeAlongIsoline = fabs(dttt(i, foo, -1));
@@ -942,19 +1028,22 @@ feStatus feMetric::computeMetricsExtremeSizesOnly(std::vector<std::size_t> &node
     double hGrad = pow(6.0 * eps / derivativeAlongGradient, 0.3333);
 
     double eigenvalues[2] = {1. / (hGrad * hGrad), 1. / (hIso * hIso)};
-    double ev1[2] = { C, S};
+    double ev1[2] = {C, S};
     double ev2[2] = {-S, C};
 
     MetricTensor M(eigenvalues, ev1, ev2);
     _metricTensorAtNodetags[nodeTags[i]] = M.boundEigenvaluesOfAbs(_lambdaMin, _lambdaMax);
   }
 
-  fprintf(directions, "};"); fclose(directions);
+  fprintf(directions, "};");
+  fclose(directions);
 
   return FE_STATUS_OK;
 }
 
-feStatus feMetric::computeMetricsCurvedLogSimplex(std::vector<std::size_t> &nodeTags, std::vector<double> &coord, bool useInducedDirections)
+feStatus feMetric::computeMetricsCurvedLogSimplex(std::vector<std::size_t> &nodeTags,
+                                                  std::vector<double> &coord,
+                                                  bool useInducedDirections)
 {
 #if defined(HAVE_SOPLEX)
 
@@ -974,9 +1063,9 @@ feStatus feMetric::computeMetricsCurvedLogSimplex(std::vector<std::size_t> &node
 
   int cnter = 0;
 
-  #if defined(HAVE_OMP)
-  #pragma omp parallel shared(cnter, OK)
-  #endif
+#if defined(HAVE_OMP)
+#pragma omp parallel shared(cnter, OK)
+#endif
   {
     double x[2];
     MetricTensor Q;
@@ -985,16 +1074,15 @@ feStatus feMetric::computeMetricsCurvedLogSimplex(std::vector<std::size_t> &node
     int nTheta = _options.logSimplexOptions.nThetaPerQuadrant;
     int maxIter = _options.logSimplexOptions.maxIter;
     double tol = _options.logSimplexOptions.tol;
-    
+
     linearProblem myLP;
     setUpLinearProblem(myLP, _options, nTheta);
 
-    // Compute bounded absolute value of upper bound Q at vertices (at nodetags)
-    #if defined(HAVE_OMP)
-    #pragma omp for schedule(dynamic,1)
-    #endif
+// Compute bounded absolute value of upper bound Q at vertices (at nodetags)
+#if defined(HAVE_OMP)
+#pragma omp for schedule(dynamic, 1)
+#endif
     for(size_t i = 0; i < numVertices; i++) {
-
       if(!OK) continue;
 
       x[0] = coord[3 * i + 0];
@@ -1011,34 +1099,39 @@ feStatus feMetric::computeMetricsCurvedLogSimplex(std::vector<std::size_t> &node
       //   fprintf(directionFile, "VP(%g,%g,%g){%g,%g,%g};\n", x[0], x[1], 0., -S, C, 0.);
       // }
 
-      bool res = computeMetricLogSimplexCurved(_nodeTag2sequentialTag[nodeTags[i]], x, grad, _recoveredFields[0], Q,
-                                               maxIter, nTheta, tol, numIter, myLP);
+      bool res =
+        computeMetricLogSimplexCurved(_nodeTag2sequentialTag[nodeTags[i]], x, grad,
+                                      _recoveredFields[0], Q, maxIter, nTheta, tol, numIter, myLP);
 
-      // If metric computation failed, try again by doubling the number of constraints points in each quadrant (x8 total)
+      // If metric computation failed, try again by doubling the number of constraints points in
+      // each quadrant (x8 total)
       int retry = 0, maxTry = 5;
       while(!res && retry < maxTry) {
         nTheta *= 2;
-        feInfoCond(FE_VERBOSE >= VERBOSE_MODERATE, "Could not compute metric. Trying again with %d constraints.", nTheta);
+        feInfoCond(FE_VERBOSE >= VERBOSE_MODERATE,
+                   "Could not compute metric. Trying again with %d constraints.", nTheta);
         setUpLinearProblem(myLP, _options, nTheta, true);
-        res = computeMetricLogSimplexCurved(_nodeTag2sequentialTag[nodeTags[i]], x, grad, _recoveredFields[0], Q,
-                                               maxIter, nTheta, tol, numIter, myLP);
+        res = computeMetricLogSimplexCurved(_nodeTag2sequentialTag[nodeTags[i]], x, grad,
+                                            _recoveredFields[0], Q, maxIter, nTheta, tol, numIter,
+                                            myLP);
         if(res) feInfoCond(FE_VERBOSE >= VERBOSE_MODERATE, "Success");
         retry++;
       }
 
       if(res) {
-        feInfoCond(FE_VERBOSE >= VERBOSE_MODERATE, 
-               "Computed metric in %2d iterations  - vertex %6d/%6d",
-               numIter, ++cnter, numVertices);
+        feInfoCond(FE_VERBOSE >= VERBOSE_MODERATE,
+                   "Computed metric in %2d iterations  - vertex %6d/%6d", numIter, ++cnter,
+                   numVertices);
 
-        // Bound the eigenvalues of Q
-        #if defined(HAVE_OMP)
-        #pragma omp critical
-        #endif
+// Bound the eigenvalues of Q
+#if defined(HAVE_OMP)
+#pragma omp critical
+#endif
         {
           if(useInducedDirections) {
-            double iso[2] = {- grad[1], grad[0]};
-            _metricTensorAtNodetags[nodeTags[i]] = Q.setEigenvectorsAndBoundEigenvalues(iso, grad, _lambdaMin, _lambdaMax);
+            double iso[2] = {-grad[1], grad[0]};
+            _metricTensorAtNodetags[nodeTags[i]] =
+              Q.setEigenvectorsAndBoundEigenvalues(iso, grad, _lambdaMin, _lambdaMax);
           } else {
             _metricTensorAtNodetags[nodeTags[i]] = Q.boundEigenvaluesOfAbs(_lambdaMin, _lambdaMax);
           }
@@ -1046,7 +1139,8 @@ feStatus feMetric::computeMetricsCurvedLogSimplex(std::vector<std::size_t> &node
 
       } else {
         OK = false;
-        // return feErrorMsg(FE_STATUS_ERROR, "Could not compute a metric at (%+-1.5e - %+-1.5e) (vertex %d/%d)",
+        // return feErrorMsg(FE_STATUS_ERROR, "Could not compute a metric at (%+-1.5e - %+-1.5e)
+        // (vertex %d/%d)",
         //           x[0], x[1], i, nodeTags.size());
       }
     }
@@ -1060,7 +1154,9 @@ feStatus feMetric::computeMetricsCurvedLogSimplex(std::vector<std::size_t> &node
 
   return FE_STATUS_OK;
 #else
-  return feErrorMsg(FE_STATUS_ERROR, "SoPlex (optimization library) is required to compute metric tensors for curved P2 adaptation");
+  return feErrorMsg(
+    FE_STATUS_ERROR,
+    "SoPlex (optimization library) is required to compute metric tensors for curved P2 adaptation");
 #endif
 }
 
@@ -1072,11 +1168,6 @@ feStatus feMetric::computeMetrics()
 #if defined(HAVE_GMSH)
 
   bool debug = true;
-
-  if(!_options.isGmshModelReady) {
-    return feErrorMsg(FE_STATUS_ERROR, "No Gmsh model available to compute a metric field.\n"
-                                       "Create a Gmsh mesh first.\n");
-  }
 
   feInfoCond(FE_VERBOSE >= VERBOSE_MODERATE, "Computing metrics on Gmsh model %s",
              _options.modelForMetric.c_str());
@@ -1095,8 +1186,7 @@ feStatus feMetric::computeMetrics()
 
   // Compute the raw metric field (no scaling)
   switch(_options.method) {
-    case adaptationMethod::ISO_P1:
-    {
+    case adaptationMethod::ISO_P1: {
       bool isotropic = true;
       s = computeMetricsP1(nodeTags, coord, isotropic);
       break;
@@ -1106,8 +1196,7 @@ feStatus feMetric::computeMetrics()
       s = computeMetricsP1(nodeTags, coord);
       break;
 
-    case adaptationMethod::ISO_PN:
-    {
+    case adaptationMethod::ISO_PN: {
       bool isotropic = true;
       s = computeMetricsPn(nodeTags, coord, isotropic);
       break;
@@ -1125,8 +1214,7 @@ feStatus feMetric::computeMetrics()
       s = computeMetricsCurvedLogSimplex(nodeTags, coord);
       break;
 
-    case adaptationMethod::CURVED_LS_INDUCED_DIRECTIONS:
-    {
+    case adaptationMethod::CURVED_LS_INDUCED_DIRECTIONS: {
       bool useInducedDirections = true;
       s = computeMetricsCurvedLogSimplex(nodeTags, coord, useInducedDirections);
       break;
@@ -1139,18 +1227,17 @@ feStatus feMetric::computeMetrics()
 
   if(s != FE_STATUS_OK) return s;
 
-  #if !defined(ONLY_TEST_METRIC_INTERPOLATION_CONVERGENCE)
+#if !defined(ONLY_TEST_METRIC_INTERPOLATION_CONVERGENCE)
   // Apply scaling and gradation only when not testing for metric interpolation convergence
   if(debug) drawEllipsoids("rawMetrics.pos", _metricTensorAtNodetags, nodeTags, coord, 100, 30);
 
-  if(_options.method != adaptationMethod::CURVED_EXTREME_SIZES)
-  {
+  if(_options.method != adaptationMethod::CURVED_EXTREME_SIZES) {
     // Scale the metric field
-    double N = (double) _options.nTargetVertices;
+    double N = (double)_options.nTargetVertices;
     double p = _options.LpNorm;
     feInfoCond(FE_VERBOSE >= VERBOSE_MODERATE, "Targetting %f vertices in L%f norm", N, p);
     double n = 2.; // Space dimension
-    double deg = (double) _options.polynomialDegree;
+    double deg = (double)_options.polynomialDegree;
 
     double exponentInIntegral, exponentForDeterminant;
     switch(_options.method) {
@@ -1165,11 +1252,11 @@ feStatus feMetric::computeMetrics()
       case adaptationMethod::CURVED_LS:
       case adaptationMethod::CURVED_LS_INDUCED_DIRECTIONS:
         // exponentInIntegral = p * (deg + 1.0) / (p * (deg + 1.0) + n);
-        exponentInIntegral = p * ((deg + 1.0)/2.) / (p * (deg + 1.0) + n);
+        exponentInIntegral = p * ((deg + 1.0) / 2.) / (p * (deg + 1.0) + n);
         exponentForDeterminant = -1. / (p * (deg + 1.) + n);
         break;
-       default:
-       	return feErrorMsg(FE_STATUS_ERROR, "No exponents provided to scale the metric field");
+      default:
+        return feErrorMsg(FE_STATUS_ERROR, "No exponents provided to scale the metric field");
     }
 
     metricScalingFromGmshSubstitute(_metricTensorAtNodetags, nodeTags, exponentInIntegral,
@@ -1188,13 +1275,13 @@ feStatus feMetric::computeMetrics()
 
   if(debug)
     drawEllipsoids("metricsAfterGradation.pos", _metricTensorAtNodetags, nodeTags, coord, 100, 30);
-  #endif
+#endif
 
   // Precompute all metric logarithms
   _logMetricTensorAtNodetags_eigen.resize(_metricTensorAtNodetags.size());
   for(auto &pair : _metricTensorAtNodetags) {
     _logMetricTensorAtNodetags[pair.first] = pair.second.log();
-    _logMetricTensorAtNodetags_eigen[pair.first-1] = convert2eigenMatrix(pair.second.log());
+    _logMetricTensorAtNodetags_eigen[pair.first - 1] = convert2eigenMatrix(pair.second.log());
   }
 
   // Write the metric field as a view in the Gmsh model

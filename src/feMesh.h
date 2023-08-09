@@ -251,12 +251,14 @@ typedef struct rtreeSearchCtxStruct {
   double x[3];
   double min[2];
   double max[2];
+  double tolerance;
   int iElm;
   int iElmLocal;
   int physicalTag;
   bool isFound;
   bool enforceConnectivity = false;
   int targetPhysicalTag;
+  int numFound;
 } rtreeSearchCtx;
 
 #if !defined(HAVE_GMSH)
@@ -423,7 +425,6 @@ public:
                  feVectorFunction *exactGradient,
                  bool curve,
                  bool isBackmeshP2,
-                 bool setGmshModelToP1,
                  bool curveMMGmesh,
                  curveToMinimize target,
                  feRecovery *oldRecovery = nullptr);
