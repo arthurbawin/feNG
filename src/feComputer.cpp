@@ -376,6 +376,7 @@ double feComputer::computeIntMultiplierNS(feSolution *sol)
       std::vector<double> x(3, 0.0);
       _geoSpace->interpolateVectorFieldAtQuadNode(geoCoord, k, x);
       J = _cnc->getJacobians()[nQuad * iElm + k];
+      
       p = (_referenceSolution != nullptr) ? _referenceSolution->eval(t, x) : 0.0; // here is the pressure
       double mu;
       std::vector<double> gradf(3, 0);
@@ -392,6 +393,8 @@ double feComputer::computeIntMultiplierNS(feSolution *sol)
       Nx /= N;
       Ny /= N;
 
+      // feInfo("Pression : %10.10f",p);
+      // feInfo("mu : %10.10f", mu);
       T11 = 2 * gradf[0];
       T12 = gradf[1] + gradf[2];
       T22 = 2 * gradf[3];

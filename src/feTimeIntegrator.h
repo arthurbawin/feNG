@@ -40,8 +40,18 @@ protected:
 	
 	std::string _codeDt;
 
+	std::vector<double> _tG;
 	std::vector<double> _t;
 	std::vector<double> _k;
+
+	double _gamma;
+	double _r;
+	double _k0;
+	int _nTimeStepM;
+
+	int _nbInterv;
+	int _nTimeStepPerInterv;
+
 
 	int _orderBDF;
 	int _nStorage;
@@ -74,7 +84,11 @@ public:
   virtual std::vector<double> &getINormDC5(int i){};
   virtual std::vector<double> &getINormDC6(int i){};
 
-	void updateTime();
+  virtual std::vector<double> &getAllTimes(){return _tG;};
+  
+  void initializeTime();
+	void updateTime(int n);
+	void rebootTime();
 
 	void pstClc(feSolutionContainerV2 *solContainer);
 
@@ -310,7 +324,7 @@ public:
 
   void initializeDC3F();
 
-  void startDC3F(std::string startCode);
+  void startDC3F(std::string startCode, std::string codeIniDC);
   virtual feStatus makeSteps(std::string startCode="Analytique", std::string codeIniDC="fromPreviousSolution");
 
   virtual std::vector<std::vector<double>> &getNormBDF(){return _resultNormBDF1;};
@@ -373,7 +387,7 @@ public:
 
   void initializeDC4F();
 
-  void startDC4F(std::string startCode);
+  void startDC4F(std::string startCode, std::string codeIniDC);
   virtual feStatus makeSteps(std::string startCode="Analytique", std::string codeIniDC="fromPreviousSolution");
 
   virtual std::vector<std::vector<double>> &getNormBDF(){return _resultNormBDF1;};
@@ -442,7 +456,7 @@ public:
 
   void initializeDC5F();
 
-  void startDC5F(std::string startCode);
+  void startDC5F(std::string startCode, std::string codeIniDC);
   virtual feStatus makeSteps(std::string startCode="Analytique", std::string codeIniDC="fromPreviousSolution");
 
   virtual std::vector<std::vector<double>> &getNormBDF(){return _resultNormBDF1;};

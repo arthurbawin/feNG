@@ -111,7 +111,7 @@ void feLinearSystemPETSc::initialize()
   // Create the Krylov solver (default is GMRES)
   ierr = KSPCreate(PETSC_COMM_WORLD, &ksp);
   CHKERRABORT(PETSC_COMM_WORLD, ierr);
-  ierr = KSPSetType(ksp, KSPBCGS);
+  // ierr = KSPSetType(ksp, KSPBCGS);
   CHKERRABORT(PETSC_COMM_WORLD, ierr);
   ierr = KSPSetOperators(ksp, _A, _A);
   CHKERRABORT(PETSC_COMM_WORLD, ierr);
@@ -122,10 +122,10 @@ void feLinearSystemPETSc::initialize()
   ierr = PCSetType(preconditioner, PCILU);
   CHKERRABORT(PETSC_COMM_WORLD, ierr);
 
-  PetscReal rel_tol = 1e-6;
-  PetscReal abs_tol = 1e-12;
+  PetscReal rel_tol = 1e-10;
+  PetscReal abs_tol = 1e-14;
   PetscReal div_tol = 1e6;
-  PetscInt max_iter = 500;
+  PetscInt max_iter = 10000;
 
   ierr = KSPSetTolerances(ksp, rel_tol, abs_tol, div_tol, max_iter);
   CHKERRABORT(PETSC_COMM_WORLD, ierr);
@@ -301,6 +301,115 @@ void feLinearSystemPETSc::assembleMatrices(feSolution *sol)
 #endif
 }
 
+
+void feLinearSystemPETSc::assembleMatricesIni(feSolution *sol)
+{
+#if defined(HAVE_PETSC)
+  if(recomputeMatrix) {
+    feInfo("Assembling the matrix ...");
+    // tic();
+
+    PetscErrorCode ierr = 0;
+
+    for(feInt eq = 0; eq < _numMatrixForms; ++eq) {
+      feBilinearForm *f = _formMatrices[eq];
+      std::string sysElmID = f->getIDName();
+      if ((sysElmID == "MASSE_0D") || (sysElmID == "MASSE_1D") || (sysElmID == "MASSE_2D")){
+        feCncGeo *cnc = f->getCncGeo();
+        int nbColor = cnc->getNbColor();
+        std::vector<int> &nbElmPerColor = cnc->getNbElmPerColor();
+        std::vector<std::vector<int> > &listElmPerColor = cnc->getListElmPerColor();
+        int nbElmC;
+        std::vector<int> listElmC;
+
+        for(int iColor = 0; iColor < nbColor; ++iColor) {
+          nbElmC = nbElmPerColor[iColor]; // nbElm : nombre d'elm de meme couleur
+          listElmC = listElmPerColor[iColor];
+          // nbElmC = cnc->getNbElmPerColorI(iColor);
+          // listElmC = cnc -> getListElmPerColorI(iColor);
+
+          int numThread = 0;
+          int elm;
+          int eqt;
+
+          double **Ae;
+          feInt sizeI;
+          feInt sizeJ;
+          std::vector<feInt> niElm;
+          std::vector<feInt> njElm;
+          std::vector<feInt> adrI;
+          std::vector<feInt> adrJ;
+          std::vector<PetscScalar> values;
+
+#if defined(HAVE_OMP)
+#pragma omp parallel for private(numThread, elm, eqt, f, niElm, njElm, sizeI, sizeJ, adrI, adrJ,   \
+                                 Ae, ierr, values)
+#endif
+          for(int iElm = 0; iElm < nbElmC; ++iElm) {
+#if defined(HAVE_OMP)
+            numThread = omp_get_thread_num();
+            eqt = eq + numThread * _numMatrixForms;
+            f = _formMatrices[eqt];
+#endif
+            elm = listElmC[iElm];
+            f->computeMatrix(_metaNumber, _mesh, sol, elm); // Matrice elementaire
+
+            Ae = f->getAe();
+
+            // Determine assignment indices
+            adrI = f->getAdrI();          
+            adrJ = f->getAdrJ();
+            sizeI = adrI.size();
+            niElm.reserve(sizeI);
+            for(feInt i = 0; i < sizeI; ++i) {
+              if(adrI[i] < _nInc) niElm.push_back(i);
+            }
+            sizeJ = adrJ.size();
+            njElm.reserve(sizeJ);
+            for(feInt i = 0; i < sizeJ; ++i) {
+              if(adrJ[i] < _nInc) njElm.push_back(i);
+            }
+
+            adrI.erase(std::remove_if(adrI.begin(), adrI.end(),
+                                      [this](const int &x) { return x >= this->_nInc; }),
+                       adrI.end());
+            adrJ.erase(std::remove_if(adrJ.begin(), adrJ.end(),
+                                      [this](const int &x) { return x >= this->_nInc; }),
+                       adrJ.end());
+
+            // Flatten Ae at relevant indices
+            sizeI = adrI.size();
+            sizeJ = adrJ.size();
+            values.resize(sizeI * sizeJ);
+            for(feInt i = 0; i < sizeI; ++i) {
+              for(feInt j = 0; j < sizeJ; ++j) {
+                values[sizeI * i + j] = Ae[niElm[i]][njElm[j]];
+              }
+            }
+            ierr = MatSetValues(_A, adrI.size(), adrI.data(), adrJ.size(), adrJ.data(), values.data(),
+                                ADD_VALUES);
+            niElm.clear();
+            njElm.clear();
+          }
+        } // nbColor
+      }
+    } // NumberOfBilinearForms
+
+    ierr = MatAssemblyBegin(_A, MAT_FINAL_ASSEMBLY);
+    CHKERRABORT(PETSC_COMM_WORLD, ierr);
+    ierr = MatAssemblyEnd(_A, MAT_FINAL_ASSEMBLY);
+    CHKERRABORT(PETSC_COMM_WORLD, ierr);
+    // double normMat = 0.0;
+    // ierr = MatNorm(_A, NORM_FROBENIUS, &normMat); CHKERRABORT(PETSC_COMM_WORLD, ierr);
+    // printf("Norme de la matrice : %10.10e\n", normMat);
+
+    // feInfo("Done");
+    // toc();
+    // viewMatrix();
+  } // if(recomputeMatrix)
+#endif
+}
+
 void feLinearSystemPETSc::assembleResiduals(feSolution *sol)
 {
 #if defined(HAVE_PETSC)
@@ -396,6 +505,12 @@ void feLinearSystemPETSc::assemble(feSolution *sol)
   this->assembleResiduals(sol);
 }
 
+void feLinearSystemPETSc::assembleIni(feSolution *sol)
+{
+  this->assembleMatricesIni(sol);
+  this->assembleResiduals(sol);
+}
+
 // Solve the system and compute norms of solution and residuals
 void feLinearSystemPETSc::solve(double *normDx, double *normResidual, double *normAxb, int *nIter)
 {
@@ -429,7 +544,30 @@ void feLinearSystemPETSc::correctSolution(feSolution *sol)
 #endif
 }
 
+
+void feLinearSystemPETSc::correctSolutionDot(feSolution *sol)
+{
+#if defined(HAVE_PETSC)
+  std::vector<double> &_solDot = sol->getSolutionReferenceDot();
+  PetscScalar *array;
+  VecGetArray(_dx, &array);
+  for(int i = 0; i < _nInc; ++i) _solDot[i] += array[i];
+  VecRestoreArray(_dx, &array);
+#endif
+}
+
+
 void feLinearSystemPETSc::assignResidualToDCResidual(feSolutionContainer *solContainer)
+{
+#if defined(HAVE_PETSC)
+  PetscScalar *array;
+  VecGetArray(_res, &array);
+  for(int i = 0; i < _nInc; ++i) solContainer->_fResidual[0][i] = array[i];
+  VecRestoreArray(_res, &array);
+#endif
+}
+
+void feLinearSystemPETSc::assignResidualToDCResidualV2(feSolutionContainerV2 *solContainer)
 {
 #if defined(HAVE_PETSC)
   PetscScalar *array;

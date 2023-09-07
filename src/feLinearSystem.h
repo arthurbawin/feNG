@@ -7,6 +7,7 @@
 #include "feBilinearForm.h"
 #include "feSolution.h"
 #include "feSolutionContainer.h"
+#include "feSolutionContainerV2.h"
 
 /* Supported linear solvers */
 typedef enum { MKLPARDISO, PETSC } linearSolverType;
@@ -61,12 +62,17 @@ public:
   virtual void setToZero() = 0;
   virtual void setMatrixToZero(){};
   virtual void setResidualToZero(){};
-  virtual void assembleMatrices(feSolution *sol){};
-  virtual void assembleResiduals(feSolution *sol){};
   virtual void assemble(feSolution *sol){};
+  virtual void assembleIni(feSolution *sol){};
+  virtual void assembleMatrices(feSolution *sol){};
+  virtual void assembleMatricesIni(feSolution *sol){};
+  virtual void assembleResiduals(feSolution *sol){};
+  
   virtual void solve(double *normDx, double *normResidual, double *normAxb, int *nIter){};
   virtual void correctSolution(feSolution *sol){};
+  virtual void correctSolutionDot(feSolution *sol){};
   virtual void assignResidualToDCResidual(feSolutionContainer *solContainer){};
+  virtual void assignResidualToDCResidualV2(feSolutionContainerV2 *solContainer){};
   virtual void applyCorrectionToResidual(double coeff, std::vector<double> &d){};
   virtual void viewMatrix(){};
   virtual void printResidual(){};

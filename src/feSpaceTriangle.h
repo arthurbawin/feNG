@@ -8,7 +8,7 @@ class feSpaceTriP1 : public feSpace
 protected:
 public:
   feSpaceTriP1(std::string cncGeoID);
-  feSpaceTriP1(feMesh *mesh, std::string fieldID, std::string cncGeoID, feFunction *fct,
+  feSpaceTriP1(feMesh *mesh, std::string fieldID, std::string cncGeoID, feFunction *fct, feFunction *fctDot, 
                bool useGlobalShapeFunctions = false);
   ~feSpaceTriP1() {}
 
@@ -38,7 +38,7 @@ protected:
 public:
   feSpaceTriP1_nonConsistant(std::string cncGeoID);
   feSpaceTriP1_nonConsistant(feMesh *mesh, std::string fieldID, std::string cncGeoID,
-                             feFunction *fct);
+                             feFunction *fct, feFunction *fctDot);
   ~feSpaceTriP1_nonConsistant() {}
 
   virtual int getNbFunctions() { return 3; }
@@ -68,7 +68,7 @@ class feSpaceTriP2 : public feSpace
 protected:
 public:
   feSpaceTriP2(std::string cncGeoID);
-  feSpaceTriP2(feMesh *mesh, std::string fieldID, std::string cncGeoID, feFunction *fct,
+  feSpaceTriP2(feMesh *mesh, std::string fieldID, std::string cncGeoID, feFunction *fct, feFunction *fctDot, 
                bool useGlobalShapeFunctions = false);
   ~feSpaceTriP2() {}
 
@@ -94,7 +94,7 @@ protected:
 public:
   feSpaceTriP2_nonConsistant(std::string cncGeoID);
   feSpaceTriP2_nonConsistant(feMesh *mesh, std::string fieldID, std::string cncGeoID,
-                             feFunction *fct);
+                             feFunction *fct, feFunction *fctDot);
   ~feSpaceTriP2_nonConsistant() {}
 
   virtual int getNbFunctions() { return 7; }
@@ -124,7 +124,7 @@ class feSpaceTriP3 : public feSpace
 protected:
 public:
   feSpaceTriP3(std::string cncGeoID);
-  feSpaceTriP3(feMesh *mesh, std::string fieldID, std::string cncGeoID, feFunction *fct,
+  feSpaceTriP3(feMesh *mesh, std::string fieldID, std::string cncGeoID, feFunction *fct, feFunction *fctDot, 
                bool useGlobalShapeFunctions = false);
   ~feSpaceTriP3() {}
 
@@ -153,7 +153,7 @@ class feSpaceTriP4 : public feSpace
 protected:
 public:
   feSpaceTriP4(std::string cncGeoID);
-  feSpaceTriP4(feMesh *mesh, std::string fieldID, std::string cncGeoID, feFunction *fct,
+  feSpaceTriP4(feMesh *mesh, std::string fieldID, std::string cncGeoID, feFunction *fct, feFunction *fctDot, 
                bool useGlobalShapeFunctions = false);
   ~feSpaceTriP4() {}
 

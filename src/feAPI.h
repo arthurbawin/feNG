@@ -26,6 +26,11 @@
 #include "feComputer.h"
 #include "fePostProc.h"
 
+#include "feSolutionContainerV2.h"
+#include "feSolverV2.h"
+#include "feTimeIntegrator.h"
+#include "feNormV2.h"
+
 #if defined(HAVE_OMP)
 #include "omp.h"
 #endif

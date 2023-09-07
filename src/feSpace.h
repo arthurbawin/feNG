@@ -24,7 +24,7 @@ class feSolution;
 
 feStatus createFiniteElementSpace(feSpace *&space, feMesh *mesh, int dim, elemType type, int deg,
                                   std::string fieldID, std::string cncGeoID, int dQuad,
-                                  feFunction *fct, bool useGlobalShapeFunctions = false);
+                                  feFunction *fct, feFunction *fctDot = nullptr, bool useGlobalShapeFunctions = false);
 
 /* Un feSpace est utilisé
   - soit pour définir les interpolants géométriques sur une partie d'un maillage (sur une cncGeo)
@@ -67,10 +67,11 @@ protected:
   // std::vector<double> _soldot;
 
   feFunction *_fct;
+  feFunction *_fctDot;
 
 public:
   feSpace(feMesh *mesh = nullptr, std::string fieldID = "", std::string cncGeoID = "",
-          feFunction *fct = nullptr, bool useGlobalShapeFunctions = false);
+          feFunction *fct = nullptr, feFunction *fctDot=nullptr, bool useGlobalShapeFunctions = false);
   virtual ~feSpace()
   {
     _Lcoor.clear();
@@ -98,6 +99,7 @@ public:
   feCncGeo *getCncGeo();
 
   bool isFctDefined() { return !(_fct == nullptr); }
+  bool isFctDotDefined() { return !(_fctDot == nullptr); }
 
   bool useGlobalFunctions() { return _useGlobalShapeFunctions; }
   void useGlobalFunctions(bool flag) { _useGlobalShapeFunctions = flag; }
@@ -164,6 +166,7 @@ public:
   // int getAddressingVectorAt(int node) { return _adr[node]; }
 
   double evalFun(const double t, const std::vector<double> &x) { return _fct->eval(t, x); }
+  double evalFunDot(const double t, const std::vector<double> &x) { return _fctDot->eval(t, x); }
 
   void interpolateField(double *field, int fieldSize, double *r, double *shape, double &res);
   double interpolateField(std::vector<double> &field, double *r);
@@ -216,8 +219,8 @@ public:
     _Lcoor = {1., 0., 0.};
   };
   // Pour la resolution
-  feSpace1DP0(feMesh *mesh, std::string fieldID, std::string cncGeoID, feFunction *fct)
-    : feSpace(mesh, fieldID, cncGeoID, fct)
+  feSpace1DP0(feMesh *mesh, std::string fieldID, std::string cncGeoID, feFunction *fct, feFunction *fctDot)
+    : feSpace(mesh, fieldID, cncGeoID, fct, fctDot)
   {
     _nFunctions = 1;
     // _adr.resize(_nFunctions);
@@ -256,8 +259,8 @@ public:
     _nFunctions = 2;
     _Lcoor = {-1., 0., 0., 1., 0., 0.};
   };
-  feSpace1DP1(feMesh *mesh, std::string fieldID, std::string cncGeoID, feFunction *fct)
-    : feSpace(mesh, fieldID, cncGeoID, fct)
+  feSpace1DP1(feMesh *mesh, std::string fieldID, std::string cncGeoID, feFunction *fct, feFunction *fctDot)
+    : feSpace(mesh, fieldID, cncGeoID, fct, fctDot)
   {
     _nFunctions = 2;
     // _adr.resize(_nFunctions);
@@ -299,8 +302,8 @@ public:
     _Lcoor = {0., 0., 0.};
   };
   feSpace1DP1_nonConsistant(feMesh *mesh, std::string fieldID, std::string cncGeoID,
-                            feFunction *fct)
-    : feSpace(mesh, fieldID, cncGeoID, fct)
+                            feFunction *fct, feFunction *fctDot)
+    : feSpace(mesh, fieldID, cncGeoID, fct, fctDot)
   {
     _nFunctions = 1;
     // _adr.resize(_nFunctions);
@@ -339,8 +342,8 @@ public:
     _nFunctions = 3;
     _Lcoor = {-1., 0., 0., 1., 0., 0., 0., 0., 0.};
   };
-  feSpace1DP2(feMesh *mesh, std::string fieldID, std::string cncGeoID, feFunction *fct)
-    : feSpace(mesh, fieldID, cncGeoID, fct)
+  feSpace1DP2(feMesh *mesh, std::string fieldID, std::string cncGeoID, feFunction *fct, feFunction *fctDot)
+    : feSpace(mesh, fieldID, cncGeoID, fct, fctDot)
   {
     _nFunctions = 3;
     // _adr.resize(_nFunctions);
@@ -390,8 +393,8 @@ public:
     _Lcoor = {-1., 0., 0., 1., 0., 0., -1. / 3., 0., 0., 1. / 3., 0., 0.}; // TODO : écrire en long
                                                                            // ?
   };
-  feSpace1DP3(feMesh *mesh, std::string fieldID, std::string cncGeoID, feFunction *fct)
-    : feSpace(mesh, fieldID, cncGeoID, fct)
+  feSpace1DP3(feMesh *mesh, std::string fieldID, std::string cncGeoID, feFunction *fct, feFunction *fctDot)
+    : feSpace(mesh, fieldID, cncGeoID, fct, fctDot)
   {
     _nFunctions = 4;
     // _adr.resize(_nFunctions);
@@ -447,8 +450,8 @@ public:
     _nFunctions = 5;
     _Lcoor = {-1., 0., 0., 1., 0., 0., -1. / 2., 0., 0., 0., 0., 0., 1. / 2., 0., 0.};
   };
-  feSpace1DP4(feMesh *mesh, std::string fieldID, std::string cncGeoID, feFunction *fct)
-    : feSpace(mesh, fieldID, cncGeoID, fct)
+  feSpace1DP4(feMesh *mesh, std::string fieldID, std::string cncGeoID, feFunction *fct, feFunction *fctDot)
+    : feSpace(mesh, fieldID, cncGeoID, fct, fctDot)
   {
     _nFunctions = 5;
     // _adr.resize(_nFunctions);

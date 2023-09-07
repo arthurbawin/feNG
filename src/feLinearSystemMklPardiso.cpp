@@ -103,7 +103,7 @@ void feLinearSystemMklPardiso::assembleMatrices(feSolution *sol)
             ncf = fin - debut;
 
             for(feInt j = 0; j < ncf; j++) {
-              feInfo("Accessing entry %d in vector ", debut + j);
+              // feInfo("Accessing entry %d in vector ", debut + j);
               irangee[Aj[debut + j] - 1] = debut + j;
             }
 
@@ -111,6 +111,103 @@ void feLinearSystemMklPardiso::assembleMatrices(feSolution *sol)
               J = Column[j];
               if(J < matrixOrder) {
                 Ax[irangee[J]] += Ae[i][j];
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  // print_matrix();
+  // double res = 0.0;
+  // for(feInt i = 0; i < nz; i++) res += fabs(Ax[i]);
+  // feInfo("sumMatrix = %f", res);
+  // feInfo("Done...");
+  // toc();
+}
+
+void feLinearSystemMklPardiso::assembleMatricesIni(feSolution *sol)
+{
+  feInfo("Assembling the Matrix...");
+  // tic();
+
+  // feInt NumberOfBilinearForms = _formMatrices.size();
+
+  for(feInt eq = 0; eq < _numMatrixForms; eq++) {
+    feBilinearForm *f = _formMatrices[eq];
+    std::string sysElmID = f->getIDName();
+    if ((sysElmID == "MASSE_0D") || (sysElmID == "MASSE_1D") || (sysElmID == "MASSE_2D")){
+      feCncGeo *cnc = f->getCncGeo();
+      int nbColor = cnc->getNbColor();
+      std::vector<int> &nbElmPerColor = cnc->getNbElmPerColor();
+      std::vector<std::vector<int> > &listElmPerColor = cnc->getListElmPerColor();
+
+      int nbElmC; // nb elm of the same color
+      std::vector<int> listElmC; // list elm of the same color;
+
+      for(int iColor = 0; iColor < nbColor; iColor++) {
+        nbElmC = nbElmPerColor[iColor]; // nbElmC : nombre d'elm de meme couleur
+        listElmC = listElmPerColor[iColor];
+        // nbElmC = cnc->getNbElmPerColorI(iColor);
+        // listElmC = cnc -> getListElmPerColorI(iColor);
+
+        feInt numThread = 0;
+        int elm;
+        int eqt;
+
+        double **Ae;
+        feInt nRow;
+        feInt nColumn;
+        std::vector<feInt> Row;
+        std::vector<feInt> Column;
+        feInt I;
+        feInt J;
+
+        feInt debut;
+        feInt fin;
+        feInt ncf;
+        std::vector<feInt> irangee;
+
+#if defined(HAVE_OMP)
+#pragma omp parallel for private(numThread, elm, eqt, f, nRow, nColumn, Row, Column, Ae, I, J, debut, fin, ncf,       \
+                                 irangee) schedule(dynamic)
+#endif
+        for(int iElm = 0; iElm < nbElmC; ++iElm) {
+#if defined(HAVE_OMP)
+          numThread = omp_get_thread_num();
+          eqt = eq + numThread * _numMatrixForms;
+          f = _formMatrices[eqt];
+#endif
+          elm = listElmC[iElm];
+          f->computeMatrix(_metaNumber, _mesh, sol, elm);
+
+          nRow = f->getNiElm();
+          Row = f->getAdrI();
+          nColumn = f->getNjElm();
+          Column = f->getAdrJ();
+          Ae = f->getAe();
+
+          for(feInt i = 0; i < nRow; i++) {
+            irangee.resize(matrixOrder);
+            I = Row[i];
+            debut = 0;
+            fin = 0;
+            ncf = 0;
+            if(I < matrixOrder) {
+              debut = Ap[I] - 1;
+              fin = Ap[I + 1] - 1;
+              ncf = fin - debut;
+
+              for(feInt j = 0; j < ncf; j++) {
+                // feInfo("Accessing entry %d in vector ", debut + j);
+                irangee[Aj[debut + j] - 1] = debut + j;
+              }
+
+              for(feInt j = 0; j < nColumn; j++) {
+                J = Column[j];
+                if(J < matrixOrder) {
+                  Ax[irangee[J]] += Ae[i][j];
+                }
               }
             }
           }
@@ -200,6 +297,11 @@ void feLinearSystemMklPardiso::assignResidualToDCResidual(feSolutionContainer *s
   for(feInt i = 0; i < matrixOrder; ++i) solContainer->_fResidual[0][i] = residu[i];
 }
 
+void feLinearSystemMklPardiso::assignResidualToDCResidualV2(feSolutionContainerV2 *solContainer)
+{
+  for(feInt i = 0; i < matrixOrder; ++i) solContainer->_fResidual[0][i] = residu[i];
+}
+
 void feLinearSystemMklPardiso::applyCorrectionToResidual(double coeff, std::vector<double> &d)
 {
   for(int i = 0; i < matrixOrder; ++i) residu[i] += coeff * d[i];
@@ -216,6 +318,20 @@ void feLinearSystemMklPardiso::correctSolution(feSolution *sol)
 void feLinearSystemMklPardiso::correctSolution(double *sol)
 {
   for(feInt i = 0; i < matrixOrder; i++) sol[i] += du[i];
+}
+
+
+void feLinearSystemMklPardiso::correctSolutionDot(feSolution *sol)
+{
+  // Est-ce efficace?
+  // Pourquoi ne pas avoir un pointeur sur le vecteur solution;
+  // Conversion de feInt à int?
+  for(feInt i = 0; i < matrixOrder; i++) sol->incrementSolDotAtDOF((int)i, du[i]);
+}
+
+void feLinearSystemMklPardiso::correctSolutionDot(double *solDot)
+{
+  for(feInt i = 0; i < matrixOrder; i++) solDot[i] += du[i];
 }
 
 void feLinearSystemMklPardiso::solve(double *normDx, double *normResidual, double *normAxb,
@@ -263,6 +379,13 @@ void feLinearSystemMklPardiso::assemble(feSolution *sol)
 {
   // printf("ICI   feLinearSystemMklPardiso::assemble\n");
   if(recomputeMatrix) assembleMatrices(sol);
+  assembleResiduals(sol);
+}
+
+void feLinearSystemMklPardiso::assembleIni(feSolution *sol)
+{
+  // printf("ICI   feLinearSystemMklPardiso::assemble\n");
+  if(recomputeMatrix) assembleMatricesIni(sol);
   assembleResiduals(sol);
 }
 

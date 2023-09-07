@@ -48,6 +48,8 @@ inline const std::string toString(elementSystemType t)
       return "ADVECTION_2D";
     case STOKES_2D:
       return "STOKES_2D";
+    case WEAKBC_EDO1_1D:
+      return "WEAKBC_EDO1_1D";
     default:
       return "[Unknown elementSystemType]";
   }

@@ -13,9 +13,9 @@ feSpaceTriP1::feSpaceTriP1(std::string cncGeoID) : feSpace(nullptr, "GEO", cncGe
 }
 
 // feSpace used to compute (bi-)linear forms
-feSpaceTriP1::feSpaceTriP1(feMesh *mesh, std::string fieldID, std::string cncGeoID, feFunction *fct,
+feSpaceTriP1::feSpaceTriP1(feMesh *mesh, std::string fieldID, std::string cncGeoID, feFunction *fct, feFunction *fctDot, 
                            bool useGlobalShapeFunctions)
-  : feSpace(mesh, fieldID, cncGeoID, fct, useGlobalShapeFunctions)
+  : feSpace(mesh, fieldID, cncGeoID, fct, fctDot, useGlobalShapeFunctions)
 {
   _nFunctions = 3;
   _Lcoor = {0., 0., 0., 1., 0., 0., 0., 1., 0.};
@@ -76,8 +76,8 @@ feSpaceTriP1_nonConsistant::feSpaceTriP1_nonConsistant(std::string cncGeoID)
 
 // feSpace used to compute (bi-)linear forms
 feSpaceTriP1_nonConsistant::feSpaceTriP1_nonConsistant(feMesh *mesh, std::string fieldID,
-                                                       std::string cncGeoID, feFunction *fct)
-  : feSpace(mesh, fieldID, cncGeoID, fct)
+                                                       std::string cncGeoID, feFunction *fct, feFunction *fctDot )
+  : feSpace(mesh, fieldID, cncGeoID, fct, fctDot)
 {
   _nFunctions = 3;
   _Lcoor = {0.5, 0., 0., 0.5, 0.5, 0., 0., 0.5, 0.};
@@ -140,9 +140,9 @@ feSpaceTriP2::feSpaceTriP2(std::string cncGeoID) : feSpace(nullptr, "GEO", cncGe
 }
 
 // feSpace used to compute (bi-)linear forms
-feSpaceTriP2::feSpaceTriP2(feMesh *mesh, std::string fieldID, std::string cncGeoID, feFunction *fct,
+feSpaceTriP2::feSpaceTriP2(feMesh *mesh, std::string fieldID, std::string cncGeoID, feFunction *fct, feFunction *fctDot, 
                            bool useGlobalShapeFunctions)
-  : feSpace(mesh, fieldID, cncGeoID, fct, useGlobalShapeFunctions)
+  : feSpace(mesh, fieldID, cncGeoID, fct, fctDot, useGlobalShapeFunctions)
 {
   _nFunctions = 6;
   _Lcoor = {0., 0., 0., 1., 0., 0., 0., 1., 0., 0.5, 0., 0., 0.5, 0.5, 0., 0., 0.5, 0.};
@@ -432,8 +432,8 @@ feSpaceTriP2_nonConsistant::feSpaceTriP2_nonConsistant(std::string cncGeoID)
 
 // feSpace used to compute (bi-)linear forms
 feSpaceTriP2_nonConsistant::feSpaceTriP2_nonConsistant(feMesh *mesh, std::string fieldID,
-                                                       std::string cncGeoID, feFunction *fct)
-  : feSpace(mesh, fieldID, cncGeoID, fct)
+                                                       std::string cncGeoID, feFunction *fct, feFunction *fctDot )
+  : feSpace(mesh, fieldID, cncGeoID, fct, fctDot)
 {
   _nFunctions = 7;
   _Lcoor = {0., 0.,  0.,  1., 0., 0.,  0., 1.,    0.,    0.5, 0.,
@@ -562,9 +562,9 @@ feSpaceTriP3::feSpaceTriP3(std::string cncGeoID) : feSpace(nullptr, "GEO", cncGe
 }
 
 // feSpace used to compute (bi-)linear forms
-feSpaceTriP3::feSpaceTriP3(feMesh *mesh, std::string fieldID, std::string cncGeoID, feFunction *fct,
+feSpaceTriP3::feSpaceTriP3(feMesh *mesh, std::string fieldID, std::string cncGeoID, feFunction *fct, feFunction *fctDot, 
                            bool useGlobalShapeFunctions)
-  : feSpace(mesh, fieldID, cncGeoID, fct, useGlobalShapeFunctions)
+  : feSpace(mesh, fieldID, cncGeoID, fct, fctDot, useGlobalShapeFunctions)
 {
   _nFunctions = 10;
   _Lcoor = {0., 0., 0.,      1., 0., 0.,      0.,      1.,      0.,      1. / 3.,
@@ -775,9 +775,9 @@ feSpaceTriP4::feSpaceTriP4(std::string cncGeoID) : feSpace(nullptr, "GEO", cncGe
 }
 
 // feSpace used to compute (bi-)linear forms
-feSpaceTriP4::feSpaceTriP4(feMesh *mesh, std::string fieldID, std::string cncGeoID, feFunction *fct,
+feSpaceTriP4::feSpaceTriP4(feMesh *mesh, std::string fieldID, std::string cncGeoID, feFunction *fct, feFunction *fctDot, 
                            bool useGlobalShapeFunctions)
-  : feSpace(mesh, fieldID, cncGeoID, fct, useGlobalShapeFunctions)
+  : feSpace(mesh, fieldID, cncGeoID, fct, fctDot, useGlobalShapeFunctions)
 {
   _nFunctions = 15;
   double x0 = 0.0, x1 = 1. / 4., x2 = 1. / 2., x3 = 3. / 4., x4 = 1.;

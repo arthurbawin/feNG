@@ -17,6 +17,7 @@ set(feNG_SRC
     feMetricTools.cpp
     feNG.cpp
     feNorm.cpp
+    feNormV2.cpp
     feNumber.cpp
     feOptionsParser.cpp
     fePolynomial.cpp
@@ -27,6 +28,9 @@ set(feNG_SRC
     feSolution.cpp
     feSolutionContainer.cpp
     feSolver.cpp
+    feSolutionContainerV2.cpp
+    feSolverV2.cpp
+    feTimeIntegrator.cpp
     feSpace.cpp
     feSpaceTriangle.cpp
     feSysElm.cpp
@@ -63,6 +67,7 @@ set(feNG_API
     feMetricTools.h
     feNG.h
     feNorm.h
+    feNormV2.h
     feNumber.h
     feOptionsParser.h
     fePolynomial.h
@@ -73,6 +78,9 @@ set(feNG_API
     feSolution.h
     feSolutionContainer.h
     feSolver.h
+    feSolutionContainerV2.h
+    feSolverV2.h
+    feTimeIntegrator.h
     feSpace.h
     feSysElm.h
     feTriangle.h

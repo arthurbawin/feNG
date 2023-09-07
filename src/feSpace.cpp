@@ -7,7 +7,7 @@
 
 feStatus createFiniteElementSpace(feSpace *&space, feMesh *mesh, int dim, elemType type, int deg,
                                   std::string fieldID, std::string cncGeoID, int dQuad,
-                                  feFunction *fct, bool useGlobalShapeFunctions)
+                                  feFunction *fct, feFunction *fctDot, bool useGlobalShapeFunctions)
 {
   if(mesh == nullptr) return feErrorMsg(FE_STATUS_ERROR, "Null mesh pointer.");
   if(fct == nullptr) return feErrorMsg(FE_STATUS_ERROR, "Null function pointer.");
@@ -15,7 +15,7 @@ feStatus createFiniteElementSpace(feSpace *&space, feMesh *mesh, int dim, elemTy
   switch(dim) {
     case 0:
       if(type == POINT) {
-        space = new feSpace1DP0(mesh, fieldID, cncGeoID, fct);
+        space = new feSpace1DP0(mesh, fieldID, cncGeoID, fct, fctDot);
       } else {
         return feErrorMsg(FE_STATUS_ERROR, "Unsupported geometry.");
       }
@@ -24,19 +24,19 @@ feStatus createFiniteElementSpace(feSpace *&space, feMesh *mesh, int dim, elemTy
       if(type == LINE) {
         switch(deg) {
           case 0:
-            space = new feSpace1DP0(mesh, fieldID, cncGeoID, fct);
+            space = new feSpace1DP0(mesh, fieldID, cncGeoID, fct, fctDot);
             break;
           case 1:
-            space = new feSpace1DP1(mesh, fieldID, cncGeoID, fct);
+            space = new feSpace1DP1(mesh, fieldID, cncGeoID, fct, fctDot);
             break;
           case 2:
-            space = new feSpace1DP2(mesh, fieldID, cncGeoID, fct);
+            space = new feSpace1DP2(mesh, fieldID, cncGeoID, fct, fctDot);
             break;
           case 3:
-            space = new feSpace1DP3(mesh, fieldID, cncGeoID, fct);
+            space = new feSpace1DP3(mesh, fieldID, cncGeoID, fct, fctDot);
             break;
           case 4:
-            space = new feSpace1DP4(mesh, fieldID, cncGeoID, fct);
+            space = new feSpace1DP4(mesh, fieldID, cncGeoID, fct, fctDot);
             break;
           default:
             return feErrorMsg(FE_STATUS_ERROR,
@@ -45,7 +45,7 @@ feStatus createFiniteElementSpace(feSpace *&space, feMesh *mesh, int dim, elemTy
       } else if(type == LINE_CR) {
         switch(deg) {
           case 1:
-            space = new feSpace1DP1_nonConsistant(mesh, fieldID, cncGeoID, fct);
+            space = new feSpace1DP1_nonConsistant(mesh, fieldID, cncGeoID, fct, fctDot);
             break;
           default:
             return feErrorMsg(FE_STATUS_ERROR,
@@ -62,16 +62,16 @@ feStatus createFiniteElementSpace(feSpace *&space, feMesh *mesh, int dim, elemTy
             return feErrorMsg(FE_STATUS_ERROR,
                               "No TRI finite element space implemented for deg > 4.");
           case 1:
-            space = new feSpaceTriP1(mesh, fieldID, cncGeoID, fct);
+            space = new feSpaceTriP1(mesh, fieldID, cncGeoID, fct, fctDot);
             break;
           case 2:
-            space = new feSpaceTriP2(mesh, fieldID, cncGeoID, fct, useGlobalShapeFunctions);
+            space = new feSpaceTriP2(mesh, fieldID, cncGeoID, fct, fctDot, useGlobalShapeFunctions);
             break;
           case 3:
-            space = new feSpaceTriP3(mesh, fieldID, cncGeoID, fct);
+            space = new feSpaceTriP3(mesh, fieldID, cncGeoID, fct, fctDot);
             break;
           case 4:
-            space = new feSpaceTriP4(mesh, fieldID, cncGeoID, fct);
+            space = new feSpaceTriP4(mesh, fieldID, cncGeoID, fct, fctDot);
             break;
           default:
             return feErrorMsg(FE_STATUS_ERROR,
@@ -83,10 +83,10 @@ feStatus createFiniteElementSpace(feSpace *&space, feMesh *mesh, int dim, elemTy
             return feErrorMsg(FE_STATUS_ERROR,
                               "No TRI_CR finite element space implemented for deg >2.");
           case 1:
-            space = new feSpaceTriP1_nonConsistant(mesh, fieldID, cncGeoID, fct);
+            space = new feSpaceTriP1_nonConsistant(mesh, fieldID, cncGeoID, fct, fctDot);
             break;
           case 2:
-            space = new feSpaceTriP2_nonConsistant(mesh, fieldID, cncGeoID, fct);
+            space = new feSpaceTriP2_nonConsistant(mesh, fieldID, cncGeoID, fct, fctDot);
             break;
           default:
             return feErrorMsg(FE_STATUS_ERROR,
@@ -114,10 +114,10 @@ feStatus createFiniteElementSpace(feSpace *&space, feMesh *mesh, int dim, elemTy
   return FE_STATUS_OK;
 }
 
-feSpace::feSpace(feMesh *mesh, std::string fieldID, std::string cncGeoID, feFunction *fct,
+feSpace::feSpace(feMesh *mesh, std::string fieldID, std::string cncGeoID, feFunction *fct, feFunction *fctDot,
                  bool useGlobalShapeFunctions)
   : _mesh(mesh), _fieldID(fieldID), _fieldTag(-1), _cncGeoID(cncGeoID), _cncGeoTag(-1), _nQuad(-1),
-    _nFunctions(0), _fct(fct), _useGlobalShapeFunctions(useGlobalShapeFunctions)
+    _nFunctions(0), _fct(fct), _fctDot(fctDot), _useGlobalShapeFunctions(useGlobalShapeFunctions)
 {
   if(mesh != nullptr) {
     _cncGeoTag = mesh->getCncGeoTag(cncGeoID);
@@ -764,6 +764,7 @@ void feSpace1DP2::initializeNumberingUnknowns(feNumber *number)
 
 void feSpace1DP2::initializeNumberingEssential(feNumber *number)
 {
+  feInfo("fieldID : %s", _fieldID);
   for(int i = 0; i < _mesh->getNbElm(_cncGeoID); ++i) {
     for(int j = 0; j < this->getCncGeo()->getNbNodePerElem(); ++j) {
       number->defDDLSommet_essentialBC(_mesh, _cncGeoID, i, j);

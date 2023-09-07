@@ -7,12 +7,12 @@ feSolution::feSolution(feMesh *mesh, const std::vector<feSpace *> &space,
                        const std::vector<feSpace *> &essBC, feMetaNumber *metaNumber)
   : _dim(mesh->getDim()), _space(space), _essBC(essBC), _c0(0.), _tn(0.)
 {
-  _sol.resize(metaNumber->getNbDOFs());
-  _dsoldt.resize(metaNumber->getNbDOFs());
-  for(int i = 0; i < metaNumber->getNbDOFs(); ++i) {
-    _sol[i] = 0.0;
-    _dsoldt[i] = 0.0;
-  }
+  _sol.resize(metaNumber->getNbDOFs(), 0.);
+  _dsoldt.resize(metaNumber->getNbDOFs(), 0.);
+  // for(int i = 0; i < metaNumber->getNbDOFs(); ++i) {
+  //   _sol[i] = 0.0;
+  //   _dsoldt[i] = 0.0;
+  // }
 }
 
 /* Constructs an feSolution from a file created by feSolution::printSol. */
@@ -88,7 +88,12 @@ void feSolution::initializeUnknowns(feMesh *mesh, feMetaNumber *metaNumber)
         if(fS->isFctDefined()) {
           double val = fS->evalFun(_tn, x);
           _sol[adrS[j]] = val;
-        } else {
+        }
+        if (fS->isFctDotDefined()){
+          double val2 = fS->evalFunDot(_tn, x);
+          _dsoldt[adrS[j]] = val2;
+        }
+        else {
           // printf("Sol un changed in field %s - %s\n", fS->getFieldID().c_str(),
           // fS->getCncGeoID().c_str());
         }
@@ -117,26 +122,62 @@ void feSolution::initializeEssentialBC(feMesh *mesh, feMetaNumber *metaNumber,
         geoSpace->interpolateVectorField(localCoord, r, x);
         
         if(fS->isFctDefined()) {
+          double val = fS->evalFun(_tn, x);
           _sol[adrS[j]] = fS->evalFun(_tn, x);
-          // fS->getAddressingVectorAt(j), _sol[fS->getAddressingVectorAt(j)], x[0], x[1]);
-        } else {
-          printf("BC Sol un changed in field %s - %s\n", fS->getFieldID().c_str(),
-                 fS->getCncGeoID().c_str());
+          if(solContainer != nullptr) 
+            solContainer->_sol[0][adrS[j]] = val;
+        } 
+        if (fS->isFctDotDefined()){
+            double val = fS->evalFunDot(_tn, x);
+            _dsoldt[adrS[j]] = val;
+            // if(solContainer != nullptr) 
+            //   solContainer->_solDot[0][adrS[j]] = val;
         }
-        // printf("_sol[%d] = %f\n", fS->getAddressingVectorAt(j),
-        // _sol[fS->getAddressingVectorAt(j)]);
-        if(solContainer != nullptr) {
-          if(fS->isFctDefined()) {
-            solContainer->_sol[0][adrS[j]] = fS->evalFun(_tn, x);
-          } else {
-            // printf("BC Sol un changed in field %s - %s\n", fS->getFieldID().c_str(),
-            // fS->getCncGeoID().c_str());
-          }
-        };
+        
       }
     }
   }
 }
+
+
+void feSolution::initializeContainerEssentialBC(feMesh *mesh, feMetaNumber *metaNumber,
+                                       feSolutionContainerV2 *solContainer)
+{
+  for(feSpace *const &fS : _essBC) {
+    std::vector<feInt> adrS(fS->getNbFunctions());
+    int nElm = mesh->getNbElm(fS->getCncGeoID());
+    std::vector<double> coor = fS->getLcoor();
+    int nbNodePerElem = mesh->getCncGeoByName(fS->getCncGeoID())->getNbNodePerElem();
+    std::vector<double> localCoord(3*nbNodePerElem); 
+    std::vector<double> x(3);
+    feSpace *geoSpace = mesh->getGeometricSpace(fS->getCncGeoID());
+    
+    for(int iElm = 0; iElm < nElm; ++iElm) {
+      fS->initializeAddressingVector(metaNumber->getNumbering(fS->getFieldID()), iElm, adrS);
+      mesh->getCoord(fS->getCncGeoID(), iElm, localCoord);
+      for(int j = 0; j < fS->getNbFunctions(); ++j) {
+        double r[3] = {coor[3 * j], coor[3 * j + 1], coor[3 * j + 2]};
+        geoSpace->interpolateVectorField(localCoord, r, x);
+        
+        if(fS->isFctDefined()) {
+          double val = fS->evalFun(_tn, x);
+          _sol[adrS[j]] = fS->evalFun(_tn, x);
+          if(solContainer != nullptr) 
+            solContainer->_sol[0][adrS[j]] = val;
+        } 
+        if (fS->isFctDotDefined()){
+            double val = fS->evalFunDot(_tn, x);
+            _dsoldt[adrS[j]] = val;
+            if(solContainer != nullptr) 
+              solContainer->_solDot[0][adrS[j]] = val;
+        }
+         
+        
+      }
+    }
+  }
+}
+
 
 void feSolution::copySpace(feMesh *mesh, feMetaNumber *metaNumber, feSpace *s1, feSpace *s2)
 {
@@ -169,11 +210,36 @@ void feSolution::setSolFromContainer(feSolutionContainer *solContainer, int iSol
   for(size_t i = 0; i < nDOFs; ++i) _sol[i] = solFromContainer[i];
 }
 
+void feSolution::setSolFromContainer(feSolutionContainerV2 *solContainer, int iSol)
+{
+  std::vector<double> &solFromContainer = solContainer->getSol(iSol);
+  if(_sol.size() != solFromContainer.size()) {
+    _sol.resize(solFromContainer.size());
+  }
+  size_t nDOFs = solFromContainer.size();
+  for(size_t i = 0; i < nDOFs; ++i) _sol[i] = solFromContainer[i];
+}
+
+void feSolution::setSolDotFromContainer(feSolutionContainerV2 *solContainer, int iSolDot)
+{
+  std::vector<double> &solDotFromContainer = solContainer->getSolDot(iSolDot);
+  if(_dsoldt.size() != solDotFromContainer.size()) {
+    _dsoldt.resize(solDotFromContainer.size());
+  }
+  
+  size_t nDOFs = solDotFromContainer.size();
+  for(size_t i = 0; i < nDOFs; ++i) _dsoldt[i] = solDotFromContainer[i];
+}
+
+
+
 void feSolution::setSolDotToZero()
 {
   size_t nDOFs = _dsoldt.size();
   for(size_t i = 0; i < nDOFs; ++i) _dsoldt[i] = 0.0;
 }
+
+
 
 void feSolution::printSol(std::string file)
 {
@@ -196,5 +262,13 @@ void feSolution::printSol(std::string file)
       fprintf(f, "%12.16f\n", val);
     }
     fclose(f);
+  }
+}
+
+
+void feSolution::displaySolDot()
+{
+  for(auto const &val : _dsoldt) {
+    printf("%12.16f\n", val);
   }
 }

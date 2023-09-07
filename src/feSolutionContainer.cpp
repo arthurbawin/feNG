@@ -1,4 +1,5 @@
 #include "feSolutionContainer.h"
+#include "feSolutionContainerV2.h"
 #include "feLinearSystem.h"
 
 feSolutionContainer::feSolutionContainer(int nSol, double tn, feMetaNumber *metaNumber)
@@ -57,9 +58,9 @@ void feSolutionBDF1::computeSolTimeDerivative(feSolution *sol, feLinearSystem *l
 
 void feSolutionDCF::computeSolTimeDerivative(feSolution *sol, feLinearSystem *linearSystem)
 {
-  printf(" %12s \t %24.18e \n", "sol[0][0]", _sol[0][0]);
-  printf(" %12s \t %24.18e \n", "sol[0][1]", _sol[1][0]);
-  printf(" %12s \t %24.18e \n", "sol[0][2]", _sol[2][0]);
+  // printf(" %12s \t %24.18e \n", "sol[0][0]", _sol[0][0]);
+  // printf(" %12s \t %24.18e \n", "sol[0][1]", _sol[1][0]);
+  // printf(" %12s \t %24.18e \n", "sol[0][2]", _sol[2][0]);
   for(int i = 0; i < _nDofs; ++i)
     sol->setSolDotAtDOF(i, _cn[0] * _sol[0][i] + _cn[1] * _sol[1][i] + _cn[2] * _sol[2][i]);
   linearSystem->applyCorrectionToResidual(-1.0, _d);
@@ -93,8 +94,7 @@ inline void tableDD(std::vector<double> &t, std::vector<double> &v, std::vector<
     for(size_t j = 0; j < nDelta - i; ++j) {
       id = 2 + i;
       // printf("i = %d j = %d - %f\n", i, j, (t[1+i+j] - t[j]));
-      table[n * id + j] =
-        (table[n * (id - 1) + j + 1] - table[n * (id - 1) + j]) / (t[1 + i + j] - t[j]);
+      table[n * id + j] = (table[n * (id - 1) + j + 1] - table[n * (id - 1) + j]) / (t[1 + i + j] - t[j]);
     }
   }
   for(size_t i = 0; i < n; ++i)
@@ -193,8 +193,10 @@ void initializeDC2F(feSolution *sol, feMetaNumber *metaNumber, feMesh *mesh,
     d2u = delta[0]; // Indexé par delta[i][j] = delta[n*j+i] : delta(1,2) = delta[0][1] = delta[n]
     // std::cout<< "le derivee deuxieme vaut " << d2u << std::endl;
     solDC2F->_d[k] = d2u * k1 / 2.0; 
+    // printf("%10.12f\n",solDC2F->_d[k]);
     // std::cout<< "la correction du DC2F vaut " << d2u * k1 / 2.0 << std::endl;
   }
+  // exit(-1);
   // Init FESOL
   int nDOF = metaNumber->getNbDOFs();
   for(int i = 0; i < nDOF; ++i) {

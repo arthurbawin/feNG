@@ -138,6 +138,8 @@ void solveQNBDF(feSolutionContainer *solDot, feTolerances tol, feMetaNumber *met
   linearSystem->setRecomputeStatus(status);
 }
 
+
+
 // Deprecated
 void solveStationary(double *normL2, feTolerances tol, feMetaNumber *metaNumber,
                      feLinearSystem *linearSystem, std::vector<feBilinearForm *> &formMatrices,
@@ -216,7 +218,7 @@ void fePstClc(feSolution *sol, feLinearSystem *linearSystem, feSolutionContainer
 
 // Parameter of varaible time step
 double _f = 0.2; //_f =0.2 means dt1/dt2 = 4  _f=0.25 means dt1/dt2 = 3
-bool K1K2 =false;
+bool K1K2 = false;
 
 BDF1Solver::BDF1Solver(feTolerances tol, feMetaNumber *metaNumber, feLinearSystem *linearSystem,
                        feSolution *sol, std::vector<feComputer *> &comput, feMesh *mesh,
@@ -427,6 +429,7 @@ DC2FSolver::DC2FSolver(feTolerances tol, feMetaNumber *metaNumber, feLinearSyste
   _solutionContainer->initialize(_sol, _mesh, _metaNumber);
   fePstClc(_sol, _linearSystem, _solutionContainerBDF1);
 
+
   // _normL2.resize(norms.size());
   // for(auto &n : _normL2) n.resize(_nTimeSteps, 0.);
 
@@ -473,6 +476,7 @@ feStatus DC2FSolver::makeSteps(int nSteps)
            _linearSystem->getRecomputeStatus() ? "true" : "false", _sol->getCurrentTime());
     solveQNBDF(_solutionContainerBDF1, _tol, _metaNumber, _linearSystem, _sol, _mesh);
     fePstClc(_sol, _linearSystem, _solutionContainerBDF1);
+
     _sol->setSolFromContainer(_solutionContainerBDF1);
     // // Compute L2 norm of BDF1 solution
     for(int k = 0; k < _comput.size() - 1; k += 2) {
@@ -484,6 +488,12 @@ feStatus DC2FSolver::makeSteps(int nSteps)
     printf("\n");
     printf("Étape 2 - recomputeMatrix = %s : Solution DC2F - t = %6.6e\n",
            _linearSystem->getRecomputeStatus() ? "true" : "false", _sol->getCurrentTime());
+
+    // std::vector<double> test = _sol->getSolutionCopy();
+    // for (size_t i=0;i<test.size(); i++)
+    //   printf("%10.10f\n", test[i]);
+    // exit(-1);
+
     solveQNBDF(_solutionContainer, _tol, _metaNumber, _linearSystem, _sol, _mesh);
     fePstClc(_sol, _linearSystem, _solutionContainer);
     // // Compute L2 norm of DC2F solution
@@ -499,7 +509,7 @@ feStatus DC2FSolver::makeSteps(int nSteps)
     printf("\n");
     printf("Current step = %d : t = %f\n", _currentStep, _tCurrent);
 
-     if(_exportData.exporter != nullptr && (_currentStep % _exportData.exportEveryNSteps) == 0) {
+    if(_exportData.exporter != nullptr && (_currentStep % _exportData.exportEveryNSteps) == 0) {
         std::string fileName = _exportData.fileNameRoot + ".vtk";
         _exportData.exporter->writeStep(fileName);
     }

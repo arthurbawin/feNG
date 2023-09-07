@@ -68,8 +68,8 @@ feBilinearForm::feBilinearForm(std::vector<feSpace *> space, feMesh *mesh, int d
       printf("In feBilinearForm::feBilinearForm : Erreur - Forme définie sur plus d'une "
              "connectivité.\n");
   }
-
   _sysElm->createElementarySystem(_intSpace);
+  
   _iVar = _sysElm->getIVar();
   _jVar = _sysElm->getJVar();
 

@@ -56,12 +56,17 @@ public:
   virtual void setMatrixToZero(); // MATLAB : INITIALISE_LA_MATRICE
   virtual void setResidualToZero(); // MATLAB : INITIALISE_LE_RESIDU
   virtual void assembleMatrices(feSolution *sol); // MATLAB : SOMME_LA_MATRICE
+  virtual void assembleMatricesIni(feSolution *sol);
   virtual void assembleResiduals(feSolution *sol); // MATLAB : SOMME_LE RESIDU
   virtual void assemble(feSolution *sol); // MATLAB : SOMME MATRICE ET RESIDU
+  virtual void assembleIni(feSolution *sol);
   virtual void assignResidualToDCResidual(feSolutionContainer *solContainer);
+  virtual void assignResidualToDCResidualV2(feSolutionContainerV2 *solContainer);
   virtual void applyCorrectionToResidual(double coeff, std::vector<double> &d);
   virtual void correctSolution(feSolution *sol); // MATLAB : ------
   virtual void correctSolution(double *sol); // MATLAB : ------
+  virtual void correctSolutionDot(feSolution *sol); // MATLAB : ------
+  virtual void correctSolutionDot(double *solDot); // MATLAB : ------
 protected:
   //=====================================================================
   // Structure Creuse CSR de MKL
