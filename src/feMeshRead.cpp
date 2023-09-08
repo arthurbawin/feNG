@@ -1479,7 +1479,7 @@ feStatus feMesh2DP1::readGmsh(const std::string meshName, const bool curved, con
 
   feInfoCond(FE_VERBOSE > 0, "");
   feInfoCond(FE_VERBOSE > 0, "MESH:");
-  feInfoCond(FE_VERBOSE > 0, "\t\tReading mesh file: %s", meshName.data());
+  feInfoCond(FE_VERBOSE > -1, "\t\tReading mesh file: %s", meshName.data());
 
   std::ifstream f(meshName.data());
   if(!f.good()) {

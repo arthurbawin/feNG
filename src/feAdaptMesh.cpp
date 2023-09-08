@@ -42,7 +42,9 @@ feStatus feMesh2DP1::adapt(std::vector<feNewRecovery*> recoveredFields, feMetric
                            feSolution *discreteSolution,
                            feFunction *exactSolution,
                            feVectorFunction *exactGradient,
-                           bool curve, bool isBackmeshP2, bool curveMMGmesh, curveToMinimize target, feRecovery *oldRecovery)
+                           bool curve, bool isBackmeshP2, bool curveMMGmesh,
+                           curveToMinimize target,
+                           bool generateAnisoMeshBeforeCurving, feRecovery *oldRecovery)
 {
   if(curve && !isBackmeshP2) {
     return feErrorMsg(FE_STATUS_ERROR, "Backmesh must be P2 when curving the mesh.");
@@ -89,84 +91,91 @@ feStatus feMesh2DP1::adapt(std::vector<feNewRecovery*> recoveredFields, feMetric
   // return FE_STATUS_OK;
 
   // Step 2: Create aniso mesh
-  // Save directly to .msh to preserve Physical Entities
-  std::string cmd1 = "mmg2d_O3 " + options.mmgInputMeshfile + " -hgrad -1 -o " +
-  options.mmgOutputMeshfile;
-  if(FE_VERBOSE == VERBOSE_NONE) {
-    // Write MMG console outputs to logMMG.txt
-    cmd1 += " > logMMG.txt";
-  }
 
-  // Create aniso mesh
-  s = checkMMGcall(cmd1);
-  if(s != FE_STATUS_OK) {
-    gmsh::finalize();
-    return s;
-  }
+  // If we curve to minimize interpolation error, we have to use the feMesh
+  // built on the current mesh. So we don't generate a new anisotropic mesh
+  // before curving.
+  if(generateAnisoMeshBeforeCurving && !(curve && target == curveToMinimize::INTERPOLATION_ERROR))
+  {
+    // Save directly to .msh to preserve Physical Entities
+    std::string cmd1 = "mmg2d_O3 " + options.mmgInputMeshfile + " -hgrad -1 -o " +
+    options.mmgOutputMeshfile;
+    if(FE_VERBOSE == VERBOSE_NONE) {
+      // Write MMG console outputs to logMMG.txt
+      cmd1 += " > logMMG.txt";
+    }
 
-  // Open adapted mesh (DEPRECATED: compute the next metric field on this mesh)
-  gmsh::open(options.mmgOutputMeshfile);
-  gmsh::model::getCurrent(options.modelForMetric);
-  metricField.setGmshMetricModel(options.modelForMetric);
+    // Create aniso mesh
+    s = checkMMGcall(cmd1);
+    if(s != FE_STATUS_OK) {
+      gmsh::finalize();
+      return s;
+    }
 
-  // if(metricField._backmeshOrder > 1) {
-  //   gmsh::model::mesh::setOrder(metricField._backmeshOrder);
-  // }
+    // Open adapted mesh (DEPRECATED: compute the next metric field on this mesh)
+    gmsh::open(options.mmgOutputMeshfile);
+    gmsh::model::getCurrent(options.modelForMetric);
+    metricField.setGmshMetricModel(options.modelForMetric);
 
-  // Step 3: Check physical entities
-  gmsh::vectorpair physicalGroups;
-  gmsh::vectorpair allGeometricEntities;
-  gmsh::model::getPhysicalGroups(physicalGroups);
-  gmsh::model::getEntities(allGeometricEntities);
+    // if(metricField._backmeshOrder > 1) {
+    //   gmsh::model::mesh::setOrder(metricField._backmeshOrder);
+    // }
 
-  std::map<std::pair<int, int>, std::vector<int>> entitiesForPhysical;
+    // Step 3: Check physical entities
+    gmsh::vectorpair physicalGroups;
+    gmsh::vectorpair allGeometricEntities;
+    gmsh::model::getPhysicalGroups(physicalGroups);
+    gmsh::model::getEntities(allGeometricEntities);
 
-  // Get the entities for existing physical groups
-  for(auto pair : physicalGroups) {
-    std::vector<int> entities;
-    gmsh::model::getEntitiesForPhysicalGroup(pair.first, pair.second, entities);
-    entitiesForPhysical[pair] = entities;
-  }
+    std::map<std::pair<int, int>, std::vector<int>> entitiesForPhysical;
 
-  // Remove all the physical groups
-  gmsh::model::removePhysicalGroups();
+    // Get the entities for existing physical groups
+    for(auto pair : physicalGroups) {
+      std::vector<int> entities;
+      gmsh::model::getEntitiesForPhysicalGroup(pair.first, pair.second, entities);
+      entitiesForPhysical[pair] = entities;
+    }
 
-  // Re-add stored physical groups
-  for(auto pair : _physicalEntitiesDescription) {
-    int dim = pair.first.first;
-    int tag = pair.first.second;
-    std::string name = pair.second;
+    // Remove all the physical groups
+    gmsh::model::removePhysicalGroups();
 
-    bool OK = false;
-    for(auto p : physicalGroups) {
-      if(p.first == dim && p.second == tag) {
-        gmsh::model::addPhysicalGroup(dim, entitiesForPhysical[p], tag);
-        gmsh::model::setPhysicalName(dim, tag, name);
-        OK = true;
+    // Re-add stored physical groups
+    for(auto pair : _physicalEntitiesDescription) {
+      int dim = pair.first.first;
+      int tag = pair.first.second;
+      std::string name = pair.second;
+
+      bool OK = false;
+      for(auto p : physicalGroups) {
+        if(p.first == dim && p.second == tag) {
+          gmsh::model::addPhysicalGroup(dim, entitiesForPhysical[p], tag);
+          gmsh::model::setPhysicalName(dim, tag, name);
+          OK = true;
+        }
+      }
+      if(!OK) {
+        return feErrorMsg(FE_STATUS_ERROR,
+                          "Physical Entity \"%s\" with (dim,tag) = (%d,%d)"
+                          " could not be reassigned after mesh adaptation :/",
+                          name.data(), dim, tag);
       }
     }
-    if(!OK) {
-      return feErrorMsg(FE_STATUS_ERROR,
-                        "Physical Entity \"%s\" with (dim,tag) = (%d,%d)"
-                        " could not be reassigned after mesh adaptation :/",
-                        name.data(), dim, tag);
-    }
+
+    // Petite astuce: écrire au format 2.2 pour éliminer des
+    // entités géométriques douteuses 0D de MMG...
+    gmsh::write(options.adaptedMeshName);
+    gmsh::clear();
+    gmsh::open(options.adaptedMeshName);
+
+    // gmsh::model::mesh::reverse();
+
+    // Write P2 aniso mesh
+    gmsh::option::setNumber("Mesh.MshFileVersion", 4.1);
+    gmsh::model::mesh::setOrder(metricField._backmeshOrder);
+    gmsh::write("anisoadapted.msh");
+    gmsh::write(options.adaptedMeshName);
+    gmsh::model::mesh::setOrder(1);
   }
-
-  // Petite astuce: écrire au format 2.2 pour éliminer des
-  // entités géométriques douteuses 0D de MMG...
-  gmsh::write(options.adaptedMeshName);
-  gmsh::clear();
-  gmsh::open(options.adaptedMeshName);
-
-  // gmsh::model::mesh::reverse();
-
-  // Write P2 aniso mesh
-  gmsh::option::setNumber("Mesh.MshFileVersion", 4.1);
-  gmsh::model::mesh::setOrder(metricField._backmeshOrder);
-  gmsh::write("anisoadapted.msh");
-  gmsh::write(options.adaptedMeshName);
-  gmsh::model::mesh::setOrder(1);
 
   if(curve) {
 
@@ -192,11 +201,10 @@ feStatus feMesh2DP1::adapt(std::vector<feNewRecovery*> recoveredFields, feMetric
       computeInterpolationErrorOnEachElement();
     }
 
-    // if(metricField._backmeshOrder > 1) {
+    if(metricField._backmeshOrder > 1) {
       // GFace2PolyMesh only takes P1 meshes
-    // gmsh::fltk::run();
-    //   gmsh::model::mesh::setOrder(1);
-    // }
+      gmsh::model::mesh::setOrder(1);
+    }
 
     // For now only curve a single 2D surface
     int faceTag;

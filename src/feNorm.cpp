@@ -192,7 +192,8 @@ double feNorm::computeLpNorm(int p, bool error)
   }
 
   if(_plotErrorToFile) {
-    fprintf(myfile, "};\n"); fclose(myfile);
+    fprintf(myfile, "};\n");
+    fclose(myfile);
   }
 
   return pow(res, 1. / (double)p);
@@ -212,7 +213,7 @@ double feNorm::computeLpNormOnElement(int p, bool error, int iElm)
   _spaces[0]->_mesh->getCoord(_cnc, iElm, _geoCoord);
 
   double eLocPowP = 0.;
-    // #if defined(HAVE_OMP)
+  // #if defined(HAVE_OMP)
   // #pragma omp parallel for private(_geoCoord) reduction(+ : res) schedule(dynamic)
   // #endif
   for(int k = 0; k < _nQuad; ++k) {
@@ -250,15 +251,15 @@ double feNorm::computeSquaredErrorOnElement(int iElm)
   _spaces[0]->_mesh->getCoord(_cnc, iElm, _geoCoord);
 
   double eLocPowP = 0.;
-  #if defined(HAVE_OMP)
-  #pragma omp parallel
-  #endif
+#if defined(HAVE_OMP)
+#pragma omp parallel
+#endif
   {
     double u, uh;
 
-    #if defined(HAVE_OMP)
-    #pragma omp for reduction(+:eLocPowP)
-    #endif
+#if defined(HAVE_OMP)
+#pragma omp for reduction(+ : eLocPowP)
+#endif
     for(int k = 0; k < _nQuad; ++k) {
       uh = _spaces[0]->interpolateFieldAtQuadNode(_localSol[0], k);
       _geoSpace->interpolateVectorFieldAtQuadNode(_geoCoord, k, MY_POS);
@@ -384,10 +385,9 @@ double feNorm::computeLInfErrorExactVsEstimator()
 
 thread_local std::vector<double> GRAD_U_EXACT(2, 0.);
 
-double feNorm::computeSemiH1ErrorExactVsEstimator(int p)
+double feNorm::computeSemiH1ErrorExactVsEstimator(bool excludeBoundary, double boundaryWidth)
 {
   double res = 0.0, t = _solution->getCurrentTime();
-  std::vector<double> graduExact(2, 0.);
 
   if(_rec == nullptr) {
     feErrorMsg(FE_STATUS_ERROR, "Cannot compute Lp error estimate "
@@ -397,28 +397,40 @@ double feNorm::computeSemiH1ErrorExactVsEstimator(int p)
 
   tic();
 
-  #if defined(HAVE_OMP)
-  #pragma omp parallel
-  #endif
+#if defined(HAVE_OMP)
+#pragma omp parallel
+#endif
   {
     double normSquared, gradRec[2];
 
-    #if defined(HAVE_OMP)
-    #pragma omp for reduction (+:res)
-    #endif
+#if defined(HAVE_OMP)
+#pragma omp for reduction(+ : res)
+#endif
     for(int iElm = 0; iElm < _nElm; ++iElm) {
       _spaces[0]->_mesh->getCoord(_cnc, iElm, MY_GEOCOORD);
 
       for(int k = 0; k < _nQuad; ++k) {
         _geoSpace->interpolateVectorFieldAtQuadNode(MY_GEOCOORD, k, MY_POS);
-        _vectorSolution->eval(t, MY_POS, GRAD_U_EXACT);
-        gradRec[0] = _rec->evaluateRecoveryAtQuadNode(PPR::DERIVATIVE, 0, iElm, k);
-        gradRec[1] = _rec->evaluateRecoveryAtQuadNode(PPR::DERIVATIVE, 1, iElm, k);
 
-        normSquared = (GRAD_U_EXACT[0] - gradRec[0]) * (GRAD_U_EXACT[0] - gradRec[0])
-                    + (GRAD_U_EXACT[1] - gradRec[1]) * (GRAD_U_EXACT[1] - gradRec[1]);
+        // Check if vertex is at distance L from the boundary
+        // Hard-coded for [0,1] x [0,1] box
+        double x = MY_POS[0];
+        double y = MY_POS[1];
+        // bool inBox = (x >       boundaryWidth && y >      boundaryWidth && x < 1. - boundaryWidth && y < 1. - boundaryWidth);
+        bool inBox = (x > -1. + boundaryWidth && y > -1 + boundaryWidth && x < 1. - boundaryWidth && y < 1. - boundaryWidth);
 
-        res += normSquared * _J[_nQuad * iElm + k] * _w[k];
+        if(!excludeBoundary) inBox = true;
+
+        if(inBox) {
+          _vectorSolution->eval(t, MY_POS, GRAD_U_EXACT);
+          gradRec[0] = _rec->evaluateRecoveryAtQuadNode(PPR::DERIVATIVE, 0, iElm, k);
+          gradRec[1] = _rec->evaluateRecoveryAtQuadNode(PPR::DERIVATIVE, 1, iElm, k);
+
+          normSquared = (GRAD_U_EXACT[0] - gradRec[0]) * (GRAD_U_EXACT[0] - gradRec[0]) +
+                        (GRAD_U_EXACT[1] - gradRec[1]) * (GRAD_U_EXACT[1] - gradRec[1]);
+
+          res += normSquared * _J[_nQuad * iElm + k] * _w[k];
+        }
       }
     }
   }
@@ -428,9 +440,62 @@ double feNorm::computeSemiH1ErrorExactVsEstimator(int p)
   return sqrt(res);
 }
 
+double feNorm::computeSemiH1ErrorExactVsEstimator_Linf(bool excludeBoundary, double boundaryWidth)
+{
+  double normMax = 0.0, gradRec[2], t = _solution->getCurrentTime();
+
+  if(_rec == nullptr) {
+    feErrorMsg(FE_STATUS_ERROR, "Cannot compute Lp error estimate "
+                                " because feRecovery (solution reconstruction) is NULL");
+    exit(-1);
+  }
+
+  tic();
+
+  const std::vector<int> &verticesConnectivity = _cnc->getVerticesConnectivity();
+
+  // Compute max norm at mesh vertices at some distance L from the boundary (Guo, Zhang, Zhao paper)
+  int nVerticesPerElem = _cnc->getNumVerticesPerElem();
+  for(int iElm = 0; iElm < _nElm; ++iElm) {
+    _spaces[0]->_mesh->getCoord(_cnc, iElm, MY_GEOCOORD);
+
+    for(int iVert = 0; iVert < nVerticesPerElem; ++iVert) {
+      MY_POS[0] = MY_GEOCOORD[3 * iVert + 0];
+      MY_POS[1] = MY_GEOCOORD[3 * iVert + 1];
+      MY_POS[2] = MY_GEOCOORD[3 * iVert + 2];
+
+      // Check if vertex is at distance L from the boundary
+      // Hard-coded for [0,1] x [0,1] box
+      double x = MY_POS[0];
+      double y = MY_POS[1];
+      // bool inBox = (x >       boundaryWidth && y >      boundaryWidth && x < 1. - boundaryWidth && y < 1. - boundaryWidth);
+      bool inBox = (x > -1. + boundaryWidth && y > -1 + boundaryWidth && x < 1. - boundaryWidth && y < 1. - boundaryWidth);
+
+      if(!excludeBoundary) inBox = true;
+
+      if(inBox) {
+        _vectorSolution->eval(t, MY_POS, GRAD_U_EXACT);
+
+        int vertex = verticesConnectivity[nVerticesPerElem * iElm + iVert];
+
+        gradRec[0] = _rec->evaluateRecoveryAtVertex(PPR::DERIVATIVE, 0, vertex);
+        gradRec[1] = _rec->evaluateRecoveryAtVertex(PPR::DERIVATIVE, 1, vertex);
+
+        for(int i = 0; i < 2; ++i) {
+          normMax = fmax(normMax, fabs(GRAD_U_EXACT[i] - gradRec[i]));
+        }
+      }
+    }
+  }
+
+  feInfo("Computed norm of gradient error in %f s", toc());
+
+  return normMax;
+}
+
 thread_local std::vector<double> HESS_U_EXACT(4, 0.);
 
-double feNorm::computeErrorHessianExactVsEstimator(int p)
+double feNorm::computeErrorHessianExactVsEstimator(bool excludeBoundary, double boundaryWidth)
 {
   double res = 0.0, t = _solution->getCurrentTime();
 
@@ -442,43 +507,56 @@ double feNorm::computeErrorHessianExactVsEstimator(int p)
 
   tic();
 
-  #if defined(HAVE_OMP)
-  #pragma omp parallel
-  #endif
+#if defined(HAVE_OMP)
+#pragma omp parallel
+#endif
   {
     double normSquared, hessRec[4];
 
-    #if defined(HAVE_OMP)
-    #pragma omp for reduction(+:res)
-    #endif
+#if defined(HAVE_OMP)
+#pragma omp for reduction(+ : res)
+#endif
     for(int iElm = 0; iElm < _nElm; ++iElm) {
       _spaces[0]->_mesh->getCoord(_cnc, iElm, MY_GEOCOORD);
 
       for(int k = 0; k < _nQuad; ++k) {
         _geoSpace->interpolateVectorFieldAtQuadNode(MY_GEOCOORD, k, MY_POS);
-        _vectorSolution->eval(t, MY_POS, HESS_U_EXACT);
 
-        // Averaged derivatives-wise
-        hessRec[0] =  _rec->evaluateRecoveryAtQuadNode(PPR::DERIVATIVE, 2, iElm, k);
-        hessRec[1] = (_rec->evaluateRecoveryAtQuadNode(PPR::DERIVATIVE, 3, iElm, k) + 
-                      _rec->evaluateRecoveryAtQuadNode(PPR::DERIVATIVE, 4, iElm, k))/2.;
-        hessRec[2] =  _rec->evaluateRecoveryAtQuadNode(PPR::DERIVATIVE, 5, iElm, k); 
+        // Check if vertex is at distance L from the boundary
+        // Hard-coded for [0,1] x [0,1] box
+        double x = MY_POS[0];
+        double y = MY_POS[1];
+        // bool inBox = (x >       boundaryWidth && y >      boundaryWidth && x < 1. - boundaryWidth && y < 1. - boundaryWidth);
+        bool inBox = (x > -1. + boundaryWidth && y > -1 + boundaryWidth && x < 1. - boundaryWidth && y < 1. - boundaryWidth);
 
-        normSquared =      (HESS_U_EXACT[0] - hessRec[0]) * (HESS_U_EXACT[0] - hessRec[0]) + 
-                    + 2. * (HESS_U_EXACT[1] - hessRec[1]) * (HESS_U_EXACT[1] - hessRec[1]) +
-                         + (HESS_U_EXACT[3] - hessRec[2]) * (HESS_U_EXACT[3] - hessRec[2]);
+        if(!excludeBoundary) inBox = true;
 
-        // Component-wise
-        // hessRec[0] = _rec->evaluateRecoveryAtQuadNode(PPR::DERIVATIVE, 2, iElm, k);
-        // hessRec[1] = _rec->evaluateRecoveryAtQuadNode(PPR::DERIVATIVE, 3, iElm, k);
-        // hessRec[2] = _rec->evaluateRecoveryAtQuadNode(PPR::DERIVATIVE, 4, iElm, k); 
-        // hessRec[3] = _rec->evaluateRecoveryAtQuadNode(PPR::DERIVATIVE, 5, iElm, k);
+        if(inBox) {
+          _vectorSolution->eval(t, MY_POS, HESS_U_EXACT);
 
-        // normSquared = 0.;
-        // for(int i = 0; i < 4; ++i)
-        //   normSquared += (HESS_U_EXACT[i] - hessRec[i]) * (HESS_U_EXACT[i] - hessRec[i]);
+          // Averaged derivatives-wise
+          hessRec[0] = _rec->evaluateRecoveryAtQuadNode(PPR::DERIVATIVE, 2, iElm, k);
+          hessRec[1] = (_rec->evaluateRecoveryAtQuadNode(PPR::DERIVATIVE, 3, iElm, k) +
+                        _rec->evaluateRecoveryAtQuadNode(PPR::DERIVATIVE, 4, iElm, k)) /
+                       2.;
+          hessRec[2] = _rec->evaluateRecoveryAtQuadNode(PPR::DERIVATIVE, 5, iElm, k);
 
-        res += normSquared * _J[_nQuad * iElm + k] * _w[k];
+          normSquared = (HESS_U_EXACT[0] - hessRec[0]) * (HESS_U_EXACT[0] - hessRec[0]) +
+                        +2. * (HESS_U_EXACT[1] - hessRec[1]) * (HESS_U_EXACT[1] - hessRec[1]) +
+                        +(HESS_U_EXACT[3] - hessRec[2]) * (HESS_U_EXACT[3] - hessRec[2]);
+
+          // Component-wise
+          // hessRec[0] = _rec->evaluateRecoveryAtQuadNode(PPR::DERIVATIVE, 2, iElm, k);
+          // hessRec[1] = _rec->evaluateRecoveryAtQuadNode(PPR::DERIVATIVE, 3, iElm, k);
+          // hessRec[2] = _rec->evaluateRecoveryAtQuadNode(PPR::DERIVATIVE, 4, iElm, k);
+          // hessRec[3] = _rec->evaluateRecoveryAtQuadNode(PPR::DERIVATIVE, 5, iElm, k);
+
+          // normSquared = 0.;
+          // for(int i = 0; i < 4; ++i)
+          //   normSquared += (HESS_U_EXACT[i] - hessRec[i]) * (HESS_U_EXACT[i] - hessRec[i]);
+
+          res += normSquared * _J[_nQuad * iElm + k] * _w[k];
+        }
       }
     }
   }
@@ -488,9 +566,86 @@ double feNorm::computeErrorHessianExactVsEstimator(int p)
   return sqrt(res);
 }
 
+double feNorm::computeErrorHessianExactVsEstimator_Linf(bool excludeBoundary, double boundaryWidth)
+{
+  double t = _solution->getCurrentTime();
+
+  if(_rec == nullptr) {
+    feErrorMsg(FE_STATUS_ERROR, "Cannot compute Lp error estimate "
+                                " because feRecovery (solution reconstruction) is NULL");
+    exit(-1);
+  }
+
+  tic();
+
+  double normMax = 0., hessRec[4];
+
+  // Compute max norm at quadrature nodes
+  // for(int iElm = 0; iElm < _nElm; ++iElm) {
+  //   _spaces[0]->_mesh->getCoord(_cnc, iElm, MY_GEOCOORD);
+
+  //   for(int k = 0; k < _nQuad; ++k) {
+  //     _geoSpace->interpolateVectorFieldAtQuadNode(MY_GEOCOORD, k, MY_POS);
+  //     _vectorSolution->eval(t, MY_POS, HESS_U_EXACT);
+
+  //     // Component-wise
+  //     hessRec[0] = _rec->evaluateRecoveryAtQuadNode(PPR::DERIVATIVE, 2, iElm, k);
+  //     hessRec[1] = _rec->evaluateRecoveryAtQuadNode(PPR::DERIVATIVE, 3, iElm, k);
+  //     hessRec[2] = _rec->evaluateRecoveryAtQuadNode(PPR::DERIVATIVE, 4, iElm, k);
+  //     hessRec[3] = _rec->evaluateRecoveryAtQuadNode(PPR::DERIVATIVE, 5, iElm, k);
+
+  //     for(int i = 0; i < 4; ++i) {
+  //       normMax = fmax(normMax, fabs(HESS_U_EXACT[i] - hessRec[i]));
+  //     }
+  //   }
+  // }
+
+  const std::vector<int> &verticesConnectivity = _cnc->getVerticesConnectivity();
+
+  // Compute max norm at mesh vertices at some distance L from the boundary (Guo, Zhang, Zhao paper)
+  int nVerticesPerElem = _cnc->getNumVerticesPerElem();
+  for(int iElm = 0; iElm < _nElm; ++iElm) {
+    _spaces[0]->_mesh->getCoord(_cnc, iElm, MY_GEOCOORD);
+
+    for(int iVert = 0; iVert < nVerticesPerElem; ++iVert) {
+      MY_POS[0] = MY_GEOCOORD[3 * iVert + 0];
+      MY_POS[1] = MY_GEOCOORD[3 * iVert + 1];
+      MY_POS[2] = MY_GEOCOORD[3 * iVert + 2];
+
+      // Check if vertex is at distance L from the boundary
+      // Hard-coded for [0,1] x [0,1] box
+      double x = MY_POS[0];
+      double y = MY_POS[1];
+      // bool inBox = (x >       boundaryWidth && y >      boundaryWidth && x < 1. - boundaryWidth && y < 1. - boundaryWidth);
+        bool inBox = (x > -1. + boundaryWidth && y > -1 + boundaryWidth && x < 1. - boundaryWidth && y < 1. - boundaryWidth);
+
+      if(!excludeBoundary) inBox = true;
+
+      if(inBox) {
+        _vectorSolution->eval(t, MY_POS, HESS_U_EXACT);
+
+        int vertex = verticesConnectivity[nVerticesPerElem * iElm + iVert];
+
+        hessRec[0] = _rec->evaluateRecoveryAtVertex(PPR::DERIVATIVE, 2, vertex);
+        hessRec[1] = _rec->evaluateRecoveryAtVertex(PPR::DERIVATIVE, 3, vertex);
+        hessRec[2] = _rec->evaluateRecoveryAtVertex(PPR::DERIVATIVE, 4, vertex);
+        hessRec[3] = _rec->evaluateRecoveryAtVertex(PPR::DERIVATIVE, 5, vertex);
+
+        for(int i = 0; i < 4; ++i) {
+          normMax = fmax(normMax, fabs(HESS_U_EXACT[i] - hessRec[i]));
+        }
+      }
+    }
+  }
+
+  feInfo("Computed norm of hessian error in %f s", toc());
+
+  return normMax;
+}
+
 thread_local std::vector<double> D3U_EXACT(8, 0.);
 
-double feNorm::computeErrorThirdDerivativesExactVsEstimator(int p)
+double feNorm::computeErrorThirdDerivativesExactVsEstimator(bool excludeBoundary, double boundaryWidth)
 {
   double res = 0.0, t = _solution->getCurrentTime();
 
@@ -502,48 +657,62 @@ double feNorm::computeErrorThirdDerivativesExactVsEstimator(int p)
 
   tic();
 
-  #if defined(HAVE_OMP)
-  #pragma omp parallel
-  #endif
+#if defined(HAVE_OMP)
+#pragma omp parallel
+#endif
   {
     double normSquared, d3Rec[4];
 
-    #if defined(HAVE_OMP)
-    #pragma omp for reduction(+:res)
-    #endif
+#if defined(HAVE_OMP)
+#pragma omp for reduction(+ : res)
+#endif
     for(int iElm = 0; iElm < _nElm; ++iElm) {
       _spaces[0]->_mesh->getCoord(_cnc, iElm, MY_GEOCOORD);
 
       for(int k = 0; k < _nQuad; ++k) {
         _geoSpace->interpolateVectorFieldAtQuadNode(MY_GEOCOORD, k, MY_POS);
-        _vectorSolution->eval(t, MY_POS, D3U_EXACT);
 
-        // Averaged derivatives-wise
-        // Be careful for the order of mixed derivatives:
-        // it's xxx, [xxy, xyx, xyy, yxx, yxy, yyx], yyy
-        // so 7-8-10 and 9-11-12 (first 6 positions are 2 first and 4 second derivatives)
-        d3Rec[0] =  _rec->evaluateRecoveryAtQuadNode(PPR::DERIVATIVE, 6, iElm, k);
-        d3Rec[1] = (_rec->evaluateRecoveryAtQuadNode(PPR::DERIVATIVE, 7, iElm, k) +
-                    _rec->evaluateRecoveryAtQuadNode(PPR::DERIVATIVE, 8, iElm, k) +  
-                    _rec->evaluateRecoveryAtQuadNode(PPR::DERIVATIVE, 10, iElm, k))/3.; 
-        d3Rec[2] = (_rec->evaluateRecoveryAtQuadNode(PPR::DERIVATIVE, 9, iElm, k) +
-                    _rec->evaluateRecoveryAtQuadNode(PPR::DERIVATIVE, 11, iElm, k) +  
-                    _rec->evaluateRecoveryAtQuadNode(PPR::DERIVATIVE, 12, iElm, k))/3.; 
-        d3Rec[3] =  _rec->evaluateRecoveryAtQuadNode(PPR::DERIVATIVE, 13, iElm, k);
+        // Check if vertex is at distance L from the boundary
+        // Hard-coded for [0,1] x [0,1] box
+        double x = MY_POS[0];
+        double y = MY_POS[1];
+        // bool inBox = (x >       boundaryWidth && y >      boundaryWidth && x < 1. - boundaryWidth && y < 1. - boundaryWidth);
+        bool inBox = (x > -1. + boundaryWidth && y > -1 + boundaryWidth && x < 1. - boundaryWidth && y < 1. - boundaryWidth);
 
-        normSquared =  (D3U_EXACT[0] - d3Rec[0]) * (D3U_EXACT[0] - d3Rec[0])
-                + 3. * (D3U_EXACT[1] - d3Rec[1]) * (D3U_EXACT[1] - d3Rec[1])
-                + 3. * (D3U_EXACT[3] - d3Rec[2]) * (D3U_EXACT[3] - d3Rec[2])
-                +      (D3U_EXACT[7] - d3Rec[3]) * (D3U_EXACT[7] - d3Rec[3]) ;
+        if(!excludeBoundary) inBox = true;
 
-        // // Component-wise
-        // normSquared = 0.;
-        // for(int ii = 0; ii < 8; ++ii) {
-        //   d3Rec[ii] =  _rec->evaluateRecoveryAtQuadNode(PPR::DERIVATIVE, 6+ii, iElm, k);
-        //   normSquared += (D3U_EXACT[ii] - d3Rec[ii]) * (D3U_EXACT[ii] - d3Rec[ii]);
-        // }
+        if(inBox) {
+          _vectorSolution->eval(t, MY_POS, D3U_EXACT);
 
-        res += normSquared * _J[_nQuad * iElm + k] * _w[k];
+          // Averaged derivatives-wise
+          // Be careful for the order of mixed derivatives:
+          // it's xxx, [xxy, xyx, xyy, yxx, yxy, yyx], yyy
+          // so 7-8-10 and 9-11-12 (first 6 positions are 2 first and 4 second derivatives)
+          d3Rec[0] = _rec->evaluateRecoveryAtQuadNode(PPR::DERIVATIVE, 6, iElm, k);
+          d3Rec[1] = (_rec->evaluateRecoveryAtQuadNode(PPR::DERIVATIVE, 7, iElm, k) +
+                      _rec->evaluateRecoveryAtQuadNode(PPR::DERIVATIVE, 8, iElm, k) +
+                      _rec->evaluateRecoveryAtQuadNode(PPR::DERIVATIVE, 10, iElm, k)) /
+                     3.;
+          d3Rec[2] = (_rec->evaluateRecoveryAtQuadNode(PPR::DERIVATIVE, 9, iElm, k) +
+                      _rec->evaluateRecoveryAtQuadNode(PPR::DERIVATIVE, 11, iElm, k) +
+                      _rec->evaluateRecoveryAtQuadNode(PPR::DERIVATIVE, 12, iElm, k)) /
+                     3.;
+          d3Rec[3] = _rec->evaluateRecoveryAtQuadNode(PPR::DERIVATIVE, 13, iElm, k);
+
+          normSquared = (D3U_EXACT[0] - d3Rec[0]) * (D3U_EXACT[0] - d3Rec[0]) +
+                        3. * (D3U_EXACT[1] - d3Rec[1]) * (D3U_EXACT[1] - d3Rec[1]) +
+                        3. * (D3U_EXACT[3] - d3Rec[2]) * (D3U_EXACT[3] - d3Rec[2]) +
+                        (D3U_EXACT[7] - d3Rec[3]) * (D3U_EXACT[7] - d3Rec[3]);
+
+          // // Component-wise
+          // normSquared = 0.;
+          // for(int ii = 0; ii < 8; ++ii) {
+          //   d3Rec[ii] =  _rec->evaluateRecoveryAtQuadNode(PPR::DERIVATIVE, 6+ii, iElm, k);
+          //   normSquared += (D3U_EXACT[ii] - d3Rec[ii]) * (D3U_EXACT[ii] - d3Rec[ii]);
+          // }
+
+          res += normSquared * _J[_nQuad * iElm + k] * _w[k];
+        }
       }
     }
   }
@@ -551,6 +720,218 @@ double feNorm::computeErrorThirdDerivativesExactVsEstimator(int p)
   feInfo("Computed norm of d3u error in %f s", toc());
 
   return sqrt(res);
+}
+
+double feNorm::computeErrorThirdDerivativesExactVsEstimator_Linf(bool excludeBoundary, double boundaryWidth)
+{
+  double normMax = 0.0, d3Rec[8], t = _solution->getCurrentTime();
+
+  if(_rec == nullptr) {
+    feErrorMsg(FE_STATUS_ERROR, "Cannot compute Lp error estimate "
+                                " because feRecovery (solution reconstruction) is NULL");
+    exit(-1);
+  }
+
+  tic();
+
+  const std::vector<int> &verticesConnectivity = _cnc->getVerticesConnectivity();
+
+  // Compute max norm at mesh vertices at some distance L from the boundary (Guo, Zhang, Zhao paper)
+  int nVerticesPerElem = _cnc->getNumVerticesPerElem();
+  for(int iElm = 0; iElm < _nElm; ++iElm) {
+    _spaces[0]->_mesh->getCoord(_cnc, iElm, MY_GEOCOORD);
+
+    for(int iVert = 0; iVert < nVerticesPerElem; ++iVert) {
+      MY_POS[0] = MY_GEOCOORD[3 * iVert + 0];
+      MY_POS[1] = MY_GEOCOORD[3 * iVert + 1];
+      MY_POS[2] = MY_GEOCOORD[3 * iVert + 2];
+
+      // Check if vertex is at distance L from the boundary
+      // Hard-coded for [0,1] x [0,1] box
+      double x = MY_POS[0];
+      double y = MY_POS[1];
+      // bool inBox = (x >       boundaryWidth && y >      boundaryWidth && x < 1. - boundaryWidth && y < 1. - boundaryWidth);
+        bool inBox = (x > -1. + boundaryWidth && y > -1 + boundaryWidth && x < 1. - boundaryWidth && y < 1. - boundaryWidth);
+
+      if(!excludeBoundary) inBox = true;
+
+      if(inBox) {
+        _vectorSolution->eval(t, MY_POS, D3U_EXACT);
+
+        int vertex = verticesConnectivity[nVerticesPerElem * iElm + iVert];
+
+        d3Rec[0] = _rec->evaluateRecoveryAtVertex(PPR::DERIVATIVE, 6, vertex);
+        d3Rec[1] = _rec->evaluateRecoveryAtVertex(PPR::DERIVATIVE, 7, vertex);
+        d3Rec[2] = _rec->evaluateRecoveryAtVertex(PPR::DERIVATIVE, 8, vertex);
+        d3Rec[3] = _rec->evaluateRecoveryAtVertex(PPR::DERIVATIVE, 9, vertex);
+        d3Rec[4] = _rec->evaluateRecoveryAtVertex(PPR::DERIVATIVE, 10, vertex);
+        d3Rec[5] = _rec->evaluateRecoveryAtVertex(PPR::DERIVATIVE, 11, vertex);
+        d3Rec[6] = _rec->evaluateRecoveryAtVertex(PPR::DERIVATIVE, 12, vertex);
+        d3Rec[7] = _rec->evaluateRecoveryAtVertex(PPR::DERIVATIVE, 13, vertex);
+
+        for(int i = 0; i < 8; ++i) {
+          normMax = fmax(normMax, fabs(D3U_EXACT[i] - d3Rec[i]));
+        }
+      }
+    }
+  }
+
+  feInfo("Computed norm of d3u error in %f s", toc());
+
+  return normMax;
+}
+
+thread_local std::vector<double> D4U_EXACT(16, 0.);
+
+double feNorm::computeErrorFourthDerivativesExactVsEstimator(bool excludeBoundary, double boundaryWidth)
+{
+  double res = 0.0, t = _solution->getCurrentTime();
+
+  if(_rec == nullptr) {
+    feErrorMsg(FE_STATUS_ERROR, "Cannot compute Lp error estimate "
+                                " because feRecovery (solution reconstruction) is NULL");
+    exit(-1);
+  }
+
+  tic();
+
+#if defined(HAVE_OMP)
+#pragma omp parallel
+#endif
+  {
+    double normSquared, d4Rec[5];
+
+#if defined(HAVE_OMP)
+#pragma omp for reduction(+ : res)
+#endif
+    for(int iElm = 0; iElm < _nElm; ++iElm) {
+      _spaces[0]->_mesh->getCoord(_cnc, iElm, MY_GEOCOORD);
+
+      for(int k = 0; k < _nQuad; ++k) {
+        _geoSpace->interpolateVectorFieldAtQuadNode(MY_GEOCOORD, k, MY_POS);
+
+        // Check if vertex is at distance L from the boundary
+        // Hard-coded for [0,1] x [0,1] box
+        double x = MY_POS[0];
+        double y = MY_POS[1];
+        // bool inBox = (x >       boundaryWidth && y >      boundaryWidth && x < 1. - boundaryWidth && y < 1. - boundaryWidth);
+        bool inBox = (x > -1. + boundaryWidth && y > -1 + boundaryWidth && x < 1. - boundaryWidth && y < 1. - boundaryWidth);
+
+        if(!excludeBoundary) inBox = true;
+
+        if(inBox) {
+          _vectorSolution->eval(t, MY_POS, D4U_EXACT);
+
+          // Averaged derivatives-wise
+          d4Rec[0] =  _rec->evaluateRecoveryAtQuadNode(PPR::DERIVATIVE, 14, iElm, k);
+          d4Rec[1] = (_rec->evaluateRecoveryAtQuadNode(PPR::DERIVATIVE, 15, iElm, k) +
+                      _rec->evaluateRecoveryAtQuadNode(PPR::DERIVATIVE, 16, iElm, k) +
+                      _rec->evaluateRecoveryAtQuadNode(PPR::DERIVATIVE, 18, iElm, k) +
+                      _rec->evaluateRecoveryAtQuadNode(PPR::DERIVATIVE, 22, iElm, k)) /
+                     4.;
+          d4Rec[2] = (_rec->evaluateRecoveryAtQuadNode(PPR::DERIVATIVE, 17, iElm, k) +
+                      _rec->evaluateRecoveryAtQuadNode(PPR::DERIVATIVE, 19, iElm, k) +
+                      _rec->evaluateRecoveryAtQuadNode(PPR::DERIVATIVE, 20, iElm, k) +
+                      _rec->evaluateRecoveryAtQuadNode(PPR::DERIVATIVE, 23, iElm, k) +
+                      _rec->evaluateRecoveryAtQuadNode(PPR::DERIVATIVE, 24, iElm, k) +
+                      _rec->evaluateRecoveryAtQuadNode(PPR::DERIVATIVE, 26, iElm, k)) /
+                     6.;
+          d4Rec[3] = (_rec->evaluateRecoveryAtQuadNode(PPR::DERIVATIVE, 21, iElm, k) +
+                      _rec->evaluateRecoveryAtQuadNode(PPR::DERIVATIVE, 25, iElm, k) +
+                      _rec->evaluateRecoveryAtQuadNode(PPR::DERIVATIVE, 27, iElm, k) +
+                      _rec->evaluateRecoveryAtQuadNode(PPR::DERIVATIVE, 28, iElm, k)) /
+                     4.;
+          d4Rec[4] =  _rec->evaluateRecoveryAtQuadNode(PPR::DERIVATIVE, 29, iElm, k);
+
+          normSquared =      (D4U_EXACT[0] - d4Rec[0]) * (D4U_EXACT[0] - d4Rec[0]) +
+                        4. * (D4U_EXACT[1] - d4Rec[1]) * (D4U_EXACT[1] - d4Rec[1]) +
+                        6. * (D4U_EXACT[3] - d4Rec[2]) * (D4U_EXACT[3] - d4Rec[2]) +
+                        4. * (D4U_EXACT[7] - d4Rec[3]) * (D4U_EXACT[7] - d4Rec[3]) +
+                             (D4U_EXACT[15] - d4Rec[4]) * (D4U_EXACT[15] - d4Rec[4]);
+
+          // // Component-wise
+          // normSquared = 0.;
+          // for(int ii = 0; ii < 8; ++ii) {
+          //   d4Rec[ii] =  _rec->evaluateRecoveryAtQuadNode(PPR::DERIVATIVE, 6+ii, iElm, k);
+          //   normSquared += (D4U_EXACT[ii] - d4Rec[ii]) * (D4U_EXACT[ii] - d4Rec[ii]);
+          // }
+
+          res += normSquared * _J[_nQuad * iElm + k] * _w[k];
+        }
+      }
+    }
+  }
+
+  feInfo("Computed norm of d4u error in %f s", toc());
+
+  return sqrt(res);
+}
+
+double feNorm::computeErrorFourthDerivativesExactVsEstimator_Linf(bool excludeBoundary, double boundaryWidth)
+{
+  double normMax = 0.0, d4Rec[16], t = _solution->getCurrentTime();
+
+  if(_rec == nullptr) {
+    feErrorMsg(FE_STATUS_ERROR, "Cannot compute Lp error estimate "
+                                " because feRecovery (solution reconstruction) is NULL");
+    exit(-1);
+  }
+
+  tic();
+
+  const std::vector<int> &verticesConnectivity = _cnc->getVerticesConnectivity();
+
+  // Compute max norm at mesh vertices at some distance L from the boundary (Guo, Zhang, Zhao paper)
+  int nVerticesPerElem = _cnc->getNumVerticesPerElem();
+  for(int iElm = 0; iElm < _nElm; ++iElm) {
+    _spaces[0]->_mesh->getCoord(_cnc, iElm, MY_GEOCOORD);
+
+    for(int iVert = 0; iVert < nVerticesPerElem; ++iVert) {
+      MY_POS[0] = MY_GEOCOORD[3 * iVert + 0];
+      MY_POS[1] = MY_GEOCOORD[3 * iVert + 1];
+      MY_POS[2] = MY_GEOCOORD[3 * iVert + 2];
+
+      // Check if vertex is at distance L from the boundary
+      // Hard-coded for [0,1] x [0,1] box
+      double x = MY_POS[0];
+      double y = MY_POS[1];
+      // bool inBox = (x >       boundaryWidth && y >      boundaryWidth && x < 1. - boundaryWidth && y < 1. - boundaryWidth);
+        bool inBox = (x > -1. + boundaryWidth && y > -1 + boundaryWidth && x < 1. - boundaryWidth && y < 1. - boundaryWidth);
+
+      if(!excludeBoundary) inBox = true;
+
+      if(inBox) {
+        _vectorSolution->eval(t, MY_POS, D4U_EXACT);
+
+        int vertex = verticesConnectivity[nVerticesPerElem * iElm + iVert];
+
+        d4Rec[0] = _rec->evaluateRecoveryAtVertex(PPR::DERIVATIVE, 14, vertex);
+        d4Rec[1] = _rec->evaluateRecoveryAtVertex(PPR::DERIVATIVE, 15, vertex);
+        d4Rec[2] = _rec->evaluateRecoveryAtVertex(PPR::DERIVATIVE, 16, vertex);
+        d4Rec[3] = _rec->evaluateRecoveryAtVertex(PPR::DERIVATIVE, 17, vertex);
+        d4Rec[4] = _rec->evaluateRecoveryAtVertex(PPR::DERIVATIVE, 18, vertex);
+        d4Rec[5] = _rec->evaluateRecoveryAtVertex(PPR::DERIVATIVE, 19, vertex);
+        d4Rec[6] = _rec->evaluateRecoveryAtVertex(PPR::DERIVATIVE, 20, vertex);
+        d4Rec[7] = _rec->evaluateRecoveryAtVertex(PPR::DERIVATIVE, 21, vertex);
+        d4Rec[8] = _rec->evaluateRecoveryAtVertex(PPR::DERIVATIVE, 22, vertex);
+        d4Rec[9] = _rec->evaluateRecoveryAtVertex(PPR::DERIVATIVE, 23, vertex);
+        d4Rec[10] = _rec->evaluateRecoveryAtVertex(PPR::DERIVATIVE, 24, vertex);
+        d4Rec[11] = _rec->evaluateRecoveryAtVertex(PPR::DERIVATIVE, 25, vertex);
+        d4Rec[12] = _rec->evaluateRecoveryAtVertex(PPR::DERIVATIVE, 26, vertex);
+        d4Rec[13] = _rec->evaluateRecoveryAtVertex(PPR::DERIVATIVE, 27, vertex);
+        d4Rec[14] = _rec->evaluateRecoveryAtVertex(PPR::DERIVATIVE, 28, vertex);
+        d4Rec[15] = _rec->evaluateRecoveryAtVertex(PPR::DERIVATIVE, 29, vertex);
+
+        for(int i = 0; i < 16; ++i) {
+          normMax = fmax(normMax, fabs(D4U_EXACT[i] - d4Rec[i]));
+        }
+      }
+    }
+  }
+
+  feInfo("Computed norm of d4u error in %f s", toc());
+
+  return normMax;
 }
 
 double feNorm::computeLpErrorFromTransferredSolution(int p, feSolution *otherSol)
@@ -561,7 +942,6 @@ double feNorm::computeLpErrorFromTransferredSolution(int p, feSolution *otherSol
   _localSol[1].resize(_spaces[0]->getNumFunctions());
 
   for(int iElm = 0; iElm < _nElm; ++iElm) {
-
     // Initialize current and other solutions
     this->initializeLocalSolutionOnSpace(0, iElm);
     otherSol->getSolAtDOF(_adr[0], _localSol[1]);
@@ -683,7 +1063,7 @@ double feNorm::computeLInfNorm(bool error)
 double feNorm::computeH1SemiNorm(int p, bool error)
 {
   double res = 0.0, jac, dotProd, t = _solution->getCurrentTime();
-  double graduh[3]  = {0., 0., 0.};
+  double graduh[3] = {0., 0., 0.};
   std::vector<double> gradu(3, 0.);
 
   if(error && _vectorSolution == nullptr) {
@@ -695,7 +1075,6 @@ double feNorm::computeH1SemiNorm(int p, bool error)
   ElementTransformation T;
 
   for(int iElm = 0; iElm < _nElm; ++iElm) {
-
     _spaces[0]->_mesh->getCoord(_cnc, iElm, _geoCoord);
 
     this->initializeLocalSolutionOnSpace(0, iElm);
@@ -711,7 +1090,7 @@ double feNorm::computeH1SemiNorm(int p, bool error)
       graduh[0] -= gradu[0];
       graduh[1] -= gradu[1];
       graduh[2] -= gradu[2];
-      dotProd = graduh[0]*graduh[0] + graduh[1]*graduh[1] + graduh[2]*graduh[2];
+      dotProd = graduh[0] * graduh[0] + graduh[1] * graduh[1] + graduh[2] * graduh[2];
 
       res += dotProd * jac * _w[k];
     }
@@ -735,7 +1114,6 @@ double feNorm::computeH1SemiNormErrorEstimator()
   ElementTransformation T;
 
   for(int iElm = 0; iElm < _nElm; ++iElm) {
-
     _spaces[0]->_mesh->getCoord(_cnc, iElm, _geoCoord);
 
     this->initializeLocalSolutionOnSpace(0, iElm);
@@ -757,7 +1135,7 @@ double feNorm::computeH1SemiNormErrorEstimator()
       graduRec[0] -= gradu[0];
       graduRec[1] -= gradu[1];
       graduRec[2] -= gradu[2];
-      dotProd = graduRec[0]*graduRec[0] + graduRec[1]*graduRec[1] + graduRec[2]*graduRec[2];
+      dotProd = graduRec[0] * graduRec[0] + graduRec[1] * graduRec[1] + graduRec[2] * graduRec[2];
 
       res += dotProd * jac * _w[k];
     }
@@ -769,7 +1147,7 @@ double feNorm::computeH1Norm(bool error)
 {
   double L2 = this->computeLpNorm(2, error);
   double SemiH1 = this->computeH1SemiNorm(2, error);
-  return sqrt(L2*L2 + SemiH1*SemiH1);
+  return sqrt(L2 * L2 + SemiH1 * SemiH1);
 }
 
 double feNorm::computeArea()
@@ -956,7 +1334,7 @@ double feNorm::computePressureLift()
       ph = _spaces[0]->interpolateFieldAtQuadNode(_localSol[0], k);
       _geoSpace->interpolateVectorFieldAtQuadNode(_geoCoord, k, _pos);
 
-      double ny = normalVectors[3*_nQuad*iElm + 3*k + 1];
+      double ny = normalVectors[3 * _nQuad * iElm + 3 * k + 1];
 
       res += ph * ny * _J[_nQuad * iElm + k] * _w[k];
       // fprintf(myf, "VP(%.16g,%.16g,%.16g){%.16g,%.16g,%.16g};\n",_pos[0], _pos[1], 0.,
@@ -990,7 +1368,7 @@ double feNorm::computeViscousLift()
       ph = _spaces[0]->interpolateFieldAtQuadNode(_localSol[0], k);
       _geoSpace->interpolateVectorFieldAtQuadNode(_geoCoord, k, _pos);
 
-      double ny = normalVectors[3*_nQuad*iElm + 3*k + 1];
+      double ny = normalVectors[3 * _nQuad * iElm + 3 * k + 1];
 
       res += ph * ny * _J[_nQuad * iElm + k] * _w[k];
     }
@@ -1019,7 +1397,7 @@ double feNorm::computePressureDrag()
     for(int k = 0; k < _nQuad; ++k) {
       ph = _spaces[0]->interpolateFieldAtQuadNode(_localSol[0], k);
       _geoSpace->interpolateVectorFieldAtQuadNode(_geoCoord, k, _pos);
-      double nx = normalVectors[3*_nQuad*iElm + 3*k + 0];
+      double nx = normalVectors[3 * _nQuad * iElm + 3 * k + 0];
       res += ph * nx * _J[_nQuad * iElm + k] * _w[k];
     }
   }
@@ -1036,12 +1414,14 @@ double feNorm::computeViscousDrag(double viscosity, feNewRecovery *recU, feNewRe
     exit(-1);
   }
   if(_spaces[0]->getNumComponents() == 1) {
-    feErrorMsg(FE_STATUS_ERROR, "Can only compute drag force for a vector-valued FE space (velocity field).");
+    feErrorMsg(FE_STATUS_ERROR,
+               "Can only compute drag force for a vector-valued FE space (velocity field).");
     exit(-1);
   }
   if(recU == nullptr || recV == nullptr) {
-    feErrorMsg(FE_STATUS_ERROR, "Cannot computeViscousDrag "
-                                " because at least one feRecovery (solution reconstruction) is NULL");
+    feErrorMsg(FE_STATUS_ERROR,
+               "Cannot computeViscousDrag "
+               " because at least one feRecovery (solution reconstruction) is NULL");
     exit(-1);
   }
 
@@ -1058,11 +1438,9 @@ double feNorm::computeViscousDrag(double viscosity, feNewRecovery *recU, feNewRe
     for(int k = 0; k < _nQuad; ++k) {
       double jac = _J[_nQuad * iElm + k];
       // _cnc->computeElementTransformation(_geoCoord, k, jac, transformation);
-      // _spaces[0]->interpolateVectorFieldAtQuadNode_physicalGradient(_localSol[0], 2, k, transformation, grad_u);
-      // double dudx = grad_u[0];
-      // double dudy = grad_u[1];
-      // double dvdx = grad_u[2];
-      // double dvdy = grad_u[3];
+      // _spaces[0]->interpolateVectorFieldAtQuadNode_physicalGradient(_localSol[0], 2, k,
+      // transformation, grad_u); double dudx = grad_u[0]; double dudy = grad_u[1]; double dvdx =
+      // grad_u[2]; double dvdy = grad_u[3];
 
       _geoSpace->interpolateVectorFieldAtQuadNode(_geoCoord, k, _pos);
 
@@ -1071,11 +1449,11 @@ double feNorm::computeViscousDrag(double viscosity, feNewRecovery *recU, feNewRe
       double dvdx = recV->evaluateRecovery(PPR::DERIVATIVE, 0, _pos.data());
       double dvdy = recV->evaluateRecovery(PPR::DERIVATIVE, 1, _pos.data());
 
-      double nx = normalVectors[3*_nQuad*iElm + 3*k + 0];
-      double ny = normalVectors[3*_nQuad*iElm + 3*k + 1];
+      double nx = normalVectors[3 * _nQuad * iElm + 3 * k + 0];
+      double ny = normalVectors[3 * _nQuad * iElm + 3 * k + 1];
 
-      double tauDotN[2] = {viscosity * (nx * (  2. * dudx) + ny * (dudy + dvdx)),
-                           viscosity * (nx * (dudy + dvdx) + ny * (  2. * dvdy))};
+      double tauDotN[2] = {viscosity * (nx * (2. * dudx) + ny * (dudy + dvdx)),
+                           viscosity * (nx * (dudy + dvdx) + ny * (2. * dvdy))};
 
       res += tauDotN[0] * nx * _J[_nQuad * iElm + k] * _w[k];
     }
@@ -1093,7 +1471,8 @@ double feNorm::computeForcesFromLagrangeMultiplier(int iComponent)
     exit(-1);
   }
   if(_spaces[0]->getNumComponents() == 1) {
-    feErrorMsg(FE_STATUS_ERROR, "Can only compute forces from a vector-valued FE space (lagrange multiplier).");
+    feErrorMsg(FE_STATUS_ERROR,
+               "Can only compute forces from a vector-valued FE space (lagrange multiplier).");
     exit(-1);
   }
 
@@ -1105,7 +1484,8 @@ double feNorm::computeForcesFromLagrangeMultiplier(int iComponent)
 
     for(int k = 0; k < _nQuad; ++k) {
       double jac = _J[_nQuad * iElm + k];
-      lambda = _spaces[0]->interpolateVectorFieldComponentAtQuadNode_fullField(_localSol[0], k, iComponent);
+      lambda = _spaces[0]->interpolateVectorFieldComponentAtQuadNode_fullField(_localSol[0], k,
+                                                                               iComponent);
       res += lambda * _J[_nQuad * iElm + k] * _w[k];
     }
   }

@@ -15,6 +15,8 @@ using namespace soplex;
 #include "../contrib/Eigen/Eigen"
 #include "../contrib/unsupported/Eigen/MatrixFunctions"
 
+extern int FE_VERBOSE;
+
 double evaluateFieldFromRecoveryCallback(int indexDerivative, void *recUserPtr, double *x)
 {
   return ((feRecovery *)recUserPtr)->evalDerivative(indexDerivative, x);
@@ -314,9 +316,9 @@ void gradationMetriques(double gradation, int nmax, std::vector<double> &coord1,
   std::vector<double> nodeparametricCoord;
   gmsh::model::mesh::getNodesByElementType(elementTypes[0], nodeTags, coord, parametricCoord);
 
-  for(auto val : elementTypes) feInfo("Gradation: Elements classified on dim 2 are of type %d", val);
-  feInfo("Gradation: There are %d elements of dim 2 and type [0]", elementTags[0].size());
-  feInfo("Gradation: There are %d nodes total in elem [0]", nodeTags.size());
+  for(auto val : elementTypes) feInfoCond(FE_VERBOSE > 0, "Gradation: Elements classified on dim 2 are of type %d", val);
+  feInfoCond(FE_VERBOSE > 0, "Gradation: There are %d elements of dim 2 and type [0]", elementTags[0].size());
+  feInfoCond(FE_VERBOSE > 0, "Gradation: There are %d nodes total in elem [0]", nodeTags.size());
 
   int nodedim, nodetag;
 
@@ -441,7 +443,7 @@ void gradationMetriques(double gradation, int nmax, std::vector<double> &coord1,
       // }
     }
 
-    feInfo("Gradation: Passe %d", iter);
+    feInfoCond(FE_VERBOSE > 0, "Gradation: Passe %d", iter);
     // correction = false;
 
     // fprintf(fff, "};");

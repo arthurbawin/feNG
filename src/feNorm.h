@@ -155,9 +155,14 @@ public:
   double computeLpNormOnElement(int p, bool error, int iElm);
   double computeLpErrorExactVsEstimator(int p);
   double computeLInfErrorExactVsEstimator();
-  double computeSemiH1ErrorExactVsEstimator(int p);
-  double computeErrorHessianExactVsEstimator(int p);
-  double computeErrorThirdDerivativesExactVsEstimator(int p);
+  double computeSemiH1ErrorExactVsEstimator(bool excludeBoundary, double boundaryWidth);
+  double computeSemiH1ErrorExactVsEstimator_Linf(bool excludeBoundary, double boundaryWidth);
+  double computeErrorHessianExactVsEstimator(bool excludeBoundary, double boundaryWidth);
+  double computeErrorHessianExactVsEstimator_Linf(bool excludeBoundary, double boundaryWidth);
+  double computeErrorThirdDerivativesExactVsEstimator(bool excludeBoundary, double boundaryWidth);
+  double computeErrorThirdDerivativesExactVsEstimator_Linf(bool excludeBoundary, double boundaryWidth);
+  double computeErrorFourthDerivativesExactVsEstimator(bool excludeBoundary, double boundaryWidth);
+  double computeErrorFourthDerivativesExactVsEstimator_Linf(bool excludeBoundary, double boundaryWidth);
 
   // iComponent = 0 : e_x
   // iComponent = 1 : e_y

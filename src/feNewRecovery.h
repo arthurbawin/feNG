@@ -42,6 +42,7 @@ protected:
   int _degSol;
 
   bool _reconstructAtHighOrderNodes;
+  bool _useOriginalZhangNagaPatchDefinition;
 
   // A set of element tags for each mesh vertex
   std::map<int, std::set<int> > vertToElems;
@@ -56,11 +57,14 @@ protected:
 
   std::unordered_map<int, bool> isOnEdge;
 
+  // The length of the longest edge incident to each vertices
+  std::map<int, double> _hMax;
+
   std::map<int, bool> _isVertexBoundary;
   std::map<int, std::pair<double, double>> _scaling;
 
 public:
-  feNewPatch(const feCncGeo *cnc, feMesh *mesh, bool reconstructAtHighOrderNodes, int degreeSolution, feMetric *metricField = nullptr);
+  feNewPatch(const feCncGeo *cnc, feMesh *mesh, bool reconstructAtHighOrderNodes, bool useOriginalZhangNagaPatchDefinition, int degreeSolution, feMetric *metricField = nullptr);
   ~feNewPatch() {}
 
   std::vector<int> &getVertices() { return _vertices; }
@@ -166,6 +170,7 @@ public:
                 std::string meshName = "",
                 std::string metricMeshName = "",
                 bool reconstructAtHighOrderNodes = false,
+                bool useOriginalZhangNagaPatchDefinition = false,
                 bool append = false,
                 feMetric *metricField = nullptr,
                 feMetaNumber *numbering = nullptr);

@@ -62,7 +62,8 @@ static void drawCircle(FILE *f, double *x, double radius, int nPoints)
 }
 
 feNewPatch::feNewPatch(const feCncGeo *cnc, feMesh *mesh, bool reconstructAtHighOrderNodes,
-                       int degreeSolution, feMetric *metricField)
+                       bool useOriginalZhangNagaPatchDefinition, int degreeSolution,
+                       feMetric *metricField)
 {
   // Get unique vertex indices in the node connectivity
   _vertices = cnc->getVerticesConnectivity();
@@ -71,15 +72,9 @@ feNewPatch::feNewPatch(const feCncGeo *cnc, feMesh *mesh, bool reconstructAtHigh
   _reconstructAtHighOrderNodes = reconstructAtHighOrderNodes;
 
   int nElm = cnc->getNumElements();
-  _nVertices = _vertices.size();
   _nNodePerElm = cnc->getNumVerticesPerElem();
+  _nVertices = _vertices.size() / _nNodePerElm;
   _nEdgePerElm = cnc->getNumEdgesPerElem();
-
-  if(_nVertices < 10) {
-    feErrorMsg(FE_STATUS_ERROR, "Mesh has too few vertices (%d) to compute solution recovery",
-               _nVertices);
-    exit(-1);
-  }
 
   // If mesh if high-order, keep only the P1 vertices.
   // This is because the Zhang-Naga method reconstructs fields at vertices,
@@ -117,114 +112,6 @@ feNewPatch::feNewPatch(const feCncGeo *cnc, feMesh *mesh, bool reconstructAtHigh
 
   const std::vector<int> &connecNodes = cnc->getVerticesConnectivity();
 
-  // std::unordered_map<int, double> hMax;
-  // for(int i = 0; i < nElm; ++i) {
-  //   for(int j = 0; j < 6; ++j) {
-  //     hMax[connecNodes[_nNodePerElm * i + j]] = 0.;
-  //   }
-  // }
-
-  // std::vector<double> geoCoord(3 * _nNodePerElm, 0.);
-  // for(int i = 0; i < nElm; ++i) {
-  //   mesh->getCoord(cnc->getTag(), i, geoCoord);
-  //   double x0 = geoCoord[0];
-  //   double y0 = geoCoord[1];
-  //   double x1 = geoCoord[3];
-  //   double y1 = geoCoord[4];
-  //   double x2 = geoCoord[6];
-  //   double y2 = geoCoord[7];
-  //   double l0, l1, l2;
-
-  //   for(int j = 0; j < 3; ++j) {
-
-  //     int vertexP1 = connecNodes[_nNodePerElm * i + j];
-  //     int incidentEdge[2] = {j, (j + 2) % 3};
-
-  //     // Compute length of the two incident edges
-  //     if(metricField) {
-  //       // Use metric field to get a better patch
-  //       MetricTensor &M = metricField->getMetricAtSequentialTag(vertexP1);
-  //       l0 = sqrt(M(0,0) * (x0 - x1) * (x0 - x1) + 2. * M(0,1) * (x0 - x1) * (y0 - y1) + M(1,1) *
-  //       (y0 - y1) * (y0 - y1)); l1 = sqrt(M(0,0) * (x1 - x2) * (x1 - x2) + 2. * M(0,1) * (x1 -
-  //       x2) * (y1 - y2) + M(1,1) * (y1 - y2) * (y1 - y2)); l2 = sqrt(M(0,0) * (x2 - x0) * (x2 -
-  //       x0) + 2. * M(0,1) * (x2 - x0) * (y2 - y0) + M(1,1) * (y2 - y0) * (y2 - y0));
-  //     } else {
-  //       // Use Euclidian metric (bad for aniso meshes)
-  //       l0 = sqrt((x0 - x1) * (x0 - x1) + (y0 - y1) * (y0 - y1));
-  //       l1 = sqrt((x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2));
-  //       l2 = sqrt((x2 - x0) * (x2 - x0) + (y2 - y0) * (y2 - y0));
-  //     }
-  //     double L[3] = {l0, l1, l2};
-
-  //     for(int iEdge = 0; iEdge < 2; ++iEdge) {
-  //       // Compute longest connected edge
-  //       hMax.at(vertexP1) = fmax(hMax.at(vertexP1), L[ incidentEdge[iEdge] ]);
-  //     }
-  //   }
-  // }
-
-  // // Compute longest connected edge at midnodes
-  // for(int i = 0; i < nElm; ++i) {
-  //   for(int j = 3; j < 6; ++j) {
-  //     int e1 = j - 3;
-  //     int e2 = (j - 2) % 3;
-  //     hMax.at(connecNodes[_nNodePerElm * i + j]) = fmax(
-  //       hMax.at(connecNodes[_nNodePerElm * i + e1]), hMax.at(connecNodes[_nNodePerElm * i +
-  //       e2]));
-  //   }
-  // }
-
-  // // Debug check
-  // if(true) {
-  //   for(auto &p : hMax) {
-  //     std::string isIso = metricField ? "aniso" : "iso";
-  //     std::string posfile = "cercle" + std::to_string(p.first) + isIso + ".pos";
-  //     FILE *file = fopen(posfile.data(), "w");
-  //     fprintf(file, "View\"cercle%s%d\"{\n", isIso.data(), p.first);
-  //     double x[2] = {0., 0.};
-  //     x[0] = mesh->getVertex(p.first)->x();
-  //     x[1] = mesh->getVertex(p.first)->y();
-  //     if(metricField) {
-  //       drawSingleEllipse(file, x, metricField->getMetricAtSequentialTag(p.first), 1, 30);
-  //     } else {
-  //       double r = p.second;
-  //       drawCircle(file, x, r, 30);
-  //     }
-  //     fprintf(file, "};\n"); fclose(file);
-  //   }
-  // }
-
-  // if(metricField) {
-  //   // Patches of elements within hMax
-  //   for(auto &p : hMax) {
-  //     double xv = mesh->getVertex(p.first)->x();
-  //     double yv = mesh->getVertex(p.first)->y();
-  //     for(int i = 0; i < nElm; ++i) {
-  //       mesh->getCoord(cnc->getTag(), i, geoCoord);
-  //       double x0 = geoCoord[0];
-  //       double y0 = geoCoord[1];
-  //       double x1 = geoCoord[3];
-  //       double y1 = geoCoord[4];
-  //       double x2 = geoCoord[6];
-  //       double y2 = geoCoord[7];
-
-  //       MetricTensor &M = metricField->getMetricAtSequentialTag(p.first);
-  //       double l0 = sqrt(M(0,0) * (x0 - xv) * (x0 - xv) + 2. * M(0,1) * (x0 - xv) * (y0 - yv) +
-  //       M(1,1) * (y0 - yv) * (y0 - yv)); double l1 = sqrt(M(0,0) * (x1 - xv) * (x1 - xv) + 2. *
-  //       M(0,1) * (x1 - xv) * (y1 - yv) + M(1,1) * (y1 - yv) * (y1 - yv)); double l2 = sqrt(M(0,0)
-  //       * (x2 - xv) * (x2 - xv) + 2. * M(0,1) * (x2 - xv) * (y2 - yv) + M(1,1) * (y2 - yv) * (y2
-  //       - yv)); double L[3] = {l0, l1, l2};
-
-  //       for(int j = 0; j < 3; ++j) {
-  //         if(L[j] <= 1.) {
-  //           vertToElems[p.first].insert(i);
-  //           break;
-  //         }
-  //       }
-  //     }
-  //   }
-  // } else {
-
   // Patches of adjacent elements
   for(int i = 0; i < nElm; ++i) {
     for(int j = 0; j < _nNodePerElm; ++j) {
@@ -233,8 +120,6 @@ feNewPatch::feNewPatch(const feCncGeo *cnc, feMesh *mesh, bool reconstructAtHigh
       _isVertexBoundary[connecNodes[_nNodePerElm * i + j]] = false;
     }
   }
-
-  // }
 
   // Mark boundary vertices
   // Vertices on cnc with dim = dimMesh - 1 are considered boundary
@@ -246,56 +131,198 @@ feNewPatch::feNewPatch(const feCncGeo *cnc, feMesh *mesh, bool reconstructAtHigh
     }
   }
 
+  std::vector<double> geoCoord(3 * _nNodePerElm, 0.);
+
 #if defined(ORIGINAL_ZHANG_NAGA)
   // PATCH OF VERTICES FOR ORIGINAL METHOD
   // Dimension of the polynomial basis for the recovery
   int basisDimension = (_degSol + 2) * (_degSol + 3) / 2;
+
   int minVertices = ceil(1.5 * basisDimension);
-  int minVerticesOnBoundary = ceil(1.5 * basisDimension);
+  // int minVertices = basisDimension;
+  // int minVertices = 2*basisDimension;
 
-  // Create vertex patch and check if enough vertices
-  std::set<int> toAdd;
-  for(auto &pair : vertToElems) {
-    int vertex = pair.first;
-    bool enoughAdjacentVertices = false;
+  // int minVerticesOnBoundary = ceil(1.5 * basisDimension);
+  // int minVerticesOnBoundary = basisDimension;
+  int minVerticesOnBoundary = 2. * basisDimension;
 
-    do {
-      // Insert vertices of adjacent elements to set of connected vertices
-      for(auto elem : pair.second) {
-        int nVerticesPerElem = reconstructAtHighOrderNodes ? _nNodePerElm : 3;
-        for(int j = 0; j < nVerticesPerElem; ++j) {
-          vertToVerts[vertex].insert(connecNodes[_nNodePerElm * elem + j]);
-          if(_isVertexBoundary[vertex] && !_isVertexBoundary[connecNodes[_nNodePerElm * elem + j]])
-            vertToInteriorVerts[vertex].insert(connecNodes[_nNodePerElm * elem + j]);
-        }
+  if(_nVertices < fmax(minVertices, minVerticesOnBoundary)) {
+    feErrorMsg(FE_STATUS_ERROR,
+               "Mesh has too few vertices (%d) to compute solution recovery. Need at least %d "
+               "vertices to compute recovery for interior nodes and %d for boundary nodes.",
+               _nVertices, minVertices, minVerticesOnBoundary);
+    exit(-1);
+  }
+
+  _useOriginalZhangNagaPatchDefinition = useOriginalZhangNagaPatchDefinition;
+
+  if(_useOriginalZhangNagaPatchDefinition) {
+    // Compute length of incident edges for original patch
+    for(int i = 0; i < nElm; ++i) {
+      for(int j = 0; j < 3; ++j) {
+        _hMax[connecNodes[_nNodePerElm * i + j]] = 0.;
+      }
+    }
+
+    for(int i = 0; i < nElm; ++i) {
+      mesh->getCoord(cnc->getTag(), i, geoCoord);
+      double x0 = geoCoord[0];
+      double y0 = geoCoord[1];
+      double x1 = geoCoord[3];
+      double y1 = geoCoord[4];
+      double x2 = geoCoord[6];
+      double y2 = geoCoord[7];
+      // Use Euclidian metric (bad for aniso meshes?)
+      double l0 = sqrt((x0 - x1) * (x0 - x1) + (y0 - y1) * (y0 - y1));
+      double l1 = sqrt((x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2));
+      double l2 = sqrt((x2 - x0) * (x2 - x0) + (y2 - y0) * (y2 - y0));
+      double L[3] = {l0, l1, l2};
+
+      // For P1 vertices take the longest edge
+      for(int j = 0; j < 3; ++j) {
+        int vertex = connecNodes[_nNodePerElm * i + j];
+        double longestIncident = fmax(L[j], L[(j + 2) % 3]);
+        _hMax.at(vertex) = fmax(_hMax.at(vertex), longestIncident);
       }
 
-      // Check that there are enough adjacent vertices
-      if(_isVertexBoundary[vertex] && vertToVerts[vertex].size() >= minVerticesOnBoundary)
-        enoughAdjacentVertices = true;
-      if(!_isVertexBoundary[vertex] && vertToVerts[vertex].size() >= minVertices)
-        enoughAdjacentVertices = true;
+      // For P2 midnodes, take the longest (straight) vertex-to-vertex distance in the triangle
+      // for(int j = 3; j < _nNodePerElm; ++j) {
+      //   int vertex = connecNodes[_nNodePerElm * i + j];
+      //   double xj = geoCoord[3 * j + 0];
+      //   double yj = geoCoord[3 * j + 1];
+      //   l0 = sqrt((x0 - xj) * (x0 - xj) + (y0 - yj) * (y0 - yj));
+      //   l1 = sqrt((x1 - xj) * (x1 - xj) + (y1 - yj) * (y1 - yj));
+      //   l2 = sqrt((x2 - xj) * (x2 - xj) + (y2 - yj) * (y2 - yj));
+      //   double longest = fmax(l0, fmax(l1, l2));
+      //   _hMax.at(vertex) = fmax(_hMax.at(vertex), longest);
+      // }
+    }
 
-      if(!enoughAdjacentVertices) {
-        toAdd.clear();
+    // Or compute longest connected edge at midnodes as the max of the hMax of extremities?
+    // for(int i = 0; i < nElm; ++i) {
+    //   for(int j = 3; j < 6; ++j) {
+    //     int e1 = j - 3;
+    //     int e2 = (j - 2) % 3;
+    //     _hMax.at(connecNodes[_nNodePerElm * i + j]) = fmax(
+    //       _hMax.at(connecNodes[_nNodePerElm * i + e1]), _hMax.at(connecNodes[_nNodePerElm * i +
+    //       e2]));
+    //   }
+    // }
 
-        // Add one layer of elements
-        // These are the elements connected to the current patch of elements
-        // Take only the first layer, as the patch of elements may have grown already
-        for(auto currentElem : pair.second) {
-          for(int j = 0; j < 3; ++j) {
-            for(auto elemToAdd :
-                vertToElems_singleLayer[connecNodes[_nNodePerElm * currentElem + j]]) {
-              toAdd.insert(elemToAdd);
-            }
+    // Debug check: plot circle of radius hMax around each vertex
+    if(false) {
+      for(auto &p : _hMax) {
+        std::string isIso = metricField ? "aniso" : "iso";
+        std::string posfile = "cercle" + std::to_string(p.first) + isIso + ".pos";
+        FILE *file = fopen(posfile.data(), "w");
+        fprintf(file, "View\"cercle%s%d\"{\n", isIso.data(), p.first);
+        double x[2] = {0., 0.};
+        x[0] = mesh->getVertex(p.first)->x();
+        x[1] = mesh->getVertex(p.first)->y();
+        if(metricField) {
+          drawSingleEllipse(file, x, metricField->getMetricAtSequentialTag(p.first), 1, 30);
+        } else {
+          double r = p.second;
+          drawCircle(file, x, r, 30);
+        }
+        fprintf(file, "};\n");
+        fclose(file);
+      }
+    }
+
+    // Dumb brute-force: check all vertices and add to patch if closer than _hMax
+    for(auto &pair : _hMax) {
+      int vertex = pair.first;
+      Vertex *vi = mesh->getVertex(vertex);
+
+      bool enoughAdjacentVertices = false;
+
+      do {
+        for(auto vertex_j : _vertices) {
+          Vertex *vj = mesh->getVertex(vertex_j);
+          double dist = sqrt((vi->x() - vj->x()) * (vi->x() - vj->x()) +
+                             (vi->y() - vj->y()) * (vi->y() - vj->y()));
+          if(dist <= 1.01 * pair.second) {
+            vertToVerts[vertex].insert(vertex_j);
           }
         }
 
-        for(auto elemToAdd : toAdd) {
-          pair.second.insert(elemToAdd);
+        pair.second *= 2.;
+
+        if(_isVertexBoundary.at(vertex) && vertToVerts.at(vertex).size() >= minVerticesOnBoundary)
+          enoughAdjacentVertices = true;
+        if(!_isVertexBoundary.at(vertex) && vertToVerts.at(vertex).size() >= minVertices)
+          enoughAdjacentVertices = true;
+
+      } while(!enoughAdjacentVertices);
+    }
+
+    if(_reconstructAtHighOrderNodes) {
+      // Another strategy for P2 patches: just merge the patches of extremities
+      for(int i = 0; i < nElm; ++i) {
+        for(int j = 3; j < 6; ++j) {
+          int e1 = j - 3;
+          int e2 = (j - 2) % 3;
+          int vertex = connecNodes[_nNodePerElm * i + j];
+          int v1 = connecNodes[_nNodePerElm * i + e1];
+          int v2 = connecNodes[_nNodePerElm * i + e2];
+          for(auto connectedVertex : vertToVerts.at(v1))
+            vertToVerts[vertex].insert(connectedVertex);
+          for(auto connectedVertex : vertToVerts.at(v2))
+            vertToVerts[vertex].insert(connectedVertex);
         }
       }
-    } while(!enoughAdjacentVertices);
+    }
+
+  } else {
+    // Do not use patch definition from Zhang & Naga,
+    // instead use only layers of elements and associated vertices.
+    // Maybe more suited for anisotropic meshes.
+    // Create vertex patch and check if enough vertices
+    std::set<int> toAdd;
+    for(auto &pair : vertToElems) {
+      int vertex = pair.first;
+      bool enoughAdjacentVertices = false;
+
+      do {
+        // Insert vertices of adjacent elements to set of connected vertices
+        for(auto elem : pair.second) {
+          int nVerticesPerElem = reconstructAtHighOrderNodes ? _nNodePerElm : 3;
+          for(int j = 0; j < nVerticesPerElem; ++j) {
+            vertToVerts[vertex].insert(connecNodes[_nNodePerElm * elem + j]);
+            if(_isVertexBoundary[vertex] &&
+               !_isVertexBoundary[connecNodes[_nNodePerElm * elem + j]])
+              vertToInteriorVerts[vertex].insert(connecNodes[_nNodePerElm * elem + j]);
+          }
+        }
+
+        // Check that there are enough adjacent vertices
+        if(_isVertexBoundary[vertex] && vertToVerts[vertex].size() >= minVerticesOnBoundary)
+          enoughAdjacentVertices = true;
+        if(!_isVertexBoundary[vertex] && vertToVerts[vertex].size() >= minVertices)
+          enoughAdjacentVertices = true;
+
+        if(!enoughAdjacentVertices) {
+          toAdd.clear();
+
+          // Add one layer of elements
+          // These are the elements connected to the current patch of elements
+          // Take only the first layer, as the patch of elements may have grown already
+          for(auto currentElem : pair.second) {
+            for(int j = 0; j < 3; ++j) {
+              for(auto elemToAdd :
+                  vertToElems_singleLayer[connecNodes[_nNodePerElm * currentElem + j]]) {
+                toAdd.insert(elemToAdd);
+              }
+            }
+          }
+
+          for(auto elemToAdd : toAdd) {
+            pair.second.insert(elemToAdd);
+          }
+        }
+      } while(!enoughAdjacentVertices);
+    }
   }
 
 #else
@@ -362,7 +389,6 @@ feNewPatch::feNewPatch(const feCncGeo *cnc, feMesh *mesh, bool reconstructAtHigh
 #endif
 
   // Compute the scaling
-  std::vector<double> geoCoord(3 * _nNodePerElm, 0.);
   for(auto &v : vertToElems) {
     Vertex *vv = mesh->getVertex(v.first);
     double maxXdist = 0.;
@@ -378,31 +404,30 @@ feNewPatch::feNewPatch(const feCncGeo *cnc, feMesh *mesh, bool reconstructAtHigh
     _scaling[v.first] = {fmax(maxXdist, maxYdist), fmax(maxXdist, maxYdist)};
   }
 
+  // Some debug plots
   if(false) {
     system("rm vertexPatch*.pos");
     // Draw connected interior vertices
-    std::vector<double> geoCoord(3 * _nNodePerElm, 0.);
     for(auto &v : vertToVerts) {
-      if(_isVertexBoundary[v.first]) {
-        std::string posfile = "vertexPatch" + std::to_string(v.first) + ".pos";
-        FILE *file = fopen(posfile.data(), "w");
-        fprintf(file, "View\"vertexPatch\"{\n");
-        Vertex *v1 = mesh->getVertex(v.first);
-        fprintf(file, "SP(%g,%g,%g){%g};\n", v1->x(), v1->y(), 0., 1.);
-        for(auto vertex : v.second) {
-          Vertex *vv = mesh->getVertex(vertex);
-          fprintf(file, "SP(%g,%g,%g){%g};\n", vv->x(), vv->y(), 0., 1.);
-        }
-        fprintf(file, "};\n");
-        fclose(file);
+      // if(_isVertexBoundary[v.first]) {
+      std::string posfile = "vertexPatch" + std::to_string(v.first) + ".pos";
+      FILE *file = fopen(posfile.data(), "w");
+      fprintf(file, "View\"vertexPatch%d\"{\n", v.first);
+      Vertex *v1 = mesh->getVertex(v.first);
+      fprintf(file, "SP(%g,%g,%g){%g};\n", v1->x(), v1->y(), 0., 1.);
+      for(auto vertex : v.second) {
+        Vertex *vv = mesh->getVertex(vertex);
+        fprintf(file, "SP(%g,%g,%g){%g};\n", vv->x(), vv->y(), 0., 1.);
       }
+      fprintf(file, "};\n");
+      fclose(file);
+      // }
     }
   }
 
   if(false) {
     system("rm interiorVertices*.pos");
     // Draw connected interior vertices
-    std::vector<double> geoCoord(3 * _nNodePerElm, 0.);
     for(auto &v : vertToInteriorVerts) {
       std::string posfile = "interiorVertices" + std::to_string(v.first) + ".pos";
       FILE *file = fopen(posfile.data(), "w");
@@ -421,7 +446,6 @@ feNewPatch::feNewPatch(const feCncGeo *cnc, feMesh *mesh, bool reconstructAtHigh
   if(false) {
     system("rm patch*.pos");
     // Draw patches
-    std::vector<double> geoCoord(3 * _nNodePerElm, 0.);
     for(auto &v : vertToElems) {
       std::string posfile = "patch" + std::to_string(v.first) + ".pos";
       FILE *file = fopen(posfile.data(), "w");
@@ -441,28 +465,48 @@ feNewPatch::feNewPatch(const feCncGeo *cnc, feMesh *mesh, bool reconstructAtHigh
 //
 void feNewPatch::increasePatchSize(feMesh *mesh, const feCncGeo *cnc, const int vertex)
 {
-  // Add a layer of elements to the set in vertToElems
-  const std::vector<int> &connecNodes = cnc->getVerticesConnectivity();
-  std::set<int> toAdd;
-  std::set<int> &connectedElements = vertToElems.at(vertex);
+  if(_useOriginalZhangNagaPatchDefinition) {
+    // For the original patch based on longest edge ball
+    // Double the hMax and try again
+    _hMax.at(vertex) *= 2.;
+    double hMax = _hMax.at(vertex);
 
-  for(auto currentElem : connectedElements) {
-    for(int j = 0; j < _nNodePerElm; ++j) {
-      for(auto elemToAdd : vertToElems_singleLayer[connecNodes[_nNodePerElm * currentElem + j]]) {
-        toAdd.insert(elemToAdd);
+    // Loop and check for new vertices
+    Vertex *vi = mesh->getVertex(vertex);
+
+    for(auto vertex_j : _vertices) {
+      Vertex *vj = mesh->getVertex(vertex_j);
+      double dist =
+        sqrt((vi->x() - vj->x()) * (vi->x() - vj->x()) + (vi->y() - vj->y()) * (vi->y() - vj->y()));
+      if(dist <= 1.01 * hMax) {
+        vertToVerts.at(vertex).insert(vertex_j);
       }
     }
-  }
 
-  for(auto e : toAdd) {
-    connectedElements.insert(e);
-  }
+  } else {
+    // Add a layer of elements to the set in vertToElems
+    const std::vector<int> &connecNodes = cnc->getVerticesConnectivity();
+    std::set<int> toAdd;
+    std::set<int> &connectedElements = vertToElems.at(vertex);
 
-  // Add the vertices of the connected elements set to vertToVerts
-  for(auto elem : connectedElements) {
-    int nVerticesPerElem = _reconstructAtHighOrderNodes ? _nNodePerElm : 3;
-    for(int j = 0; j < nVerticesPerElem; ++j) {
-      vertToVerts[vertex].insert(connecNodes[_nNodePerElm * elem + j]);
+    for(auto currentElem : connectedElements) {
+      for(int j = 0; j < _nNodePerElm; ++j) {
+        for(auto elemToAdd : vertToElems_singleLayer[connecNodes[_nNodePerElm * currentElem + j]]) {
+          toAdd.insert(elemToAdd);
+        }
+      }
+    }
+
+    for(auto e : toAdd) {
+      connectedElements.insert(e);
+    }
+
+    // Add the vertices of the connected elements set to vertToVerts
+    for(auto elem : connectedElements) {
+      int nVerticesPerElem = _reconstructAtHighOrderNodes ? _nNodePerElm : 3;
+      for(int j = 0; j < nVerticesPerElem; ++j) {
+        vertToVerts[vertex].insert(connecNodes[_nNodePerElm * elem + j]);
+      }
     }
   }
 }
@@ -756,7 +800,7 @@ void feNewRecovery::computeVertexLeastSquareMatrices2D()
   const std::map<int, std::set<int> > &vertToVerts = _patch->getVerticesPatches();
   const std::map<int, std::pair<double, double> > &scaling = _patch->getScaling();
 
-  int maxPatchIncreases = 2;
+  int maxPatchIncreases = 5;
 
 #if defined(HAVE_OMP)
 #pragma omp parallel
@@ -981,6 +1025,8 @@ void feNewRecovery::computeRHSAndSolve_noIntegral(int numRecoveries, int nRecove
                 // and P3 interpolant. Interpolate solution at vertex.
                 pos[0] = xvj;
                 pos[1] = yvj;
+                // TODO: Search only in the element patch or better directly provide the reference
+                // coord if there is a way to obtain them easily
                 bool wasFound = _mesh->locateVertex(pos.data(), elm, r, 1e-6);
                 if(!wasFound) {
                   feInfo(
@@ -1481,9 +1527,6 @@ void feNewRecovery::computeRecoveryAtAllElementDOF(PPR recoveredField, const int
                                                    std::vector<double> &recoveryAtDOFS,
                                                    bool computeAtP1VerticesOnly)
 {
-  // Simply evaluate the recoveries at (0,0)
-  // if there is one recovery at each DOF (i.e. linear interpolation
-  // on P1 mesh or P2 interpolation on P2 mesh)
   int nFunctions = _intSpace->getNumFunctions() / _intSpace->getNumComponents();
 
   // Only fill the first 3 entries (even if triangle is P2)
@@ -1499,10 +1542,10 @@ void feNewRecovery::computeRecoveryAtAllElementDOF(PPR recoveredField, const int
     return;
   }
 
-  // Polynomials for the geometry and interpolants match: fast case, just get recovery at (0,0)
   int geometryDegree = getGeometricInterpolantDegree(_cnc->getInterpolant());
   int interpolantDegree = _intSpace->getPolynomialDegree();
   if(geometryDegree == interpolantDegree) {
+    // Polynomials for the geometry and interpolants match: fast case, just get recovery at (0,0)
     for(int iDOF = 0; iDOF < nFunctions; ++iDOF) {
       int vertex = _cnc->getVertexConnectivity(iElm, iDOF);
       if(recoveredField == PPR::RECOVERY) {
@@ -1543,8 +1586,7 @@ void feNewRecovery::computeRecoveryAtAllElementDOF(PPR recoveredField, const int
     double r[3], xLoc[2];
     const std::vector<double> &referenceCoordinates = _intSpace->getLcoor();
 
-    for(int iDOF = 3; iDOF < nFunctions; ++iDOF)
-    {
+    for(int iDOF = 3; iDOF < nFunctions; ++iDOF) {
       // Get reference and physical coordinates of dof
       r[0] = referenceCoordinates[3 * iDOF + 0];
       r[1] = referenceCoordinates[3 * iDOF + 1];
@@ -1555,7 +1597,6 @@ void feNewRecovery::computeRecoveryAtAllElementDOF(PPR recoveredField, const int
       dofLocation dloc = _intSpace->getDOFLocation(iDOF);
 
       if(dloc == dofLocation::EDGE) {
-
         // Average the evaluations at the DOF of the two polynomials
         // associated to the edge extremities.
         // For now only 2 evaluations, ideally 3 if geometry is P2
@@ -1590,7 +1631,7 @@ void feNewRecovery::computeRecoveryAtAllElementDOF(PPR recoveredField, const int
           double xe = GEOCOORD[3 * indexEdgeVertex[iE] + 0];
           double ye = GEOCOORD[3 * indexEdgeVertex[iE] + 1];
 
-          #if defined(TREAT_BOUNDARIES)
+#if defined(TREAT_BOUNDARIES)
           // There is no polynomial stored at the edge extremity if it's a boundary vertex
           // Evaluate from the interior vertices of the edge extremity instead
           if(isVertexBoundary[ve]) {
@@ -1601,24 +1642,24 @@ void feNewRecovery::computeRecoveryAtAllElementDOF(PPR recoveredField, const int
               vInt = _mesh->getVertex(vi);
               xLoc[0] = POS_VEC[0] - vInt->x();
               xLoc[1] = POS_VEC[1] - vInt->y();
-              #if defined(APPLY_SCALING)
+#if defined(APPLY_SCALING)
               xLoc[0] /= scaling.at(vi).first;
               xLoc[1] /= scaling.at(vi).second;
-              #endif
+#endif
               evalOnEdge += evaluatePolynomial(recoveredField, index, vi, xLoc);
             }
             evalOnEdge /= (double)connectedInteriorVertices.size();
             pFromExtremities[iE] = evalOnEdge;
           } else
-          #endif
+#endif
           {
             // Local coordinates in the frame centered at vertex ve0/ve1
             xLoc[0] = POS_VEC[0] - xe;
             xLoc[1] = POS_VEC[1] - ye;
-            #if defined(APPLY_SCALING)
+#if defined(APPLY_SCALING)
             xLoc[0] /= scaling.at(ve).first;
             xLoc[1] /= scaling.at(ve).second;
-            #endif
+#endif
             pFromExtremities[iE] = evaluatePolynomial(recoveredField, index, ve, xLoc);
           }
 
@@ -1643,10 +1684,12 @@ void feNewRecovery::computeRecoveryAtAllElementDOF(PPR recoveredField, const int
         recoveryAtDOFS[iDOF] = alpha * pFromExtremities[0] + (1. - alpha) * pFromExtremities[1];
 
       } else if(dloc == dofLocation::ELEMENT) {
-
         // What weights should we use to average the evaluations
         // at DOFs inside the element?
-        // Try just interpolating using the geometry's space for now
+        // Try just interpolating using the geometry's space for now:
+        // This is correct for a P1 mesh, because then it's the barycentric coordinates.
+        // For P2 mesh, the Lagrange P2 function can be negative, so it's not a good choice for
+        // weights... Try Bézier functions?
 
         int numFunctionsGeometry = _cnc->getFeSpace()->getNumFunctions();
         std::vector<double> evaluationsAtElementDOF(numFunctionsGeometry);
@@ -1656,16 +1699,16 @@ void feNewRecovery::computeRecoveryAtAllElementDOF(PPR recoveredField, const int
           double ygeo = GEOCOORD[3 * i + 1];
           xLoc[0] = POS_VEC[0] - xgeo;
           xLoc[1] = POS_VEC[1] - ygeo;
-          #if defined(APPLY_SCALING)
+#if defined(APPLY_SCALING)
           feInfo("FIXME: add scaling when interpolating at ELEMENT dof");
           exit(-1);
-          #endif
+#endif
           evaluationsAtElementDOF[i] = evaluatePolynomial(recoveredField, index, vertex, xLoc);
         }
 
-        // Interpolate the evaluations at DOF inside element
+        // Weight the evaluations at DOF inside element using Lagrange functions for the geometric
+        // space (see remark above, ideally it should be always positive weights).
         recoveryAtDOFS[iDOF] = _geoSpace->interpolateField(evaluationsAtElementDOF, r);
-
       }
     }
   }
@@ -1772,7 +1815,7 @@ double feNewRecovery::averageRecoveryEvaluations(PPR recoveredField, const int i
 // (not the geometric interpolant)
 // Note: this is *not* equivalent to evaluating each polynomial at the quad node, then averaging
 
-thread_local std::vector<double> RECOVERY_AT_DOFS(10);
+thread_local std::vector<double> RECOVERY_AT_DOFS(15);
 
 double feNewRecovery::evaluateRecoveryAtQuadNode(PPR recoveredField, const int index,
                                                  const int iElm, const int iQuadNode)
@@ -1781,7 +1824,7 @@ double feNewRecovery::evaluateRecoveryAtQuadNode(PPR recoveredField, const int i
   // Attempt: evaluating each polynomial at the quad node, then averaging
   return averageRecoveryEvaluationsAtQuadNode(recoveredField, index, iElm, iQuadNode);
 #else
-  // The "classic" Zhang and Naga method: interpolate the data at DOFS using the interpolation
+  // The Zhang and Naga method: weight evaluation at DOFS then use the Lagrange interpolation
   // functions
   computeRecoveryAtAllElementDOF(recoveredField, index, iElm, RECOVERY_AT_DOFS);
   if(_intSpace->getNumComponents() > 1)
@@ -1861,8 +1904,9 @@ double feNewRecovery::evaluateRecoveryLinear(PPR recoveredField, const int index
 
 feNewRecovery::feNewRecovery(feSpace *space, int indexComponent, feMesh *mesh, feSolution *sol,
                              std::string meshName, std::string metricMeshName,
-                             bool reconstructAtHighOrderNodes, bool append, feMetric *metricField,
-                             feMetaNumber *numbering)
+                             bool reconstructAtHighOrderNodes,
+                             bool useOriginalZhangNagaPatchDefinition, bool append,
+                             feMetric *metricField, feMetaNumber *numbering)
   : _mesh(mesh), _sol(sol), _numbering(numbering), _componentToRecover(indexComponent),
     _intSpace(space), _cnc(space->getCncGeo()), _nElm(_cnc->getNumElements()),
     _nNodePerElm(_cnc->getNumVerticesPerElem()), _geoSpace(_cnc->getFeSpace()),
@@ -1891,7 +1935,8 @@ feNewRecovery::feNewRecovery(feSpace *space, int indexComponent, feMesh *mesh, f
     exit(-1);
   }
 
-  _patch = new feNewPatch(_cnc, _mesh, reconstructAtHighOrderNodes, _degSol, metricField);
+  _patch = new feNewPatch(_cnc, _mesh, reconstructAtHighOrderNodes,
+                          useOriginalZhangNagaPatchDefinition, _degSol, metricField);
 
   // Assign a 1D quadrature rule to compute transformed edges lengths
   feQuadrature rule1d(8, geometryType::LINE);
@@ -1941,22 +1986,17 @@ feNewRecovery::feNewRecovery(feSpace *space, int indexComponent, feMesh *mesh, f
   int nRecoveredFields = 0;
   int nRecoveredDerivatives = 0;
   int numRecoveries;
-  int maxDerivativeDegree = _degSol + 1;
+  int maxDerivativeDegree = fmax(4, _degSol + 1);
   _numTotalRecoveries = 0;
   _numTotalDerivatives = 0;
 
+  // Need to loop only to maxDerivativeDegree, and not +1 because we take the derivative of the last
+  // recovered So recover up to 2 and take derivative for 3rd order derivative for example.
   for(int iDerivative = 0; iDerivative < maxDerivativeDegree; ++iDerivative) {
     // Reconstruct solution (for i = 0) or derivatives (i > 0)
     numRecoveries = pow(_dim, iDerivative);
     _numTotalRecoveries += numRecoveries;
     _numTotalDerivatives += 2. * numRecoveries;
-
-    if(iDerivative == 0) {
-      feInfoCond(FE_VERBOSE > 0, "\t\tRecovering solution...");
-    } else {
-      feInfoCond(FE_VERBOSE > 0, "\t\tRecovering %d derivatives of order %d...", numRecoveries,
-                 iDerivative);
-    }
 
     tic();
 #if defined(ORIGINAL_ZHANG_NAGA)
@@ -1965,18 +2005,12 @@ feNewRecovery::feNewRecovery(feSpace *space, int indexComponent, feMesh *mesh, f
 #else
     this->computeRHSAndSolve(numRecoveries, nRecoveredFields, nRecoveredDerivatives, iDerivative);
 #endif
-    if(iDerivative == 0) {
-      feInfoCond(FE_VERBOSE > 0, "\t\tRecovered solution in %f s", toc());
-    } else {
-      feInfoCond(FE_VERBOSE > 0, "\t\tRecovered %d derivatives of order %d in %f s", numRecoveries,
-                 iDerivative, toc());
-    }
 
-    tic();
     for(int iRecovery = 0; iRecovery < numRecoveries; ++iRecovery) {
       computeDerivative(nRecoveredFields, iRecovery, iDerivative, output);
     }
-    feInfoCond(FE_VERBOSE > 0, "\t\tComputed derivatives in %f s", toc());
+    feInfoCond(FE_VERBOSE > 0, "\t\tComputed %d derivatives of order %d in %f s", 2 * numRecoveries,
+               iDerivative + 1, toc());
 
     if(iDerivative > 0) {
       nRecoveredDerivatives += numRecoveries;

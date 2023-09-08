@@ -59,7 +59,7 @@ int main(int argc, char **argv)
 
   int orderVelocity = 3;
   int orderPressure = 2;
-  int degreeQuadrature = 8;
+  int degreeQuadrature = 15;
 
   setVerbose(1);
 
@@ -93,7 +93,7 @@ int main(int argc, char **argv)
     int currentStep = 0;
     int nAdaptationCycles = 50;
 
-    double Re = 50.;
+    double Re = 10.;
 
     double D = 1.;
     double l1 = 15. * D - D/2.;
@@ -111,8 +111,8 @@ int main(int argc, char **argv)
         // meshFile = "anisoadapted.msh";
       } else {
         if(curved) {
-          // meshFile = "../data/jetImpactant_P2.msh";
-          meshFile = "../data/jetImpactant_P2_coarse.msh";
+          meshFile = "../data/jetImpactant_P2.msh";
+          // meshFile = "../data/jetImpactant_P2_coarse.msh";
           // meshFile = "../data/jetImpactant_dummy_P2.msh";
           // meshFile = "ref_curved.msh";
 	      } else {
@@ -170,7 +170,7 @@ int main(int argc, char **argv)
       feLinearSystem *linearSystem;
       feCheck(createLinearSystem(linearSystem, MKLPARDISO, forms, numbering.getNbUnknowns(), argc, argv));
 
-      bool curveTheMesh = false;
+      bool curveTheMesh = true;
 
       feExporter *exporter;
       feCheck(createVisualizationExporter(exporter, VTK, &numbering, &sol, &mesh, spaces));
@@ -250,7 +250,7 @@ int main(int argc, char **argv)
         feNewRecovery recW(wDomaine, 0, &mesh, &sol, meshFile, "recoveredDerivativesW.msh", reconstructAtHighOrderNodes, false, nullptr, &numbering);
         std::vector<feNewRecovery*> recoveredFields = {&recW};
         feCheck(mesh.adapt(recoveredFields, options, spaces, essentialSpaces, uDomaine,
-          nullptr, nullptr, nullptr, curveTheMesh, isBackMeshP2, curveMMGmesh, curveToMinimize::LENGTH));
+          nullptr, nullptr, nullptr, curveTheMesh, isBackMeshP2, curveMMGmesh, curveToMinimize::DISTORTION));
 
         // ============================================================================================================================================================
         // Interpolate solution on adapted mesh

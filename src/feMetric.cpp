@@ -189,7 +189,7 @@ void feMetric::metricScalingFromGmshSubstitute(std::map<int, MetricType> &metric
     }
   }
 
-  feInfo("Scaling : Integral of determinant = %+-1.16e", I);
+  feInfoCond(FE_VERBOSE > 0, "Scaling : Integral of determinant = %+-1.16e", I);
 
   // Apply scaling
   for(size_t i = 0; i < nodeTags.size(); i++) {
@@ -612,6 +612,7 @@ feStatus feMetric::computeMetricsP1(std::vector<std::size_t> &nodeTags, std::vec
 {
   double x[2], fxx, fxy, fyx, fyy;
   MetricTensor H;
+  std::vector<double> d2exact(4, 0.), pos(3, 0.);
 
   // Compute bounded absolute value of hessian at vertices (at nodetags)
   for(size_t i = 0; i < nodeTags.size(); i++) {
@@ -623,6 +624,18 @@ feStatus feMetric::computeMetricsP1(std::vector<std::size_t> &nodeTags, std::vec
     fxy = _recoveredFields[0]->evaluateRecovery(PPR::DERIVATIVE, 3, x);
     fyx = _recoveredFields[0]->evaluateRecovery(PPR::DERIVATIVE, 4, x);
     fyy = _recoveredFields[0]->evaluateRecovery(PPR::DERIVATIVE, 5, x);
+
+   if(_options.useAnalyticDerivatives) {
+      // Evaluate the analytic high-order derivatives instead
+      pos[0] = x[0];
+      pos[1] = x[1];
+      _options.analyticDerivatives->eval(0, pos, d2exact);
+
+      fxx = d2exact[0];
+      fxy = d2exact[1];
+      fyx = d2exact[2];
+      fyy = d2exact[3];
+    }
 
     H(0, 0) = fxx;
     H(0, 1) = (fxy + fyx) / 2.;
@@ -820,6 +833,7 @@ feStatus feMetric::computeMetricsPn(std::vector<std::size_t> &nodeTags, std::vec
   {
     double x[2];
     MetricTensor Q;
+    std::vector<double> D3U_EXACT(8, 0.), D4U_EXACT(16, 0.), pos(3, 0.);
 
     int numIter;
     int nTheta = _options.logSimplexOptions.nThetaPerQuadrant;
@@ -842,6 +856,15 @@ feStatus feMetric::computeMetricsPn(std::vector<std::size_t> &nodeTags, std::vec
       // Get the coefficients of the homogeneous error polynomial at vertex
       std::vector<double> &errorCoeff = errorCoeffAtVertices[_nodeTag2sequentialTag[nodeTags[i]]];
 
+      // IMPORTANT: This should be correct and t converges with rate 3 for tanh and a = 10.
+      // The error coefficient are multiplied by the corresponding binomial coefficient
+      // WHEN EVALUATING THE ERROR POLYNOMIAL, see feMetricTools.cpp.
+      // This allows to factorize the homogeneous polynomial.
+      // Both methods in "evaluateHomogeneousErrorPolynomial" multiply the error coefficients,
+      // so the values in "errorCoeff" should be d^(k+1) u / dx^(k1) dy^(k2), 
+      // without any coefficient in front. So for the mixed derivatives, the result
+      // stored in errorCoeff must be divided since they were summed in feNewRecovery.
+
       // Divide the mixed derivatives coefficient by the corresponding binomial coefficient.
       // Coefficients in errorCoeff are the sum of all relevant terms in 
       // the homogeneous polynomial, counting multiple times repeated exponents,
@@ -855,6 +878,41 @@ feStatus feMetric::computeMetricsPn(std::vector<std::size_t> &nodeTags, std::vec
         errorCoeff[1] /= 4.;
         errorCoeff[2] /= 6.;
         errorCoeff[3] /= 4.;
+      }
+
+      if(_options.useAnalyticDerivatives) {
+        pos[0] = x[0];
+        pos[1] = x[1];
+        pos[2] = 0.;
+        // Evaluate the analytic high-order derivatives instead
+        if(_options.polynomialDegree == 2) {
+          
+          _options.analyticDerivatives->eval(0, pos, D3U_EXACT);
+
+          double uxxx = D3U_EXACT[0];
+          double uxxy = D3U_EXACT[1];
+          double uxyy = D3U_EXACT[3];
+          double uyyy = D3U_EXACT[7];
+
+          errorCoeff[0] = uxxx;
+          errorCoeff[1] = uxxy;
+          errorCoeff[2] = uxyy;
+          errorCoeff[3] = uyyy;
+
+        } else if(_options.polynomialDegree == 3) {
+
+          _options.analyticDerivatives->eval(0, pos, D4U_EXACT);
+
+          errorCoeff[0] =  D4U_EXACT[0];
+          errorCoeff[1] = (D4U_EXACT[1] + D4U_EXACT[2] + D4U_EXACT[4] + D4U_EXACT[8]) / 4.;
+          errorCoeff[2] = (D4U_EXACT[3] + D4U_EXACT[5] + D4U_EXACT[6] + D4U_EXACT[9] + D4U_EXACT[10] + D4U_EXACT[12]) / 6.;
+          errorCoeff[3] = (D4U_EXACT[7] + D4U_EXACT[11] + D4U_EXACT[13] + D4U_EXACT[14]) / 4.;
+          errorCoeff[4] =  D4U_EXACT[15];
+
+        } else {
+          feInfo("TEMPORARY ERROR MESSAGE: CANNOT COMPUTE ANALYTIC DERIVATIVES FOR THIS POLYNOMIAL DEGREE");
+          exit(-1);
+        }
       }
 
       bool res = computeMetricLogSimplexStraight(x, errorCoeff, _options.polynomialDegree, nTheta,
@@ -1229,7 +1287,7 @@ feStatus feMetric::computeMetrics()
 
 #if !defined(ONLY_TEST_METRIC_INTERPOLATION_CONVERGENCE)
   // Apply scaling and gradation only when not testing for metric interpolation convergence
-  if(debug) drawEllipsoids("rawMetrics.pos", _metricTensorAtNodetags, nodeTags, coord, 100, 30);
+  if(debug) drawEllipsoids("rawMetrics.pos", _metricTensorAtNodetags, nodeTags, coord, _options.plotSizeFactor, 30);
 
   if(_options.method != adaptationMethod::CURVED_EXTREME_SIZES) {
     // Scale the metric field
@@ -1263,7 +1321,7 @@ feStatus feMetric::computeMetrics()
                                     exponentForDeterminant);
 
     if(debug)
-      drawEllipsoids("metricsAfterScaling.pos", _metricTensorAtNodetags, nodeTags, coord, 100, 30);
+      drawEllipsoids("metricsAfterScaling.pos", _metricTensorAtNodetags, nodeTags, coord, _options.plotSizeFactor, 30);
   }
 
   // Apply gradation
@@ -1274,7 +1332,7 @@ feStatus feMetric::computeMetrics()
   }
 
   if(debug)
-    drawEllipsoids("metricsAfterGradation.pos", _metricTensorAtNodetags, nodeTags, coord, 100, 30);
+    drawEllipsoids("metricsAfterGradation.pos", _metricTensorAtNodetags, nodeTags, coord, _options.plotSizeFactor, 30);
 #endif
 
   // Precompute all metric logarithms

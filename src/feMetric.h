@@ -88,6 +88,11 @@ public:
 
   // Print a bunch of ellipses and other visualisation files if set to true
   bool debug = true;
+  double plotSizeFactor = 100.;
+
+  // Use analytic derivatives? For debug only
+  bool useAnalyticDerivatives = false;
+  feVectorFunction *analyticDerivatives = nullptr;
 
   //
   // More advanced parameters:

@@ -427,6 +427,7 @@ public:
                  bool isBackmeshP2,
                  bool curveMMGmesh,
                  curveToMinimize target,
+                 bool generateAnisoMeshBeforeCurving = true, 
                  feRecovery *oldRecovery = nullptr);
 
   void drawConnectivityToPOSfile(const std::string &cncName, const std::string &fileName);
