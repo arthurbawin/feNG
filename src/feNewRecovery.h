@@ -41,11 +41,15 @@ protected:
   // Determines the dimension and rank of the target mass/least squares matrix
   int _degSol;
 
+  int _elementOrder;
+
   bool _reconstructAtHighOrderNodes;
   bool _useOriginalZhangNagaPatchDefinition;
 
   // A set of element tags for each mesh vertex
   std::map<int, std::set<int> > vertToElems;
+  // Patch of elements for boundary vertices. It contains n0 layers of elements, where n0 is the minimum integer to contain at least one interior vertex
+  std::map<int, std::set<int> > boundaryVertToElems;
   // A set of element tags for each mesh vertex - Only the first layer of adjacent elements
   std::map<int, std::set<int> > vertToElems_singleLayer;
   // A set of vertices tags for mesh vertices (the vertices of its elem patch)
@@ -231,6 +235,12 @@ private:
                                     std::vector<double> &dxds,
                                     const double tEnd,
                                     int whichEdge, double &firstHalf, double &secondHalf);
+  double computeTransformedEdgeLength2(std::vector<double> &geoCoord,
+                                                 std::vector<double> &dxdr,
+                                                 std::vector<double> &dxds,
+                                                 const double t0,
+                                                 const double tEnd,
+                                                 int whichEdge);
   void computeRecoveryAtAllElementDOF(PPR recoveredField,
                                       const int index,
                                       const int iElm,

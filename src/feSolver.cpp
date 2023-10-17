@@ -228,7 +228,7 @@ feStatus StationarySolver::makeSteps(int nSteps)
   // }
 
   // Export for visualization
-  if(_exportData.exporter != nullptr) {
+  if(_exportData.exportEveryNSteps != 0 && _exportData.exporter != nullptr) {
     std::string fileName = _exportData.fileNameRoot + "Stationary.vtk";
     feCheck(_exportData.exporter->writeStep(fileName));
   }

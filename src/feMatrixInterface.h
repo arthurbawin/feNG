@@ -107,13 +107,16 @@ public:
   SquareMatrix &operator=(SquareMatrix &&) noexcept;
 
   int getSize() const;
+  int rank() const;
 
   double &operator()(int i, int j);
+  double operator()(int i, int j) const;
   Vector operator*(const Vector &v);
 
   void print() const;
 
   SquareMatrix inverse() const;
+  void inverse(SquareMatrix &) const;
 
 private:
   class SquareMatrixImpl;

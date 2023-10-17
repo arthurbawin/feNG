@@ -18,7 +18,7 @@ feNorm *activeNorm;
 #define USE_AVERAGED_EVALUATIONS false
 
 static double INITIAL_COORD[3];
-static double LARGE_VALUE_WHEN_FAILED = 1e10;
+static double LARGE_VALUE_WHEN_FAILED = std::numeric_limits<double>::infinity();;
 static std::vector<double> ELEM_ERROR_SQUARED;
 static double INITIAL_ERROR_SQUARED;
 static std::vector<double> GEO_COORD(18, 0.);

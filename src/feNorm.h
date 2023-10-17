@@ -155,14 +155,17 @@ public:
   double computeLpNormOnElement(int p, bool error, int iElm);
   double computeLpErrorExactVsEstimator(int p);
   double computeLInfErrorExactVsEstimator();
-  double computeSemiH1ErrorExactVsEstimator(bool excludeBoundary, double boundaryWidth);
-  double computeSemiH1ErrorExactVsEstimator_Linf(bool excludeBoundary, double boundaryWidth);
-  double computeErrorHessianExactVsEstimator(bool excludeBoundary, double boundaryWidth);
-  double computeErrorHessianExactVsEstimator_Linf(bool excludeBoundary, double boundaryWidth);
-  double computeErrorThirdDerivativesExactVsEstimator(bool excludeBoundary, double boundaryWidth);
-  double computeErrorThirdDerivativesExactVsEstimator_Linf(bool excludeBoundary, double boundaryWidth);
-  double computeErrorFourthDerivativesExactVsEstimator(bool excludeBoundary, double boundaryWidth);
-  double computeErrorFourthDerivativesExactVsEstimator_Linf(bool excludeBoundary, double boundaryWidth);
+  double computeLInfErrorExactVsEstimatorAtVertices();
+
+  // Bounding box is given as [xmin, xmax, ymin, ymax]
+  double computeSemiH1ErrorExactVsEstimator(bool excludeBoundary, double boundaryWidth, double boundingBox[4]);
+  double computeSemiH1ErrorExactVsEstimator_Linf(bool excludeBoundary, double boundaryWidth, double boundingBox[4]);
+  double computeErrorHessianExactVsEstimator(bool excludeBoundary, double boundaryWidth, double boundingBox[4]);
+  double computeErrorHessianExactVsEstimator_Linf(bool excludeBoundary, double boundaryWidth, double boundingBox[4]);
+  double computeErrorThirdDerivativesExactVsEstimator(bool excludeBoundary, double boundaryWidth, double boundingBox[4]);
+  double computeErrorThirdDerivativesExactVsEstimator_Linf(bool excludeBoundary, double boundaryWidth, double boundingBox[4]);
+  double computeErrorFourthDerivativesExactVsEstimator(bool excludeBoundary, double boundaryWidth, double boundingBox[4]);
+  double computeErrorFourthDerivativesExactVsEstimator_Linf(bool excludeBoundary, double boundaryWidth, double boundingBox[4]);
 
   // iComponent = 0 : e_x
   // iComponent = 1 : e_y

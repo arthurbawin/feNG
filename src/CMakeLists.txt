@@ -15,6 +15,7 @@ set(feNG_SRC
     feMeshRead.cpp
     feMessage.cpp
     feMetric.cpp
+    feMetricAnalyticP2.cpp
     feMetricInterpolation.cpp
     feMetricTools.cpp
     feMinimizeInterpolationError.cpp

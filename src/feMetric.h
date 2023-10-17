@@ -205,6 +205,8 @@ public:
   // New interface
   feStatus createVertex2NodeMap(std::vector<std::size_t> &nodeTags, std::vector<double> &coord);
   feStatus computeMetricsP1(std::vector<std::size_t> &nodeTags, std::vector<double> &coord, bool isotropic = false);
+  void computeAnalyticMetricP2(std::vector<double> &errorCoeff, MetricTensor &Q, const double alpha);
+  feStatus computeMetricsP2(std::vector<std::size_t> &nodeTags, std::vector<double> &coord);
   feStatus computeMetricsPn(std::vector<std::size_t> &nodeTags, std::vector<double> &coord, bool isotropic = false);
   feStatus computeMetricsGoalOrientedP1(std::vector<std::size_t> &nodeTags, std::vector<double> &coord);
   feStatus computeMetricsCurvedLogSimplex(std::vector<std::size_t> &nodeTags, std::vector<double> &coord, bool useInducedDirections = false);

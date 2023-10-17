@@ -383,9 +383,46 @@ double feNorm::computeLInfErrorExactVsEstimator()
   return res;
 }
 
+double feNorm::computeLInfErrorExactVsEstimatorAtVertices()
+{
+  double normMax = 0.0, uRec, uExact, t = _solution->getCurrentTime();
+
+  if(_rec == nullptr) {
+    feErrorMsg(FE_STATUS_ERROR, "Cannot compute Lp error estimate "
+                                " because feRecovery (solution reconstruction) is NULL");
+    exit(-1);
+  }
+
+  tic();
+
+  const std::vector<int> &verticesConnectivity = _cnc->getVerticesConnectivity();
+
+  // Compute max norm at mesh vertices at some distance L from the boundary (Guo, Zhang, Zhao paper)
+  int nVerticesPerElem = _cnc->getNumVerticesPerElem();
+  for(int iElm = 0; iElm < _nElm; ++iElm) {
+    _spaces[0]->_mesh->getCoord(_cnc, iElm, MY_GEOCOORD);
+
+    for(int iVert = 0; iVert < nVerticesPerElem; ++iVert) {
+      MY_POS[0] = MY_GEOCOORD[3 * iVert + 0];
+      MY_POS[1] = MY_GEOCOORD[3 * iVert + 1];
+      MY_POS[2] = MY_GEOCOORD[3 * iVert + 2];
+
+      // Check if vertex is at distance L from the boundary
+      uExact = _scalarSolution->eval(t, MY_POS);
+      int vertex = verticesConnectivity[nVerticesPerElem * iElm + iVert];
+      uRec = _rec->evaluateRecoveryAtVertex(PPR::RECOVERY, 0, vertex);
+      normMax = fmax(normMax, fabs(uExact - uRec));
+    }
+  }
+
+  feInfo("Computed norm of error in %f s", toc());
+
+  return normMax;
+}
+
 thread_local std::vector<double> GRAD_U_EXACT(2, 0.);
 
-double feNorm::computeSemiH1ErrorExactVsEstimator(bool excludeBoundary, double boundaryWidth)
+double feNorm::computeSemiH1ErrorExactVsEstimator(bool excludeBoundary, double boundaryWidth, double boundingBox[4])
 {
   double res = 0.0, t = _solution->getCurrentTime();
 
@@ -416,8 +453,8 @@ double feNorm::computeSemiH1ErrorExactVsEstimator(bool excludeBoundary, double b
         // Hard-coded for [0,1] x [0,1] box
         double x = MY_POS[0];
         double y = MY_POS[1];
-        // bool inBox = (x >       boundaryWidth && y >      boundaryWidth && x < 1. - boundaryWidth && y < 1. - boundaryWidth);
-        bool inBox = (x > -1. + boundaryWidth && y > -1 + boundaryWidth && x < 1. - boundaryWidth && y < 1. - boundaryWidth);
+        bool inBox = (x > boundingBox[0] + boundaryWidth && y > boundingBox[2] + boundaryWidth 
+                 && x < boundingBox[1] - boundaryWidth && y < boundingBox[3] - boundaryWidth);
 
         if(!excludeBoundary) inBox = true;
 
@@ -440,7 +477,7 @@ double feNorm::computeSemiH1ErrorExactVsEstimator(bool excludeBoundary, double b
   return sqrt(res);
 }
 
-double feNorm::computeSemiH1ErrorExactVsEstimator_Linf(bool excludeBoundary, double boundaryWidth)
+double feNorm::computeSemiH1ErrorExactVsEstimator_Linf(bool excludeBoundary, double boundaryWidth, double boundingBox[4])
 {
   double normMax = 0.0, gradRec[2], t = _solution->getCurrentTime();
 
@@ -468,8 +505,8 @@ double feNorm::computeSemiH1ErrorExactVsEstimator_Linf(bool excludeBoundary, dou
       // Hard-coded for [0,1] x [0,1] box
       double x = MY_POS[0];
       double y = MY_POS[1];
-      // bool inBox = (x >       boundaryWidth && y >      boundaryWidth && x < 1. - boundaryWidth && y < 1. - boundaryWidth);
-      bool inBox = (x > -1. + boundaryWidth && y > -1 + boundaryWidth && x < 1. - boundaryWidth && y < 1. - boundaryWidth);
+      bool inBox = (x > boundingBox[0] + boundaryWidth && y > boundingBox[2] + boundaryWidth 
+                 && x < boundingBox[1] - boundaryWidth && y < boundingBox[3] - boundaryWidth);
 
       if(!excludeBoundary) inBox = true;
 
@@ -495,7 +532,7 @@ double feNorm::computeSemiH1ErrorExactVsEstimator_Linf(bool excludeBoundary, dou
 
 thread_local std::vector<double> HESS_U_EXACT(4, 0.);
 
-double feNorm::computeErrorHessianExactVsEstimator(bool excludeBoundary, double boundaryWidth)
+double feNorm::computeErrorHessianExactVsEstimator(bool excludeBoundary, double boundaryWidth, double boundingBox[4])
 {
   double res = 0.0, t = _solution->getCurrentTime();
 
@@ -526,8 +563,8 @@ double feNorm::computeErrorHessianExactVsEstimator(bool excludeBoundary, double 
         // Hard-coded for [0,1] x [0,1] box
         double x = MY_POS[0];
         double y = MY_POS[1];
-        // bool inBox = (x >       boundaryWidth && y >      boundaryWidth && x < 1. - boundaryWidth && y < 1. - boundaryWidth);
-        bool inBox = (x > -1. + boundaryWidth && y > -1 + boundaryWidth && x < 1. - boundaryWidth && y < 1. - boundaryWidth);
+        bool inBox = (x > boundingBox[0] + boundaryWidth && y > boundingBox[2] + boundaryWidth 
+                 && x < boundingBox[1] - boundaryWidth && y < boundingBox[3] - boundaryWidth);
 
         if(!excludeBoundary) inBox = true;
 
@@ -566,7 +603,7 @@ double feNorm::computeErrorHessianExactVsEstimator(bool excludeBoundary, double 
   return sqrt(res);
 }
 
-double feNorm::computeErrorHessianExactVsEstimator_Linf(bool excludeBoundary, double boundaryWidth)
+double feNorm::computeErrorHessianExactVsEstimator_Linf(bool excludeBoundary, double boundaryWidth, double boundingBox[4])
 {
   double t = _solution->getCurrentTime();
 
@@ -616,8 +653,8 @@ double feNorm::computeErrorHessianExactVsEstimator_Linf(bool excludeBoundary, do
       // Hard-coded for [0,1] x [0,1] box
       double x = MY_POS[0];
       double y = MY_POS[1];
-      // bool inBox = (x >       boundaryWidth && y >      boundaryWidth && x < 1. - boundaryWidth && y < 1. - boundaryWidth);
-        bool inBox = (x > -1. + boundaryWidth && y > -1 + boundaryWidth && x < 1. - boundaryWidth && y < 1. - boundaryWidth);
+      bool inBox = (x > boundingBox[0] + boundaryWidth && y > boundingBox[2] + boundaryWidth 
+                 && x < boundingBox[1] - boundaryWidth && y < boundingBox[3] - boundaryWidth);
 
       if(!excludeBoundary) inBox = true;
 
@@ -645,7 +682,7 @@ double feNorm::computeErrorHessianExactVsEstimator_Linf(bool excludeBoundary, do
 
 thread_local std::vector<double> D3U_EXACT(8, 0.);
 
-double feNorm::computeErrorThirdDerivativesExactVsEstimator(bool excludeBoundary, double boundaryWidth)
+double feNorm::computeErrorThirdDerivativesExactVsEstimator(bool excludeBoundary, double boundaryWidth, double boundingBox[4])
 {
   double res = 0.0, t = _solution->getCurrentTime();
 
@@ -676,8 +713,8 @@ double feNorm::computeErrorThirdDerivativesExactVsEstimator(bool excludeBoundary
         // Hard-coded for [0,1] x [0,1] box
         double x = MY_POS[0];
         double y = MY_POS[1];
-        // bool inBox = (x >       boundaryWidth && y >      boundaryWidth && x < 1. - boundaryWidth && y < 1. - boundaryWidth);
-        bool inBox = (x > -1. + boundaryWidth && y > -1 + boundaryWidth && x < 1. - boundaryWidth && y < 1. - boundaryWidth);
+        bool inBox = (x > boundingBox[0] + boundaryWidth && y > boundingBox[2] + boundaryWidth 
+                 && x < boundingBox[1] - boundaryWidth && y < boundingBox[3] - boundaryWidth);
 
         if(!excludeBoundary) inBox = true;
 
@@ -722,7 +759,7 @@ double feNorm::computeErrorThirdDerivativesExactVsEstimator(bool excludeBoundary
   return sqrt(res);
 }
 
-double feNorm::computeErrorThirdDerivativesExactVsEstimator_Linf(bool excludeBoundary, double boundaryWidth)
+double feNorm::computeErrorThirdDerivativesExactVsEstimator_Linf(bool excludeBoundary, double boundaryWidth, double boundingBox[4])
 {
   double normMax = 0.0, d3Rec[8], t = _solution->getCurrentTime();
 
@@ -750,8 +787,8 @@ double feNorm::computeErrorThirdDerivativesExactVsEstimator_Linf(bool excludeBou
       // Hard-coded for [0,1] x [0,1] box
       double x = MY_POS[0];
       double y = MY_POS[1];
-      // bool inBox = (x >       boundaryWidth && y >      boundaryWidth && x < 1. - boundaryWidth && y < 1. - boundaryWidth);
-        bool inBox = (x > -1. + boundaryWidth && y > -1 + boundaryWidth && x < 1. - boundaryWidth && y < 1. - boundaryWidth);
+      bool inBox = (x > boundingBox[0] + boundaryWidth && y > boundingBox[2] + boundaryWidth 
+                 && x < boundingBox[1] - boundaryWidth && y < boundingBox[3] - boundaryWidth);
 
       if(!excludeBoundary) inBox = true;
 
@@ -783,7 +820,7 @@ double feNorm::computeErrorThirdDerivativesExactVsEstimator_Linf(bool excludeBou
 
 thread_local std::vector<double> D4U_EXACT(16, 0.);
 
-double feNorm::computeErrorFourthDerivativesExactVsEstimator(bool excludeBoundary, double boundaryWidth)
+double feNorm::computeErrorFourthDerivativesExactVsEstimator(bool excludeBoundary, double boundaryWidth, double boundingBox[4])
 {
   double res = 0.0, t = _solution->getCurrentTime();
 
@@ -814,8 +851,8 @@ double feNorm::computeErrorFourthDerivativesExactVsEstimator(bool excludeBoundar
         // Hard-coded for [0,1] x [0,1] box
         double x = MY_POS[0];
         double y = MY_POS[1];
-        // bool inBox = (x >       boundaryWidth && y >      boundaryWidth && x < 1. - boundaryWidth && y < 1. - boundaryWidth);
-        bool inBox = (x > -1. + boundaryWidth && y > -1 + boundaryWidth && x < 1. - boundaryWidth && y < 1. - boundaryWidth);
+        bool inBox = (x > boundingBox[0] + boundaryWidth && y > boundingBox[2] + boundaryWidth 
+                 && x < boundingBox[1] - boundaryWidth && y < boundingBox[3] - boundaryWidth);
 
         if(!excludeBoundary) inBox = true;
 
@@ -867,7 +904,7 @@ double feNorm::computeErrorFourthDerivativesExactVsEstimator(bool excludeBoundar
   return sqrt(res);
 }
 
-double feNorm::computeErrorFourthDerivativesExactVsEstimator_Linf(bool excludeBoundary, double boundaryWidth)
+double feNorm::computeErrorFourthDerivativesExactVsEstimator_Linf(bool excludeBoundary, double boundaryWidth, double boundingBox[4])
 {
   double normMax = 0.0, d4Rec[16], t = _solution->getCurrentTime();
 
@@ -881,9 +918,17 @@ double feNorm::computeErrorFourthDerivativesExactVsEstimator_Linf(bool excludeBo
 
   const std::vector<int> &verticesConnectivity = _cnc->getVerticesConnectivity();
 
+  FILE *file = fopen("testInside.pos", "w");
+  fprintf(file, "View\"testInside\"{\n");
+
+  FILE *myfile;
+  myfile = fopen("errorFourthDerivative_Linf.pos", "w");
+  fprintf(myfile, "View \"errorOnElements\"{\n");
+
   // Compute max norm at mesh vertices at some distance L from the boundary (Guo, Zhang, Zhao paper)
   int nVerticesPerElem = _cnc->getNumVerticesPerElem();
   for(int iElm = 0; iElm < _nElm; ++iElm) {
+    double maxErrorOnElement = 0.;
     _spaces[0]->_mesh->getCoord(_cnc, iElm, MY_GEOCOORD);
 
     for(int iVert = 0; iVert < nVerticesPerElem; ++iVert) {
@@ -895,12 +940,13 @@ double feNorm::computeErrorFourthDerivativesExactVsEstimator_Linf(bool excludeBo
       // Hard-coded for [0,1] x [0,1] box
       double x = MY_POS[0];
       double y = MY_POS[1];
-      // bool inBox = (x >       boundaryWidth && y >      boundaryWidth && x < 1. - boundaryWidth && y < 1. - boundaryWidth);
-        bool inBox = (x > -1. + boundaryWidth && y > -1 + boundaryWidth && x < 1. - boundaryWidth && y < 1. - boundaryWidth);
+      bool inBox = (x > boundingBox[0] + boundaryWidth && y > boundingBox[2] + boundaryWidth 
+                 && x < boundingBox[1] - boundaryWidth && y < boundingBox[3] - boundaryWidth);
 
       if(!excludeBoundary) inBox = true;
 
       if(inBox) {
+        fprintf(file, "SP(%g,%g,0.){%g};\n",x, y, 1.);
         _vectorSolution->eval(t, MY_POS, D4U_EXACT);
 
         int vertex = verticesConnectivity[nVerticesPerElem * iElm + iVert];
@@ -924,10 +970,18 @@ double feNorm::computeErrorFourthDerivativesExactVsEstimator_Linf(bool excludeBo
 
         for(int i = 0; i < 16; ++i) {
           normMax = fmax(normMax, fabs(D4U_EXACT[i] - d4Rec[i]));
+          maxErrorOnElement = fmax(maxErrorOnElement, fabs(D4U_EXACT[i] - d4Rec[i]));
         }
+
+        // Plot error
+        _cnc->writeElementToPOS(myfile, MY_GEOCOORD, maxErrorOnElement);
       }
     }
   }
+  fprintf(file, "};\n");
+  fclose(file);
+  fprintf(myfile, "};\n");
+  fclose(myfile);
 
   feInfo("Computed norm of d4u error in %f s", toc());
 

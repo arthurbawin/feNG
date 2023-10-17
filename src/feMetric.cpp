@@ -610,42 +610,56 @@ void feMetric::writeMetricField(std::vector<std::size_t> &nodeTags, std::vector<
 feStatus feMetric::computeMetricsP1(std::vector<std::size_t> &nodeTags, std::vector<double> &coord,
                                     bool isotropic)
 {
-  double x[2], fxx, fxy, fyx, fyy;
-  MetricTensor H;
-  std::vector<double> d2exact(4, 0.), pos(3, 0.);
+  #if defined(HAVE_OMP)
+  #pragma omp parallel
+  #endif
+  {
+    double x[2], fxx, fxy, fyx, fyy;
+    MetricTensor H;
+    std::vector<double> d2exact(4, 0.), pos(3, 0.);
 
-  // Compute bounded absolute value of hessian at vertices (at nodetags)
-  for(size_t i = 0; i < nodeTags.size(); i++) {
-    x[0] = coord[3 * i + 0];
-    x[1] = coord[3 * i + 1];
+    // Compute bounded absolute value of hessian at vertices (at nodetags)
+    #if defined(HAVE_OMP)
+    #pragma omp for schedule(dynamic, 1)
+    #endif
+    for(size_t i = 0; i < nodeTags.size(); i++) {
+      x[0] = coord[3 * i + 0];
+      x[1] = coord[3 * i + 1];
 
-    // Evaluate 2nd order derivatives
-    fxx = _recoveredFields[0]->evaluateRecovery(PPR::DERIVATIVE, 2, x);
-    fxy = _recoveredFields[0]->evaluateRecovery(PPR::DERIVATIVE, 3, x);
-    fyx = _recoveredFields[0]->evaluateRecovery(PPR::DERIVATIVE, 4, x);
-    fyy = _recoveredFields[0]->evaluateRecovery(PPR::DERIVATIVE, 5, x);
+      // Evaluate 2nd order derivatives
+      fxx = _recoveredFields[0]->evaluateRecovery(PPR::DERIVATIVE, 2, x);
+      fxy = _recoveredFields[0]->evaluateRecovery(PPR::DERIVATIVE, 3, x);
+      fyx = _recoveredFields[0]->evaluateRecovery(PPR::DERIVATIVE, 4, x);
+      fyy = _recoveredFields[0]->evaluateRecovery(PPR::DERIVATIVE, 5, x);
 
-   if(_options.useAnalyticDerivatives) {
-      // Evaluate the analytic high-order derivatives instead
-      pos[0] = x[0];
-      pos[1] = x[1];
-      _options.analyticDerivatives->eval(0, pos, d2exact);
+     if(_options.useAnalyticDerivatives) {
+        // Evaluate the analytic high-order derivatives instead
+        pos[0] = x[0];
+        pos[1] = x[1];
+        _options.analyticDerivatives->eval(0, pos, d2exact);
 
-      fxx = d2exact[0];
-      fxy = d2exact[1];
-      fyx = d2exact[2];
-      fyy = d2exact[3];
+        fxx = d2exact[0];
+        fxy = d2exact[1];
+        fyx = d2exact[2];
+        fyy = d2exact[3];
+      }
+
+      H(0, 0) = fxx;
+      H(0, 1) = (fxy + fyx) / 2.;
+      H(1, 0) = (fxy + fyx) / 2.;
+      H(1, 1) = fyy;
+
+      #if defined(HAVE_OMP)
+      #pragma omp critical
+      #endif
+      {
+        if(isotropic)
+          _metricTensorAtNodetags[nodeTags[i]] =
+            H.boundEigenvaluesOfAbsIsotropic(_lambdaMin, _lambdaMax);
+        else
+          _metricTensorAtNodetags[nodeTags[i]] = H.boundEigenvaluesOfAbs(_lambdaMin, _lambdaMax);
+      }
     }
-
-    H(0, 0) = fxx;
-    H(0, 1) = (fxy + fyx) / 2.;
-    H(1, 0) = (fxy + fyx) / 2.;
-    H(1, 1) = fyy;
-    if(isotropic)
-      _metricTensorAtNodetags[nodeTags[i]] =
-        H.boundEigenvaluesOfAbsIsotropic(_lambdaMin, _lambdaMax);
-    else
-      _metricTensorAtNodetags[nodeTags[i]] = H.boundEigenvaluesOfAbs(_lambdaMin, _lambdaMax);
   }
 
   return FE_STATUS_OK;
@@ -699,6 +713,84 @@ feStatus feMetric::computeMetricsGoalOrientedP1(std::vector<std::size_t> &nodeTa
     // H *= fabs(dotProd);
     H *= fabs(p);
     _metricTensorAtNodetags[nodeTags[i]] = H.boundEigenvaluesOfAbs(_lambdaMin, _lambdaMax);
+  }
+
+  return FE_STATUS_OK;
+}
+
+feStatus feMetric::computeMetricsP2(std::vector<std::size_t> &nodeTags, std::vector<double> &coord)
+{
+  feInfoCond(FE_VERBOSE >= VERBOSE_MODERATE,
+             "Computing metric tensors (ANISO_P2) for %d vertices...", nodeTags.size());
+
+  size_t numVertices = nodeTags.size();
+  std::map<int, std::vector<double> > &errorCoeffAtVertices = _recoveredFields[0]->getErrorCoefficients();
+
+#if defined(HAVE_OMP)
+#pragma omp parallel
+#endif
+  {
+    double x[2];
+    MetricTensor Q;
+    std::vector<double> D3U_EXACT(8, 0.), pos(3, 0.);
+
+// Compute bounded absolute value of upper bound Q at vertices (at nodetags)
+#if defined(HAVE_OMP)
+#pragma omp for
+#endif
+    for(size_t i = 0; i < numVertices; i++) {
+
+      x[0] = coord[3 * i + 0];
+      x[1] = coord[3 * i + 1];
+
+      // Get the coefficients of the homogeneous error polynomial at vertex
+      std::vector<double> &errorCoeff = errorCoeffAtVertices[_nodeTag2sequentialTag[nodeTags[i]]];
+
+      // IMPORTANT: This should be correct and t converges with rate 3 for tanh and a = 10.
+      // The error coefficient are multiplied by the corresponding binomial coefficient
+      // WHEN EVALUATING THE ERROR POLYNOMIAL, see feMetricTools.cpp.
+      // This allows to factorize the homogeneous polynomial.
+      // Both methods in "evaluateHomogeneousErrorPolynomial" multiply the error coefficients,
+      // so the values in "errorCoeff" should be d^(k+1) u / dx^(k1) dy^(k2), 
+      // without any coefficient in front. So for the mixed derivatives, the result
+      // stored in errorCoeff must be divided since they were summed in feNewRecovery.
+
+      // Divide the mixed derivatives coefficient by the corresponding binomial coefficient.
+      // Coefficients in errorCoeff are the sum of all relevant terms in 
+      // the homogeneous polynomial, counting multiple times repeated exponents,
+      // e.g. x^2*y appears 3 times as xxy, xyx and yxx.
+      errorCoeff[1] /= 3.;
+      errorCoeff[2] /= 3.;
+
+      if(_options.useAnalyticDerivatives) {
+        // Evaluate the analytic high-order derivatives instead
+        pos[0] = x[0];
+        pos[1] = x[1];
+        pos[2] = 0.;
+        _options.analyticDerivatives->eval(0, pos, D3U_EXACT);
+        double uxxx = D3U_EXACT[0];
+        double uxxy = D3U_EXACT[1];
+        double uxyy = D3U_EXACT[3];
+        double uyyy = D3U_EXACT[7];
+        errorCoeff[0] = uxxx;
+        errorCoeff[1] = uxxy;
+        errorCoeff[2] = uxyy;
+        errorCoeff[3] = uyyy;
+      }
+
+      double maxDiameter = 1.;
+      computeAnalyticMetricP2(errorCoeff, Q, maxDiameter);
+
+      #if defined(HAVE_OMP)
+      #pragma omp critical
+      #endif
+      {
+        _metricTensorAtNodetags[nodeTags[i]](0,0) = Q(0,0);
+        _metricTensorAtNodetags[nodeTags[i]](0,1) = Q(0,1);
+        _metricTensorAtNodetags[nodeTags[i]](1,0) = Q(1,0);
+        _metricTensorAtNodetags[nodeTags[i]](1,1) = Q(1,1);
+      }
+    }
   }
 
   return FE_STATUS_OK;
@@ -772,6 +864,7 @@ static MetricTensor metricAparicioEstrems(double x, double y)
   D(1, 1) = 1. / (h * h);
 
   // Gradient of (x, (10y - cos(2*pi*x)) / c)
+  // FIXME: gradPhi should be a SquareMatrix, not a MetricTensor
   MetricTensor gradPhi(0.);
   gradPhi(0, 0) = 1.;
   gradPhi(0, 1) = 0.;
@@ -1261,7 +1354,10 @@ feStatus feMetric::computeMetrics()
     }
 
     case adaptationMethod::ANISO_PN:
-      s = computeMetricsPn(nodeTags, coord);
+      if(_options.polynomialDegree == 2)
+        s = computeMetricsP2(nodeTags, coord);
+      else
+        s = computeMetricsPn(nodeTags, coord);
       break;
 
     case adaptationMethod::GOAL_ORIENTED_ANISO_P1:

@@ -287,6 +287,7 @@ SquareMatrix::SquareMatrix(const int size) : _impl(std::make_unique<SquareMatrix
 int SquareMatrix::getSize() const { return _impl->_size; }
 
 double &SquareMatrix::operator()(int i, int j) { return _impl->_m(i, j); }
+double SquareMatrix::operator()(int i, int j) const { return _impl->_m(i, j); }
 
 // Matrix-vector product
 Vector SquareMatrix::operator*(const Vector &v)
@@ -306,6 +307,17 @@ SquareMatrix SquareMatrix::inverse() const
   SquareMatrix inv(_impl->_size);
   inv._impl->setMatrix(this->_impl->_m.inverse());
   return inv;
+}
+
+void SquareMatrix::inverse(SquareMatrix &res) const
+{
+  res._impl->setMatrix(this->_impl->_m.inverse());
+}
+
+int SquareMatrix::rank() const
+{
+  Eigen::FullPivLU<Eigen::MatrixXd> lu_decomp(this->_impl->_m);
+  return lu_decomp.rank();
 }
 
 // ============================================================
