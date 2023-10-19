@@ -759,8 +759,8 @@ feStatus feMetric::computeMetricsP2(std::vector<std::size_t> &nodeTags, std::vec
       // Coefficients in errorCoeff are the sum of all relevant terms in 
       // the homogeneous polynomial, counting multiple times repeated exponents,
       // e.g. x^2*y appears 3 times as xxy, xyx and yxx.
-      errorCoeff[1] /= 3.;
-      errorCoeff[2] /= 3.;
+      // errorCoeff[1] /= 3.;
+      // errorCoeff[2] /= 3.;
 
       if(_options.useAnalyticDerivatives) {
         // Evaluate the analytic high-order derivatives instead
@@ -773,12 +773,12 @@ feStatus feMetric::computeMetricsP2(std::vector<std::size_t> &nodeTags, std::vec
         double uxyy = D3U_EXACT[3];
         double uyyy = D3U_EXACT[7];
         errorCoeff[0] = uxxx;
-        errorCoeff[1] = uxxy;
-        errorCoeff[2] = uxyy;
+        errorCoeff[1] = 3. * uxxy;
+        errorCoeff[2] = 3. * uxyy;
         errorCoeff[3] = uyyy;
       }
 
-      double maxDiameter = 1.;
+      double maxDiameter = 100.;
       computeAnalyticMetricP2(errorCoeff, Q, maxDiameter);
 
       #if defined(HAVE_OMP)
@@ -1405,8 +1405,7 @@ feStatus feMetric::computeMetrics()
       case adaptationMethod::ANISO_PN:
       case adaptationMethod::CURVED_LS:
       case adaptationMethod::CURVED_LS_INDUCED_DIRECTIONS:
-        // exponentInIntegral = p * (deg + 1.0) / (p * (deg + 1.0) + n);
-        exponentInIntegral = p * ((deg + 1.0) / 2.) / (p * (deg + 1.0) + n);
+        exponentInIntegral = p * (deg + 1.0) / (2.* (p * (deg + 1.0) + n));
         exponentForDeterminant = -1. / (p * (deg + 1.) + n);
         break;
       default:

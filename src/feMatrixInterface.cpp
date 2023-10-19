@@ -148,6 +148,15 @@ double MetricTensor::maxCoeff() const
   return this->_impl->_m.maxCoeff();
 }
 
+double MetricTensor::getMinEigenvalue() const
+{
+  Eigen::EigenSolver<Eigen::Matrix2d> es;
+  Eigen::EigenSolver<Eigen::Matrix2d>::EigenvalueType ev;
+  es.compute(_impl->_m, true);
+  ev = es.eigenvalues();
+  return fmin(ev(0).real(), ev(1).real());
+}
+
 MetricTensor MetricTensor::absoluteValueEigen() const
 {
   Eigen::EigenSolver<Eigen::Matrix2d> es;
@@ -301,6 +310,8 @@ Vector SquareMatrix::operator*(const Vector &v)
 }
 
 void SquareMatrix::print() const { std::cout << _impl->_m << std::endl; }
+
+double SquareMatrix::determinant() const { return _impl->_m.determinant(); }
 
 SquareMatrix SquareMatrix::inverse() const
 {

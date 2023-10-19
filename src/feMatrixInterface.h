@@ -45,6 +45,8 @@ public:
 
   double maxCoeff() const;
 
+  double getMinEigenvalue() const;
+
   // Compute diagonalization M = R * |D| * Rt
   // with |D| = diag( |lambda1|, |lambda2| )
   MetricTensor absoluteValueEigen() const;
@@ -115,6 +117,7 @@ public:
 
   void print() const;
 
+  double determinant() const;
   SquareMatrix inverse() const;
   void inverse(SquareMatrix &) const;
 
