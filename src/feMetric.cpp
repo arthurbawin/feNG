@@ -653,11 +653,29 @@ feStatus feMetric::computeMetricsP1(std::vector<std::size_t> &nodeTags, std::vec
       #pragma omp critical
       #endif
       {
-        if(isotropic)
-          _metricTensorAtNodetags[nodeTags[i]] =
-            H.boundEigenvaluesOfAbsIsotropic(_lambdaMin, _lambdaMax);
-        else
-          _metricTensorAtNodetags[nodeTags[i]] = H.boundEigenvaluesOfAbs(_lambdaMin, _lambdaMax);
+        if(_options.targetNorm == Norm::Lp) {
+          if(isotropic)
+            _metricTensorAtNodetags[nodeTags[i]] =
+              H.boundEigenvaluesOfAbsIsotropic(_lambdaMin, _lambdaMax);
+          else
+            _metricTensorAtNodetags[nodeTags[i]] = H.boundEigenvaluesOfAbs(_lambdaMin, _lambdaMax);
+        } else {
+          // Target norm to minimize is H1. Use Mirebeau's analytical solution.
+          double a = fxx / 4.;
+          double b = ((fxy + fyx)/2.) / 4.;
+          double c = fyy / 4.;
+          if(fabs(a*c - b*b) < 1e-6) {
+            feInfo("a*c - b*b = %+-1.4e", a*c - b*b);
+            exit(-1);
+          }
+          double alpha = 100.;
+          H(0, 0) = 4. * (a*a + b*b);
+          H(0, 1) = 4. * (a*b + b*c);
+          H(1, 0) = 4. * (a*b + b*c);
+          H(1, 1) = 4. * (b*b + c*c);
+          // Limit the anisotropy (Mirebeau's thesis, Section 3.4.3 equation 3.74
+          _metricTensorAtNodetags[nodeTags[i]] = H.limitAnisotropy(alpha);
+        }
       }
     }
   }
@@ -778,8 +796,51 @@ feStatus feMetric::computeMetricsP2(std::vector<std::size_t> &nodeTags, std::vec
         errorCoeff[3] = uyyy;
       }
 
-      double maxDiameter = 100.;
-      computeAnalyticMetricP2(errorCoeff, Q, maxDiameter);
+      if(_options.targetNorm == Norm::Lp) {
+        double maxDiameter = 100.;
+        computeAnalyticMetricP2ForLpNorm(errorCoeff, Q, maxDiameter);
+      } else {
+        // Upper bound on grad(error)
+        // Those coefficients are such that
+        // pi(x,y) = a*x^3 + 3*b*x^2y + 3*c*xy^2 + d*y^3 
+        double a = errorCoeff[0] / 6.;
+        double b = errorCoeff[1] / 18.;
+        double c = errorCoeff[2] / 18.;
+        double d = errorCoeff[3] / 6.;
+        double disc = b*b*c*c - 4.*a*c*c*c - 4.*b*b*b*d + 18.*a*b*c*d - 27.*a*a*d*d;
+        if(fabs(disc) < 1e-6) {
+          feInfo("disc = %+-1.4e", disc);
+          exit(-1);
+        }
+        Q(0,0) = 9. * (a*a + 2.*b*b + c*c);
+        Q(0,1) = 9. * (a*b + 2.*b*c + c*d);
+        Q(1,0) = 9. * (a*b + 2.*b*c + c*d);
+        Q(1,1) = 9. * (b*b + 2.*c*c + d*d);
+        Q = Q.sqrt();
+
+        /////////////////////////////////////
+        // Check that the bound is satisfied, i.e. check that
+        //
+        //  || grad(pi) o (sqrt(2) * Q)^(-1/2) || <= 1
+        //
+        int nTheta = 100;
+        double dT = M_PI/nTheta;
+        double sup = 0.;
+        for(int iT = 0; iT < nTheta; ++iT) {
+          double z[2] = {cos(dT * iT), sin(dT * iT)};
+          // MetricTensor S = Q * sqrt(2.);
+          double normz = sqrt(z[0]*(Q(0,0)*z[0] + Q(0,1)*z[1]) + z[1]*(Q(0,1)*z[0] + Q(1,1)*z[1]));
+          double gx = 3.*a*z[0]*z[0] + 2.*(3.*b)*z[0]*z[1] + (3.*c)*z[1]*z[1];
+          double gy = 3.*d*z[1]*z[1] + 2.*(3.*c)*z[0]*z[1] + (3.*b)*z[0]*z[0];
+          double normu = sqrt(gx*gx + gy*gy);
+          sup = fmax(sup, normu/(normz*normz));
+        }
+        if(sup > 1.) {
+          feInfo("sup = %+-1.4e", sup);
+          exit(-1);
+        }
+        /////////////////////////////////////
+      }
 
       #if defined(HAVE_OMP)
       #pragma omp critical
@@ -1353,10 +1414,11 @@ feStatus feMetric::computeMetrics()
       break;
     }
 
+    case adaptationMethod::ANISO_P2:
+      s = computeMetricsP2(nodeTags, coord);
+      break;
+
     case adaptationMethod::ANISO_PN:
-      if(_options.polynomialDegree == 2)
-        s = computeMetricsP2(nodeTags, coord);
-      else
         s = computeMetricsPn(nodeTags, coord);
       break;
 
@@ -1394,26 +1456,42 @@ feStatus feMetric::computeMetrics()
     double deg = (double)_options.polynomialDegree;
 
     double exponentInIntegral, exponentForDeterminant;
-    switch(_options.method) {
-      case adaptationMethod::ISO_P1:
-      case adaptationMethod::ANISO_P1:
-      case adaptationMethod::GOAL_ORIENTED_ANISO_P1:
-        exponentInIntegral = p / (2. * p + n);
-        exponentForDeterminant = -1. / (2. * p + n);
-        break;
-      case adaptationMethod::ISO_PN:
-      case adaptationMethod::ANISO_PN:
-      case adaptationMethod::CURVED_LS:
-      case adaptationMethod::CURVED_LS_INDUCED_DIRECTIONS:
-        exponentInIntegral = p * (deg + 1.0) / (2.* (p * (deg + 1.0) + n));
-        exponentForDeterminant = -1. / (p * (deg + 1.) + n);
-        break;
-      default:
-        return feErrorMsg(FE_STATUS_ERROR, "No exponents provided to scale the metric field");
+
+    // switch(_options.method) {
+    //   case adaptationMethod::ISO_P1:
+    //   case adaptationMethod::ANISO_P1:
+    //   case adaptationMethod::GOAL_ORIENTED_ANISO_P1:
+    //     exponentInIntegral = p / (2. * p + n);
+    //     exponentForDeterminant = -1. / (2. * p + n);
+    //     break;
+    //   case adaptationMethod::ISO_PN:
+    //   case adaptationMethod::ANISO_P2:
+    //   case adaptationMethod::ANISO_PN:
+    //   case adaptationMethod::CURVED_LS:
+    //   case adaptationMethod::CURVED_LS_INDUCED_DIRECTIONS:
+    //     exponentInIntegral = p * (deg + 1.0) / (2.* (p * (deg + 1.0) + n));
+    //     exponentForDeterminant = -1. / (p * (deg + 1.) + n);
+    //     break;
+    //   default:
+    //     return feErrorMsg(FE_STATUS_ERROR, "No exponents provided to scale the metric field");
+    // }
+
+    if(_options.targetNorm == Norm::Lp) {
+      exponentInIntegral = p * (deg + 1.0) / (2.* (p * (deg + 1.0) + n));
+      exponentForDeterminant = -1. / (p * (deg + 1.) + n);
+    } else {
+      exponentInIntegral = p * deg / (2.* (p * deg + n));
+      exponentForDeterminant = -1. / (p * deg + n);
+      feInfo("Exponents for scaling = %+-1.4e - %+-1.4e", exponentForDeterminant, exponentInIntegral);
     }
 
     metricScalingFromGmshSubstitute(_metricTensorAtNodetags, nodeTags, exponentInIntegral,
                                     exponentForDeterminant);
+
+    // // Bound the eigenvalues according to hMin and hMax
+    // for(auto &pair : _metricTensorAtNodetags) {
+    //   pair.second = pair.second.boundEigenvalues(_lambdaMin, _lambdaMax);
+    // }
 
     if(debug)
       drawEllipsoids("metricsAfterScaling.pos", _metricTensorAtNodetags, nodeTags, coord, _options.plotSizeFactor, 30);

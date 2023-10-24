@@ -42,6 +42,8 @@ public:
   MetricTensor transpose() const;
   MetricTensor log() const;
   MetricTensor exp() const;
+  MetricTensor pow(const double &power) const;
+  MetricTensor sqrt() const;
 
   double maxCoeff() const;
 
@@ -53,9 +55,11 @@ public:
   // Compute diagonalization M = R * |D| * Rt
   // with |D| = diag( |lambda1|, |lambda2| )
   // and bound the eigenvalues between lMin and lMax
+  MetricTensor boundEigenvalues(const double lMin, const double lMax) const;
   MetricTensor boundEigenvaluesOfAbs(const double lMin, const double lMax) const;
   MetricTensor boundEigenvaluesOfAbsIsotropic(const double lMin, const double lMax) const;
   MetricTensor setEigenvectorsAndBoundEigenvalues(const double ev1[2], const double ev2[2], const double lMin, const double lMax) const;
+  MetricTensor limitAnisotropy(const double alpha) const;
 
   void print() const;
 

@@ -191,7 +191,7 @@ private:
   double computeL1Norm(bool error = false);
   double computeL2Norm(bool error = false);
   double computeLInfNorm(bool error = false);
-  double computeH1SemiNorm(int p, bool error = false);
+  double computeH1SemiNorm(bool error = false);
   double computeH1SemiNormErrorEstimator();
   double computeH1Norm(bool error = false);
   double computeArea();

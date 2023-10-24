@@ -29,6 +29,18 @@ bool TriangleP1::isInsidePhysical(double xyz[3], double tol)
   return Triangle::isInsideReference(uvw[0], uvw[1], uvw[2], tol);
 }
 
+double TriangleP1::sliverness()
+{
+  double a = sqrt( (_v[1]->x() - _v[0]->x())*(_v[1]->x() - _v[0]->x()) + (_v[1]->y() - _v[0]->y())*(_v[1]->y() - _v[0]->y()));
+  double b = sqrt( (_v[2]->x() - _v[1]->x())*(_v[2]->x() - _v[1]->x()) + (_v[2]->y() - _v[1]->y())*(_v[2]->y() - _v[1]->y()));
+  double c = sqrt( (_v[0]->x() - _v[2]->x())*(_v[0]->x() - _v[2]->x()) + (_v[0]->y() - _v[2]->y())*(_v[0]->y() - _v[2]->y()));
+  // Cosine rule
+  double tha = acos( (a*a + b*b - c*c) / (2.*a*b) );
+  double thb = acos( (b*b + c*c - a*a) / (2.*b*c) );
+  double thc = acos( (a*a + c*c - b*b) / (2.*a*c) );
+  return fmax(1., tan( fmax(tha, fmax(thb, thc))/2.) );
+}
+
 // Return true if the point xyz is inside the convex region delimited by the parabola
 // represented by its implicit form of parameters [A,B,C,D,E,F] such that 
 // f(x,y) = A * x^2 + B * y^2 + C * x * y + D * x + E * y + F.

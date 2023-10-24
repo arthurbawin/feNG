@@ -782,7 +782,7 @@ bool solveLP(linearProblem &myLP, Eigen::Matrix2d &L)
   }
 }
 
-#define LOG_SIMPLEX_DEBUG
+// #define LOG_SIMPLEX_DEBUG
 
 bool computeMetricLogSimplexStraight(const double *x, const std::vector<double> &errorCoefficients,
                                      const int degree, const int nThetaPerQuadrant,
@@ -883,39 +883,6 @@ bool computeMetricLogSimplexStraight(const double *x, const std::vector<double> 
         Qres(0,1) = Q(0,1);
         Qres(1,0) = Q(1,0);
         Qres(1,1) = Q(1,1);
-
-        /////////////////////
-        // Compare with analytic solution from Mirebeau
-        double a = errorCoefficients[0];
-        double b = errorCoefficients[1];
-        double c = errorCoefficients[2];
-        double d = errorCoefficients[3];
-        feInfo("%f - %f - %f - %f", a,b,c,d);
-        double B = 3*b;
-        double C = 3*c;
-        double disc = B*B*C*C - 4.*a*C*C*C - 4.*B*B*B*d + 18.*a*B*C*d - 27.*a*a*d*d;
-        if(disc > 0) {
-          Eigen::Matrix2d hPi;
-          double fac = 3. * 1./pow(2., 1./3.) * 1./pow(disc, 1./3.);
-          hPi(0,0) = fac * 2.*(b*b - a*c);
-          hPi(0,1) = fac * (b*c-a*d);
-          hPi(1,0) = fac * (b*c-a*d);
-          hPi(1,1) = fac * 2.*(c*c - b*d);
-          std::cout<<"hPi"<<std::endl;
-          std::cout<<hPi<<std::endl;
-          std::cout<<"Q"<<std::endl;
-          std::cout<<Q<<std::endl;
-          std::cout<<"ratio"<<std::endl;
-          feInfo("%f - %f - %f - %f",
-            hPi(0,0)/Q(0,0), 
-            hPi(0,1)/Q(0,1),
-            hPi(1,0)/Q(1,0),
-            hPi(1,1)/Q(1,1));
-          drawSingleEllipse(myfile, x, Q, 1, 30);
-          drawSingleEllipse(myfile, x, hPi, 1, 30);
-          fprintf(myfile, "};\n"); fclose(myfile);
-          exit(-1);
-        }
 
         #if defined(LOG_SIMPLEX_DEBUG)
         fprintf(myfile, "};\n"); fclose(myfile);

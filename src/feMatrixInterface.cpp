@@ -143,6 +143,20 @@ MetricTensor MetricTensor::exp() const
   return expm;
 }
 
+MetricTensor MetricTensor::pow(const double &power) const
+{
+  MetricTensor powm(1.0);
+  powm._impl->setMatrix(this->_impl->_m.pow(power));
+  return powm;
+}
+
+MetricTensor MetricTensor::sqrt() const
+{
+  MetricTensor sqrtm(1.0);
+  sqrtm._impl->setMatrix(this->_impl->_m.sqrt());
+  return sqrtm;
+}
+
 double MetricTensor::maxCoeff() const
 {
   return this->_impl->_m.maxCoeff();
@@ -166,6 +180,20 @@ MetricTensor MetricTensor::absoluteValueEigen() const
   Eigen::Matrix2d D = Eigen::Matrix2d::Identity();
   D(0, 0) = fabs(ev(0).real());
   D(1, 1) = fabs(ev(1).real());
+  MetricTensor res(1.0);
+  res._impl->setMatrix(es.eigenvectors().real() * D * es.eigenvectors().transpose().real());
+  return res;
+}
+
+MetricTensor MetricTensor::boundEigenvalues(const double lMin, const double lMax) const
+{
+  Eigen::EigenSolver<Eigen::Matrix2d> es;
+  Eigen::EigenSolver<Eigen::Matrix2d>::EigenvalueType ev;
+  es.compute(_impl->_m, true);
+  ev = es.eigenvalues();
+  Eigen::Matrix2d D = Eigen::Matrix2d::Identity();
+  D(0, 0) = fmin(lMax, fmax(lMin, ev(0).real()));
+  D(1, 1) = fmin(lMax, fmax(lMin, ev(1).real()));
   MetricTensor res(1.0);
   res._impl->setMatrix(es.eigenvectors().real() * D * es.eigenvectors().transpose().real());
   return res;
@@ -219,6 +247,27 @@ MetricTensor MetricTensor::setEigenvectorsAndBoundEigenvalues(const double ev1[2
   newEigenvectors(1,1) = ev2[1];
   MetricTensor res(1.0);
   res._impl->setMatrix(newEigenvectors * D * newEigenvectors.transpose());
+  return res;
+}
+
+MetricTensor MetricTensor::limitAnisotropy(const double alpha) const
+{
+  Eigen::EigenSolver<Eigen::Matrix2d> es;
+  Eigen::EigenSolver<Eigen::Matrix2d>::EigenvalueType ev;
+  es.compute(_impl->_m, true);
+  ev = es.eigenvalues();
+  Eigen::Matrix2d D = Eigen::Matrix2d::Identity();
+  double lambda = ev(0).real();
+  double mu     = ev(1).real();
+  if(lambda >= mu) {
+    D(0, 0) = lambda;
+    D(1, 1) = fmax(mu, lambda / (alpha*alpha));
+  } else {
+    D(0, 0) = fmax(lambda, mu / (alpha*alpha));
+    D(1, 1) = mu;
+  }
+  MetricTensor res(1.0);
+  res._impl->setMatrix(es.eigenvectors().real() * D * es.eigenvectors().transpose().real());
   return res;
 }
 

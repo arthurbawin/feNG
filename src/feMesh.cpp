@@ -395,6 +395,27 @@ feMesh2DP1::~feMesh2DP1()
   }
 }
 
+double feMesh2DP1::computeAverageSliverness(const double LpNorm)
+{
+  FILE *myfile = fopen("meshSliverness.txt", "w");
+  fprintf(myfile, "View \"sliverness\"{\n");
+
+  double res = 0.;
+  for(Triangle *t : _elements) {
+    double s = t->sliverness();
+    res += pow(s, LpNorm);
+
+    fprintf(myfile, "ST(%g,%g,%g,%g,%g,%g,%g,%g,%g){%g,%g,%g};\n",
+      t->getVertex(0)->x(), t->getVertex(0)->y(), 0.,
+      t->getVertex(1)->x(), t->getVertex(1)->y(), 0.,
+      t->getVertex(2)->x(), t->getVertex(2)->y(), 0., s, s, s);
+  }
+
+  fprintf(myfile, "};\n"); fclose(myfile);
+
+  return pow(res/(double)_elements.size(), 1./LpNorm);
+}
+
 // Callback to give the RTree to locate a physical point in the mesh.
 bool rtreeCallback(int id, void *ctx)
 {

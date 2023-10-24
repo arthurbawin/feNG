@@ -9,6 +9,12 @@
 
 #include "STensor3.h"
 
+enum class Norm
+{ 
+  // Target norm or seminorm to minimize with mesh adaptation
+  Lp, Wmp
+};
+
 enum class adaptationMethod
 { 
   // Isotropic adaptation minimizing linear interpolation error
@@ -19,6 +25,10 @@ enum class adaptationMethod
   ANISO_P1,
   // Same but for any order on straight meshes
   ISO_PN,
+  // Compute the analytic solution for the upper bound Q on the 3rd order derivatives
+  ANISO_P2,
+  // Compute an approximate the upper bound Q on the n+1th order derivatives
+  // using the logsimplex method from Coulaud & Loseille (2016)
   ANISO_PN,
   // Goal-oriented anisotropic adaptation for linear interpolant
   // Requires the computation of the adjoint solution p
@@ -63,10 +73,15 @@ public:
   // Maximum growth in the metric field if gradation is enabled
   // See F. Alauzet, Size gradation control of anisotropic meshes
   double gradation = 1.5;
+  // Target norm or seminorm to minimize - choice between Lp or Wmp
+  Norm targetNorm = Norm::Lp;
   // Target Lp norm in which the interpolation error is minimized
   // See e.g. Alauzet & Loseille, Multi-Dimensional Continuous Metric
   // for Mesh Adaptation
   double LpNorm = 2.;
+  double WmpNorm_mParam = 1.;
+  double WmpNorm_pParam = 2.;
+
   // Number of cycles to produce the final anisotropic mesh
   // One cycle = evaluate metric field, then remesh
   
@@ -205,7 +220,7 @@ public:
   // New interface
   feStatus createVertex2NodeMap(std::vector<std::size_t> &nodeTags, std::vector<double> &coord);
   feStatus computeMetricsP1(std::vector<std::size_t> &nodeTags, std::vector<double> &coord, bool isotropic = false);
-  void computeAnalyticMetricP2(std::vector<double> &errorCoeff, MetricTensor &Q, const double alpha);
+  void computeAnalyticMetricP2ForLpNorm(std::vector<double> &errorCoeff, MetricTensor &Q, const double maxDiameter);
   feStatus computeMetricsP2(std::vector<std::size_t> &nodeTags, std::vector<double> &coord);
   feStatus computeMetricsPn(std::vector<std::size_t> &nodeTags, std::vector<double> &coord, bool isotropic = false);
   feStatus computeMetricsGoalOrientedP1(std::vector<std::size_t> &nodeTags, std::vector<double> &coord);

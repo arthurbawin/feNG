@@ -402,6 +402,8 @@ public:
 
   int getGmshNodeTag(int iVertex) { return _sequentialNodeToGmshNode[iVertex]; }
 
+  double computeAverageSliverness(const double LpNorm);
+
   bool locateVertex(const double *x, int &iElm, double *u, double tol = 1e-12,
                     bool returnLocalElmTag = false, std::string targetConnectivity = "");
   bool locateVertexInElements(feCncGeo *cnc, const double *x, const std::vector<int> &elementsToSearch, int &iElm,

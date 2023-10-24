@@ -105,10 +105,10 @@ double feNorm::compute(normType type)
       res = this->computeLInfNorm(true);
       break;
     case SEMI_H1:
-      res = this->computeH1SemiNorm(2, false);
+      res = this->computeH1SemiNorm(false);
       break;
     case SEMI_H1_ERROR:
-      res = this->computeH1SemiNorm(2, true);
+      res = this->computeH1SemiNorm(true);
       break;
     case SEMI_H1_ERROR_ESTIMATE:
       res = this->computeH1SemiNormErrorEstimator();
@@ -1114,7 +1114,7 @@ double feNorm::computeLInfNorm(bool error)
   return res;
 }
 
-double feNorm::computeH1SemiNorm(int p, bool error)
+double feNorm::computeH1SemiNorm(bool error)
 {
   double res = 0.0, jac, dotProd, t = _solution->getCurrentTime();
   double graduh[3] = {0., 0., 0.};
@@ -1128,11 +1128,18 @@ double feNorm::computeH1SemiNorm(int p, bool error)
 
   ElementTransformation T;
 
+  FILE *myfile;
+  if(_plotErrorToFile) {
+    myfile = fopen(_errorPlotFileName.data(), "w");
+    fprintf(myfile, "View \"errorOnElements\"{\n");
+  }
+
   for(int iElm = 0; iElm < _nElm; ++iElm) {
     _spaces[0]->_mesh->getCoord(_cnc, iElm, _geoCoord);
 
     this->initializeLocalSolutionOnSpace(0, iElm);
 
+    double eLocSquared = 0.;
     for(int k = 0; k < _nQuad; ++k) {
       jac = _J[_nQuad * iElm + k];
       _cnc->computeElementTransformation(_geoCoord, k, jac, T);
@@ -1146,9 +1153,23 @@ double feNorm::computeH1SemiNorm(int p, bool error)
       graduh[2] -= gradu[2];
       dotProd = graduh[0] * graduh[0] + graduh[1] * graduh[1] + graduh[2] * graduh[2];
 
-      res += dotProd * jac * _w[k];
+      eLocSquared += dotProd * jac * _w[k];
+    }
+
+    res += eLocSquared;
+
+    double eLoc = sqrt(eLocSquared);
+    if(_plotErrorToFile) {
+      // Plot error
+      _cnc->writeElementToPOS(myfile, _geoCoord, eLoc);
     }
   }
+
+  if(_plotErrorToFile) {
+    fprintf(myfile, "};\n");
+    fclose(myfile);
+  }
+
   return sqrt(res);
 }
 
@@ -1200,7 +1221,7 @@ double feNorm::computeH1SemiNormErrorEstimator()
 double feNorm::computeH1Norm(bool error)
 {
   double L2 = this->computeLpNorm(2, error);
-  double SemiH1 = this->computeH1SemiNorm(2, error);
+  double SemiH1 = this->computeH1SemiNorm(error);
   return sqrt(L2 * L2 + SemiH1 * SemiH1);
 }
 

@@ -9,7 +9,7 @@ extern int FE_VERBOSE;
 #define TOL_HESS 1e-14
 #define TOL_LEADING_COEFF 1e-14
 #define TOL_ZERO 1e-14
-#define TOL_CHECK 1e-6
+#define TOL_CHECK 1e-4
 
 double LARGE_VALUE = 1e16;
 
@@ -103,11 +103,6 @@ int getCubicPolynomialRoots(const double a, const double b, const double c, cons
 
     const double d1 = 2.*b*b*b - 9.*a*b*c + 27.*a*a*d;
     const double delta = d1*d1 - 4.*d0*d0*d0;
-
-    PRINT(d0);
-    PRINT(d1);
-    PRINT(delta);
-    PRINT(disc);
 
     if(disc > 0) {
       // Three distinct real roots (but complex parameters in the process)
@@ -346,7 +341,6 @@ void computeDiameters(const double a, const double b, const double c, const doub
   double zPi[2], max_pz = 0.;
   for(int i = 0; i < nRealRoots; ++i) {
     double z = roots[i];
-    PRINT(z);
     double pz = fabs( (a*z*z*z + b*z*z + c*z + d)/pow(sqrt(z*z+1.),3) );
     if(pz > max_pz) {
       zPi[0] = z;
@@ -387,12 +381,6 @@ void computeDiameters(const double a, const double b, const double c, const doub
   zT[1] = phi(0,1) * zPi[0] + phi(1,1) * zPi[1];
   zTO[0] = phi(0,0) * zPiO[0] + phi(1,0) * zPiO[1];
   zTO[1] = phi(0,1) * zPiO[0] + phi(1,1) * zPiO[1];
-  PRINTVEC(zPi);
-  PRINTVEC(zPiO);
-  PRINTVEC(zI);
-  PRINTVEC(zIO);
-  PRINTMAT(phi);
-  PRINTMAT(invPhi);
 
   switch(factorizationCase) {
     case 2 :
@@ -686,69 +674,29 @@ void getTransitionMetric(const int factorizationCase, const double disc, const d
 
 }
                              
-void feMetric::computeAnalyticMetricP2(std::vector<double> &errorCoeff, MetricTensor &Q, const double maxDiameter)
+void feMetric::computeAnalyticMetricP2ForLpNorm(std::vector<double> &errorCoeff, MetricTensor &Q, const double maxDiameter)
 {
   double a = errorCoeff[0];
   double b = errorCoeff[1];
   double c = errorCoeff[2];
   double d = errorCoeff[3];
 
-  // a = 1.;
-  // b = 3.;
-  // c = -1.;
-  // d = -(2.*sqrt(pow(b*b-3.*a*c,3)) - 9.*a*b*c + 2.*b*b*b)/(27.*a*a);
-
-  // a = -10.;
-  // b = 5.;
-  // c = 2.;
-  // d = -1.;
-
-  // a = 6.;
-  // b = d = 0.;
-  // c = 2.;
-
-  // a = 1.;
-  // b = 3.;
-  // c = -1.;
-  // d = -(2.*sqrt(pow(b*b-3.*a*c,3)) - 9.*a*b*c + 2.*b*b*b)/(27.*a*a);
-
-  // a = 1.;
-  // b = 1.;
-  // c = 0.;
-  // d = 0.;
-
-  // feInfo("a = %f", a);
-  // feInfo("b = %f", b);
-  // feInfo("c = %f", c);
-  // feInfo("d = %f", d);
-  PRINT(a);
-  PRINT(b);
-  PRINT(c);
-  PRINT(d);
-
   double disc;
   int cas = getFactorizationCase(a,b,c,d,disc);
 
-  feInfo("cas = %d", cas);
-  feInfo("disc = %+-1.16e", disc);
+  // feInfo("cas = %d", cas);
+  // feInfo("disc = %+-1.16e", disc);
 
   SquareMatrix phi(2), invPhi(2), U(2), diag(2);
-  feInfo("Computing phi");
   getPhiAndInverse(a,b,c,d, cas, disc, phi, invPhi);
-  feInfo("Done phi");
 
   double muPi, alphaPi, betaPi = 0.;
-  feInfo("Computing diameters");
   computeDiameters(a, b, c, d, disc, cas, phi, invPhi, U, muPi, alphaPi);
-  feInfo("Done diameters");
 
   MetricTensor hPi;
   getUnconstrainedOptimalMetric(a,b,c,d,cas,disc,phi,invPhi,hPi,betaPi);
 
   double alpha = 4. / (maxDiameter*maxDiameter);
-
-  // alpha = (muPi+alphaPi)/2.;
-  // alpha = (alphaPi+betaPi)/2.;
 
   if(alpha >= muPi)
   {
@@ -782,13 +730,16 @@ void feMetric::computeAnalyticMetricP2(std::vector<double> &errorCoeff, MetricTe
     Q(1,1) = hPi(1,1);
   }
 
-  PRINT(betaPi);
-  PRINT(alphaPi);
-  PRINT(muPi);
-
   if(Q.determinant() <= 0) {
     Q.print();
     feInfo("det = %+-1.16e", Q.determinant());
+    exit(-1);
+  }
+
+  if(isnan(Q(0,0)) || isnan(Q(0,1)) || isnan(Q(1,0)) || isnan(Q(1,1)))
+  {
+    Q.print();
+    feInfo("Nan in Q");
     exit(-1);
   }
 }

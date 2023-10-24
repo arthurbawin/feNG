@@ -43,6 +43,8 @@ public:
   // JUST CHECKING THE NEWTON RESULTS SEEMS ROBUST ENOUGH
   virtual bool isInsidePhysical(double xyz[3], double tol) = 0;
 
+  virtual double sliverness() = 0;
+
   // Reference element is the same for P1 and P2 triangles
   bool isInsideReference(double u, double v, double w, double tol)
   {
@@ -76,6 +78,7 @@ public:
   Vertex *getVertex(int num) { return _v[num]; }
   bool isInsidePhysical(double xyz[3], double tol);
   bool xyz2uvw(double xyz[3], double uvw[3], double tol = 1e-5);
+  double sliverness();
 };
 
 class TriangleP2 : public Triangle
@@ -100,6 +103,7 @@ public:
   Vertex *getVertex(int num) { return _v[num]; }
   bool isInsidePhysical(double xyz[3], double tol);
   bool xyz2uvw(double xyz[3], double uvw[3], double tol = 1e-5);
+  double sliverness() { return -1.; };
 };
 
 bool isInConvexRegionOfImplicitParabola(const double implicitParameters[6], double xyz[3]);
