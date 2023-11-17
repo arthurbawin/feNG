@@ -52,6 +52,21 @@ MetricTensor::MetricTensor(const double eigenvalues[2], const double eigenvector
   : _impl(std::make_unique<MetricTensorImpl>(eigenvalues, eigenvector1, eigenvector2)) {}
 
 // =============== MetricTensor member functions ===============
+MetricTensor MetricTensor::copy() const
+{
+  MetricTensor tmp(1.0);
+  tmp._impl->setMatrix(_impl->_m);
+  return tmp;
+}
+
+void MetricTensor::assignMatrixFrom(const MetricTensor &other)
+{
+  this->_impl->_m(0,0) = other._impl->_m(0,0);
+  this->_impl->_m(0,1) = other._impl->_m(0,1);
+  this->_impl->_m(1,0) = other._impl->_m(1,0);
+  this->_impl->_m(1,1) = other._impl->_m(1,1);
+}
+
 double &MetricTensor::operator()(int i, int j) { return _impl->_m(i, j); }
 double MetricTensor::operator()(int i, int j) const { return _impl->_m(i, j); }
 MetricTensor &MetricTensor::operator*=(const double &val)
@@ -155,6 +170,12 @@ MetricTensor MetricTensor::sqrt() const
   MetricTensor sqrtm(1.0);
   sqrtm._impl->setMatrix(this->_impl->_m.sqrt());
   return sqrtm;
+}
+
+double MetricTensor::dotProduct(const double x1[2], const double x2[2]) const
+{
+  return x2[0] * (this->_impl->_m(0,0) * x1[0] + this->_impl->_m(0,1) * x1[1])
+       + x2[1] * (this->_impl->_m(0,1) * x1[0] + this->_impl->_m(1,1) * x1[1]);
 }
 
 double MetricTensor::maxCoeff() const
@@ -271,6 +292,24 @@ MetricTensor MetricTensor::limitAnisotropy(const double alpha) const
   return res;
 }
 
+MetricTensor MetricTensor::spanMetricInPhysicalSpace(const double gradation, const double pq[2]) const
+{
+  Eigen::EigenSolver<Eigen::Matrix2d> es;
+  Eigen::EigenSolver<Eigen::Matrix2d>::EigenvalueType ev;
+  es.compute(this->_impl->_m, true);
+  ev = es.eigenvalues();
+  double l1 = ev(0).real();
+  double l2 = ev(1).real();
+  double normPQ = std::sqrt(pq[0]*pq[0] + pq[1]*pq[1]);
+  double eta1 = 1. + std::sqrt(l1) * normPQ * std::log(gradation); eta1 = 1. / (eta1*eta1);
+  double eta2 = 1. + std::sqrt(l2) * normPQ * std::log(gradation); eta2 = 1. / (eta2*eta2);
+  Eigen::Matrix2d D = Eigen::Matrix2d::Identity();
+  D(0, 0) = eta1 * l1;
+  D(1, 1) = eta2 * l2;
+  MetricTensor res(1.0);
+  res._impl->setMatrix(es.eigenvectors().real() * D * es.eigenvectors().transpose().real());
+  return res;
+}
 
 // ============================================================
 // Implementation of Vector

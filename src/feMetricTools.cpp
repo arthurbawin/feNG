@@ -316,6 +316,8 @@ void gradationMetriques(double gradation, int nmax, std::vector<double> &coord1,
   std::vector<double> nodeparametricCoord;
   gmsh::model::mesh::getNodesByElementType(elementTypes[0], nodeTags, coord, parametricCoord);
 
+  size_t numNodesPerElem = (elementTypes[0] == 2) ? 3 : 6;
+
   for(auto val : elementTypes) feInfoCond(FE_VERBOSE > 0, "Gradation: Elements classified on dim 2 are of type %d", val);
   feInfoCond(FE_VERBOSE > 0, "Gradation: There are %d elements of dim 2 and type [0]", elementTags[0].size());
   feInfoCond(FE_VERBOSE > 0, "Gradation: There are %d nodes total in elem [0]", nodeTags.size());
@@ -328,24 +330,41 @@ void gradationMetriques(double gradation, int nmax, std::vector<double> &coord1,
   std::pair<std::set<std::pair<size_t, size_t>, gmshEdgeLessThan>::iterator, bool> ret;
 
   for(size_t i = 0; i < elementTags[0].size(); i++) {
-    size_t n0 = elemNodeTags[0][3 * i + 0];
-    size_t n1 = elemNodeTags[0][3 * i + 1];
-    size_t n2 = elemNodeTags[0][3 * i + 2];
-    ret = edges.insert(std::make_pair(n0, n1));
-    ret = edges.insert(std::make_pair(n1, n2));
-    ret = edges.insert(std::make_pair(n2, n0));
-    gmsh::model::mesh::getNode(n0, nodecoord1, nodeparametricCoord, nodedim, nodetag);
-    gmsh::model::mesh::getNode(n1, nodecoord2, nodeparametricCoord, nodedim, nodetag);
-    gmsh::model::mesh::getNode(n2, nodecoord3, nodeparametricCoord, nodedim, nodetag);
-    double x1 = nodecoord1[0];
-    double y1 = nodecoord1[1];
-    double x2 = nodecoord2[0];
-    double y2 = nodecoord2[1];
-    double x3 = nodecoord3[0];
-    double y3 = nodecoord3[1];
-    fprintf(fff, "SL(%.16g,%.16g,0.,%.16g,%.16g,0.){%u, %u};\n", x1, y1, x2, y2, 1, 1);
-    fprintf(fff, "SL(%.16g,%.16g,0.,%.16g,%.16g,0.){%u, %u};\n", x2, y2, x3, y3, 1, 1);
-    fprintf(fff, "SL(%.16g,%.16g,0.,%.16g,%.16g,0.){%u, %u};\n", x3, y3, x1, y1, 1, 1);
+    for(size_t j = 0; j < 3; ++j) {
+
+      if(numNodesPerElem == 3) {
+        // P1 triangles
+        // Add each edge
+        size_t n0 = elemNodeTags[0][numNodesPerElem * i + j];
+        size_t n1 = elemNodeTags[0][numNodesPerElem * i + (j+1) % numNodesPerElem];
+        ret = edges.insert(std::make_pair(n0, n1));
+      } else {
+        // P2 triangles
+        // Add the 6 semi-edges from a P1 vertex to a P2 midnode
+        size_t n0 = elemNodeTags[0][numNodesPerElem * i + j];
+        size_t n1 = elemNodeTags[0][numNodesPerElem * i + j+3];
+        ret = edges.insert(std::make_pair(n0, n1));
+      }
+
+      // size_t n0 = elemNodeTags[0][numNodesPerElem * i + 0];
+      // size_t n1 = elemNodeTags[0][numNodesPerElem * i + 1];
+      // size_t n2 = elemNodeTags[0][numNodesPerElem * i + 2];
+      // ret = edges.insert(std::make_pair(n0, n1));
+      // ret = edges.insert(std::make_pair(n1, n2));
+      // ret = edges.insert(std::make_pair(n2, n0));
+      // gmsh::model::mesh::getNode(n0, nodecoord1, nodeparametricCoord, nodedim, nodetag);
+      // gmsh::model::mesh::getNode(n1, nodecoord2, nodeparametricCoord, nodedim, nodetag);
+      // gmsh::model::mesh::getNode(n2, nodecoord3, nodeparametricCoord, nodedim, nodetag);
+      // double x1 = nodecoord1[0];
+      // double y1 = nodecoord1[1];
+      // double x2 = nodecoord2[0];
+      // double y2 = nodecoord2[1];
+      // double x3 = nodecoord3[0];
+      // double y3 = nodecoord3[1];
+      // fprintf(fff, "SL(%.16g,%.16g,0.,%.16g,%.16g,0.){%u, %u};\n", x1, y1, x2, y2, 1, 1);
+      // fprintf(fff, "SL(%.16g,%.16g,0.,%.16g,%.16g,0.){%u, %u};\n", x2, y2, x3, y3, 1, 1);
+      // fprintf(fff, "SL(%.16g,%.16g,0.,%.16g,%.16g,0.){%u, %u};\n", x3, y3, x1, y1, 1, 1);
+    }
   }
 
   fprintf(fff, "};");
@@ -362,16 +381,6 @@ void gradationMetriques(double gradation, int nmax, std::vector<double> &coord1,
   while(correction && iter < nmax) {
     correction = false;
     iter++;
-
-    // FILE* fff = fopen("CHECK.pos","w");
-    // fprintf(fff, "View \" CHECK \"{\n");
-
-    // size_t n0 = elemNodeTags[0][400];
-    // gmsh::model::mesh::getNode(n0, nodecoord3, nodeparametricCoord, nodedim, nodetag);
-    // double X0 = nodecoord3[0];
-    // double Y0 = nodecoord3[1];
-    // SMetric3 mref = metricsOnGmshModel[n0];
-    // fprintf(fff, "SP(%.16g,%.16g,0.){%u};\n", X0, Y0, 1);
 
     for(auto edge : edges) {
       size_t n = edge.first;
@@ -451,6 +460,99 @@ void gradationMetriques(double gradation, int nmax, std::vector<double> &coord1,
   }
   // feInfo("%d coord size", coord.size());
   // feInfo("%d edges size", edges.size());
+#endif
+}
+
+void smoothDirections(std::map<size_t, double> &C, std::map<size_t, double> &S, int nIter,
+                      double tol)
+{
+#if defined(HAVE_GMSH)
+  std::vector<int> elementTypes;
+  std::vector<std::vector<std::size_t> > elementTags;
+  std::vector<std::vector<std::size_t> > nodeTags;
+  gmsh::model::mesh::getElements(elementTypes, elementTags, nodeTags, 2);
+  std::multimap<size_t, size_t> graph;
+  std::set<size_t> nodes_to_treat;
+  std::set<size_t> nodes;
+  size_t numNodesPerElem = (elementTypes[0] == 2) ? 3 : 6;
+
+  for(size_t i = 0; i < elementTags[0].size(); i++) {
+    for(size_t j = 0; j < numNodesPerElem; ++j) {
+      size_t n0 = nodeTags[0][numNodesPerElem * i + j];
+      size_t n1 = nodeTags[0][numNodesPerElem * i + ((j + 1) % numNodesPerElem)];
+      graph.insert(std::make_pair(n0, n1));
+      nodes.insert(n0);
+      nodes.insert(n1);
+    }
+    // size_t n0 = nodeTags[0][numNodesPerElem * i + 0];
+    // size_t n1 = nodeTags[0][numNodesPerElem * i + 1];
+    // size_t n2 = nodeTags[0][numNodesPerElem * i + 2];
+    // graph.insert(std::make_pair(n0, n1));
+    // graph.insert(std::make_pair(n1, n2));
+    // graph.insert(std::make_pair(n2, n0));
+    // nodes.insert(n0);
+    // nodes.insert(n1);
+    // nodes.insert(n2);
+  }
+
+  double threshold = tol;
+
+  for(auto n : nodes) {
+    double c = C[n];
+    double s = S[n];
+    for(auto it = graph.lower_bound(n); it != graph.upper_bound(n); ++it) {
+      size_t neigh = it->second;
+      double cn = C[neigh];
+      double sn = S[neigh];
+      double pv = fabs(cn * c + sn * s);
+      // if(pv > threshold && pv < 1. - threshold) nodes_to_treat.insert(n);
+      if(pv < threshold) nodes_to_treat.insert(n);
+    }
+  }
+  int iter = 0;
+  while(iter++ < nIter) {
+    for(auto n : nodes_to_treat) {
+      double c4 = 0;
+      double s4 = 0;
+      for(auto it = graph.lower_bound(n); it != graph.upper_bound(n); ++it) {
+        size_t neigh = it->second;
+        double cn = C[neigh];
+        double sn = S[neigh];
+        double theta = atan2(sn, cn);
+        c4 += cos(2. * theta);
+        s4 += sin(2. * theta);
+      }
+      double theta = 0.5 * atan2(s4, c4);
+      C[n] = cos(theta);
+      S[n] = sin(theta);
+    }
+  }
+
+  FILE *fIso = fopen("isoAfterSmoothing.pos", "w");
+  fprintf(fIso, "View\"isoAfterSmoothing\"{\n");
+  FILE *fGra = fopen("graAfterSmoothing.pos", "w");
+  fprintf(fGra, "View\"graAfterSmoothing\"{\n");
+
+  for(auto n : nodes) {
+    double c = C[n];
+    double s = S[n];
+    if(nodes_to_treat.find(n) != nodes_to_treat.end()) {
+      c *= 2;
+      s *= 2;
+    }
+    std::vector<double> coord;
+    std::vector<double> par;
+    int entityDim, entityTag;
+    gmsh::model::mesh::getNode(n, coord, par, entityDim, entityTag);
+
+    fprintf(fGra, "VP(%g,%g,0){%g,%g,0};", coord[0], coord[1], c, s);
+    fprintf(fIso, "VP(%g,%g,0){%g,%g,0};", coord[0], coord[1], -s, c);
+  }
+
+  fprintf(fIso, "};");
+  fclose(fIso);
+  fprintf(fGra, "};");
+  fclose(fGra);
 #endif
 }
 
@@ -548,28 +650,28 @@ double evaluateHomogeneousErrorPolynomial(const std::vector<double> &errorCoeffi
 	// Using homogeneous polynomial factorization.
 	// See e.g. Coulaud & Loseille, Very High Order Anisotropic Metric-Based Mesh Adaptation in 3D
 	// Proposition 2.2. The matrix H has been adapted for 2D polynomial (no factor 2 on non-diagonal entries)
-  double res1 = 0.;
-  for(int i = degree-1, j = 0, cnt = 0; i >= 0; --i, ++j, ++cnt){
-  	if(i+j == degree-1){
+  // double res1 = 0.;
+  // for(int i = degree-1, j = 0, cnt = 0; i >= 0; --i, ++j, ++cnt){
+  // 	if(i+j == degree-1){
   		
-	  	Hij(0,0) = errorCoefficients[ cnt + 0 + 0 ];
-	  	Hij(0,1) = errorCoefficients[ cnt + 0 + 1 ];
-	  	Hij(1,0) = errorCoefficients[ cnt + 1 + 0 ];
-	  	Hij(1,1) = errorCoefficients[ cnt + 1 + 1 ];
-	  	Hij = Hij.absoluteValueEigen();
+	//   	Hij(0,0) = errorCoefficients[ cnt + 0 + 0 ];
+	//   	Hij(0,1) = errorCoefficients[ cnt + 0 + 1 ];
+	//   	Hij(1,0) = errorCoefficients[ cnt + 1 + 0 ];
+	//   	Hij(1,1) = errorCoefficients[ cnt + 1 + 1 ];
+	//   	Hij = Hij.absoluteValueEigen();
 
-	  	res1 += fabs(pow(xLoc, i) * pow(yLoc, j)) * 
-	  		  (xLoc*xLoc * Hij(0,0) + 2. * xLoc*yLoc * Hij(0,1) + yLoc*yLoc * Hij(1,1));
-	  }
-  }
-  return res1;
+	//   	res1 += fabs(pow(xLoc, i) * pow(yLoc, j)) * 
+	//   		  (xLoc*xLoc * Hij(0,0) + 2. * xLoc*yLoc * Hij(0,1) + yLoc*yLoc * Hij(1,1));
+	//   }
+  // }
+  // return res1;
 
   // Classical polynomial evaluation
   double res2 = 0.;
   int expx = errorCoefficients.size() - 1, expy = 0;
 
   // Quick and dirty binomial coefficients
-  int coeff[4];
+  int coeff[5];
   if(degree == 1) {
     coeff[0] = 1.;
     coeff[1] = 2.;
@@ -579,6 +681,12 @@ double evaluateHomogeneousErrorPolynomial(const std::vector<double> &errorCoeffi
     coeff[1] = 3.;
     coeff[2] = 3.;
     coeff[3] = 1.;
+  } else if(degree == 3) {
+    coeff[0] = 1.;
+    coeff[1] = 4.;
+    coeff[2] = 6.;
+    coeff[3] = 4.;
+    coeff[4] = 1.;
   } else {
     feInfo("Implement binomial coefficients for P3+ recoveries");
     exit(-1);
@@ -789,26 +897,6 @@ bool computeMetricLogSimplexStraight(const double *x, const std::vector<double> 
                                      const int maxIter, const double tol, MetricTensor &Qres,
                                      int &numIter, linearProblem &myLP)
 {
-  // feInfo("Error : %+-1.16e - %+-1.16e - %+-1.16e - %+-1.16e", 
-  //   errorCoefficients[0],
-  //   errorCoefficients[1],
-  //   errorCoefficients[2],
-  //   errorCoefficients[3]);
-
-  // double aa = errorCoefficients[0];
-  // double bb = errorCoefficients[1];
-  // double cc = errorCoefficients[2];
-  // double dd = errorCoefficients[3];
-  // double qtest[3];
-  // qtest[0] = 3. * sqrt(aa*aa + 2.*bb*bb + cc*cc);
-  // qtest[1] = 3. * sqrt(aa*bb + 2.*bb*cc + cc*dd);
-  // qtest[2] = 3. * sqrt(bb*bb + 2.*cc*cc + dd*dd);
-  // Eigen::Matrix2d Qtest;
-  // Qtest(0,0) = sqrt(2.) * qtest[0];
-  // Qtest(0,1) = sqrt(2.) * qtest[1];
-  // Qtest(1,0) = sqrt(2.) * qtest[1];
-  // Qtest(1,1) = sqrt(2.) * qtest[2];
-  
   #if defined(LOG_SIMPLEX_DEBUG)
 	FILE *ff = fopen("lvl1_straight.pos", "w");
   fprintf(ff, "View\"lvl1\"{\n");
@@ -863,17 +951,6 @@ bool computeMetricLogSimplexStraight(const double *x, const std::vector<double> 
     if(success) {
     	// Recover Q from L
      	Q = Q12 * L.exp() * Q12;
-
-      // #if defined(LOG_SIMPLEX_DEBUG)
-      // feInfo("Found upper bound:");
-      // std::cout << Q << std::endl;
-     	// drawSingleEllipse(myfile, x, Q, 1, 30);
-      // feInfo("Compare with:");
-      // std::cout << Qtest << std::endl;
-      // drawSingleEllipse(myfile, x, Qtest, 1, 6);
-      // drawSingleEllipse(myfile, x, Qtest, 1, 30);
-      // #endif
-
       diff = Q - Qprev;
       if((diff.norm() / Q.norm()) < tol) {
 

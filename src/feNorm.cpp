@@ -165,7 +165,7 @@ double feNorm::computeLpNorm(int p, bool error)
   FILE *myfile;
   if(_plotErrorToFile) {
     myfile = fopen(_errorPlotFileName.data(), "w");
-    fprintf(myfile, "View \"errorOnElements\"{\n");
+    fprintf(myfile, "View \"LpNorm_errorOnElements\"{\n");
   }
 
   for(int iElm = 0; iElm < _nElm; ++iElm) {
@@ -1131,7 +1131,7 @@ double feNorm::computeH1SemiNorm(bool error)
   FILE *myfile;
   if(_plotErrorToFile) {
     myfile = fopen(_errorPlotFileName.data(), "w");
-    fprintf(myfile, "View \"errorOnElements\"{\n");
+    fprintf(myfile, "View \"H1_seminorm_errorOnElements\"{\n");
   }
 
   for(int iElm = 0; iElm < _nElm; ++iElm) {

@@ -28,6 +28,10 @@ public:
   MetricTensor(MetricTensor &&) noexcept;
   MetricTensor &operator=(MetricTensor &&) noexcept;
 
+  // Return a new MetricTensor whose matrix is a copy of this
+  MetricTensor copy() const;
+  void assignMatrixFrom(const MetricTensor &other);
+
   double &operator()(int i, int j);
   double operator()(int i, int j) const;
   MetricTensor &operator*=(const double &val);
@@ -45,6 +49,9 @@ public:
   MetricTensor pow(const double &power) const;
   MetricTensor sqrt() const;
 
+  // Returns the dot product weighted by the metric x1^T * M * x2
+  double dotProduct(const double x1[2], const double x2[2]) const;
+
   double maxCoeff() const;
 
   double getMinEigenvalue() const;
@@ -60,6 +67,8 @@ public:
   MetricTensor boundEigenvaluesOfAbsIsotropic(const double lMin, const double lMax) const;
   MetricTensor setEigenvectorsAndBoundEigenvalues(const double ev1[2], const double ev2[2], const double lMin, const double lMax) const;
   MetricTensor limitAnisotropy(const double alpha) const;
+
+  MetricTensor spanMetricInPhysicalSpace(const double gradation, const double pq[2]) const;
 
   void print() const;
 

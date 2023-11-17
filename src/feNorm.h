@@ -141,7 +141,7 @@ public:
   feNewRecovery *getRecovery(){ return _rec; };
 
   void setErrorPlotFlag(bool flag) { _plotErrorToFile = flag; };
-  void setErrorPlotFilename(std::string &name) { _errorPlotFileName = name; };
+  void setErrorPlotFilename(std::string name) { _errorPlotFileName = name; };
 
   void setViscosity(double viscosity){ _viscosity = viscosity; };
 

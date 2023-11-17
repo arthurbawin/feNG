@@ -4,6 +4,7 @@
 #include "feMessage.h"
 #include "feMetric.h"
 #include "feMetricTools.h"
+#include "../contrib/root_finder/root_finder.hpp"
 
 #if defined(HAVE_GMSH)
 #include "gmsh.h"
@@ -90,6 +91,7 @@ feStatus feMetric::createVertex2NodeMap(std::vector<std::size_t> &nodeTags,
 template <class MetricType>
 void feMetric::metricScalingFromGmshSubstitute(std::map<int, MetricType> &metrics,
                                                const std::vector<size_t> &nodeTags,
+                                               const std::vector<double> &coord,
                                                double exponentInIntegral,
                                                double exponentForDeterminant)
 {
@@ -127,12 +129,12 @@ void feMetric::metricScalingFromGmshSubstitute(std::map<int, MetricType> &metric
   }
 
   // Get the jacobians
-  std::vector<double> jac, det, pts;
-  gmsh::model::mesh::getJacobians(elementType, localCoord, jac, det, pts);
+  std::vector<double> jac, detJac, pts;
+  gmsh::model::mesh::getJacobians(elementType, localCoord, jac, detJac, pts);
 
   // Compute integral of det^exponent
   double I = 0.0;
-  int nQuad = weights.size();
+  size_t nQuad = weights.size();
   size_t nElm = elementTags[0].size();
 
   double N = (double)_options.nTargetVertices;
@@ -152,6 +154,7 @@ void feMetric::metricScalingFromGmshSubstitute(std::map<int, MetricType> &metric
 #pragma omp for reduction(+ : I)
 #endif
     for(size_t iElm = 0; iElm < nElm; iElm++) {
+
       for(size_t i = 0; i < _nVerticesPerElmOnBackmesh; ++i) {
         tags[i] = elemNodeTags[0][_nVerticesPerElmOnBackmesh * iElm + i];
       }
@@ -163,6 +166,10 @@ void feMetric::metricScalingFromGmshSubstitute(std::map<int, MetricType> &metric
       for(size_t i = 0; i < nQuad; i++) {
         xsi[0] = localCoord[3 * i + 0];
         xsi[1] = localCoord[3 * i + 1];
+
+        // Coordonnees physiques
+        // double xphys = pts[iElm * 3 * nQuad + 3 * i + 0];
+        // double yphys = pts[iElm * 3 * nQuad + 3 * i + 1];
 
         if(_nVerticesPerElmOnBackmesh == 3) {
           logEuclidianP1Interpolation(xsi, logM0, logM1, logM2, M_interpolated);
@@ -184,7 +191,7 @@ void feMetric::metricScalingFromGmshSubstitute(std::map<int, MetricType> &metric
           exit(-1);
         }
 
-        I += weights[i] * det[iElm * nQuad + i] * pow(interpolatedDet, exponentInIntegral);
+        I += weights[i] * detJac[iElm * nQuad + i] * pow(interpolatedDet, exponentInIntegral);
       }
     }
   }
@@ -615,12 +622,12 @@ feStatus feMetric::computeMetricsP1(std::vector<std::size_t> &nodeTags, std::vec
   #endif
   {
     double x[2], fxx, fxy, fyx, fyy;
-    MetricTensor H;
+    MetricTensor H, Q;
     std::vector<double> d2exact(4, 0.), pos(3, 0.);
 
     // Compute bounded absolute value of hessian at vertices (at nodetags)
     #if defined(HAVE_OMP)
-    #pragma omp for schedule(dynamic, 1)
+    #pragma omp for
     #endif
     for(size_t i = 0; i < nodeTags.size(); i++) {
       x[0] = coord[3 * i + 0];
@@ -636,7 +643,7 @@ feStatus feMetric::computeMetricsP1(std::vector<std::size_t> &nodeTags, std::vec
         // Evaluate the analytic high-order derivatives instead
         pos[0] = x[0];
         pos[1] = x[1];
-        _options.analyticDerivatives->eval(0, pos, d2exact);
+        _options.secondDerivatives->eval(0, pos, d2exact);
 
         fxx = d2exact[0];
         fxy = d2exact[1];
@@ -649,33 +656,39 @@ feStatus feMetric::computeMetricsP1(std::vector<std::size_t> &nodeTags, std::vec
       H(1, 0) = (fxy + fyx) / 2.;
       H(1, 1) = fyy;
 
+      if(_options.targetNorm == Norm::Lp) {
+        if(isotropic)
+          Q = H.boundEigenvaluesOfAbsIsotropic(_lambdaMin, _lambdaMax);
+        else {
+          // Q = H.absoluteValueEigen();
+          Q = H.boundEigenvaluesOfAbs(_lambdaMin, _lambdaMax);
+        }
+      } else {
+        // Target norm to minimize is H1. Use Mirebeau's analytical solution.
+        double a = fxx / 2.;
+        double b = ((fxy + fyx)/2.) / 2.;
+        double c = fyy / 2.;
+        if(fabs(a*c - b*b) < 1e-10) {
+          feInfo("a*c - b*b = %+-1.4e", a*c - b*b);
+          exit(-1);
+        }
+        double alpha = 100.;
+        Q(0, 0) = 4. * (a*a + b*b);
+        Q(0, 1) = 4. * (a*b + b*c);
+        Q(1, 0) = 4. * (a*b + b*c);
+        Q(1, 1) = 4. * (b*b + c*c);
+        // Limit the anisotropy (Mirebeau's thesis, Section 3.4.3 equation 3.74
+        Q = Q.limitAnisotropy(alpha);
+      }
+
       #if defined(HAVE_OMP)
       #pragma omp critical
       #endif
       {
-        if(_options.targetNorm == Norm::Lp) {
-          if(isotropic)
-            _metricTensorAtNodetags[nodeTags[i]] =
-              H.boundEigenvaluesOfAbsIsotropic(_lambdaMin, _lambdaMax);
-          else
-            _metricTensorAtNodetags[nodeTags[i]] = H.boundEigenvaluesOfAbs(_lambdaMin, _lambdaMax);
-        } else {
-          // Target norm to minimize is H1. Use Mirebeau's analytical solution.
-          double a = fxx / 4.;
-          double b = ((fxy + fyx)/2.) / 4.;
-          double c = fyy / 4.;
-          if(fabs(a*c - b*b) < 1e-6) {
-            feInfo("a*c - b*b = %+-1.4e", a*c - b*b);
-            exit(-1);
-          }
-          double alpha = 100.;
-          H(0, 0) = 4. * (a*a + b*b);
-          H(0, 1) = 4. * (a*b + b*c);
-          H(1, 0) = 4. * (a*b + b*c);
-          H(1, 1) = 4. * (b*b + c*c);
-          // Limit the anisotropy (Mirebeau's thesis, Section 3.4.3 equation 3.74
-          _metricTensorAtNodetags[nodeTags[i]] = H.limitAnisotropy(alpha);
-        }
+        _metricTensorAtNodetags[nodeTags[i]](0,0) = Q(0,0);
+        _metricTensorAtNodetags[nodeTags[i]](0,1) = Q(0,1);
+        _metricTensorAtNodetags[nodeTags[i]](1,0) = Q(1,0);
+        _metricTensorAtNodetags[nodeTags[i]](1,1) = Q(1,1);
       }
     }
   }
@@ -785,7 +798,7 @@ feStatus feMetric::computeMetricsP2(std::vector<std::size_t> &nodeTags, std::vec
         pos[0] = x[0];
         pos[1] = x[1];
         pos[2] = 0.;
-        _options.analyticDerivatives->eval(0, pos, D3U_EXACT);
+        _options.thirdDerivatives->eval(0, pos, D3U_EXACT);
         double uxxx = D3U_EXACT[0];
         double uxxy = D3U_EXACT[1];
         double uxyy = D3U_EXACT[3];
@@ -797,49 +810,40 @@ feStatus feMetric::computeMetricsP2(std::vector<std::size_t> &nodeTags, std::vec
       }
 
       if(_options.targetNorm == Norm::Lp) {
-        double maxDiameter = 100.;
-        computeAnalyticMetricP2ForLpNorm(errorCoeff, Q, maxDiameter);
+        computeAnalyticMetricP2ForLpNorm(errorCoeff, Q, _options.maxAnalyticEllipseDiameter);
+
+        ////////////////////////////////////////////////////////////////
+        // Debug plot (must be done here to plot around (x,y)
+        // {
+        //   double a = errorCoeff[0];
+        //   double b = errorCoeff[1];
+        //   double c = errorCoeff[2];
+        //   double d = errorCoeff[3];
+        //   double sc = fmax(fmax(fabs(a), fabs(b)), fmax(fabs(c), fabs(d)));
+        //   a /= sc;
+        //   b /= sc;
+        //   c /= sc;
+        //   d /= sc;
+        //   std::string name = "debugPlotAnalyticMetric_" + std::to_string(i) + ".pos";
+        //   FILE *myfile = fopen(name.data(), "w");
+        //   fprintf(myfile, "View \"debugMetric\"{\n");
+        //   int N = 200;
+        //   double fac = 100.;
+        //   double xx, yy, p, v;
+        //   for(int iT = 0; iT < N; ++iT) {
+        //     xx = cos(2.*M_PI/(double)N * iT); 
+        //     yy = sin(2.*M_PI/(double)N * iT);
+        //     p = fabs(a*xx*xx*xx + b*xx*xx*yy + c*xx*yy*yy + d*yy*yy*yy);
+        //     v = pow(p, -1./3.);
+        //     if(fabs(x[0] + v*xx)/fac < 10. && fabs(x[1] + v*yy)/fac < 10.)
+        //     fprintf(myfile, "SP(%g,%g,%g){%g};\n", x[0] + (v*xx)/fac, x[1] + (v*yy)/fac, 0., 1.);
+        //   }
+        //   fprintf(myfile, "};\n"); fclose(myfile);
+        // }
+        ////////////////////////////////////////////////////////////////
       } else {
         // Upper bound on grad(error)
-        // Those coefficients are such that
-        // pi(x,y) = a*x^3 + 3*b*x^2y + 3*c*xy^2 + d*y^3 
-        double a = errorCoeff[0] / 6.;
-        double b = errorCoeff[1] / 18.;
-        double c = errorCoeff[2] / 18.;
-        double d = errorCoeff[3] / 6.;
-        double disc = b*b*c*c - 4.*a*c*c*c - 4.*b*b*b*d + 18.*a*b*c*d - 27.*a*a*d*d;
-        if(fabs(disc) < 1e-6) {
-          feInfo("disc = %+-1.4e", disc);
-          exit(-1);
-        }
-        Q(0,0) = 9. * (a*a + 2.*b*b + c*c);
-        Q(0,1) = 9. * (a*b + 2.*b*c + c*d);
-        Q(1,0) = 9. * (a*b + 2.*b*c + c*d);
-        Q(1,1) = 9. * (b*b + 2.*c*c + d*d);
-        Q = Q.sqrt();
-
-        /////////////////////////////////////
-        // Check that the bound is satisfied, i.e. check that
-        //
-        //  || grad(pi) o (sqrt(2) * Q)^(-1/2) || <= 1
-        //
-        int nTheta = 100;
-        double dT = M_PI/nTheta;
-        double sup = 0.;
-        for(int iT = 0; iT < nTheta; ++iT) {
-          double z[2] = {cos(dT * iT), sin(dT * iT)};
-          // MetricTensor S = Q * sqrt(2.);
-          double normz = sqrt(z[0]*(Q(0,0)*z[0] + Q(0,1)*z[1]) + z[1]*(Q(0,1)*z[0] + Q(1,1)*z[1]));
-          double gx = 3.*a*z[0]*z[0] + 2.*(3.*b)*z[0]*z[1] + (3.*c)*z[1]*z[1];
-          double gy = 3.*d*z[1]*z[1] + 2.*(3.*c)*z[0]*z[1] + (3.*b)*z[0]*z[0];
-          double normu = sqrt(gx*gx + gy*gy);
-          sup = fmax(sup, normu/(normz*normz));
-        }
-        if(sup > 1.) {
-          feInfo("sup = %+-1.4e", sup);
-          exit(-1);
-        }
-        /////////////////////////////////////
+        computeAnalyticMetricP2ForH1semiNorm(errorCoeff, Q);
       }
 
       #if defined(HAVE_OMP)
@@ -1041,7 +1045,7 @@ feStatus feMetric::computeMetricsPn(std::vector<std::size_t> &nodeTags, std::vec
         // Evaluate the analytic high-order derivatives instead
         if(_options.polynomialDegree == 2) {
           
-          _options.analyticDerivatives->eval(0, pos, D3U_EXACT);
+          _options.thirdDerivatives->eval(0, pos, D3U_EXACT);
 
           double uxxx = D3U_EXACT[0];
           double uxxy = D3U_EXACT[1];
@@ -1055,13 +1059,13 @@ feStatus feMetric::computeMetricsPn(std::vector<std::size_t> &nodeTags, std::vec
 
         } else if(_options.polynomialDegree == 3) {
 
-          _options.analyticDerivatives->eval(0, pos, D4U_EXACT);
+          _options.fourthDerivatives->eval(0, pos, D4U_EXACT);
 
-          errorCoeff[0] =  D4U_EXACT[0];
-          errorCoeff[1] = (D4U_EXACT[1] + D4U_EXACT[2] + D4U_EXACT[4] + D4U_EXACT[8]) / 4.;
-          errorCoeff[2] = (D4U_EXACT[3] + D4U_EXACT[5] + D4U_EXACT[6] + D4U_EXACT[9] + D4U_EXACT[10] + D4U_EXACT[12]) / 6.;
-          errorCoeff[3] = (D4U_EXACT[7] + D4U_EXACT[11] + D4U_EXACT[13] + D4U_EXACT[14]) / 4.;
-          errorCoeff[4] =  D4U_EXACT[15];
+          errorCoeff[0] = D4U_EXACT[0];
+          errorCoeff[1] = D4U_EXACT[1];
+          errorCoeff[2] = D4U_EXACT[3];
+          errorCoeff[3] = D4U_EXACT[7];
+          errorCoeff[4] = D4U_EXACT[15];
 
         } else {
           feInfo("TEMPORARY ERROR MESSAGE: CANNOT COMPUTE ANALYTIC DERIVATIVES FOR THIS POLYNOMIAL DEGREE");
@@ -1069,8 +1073,23 @@ feStatus feMetric::computeMetricsPn(std::vector<std::size_t> &nodeTags, std::vec
         }
       }
 
-      bool res = computeMetricLogSimplexStraight(x, errorCoeff, _options.polynomialDegree, nTheta,
+      bool res = false;
+
+      if(_options.targetNorm == Norm::Lp) {
+        // Optimal upper bound for |pi(z)| <= 1
+        res = computeMetricLogSimplexStraight(x, errorCoeff, _options.polynomialDegree, nTheta,
                                                  maxIter, tol, Q, numIter, myLP);
+      } else {
+        // Optimal upper bound for |grad(pi)(z)| <= 1
+        // if(_options.polynomialDegree == 3) {
+
+        // } else {
+          OK = false;
+          feErrorMsg(FE_STATUS_ERROR, "Implement optimal metric for H1 seminorm for P4+");
+        // }
+        res = computeMetricLogSimplexStraight(x, errorCoeff, _options.polynomialDegree, nTheta,
+                                                 maxIter, tol, Q, numIter, myLP);
+      }
 
       // If metric computation failed, try again by doubling the number of constraints points in
       // each quadrant (x8 total)
@@ -1144,7 +1163,141 @@ void feMetric::computeDirectionFieldFromGradient(const int vertex, double grad[2
   }
 }
 
-double feMetric::dttt(const int vertex, double directionV1[2], const int direction)
+inline double maxFabs(const double x, const double threshold)
+{
+  if(x < 0 && fabs(x) < threshold) return -threshold;
+  if(x > 0 && fabs(x) < threshold) return threshold;
+  return x;
+}
+
+double feMetric::secondDerivativesAlongCurve(const double x[2], const int vertex, const double directionV1[2], const int direction)
+{
+  double fx = _recoveredFields[0]->evaluateRecoveryAtVertex(PPR::DERIVATIVE, 0, vertex);
+  double fy = _recoveredFields[0]->evaluateRecoveryAtVertex(PPR::DERIVATIVE, 1, vertex);
+
+  double fxx = _recoveredFields[0]->evaluateRecoveryAtVertex(PPR::DERIVATIVE, 2, vertex);
+  double fxy = (_recoveredFields[0]->evaluateRecoveryAtVertex(PPR::DERIVATIVE, 3, vertex) +
+                _recoveredFields[0]->evaluateRecoveryAtVertex(PPR::DERIVATIVE, 4, vertex)) /
+               2.;
+  double fyy = _recoveredFields[0]->evaluateRecoveryAtVertex(PPR::DERIVATIVE, 5, vertex);
+
+  double TOL = 1e-12;
+  std::vector<double> pos(3, 0.), DU(2, 0.), D2U(4, 0.);
+
+  if(_options.useAnalyticDerivatives) {
+    // Evaluate the analytic high-order derivatives instead
+    pos[0] = x[0];
+    pos[1] = x[1];
+    pos[2] = 0.;
+    _options.firstDerivatives->eval(0, pos, DU);
+    fx = maxFabs(DU[0], TOL);
+    fy = maxFabs(DU[1], TOL);
+    _options.secondDerivatives->eval(0, pos, D2U);
+    fxx = maxFabs(D2U[0], TOL);
+    fxy = maxFabs(D2U[1], TOL);
+    fyy = maxFabs(D2U[3], TOL);
+  }
+
+  double kappa1 = (-fy * fy * fxx + 2.0 * fx * fy * fxy - fx * fx * fyy) / (pow(fx * fx + fy * fy, 3. / 2.));
+  double kappa2 = (fx * fy * (fyy - fxx) + (fx * fx - fy * fy) * fxy) / (pow(fx * fx + fy * fy, 3. / 2.));
+  double kappa[2] = {kappa1, kappa2};
+
+  double C = directionV1[0];
+  double S = directionV1[1];
+  double g[2], gOrth[2];
+
+  if(direction == 0) {
+    g[0] = C;
+    g[1] = S;
+    gOrth[0] = -S;
+    gOrth[1] = C;
+  } else {
+    gOrth[0] = C;
+    gOrth[1] = S;
+    g[0] = -S;
+    g[1] = C;
+  }
+
+  double d2 = g[0] * g[0] * fxx + 2. * g[0] * g[1] * fxy + g[1] * g[1] * fyy;
+  // double d1 = 2. * kappa[direction] * (gOrth[0] * fx + gOrth[1] * fy);
+  double d1 = kappa[direction] * (g[0] * fx + g[1] * fy);
+  feInfo("dir = %d - k = %f - 1/r = %f - %f - %f - %1.4e", direction, kappa[direction], 1./sqrt(x[0]*x[0] + x[1]*x[1]), d2, d1, d2+d1);
+
+  return d2 + d1;
+}
+
+thread_local std::set<double> ROOTS_L_LINEAR;
+thread_local Eigen::VectorXd COEFF_L_LINEAR = Eigen::VectorXd::Zero(5);
+
+double feMetric::solveSizePolynomialLinear(const double x[2], const int vertex, const double directionV1[2], const int direction, const double targetError)
+{
+  double fx, fy, fxx, fxy, fyy, TOL = 1e-12;
+  std::vector<double> pos(3, 0.), DU(2, 0.), D2U(4, 0.);
+
+  if(_options.useAnalyticDerivatives) {
+    // Evaluate the analytic high-order derivatives instead
+    pos[0] = x[0];
+    pos[1] = x[1];
+    pos[2] = 0.;
+    _options.firstDerivatives->eval(0, pos, DU);
+    fx = maxFabs(DU[0], TOL);
+    fy = maxFabs(DU[1], TOL);
+    _options.secondDerivatives->eval(0, pos, D2U);
+    fxx = maxFabs(D2U[0], TOL);
+    fxy = maxFabs(D2U[1], TOL);
+    fyy = maxFabs(D2U[3], TOL);
+  } else {
+    feInfo("Implement for non-analytic derivatives");
+    exit(-1);
+  }
+
+  // Compute directions and curvatures
+  double ax, ay, bx, by, kappa;
+
+  // (C,S) is the direction of the gradient at x
+  // double C = directionV1[0];
+  // double S = directionV1[1];
+
+  double normGrad = fmax(TOL, sqrt(fx*fx+fy*fy));
+
+  // 0 is iso, 1 is gradient
+  if(direction == 0) {
+    kappa = (-fy * fy * fxx + 2.0 * fx * fy * fxy - fx * fx * fyy) / (pow(fx * fx + fy * fy, 3. / 2.));
+    ax = -fy/normGrad;
+    ay =  fx/normGrad;
+    bx =  fx/normGrad * 0.5 * kappa;
+    by =  fy/normGrad * 0.5 * kappa;
+  } else {
+    kappa = (fx * fy * (fyy - fxx) + (fx * fx - fy * fy) * fxy) / (pow(fx * fx + fy * fy, 3. / 2.));
+    ax =  fx/normGrad;
+    ay =  fy/normGrad;
+    bx = -fy/normGrad * 0.5 * kappa;
+    by =  fx/normGrad * 0.5 * kappa;
+  }
+
+  double coeffL4 = (fxx * bx * bx + 2. * fxy * bx*by + fyy*by*by) / 3.;
+  double coeffL3 = (ax*bx*fxx + fxy * (ax*by + ay*bx) + ay*by*fyy) * 2./3.;
+  double coeffL2 = (0.5 * (fxx*ax*ax + fyy*ay*ay) + fxy*ax*ay + bx*fx + by*fy);
+  COEFF_L_LINEAR(0) = coeffL4;
+  COEFF_L_LINEAR(1) = coeffL3;
+  COEFF_L_LINEAR(2) = coeffL2;
+  COEFF_L_LINEAR(3) = 0.;
+  COEFF_L_LINEAR(4) = -targetError;
+  feInfo("Polynomial is %+-1.4e - %+-1.4e - %+-1.4e - %+-1.4e - %+-1.4e", 
+    COEFF_L_LINEAR(0),
+    COEFF_L_LINEAR(1),
+    COEFF_L_LINEAR(2),
+    COEFF_L_LINEAR(3),
+    COEFF_L_LINEAR(4));
+  double L = 1e10;
+  ROOTS_L_LINEAR = RootFinder::solvePolynomial(COEFF_L_LINEAR, 0., INFINITY, 1e-4);
+  for(auto it = ROOTS_L_LINEAR.begin(); it != ROOTS_L_LINEAR.end(); it++) {
+    L = fmin(L, *it);
+  }
+  return L;
+}
+
+double feMetric::thirdDerivativesAlongCurve(const double x[2], const int vertex, const double directionV1[2], const int direction)
 {
   double fx = _recoveredFields[0]->evaluateRecoveryAtVertex(PPR::DERIVATIVE, 0, vertex);
   double fy = _recoveredFields[0]->evaluateRecoveryAtVertex(PPR::DERIVATIVE, 1, vertex);
@@ -1166,10 +1319,30 @@ double feMetric::dttt(const int vertex, double directionV1[2], const int directi
                 3.;
   double fyyy = _recoveredFields[0]->evaluateRecoveryAtVertex(PPR::DERIVATIVE, 13, vertex);
 
-  double kappa1 =
-    (-fy * fy * fxx + 2.0 * fx * fy * fxy - fx * fx * fyy) / (pow(fx * fx + fy * fy, 3. / 2.));
-  double kappa2 =
-    (fx * fy * (fyy - fxx) + (fx * fx - fy * fy) * fxy) / (pow(fx * fx + fy * fy, 3. / 2.));
+  double TOL = 1e-12;
+  std::vector<double> pos(3, 0.), DU(2, 0.), D2U(4, 0.), D3U(8, 0.);
+
+  if(_options.useAnalyticDerivatives) {
+    // Evaluate the analytic high-order derivatives instead
+    pos[0] = x[0];
+    pos[1] = x[1];
+    pos[2] = 0.;
+    _options.firstDerivatives->eval(0, pos, DU);
+    fx = maxFabs(DU[0], TOL);
+    fy = maxFabs(DU[1], TOL);
+    _options.secondDerivatives->eval(0, pos, D2U);
+    fxx = maxFabs(D2U[0], TOL);
+    fxy = maxFabs(D2U[1], TOL);
+    fyy = maxFabs(D2U[3], TOL);
+    _options.thirdDerivatives->eval(0, pos, D3U);
+    fxxx = maxFabs(D3U[0], TOL);
+    fxxy = maxFabs(D3U[1], TOL);
+    fxyy = maxFabs(D3U[3], TOL);
+    fyyy = maxFabs(D3U[7], TOL);
+  }
+
+  double kappa1 = (-fy * fy * fxx + 2.0 * fx * fy * fxy - fx * fx * fyy) / (pow(fx * fx + fy * fy, 3. / 2.));
+  double kappa2 = (fx * fy * (fyy - fxx) + (fx * fx - fy * fy) * fxy) / (pow(fx * fx + fy * fy, 3. / 2.));
   double kappa[2] = {kappa1, kappa2};
 
   double C = directionV1[0];
@@ -1191,54 +1364,109 @@ double feMetric::dttt(const int vertex, double directionV1[2], const int directi
   double d3 = g[0] * g[0] * g[0] * fxxx + 3. * g[0] * g[0] * g[1] * fxxy +
               3. * g[0] * g[1] * g[1] * fxyy + g[1] * g[1] * g[1] * fyyy;
 
-  double d2 =
-    3. * kappa[direction] *
-    (g[0] * gOrth[0] * fxx + (g[0] * gOrth[1] + g[1] * gOrth[0]) * fxy + g[1] * gOrth[1] * fyy);
+  double d2 = 3. * kappa[direction] * (g[0] * gOrth[0] * fxx + (g[0] * gOrth[1] + g[1] * gOrth[0]) * fxy + g[1] * gOrth[1] * fyy);
 
   return d3 + d2;
+}
+
+ void feMetric::computeSizeField(const double pos[2], const int vertex, const double directionV1[2], double &hGrad, double &hIso)
+{
+  switch(_options.polynomialDegree) {
+    case 1:
+      {
+        // // // double derivativeAlongIsoline = fabs(secondDerivativesAlongCurve(pos, vertex, directionV1, 0));
+        // // // double derivativeAlongGradient = fabs(secondDerivativesAlongCurve(pos, vertex, directionV1, 1));
+        // // // hIso  = sqrt(2.0 * _options.eTargetError / fmax(derivativeAlongIsoline, 1e-10));
+        // // // hGrad = sqrt(2.0 * _options.eTargetError / fmax(derivativeAlongGradient, 1e-10));
+
+        // Test for f(x,y) = x^2+y^2 only
+        // hGrad = sqrt(_options.eTargetError);
+        // // hIso = sqrt(2. * _options.eTargetError * sqrt(pos[0]*pos[0]+pos[1]*pos[1]));
+        // hIso = sqrt(sqrt(6.)) * sqrt(_options.eTargetError * sqrt(pos[0]*pos[0]+pos[1]*pos[1]));
+
+        // hIso  = solveSizePolynomialLinear(pos, vertex, directionV1, 0, pow(_options.eTargetError, 2) );
+        // hGrad = solveSizePolynomialLinear(pos, vertex, directionV1, 1,     _options.eTargetError     );
+
+        hIso  = solveSizePolynomialLinear(pos, vertex, directionV1, 0, _options.eTargetError);
+        hGrad = solveSizePolynomialLinear(pos, vertex, directionV1, 1, _options.eTargetError);
+
+        // if(fabs(hIso_ini - hIso)/fabs(hIso_ini) > 1e-4 || fabs(hGrad_ini - hGrad)/fabs(hGrad_ini) > 1e-4) {
+        //   feInfo("At (%+-1.4e,%+-1.4e) : %+-1.4e vs %+-1.4e -- %+-1.4e vs %+-1.4e", pos[0], pos[1], hIso_ini, hIso, hGrad_ini, hGrad);
+        //   feErrorMsg(FE_STATUS_ERROR, "Human is dead. Mismatch.");
+        //   exit(-1);
+        // }
+
+      }
+      return;
+    case 2:
+      {
+        double derivativeAlongGradient = fabs(thirdDerivativesAlongCurve(pos, vertex, directionV1, 0));
+        double derivativeAlongIsoline = fabs(thirdDerivativesAlongCurve(pos, vertex, directionV1, 1));
+        hIso = pow(6.0 * _options.eTargetError / derivativeAlongIsoline, 1./3.);
+        hGrad = pow(6.0 * _options.eTargetError / derivativeAlongGradient, 1./3.);
+      }
+      return;
+    default:
+      feErrorMsg(FE_STATUS_ERROR, "Cannot compute size field for interpolation of order > 2. Exiting.");
+      exit(-1);
+  }
 }
 
 feStatus feMetric::computeMetricsExtremeSizesOnly(std::vector<std::size_t> &nodeTags,
                                                   std::vector<double> &coord)
 {
+  bool smoothDirectionField = true;
   size_t numVertices = nodeTags.size();
-
   std::vector<double[2]> directionV1(numVertices);
+  double x[2], C, S;
 
-  // Compute the principal sizes
-  const int deg = _options.polynomialDegree;
-  const double lMin = _options.hMin;
-  const double lMax = _options.hMax;
-  const double eps = _options.eTargetError;
-
-  double x[2];
-
-  FILE *directions;
+  FILE *directions, *dirSmoothed;
   directions = fopen("directions.pos", "w");
+  dirSmoothed = fopen("directionsSmoothed.pos", "w");
   fprintf(directions, "View \" directions \"{\n");
+  fprintf(dirSmoothed, "View \" directionsSmoothed \"{\n");
+
+  std::map<size_t, double> COS;
+  std::map<size_t, double> SIN;
+
+  // Compute the direction field
+  for(size_t i = 0; i < nodeTags.size(); i++) {
+    x[0] = coord[3 * i + 0];
+    x[1] = coord[3 * i + 1];
+    computeDirectionFieldFromGradient(_nodeTag2sequentialTag[nodeTags[i]], directionV1[i], 1e-12);
+    C = directionV1[i][0];
+    S = directionV1[i][1];
+    fprintf(directions, "VP(%g,%g,%g){%g,%g,%g};\n", x[0], x[1], 0., C, S, 0.);
+    fprintf(directions, "VP(%g,%g,%g){%g,%g,%g};\n", x[0], x[1], 0., -S, C, 0.);
+    COS[nodeTags[i]] = C;
+    SIN[nodeTags[i]] = S;
+  }
+
+  // Smooth the direction field
+  int smoothMaxIter = 100;
+  double smoothTol = 0.85;
+  smoothDirections(COS, SIN,  smoothMaxIter, smoothTol);
 
   for(size_t i = 0; i < numVertices; i++) {
     x[0] = coord[3 * i + 0];
     x[1] = coord[3 * i + 1];
 
-    computeDirectionFieldFromGradient(_nodeTag2sequentialTag[nodeTags[i]], directionV1[i], 1e-8);
+    if(smoothDirectionField) {
+      C = COS[nodeTags[i]];
+      S = SIN[nodeTags[i]];
+      fprintf(dirSmoothed, "VP(%g,%g,%g){%g,%g,%g};\n", x[0], x[1], 0., C, S, 0.);
+      fprintf(dirSmoothed, "VP(%g,%g,%g){%g,%g,%g};\n", x[0], x[1], 0., -S, C, 0.);
+    } else {
+      computeDirectionFieldFromGradient(_nodeTag2sequentialTag[nodeTags[i]], directionV1[i], 1e-12);
+      C = directionV1[i][0];
+      S = directionV1[i][1];
+      fprintf(directions, "VP(%g,%g,%g){%g,%g,%g};\n", x[0], x[1], 0., C, S, 0.);
+      fprintf(directions, "VP(%g,%g,%g){%g,%g,%g};\n", x[0], x[1], 0., -S, C, 0.);
+    } 
 
-    double C = directionV1[i][0];
-    double S = directionV1[i][1];
-    fprintf(directions, "VP(%g,%g,%g){%g,%g,%g};\n", x[0], x[1], 0., C, S, 0.);
-    fprintf(directions, "VP(%g,%g,%g){%g,%g,%g};\n", x[0], x[1], 0., -S, C, 0.);
-
-    double derivativeAlongGradient =
-      fabs(dttt(_nodeTag2sequentialTag[nodeTags[i]], directionV1[i], 0));
-    double derivativeAlongIsoline =
-      fabs(dttt(_nodeTag2sequentialTag[nodeTags[i]], directionV1[i], 1));
-    // double derivativeAlongGradient = fabs(dttt(i, directionV1[i], -1));
-    // double foo[2] = {-S,C};
-    // double derivativeAlongIsoline = fabs(dttt(i, foo, -1));
-
-    double hIso = pow(6.0 * eps / derivativeAlongIsoline, 0.3333);
-    double hGrad = pow(6.0 * eps / derivativeAlongGradient, 0.3333);
-
+    double hGrad = 1., hIso = 1.;
+    computeSizeField(x, _nodeTag2sequentialTag[nodeTags[i]], directionV1[i], hGrad, hIso);
+    feInfo("Final = %f - %f", hGrad, hIso);
     double eigenvalues[2] = {1. / (hGrad * hGrad), 1. / (hIso * hIso)};
     double ev1[2] = {C, S};
     double ev2[2] = {-S, C};
@@ -1247,8 +1475,8 @@ feStatus feMetric::computeMetricsExtremeSizesOnly(std::vector<std::size_t> &node
     _metricTensorAtNodetags[nodeTags[i]] = M.boundEigenvaluesOfAbs(_lambdaMin, _lambdaMax);
   }
 
-  fprintf(directions, "};");
-  fclose(directions);
+  fprintf(directions, "};"); fclose(directions);
+  fprintf(dirSmoothed, "};"); fclose(dirSmoothed);
 
   return FE_STATUS_OK;
 }
@@ -1457,41 +1685,22 @@ feStatus feMetric::computeMetrics()
 
     double exponentInIntegral, exponentForDeterminant;
 
-    // switch(_options.method) {
-    //   case adaptationMethod::ISO_P1:
-    //   case adaptationMethod::ANISO_P1:
-    //   case adaptationMethod::GOAL_ORIENTED_ANISO_P1:
-    //     exponentInIntegral = p / (2. * p + n);
-    //     exponentForDeterminant = -1. / (2. * p + n);
-    //     break;
-    //   case adaptationMethod::ISO_PN:
-    //   case adaptationMethod::ANISO_P2:
-    //   case adaptationMethod::ANISO_PN:
-    //   case adaptationMethod::CURVED_LS:
-    //   case adaptationMethod::CURVED_LS_INDUCED_DIRECTIONS:
-    //     exponentInIntegral = p * (deg + 1.0) / (2.* (p * (deg + 1.0) + n));
-    //     exponentForDeterminant = -1. / (p * (deg + 1.) + n);
-    //     break;
-    //   default:
-    //     return feErrorMsg(FE_STATUS_ERROR, "No exponents provided to scale the metric field");
-    // }
-
     if(_options.targetNorm == Norm::Lp) {
       exponentInIntegral = p * (deg + 1.0) / (2.* (p * (deg + 1.0) + n));
       exponentForDeterminant = -1. / (p * (deg + 1.) + n);
+      feInfo("Exponents for scaling for L%2.1f norm = %+-1.4e - %+-1.4e", p, exponentForDeterminant, exponentInIntegral);
     } else {
       exponentInIntegral = p * deg / (2.* (p * deg + n));
       exponentForDeterminant = -1. / (p * deg + n);
-      feInfo("Exponents for scaling = %+-1.4e - %+-1.4e", exponentForDeterminant, exponentInIntegral);
+      feInfo("Exponents for scaling for H1 seminorm = %+-1.4e - %+-1.4e", exponentForDeterminant, exponentInIntegral);
     }
 
-    metricScalingFromGmshSubstitute(_metricTensorAtNodetags, nodeTags, exponentInIntegral,
-                                    exponentForDeterminant);
+    metricScalingFromGmshSubstitute(_metricTensorAtNodetags, nodeTags, coord, exponentInIntegral, exponentForDeterminant);
 
-    // // Bound the eigenvalues according to hMin and hMax
-    // for(auto &pair : _metricTensorAtNodetags) {
-    //   pair.second = pair.second.boundEigenvalues(_lambdaMin, _lambdaMax);
-    // }
+    // Bound the eigenvalues according to hMin and hMax
+    for(auto &pair : _metricTensorAtNodetags) {
+      pair.second = pair.second.boundEigenvalues(_lambdaMin, _lambdaMax);
+    }
 
     if(debug)
       drawEllipsoids("metricsAfterScaling.pos", _metricTensorAtNodetags, nodeTags, coord, _options.plotSizeFactor, 30);
@@ -1501,11 +1710,14 @@ feStatus feMetric::computeMetrics()
   // FIXME: gradation is computed for SMetric3 metric for now, so
   // need to transfer MetricTensors to SMetric3, then transfer back
   if(_options.enableGradation) {
-    applyGradation(nodeTags, coord);
+    // applyGradation(nodeTags, coord);
+    newGradation(nodeTags, coord, _metricTensorAtNodetags);
   }
 
   if(debug)
     drawEllipsoids("metricsAfterGradation.pos", _metricTensorAtNodetags, nodeTags, coord, _options.plotSizeFactor, 30);
+
+  exit(-1);
 #endif
 
   // Precompute all metric logarithms

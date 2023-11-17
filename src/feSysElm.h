@@ -26,6 +26,7 @@ typedef enum {
   ADVECTION,
   NONLINEAR_ADVECTION,
   VECTOR_CONVECTIVE_ACCELERATION,
+  VECTOR_ADJOINT_CONVECTIVE_ACCELERATION,
   DIV_NEWTONIAN_STRESS,
   MIXED_GRADIENT,
   MIXED_DIVERGENCE,
@@ -86,6 +87,8 @@ inline const std::string toString(elementSystemType t)
       return "NONLINEAR_ADVECTION";
     case VECTOR_CONVECTIVE_ACCELERATION:
       return "VECTOR_CONVECTIVE_ACCELERATION";
+    case VECTOR_ADJOINT_CONVECTIVE_ACCELERATION:
+      return "VECTOR_ADJOINT_CONVECTIVE_ACCELERATION";
     case DIV_NEWTONIAN_STRESS:
       return "DIV_NEWTONIAN_STRESS";
     case MIXED_GRADIENT:
@@ -631,6 +634,40 @@ public:
   void computeAe(feBilinearForm *form);
   void computeBe(feBilinearForm *form);
   CLONEABLE(feSysElm_VectorConvectiveAcceleration)
+};
+
+//
+// Integral of coeff * (u dot grad uAd) dot phi_uAd
+//
+// where u is the velocity field
+//       uAd is the adjoint velocity field
+//       phi_uAd is the test function for the uAd
+//
+// Convective term in the adjoint Navier-Stokes equations
+//
+class feSysElm_VectorAdjointConvectiveAcceleration : public feSysElm
+{
+protected:
+  feFunction *_coeff;
+  int _idU, _idUad;
+  int _nFunctionsU, _nFunctionsUad;
+  std::vector<double> _u;
+  std::vector<double> _grad_uAd;
+  std::vector<double> _uDotGraduAd;
+  std::vector<double> _phi_uAd;
+  std::vector<double> _gradPhiU;
+
+public:
+  feSysElm_VectorAdjointConvectiveAcceleration(feFunction *coeff)
+    : feSysElm(-1, 2, VECTOR_ADJOINT_CONVECTIVE_ACCELERATION, true), _coeff(coeff)
+  {
+    _computeMatrixWithFD = true;
+  };
+  ~feSysElm_VectorAdjointConvectiveAcceleration(){};
+  void createElementarySystem(std::vector<feSpace *> &space);
+  void computeAe(feBilinearForm *form);
+  void computeBe(feBilinearForm *form);
+  CLONEABLE(feSysElm_VectorAdjointConvectiveAcceleration)
 };
 
 //

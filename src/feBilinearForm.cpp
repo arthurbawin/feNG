@@ -13,7 +13,8 @@ feStatus createBilinearForm(feBilinearForm *&form, const std::vector<feSpace *> 
   for(auto *s : spaces) {
     if(s == nullptr) {
       return feErrorMsg(FE_STATUS_ERROR,
-                        "Null pointer in vector of FE spaces, maybe you forgot to initialize it.");
+                        "Null pointer in vector of FE spaces for (bi)linear form \"%s\", maybe you forgot to initialize it.",
+                        elementarySystem->getWeakFormName().data());
     }
   }
 

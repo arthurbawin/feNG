@@ -15,6 +15,12 @@ enum class Norm
   Lp, Wmp
 };
 
+enum class GradationSpace
+{ 
+  // Target norm or seminorm to minimize with mesh adaptation
+  Metric, Physical
+};
+
 enum class adaptationMethod
 { 
   // Isotropic adaptation minimizing linear interpolation error
@@ -56,6 +62,8 @@ public:
   // Min/max allowed mesh size
   double hMin = 1e-3;
   double hMax = 1.;
+  // 
+  double maxAnalyticEllipseDiameter = 1e2;
   // Mesh adaptation method
   adaptationMethod method = adaptationMethod::ANISO_P1;
   // Degree of the polynomial solution for the field driving
@@ -73,6 +81,8 @@ public:
   // Maximum growth in the metric field if gradation is enabled
   // See F. Alauzet, Size gradation control of anisotropic meshes
   double gradation = 1.5;
+  int gradationMaxIter = 100;
+  GradationSpace gradationSpace = GradationSpace::Metric;
   // Target norm or seminorm to minimize - choice between Lp or Wmp
   Norm targetNorm = Norm::Lp;
   // Target Lp norm in which the interpolation error is minimized
@@ -107,7 +117,10 @@ public:
 
   // Use analytic derivatives? For debug only
   bool useAnalyticDerivatives = false;
-  feVectorFunction *analyticDerivatives = nullptr;
+  feVectorFunction *firstDerivatives = nullptr;
+  feVectorFunction *secondDerivatives = nullptr;
+  feVectorFunction *thirdDerivatives = nullptr;
+  feVectorFunction *fourthDerivatives = nullptr;
 
   //
   // More advanced parameters:
@@ -221,15 +234,25 @@ public:
   feStatus createVertex2NodeMap(std::vector<std::size_t> &nodeTags, std::vector<double> &coord);
   feStatus computeMetricsP1(std::vector<std::size_t> &nodeTags, std::vector<double> &coord, bool isotropic = false);
   void computeAnalyticMetricP2ForLpNorm(std::vector<double> &errorCoeff, MetricTensor &Q, const double maxDiameter);
+  void computeAnalyticMetricP2ForH1semiNorm(std::vector<double> &errorCoeff, MetricTensor &Q);
   feStatus computeMetricsP2(std::vector<std::size_t> &nodeTags, std::vector<double> &coord);
   feStatus computeMetricsPn(std::vector<std::size_t> &nodeTags, std::vector<double> &coord, bool isotropic = false);
   feStatus computeMetricsGoalOrientedP1(std::vector<std::size_t> &nodeTags, std::vector<double> &coord);
   feStatus computeMetricsCurvedLogSimplex(std::vector<std::size_t> &nodeTags, std::vector<double> &coord, bool useInducedDirections = false);
+
   void computeDirectionFieldFromGradient(const int vertex, double directionV1[2], const double tol);
-  double dttt(const int vertex, double directionV1[2], const int direction);
+  double secondDerivativesAlongCurve(const double pos[2], const int vertex, const double directionV1[2], const int direction);
+  double thirdDerivativesAlongCurve(const double pos[2], const int vertex, const double directionV1[2], const int direction);
+
+  double solveSizePolynomialLinear(const double x[2], const int vertex, const double directionV1[2], const int direction, const double targetError);
+
+  void computeSizeField(const double pos[2], const int vertex, const double directionV1[2], double &hGrad, double &hIso);
+
   feStatus computeMetricsExtremeSizesOnly(std::vector<std::size_t> &nodeTags, std::vector<double> &coord);
 
   void applyGradation(std::vector<std::size_t> &nodeTags, std::vector<double> &coord);
+  feStatus newGradation(std::vector<std::size_t> &nodeTags, std::vector<double> &coord, std::map<int, MetricTensor> &metricsAtNodeTags);
+
   void writeMetricField(std::vector<std::size_t> &nodeTags, std::vector<double> &coord);
 
   MetricTensor &getMetricAtSequentialTag(int tag){ return _metricTensorAtNodetags[_sequentialTag2nodeTag[tag]]; };
@@ -244,6 +267,7 @@ public:
   template <class MetricType>
   void metricScalingFromGmshSubstitute(std::map<int, MetricType> &metrics,
                                        const std::vector<size_t> &nodeTags,
+                                       const std::vector<double> &coord,
                                        double exponentInIntegral,
                                        double exponentForDeterminant);
 

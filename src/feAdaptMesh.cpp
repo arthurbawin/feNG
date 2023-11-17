@@ -18,6 +18,8 @@ inline feStatus checkMMGcall(std::string &command)
   // From mmg/src/mmg2d/libmmgtypes.h
   int MMG_SUCCESS = 0;
 
+  feInfo("Running MMG with: %s", command.data());
+
   auto status = system(command.data());
   if(status < 0) {
     return feErrorMsg(FE_STATUS_ERROR, "System call to MMG2D failed with system status %d", status);
@@ -98,8 +100,7 @@ feStatus feMesh2DP1::adapt(std::vector<feNewRecovery*> recoveredFields, feMetric
   if(generateAnisoMeshBeforeCurving && !(curve && target == curveToMinimize::INTERPOLATION_ERROR))
   {
     // Save directly to .msh to preserve Physical Entities
-    std::string cmd1 = "mmg2d_O3 " + options.mmgInputMeshfile + " -hgrad -1 -o " +
-    options.mmgOutputMeshfile;
+    std::string cmd1 = "mmg2d_O3 " + options.mmgInputMeshfile + " -v 10 -hgrad 2 -o " + options.mmgOutputMeshfile;
     if(FE_VERBOSE == VERBOSE_NONE) {
       // Write MMG console outputs to logMMG.txt
       cmd1 += " > logMMG.txt";
