@@ -1673,7 +1673,7 @@ feStatus feMetric::computeMetrics()
 
 #if !defined(ONLY_TEST_METRIC_INTERPOLATION_CONVERGENCE)
   // Apply scaling and gradation only when not testing for metric interpolation convergence
-  if(debug) drawEllipsoids("rawMetrics.pos", _metricTensorAtNodetags, nodeTags, coord, _options.plotSizeFactor, 30);
+  if(debug) drawEllipsoids("rawMetrics.pos", _metricTensorAtNodetags, nodeTags, coord, _options.plotSizeFactor, 20);
 
   if(_options.method != adaptationMethod::CURVED_EXTREME_SIZES) {
     // Scale the metric field
@@ -1703,7 +1703,7 @@ feStatus feMetric::computeMetrics()
     }
 
     if(debug)
-      drawEllipsoids("metricsAfterScaling.pos", _metricTensorAtNodetags, nodeTags, coord, _options.plotSizeFactor, 30);
+      drawEllipsoids("metricsAfterScaling.pos", _metricTensorAtNodetags, nodeTags, coord, _options.plotSizeFactor, 20);
   }
 
   // Apply gradation
@@ -1715,9 +1715,8 @@ feStatus feMetric::computeMetrics()
   }
 
   if(debug)
-    drawEllipsoids("metricsAfterGradation.pos", _metricTensorAtNodetags, nodeTags, coord, _options.plotSizeFactor, 30);
+    drawEllipsoids("metricsAfterGradation.pos", _metricTensorAtNodetags, nodeTags, coord, _options.plotSizeFactor, 20);
 
-  exit(-1);
 #endif
 
   // Precompute all metric logarithms

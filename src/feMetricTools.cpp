@@ -44,6 +44,7 @@ void drawSingleEllipse(FILE *file, const double *x, MetricType &M, double sizeFa
 
 // Explicit instantiation
 template void drawSingleEllipse<MetricTensor>(FILE *file, const double *x, MetricTensor &M, double sizeFactor, int nPoints);
+template void drawSingleEllipse<SMetric3>(FILE *file, const double *x, SMetric3 &M, double sizeFactor, int nPoints);
 
 template <class MetricType>
 void drawEllipsoids(const std::string &posFile, std::map<int, MetricType> &metrics,

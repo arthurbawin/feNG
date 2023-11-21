@@ -292,6 +292,15 @@ MetricTensor MetricTensor::limitAnisotropy(const double alpha) const
   return res;
 }
 
+MetricTensor MetricTensor::spanMetricInMetricSpace(const double gradation, const double pq[2]) const
+{
+  double eta = (1. + std::sqrt(this->dotProduct(pq, pq)) * std::log(gradation));
+  eta = 1. / (eta * eta);
+  MetricTensor res(1.0);
+  res._impl->setMatrix(this->_impl->_m * eta);
+  return res;
+}
+
 MetricTensor MetricTensor::spanMetricInPhysicalSpace(const double gradation, const double pq[2]) const
 {
   Eigen::EigenSolver<Eigen::Matrix2d> es;
@@ -303,6 +312,28 @@ MetricTensor MetricTensor::spanMetricInPhysicalSpace(const double gradation, con
   double normPQ = std::sqrt(pq[0]*pq[0] + pq[1]*pq[1]);
   double eta1 = 1. + std::sqrt(l1) * normPQ * std::log(gradation); eta1 = 1. / (eta1*eta1);
   double eta2 = 1. + std::sqrt(l2) * normPQ * std::log(gradation); eta2 = 1. / (eta2*eta2);
+  Eigen::Matrix2d D = Eigen::Matrix2d::Identity();
+  D(0, 0) = eta1 * l1;
+  D(1, 1) = eta2 * l2;
+  MetricTensor res(1.0);
+  res._impl->setMatrix(es.eigenvectors().real() * D * es.eigenvectors().transpose().real());
+  return res;
+}
+
+MetricTensor MetricTensor::spanMetricInMixedSpace(const double gradation, const double pq[2], const double t) const
+{
+  Eigen::EigenSolver<Eigen::Matrix2d> es;
+  Eigen::EigenSolver<Eigen::Matrix2d>::EigenvalueType ev;
+  es.compute(this->_impl->_m, true);
+  ev = es.eigenvalues();
+  double l1 = ev(0).real();
+  double l2 = ev(1).real();
+  double normPQ = std::sqrt(pq[0]*pq[0] + pq[1]*pq[1]);
+  double etaMetric = 1. + std::sqrt(this->dotProduct(pq, pq)) * std::log(gradation);
+  double etaPhysical1 = 1. + std::sqrt(l1) * normPQ * std::log(gradation);
+  double etaPhysical2 = 1. + std::sqrt(l2) * normPQ * std::log(gradation);
+  double eta1 = std::pow(etaMetric, 1.-t) * std::pow(etaPhysical1, t); eta1 = 1. / (eta1*eta1);
+  double eta2 = std::pow(etaMetric, 1.-t) * std::pow(etaPhysical2, t); eta2 = 1. / (eta2*eta2);
   Eigen::Matrix2d D = Eigen::Matrix2d::Identity();
   D(0, 0) = eta1 * l1;
   D(1, 1) = eta2 * l2;

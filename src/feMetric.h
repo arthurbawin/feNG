@@ -17,8 +17,10 @@ enum class Norm
 
 enum class GradationSpace
 { 
-  // Target norm or seminorm to minimize with mesh adaptation
-  Metric, Physical
+  // In which space the graded metric field will be homoegeneous
+  // Metric space preserves anisotropy
+  // Physical space leads to more isotropic metrics
+  Metric, Physical, Mixed, ExpMetric
 };
 
 enum class adaptationMethod
@@ -406,6 +408,15 @@ public:
 //                                               const Eigen::Matrix2d &sumdudaM, Eigen::Matrix2d
 //                                               &M, Eigen::Matrix2d &dMda);
 };
+
+SMetric3 intersectionReductionSimultaneeExplicite(const SMetric3 &m1, const SMetric3 &m2);
+
+template <class MetricType>
+void drawSingleEllipse(FILE *file, const double *x, MetricType &M, double sizeFactor = 1., int nPoints = 30);
+template <class MetricType>
+void drawEllipsoids(const std::string &posFile, std::map<int, MetricType> &metrics,
+                    const std::vector<std::size_t> &nodeTags, const std::vector<double> &coord,
+                    double sizeFactor, int nPoints);
 
 // Non-class wrapper
 void interpolateMetricP1Callback(void *metricPtr, const double *x, Eigen::Matrix2d &M,

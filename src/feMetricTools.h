@@ -48,13 +48,6 @@ struct gmshEdgeLessThan {
   }
 };
 
-template <class MetricType>
-void drawSingleEllipse(FILE *file, const double *x, MetricType &M, double sizeFactor, int nPoints);
-template <class MetricType>
-void drawEllipsoids(const std::string &posFile, std::map<int, MetricType> &metrics,
-                    const std::vector<std::size_t> &nodeTags, const std::vector<double> &coord,
-                    double sizeFactor, int nPoints);
-
 double evaluateFieldFromRecovery(int indexDerivative, feRecovery *rec, double *x);
 
 double evaluateFieldFromRecoveryCallback(int indexDerivative, void *recUserPtr, double *x);

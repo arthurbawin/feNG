@@ -68,7 +68,9 @@ public:
   MetricTensor setEigenvectorsAndBoundEigenvalues(const double ev1[2], const double ev2[2], const double lMin, const double lMax) const;
   MetricTensor limitAnisotropy(const double alpha) const;
 
+  MetricTensor spanMetricInMetricSpace(const double gradation, const double pq[2]) const;
   MetricTensor spanMetricInPhysicalSpace(const double gradation, const double pq[2]) const;
+  MetricTensor spanMetricInMixedSpace(const double gradation, const double pq[2], const double t) const;
 
   void print() const;
 
