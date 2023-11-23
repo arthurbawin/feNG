@@ -1278,6 +1278,8 @@ double feMetric::solveSizePolynomialLinear(const double x[2], const int vertex, 
   double coeffL4 = (fxx * bx * bx + 2. * fxy * bx*by + fyy*by*by) / 3.;
   double coeffL3 = (ax*bx*fxx + fxy * (ax*by + ay*bx) + ay*by*fyy) * 2./3.;
   double coeffL2 = (0.5 * (fxx*ax*ax + fyy*ay*ay) + fxy*ax*ay + bx*fx + by*fy);
+
+  // Solve p(L) = error
   COEFF_L_LINEAR(0) = coeffL4;
   COEFF_L_LINEAR(1) = coeffL3;
   COEFF_L_LINEAR(2) = coeffL2;
@@ -1290,6 +1292,23 @@ double feMetric::solveSizePolynomialLinear(const double x[2], const int vertex, 
     COEFF_L_LINEAR(3),
     COEFF_L_LINEAR(4));
   double L = 1e10;
+  ROOTS_L_LINEAR = RootFinder::solvePolynomial(COEFF_L_LINEAR, 0., INFINITY, 1e-4);
+  for(auto it = ROOTS_L_LINEAR.begin(); it != ROOTS_L_LINEAR.end(); it++) {
+    L = fmin(L, *it);
+  }
+
+  // Solve -p(L) = error
+  COEFF_L_LINEAR(0) = -coeffL4;
+  COEFF_L_LINEAR(1) = -coeffL3;
+  COEFF_L_LINEAR(2) = -coeffL2;
+  COEFF_L_LINEAR(3) = 0.;
+  COEFF_L_LINEAR(4) = -targetError;
+  feInfo("Polynomial is %+-1.4e - %+-1.4e - %+-1.4e - %+-1.4e - %+-1.4e", 
+    COEFF_L_LINEAR(0),
+    COEFF_L_LINEAR(1),
+    COEFF_L_LINEAR(2),
+    COEFF_L_LINEAR(3),
+    COEFF_L_LINEAR(4));
   ROOTS_L_LINEAR = RootFinder::solvePolynomial(COEFF_L_LINEAR, 0., INFINITY, 1e-4);
   for(auto it = ROOTS_L_LINEAR.begin(); it != ROOTS_L_LINEAR.end(); it++) {
     L = fmin(L, *it);
@@ -1466,7 +1485,8 @@ feStatus feMetric::computeMetricsExtremeSizesOnly(std::vector<std::size_t> &node
 
     double hGrad = 1., hIso = 1.;
     computeSizeField(x, _nodeTag2sequentialTag[nodeTags[i]], directionV1[i], hGrad, hIso);
-    feInfo("Final = %f - %f", hGrad, hIso);
+    if(x[0] >= 0) feInfo("POSITIVE x: size = %f - %f", hGrad, hIso);
+    if(x[0] <  0) feInfo("NEGATIVE x: size = %f - %f", hGrad, hIso);
     double eigenvalues[2] = {1. / (hGrad * hGrad), 1. / (hIso * hIso)};
     double ev1[2] = {C, S};
     double ev2[2] = {-S, C};

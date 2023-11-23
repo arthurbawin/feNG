@@ -533,49 +533,69 @@ feStatus feMetric::newGradation(std::vector<std::size_t> &nodeTags, std::vector<
     }
   }
 
+  ////////////////////////////////////////////////////
+  // The circle test case from Alauzet
+  // for(size_t i = 0; i < nodeTags.size(); ++i) {
+  //   double x[2] = {coord[3*i], coord[3*i+1]};
+  //   double theta = atan2(x[1], x[0]);
+  //   double v1[2] = {cos(theta),sin(theta)};
+  //   double v2[2] = {-sin(theta),cos(theta)};
+  //   double h1 = 0.0005 + 1.5 * fabs(1. - sqrt(x[0]*x[0] + x[1]*x[1]));
+  //   double h2 = 0.1 * sqrt(x[0]*x[0] + x[1]*x[1]) + 1.5 * fabs(1. - sqrt(x[0]*x[0] + x[1]*x[1]));
+  //   double evalues[2] = {1./(h1*h1), 1./(h2*h2)};
+  //   MetricTensor metric(evalues, v1, v2);
+  //   metricsAtNodeTags.at(nodeTags[i]).assignMatrixFrom(metric);
+  // }
+  ////////////////////////////////////////////////////
+
   fprintf(myFile, "};"); fclose(myFile);
 
   int iter = 0, numCorrected;
-  bool correction = true, edgeWasCorrected;
+  bool correction = true;
   
   if(_options.gradationSpace != GradationSpace::ExpMetric) {
     while(correction && iter < _options.gradationMaxIter)
     {
     	numCorrected = 0; correction = false; iter++;
       for(auto edge : edges) {
-      	edgeWasCorrected = gradationOnEdge(_options.gradationSpace, _options.gradation, edge, coord, metricsAtNodeTags);
-      	if(edgeWasCorrected) numCorrected++;
-      	correction |= edgeWasCorrected;
+      	if(gradationOnEdge(_options.gradationSpace, _options.gradation, edge, coord, metricsAtNodeTags)) {
+          numCorrected++;
+      	  correction = true
+        };
       }
       feInfoCond(FE_VERBOSE > 0, "Gradation: Passe %d - Corrected %d edges", iter, numCorrected);
     }
   } else {
 
     double alpha = 1.05;
-    // Only mNew is modified
-    std::map<int, MetricTensor> mNew;
-    for(size_t i = 0; i < nodeTags.size(); ++i) {
-      mNew[nodeTags[i]].assignMatrixFrom(metricsAtNodeTags.at(nodeTags[i]));
-    }
     double beta = _options.gradation;
+
+    std::map<int, MetricTensor> mNew;
 
     while(correction && iter < _options.gradationMaxIter)
     {
       numCorrected = 0; correction = false; iter++;
-      for(auto edge : edges) {
-        edgeWasCorrected = gradationOnEdgeExpMetric(_options.gradationSpace, beta, edge, coord, metricsAtNodeTags, mNew);
-        if(edgeWasCorrected) numCorrected++;
-        correction |= edgeWasCorrected;
+      
+      for(size_t i = 0; i < nodeTags.size(); ++i) {
+        mNew[nodeTags[i]].assignMatrixFrom(metricsAtNodeTags.at(nodeTags[i]));
       }
-      beta *= alpha;
+
+      for(auto edge : edges) {
+        if(gradationOnEdgeExpMetric(_options.gradationSpace, beta, edge, coord, metricsAtNodeTags, mNew)){
+          numCorrected++;
+          correction = true;
+        }
+      }
+
+      if(correction) beta *= alpha;
+
+      for(size_t i = 0; i < nodeTags.size(); ++i) {
+        metricsAtNodeTags.at(nodeTags[i]).assignMatrixFrom(mNew.at(nodeTags[i]));
+      }
 
       feInfoCond(FE_VERBOSE > 0, "Gradation: Passe %d - Corrected %d edges", iter, numCorrected);
     }
 
-    // Copy mNew into the metric
-    for(size_t i = 0; i < nodeTags.size(); ++i) {
-      metricsAtNodeTags.at(nodeTags[i]).assignMatrixFrom(mNew.at(nodeTags[i]));
-    }
     mNew.clear();
   }
 
