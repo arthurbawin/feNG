@@ -1627,7 +1627,9 @@ feStatus feMetric::computeMetrics()
 {
 #if defined(HAVE_GMSH)
 
-  bool debug = true;
+  bool debug = false;
+  if(_options.method == adaptationMethod::CURVED_EXTREME_SIZES)
+    debug = true;
 
   feInfoCond(FE_VERBOSE >= VERBOSE_MODERATE, "Computing metrics on Gmsh model %s",
              _options.modelForMetric.c_str());

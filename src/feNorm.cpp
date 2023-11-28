@@ -168,6 +168,8 @@ double feNorm::computeLpNorm(int p, bool error)
     fprintf(myfile, "View \"LpNorm_errorOnElements\"{\n");
   }
 
+  std::vector<double> errorOnElementsToThePowerP(_nElm, 0.);
+
   for(int iElm = 0; iElm < _nElm; ++iElm) {
     this->initializeLocalSolutionOnSpace(0, iElm);
     _spaces[0]->_mesh->getCoord(_cnc, iElm, _geoCoord);
@@ -181,6 +183,7 @@ double feNorm::computeLpNorm(int p, bool error)
       eLocPowP += pow(fabs(u - uh), p) * _J[_nQuad * iElm + k] * _w[k];
     }
 
+    errorOnElementsToThePowerP[iElm] = eLocPowP;
     res += eLocPowP;
 
     double eLoc = pow(eLocPowP, 1. / (double)p);
@@ -194,6 +197,15 @@ double feNorm::computeLpNorm(int p, bool error)
   if(_plotErrorToFile) {
     fprintf(myfile, "};\n");
     fclose(myfile);
+  }
+
+  if(_ignoreHighestError) {
+    // Ignore the top X percents of error contributions
+    std::sort(errorOnElementsToThePowerP.begin(), errorOnElementsToThePowerP.end());
+    size_t numElmToIgnore = ceil(errorOnElementsToThePowerP.size() * _fractionToIgnore);
+    res = 0.;
+    for(size_t i = 0; i < errorOnElementsToThePowerP.size() - numElmToIgnore; ++i)
+      res += errorOnElementsToThePowerP[i];
   }
 
   return pow(res, 1. / (double)p);
@@ -1134,6 +1146,8 @@ double feNorm::computeH1SemiNorm(bool error)
     fprintf(myfile, "View \"H1_seminorm_errorOnElements\"{\n");
   }
 
+  std::vector<double> errorSquaredOnElements(_nElm, 0.);
+
   for(int iElm = 0; iElm < _nElm; ++iElm) {
     _spaces[0]->_mesh->getCoord(_cnc, iElm, _geoCoord);
 
@@ -1156,6 +1170,7 @@ double feNorm::computeH1SemiNorm(bool error)
       eLocSquared += dotProd * jac * _w[k];
     }
 
+    errorSquaredOnElements[iElm] = eLocSquared;
     res += eLocSquared;
 
     double eLoc = sqrt(eLocSquared);
@@ -1168,6 +1183,15 @@ double feNorm::computeH1SemiNorm(bool error)
   if(_plotErrorToFile) {
     fprintf(myfile, "};\n");
     fclose(myfile);
+  }
+
+  if(_ignoreHighestError) {
+    // Ignore the top X percents of error contributions
+    std::sort(errorSquaredOnElements.begin(), errorSquaredOnElements.end());
+    size_t numElmToIgnore = ceil(errorSquaredOnElements.size() * _fractionToIgnore);
+    res = 0.;
+    for(size_t i = 0; i < errorSquaredOnElements.size() - numElmToIgnore; ++i)
+      res += errorSquaredOnElements[i];
   }
 
   return sqrt(res);

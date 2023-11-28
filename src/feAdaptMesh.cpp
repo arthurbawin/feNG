@@ -86,6 +86,7 @@ feStatus feMesh2DP1::adapt(std::vector<feNewRecovery*> recoveredFields, feMetric
   feInfoCond(FE_VERBOSE > 0, "\t\tComputed metric tensors in %f s", toc());
   if(s != FE_STATUS_OK) {
     gmsh::finalize();
+    gmshWasInitialized = false;
     return s;
   }
 
@@ -100,7 +101,7 @@ feStatus feMesh2DP1::adapt(std::vector<feNewRecovery*> recoveredFields, feMetric
   if(generateAnisoMeshBeforeCurving && !(curve && target == curveToMinimize::INTERPOLATION_ERROR))
   {
     // Save directly to .msh to preserve Physical Entities
-    std::string cmd1 = "mmg2d_O3 " + options.mmgInputMeshfile + " -v 10 -hgrad 2 -o " + options.mmgOutputMeshfile;
+    std::string cmd1 = "mmg2d_O3 " + options.mmgInputMeshfile + " -v 10 -hgrad -1 -o " + options.mmgOutputMeshfile;
     if(FE_VERBOSE == VERBOSE_NONE) {
       // Write MMG console outputs to logMMG.txt
       cmd1 += " > logMMG.txt";
@@ -254,7 +255,8 @@ feStatus feMesh2DP1::adapt(std::vector<feNewRecovery*> recoveredFields, feMetric
     meshOptions.getPolyMeshVertexTags = getPolyMeshVertexTags;
     meshOptions.metricUserPointer = (void *) &metricField;
     meshOptions.interpolateMetricP1Callback = interpolateMetricP1Callback;
-    meshOptions.interpolateMetricP2Callback = interpolateMetricP2Callback;
+    meshOptions.interpolateMetricP2CallbackWithoutDerivatives = interpolateMetricP2CallbackWithoutDerivatives;
+    meshOptions.interpolateMetricP2CallbackWithDerivatives = interpolateMetricP2CallbackWithDerivatives;
     meshOptions.interpolateMetricP2CallbackLog = interpolateMetricP2CallbackLog;
 
     tic();
@@ -278,6 +280,9 @@ feStatus feMesh2DP1::adapt(std::vector<feNewRecovery*> recoveredFields, feMetric
   }
 
   gmsh::clear();
+  gmsh::finalize();
+
+  gmshWasInitialized = false;
 
 #endif
   return FE_STATUS_OK;

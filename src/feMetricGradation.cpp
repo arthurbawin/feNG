@@ -560,7 +560,7 @@ feStatus feMetric::newGradation(std::vector<std::size_t> &nodeTags, std::vector<
       for(auto edge : edges) {
       	if(gradationOnEdge(_options.gradationSpace, _options.gradation, edge, coord, metricsAtNodeTags)) {
           numCorrected++;
-      	  correction = true
+      	  correction = true;
         };
       }
       feInfoCond(FE_VERBOSE > 0, "Gradation: Passe %d - Corrected %d edges", iter, numCorrected);

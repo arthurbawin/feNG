@@ -1,9 +1,5 @@
 #include "feMetric.h"
-
-// #include "../contrib/Eigen/Eigen"
-// #include "../contrib/Eigen/Eigenvalues"
 #include "../contrib/Eigen/QR"
-// #include "../contrib/unsupported/Eigen/MatrixFunctions"
 
 // Wrapper to give gmsh
 void interpolateMetricP1Callback(void *metricPtr, const double *x, Eigen::Matrix2d &M,
@@ -202,98 +198,84 @@ void feMetric::gradLogEuclidianP1Interpolation(const double xsi[2],
   dMdy = dUdy * expD * U.transpose() + U * dexpDdy * U.transpose() + U * expD * dUdy.transpose();
 }
 
-// Wrapper to give gmsh
-void interpolateMetricP2Callback(void *metricPtr, const double *x, Eigen::Matrix2d &M,
+// Wrapper to give gmsh without the metric derivatives
+void interpolateMetricP2CallbackWithoutDerivatives(void *metricPtr, const double *x, Eigen::Matrix2d &M)
+{
+  static_cast<feMetric*>(metricPtr)->interpolateMetricP2(x, M);
+}
+
+// Wrapper to give gmsh with the metric derivatives
+void interpolateMetricP2CallbackWithDerivatives(void *metricPtr, const double *x, Eigen::Matrix2d &M,
                            Eigen::Matrix2d &dMdx, Eigen::Matrix2d &dMdy)
 {
   static_cast<feMetric*>(metricPtr)->interpolateMetricP2(x, M, dMdx, dMdy);
 }
 
+thread_local double UVW[3];
+thread_local int GMSHNODETAGS_P2[6];
+
+//
 // Main metric interpolation function
-// Interpolate metric on P2 background mesh
+// Interpolate metric on P2 background mesh without computing metric derivatives
+//
+void feMetric::interpolateMetricP2(const double *x, Eigen::Matrix2d &M)
+{
+  // Locate point in the feMesh
+  int elm;
+  bool isFound = static_cast<feMesh2DP1 *>(_recoveredFields[0]->_mesh)->locateVertex(x, elm, UVW);
+  if(!isFound) {
+    // Point was not found in the mesh
+  } else {
+
+    double xsi[2] = {UVW[0], UVW[1]};
+
+    // Get the vertex tags from the feMesh
+    for(int i = 0; i < 6; ++i) {
+      int vertexTag = _recoveredFields[0]->_cnc->getVertexConnectivity(elm, i);
+      GMSHNODETAGS_P2[i] = _sequentialTag2nodeTag[vertexTag];
+    }
+
+    this->logEuclidianP2Interpolation(xsi, _logMetricTensorAtNodetags_eigen[GMSHNODETAGS_P2[0]-1],
+                                           _logMetricTensorAtNodetags_eigen[GMSHNODETAGS_P2[1]-1],
+                                           _logMetricTensorAtNodetags_eigen[GMSHNODETAGS_P2[2]-1],
+                                           _logMetricTensorAtNodetags_eigen[GMSHNODETAGS_P2[3]-1],
+                                           _logMetricTensorAtNodetags_eigen[GMSHNODETAGS_P2[4]-1],
+                                           _logMetricTensorAtNodetags_eigen[GMSHNODETAGS_P2[5]-1], M);
+  }
+}
+
+thread_local Eigen::Matrix2d L, DLDX, DLDY;
+thread_local double L1, L2, DL1DX, DL1DY, DL2DX, DL2DY;
+thread_local Eigen::Vector2d U1, U2, DU1DX, DU1DY, DU2DX, DU2DY;
+
+//
+// Main metric interpolation function
+// Interpolate metric on P2 background mesh and compute metric derivatives
+//
 void feMetric::interpolateMetricP2(const double *x, Eigen::Matrix2d &M,
                                    Eigen::Matrix2d &dMdx, Eigen::Matrix2d &dMdy)
 {
   // Locate point in the feMesh
   int elm;
-  double UVW[3];
   bool isFound = static_cast<feMesh2DP1 *>(_recoveredFields[0]->_mesh)->locateVertex(x, elm, UVW);
   if(!isFound) {
-    // feWarning("In interpolateMetricP2 : Point (%f, %f) was not found in the mesh.", x[0], x[1]);
+    // Point was not found in the mesh
   } else {
-
-    // if(elm == 130) {
-    //   elm = 245;
-    //   Triangle *t = _recoveredFields[0]->_mesh->_elements[elm];
-    //   double XX[3] = {x[0], x[1], 0.};
-    //   t->xyz2uvw(XX,UVW);
-    // }
 
     double xsi[2] = {UVW[0], UVW[1]};
 
-    // double distToLocal3 = sqrt((xsi[0] - 0.5)*(xsi[0] - 0.5) + xsi[1]*xsi[1]);
-    // double distToLocal4 = sqrt((xsi[0] - 0.5)*(xsi[0] - 0.5) + (xsi[1] - 0.5)*(xsi[1] - 0.5));
-    // double distToLocal5 = sqrt(xsi[0]*xsi[0] + (xsi[1] - 0.5)*(xsi[1] - 0.5));
-    // int localtag;
-    // if(distToLocal3 < fmin(distToLocal4,distToLocal5)) localtag = 3;
-    // else if(distToLocal4 < fmin(distToLocal3,distToLocal5)) localtag = 4;
-    // else if(distToLocal5 < fmin(distToLocal3,distToLocal4)) localtag = 5;
-    // else{ feInfo("bug"); exit(-1); }
-    // feInfo("Found in element %d at position %+-1.16e == %+-1.16e - local pos %d", elm, xsi[0], xsi[1], localtag);
-    // feInfo("Found in element %d", elm);
-    // double tol = 1e-12;
-    // if(xsi[0] < -tol || xsi[1] < -tol) {
-    //   feErrorMsg(FE_STATUS_ERROR, "Reference coordinate is negative");
-    //   exit(-1);
-    // }
-
     // Get the vertex tags from the feMesh
-    int gmshNodeTags[6];
     for(int i = 0; i < 6; ++i) {
       int vertexTag = _recoveredFields[0]->_cnc->getVertexConnectivity(elm, i);
-      gmshNodeTags[i] = _sequentialTag2nodeTag[vertexTag];
-      // MetricTensor &refm = _logMetricTensorAtNodetags.at(gmshNodeTags[i]);
-      // feInfo("Metric %d = %+-1.10e - %+-1.10e - %+-1.10e", i, refm(0,0), refm(0,1), refm(1,1));
+      GMSHNODETAGS_P2[i] = _sequentialTag2nodeTag[vertexTag];
     }
 
-    this->logEuclidianP2Interpolation(xsi, _logMetricTensorAtNodetags_eigen[gmshNodeTags[0]-1],
-                                           _logMetricTensorAtNodetags_eigen[gmshNodeTags[1]-1],
-                                           _logMetricTensorAtNodetags_eigen[gmshNodeTags[2]-1],
-                                           _logMetricTensorAtNodetags_eigen[gmshNodeTags[3]-1],
-                                           _logMetricTensorAtNodetags_eigen[gmshNodeTags[4]-1],
-                                           _logMetricTensorAtNodetags_eigen[gmshNodeTags[5]-1], M);
-
-    Eigen::Matrix2d L, dLdx, dLdy;
-    double l1, l2;
-    double dl1dx;
-    double dl1dy;
-    double dl2dx;
-    double dl2dy;
-    Eigen::Vector2d u1, u2;
-    Eigen::Vector2d du1dx;
-    Eigen::Vector2d du1dy;
-    Eigen::Vector2d du2dx;
-    Eigen::Vector2d du2dy;
-    gradLogEuclidianP2Interpolation(xsi, elm, _logMetricTensorAtNodetags_eigen[gmshNodeTags[0]-1],
-                                              _logMetricTensorAtNodetags_eigen[gmshNodeTags[1]-1],
-                                              _logMetricTensorAtNodetags_eigen[gmshNodeTags[2]-1],
-                                              _logMetricTensorAtNodetags_eigen[gmshNodeTags[3]-1],
-                                              _logMetricTensorAtNodetags_eigen[gmshNodeTags[4]-1],
-                                              _logMetricTensorAtNodetags_eigen[gmshNodeTags[5]-1], dMdx, dMdy, L, dLdx, dLdy,
-                                              l1, dl1dx, dl1dy, l2, dl2dx, dl2dy, u1, du1dx, du1dy, u2, du2dx, du2dy);
-
-    // Version with MetricTensors (expensive because of many std::make_unique and news)
-    // MetricTensor res;
-    // this->logEuclidianP2Interpolation(xsi, _logMetricTensorAtNodetags.at(gmshNodeTags[0]),
-    //                                        _logMetricTensorAtNodetags.at(gmshNodeTags[1]),
-    //                                        _logMetricTensorAtNodetags.at(gmshNodeTags[2]),
-    //                                        _logMetricTensorAtNodetags.at(gmshNodeTags[3]),
-    //                                        _logMetricTensorAtNodetags.at(gmshNodeTags[4]),
-    //                                        _logMetricTensorAtNodetags.at(gmshNodeTags[5]), res);
-    // M(0,0) = res(0,0);
-    // M(0,1) = res(0,1);
-    // M(1,0) = res(1,0);
-    // M(1,1) = res(1,1);
+    this->logEuclidianP2Interpolation(xsi, _logMetricTensorAtNodetags_eigen[GMSHNODETAGS_P2[0]-1],
+                                           _logMetricTensorAtNodetags_eigen[GMSHNODETAGS_P2[1]-1],
+                                           _logMetricTensorAtNodetags_eigen[GMSHNODETAGS_P2[2]-1],
+                                           _logMetricTensorAtNodetags_eigen[GMSHNODETAGS_P2[3]-1],
+                                           _logMetricTensorAtNodetags_eigen[GMSHNODETAGS_P2[4]-1],
+                                           _logMetricTensorAtNodetags_eigen[GMSHNODETAGS_P2[5]-1], M);
 
     // Eigen::Matrix2d L, dLdx, dLdy;
     // double l1, l2;
@@ -306,13 +288,13 @@ void feMetric::interpolateMetricP2(const double *x, Eigen::Matrix2d &M,
     // Eigen::Vector2d du1dy;
     // Eigen::Vector2d du2dx;
     // Eigen::Vector2d du2dy;
-    // gradLogEuclidianP2Interpolation(xsi, elm, _logMetricTensorAtNodetags.at(gmshNodeTags[0]),
-    //                                           _logMetricTensorAtNodetags.at(gmshNodeTags[1]),
-    //                                           _logMetricTensorAtNodetags.at(gmshNodeTags[2]),
-    //                                           _logMetricTensorAtNodetags.at(gmshNodeTags[3]),
-    //                                           _logMetricTensorAtNodetags.at(gmshNodeTags[4]),
-    //                                           _logMetricTensorAtNodetags.at(gmshNodeTags[5]), dMdx, dMdy, L, dLdx, dLdy,
-    //                                           l1, dl1dx, dl1dy, l2, dl2dx, dl2dy, u1, du1dx, du1dy, u2, du2dx, du2dy);
+    gradLogEuclidianP2Interpolation(xsi, elm, _logMetricTensorAtNodetags_eigen[GMSHNODETAGS_P2[0]-1],
+                                              _logMetricTensorAtNodetags_eigen[GMSHNODETAGS_P2[1]-1],
+                                              _logMetricTensorAtNodetags_eigen[GMSHNODETAGS_P2[2]-1],
+                                              _logMetricTensorAtNodetags_eigen[GMSHNODETAGS_P2[3]-1],
+                                              _logMetricTensorAtNodetags_eigen[GMSHNODETAGS_P2[4]-1],
+                                              _logMetricTensorAtNodetags_eigen[GMSHNODETAGS_P2[5]-1], dMdx, dMdy, L, DLDX, DLDY,
+                                              L1, DL1DX, DL1DY, L2, DL2DX, DL2DY, U1, DU1DX, DU1DY, U2, DU2DX, DU2DY);
   }
 }
 
@@ -391,26 +373,6 @@ void feMetric::interpolateMetricP2Log(const double *x, Eigen::Matrix2d &M,
                                               _logMetricTensorAtNodetags_eigen[gmshNodeTags[4]-1],
                                               _logMetricTensorAtNodetags_eigen[gmshNodeTags[5]-1], dMdx, dMdy, L, dLdx, dLdy,
                                               l1, dl1dx, dl1dy, l2, dl2dx, dl2dy, u1, du1dx, du1dy, u2, du2dx, du2dy);
-
-    // MetricTensor res;
-    // this->logEuclidianP2Interpolation(xsi, _logMetricTensorAtNodetags.at(gmshNodeTags[0]),
-    //                                        _logMetricTensorAtNodetags.at(gmshNodeTags[1]),
-    //                                        _logMetricTensorAtNodetags.at(gmshNodeTags[2]),
-    //                                        _logMetricTensorAtNodetags.at(gmshNodeTags[3]),
-    //                                        _logMetricTensorAtNodetags.at(gmshNodeTags[4]),
-    //                                        _logMetricTensorAtNodetags.at(gmshNodeTags[5]), res);
-    // M(0,0) = res(0,0);
-    // M(0,1) = res(0,1);
-    // M(1,0) = res(1,0);
-    // M(1,1) = res(1,1);
-
-    // gradLogEuclidianP2Interpolation(xsi, elm, _logMetricTensorAtNodetags.at(gmshNodeTags[0]),
-    //                                           _logMetricTensorAtNodetags.at(gmshNodeTags[1]),
-    //                                           _logMetricTensorAtNodetags.at(gmshNodeTags[2]),
-    //                                           _logMetricTensorAtNodetags.at(gmshNodeTags[3]),
-    //                                           _logMetricTensorAtNodetags.at(gmshNodeTags[4]),
-    //                                           _logMetricTensorAtNodetags.at(gmshNodeTags[5]), dMdx, dMdy, L, dLdx, dLdy,
-    //                                           l1, dl1dx, dl1dy, l2, dl2dx, dl2dy, u1, du1dx, du1dy, u2, du2dx, du2dy);
   }
 }
 
@@ -482,6 +444,8 @@ void feMetric::gradLogEuclidianP2Interpolation(const double xsi[2],
   double y1 = t->getVertex(1)->y();
   double x2 = t->getVertex(2)->x();
   double y2 = t->getVertex(2)->y();
+
+  // FIXME: TRANSFORMATION SHOULD BE QUADRATIC!
   Eigen::Matrix2d Jac;
   Jac(0,0) = x1 - x0;
   Jac(0,1) = x2 - x0;

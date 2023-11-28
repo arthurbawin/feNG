@@ -333,6 +333,7 @@ public:
   // Metric interpolation on background mesh
   void interpolateMetricP1(const double *x, Eigen::Matrix2d &M,
                            Eigen::Matrix2d &dMdx, Eigen::Matrix2d &dMdy);
+  void interpolateMetricP2(const double *x, Eigen::Matrix2d &M);
   void interpolateMetricP2(const double *x, Eigen::Matrix2d &M,
                            Eigen::Matrix2d &dMdx, Eigen::Matrix2d &dMdy);
   void interpolateMetricP2Log(const double *x, Eigen::Matrix2d &M,
@@ -421,8 +422,8 @@ void drawEllipsoids(const std::string &posFile, std::map<int, MetricType> &metri
 // Non-class wrapper
 void interpolateMetricP1Callback(void *metricPtr, const double *x, Eigen::Matrix2d &M,
                            Eigen::Matrix2d &dMdx, Eigen::Matrix2d &dMdy);
-void interpolateMetricP2Callback(void *metricPtr, const double *x, Eigen::Matrix2d &M,
-                           Eigen::Matrix2d &dMdx, Eigen::Matrix2d &dMdy);
+void interpolateMetricP2CallbackWithoutDerivatives(void *metricPtr, const double *x, Eigen::Matrix2d &M);
+void interpolateMetricP2CallbackWithDerivatives(void *metricPtr, const double *x, Eigen::Matrix2d &M, Eigen::Matrix2d &dMdx, Eigen::Matrix2d &dMdy);
 void interpolateMetricP2CallbackLog(void *metricPtr, const double *x, Eigen::Matrix2d &M,
                            Eigen::Matrix2d &dMdx, Eigen::Matrix2d &dMdy,
                            Eigen::Matrix2d &L,

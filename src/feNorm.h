@@ -124,6 +124,10 @@ protected:
   bool _plotErrorToFile = false;
   std::string _errorPlotFileName = "errorOnElements.pos";
 
+  // To ignore the top fraction of elements error
+  bool _ignoreHighestError = false;
+  double _fractionToIgnore = 0.;
+
   double _viscosity = 1.0;
 
 public:
@@ -142,6 +146,12 @@ public:
 
   void setErrorPlotFlag(bool flag) { _plotErrorToFile = flag; };
   void setErrorPlotFilename(std::string name) { _errorPlotFileName = name; };
+
+  void setFractionToIgnore(double fraction)
+  {
+    _ignoreHighestError = true;
+    _fractionToIgnore = fmin(fmax(fraction, 0.), 1.);
+  }
 
   void setViscosity(double viscosity){ _viscosity = viscosity; };
 
