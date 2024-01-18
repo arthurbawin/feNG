@@ -286,9 +286,14 @@ feNewPatch::feNewPatch(const feCncGeo *cnc, feMesh *mesh, bool reconstructAtHigh
     // D'abord déterminer les patches interieures
     // Elles doivent contenir au moins "minVertices" sommets
     // On ajoute juste des couches d'éléments pour y arriver
+
+    // Also, check that there is at least one inner P1 vertex in the mesh
+    bool OK = false;
     for(auto &pair : vertToElems) {
       int vertex = pair.first;
       if(!_isVertexBoundary.at(vertex) && !isOnEdge.at(vertex)) {
+
+        OK = true;
         bool enoughAdjacentVertices = false;
 
         do {
@@ -328,6 +333,14 @@ feNewPatch::feNewPatch(const feCncGeo *cnc, feMesh *mesh, bool reconstructAtHigh
           }
         } while(!enoughAdjacentVertices);
       }
+    }
+
+    if(!OK) {
+      // All P1 vertices are on the boundary. Need to look into it, if necessary.
+      feErrorMsg(FE_STATUS_ERROR,
+               "Mesh has no inner P1 vertex. All P1 vertices are on the boundary."
+               " Cannot construct patches for derivatives recovery for now.");
+      exit(-1);
     }
 
     // Boundary patches

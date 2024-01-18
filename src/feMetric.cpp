@@ -61,6 +61,9 @@ feStatus feMetric::createVertex2NodeMap(std::vector<std::size_t> &nodeTags,
   double tol = 1e-12;
   _v2n.clear();
   _n2v.clear();
+
+  _sequentialTag2nodeTagVec.resize(meshVertices.size());
+
   for(size_t i = 0; i < nodeTags.size(); i++) {
     const double x = coord[3 * i + 0];
     const double y = coord[3 * i + 1];
@@ -70,6 +73,7 @@ feStatus feMetric::createVertex2NodeMap(std::vector<std::size_t> &nodeTags,
         _n2v[nodeTags[i]] = &v;
         _nodeTag2sequentialTag[nodeTags[i]] = mesh->_verticesMap[v.getTag()];
         _sequentialTag2nodeTag[mesh->_verticesMap[v.getTag()]] = nodeTags[i];
+        _sequentialTag2nodeTagVec[mesh->_verticesMap[v.getTag()]] = nodeTags[i];
         break;
       }
     }
@@ -1145,10 +1149,24 @@ feStatus feMetric::computeMetricsPn(std::vector<std::size_t> &nodeTags, std::vec
 #endif
 }
 
-void feMetric::computeDirectionFieldFromGradient(const int vertex, double grad[2], const double tol)
+thread_local std::vector<double> POS(3, 0.), DU(2, 0.), D2U(4, 0.), D3U(8, 0.);
+
+void feMetric::computeDirectionFieldFromGradient(const double x[2], const int vertex, double grad[2], const double tol)
 {
-  double gx = _recoveredFields[0]->evaluateRecoveryAtVertex(PPR::DERIVATIVE, 0, vertex);
-  double gy = _recoveredFields[0]->evaluateRecoveryAtVertex(PPR::DERIVATIVE, 1, vertex);
+  double gx, gy;
+
+  if(_options.useAnalyticDerivatives) {
+    // Evaluate the analytic gradient
+    POS[0] = x[0];
+    POS[1] = x[1];
+    POS[2] = 0.;
+    _options.firstDerivatives->eval(0, POS, DU);
+    gx = DU[0];
+    gy = DU[1];
+  } else {
+    gx = _recoveredFields[0]->evaluateRecoveryAtVertex(PPR::DERIVATIVE, 0, vertex);
+    gy = _recoveredFields[0]->evaluateRecoveryAtVertex(PPR::DERIVATIVE, 1, vertex);
+  }
 
   double normGrad = sqrt(gx * gx + gy * gy);
 
@@ -1182,17 +1200,16 @@ double feMetric::secondDerivativesAlongCurve(const double x[2], const int vertex
   double fyy = _recoveredFields[0]->evaluateRecoveryAtVertex(PPR::DERIVATIVE, 5, vertex);
 
   double TOL = 1e-12;
-  std::vector<double> pos(3, 0.), DU(2, 0.), D2U(4, 0.);
 
   if(_options.useAnalyticDerivatives) {
     // Evaluate the analytic high-order derivatives instead
-    pos[0] = x[0];
-    pos[1] = x[1];
-    pos[2] = 0.;
-    _options.firstDerivatives->eval(0, pos, DU);
+    POS[0] = x[0];
+    POS[1] = x[1];
+    POS[2] = 0.;
+    _options.firstDerivatives->eval(0, POS, DU);
     fx = maxFabs(DU[0], TOL);
     fy = maxFabs(DU[1], TOL);
-    _options.secondDerivatives->eval(0, pos, D2U);
+    _options.secondDerivatives->eval(0, POS, D2U);
     fxx = maxFabs(D2U[0], TOL);
     fxy = maxFabs(D2U[1], TOL);
     fyy = maxFabs(D2U[3], TOL);
@@ -1232,23 +1249,27 @@ thread_local Eigen::VectorXd COEFF_L_LINEAR = Eigen::VectorXd::Zero(5);
 double feMetric::solveSizePolynomialLinear(const double x[2], const int vertex, const double directionV1[2], const int direction, const double targetError)
 {
   double fx, fy, fxx, fxy, fyy, TOL = 1e-12;
-  std::vector<double> pos(3, 0.), DU(2, 0.), D2U(4, 0.);
 
   if(_options.useAnalyticDerivatives) {
     // Evaluate the analytic high-order derivatives instead
-    pos[0] = x[0];
-    pos[1] = x[1];
-    pos[2] = 0.;
-    _options.firstDerivatives->eval(0, pos, DU);
+    POS[0] = x[0];
+    POS[1] = x[1];
+    POS[2] = 0.;
+    _options.firstDerivatives->eval(0, POS, DU);
     fx = maxFabs(DU[0], TOL);
     fy = maxFabs(DU[1], TOL);
-    _options.secondDerivatives->eval(0, pos, D2U);
+    _options.secondDerivatives->eval(0, POS, D2U);
     fxx = maxFabs(D2U[0], TOL);
     fxy = maxFabs(D2U[1], TOL);
     fyy = maxFabs(D2U[3], TOL);
   } else {
-    feInfo("Implement for non-analytic derivatives");
-    exit(-1);
+    fx = _recoveredFields[0]->evaluateRecoveryAtVertex(PPR::DERIVATIVE, 0, vertex);
+    fy = _recoveredFields[0]->evaluateRecoveryAtVertex(PPR::DERIVATIVE, 1, vertex);
+
+    fxx = _recoveredFields[0]->evaluateRecoveryAtVertex(PPR::DERIVATIVE, 2, vertex);
+    fxy = 0.5 * (_recoveredFields[0]->evaluateRecoveryAtVertex(PPR::DERIVATIVE, 3, vertex) +
+                 _recoveredFields[0]->evaluateRecoveryAtVertex(PPR::DERIVATIVE, 4, vertex));
+    fyy = _recoveredFields[0]->evaluateRecoveryAtVertex(PPR::DERIVATIVE, 5, vertex);
   }
 
   // Compute directions and curvatures
@@ -1260,59 +1281,212 @@ double feMetric::solveSizePolynomialLinear(const double x[2], const int vertex, 
 
   double normGrad = fmax(TOL, sqrt(fx*fx+fy*fy));
 
-  // 0 is iso, 1 is gradient
-  if(direction == 0) {
-    kappa = (-fy * fy * fxx + 2.0 * fx * fy * fxy - fx * fx * fyy) / (pow(fx * fx + fy * fy, 3. / 2.));
-    ax = -fy/normGrad;
-    ay =  fx/normGrad;
-    bx =  fx/normGrad * 0.5 * kappa;
-    by =  fy/normGrad * 0.5 * kappa;
-  } else {
-    kappa = (fx * fy * (fyy - fxx) + (fx * fx - fy * fy) * fxy) / (pow(fx * fx + fy * fy, 3. / 2.));
-    ax =  fx/normGrad;
-    ay =  fy/normGrad;
-    bx = -fy/normGrad * 0.5 * kappa;
-    by =  fx/normGrad * 0.5 * kappa;
-  }
+  double  xIso[2] = {-fy,  fy};
+  double  yIso[2] = { fx, -fx};
+  double xGrad[2] = { fx, -fx};
+  double yGrad[2] = { fy, -fy};
+  double  kappaIso = (-fy * fy * fxx + 2.0 * fx * fy * fxy - fx * fx * fyy) / (pow(fx * fx + fy * fy, 3. / 2.));
+  double kappaGrad = (fx * fy * (fyy - fxx) + (fx * fx - fy * fy) * fxy) / (pow(fx * fx + fy * fy, 3. / 2.));
+  double kappaVec[2] = {kappaIso, kappaGrad};
+  kappa = kappaVec[direction];
 
-  double coeffL4 = (fxx * bx * bx + 2. * fxy * bx*by + fyy*by*by) / 3.;
-  double coeffL3 = (ax*bx*fxx + fxy * (ax*by + ay*bx) + ay*by*fyy) * 2./3.;
-  double coeffL2 = (0.5 * (fxx*ax*ax + fyy*ay*ay) + fxy*ax*ay + bx*fx + by*fy);
+  // // 0 is iso, 1 is gradient
+  // if(direction == 0) {
+  //   kappa = (-fy * fy * fxx + 2.0 * fx * fy * fxy - fx * fx * fyy) / (pow(fx * fx + fy * fy, 3. / 2.));
+  //   ax = -fy/normGrad;
+  //   ay =  fx/normGrad;
+  //   bx =  fx/normGrad * 0.5 * kappa;
+  //   by =  fy/normGrad * 0.5 * kappa;
+  // } else {
+  //   kappa = (fx * fy * (fyy - fxx) + (fx * fx - fy * fy) * fxy) / (pow(fx * fx + fy * fy, 3. / 2.));
+  //   ax =  fx/normGrad;
+  //   ay =  fy/normGrad;
+  //   bx = -fy/normGrad * 0.5 * kappa;
+  //   by =  fx/normGrad * 0.5 * kappa;
+  // }
 
-  // Solve p(L) = error
-  COEFF_L_LINEAR(0) = coeffL4;
-  COEFF_L_LINEAR(1) = coeffL3;
-  COEFF_L_LINEAR(2) = coeffL2;
-  COEFF_L_LINEAR(3) = 0.;
-  COEFF_L_LINEAR(4) = -targetError;
-  feInfo("Polynomial is %+-1.4e - %+-1.4e - %+-1.4e - %+-1.4e - %+-1.4e", 
-    COEFF_L_LINEAR(0),
-    COEFF_L_LINEAR(1),
-    COEFF_L_LINEAR(2),
-    COEFF_L_LINEAR(3),
-    COEFF_L_LINEAR(4));
   double L = 1e10;
-  ROOTS_L_LINEAR = RootFinder::solvePolynomial(COEFF_L_LINEAR, 0., INFINITY, 1e-4);
-  for(auto it = ROOTS_L_LINEAR.begin(); it != ROOTS_L_LINEAR.end(); it++) {
-    L = fmin(L, *it);
+
+  // Forward and backward along iso or grad
+  for(int i = 0; i < 1; ++i) {
+
+    if(direction == 0) {
+      ax =  xIso[i]/normGrad;
+      ay =  yIso[i]/normGrad;
+      bx = xGrad[i]/normGrad * 0.5 * kappa;
+      by = yGrad[i]/normGrad * 0.5 * kappa;
+    } else {
+      ax = xGrad[i]/normGrad;
+      ay = yGrad[i]/normGrad;
+      bx =  xIso[i]/normGrad * 0.5 * kappa;
+      by =  yIso[i]/normGrad * 0.5 * kappa;
+    }
+
+    double coeffL4 = (fxx * bx * bx + 2. * fxy * bx*by + fyy*by*by) / 3.;
+    double coeffL3 = (ax*bx*fxx + fxy * (ax*by + ay*bx) + ay*by*fyy) * 2./3.;
+    double coeffL2 = (0.5 * (fxx*ax*ax + fyy*ay*ay) + fxy*ax*ay + bx*fx + by*fy);
+
+    // Solve p(L) = error
+    COEFF_L_LINEAR(0) = coeffL4;
+    COEFF_L_LINEAR(1) = coeffL3;
+    COEFF_L_LINEAR(2) = coeffL2;
+    COEFF_L_LINEAR(3) = 0.;
+    COEFF_L_LINEAR(4) = -targetError;
+    // feInfo("Polynomial is %+-1.4e - %+-1.4e - %+-1.4e - %+-1.4e - %+-1.4e", 
+    //   COEFF_L_LINEAR(0),
+    //   COEFF_L_LINEAR(1),
+    //   COEFF_L_LINEAR(2),
+    //   COEFF_L_LINEAR(3),
+    //   COEFF_L_LINEAR(4));
+    ROOTS_L_LINEAR = RootFinder::solvePolynomial(COEFF_L_LINEAR, 0., INFINITY, 1e-4);
+    for(auto it = ROOTS_L_LINEAR.begin(); it != ROOTS_L_LINEAR.end(); it++) {
+      L = fmin(L, fabs(*it));
+    }
+
+    // Solve -p(L) = error
+    COEFF_L_LINEAR(0) = -coeffL4;
+    COEFF_L_LINEAR(1) = -coeffL3;
+    COEFF_L_LINEAR(2) = -coeffL2;
+    COEFF_L_LINEAR(3) = 0.;
+    COEFF_L_LINEAR(4) = -targetError;
+    // feInfo("Polynomial is %+-1.4e - %+-1.4e - %+-1.4e - %+-1.4e - %+-1.4e", 
+    //   COEFF_L_LINEAR(0),
+    //   COEFF_L_LINEAR(1),
+    //   COEFF_L_LINEAR(2),
+    //   COEFF_L_LINEAR(3),
+    //   COEFF_L_LINEAR(4));
+    ROOTS_L_LINEAR = RootFinder::solvePolynomial(COEFF_L_LINEAR, 0., INFINITY, 1e-4);
+    for(auto it = ROOTS_L_LINEAR.begin(); it != ROOTS_L_LINEAR.end(); it++) {
+      L = fmin(L, fabs(*it));
+    }
   }
 
-  // Solve -p(L) = error
-  COEFF_L_LINEAR(0) = -coeffL4;
-  COEFF_L_LINEAR(1) = -coeffL3;
-  COEFF_L_LINEAR(2) = -coeffL2;
-  COEFF_L_LINEAR(3) = 0.;
-  COEFF_L_LINEAR(4) = -targetError;
-  feInfo("Polynomial is %+-1.4e - %+-1.4e - %+-1.4e - %+-1.4e - %+-1.4e", 
-    COEFF_L_LINEAR(0),
-    COEFF_L_LINEAR(1),
-    COEFF_L_LINEAR(2),
-    COEFF_L_LINEAR(3),
-    COEFF_L_LINEAR(4));
-  ROOTS_L_LINEAR = RootFinder::solvePolynomial(COEFF_L_LINEAR, 0., INFINITY, 1e-4);
-  for(auto it = ROOTS_L_LINEAR.begin(); it != ROOTS_L_LINEAR.end(); it++) {
-    L = fmin(L, *it);
+  return L;
+}
+
+thread_local std::set<double> ROOTS_L_QUADRATIC;
+thread_local Eigen::VectorXd COEFF_L_QUADRATIC = Eigen::VectorXd::Zero(7);
+
+double feMetric::solveSizePolynomialQuadratic(const double x[2], const int vertex, const double directionV1[2], const int direction, const double targetError)
+{
+  double fx, fy, fxx, fxy, fyy, fxxx, fxxy, fxyy, fyyy, TOL = 1e-12;
+
+  if(_options.useAnalyticDerivatives) {
+    // Evaluate the analytic high-order derivatives instead
+    POS[0] = x[0];
+    POS[1] = x[1];
+    POS[2] = 0.;
+    _options.firstDerivatives->eval(0, POS, DU);
+    fx = maxFabs(DU[0], TOL);
+    fy = maxFabs(DU[1], TOL);
+    _options.secondDerivatives->eval(0, POS, D2U);
+    fxx = maxFabs(D2U[0], TOL);
+    fxy = maxFabs(D2U[1], TOL);
+    fyy = maxFabs(D2U[3], TOL);
+    _options.thirdDerivatives->eval(0, POS, D3U);
+    fxxx = maxFabs(D3U[0], TOL);
+    fxxy = maxFabs(D3U[1], TOL);
+    fxyy = maxFabs(D3U[3], TOL);
+    fyyy = maxFabs(D3U[7], TOL);
+  } else {
+    fx = _recoveredFields[0]->evaluateRecoveryAtVertex(PPR::DERIVATIVE, 0, vertex);
+    fy = _recoveredFields[0]->evaluateRecoveryAtVertex(PPR::DERIVATIVE, 1, vertex);
+
+    fxx = _recoveredFields[0]->evaluateRecoveryAtVertex(PPR::DERIVATIVE, 2, vertex);
+    fxy = 0.5 * (_recoveredFields[0]->evaluateRecoveryAtVertex(PPR::DERIVATIVE, 3, vertex) +
+                 _recoveredFields[0]->evaluateRecoveryAtVertex(PPR::DERIVATIVE, 4, vertex));
+    fyy = _recoveredFields[0]->evaluateRecoveryAtVertex(PPR::DERIVATIVE, 5, vertex);
+
+    fxxx = _recoveredFields[0]->evaluateRecoveryAtVertex(PPR::DERIVATIVE, 6, vertex);
+    fxxy = (_recoveredFields[0]->evaluateRecoveryAtVertex(PPR::DERIVATIVE, 7, vertex) +
+            _recoveredFields[0]->evaluateRecoveryAtVertex(PPR::DERIVATIVE, 8, vertex) +
+            _recoveredFields[0]->evaluateRecoveryAtVertex(PPR::DERIVATIVE, 10, vertex)) / 3.;
+    fxyy = (_recoveredFields[0]->evaluateRecoveryAtVertex(PPR::DERIVATIVE, 9, vertex) +
+            _recoveredFields[0]->evaluateRecoveryAtVertex(PPR::DERIVATIVE, 11, vertex) +
+            _recoveredFields[0]->evaluateRecoveryAtVertex(PPR::DERIVATIVE, 12, vertex)) / 3.;
+    fyyy = _recoveredFields[0]->evaluateRecoveryAtVertex(PPR::DERIVATIVE, 13, vertex);
   }
+
+  // Compute directions and curvatures
+  double ax, ay, bx, by, kappa;
+
+  // (C,S) is the direction of the gradient at x
+  // double C = directionV1[0];
+  // double S = directionV1[1];
+
+  double normGrad = fmax(TOL, sqrt(fx*fx+fy*fy));
+
+  double  xIso[2] = {-fy,  fy};
+  double  yIso[2] = { fx, -fx};
+  double xGrad[2] = { fx, -fx};
+  double yGrad[2] = { fy, -fy};
+  double  kappaIso = (-fy * fy * fxx + 2.0 * fx * fy * fxy - fx * fx * fyy) / (pow(fx * fx + fy * fy, 3. / 2.));
+  double kappaGrad = (fx * fy * (fyy - fxx) + (fx * fx - fy * fy) * fxy) / (pow(fx * fx + fy * fy, 3. / 2.));
+  double kappaVec[2] = {kappaIso, kappaGrad};
+  kappa = kappaVec[direction];
+
+  double L = 1e10;
+
+  // Forward and backward along iso or grad
+  for(int i = 0; i < 1; ++i) {
+
+    if(direction == 0) {
+      ax =  xIso[i]/normGrad;
+      ay =  yIso[i]/normGrad;
+      bx = xGrad[i]/normGrad * 0.5 * kappa;
+      by = yGrad[i]/normGrad * 0.5 * kappa;
+    } else {
+      ax = xGrad[i]/normGrad;
+      ay = yGrad[i]/normGrad;
+      bx =  xIso[i]/normGrad * 0.5 * kappa;
+      by =  yIso[i]/normGrad * 0.5 * kappa;
+    }
+
+    double coeffL6 = (fxxx * bx*bx*bx + 3. * fxxy * bx*bx*by + 3. * fxyy * bx*by*by + fyyy*by*by*by) * 2./15.;
+    double coeffL5 = (fxxx * bx*bx*ax +      fxxy * bx*bx*ay +      fxyy * ax*by*by + fyyy*ay*by*by) * 2./5.
+                    + (fxxy * ax*bx*by + fxyy * ay*bx*by) * 4./5.;
+    double coeffL4 = (fxxx * ax*ax*bx /2. + fxxy * ax*ax*by/2. + fxxy*ax*ay*bx + fxyy*ax*ay*by + fxyy*ay*ay*bx/2. + fyyy*ay*ay*by/2. + fxx*bx*bx + 2.*fxy*bx*by + fyy*by*by);
+    double coeffL3 = (fxxx*ax*ax*ax/3. + fyyy*ay*ay*ay/3. + 2. * ax * (bx*fxx + by*fxy) + 2.*ay*(bx*fxy + by*fyy) + ax*ax*ay*fxxy + ax*ay*ay*fyy);
+
+    // Solve p(L) = error
+    COEFF_L_QUADRATIC(0) = coeffL6;
+    COEFF_L_QUADRATIC(1) = coeffL5;
+    COEFF_L_QUADRATIC(2) = coeffL4;
+    COEFF_L_QUADRATIC(3) = coeffL3;
+    COEFF_L_QUADRATIC(4) = 0.;
+    COEFF_L_QUADRATIC(5) = 0.;
+    COEFF_L_QUADRATIC(6) = -targetError;
+    // feInfo("Polynomial is %+-1.4e - %+-1.4e - %+-1.4e - %+-1.4e - %+-1.4e", 
+    //   COEFF_L_QUADRATIC(0),
+    //   COEFF_L_QUADRATIC(1),
+    //   COEFF_L_QUADRATIC(2),
+    //   COEFF_L_QUADRATIC(3),
+    //   COEFF_L_QUADRATIC(4));
+    ROOTS_L_QUADRATIC = RootFinder::solvePolynomial(COEFF_L_QUADRATIC, 0., INFINITY, 1e-4);
+    for(auto it = ROOTS_L_QUADRATIC.begin(); it != ROOTS_L_QUADRATIC.end(); it++) {
+      L = fmin(L, fabs(*it));
+    }
+
+    // Solve -p(L) = error
+    COEFF_L_QUADRATIC(0) = -coeffL6;
+    COEFF_L_QUADRATIC(1) = -coeffL5;
+    COEFF_L_QUADRATIC(2) = -coeffL4;
+    COEFF_L_QUADRATIC(3) = -coeffL3;
+    COEFF_L_QUADRATIC(4) = 0.;
+    COEFF_L_QUADRATIC(5) = 0.;
+    COEFF_L_QUADRATIC(6) = -targetError;
+    // feInfo("Polynomial is %+-1.4e - %+-1.4e - %+-1.4e - %+-1.4e - %+-1.4e", 
+    //   COEFF_L_QUADRATIC(0),
+    //   COEFF_L_QUADRATIC(1),
+    //   COEFF_L_QUADRATIC(2),
+    //   COEFF_L_QUADRATIC(3),
+    //   COEFF_L_QUADRATIC(4));
+    ROOTS_L_QUADRATIC = RootFinder::solvePolynomial(COEFF_L_QUADRATIC, 0., INFINITY, 1e-4);
+    for(auto it = ROOTS_L_QUADRATIC.begin(); it != ROOTS_L_QUADRATIC.end(); it++) {
+      L = fmin(L, fabs(*it));
+    }
+  }
+
   return L;
 }
 
@@ -1339,21 +1513,20 @@ double feMetric::thirdDerivativesAlongCurve(const double x[2], const int vertex,
   double fyyy = _recoveredFields[0]->evaluateRecoveryAtVertex(PPR::DERIVATIVE, 13, vertex);
 
   double TOL = 1e-12;
-  std::vector<double> pos(3, 0.), DU(2, 0.), D2U(4, 0.), D3U(8, 0.);
 
   if(_options.useAnalyticDerivatives) {
     // Evaluate the analytic high-order derivatives instead
-    pos[0] = x[0];
-    pos[1] = x[1];
-    pos[2] = 0.;
-    _options.firstDerivatives->eval(0, pos, DU);
+    POS[0] = x[0];
+    POS[1] = x[1];
+    POS[2] = 0.;
+    _options.firstDerivatives->eval(0, POS, DU);
     fx = maxFabs(DU[0], TOL);
     fy = maxFabs(DU[1], TOL);
-    _options.secondDerivatives->eval(0, pos, D2U);
+    _options.secondDerivatives->eval(0, POS, D2U);
     fxx = maxFabs(D2U[0], TOL);
     fxy = maxFabs(D2U[1], TOL);
     fyy = maxFabs(D2U[3], TOL);
-    _options.thirdDerivatives->eval(0, pos, D3U);
+    _options.thirdDerivatives->eval(0, POS, D3U);
     fxxx = maxFabs(D3U[0], TOL);
     fxxy = maxFabs(D3U[1], TOL);
     fxyy = maxFabs(D3U[3], TOL);
@@ -1419,10 +1592,14 @@ double feMetric::thirdDerivativesAlongCurve(const double x[2], const int vertex,
       return;
     case 2:
       {
-        double derivativeAlongGradient = fabs(thirdDerivativesAlongCurve(pos, vertex, directionV1, 0));
-        double derivativeAlongIsoline = fabs(thirdDerivativesAlongCurve(pos, vertex, directionV1, 1));
-        hIso = pow(6.0 * _options.eTargetError / derivativeAlongIsoline, 1./3.);
-        hGrad = pow(6.0 * _options.eTargetError / derivativeAlongGradient, 1./3.);
+        // double derivativeAlongGradient = fabs(thirdDerivativesAlongCurve(pos, vertex, directionV1, 0));
+        // double derivativeAlongIsoline = fabs(thirdDerivativesAlongCurve(pos, vertex, directionV1, 1));
+        // hIso = pow(6.0 * _options.eTargetError / derivativeAlongIsoline, 1./3.);
+        // hGrad = pow(6.0 * _options.eTargetError / derivativeAlongGradient, 1./3.);
+
+        hIso  = solveSizePolynomialQuadratic(pos, vertex, directionV1, 0, _options.eTargetError);
+        hGrad = solveSizePolynomialQuadratic(pos, vertex, directionV1, 1, _options.eTargetError);
+
       }
       return;
     default:
@@ -1434,10 +1611,9 @@ double feMetric::thirdDerivativesAlongCurve(const double x[2], const int vertex,
 feStatus feMetric::computeMetricsExtremeSizesOnly(std::vector<std::size_t> &nodeTags,
                                                   std::vector<double> &coord)
 {
-  bool smoothDirectionField = true;
   size_t numVertices = nodeTags.size();
-  std::vector<double[2]> directionV1(numVertices);
-  double x[2], C, S;
+  // std::vector<double[2]> directionV1(numVertices);
+  double x[2], direction[2], C, S;
 
   FILE *directions, *dirSmoothed;
   directions = fopen("directions.pos", "w");
@@ -1452,47 +1628,50 @@ feStatus feMetric::computeMetricsExtremeSizesOnly(std::vector<std::size_t> &node
   for(size_t i = 0; i < nodeTags.size(); i++) {
     x[0] = coord[3 * i + 0];
     x[1] = coord[3 * i + 1];
-    computeDirectionFieldFromGradient(_nodeTag2sequentialTag[nodeTags[i]], directionV1[i], 1e-12);
-    C = directionV1[i][0];
-    S = directionV1[i][1];
+    computeDirectionFieldFromGradient(x, _nodeTag2sequentialTag[nodeTags[i]], direction, 1e-12);
+    C = direction[0];
+    S = direction[1];
     fprintf(directions, "VP(%g,%g,%g){%g,%g,%g};\n", x[0], x[1], 0., C, S, 0.);
     fprintf(directions, "VP(%g,%g,%g){%g,%g,%g};\n", x[0], x[1], 0., -S, C, 0.);
     COS[nodeTags[i]] = C;
     SIN[nodeTags[i]] = S;
   }
 
-  // Smooth the direction field
-  int smoothMaxIter = 100;
-  double smoothTol = 0.85;
-  smoothDirections(COS, SIN,  smoothMaxIter, smoothTol);
+  if(_options.smoothDirectionField) {
+    // Smooth the direction field
+    int smoothMaxIter = 100;
+    double smoothTol = 0.95;
+    smoothDirections(COS, SIN,  smoothMaxIter, smoothTol);
+  }
 
   for(size_t i = 0; i < numVertices; i++) {
     x[0] = coord[3 * i + 0];
     x[1] = coord[3 * i + 1];
 
-    if(smoothDirectionField) {
-      C = COS[nodeTags[i]];
-      S = SIN[nodeTags[i]];
+    C = COS[nodeTags[i]];
+    S = SIN[nodeTags[i]];
+
+    if(_options.smoothDirectionField) {
       fprintf(dirSmoothed, "VP(%g,%g,%g){%g,%g,%g};\n", x[0], x[1], 0., C, S, 0.);
       fprintf(dirSmoothed, "VP(%g,%g,%g){%g,%g,%g};\n", x[0], x[1], 0., -S, C, 0.);
     } else {
-      computeDirectionFieldFromGradient(_nodeTag2sequentialTag[nodeTags[i]], directionV1[i], 1e-12);
-      C = directionV1[i][0];
-      S = directionV1[i][1];
       fprintf(directions, "VP(%g,%g,%g){%g,%g,%g};\n", x[0], x[1], 0., C, S, 0.);
       fprintf(directions, "VP(%g,%g,%g){%g,%g,%g};\n", x[0], x[1], 0., -S, C, 0.);
     } 
 
     double hGrad = 1., hIso = 1.;
-    computeSizeField(x, _nodeTag2sequentialTag[nodeTags[i]], directionV1[i], hGrad, hIso);
-    if(x[0] >= 0) feInfo("POSITIVE x: size = %f - %f", hGrad, hIso);
-    if(x[0] <  0) feInfo("NEGATIVE x: size = %f - %f", hGrad, hIso);
-    double eigenvalues[2] = {1. / (hGrad * hGrad), 1. / (hIso * hIso)};
+    direction[0] = C;
+    direction[1] = S; 
+    computeSizeField(x, _nodeTag2sequentialTag[nodeTags[i]], direction, hGrad, hIso);
+
+    double eigenvalues[2] = {fmax(_lambdaMin, fmin(_lambdaMax, 1. / (hGrad * hGrad))), 
+                             fmax(_lambdaMin, fmin(_lambdaMax, 1. / (hIso  * hIso )))};
     double ev1[2] = {C, S};
     double ev2[2] = {-S, C};
 
-    MetricTensor M(eigenvalues, ev1, ev2);
-    _metricTensorAtNodetags[nodeTags[i]] = M.boundEigenvaluesOfAbs(_lambdaMin, _lambdaMax);
+    // MetricTensor M(eigenvalues, ev1, ev2);
+    // _metricTensorAtNodetags[nodeTags[i]] = M.boundEigenvaluesOfAbs(_lambdaMin, _lambdaMax);
+    _metricTensorAtNodetags[nodeTags[i]] = MetricTensor(eigenvalues, ev1, ev2);
   }
 
   fprintf(directions, "};"); fclose(directions);
@@ -1550,7 +1729,7 @@ feStatus feMetric::computeMetricsCurvedLogSimplex(std::vector<std::size_t> &node
 
       // Get the direction of the gradient
       double grad[2];
-      computeDirectionFieldFromGradient(_nodeTag2sequentialTag[nodeTags[i]], grad, 1e-8);
+      computeDirectionFieldFromGradient(x, _nodeTag2sequentialTag[nodeTags[i]], grad, 1e-8);
       double C = grad[0];
       double S = grad[1];
       // #pragma omp critical
@@ -1627,10 +1806,6 @@ feStatus feMetric::computeMetrics()
 {
 #if defined(HAVE_GMSH)
 
-  bool debug = false;
-  if(_options.method == adaptationMethod::CURVED_EXTREME_SIZES)
-    debug = true;
-
   feInfoCond(FE_VERBOSE >= VERBOSE_MODERATE, "Computing metrics on Gmsh model %s",
              _options.modelForMetric.c_str());
   gmsh::model::setCurrent(_options.modelForMetric);
@@ -1695,7 +1870,7 @@ feStatus feMetric::computeMetrics()
 
 #if !defined(ONLY_TEST_METRIC_INTERPOLATION_CONVERGENCE)
   // Apply scaling and gradation only when not testing for metric interpolation convergence
-  if(debug) drawEllipsoids("rawMetrics.pos", _metricTensorAtNodetags, nodeTags, coord, _options.plotSizeFactor, 20);
+  if(_options.debug) drawEllipsoids("rawMetrics.pos", _metricTensorAtNodetags, nodeTags, coord, _options.plotSizeFactor, 20);
 
   if(_options.method != adaptationMethod::CURVED_EXTREME_SIZES) {
     // Scale the metric field
@@ -1724,7 +1899,7 @@ feStatus feMetric::computeMetrics()
       pair.second = pair.second.boundEigenvalues(_lambdaMin, _lambdaMax);
     }
 
-    if(debug)
+    if(_options.debug)
       drawEllipsoids("metricsAfterScaling.pos", _metricTensorAtNodetags, nodeTags, coord, _options.plotSizeFactor, 20);
   }
 
@@ -1736,8 +1911,9 @@ feStatus feMetric::computeMetrics()
     newGradation(nodeTags, coord, _metricTensorAtNodetags);
   }
 
-  if(debug)
+  if(_options.debug) {
     drawEllipsoids("metricsAfterGradation.pos", _metricTensorAtNodetags, nodeTags, coord, _options.plotSizeFactor, 20);
+  }
 
 #endif
 

@@ -477,23 +477,50 @@ void smoothDirections(std::map<size_t, double> &C, std::map<size_t, double> &S, 
   std::set<size_t> nodes;
   size_t numNodesPerElem = (elementTypes[0] == 2) ? 3 : 6;
 
+  // All sub-edges in P2 triangle
+  size_t nSubEdges = 15;
+  size_t e0[] = {0,0,0,0,0,1,1,1,1,2,2,2,3,3,4};
+  size_t e1[] = {1,2,3,4,5,2,3,4,5,3,4,5,4,5,5};
+
+  // for(size_t i = 0; i < elementTags[0].size(); i++) {
+  //   for(size_t j = 0; j < numNodesPerElem; ++j) {
+  //     size_t n0 = nodeTags[0][numNodesPerElem * i + j];
+  //     size_t n1 = nodeTags[0][numNodesPerElem * i + ((j + 1) % numNodesPerElem)];
+  //     graph.insert(std::make_pair(n0, n1));
+  //     nodes.insert(n0);
+  //     nodes.insert(n1);
+  //   }
+  //   // size_t n0 = nodeTags[0][numNodesPerElem * i + 0];
+  //   // size_t n1 = nodeTags[0][numNodesPerElem * i + 1];
+  //   // size_t n2 = nodeTags[0][numNodesPerElem * i + 2];
+  //   // graph.insert(std::make_pair(n0, n1));
+  //   // graph.insert(std::make_pair(n1, n2));
+  //   // graph.insert(std::make_pair(n2, n0));
+  //   // nodes.insert(n0);
+  //   // nodes.insert(n1);
+  //   // nodes.insert(n2);
+  // }
+
   for(size_t i = 0; i < elementTags[0].size(); i++) {
-    for(size_t j = 0; j < numNodesPerElem; ++j) {
-      size_t n0 = nodeTags[0][numNodesPerElem * i + j];
-      size_t n1 = nodeTags[0][numNodesPerElem * i + ((j + 1) % numNodesPerElem)];
-      graph.insert(std::make_pair(n0, n1));
-      nodes.insert(n0);
-      nodes.insert(n1);
+    if(numNodesPerElem == 3) {
+      // P1 triangles - Add each edge
+      for(size_t j = 0; j < 3; ++j) {
+        size_t n0 = nodeTags[0][numNodesPerElem * i + j];
+        size_t n1 = nodeTags[0][numNodesPerElem * i + (j+1) % numNodesPerElem];
+        graph.insert(std::make_pair(n0, n1));
+        nodes.insert(n0);
+        nodes.insert(n1);
+      }
+    } else {
+      // P2 triangles - Add all possible P2 sub-edges
+      for(size_t k = 0; k < nSubEdges; ++k) {
+        size_t n0 = nodeTags[0][numNodesPerElem * i + e0[k]];
+        size_t n1 = nodeTags[0][numNodesPerElem * i + e1[k]];
+        graph.insert(std::make_pair(n0, n1));
+        nodes.insert(n0);
+        nodes.insert(n1);
+      }
     }
-    // size_t n0 = nodeTags[0][numNodesPerElem * i + 0];
-    // size_t n1 = nodeTags[0][numNodesPerElem * i + 1];
-    // size_t n2 = nodeTags[0][numNodesPerElem * i + 2];
-    // graph.insert(std::make_pair(n0, n1));
-    // graph.insert(std::make_pair(n1, n2));
-    // graph.insert(std::make_pair(n2, n0));
-    // nodes.insert(n0);
-    // nodes.insert(n1);
-    // nodes.insert(n2);
   }
 
   double threshold = tol;

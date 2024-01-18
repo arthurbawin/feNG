@@ -1486,8 +1486,7 @@ feStatus feMesh2DP1::readGmsh(const std::string meshName, const bool curved, con
     return feErrorMsg(FE_STATUS_READ_ERROR, "Mesh file does not exist.");
   }
 
-  // Mesh ID is unused for now
-  _ID = "myBeautifulMesh";
+  _ID = meshName;
 
   if(fb.open(meshName, std::ios::in)) {
     std::istream input(&fb);

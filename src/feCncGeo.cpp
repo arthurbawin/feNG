@@ -283,11 +283,31 @@ feStatus feCncGeo::computeJacobians()
 
           if(_J[nQuad * iElm + k] <= 0) {
             atLeastOneNegative = true;
-            feWarning("Negative or zero jacobian = %+-12.12e on elm %d with coordinates "
+            if(_nVerticesPerElm == 2) {
+              feWarning("Negative or zero jacobian = %+-12.12e on elm %d with coordinates "
+                         "(%+-1.4e - %+-1.4e) - (%+-1.4e - %+-1.4e)\n",
+                         _J[nQuad * iElm + k], iElm,
+                         geoCoord[3 * 0 + 0], geoCoord[3 * 0 + 1],
+                         geoCoord[3 * 1 + 0], geoCoord[3 * 1 + 1]);
+            } else if(_nVerticesPerElm == 3) {
+              feWarning("Negative or zero jacobian = %+-12.12e on elm %d with coordinates "
                        "(%+-1.4e - %+-1.4e) - (%+-1.4e - %+-1.4e) - (%+-1.4e - %+-1.4e)\n",
-                       _J[nQuad * iElm + k], iElm, geoCoord[3 * 0 + 0], geoCoord[3 * 0 + 1],
-                       geoCoord[3 * 1 + 0], geoCoord[3 * 1 + 1], geoCoord[3 * 2 + 0],
-                       geoCoord[3 * 2 + 1]);
+                       _J[nQuad * iElm + k], iElm,
+                       geoCoord[3 * 0 + 0], geoCoord[3 * 0 + 1],
+                       geoCoord[3 * 1 + 0], geoCoord[3 * 1 + 1],
+                       geoCoord[3 * 2 + 0], geoCoord[3 * 2 + 1]);
+            } else if(_nVerticesPerElm == 6) {
+              feWarning("Negative or zero jacobian = %+-12.12e on elm %d with coordinates "
+                       "(%+-1.4e - %+-1.4e) - (%+-1.4e - %+-1.4e) - (%+-1.4e - %+-1.4e) - "
+                       "(%+-1.4e - %+-1.4e) - (%+-1.4e - %+-1.4e) - (%+-1.4e - %+-1.4e)\n",
+                       _J[nQuad * iElm + k], iElm, 
+                       geoCoord[3 * 0 + 0], geoCoord[3 * 0 + 1],
+                       geoCoord[3 * 1 + 0], geoCoord[3 * 1 + 1],
+                       geoCoord[3 * 2 + 0], geoCoord[3 * 2 + 1],
+                       geoCoord[3 * 3 + 0], geoCoord[3 * 3 + 1],
+                       geoCoord[3 * 4 + 0], geoCoord[3 * 4 + 1],
+                       geoCoord[3 * 5 + 0], geoCoord[3 * 5 + 1]);
+            }
           }
         }
 

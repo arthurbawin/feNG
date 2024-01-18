@@ -85,6 +85,8 @@ public:
   double gradation = 1.5;
   int gradationMaxIter = 100;
   GradationSpace gradationSpace = GradationSpace::Metric;
+  // Smooth the directions field
+  bool smoothDirectionField = true;
   // Target norm or seminorm to minimize - choice between Lp or Wmp
   Norm targetNorm = Norm::Lp;
   // Target Lp norm in which the interpolation error is minimized
@@ -202,6 +204,7 @@ protected:
   std::map<int, const Vertex *> _n2v;
   std::map<int, int> _nodeTag2sequentialTag;
   std::map<int, int> _sequentialTag2nodeTag;
+  std::vector<int> _sequentialTag2nodeTagVec;
 
   // The tag of the gmsh view in which the metric field is stored (if using Gmsh)
   int _metricViewTag = -1;
@@ -242,11 +245,12 @@ public:
   feStatus computeMetricsGoalOrientedP1(std::vector<std::size_t> &nodeTags, std::vector<double> &coord);
   feStatus computeMetricsCurvedLogSimplex(std::vector<std::size_t> &nodeTags, std::vector<double> &coord, bool useInducedDirections = false);
 
-  void computeDirectionFieldFromGradient(const int vertex, double directionV1[2], const double tol);
+  void computeDirectionFieldFromGradient(const double pos[2], const int vertex, double directionV1[2], const double tol);
   double secondDerivativesAlongCurve(const double pos[2], const int vertex, const double directionV1[2], const int direction);
   double thirdDerivativesAlongCurve(const double pos[2], const int vertex, const double directionV1[2], const int direction);
 
   double solveSizePolynomialLinear(const double x[2], const int vertex, const double directionV1[2], const int direction, const double targetError);
+  double solveSizePolynomialQuadratic(const double x[2], const int vertex, const double directionV1[2], const int direction, const double targetError);
 
   void computeSizeField(const double pos[2], const int vertex, const double directionV1[2], double &hGrad, double &hIso);
 

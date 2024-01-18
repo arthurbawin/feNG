@@ -232,7 +232,8 @@ void feMetric::interpolateMetricP2(const double *x, Eigen::Matrix2d &M)
     // Get the vertex tags from the feMesh
     for(int i = 0; i < 6; ++i) {
       int vertexTag = _recoveredFields[0]->_cnc->getVertexConnectivity(elm, i);
-      GMSHNODETAGS_P2[i] = _sequentialTag2nodeTag[vertexTag];
+      // GMSHNODETAGS_P2[i] = _sequentialTag2nodeTag[vertexTag];
+      GMSHNODETAGS_P2[i] = _sequentialTag2nodeTagVec[vertexTag];
     }
 
     this->logEuclidianP2Interpolation(xsi, _logMetricTensorAtNodetags_eigen[GMSHNODETAGS_P2[0]-1],
@@ -267,7 +268,8 @@ void feMetric::interpolateMetricP2(const double *x, Eigen::Matrix2d &M,
     // Get the vertex tags from the feMesh
     for(int i = 0; i < 6; ++i) {
       int vertexTag = _recoveredFields[0]->_cnc->getVertexConnectivity(elm, i);
-      GMSHNODETAGS_P2[i] = _sequentialTag2nodeTag[vertexTag];
+      // GMSHNODETAGS_P2[i] = _sequentialTag2nodeTag[vertexTag];
+      GMSHNODETAGS_P2[i] = _sequentialTag2nodeTagVec[vertexTag];
     }
 
     this->logEuclidianP2Interpolation(xsi, _logMetricTensorAtNodetags_eigen[GMSHNODETAGS_P2[0]-1],

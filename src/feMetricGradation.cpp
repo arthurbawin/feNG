@@ -496,39 +496,19 @@ feStatus feMetric::newGradation(std::vector<std::size_t> &nodeTags, std::vector<
   size_t e1[] = {1,2,3,4,5,2,3,4,5,3,4,5,4,5,5};
 
   for(size_t i = 0; i < elementTags[0].size(); i++) {
-    for(size_t j = 0; j < 3; ++j) {
-
-      if(numNodesPerElem == 3) {
-        // P1 triangles
-        // Add each edge
+    if(numNodesPerElem == 3) {
+      // P1 triangles - Add each edge
+      for(size_t j = 0; j < 3; ++j) {
         size_t n0 = elemNodeTags[0][numNodesPerElem * i + j];
         size_t n1 = elemNodeTags[0][numNodesPerElem * i + (j+1) % numNodesPerElem];
         edges.insert(std::make_pair(n0, n1));
-      } else {
-        // P2 triangles
-        // Add the 6 semi-edges, from a P1 vertex to a P2 midnode
-        // size_t n0 = elemNodeTags[0][numNodesPerElem * i + j];
-        // size_t n1 = elemNodeTags[0][numNodesPerElem * i + j+3];
-        // size_t n2 = elemNodeTags[0][numNodesPerElem * i + (j+1) % 3];
-        // edges.insert(std::make_pair(n0, n1));
-        // edges.insert(std::make_pair(n1, n2));
-        // fprintf(myFile, "SL(%.16g,%.16g,0.,%.16g,%.16g,0.){%f, %f};\n",
-        //   coord[3 * (n0-1)],
-        //   coord[3 * (n0-1) + 1],
-        //   coord[3 * (n1-1)],
-        //   coord[3 * (n1-1) + 1], 1., 1.);
-        // fprintf(myFile, "SL(%.16g,%.16g,0.,%.16g,%.16g,0.){%f, %f};\n",
-        //   coord[3 * (n1-1)],
-        //   coord[3 * (n1-1) + 1],
-        //   coord[3 * (n2-1)],
-        //   coord[3 * (n2-1) + 1], 1., 1.);
-
-        // Add all possible P2 sub-edges
-        for(size_t k = 0; k < nSubEdges; ++k) {
-          size_t n0 = elemNodeTags[0][numNodesPerElem * i + e0[k]];
-          size_t n1 = elemNodeTags[0][numNodesPerElem * i + e1[k]];
-          edges.insert(std::make_pair(n0, n1));
-        }
+      }
+    } else {
+      // P2 triangles - Add all possible P2 sub-edges
+      for(size_t k = 0; k < nSubEdges; ++k) {
+        size_t n0 = elemNodeTags[0][numNodesPerElem * i + e0[k]];
+        size_t n1 = elemNodeTags[0][numNodesPerElem * i + e1[k]];
+        edges.insert(std::make_pair(n0, n1));
       }
     }
   }

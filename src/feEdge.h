@@ -27,6 +27,9 @@ public:
   }
   ~Edge() {}
 
+  // Return an edge whose vertices are flipped with default tag and physicalTag
+  Edge flip() { return Edge(_v1, _v0); }
+
   inline Vertex *getVertex(int i) { return (i == 0) ? _v0 : _v1; }
   inline const Vertex *getVertex(int i) const { return (i == 0) ? _v0 : _v1; }
   

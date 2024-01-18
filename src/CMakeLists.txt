@@ -40,6 +40,7 @@ set(feNG_SRC
     feSysElm_2D.cpp
     feTriangle.cpp
     feVectorSysElm.cpp
+    geodesic.cpp
     glfem.cpp)
 
 #Add Gmsh files for STensor3
@@ -82,6 +83,7 @@ set(feNG_API
     feSysElm.h
     feTriangle.h
     feVertex.h
+    geodesic.h
     glfem.h)
 
 feng_add_library(feNG "${feNG_SRC}" "${feNG_API}")
