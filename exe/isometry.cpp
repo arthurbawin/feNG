@@ -750,7 +750,7 @@ double relocateFixedEdge_bisection(double x0[2], double x1[2], double cMin, doub
 int main(int argc, char** argv)
 {
   double x0_ref[2] = {3., 1.};
-  bool computeGeodesics = false;
+  bool computeGeodesics = true;
 
   #define NTHETA 1
   #define NCONV 1
@@ -804,76 +804,6 @@ int main(int argc, char** argv)
       }
 
       std::vector<double> optimalPos(numParameters, 0.);
-
-      // Choice 1 (bad, rotation is free): Fix the first vertex and send the whole mesh to the physical space
-      // for(auto *v : verticesPtr) {
-      //   (*v)(0) += x0[0];
-      //   (*v)(1) += x0[1];
-      //   feInfo("V pos = %f - %f", (*v)(0), (*v)(1));
-      // }  
-
-      // Choice 2: Fix the subtriangle containing the barycenter via a fixed vertex and a rotation
-      // // Rotate around 0
-      // for(auto *v : verticesPtr) {
-      //   double vx = (*v)(0);
-      //   double vy = (*v)(1);
-      //   (*v)(0) = R[0][0] * vx + R[0][1] * vy;
-      //   (*v)(1) = R[1][0] * vx + R[1][1] * vy;
-      // }
-      // double v0x = elements[iTriBarycenter][0]->x();
-      // double v0y = elements[iTriBarycenter][0]->y();
-      // // Send v0 of iTriBarycenter to x0_ref
-      // for(auto *v : verticesPtr) {
-      //   (*v)(0) += x0_ref[0] - v0x;
-      //   (*v)(1) += x0_ref[1] - v0y;
-      // }
-      // // Move the other two vertices of the subtriangle containing the barycenter to have the required lengths
-      // for(size_t i = 1; i < 3; ++i) {
-      //   Vertex *v = elements[iTriBarycenter][i];
-      //   double vx = (*v)(0);
-      //   double vy = (*v)(1);
-
-      //   // Set c with a bisection such that x0_ref + c * (v-x0_ref) has length in metric = TARGET_LENGTH_IN_METRIC_SUBTRIANGLE
-      //   // double c = TARGET_LENGTH_SUBTRIANGLE / sqrt(( pow(vx - x0_ref[0],2) + pow(vy - x0_ref[1],2) ));
-      //   double x1[2] = {vx, vy};
-      //   double c = relocateFixedEdge_bisection(x0_ref, x1, 0., 10., 50, 1e-3);
-      //   (*v)(0) = x0_ref[0] + c * (vx - x0_ref[0]);
-      //   (*v)(1) = x0_ref[1] + c * (vy - x0_ref[1]);
-      // }
-
-      // // Untangle the linear mesh
-      // double tangled;
-      // do {
-      //   tangled = false;
-      //   for(size_t i = 0; i < elements.size(); ++i) {
-      //     if(computeAreaTri(elements[i]) <= 0.)
-      //       tangled = true;
-      //   }
-      //   if(tangled) {
-      //     // Inflate the whole mesh from the barycenter
-      //     double xBary[2] = {0., 0.};
-      //     for(size_t i = 0; i < 3; ++i) {
-      //       xBary[0] += elements[iTriBarycenter][i]->x();
-      //       xBary[1] += elements[iTriBarycenter][i]->y();
-      //     }
-      //     xBary[0] /= 3.; xBary[1] /= 3.;
-
-      //     for(auto *v : verticesToModify) {
-      //       double vx = v->x();
-      //       double vy = v->y();
-      //       (*v)(0) = xBary[0] + 1.1 * (vx - xBary[0]);
-      //       (*v)(1) = xBary[1] + 1.1 * (vy - xBary[1]);
-      //     }
-      //   }
-      // } while(tangled);
-
-      // // Move whole mesh by the jacobian of the fixed triangle
-      // for(auto *v : verticesPtr) {
-      //   double vx = (*v)(0);
-      //   double vy = (*v)(1);
-      //   (*v)(0) = R[0][0] * vx + R[0][1] * vy;
-      //   (*v)(1) = R[1][0] * vx + R[1][1] * vy;
-      // }
 
       // Initial positions
       int cnt = 0;
@@ -966,30 +896,6 @@ int main(int argc, char** argv)
         (*v)(0) = optimalPos[2*i];
         (*v)(1) = optimalPos[2*i+1];
       }
-
-      // Print some stats
-      double ratioBary;
-      for(size_t i = 0; i < elements.size(); ++i) {
-        double euclideanArea = computeAreaTri(elements[i]);
-        Vertex *v0 = elements[i][0];
-        Vertex *v1 = elements[i][1];
-        Vertex *v2 = elements[i][2];
-        double xBary[2] = {(v0->x() + v1->x() + v2->x())/3., (v0->y() + v1->y() + v2->y())/3.};
-        getMetric(METRIC_ARRAY, DMDX_ARRAY, DMDY_ARRAY, xBary);
-        double areaInMetric = euclideanArea * sqrt(determinant(METRIC_ARRAY));
-        double X = areaInMetric/TARGET_AREA_IN_METRIC_SUBTRIANGLE;
-        if(i == iTriBarycenter)
-          ratioBary = X;
-        feInfo("After optimization - elm %d: A/Acible = %+-1.e", i, X);
-      }
-      feInfo("After optimization at barycenter: A/Acible = %+-1.e", ratioBary);
-      // Recompute barycenter to check
-      double xb[2] = {(elements[iTriBarycenter][0]->x() + elements[iTriBarycenter][1]->x() + elements[iTriBarycenter][2]->x())/3., 
-                      (elements[iTriBarycenter][0]->y() + elements[iTriBarycenter][1]->y() + elements[iTriBarycenter][2]->y())/3.};
-      getMetric(METRIC, xb);
-      feInfo("Computed metric at barycenter: %+-1.3e - %+-1.3e", xb[0], xb[1]);
-      METRIC.print();
-
 
       // Print solution
       std::string name = "afterMoving_N" + std::to_string(N_SUBTRIANGLES) + ".pos";
