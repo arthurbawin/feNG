@@ -27,17 +27,11 @@ static double wQuad[10] = {6.667134430868774e-02, 1.494513491505805e-01,
                            2.692667193099962e-01, 2.190863625159822e-01,
                            1.494513491505805e-01, 6.667134430868774e-02};
 
-// std::vector<double> INITIALPOS;
 
 double TARGET_LENGTH_IN_METRIC_SUBTRIANGLE;
 double TARGET_AREA_IN_METRIC_SUBTRIANGLE;
 
 double A0 = sqrt(3.)/4.;
-double TARGET_LENGTH = 0.5;
-double TARGET_AREA = A0 * TARGET_LENGTH*TARGET_LENGTH;
-double TARGET_LENGTH_SUBTRIANGLE;
-double TARGET_AREA_SUBTRIANGLE;
-double LOG_FACTOR = 1.;
 
 bool SET_RATIO = true;
 double EDGE2TRI_RATIO = 1.;
@@ -246,7 +240,6 @@ double computeCostFunction(const std::vector<Vertex*> &vertices,
   const std::vector<std::vector<Vertex*>> &elements)
 {
   double costEdges = 0.;
-  // Need to account for the first vertex too?
   for(size_t i = 0; i < vertices.size(); ++i) {
     Vertex *v = vertices[i];
     for(auto e : vertNeighbours.at(v)) {
@@ -254,7 +247,6 @@ double computeCostFunction(const std::vector<Vertex*> &vertices,
       double yi = e.getVertex(0)->y();
       double xj = e.getVertex(1)->x();
       double yj = e.getVertex(1)->y();
-      // double lengthSquared = (xi-xj)*(xi-xj) + (yi-yj)*(yi-yj);
       double x0[2] = {xi, yi};
       double x1[2] = {xj, yj};
 
@@ -267,22 +259,13 @@ double computeCostFunction(const std::vector<Vertex*> &vertices,
       double xMid[2] = {(xi+xj)/2., (yi+yj)/2.};
       getMetric(METRIC_ARRAY, DMDX_ARRAY, DMDY_ARRAY, xMid);
       double lengthInMetricSquared = getEdgeLengthInMetricSquared(METRIC_ARRAY, x0, x1);
-      if(PRINT_INFO) {
-        // feInfo("Current euclidean length = %f", sqrt(lengthSquared));
-        // feInfo("Target  euclidean length = %f", TARGET_LENGTH_SUBTRIANGLE);
-        // feInfo("Current metric    length = %f", sqrt(lengthInMetricSquared));
-        // feInfo("Target  metric    length = %f", TARGET_LENGTH_IN_METRIC_SUBTRIANGLE);
-      }
-      costEdges += 0.5 * pow(lengthInMetricSquared + (-1.) * TARGET_LENGTH_IN_METRIC_SUBTRIANGLE*TARGET_LENGTH_IN_METRIC_SUBTRIANGLE, 2);
+      costEdges += 0.5 * pow(lengthInMetricSquared - TARGET_LENGTH_IN_METRIC_SUBTRIANGLE*TARGET_LENGTH_IN_METRIC_SUBTRIANGLE, 2);
     }
   }
 
   double costTri = 0.;
-  for(size_t i = 0; i < elements.size(); ++i)
-  {
-    double A = computeAreaTri(elements[i]);
-
-    double euclideanArea = A;
+  for(size_t i = 0; i < elements.size(); ++i) {
+    double euclideanArea = computeAreaTri(elements[i]);
     Vertex *v0 = elements[i][0];
     Vertex *v1 = elements[i][1];
     Vertex *v2 = elements[i][2];
@@ -290,14 +273,6 @@ double computeCostFunction(const std::vector<Vertex*> &vertices,
     getMetric(METRIC_ARRAY, DMDX_ARRAY, DMDY_ARRAY, xBary);
     double areaInMetric = euclideanArea * sqrt(determinant(METRIC_ARRAY));
 
-    if(PRINT_INFO) {
-      // feInfo("Current euclidean area = %f", euclideanArea);
-      // feInfo("Target  euclidean area = %f", TARGET_AREA_SUBTRIANGLE);
-      // feInfo("Current metric    area = %f", areaInMetric);
-      // feInfo("Target  metric    area = %f", TARGET_AREA_IN_METRIC_SUBTRIANGLE);
-    }
-
-    // double X = A/TARGET_AREA_SUBTRIANGLE;
     double X = areaInMetric/TARGET_AREA_IN_METRIC_SUBTRIANGLE;
     costTri += log(X) * log(X);
   }
@@ -308,7 +283,6 @@ double computeCostFunction(const std::vector<Vertex*> &vertices,
   }
 
   return costEdges + EDGE2TRI_RATIO * costTri;
-  // return costTri;
 }
 
 // Compute [dE/dxi, dE/dyi]
@@ -324,7 +298,7 @@ void computeCostGradient(int iVertex, const std::vector<Vertex*> &verticesToModi
   Vertex *v = verticesToModify[iVertex];
 
   for(auto e : vertNeighbours.at(v)) {
-    double xi = e.getVertex(0)->x(); // xi est le vertex courant (voir construction des aretes)
+    double xi = e.getVertex(0)->x(); // xi est toujours le vertex courant (voir construction des aretes)
     double yi = e.getVertex(0)->y(); // et xj est l'autre extremite
     double xj = e.getVertex(1)->x();
     double yj = e.getVertex(1)->y();
@@ -381,8 +355,8 @@ void computeCostGradient(int iVertex, const std::vector<Vertex*> &verticesToModi
     // Use Jacobi's identity to compute derivative of determinant
     // double dDetdx0 = 1./3. * (METRIC(1,1)*DMDX(0,0) - 2.*METRIC(0,1)*DMDX(0,1) + METRIC(0,0)*DMDX(1,1));
     // double dDetdy0 = 1./3. * (METRIC(1,1)*DMDY(0,0) - 2.*METRIC(0,1)*DMDY(0,1) + METRIC(0,0)*DMDY(1,1));
-    double dDetdx0 = 1./3. * (METRIC_ARRAY[1][1]*DMDX_ARRAY[0][0] + (-1.) * 2.*METRIC_ARRAY[0][1]*DMDX_ARRAY[0][1] + METRIC_ARRAY[0][0]*DMDX_ARRAY[1][1]);
-    double dDetdy0 = 1./3. * (METRIC_ARRAY[1][1]*DMDY_ARRAY[0][0] + (-1.) * 2.*METRIC_ARRAY[0][1]*DMDY_ARRAY[0][1] + METRIC_ARRAY[0][0]*DMDY_ARRAY[1][1]);
+    double dDetdx0 = 1./3. * (METRIC_ARRAY[1][1]*DMDX_ARRAY[0][0] - 2.*METRIC_ARRAY[0][1]*DMDX_ARRAY[0][1] + METRIC_ARRAY[0][0]*DMDX_ARRAY[1][1]);
+    double dDetdy0 = 1./3. * (METRIC_ARRAY[1][1]*DMDY_ARRAY[0][0] - 2.*METRIC_ARRAY[0][1]*DMDY_ARRAY[0][1] + METRIC_ARRAY[0][0]*DMDY_ARRAY[1][1]);
 
     double d_areaMetric_dx0 = d_areaEuclidian_x0 * sq_det + euclideanArea / (2.*sq_det) * dDetdx0;
     double d_areaMetric_dy0 = d_areaEuclidian_y0 * sq_det + euclideanArea / (2.*sq_det) * dDetdy0;
@@ -392,8 +366,8 @@ void computeCostGradient(int iVertex, const std::vector<Vertex*> &verticesToModi
   }
 }
 
-// FirstOrder function with analytic gradient
-class costFunctorAnalytic final : public ceres::FirstOrderFunction {
+// Cost function with analytic gradient
+class costFunctor final : public ceres::FirstOrderFunction {
   public:
     int _numParameters;
     int _numVertices;
@@ -406,7 +380,7 @@ class costFunctorAnalytic final : public ceres::FirstOrderFunction {
     mutable std::vector<double> INITIALPOS;
 
   public:
-    costFunctorAnalytic(std::vector<Vertex*> &vertices,
+    costFunctor(std::vector<Vertex*> &vertices,
       std::vector<Vertex*> &verticesToModify,
       std::map<Vertex*, std::set<Edge, EdgeLessThan>> &vertNeighbours,
       std::vector<std::vector<Vertex*>> &elements,
@@ -431,7 +405,7 @@ class costFunctorAnalytic final : public ceres::FirstOrderFunction {
                   double* cost,
                   double* gradient) const override
     {
-      // Save initial positions.
+      // Save initial positions
       int cnt = 0;
       for(int i = 0; i < _numVerticesToModify; ++i) {
         Vertex *v = _verticesToModify[i];
@@ -476,81 +450,13 @@ class costFunctorAnalytic final : public ceres::FirstOrderFunction {
       return true;
     }
 
+    // When using numeric differentiation: only compute cost
+    bool operator()(const double* parameters, double* cost) const 
+    {
+      return this->Evaluate(parameters, cost, nullptr);
+    }
+
     int NumParameters() const override { return _numParameters; }
-};
-
-class costFunctorNumeric final : public ceres::FirstOrderFunction {
-  public:
-    int _numParameters;
-    int _numVertices;
-    int _numVerticesToModify;
-    std::vector<Vertex*> _vertices;
-    std::vector<Vertex*> _verticesToModify;
-    std::map<Vertex*, std::set<Edge, EdgeLessThan>> _vertNeighbours;
-    std::vector<std::vector<Vertex*>> _elements;
-    std::map<Vertex*, std::set<size_t>> _vert2tri;
-    mutable std::vector<double> INITIALPOS;
-
-  public:
-    costFunctorNumeric(std::vector<Vertex*> &vertices,
-      std::vector<Vertex*> &verticesToModify,
-      std::map<Vertex*, std::set<Edge, EdgeLessThan>> &vertNeighbours,
-      std::vector<std::vector<Vertex*>> &elements,
-      std::map<Vertex*, std::set<size_t>> &vert2tri,
-      int numVertices,
-      int numVerticesToModify,
-      int numParameters)
-      : _vertices(vertices),
-      _verticesToModify(verticesToModify),
-      _vertNeighbours(vertNeighbours),
-      _elements(elements),
-      _vert2tri(vert2tri),
-      _numVertices(numVertices),
-      _numVerticesToModify(numVerticesToModify),
-      _numParameters(numParameters)
-      {
-        INITIALPOS.resize(numParameters, 0.);
-      };
-
-      bool Evaluate(const double* parameters,
-                  double* cost,
-                  double* gradient) const override
-      { return true; };
-
-      // The objective (cost) function and its gradient
-      bool operator()(const double* parameters, double* cost) const 
-      {
-        // Save initial positions.
-        int cnt = 0;
-        for(int i = 0; i < _numVerticesToModify; ++i) {
-          Vertex *v = _verticesToModify[i];
-          INITIALPOS[cnt] = v->x(); cnt++;
-          INITIALPOS[cnt] = v->y(); cnt++;
-        }
-
-        // Update the positions
-        cnt = 0;
-        for(int i = 0; i < _numVerticesToModify; ++i) {
-          Vertex *v = _verticesToModify[i];
-          (*v)(0) = parameters[cnt]; cnt++;
-          (*v)(1) = parameters[cnt]; cnt++;
-        }
-
-        // COMPUTE OBJECTIVE FUNCTION
-        cost[0] = computeCostFunction(_vertices, _vertNeighbours, _elements);
-
-        // Restore initial positions
-        cnt = 0;
-        for(int i = 0; i < _numVerticesToModify; ++i) {
-          Vertex *v = _verticesToModify[i];
-          (*v)(0) = INITIALPOS[cnt]; cnt++;
-          (*v)(1) = INITIALPOS[cnt]; cnt++;
-        }
-
-        return true;
-      }
-
-      int NumParameters() const override { return _numParameters; }
 };
 
 bool isInsideTriangle(std::vector<Vertex*> &tri_abc, Vertex *p) {
@@ -584,8 +490,6 @@ void getMetricFixedSubTriangle_fixedPoint(const double x0[2], const double R[2][
 
     double v0[2] = {tri[0]->x(), tri[1]->y()}, v1[2], v2[2];
 
-    // feInfo("Prod = %f - %f - %f - %f", prod[0][0], prod[0][1], prod[1][0], prod[1][1]);
-
     // Move tri according to M^(-1/2) and rotation R
     v1[0] = x0[0] + prod[0][0] * (tri[1]->x() - v0[0]) + prod[0][1] * (tri[1]->y() - v0[1]);
     v1[1] = x0[1] + prod[1][0] * (tri[1]->x() - v0[0]) + prod[1][1] * (tri[1]->y() - v0[1]);
@@ -610,7 +514,7 @@ void getMetricFixedSubTriangle_fixedPoint(const double x0[2], const double R[2][
   fprintf(myFile, "};"); fclose(myFile);
 }
 
-void createEquilateralMesh(const int N,
+void createInitialMesh(const int N,
   const double x0_ref[2],
   const double theta,
   std::vector<Vertex> &vertices,
@@ -621,7 +525,6 @@ void createEquilateralMesh(const int N,
   std::map<Vertex*, std::set<size_t>> &vert2tri,
   size_t &iTriBarycenter)
 {
-
   FILE *myFile = fopen("edges.pos", "w");
   fprintf(myFile, "View \" edges \"{\n");
 
@@ -629,9 +532,6 @@ void createEquilateralMesh(const int N,
   vertices.resize((N+1)*(N+2)/2);
   verticesToModify.clear();
   boundaryVertices.resize(3);
-  // for(size_t i = 0; i < 3; ++i) {
-  //   boundaryVertices[i].resize(N+1);
-  // }
   std::vector<std::vector<Vertex*>> verticesMat(N+1);
   vert2tri.clear();
 
@@ -725,8 +625,8 @@ void createEquilateralMesh(const int N,
 
   // Create the triangles
   int cnt_tri = 0;
-  FILE *triFile = fopen("triRef.pos", "w");
-  fprintf(triFile, "View \" tri \"{\n");
+  FILE *triFile = fopen("initialMeshRef.pos", "w");
+  fprintf(triFile, "View \" initialMeshRef \"{\n");
   for(int i = 0; i <= N; ++i) {
     for(int j = 0; j <= N-i; ++j) {
       
@@ -812,8 +712,8 @@ void createEquilateralMesh(const int N,
     p(1) = new_y;
   }
 
-  triFile = fopen("tri.pos", "w");
-  fprintf(triFile, "View \" tri \"{\n");
+  triFile = fopen("initialMesh.pos", "w");
+  fprintf(triFile, "View \" initialMesh \"{\n");
   for(auto tri : elements) {
     fprintf(triFile, "ST(%g,%g,%g,%g,%g,%g,%g,%g,%g){%d,%d,%d};\n",
         tri[0]->x(), tri[0]->y(), 0.,
@@ -876,10 +776,10 @@ int main(int argc, char** argv)
   double x0_ref[2] = {3., 1.};
   double theta = 0.; //M_PI/4.;
 
-  #define NCONV 3
+  #define NCONV 1
   double rate[NCONV], Etot[NCONV], h[NCONV];
 
-  int N_SUBTRIANGLES = 8;
+  int N_SUBTRIANGLES = 10;
 
   for(int iConv = 0; iConv < NCONV; ++iConv, N_SUBTRIANGLES *= 2)
   {
@@ -891,9 +791,6 @@ int main(int argc, char** argv)
     TARGET_LENGTH_IN_METRIC_SUBTRIANGLE = 1. / N_SUBTRIANGLES;
     TARGET_AREA_IN_METRIC_SUBTRIANGLE = A0 / (N_SUBTRIANGLES*N_SUBTRIANGLES);
 
-    // TARGET_LENGTH_SUBTRIANGLE = TARGET_LENGTH / (double) N_SUBTRIANGLES;
-    // TARGET_AREA_SUBTRIANGLE = A0 * pow(TARGET_LENGTH_SUBTRIANGLE,2);
-
     std::vector<Vertex> vertices;
     std::vector<Vertex*> verticesToModify;
     std::map<Vertex*, std::set<Edge, EdgeLessThan>> vertNeighbours;
@@ -901,21 +798,20 @@ int main(int argc, char** argv)
     std::map<Vertex*, std::set<size_t>> vert2tri;
     size_t iTriBarycenter;
     std::vector<std::vector<size_t>> boundaryVertices;
-    createEquilateralMesh(N_SUBTRIANGLES, x0_ref, theta, vertices, verticesToModify, vertNeighbours, boundaryVertices, elements, vert2tri, iTriBarycenter);
+
+    // Create the initial mesh:
+    // - discretize the reference rectangle triangle
+    // - find the subtriangle that contains the barycenter
+    // - compute the metric at the barycenter of its physical coordinates
+    //   using a fixed point
+    // - map it and the whole mesh using this constant metric to form the initial mesh
+    createInitialMesh(N_SUBTRIANGLES, x0_ref, theta, vertices, verticesToModify, 
+      vertNeighbours, boundaryVertices, elements, vert2tri, iTriBarycenter);
 
     size_t numVertices = vertices.size();
     size_t numVerticesToModify = verticesToModify.size();
     size_t numParameters = 2*numVerticesToModify;
     size_t numTri = elements.size();
-
-    // feInfo("TARGET_LENGTH = %f", TARGET_LENGTH);
-    // feInfo("TARGET_AREA = %f", TARGET_AREA);
-    // feInfo("TARGET_LENGTH_SUBTRIANGLE = %f", TARGET_LENGTH_SUBTRIANGLE);
-    // feInfo("TARGET_AREA_SUBTRIANGLE = %f", TARGET_AREA_SUBTRIANGLE);
-    // feInfo("Check : nTri * TARGET_AREA_SUBTRIANGLE = %f - A0 = %f", numTri * TARGET_AREA_SUBTRIANGLE, TARGET_AREA);
-    // feInfo("iTriBarycenter = %d", iTriBarycenter);
-    // feInfo("numVertices = %d", numVertices);
-    // feInfo("numVerticesToModify = %d", numVerticesToModify);
 
     std::vector<Vertex*> verticesPtr(numVertices);
     for(int i = 0; i < numVertices; ++i) {
@@ -932,8 +828,6 @@ int main(int argc, char** argv)
     // }  
 
     // Choice 2: Fix the subtriangle containing the barycenter via a fixed vertex and a rotation
-    
-
     // // Rotate around 0
     // for(auto *v : verticesPtr) {
     //   double vx = (*v)(0);
@@ -1005,13 +899,14 @@ int main(int argc, char** argv)
     }
 
     // //////////////////////////////////////////////////////
+    // To test the gradient implementation with finite differences:
     // double hFD = 1e-8;
     // double f0 = computeCostFunction(verticesPtr, vertNeighbours, elements);
     // feInfo("Initial cost is %f", f0);
     // // Move vertices and check gradient
-    // for(size_t i = 1; i < numVertices; ++i) {
+    // for(size_t i = 0; i < numVerticesToModify; ++i) {
 
-    //   Vertex *v = verticesPtr[i];
+    //   Vertex *v = verticesToModify[i];
     //   double x0 = (*v)(0);
     //   double y0 = (*v)(1);
 
@@ -1024,7 +919,7 @@ int main(int argc, char** argv)
     //   (*v)(1) = y0;
 
     //   double grad[2] = {0., 0.};
-    //   computeCostGradient(i, verticesPtr, vertNeighbours, elements, vert2tri, grad);
+    //   computeCostGradient(i, verticesToModify, vertNeighbours, elements, vert2tri, grad);
 
     //   double gx = (dx-f0)/hFD;
     //   double gy = (dy-f0)/hFD;
@@ -1040,13 +935,14 @@ int main(int argc, char** argv)
     if(true) {
       ceres::GradientProblemSolver::Summary summary;
 
+      costFunctor *costFun = new costFunctor(verticesPtr, verticesToModify, vertNeighbours, elements, vert2tri, numVertices, numVerticesToModify, numParameters);
+      
       // Analytic diff
-      costFunctorAnalytic *foo = new costFunctorAnalytic(verticesPtr, verticesToModify, vertNeighbours, elements, vert2tri, numVertices, numVerticesToModify, numParameters);
-      // Numeric diff
-      // costFunctorNumeric *foo1 = new costFunctorNumeric(verticesPtr, verticesToModify, vertNeighbours, elements, vert2tri, numVertices, numVerticesToModify, numParameters);                                       
-      // auto *foo = new ceres::NumericDiffFirstOrderFunction<costFunctorNumeric, ceres::CENTRAL>(foo1, numParameters);
+      ceres::GradientProblem problem(costFun);
 
-      ceres::GradientProblem problem(foo);
+      // Numeric diff (only to test)
+      // auto *foo = new ceres::NumericDiffFirstOrderFunction<costFunctor, ceres::CENTRAL>(costFun, numParameters);
+      // ceres::GradientProblem problem(foo);
 
       ceres::GradientProblemSolver::Options options;
       // options.function_tolerance = 1e-12;
@@ -1091,11 +987,8 @@ int main(int argc, char** argv)
     FILE *myFile = fopen(name.data(), "w");
     fprintf(myFile, "View \" %s \"{\n", name.data());
     for(int i = 0; i < numVertices; ++i) {
-
       Vertex *v = verticesPtr[i];
-
       fprintf(myFile, "SP(%g,%g,%g){%d};\n", (*v)(0), (*v)(1), (*v)(2), v->getTag());
-
       for(auto e : vertNeighbours[v]) {
       fprintf(myFile, "SL(%g,%g,0.,%g,%g,0.){%d,%d};\n",
                 e.getVertex(0)->x(), e.getVertex(0)->y(),
@@ -1153,14 +1046,14 @@ int main(int argc, char** argv)
   }
 
 
-  // // Compute the convergence rate
-  // for(int i = 1; i < NCONV; ++i) {
-  //   rate[i] = -log(Etot[i] / Etot[i-1]) / log(h[i] / h[i-1]);
-  // }
-  // printf("%12s \t %12s \t %12s \n", "h", "E", "rate");
-  // for(int i = 0; i < NCONV; ++i) {
-  //   printf("%12.6e \t %12.6e \t %12.6e\n", h[i], Etot[i], rate[i]);
-  // }
+  // Compute the convergence rate
+  for(int i = 1; i < NCONV; ++i) {
+    rate[i] = -log(Etot[i] / Etot[i-1]) / log(h[i] / h[i-1]);
+  }
+  printf("%12s \t %12s \t %12s \n", "h", "E", "rate");
+  for(int i = 0; i < NCONV; ++i) {
+    printf("%12.6e \t %12.6e \t %12.6e\n", h[i], Etot[i], rate[i]);
+  }
 
   return 0;
 }
