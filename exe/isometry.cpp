@@ -34,13 +34,86 @@ double dotProduct(const double m[2][2], const double x1[2], const double x2[2])
        + x2[1] * (m[0][1] * x1[0] + m[1][1] * x1[1]);
 }
 
+static double MINV[2][2], MMUD[2][2], DMMUD_DXt[2][2][2], DMMUD_DY[2][2], TIJK[2][2][2];
+
+static void inverse2x2array(const double m[2][2], double res[2][2])
+{
+  double oneOverdet = 1./determinant(m);
+  res[0][0] =  oneOverdet * m[1][1];
+  res[0][1] = -oneOverdet * m[0][1];
+  res[1][0] = -oneOverdet * m[0][1];
+  res[1][1] =  oneOverdet * m[0][0];
+}
+
+static void powerMinusOneHalf(const double m[2][2], double res[2][2])
+{
+  double a = m[0][0], b = m[0][1], c = m[1][1];
+  double sq2 = sqrt(2.);
+  double r2 = sqrt(a*a - 2.*a*c + 4.*b*b + c*c);
+  double r1 = sq2 * b * ( 1./sqrt(a+c+r2) - 1./sqrt(a+c-r2) ) / r2;
+  res[0][0] = 0.5 * sq2 * (a-c+r2) / (r2 * sqrt(a+c+r2)) + 0.5 * sq2 * (c-a+r2) / (r2 * sqrt(a+c-r2));
+  res[0][1] = r1;
+  res[1][0] = r1;
+  res[1][1] = 0.5 * sq2 * (c-a+r2) / (r2 * sqrt(a+c+r2)) + 0.5 * sq2 * (a-c+r2) / (r2 * sqrt(a+c-r2));
+}
+
+bool checkSymmetryCondition(double m[2][2], double dmdx[2][2], double dmdy[2][2], double tol)
+{
+  inverse2x2array(m, MINV);
+
+  // Compute M^(-1/2)
+  powerMinusOneHalf(m, MMUD);
+
+  // Compute d/dt (M^(-1/2))
+  DMMUD_DXt[0][0][0] = DMMUD_DXt[0][0][1] = DMMUD_DXt[0][1][0] = DMMUD_DXt[0][1][1] = 0.;
+  DMMUD_DXt[1][0][0] = DMMUD_DXt[1][0][1] = DMMUD_DXt[1][1][0] = DMMUD_DXt[1][1][1] = 0.;
+  for(int i = 0; i < 2; ++i) {
+    for(int j = 0; j < 2; ++j) {
+      for(int k = 0; k < 2; ++k) {
+        for(int l = 0; l < 2; ++l) {
+          DMMUD_DXt[i][j][0] += -0.5 * MINV[i][k] * dmdx[k][l] * MMUD[l][j];
+          DMMUD_DXt[i][j][1] += -0.5 * MINV[i][k] * dmdy[k][l] * MMUD[l][j];
+        }
+      }
+    }
+  }
+
+  TIJK[0][0][0] = TIJK[0][0][1] = TIJK[0][1][0] = TIJK[0][1][1] = 0.;
+  TIJK[1][0][0] = TIJK[1][0][1] = TIJK[1][1][0] = TIJK[1][1][1] = 0.;
+  for(int i = 0; i < 2; ++i) {
+    for(int j = 0; j < 2; ++j) {
+      for(int k = 0; k < 2; ++k) {
+        for(int t = 0; t < 2; ++t) {
+          TIJK[i][j][k] += MMUD[t][i] * DMMUD_DXt[k][j][t] - MMUD[t][j] * DMMUD_DXt[k][i][t];
+        }
+      }
+    }
+  }
+
+  bool OK = true;
+  for(int i = 0; i < 2; ++i) {
+    for(int j = 0; j < 2; ++j) {
+      for(int k = 0; k < 2; ++k) {
+        OK &= fabs(TIJK[i][j][k]) <= tol;
+        if(fabs(TIJK[i][j][k]) > tol) {
+          feInfo("TIJK[%d][%d][%d] = %+-1.4e", i,j,k,TIJK[i][j][k]);
+        }
+      }
+    }
+  }
+  return OK;
+}
+
 // Much faster than using MetricTensors
 void getMetric(double m[2][2], double dmdx[2][2], double dmdy[2][2], double pos[2])
 {
+  double x = pos[0];
+  double y = pos[1];
+
   // m[0][0] = 2.0;
   // m[0][1] = 1.0;
   // m[1][0] = 1.0;
-  // m[1][1] = 3.0;
+  // m[1][1] = 2.0;
 
   // dmdx[0][0] = 0.;
   // dmdx[0][1] = 0.;
@@ -53,18 +126,12 @@ void getMetric(double m[2][2], double dmdx[2][2], double dmdy[2][2], double pos[
   // dmdy[1][1] = 0.;
   // return;
 
-  double x = pos[0];
-  double y = pos[1];
-
   m[0][0] = 1./( (1.+x)*(1.+x) );
-  m[0][1] = 0.; //1./7.;
-  m[1][0] = 0.; //1./7.;
+  m[0][1] = 1./20.;
+  m[1][0] = 1./20.;
   m[1][1] = 1./( (1.+y)*(1.+y) );
 
-  // if(m.determinant() <= 0) {
-  //   feErrorMsg(FE_STATUS_ERROR, "Determinant négatif");
-  //   exit(-1);
-  // }
+  
 
   dmdx[0][0] = 1. * (-2./((1+x)*(1+x)*(1+x)));
   dmdx[0][1] = 0.0;
@@ -76,24 +143,49 @@ void getMetric(double m[2][2], double dmdx[2][2], double dmdy[2][2], double pos[
   dmdy[1][0] = 0.0;
   dmdy[1][1] = 1. * (-2./((1+y)*(1+y)*(1+y)));
 
-  // Iso et grad
+  // // Iso et grad
   // double l1 = 1/(0.5*0.5); 
   // double l2 = 1/(0.1*0.1);
 
-  // m(0,0) = 1./(x*x+y*y) * (l2*x*x + l1*y*y);
-  // m(0,1) = 1./(x*x+y*y) * (l2-l1) * x*y;
-  // m(1,0) = 1./(x*x+y*y) * (l2-l1) * x*y;
-  // m(1,1) = 1./(x*x+y*y) * (l1*x*x + l2*y*y);
+  // m[0][0] = 1./(x*x+y*y) * (l2*x*x + l1*y*y);
+  // m[0][1] = 1./(x*x+y*y) * (l2-l1) * x*y;
+  // m[1][0] = 1./(x*x+y*y) * (l2-l1) * x*y;
+  // m[1][1] = 1./(x*x+y*y) * (l1*x*x + l2*y*y);
 
-  // dmdx(0,0) = (l1-l2)/((x*x+y*y)*(x*x+y*y)) * -2.*x*y*y;
-  // dmdx(0,1) = (l1-l2)/((x*x+y*y)*(x*x+y*y)) * y*(x*x-y*y);
-  // dmdx(1,0) = (l1-l2)/((x*x+y*y)*(x*x+y*y)) * y*(x*x-y*y);
-  // dmdx(1,1) = (l1-l2)/((x*x+y*y)*(x*x+y*y)) *  2.*x*y*y;
+  // dmdx[0][0] = (l1-l2)/((x*x+y*y)*(x*x+y*y)) * -2.*x*y*y;
+  // dmdx[0][1] = (l1-l2)/((x*x+y*y)*(x*x+y*y)) * y*(x*x-y*y);
+  // dmdx[1][0] = (l1-l2)/((x*x+y*y)*(x*x+y*y)) * y*(x*x-y*y);
+  // dmdx[1][1] = (l1-l2)/((x*x+y*y)*(x*x+y*y)) *  2.*x*y*y;
 
-  // dmdy(0,0) = (l1-l2)/((x*x+y*y)*(x*x+y*y)) *  2.*x*x*y;
-  // dmdy(0,1) = (l1-l2)/((x*x+y*y)*(x*x+y*y)) * -x*(x*x-y*y);
-  // dmdy(1,0) = (l1-l2)/((x*x+y*y)*(x*x+y*y)) * -x*(x*x-y*y);
-  // dmdy(1,1) = (l1-l2)/((x*x+y*y)*(x*x+y*y)) * -2.*x*x*y;
+  // dmdy[0][0] = (l1-l2)/((x*x+y*y)*(x*x+y*y)) *  2.*x*x*y;
+  // dmdy[0][1] = (l1-l2)/((x*x+y*y)*(x*x+y*y)) * -x*(x*x-y*y);
+  // dmdy[1][0] = (l1-l2)/((x*x+y*y)*(x*x+y*y)) * -x*(x*x-y*y);
+  // dmdy[1][1] = (l1-l2)/((x*x+y*y)*(x*x+y*y)) * -2.*x*x*y;
+
+  // // Original graph metric
+  // m[0][0] = 1. + 4.*x*x;
+  // m[0][1] = 4.*x*y;
+  // m[1][0] = 4.*x*y;
+  // m[1][1] = 1. + 4.*y*y;
+
+  // dmdx[0][0] = 8.*x;
+  // dmdx[0][1] = 4.*y;
+  // dmdx[1][0] = 4.*y;
+  // dmdx[1][1] = 0.;
+
+  // dmdy[0][0] = 0.;
+  // dmdy[0][1] = 4.*x;
+  // dmdy[1][0] = 4.*x;
+  // dmdy[1][1] = 8.*y;
+
+  if(determinant(m) <= 0) {
+    feErrorMsg(FE_STATUS_ERROR, "Determinant négatif");
+    exit(-1);
+  }
+  if(!checkSymmetryCondition(m, dmdx, dmdy, 1e-5)) {
+    feErrorMsg(FE_STATUS_ERROR, "Metric does not satisfy symmetry constraint.");
+    exit(-1);
+  }
 }
 
 void getMetric(MetricTensor &m, MetricTensor &dmdx, MetricTensor &dmdy, double pos[2])
@@ -171,6 +263,37 @@ double computeAreaTri(const std::vector<Vertex*> &tri)
   return 0.5 * computeTriJacobianDet(tri);
 }
 
+double computeCostFunction_edgesOnly(const std::vector<Vertex*> &vertices,
+  const std::map<Vertex*, std::set<Edge, EdgeLessThan>> &vertNeighbours,
+  const std::vector<std::vector<Vertex*>> &elements)
+{
+  double costEdges = 0.;
+  for(size_t i = 0; i < vertices.size(); ++i) {
+    Vertex *v = vertices[i];
+    for(auto e : vertNeighbours.at(v)) {
+      double xi = e.getVertex(0)->x();
+      double yi = e.getVertex(0)->y();
+      double xj = e.getVertex(1)->x();
+      double yj = e.getVertex(1)->y();
+      double x0[2] = {xi, yi};
+      double x1[2] = {xj, yj};
+
+      // This sets the Euclidean length to the target. When the metric is not diagonal constant,
+      // it is not always possible to write the length in the metric as a function of the Euclidean length,
+      // so we do the opposite and impose the length in the metric
+      // costEdges += 0.5 * pow(lengthSquared - TARGET_LENGTH_SUBTRIANGLE*TARGET_LENGTH_SUBTRIANGLE, 2);
+
+      // TARGET_LENGTH_IN_METRIC_SUBTRIANGLE is always 1/N_SUBTRIANGLES
+      double xMid[2] = {(xi+xj)/2., (yi+yj)/2.};
+      getMetric(METRIC_ARRAY, DMDX_ARRAY, DMDY_ARRAY, xMid);
+      double lengthInMetricSquared = getEdgeLengthInMetricSquared(METRIC_ARRAY, x0, x1);
+      costEdges += 0.5 * pow(lengthInMetricSquared - TARGET_LENGTH_IN_METRIC_SUBTRIANGLE*TARGET_LENGTH_IN_METRIC_SUBTRIANGLE, 2);
+    }
+  }
+
+  return costEdges;
+}
+
 double computeCostFunction(const std::vector<Vertex*> &vertices,
   const std::map<Vertex*, std::set<Edge, EdgeLessThan>> &vertNeighbours,
   const std::vector<std::vector<Vertex*>> &elements)
@@ -211,11 +334,13 @@ double computeCostFunction(const std::vector<Vertex*> &vertices,
 
     double X = areaInMetric/TARGET_AREA_IN_METRIC_SUBTRIANGLE;
     costTri += log(X) * log(X);
+
+    // costTri += pow(areaInMetric - TARGET_AREA_IN_METRIC_SUBTRIANGLE, 2);
   }
 
   if(SET_RATIO) {
     SET_RATIO = false;
-    EDGE2TRI_RATIO = costEdges/costTri;
+    EDGE2TRI_RATIO = 1e-3 * costEdges/costTri;
   }
 
   return costEdges + EDGE2TRI_RATIO * costTri;
@@ -299,6 +424,10 @@ void computeCostGradient(int iVertex, const std::vector<Vertex*> &verticesToModi
     double logx = log(X);
     grad[0] += EDGE2TRI_RATIO * 2. * logx / X * d_areaMetric_dx0 / TARGET_AREA_IN_METRIC_SUBTRIANGLE;
     grad[1] += EDGE2TRI_RATIO * 2. * logx / X * d_areaMetric_dy0 / TARGET_AREA_IN_METRIC_SUBTRIANGLE;
+
+    // grad[0] += EDGE2TRI_RATIO * 2. * (areaInMetric - TARGET_AREA_IN_METRIC_SUBTRIANGLE) * d_areaMetric_dx0;
+    // grad[1] += EDGE2TRI_RATIO * 2. * (areaInMetric - TARGET_AREA_IN_METRIC_SUBTRIANGLE) * d_areaMetric_dy0;
+
   }
 }
 
@@ -765,7 +894,7 @@ int main(int argc, char** argv)
 
     double rate[NCONV], Etot[NCONV], h[NCONV];
 
-    int N_SUBTRIANGLES = 32;
+    int N_SUBTRIANGLES = 16;
 
     for(int iConv = 0; iConv < NCONV; ++iConv, N_SUBTRIANGLES *= 2)
     {
@@ -815,36 +944,36 @@ int main(int argc, char** argv)
 
       // //////////////////////////////////////////////////////
       // To test the gradient implementation with finite differences:
-      // double hFD = 1e-8;
-      // double f0 = computeCostFunction(verticesPtr, vertNeighbours, elements);
-      // feInfo("Initial cost is %f", f0);
-      // // Move vertices and check gradient
-      // for(size_t i = 0; i < numVerticesToModify; ++i) {
+      double hFD = 1e-8;
+      double f0 = computeCostFunction(verticesPtr, vertNeighbours, elements);
+      feInfo("Initial cost is %f", f0);
+      // Move vertices and check gradient
+      for(size_t i = 0; i < numVerticesToModify; ++i) {
 
-      //   Vertex *v = verticesToModify[i];
-      //   double x0 = (*v)(0);
-      //   double y0 = (*v)(1);
+        Vertex *v = verticesToModify[i];
+        double x0 = (*v)(0);
+        double y0 = (*v)(1);
 
-      //   (*v)(0) += hFD;
-      //   double dx = computeCostFunction(verticesPtr, vertNeighbours, elements);
-      //   (*v)(0) = x0;
+        (*v)(0) += hFD;
+        double dx = computeCostFunction(verticesPtr, vertNeighbours, elements);
+        (*v)(0) = x0;
 
-      //   (*v)(1) += hFD;
-      //   double dy = computeCostFunction(verticesPtr, vertNeighbours, elements);
-      //   (*v)(1) = y0;
+        (*v)(1) += hFD;
+        double dy = computeCostFunction(verticesPtr, vertNeighbours, elements);
+        (*v)(1) = y0;
 
-      //   double grad[2] = {0., 0.};
-      //   computeCostGradient(i, verticesToModify, vertNeighbours, elements, vert2tri, grad);
+        double grad[2] = {0., 0.};
+        computeCostGradient(i, verticesToModify, vertNeighbours, elements, vert2tri, grad);
 
-      //   double gx = (dx-f0)/hFD;
-      //   double gy = (dy-f0)/hFD;
-      //   double errorAbs = fmax(fabs(grad[0] - gx), fabs(grad[1] - gy));
-      //   double errorRel = fmax(fabs(grad[0] - gx)/fmax(1e-12, fabs(gx)), fabs(grad[1] - gy)/fmax(1e-12, fabs(gy)));
+        double gx = (dx-f0)/hFD;
+        double gy = (dy-f0)/hFD;
+        double errorAbs = fmax(fabs(grad[0] - gx), fabs(grad[1] - gy));
+        double errorRel = fmax(fabs(grad[0] - gx)/fmax(1e-12, fabs(gx)), fabs(grad[1] - gy)/fmax(1e-12, fabs(gy)));
 
-      //   feInfo("FD    grad = %+-1.10e - %+-1.10e", gx, gy);
-      //   feInfo("Exact grad = %+-1.10e - %+-1.10e - errorAbs = %1.6e - errorRel = %1.6e", grad[0], grad[1], errorAbs, errorRel);
-      // }
-      //   exit(-1);
+        feInfo("FD    grad = %+-1.10e - %+-1.10e", gx, gy);
+        feInfo("Exact grad = %+-1.10e - %+-1.10e - errorAbs = %1.6e - errorRel = %1.6e", grad[0], grad[1], errorAbs, errorRel);
+      }
+        exit(-1);
       // //////////////////////////////////////////////////////
 
       if(true) {
@@ -917,35 +1046,71 @@ int main(int argc, char** argv)
       fprintf(myFile, "};"); fclose(myFile);
 
       Etot[iConv] = 0.;
-      if(computeGeodesics && iConv == NCONV-1) {
+      // if(computeGeodesics && iConv == NCONV-1) {
+      if(computeGeodesics) {
+
         // Compute geodesics
-        myFile = fopen("geodesics.pos", "w");
-        fprintf(myFile, "View \" geodesics \"{\n");
-        double x0[2] = {vertices[0].x(), vertices[0].y() };
-        double x1[2] = {vertices[N_SUBTRIANGLES].x(), vertices[N_SUBTRIANGLES].y() };
-        double x2[2] = {vertices[vertices.size()-1].x(), vertices[vertices.size()-1].y() };
-        fprintf(myFile, "SP(%g,%g,0.){%d};\n", x0[0], x0[1], 1);
-        fprintf(myFile, "SP(%g,%g,0.){%d};\n", x1[0], x1[1], 1);
-        fprintf(myFile, "SP(%g,%g,0.){%d};\n", x2[0], x2[1], 1);
+        // myFile = fopen("geodesics.pos", "w");
+        // fprintf(myFile, "View \" geodesics \"{\n");
+        // double x0[2] = {vertices[0].x(), vertices[0].y() };
+        // double x1[2] = {vertices[N_SUBTRIANGLES].x(), vertices[N_SUBTRIANGLES].y() };
+        // double x2[2] = {vertices[vertices.size()-1].x(), vertices[vertices.size()-1].y() };
+        // fprintf(myFile, "SP(%g,%g,0.){%d};\n", x0[0], x0[1], 1);
+        // fprintf(myFile, "SP(%g,%g,0.){%d};\n", x1[0], x1[1], 1);
+        // fprintf(myFile, "SP(%g,%g,0.){%d};\n", x2[0], x2[1], 1);
 
-        int maxIter = 100;
-        double tol = 1e-5;
-        double ds = tol/2.;
-        double length, error;
+        // int maxIter = 100;
+        // double tol = 1e-5;
+        // double ds = tol/2.;
+        // double length, error;
 
-        std::vector<std::vector<SPoint2>> geodesics(3);
-        geodesics[0] = geodesicBetweenTwoPoints_arrayPtr(x0, x1, getMetric, maxIter, tol, ds, length, error);
-        feInfo("Length of geodesic = %+-1.3e", length);
-        feInfo("Distance to target = %+-1.3e", error);
-        geodesics[1] = geodesicBetweenTwoPoints_arrayPtr(x1, x2, getMetric, maxIter, tol, ds, length, error);
-        feInfo("Length of geodesic = %+-1.3e", length);
-        feInfo("Distance to target = %+-1.3e", error);
-        geodesics[2] = geodesicBetweenTwoPoints_arrayPtr(x2, x0, getMetric, maxIter, tol, ds, length, error);
-        feInfo("Length of geodesic = %+-1.3e", length);
-        feInfo("Distance to target = %+-1.3e", error);
+        // std::vector<std::vector<SPoint2>> geodesics(3);
+        // geodesics[0] = geodesicBetweenTwoPoints_arrayPtr(x0, x1, getMetric, maxIter, tol, ds, length, error);
+        // feInfo("Length of geodesic = %+-1.3e", length);
+        // feInfo("Distance to target = %+-1.3e", error);
+        // // geodesics[1] = geodesicBetweenTwoPoints_arrayPtr(x1, x2, getMetric, maxIter, tol, ds, length, error);
+        // // feInfo("Length of geodesic = %+-1.3e", length);
+        // // feInfo("Distance to target = %+-1.3e", error);
+        // // geodesics[2] = geodesicBetweenTwoPoints_arrayPtr(x2, x0, getMetric, maxIter, tol, ds, length, error);
+        // // feInfo("Length of geodesic = %+-1.3e", length);
+        // // feInfo("Distance to target = %+-1.3e", error);
+        // for(size_t i = 0; i < 3; ++i) {
+        //   for(SPoint2 p : geodesics[i]) { fprintf(myFile, "SP(%+-1.10e,%+-1.10e,0.){%d};\n", p[0], p[1], 1); }
+        // }
+        // fprintf(myFile, "};"); fclose(myFile);
 
+        // // Estimate the error betweem the transformation and the geodesics
+        // // Measure the distance from each edge point to the geodesic
+        // double E[3] = {0., 0., 0.};
+        // for(size_t i = 0; i < 3; ++i) {
+        //   for(auto ind : boundaryVertices[i]) {
+        //     double x[2] = {vertices[ind].x(), vertices[ind].y()};
+        //     double dist = distGeodesicToPoint(x, geodesics[i]);
+        //     E[i] = fmax(fabs(dist), E[i]);
+        //     Etot[iConv] = fmax(fabs(dist), Etot[iConv]);
+        //   }
+        // }
+        // feInfo("E = %+-1.4e - %+-1.4e - %+-1.4e - %+-1.4e", E[0], E[1], E[2], Etot[iConv]);
+
+        // Compute geodesics using Ceres by minimizing length (not integrate ODE)
+        double length;
+        std::string name = "geodesics_minLength_" + std::to_string(N_SUBTRIANGLES) + ".pos";
+        myFile = fopen(name.data(), "w");
+        fprintf(myFile, "View \" %s \"{\n", name.data());
+        std::vector<std::vector<Vertex>> geodesics2(3);
         for(size_t i = 0; i < 3; ++i) {
-          for(SPoint2 p : geodesics[i]) { fprintf(myFile, "SP(%+-1.10e,%+-1.10e,0.){%d};\n", p[0], p[1], 1); }
+          std::vector<Vertex> bdr(boundaryVertices[i].size());
+          for(size_t j = 0; j < bdr.size(); ++j) {
+            int ind = boundaryVertices[i][j];
+            bdr[j] = Vertex(vertices[ind].x(), vertices[ind].y(), 0., -1);
+          }
+
+          geodesicBetweenTwoPoints_arrayPtr_minimizeLength(bdr, getMetric, length);
+
+          for(auto p : bdr) { 
+            fprintf(myFile, "SP(%+-1.10e,%+-1.10e,0.){%d};\n", p(0), p(1), 1);
+          }
+          geodesics2[i] = bdr;
         }
         fprintf(myFile, "};"); fclose(myFile);
 
@@ -953,19 +1118,46 @@ int main(int argc, char** argv)
         // Measure the distance from each edge point to the geodesic
         double E[3] = {0., 0., 0.};
         for(size_t i = 0; i < 3; ++i) {
-          for(auto ind : boundaryVertices[i]) {
-            double x[2] = {vertices[ind].x(), vertices[ind].y()};
-            double dist = distGeodesicToPoint(x, geodesics[i]);
-            E[i] += fabs(dist);
-            Etot[iConv] = fmax(fabs(dist), Etot[iConv]);
+          for(size_t j = 0; j < boundaryVertices[i].size(); ++j) {
+            Vertex *vi = &vertices[boundaryVertices[i][j]];
+            Vertex *vj = &geodesics2[i][j];
+            double dist = sqrt( (vi->x() - vj->x())*(vi->x() - vj->x()) + (vi->y() - vj->y())*(vi->y() - vj->y()));
+            // E[i] = fmax(fabs(dist), E[i]);
+            // Etot[iConv] = fmax(fabs(dist), Etot[iConv]);
+
+            E[i] += dist*dist;
+            Etot[iConv] += dist*dist;
           }
+          E[i] = sqrt(E[i] / boundaryVertices[i].size());
         }
+        Etot[iConv] = sqrt(Etot[iConv] / (3*boundaryVertices[0].size()));
         feInfo("E = %+-1.4e - %+-1.4e - %+-1.4e - %+-1.4e", E[0], E[1], E[2], Etot[iConv]);
       }
+
+      // Compute the length of bounary edges after optimization
+      for(size_t i = 0; i < 3; ++i) {
+        double L = 0.;
+        for(size_t j = 0; j < boundaryVertices[i].size()-1; ++j) {
+          int ind = boundaryVertices[i][j];
+          int ind_next = boundaryVertices[i][j+1];
+          double x0[2] = {vertices[ind].x(), vertices[ind].y()};
+          double x1[2] = {vertices[ind_next].x(), vertices[ind_next].y()};
+          double xMid[2] = {0.5 * (x0[0] + x1[0]), 0.5 * (x0[1] + x1[1])};
+          getMetric(METRIC, xMid);
+          L += sqrt(getEdgeLengthInMetricSquared(METRIC, x0, x1));
+        }
+        feInfo("Length of boundary edge = %+-1.4e", L);
+      }
+
+      // Compute edge cost
+      double costEdges = computeCostFunction_edgesOnly(verticesPtr, vertNeighbours, elements);
+      feInfo("Cost edges = %+-1.4e", costEdges);
+      
     }
 
     if(computeGeodesics) {
       // Compute the convergence rate
+      rate[0] = 0.;
       for(int i = 1; i < NCONV; ++i) {
         rate[i] = -log(Etot[i] / Etot[i-1]) / log(h[i] / h[i-1]);
       }

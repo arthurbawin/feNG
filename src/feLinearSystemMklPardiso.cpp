@@ -5,27 +5,182 @@ extern int FE_VERBOSE;
 #if defined(HAVE_MKL)
 #include "mkl.h"
 
+#if defined(HAVE_MPI)
+  #include "mpi.h"
+  #include "mkl_cluster_sparse_solver.h"
+#endif
+
+//
+// Determine the matrix, unknown vector and RHS distribution
+// across MPI processes once the sparsity pattern is known
+//
+void feLinearSystemMklPardiso::setOwnershipAndAllocate(void)
+{
+#if defined(HAVE_MPI)
+
+  int size, rank;
+  MPI_Comm_size(MPI_COMM_WORLD, &size);
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+  // Number of rows
+  PardisoInt nNNZPerProc, N = _nInc;
+  PardisoInt low, high;
+
+  _ownershipSplit = 0;
+
+  if(_ownershipSplit != 0 && _ownershipSplit != 1 && _ownershipSplit != 2) {
+    _ownershipSplit = 0;
+  }
+
+  switch(_ownershipSplit) {
+    case 0:
+      // Even number of rows per proc according to PetscSplitOwnership()'s formula
+      {
+        if(N < size) {
+          // There are more MPI processes than unknowns.
+          // Cluster Pardiso supports idle processes (with 0 matrix rows),
+          // but the situation is unlikely to happen so we'll just ask 
+          // to run with less processes
+          feErrorMsg(FE_STATUS_ERROR, "There are more MPI processes (%d) than FE unknowns! (%d)\n"
+            "Idle processes storing 0 rows are not supported at the moment, please run again"
+            " with less MPI processes.", size, N);
+          exit(-1);
+        }
+        _numOwnedRows = N/size + ((N % size) > rank);
+        PardisoInt sendbuf[1] = { _numOwnedRows };
+
+        // Synchronize the number of rows on each process
+        PardisoInt *rowsOnEachProc = (PardisoInt*) malloc(size*sizeof(PardisoInt));
+        MPI_Allgather(sendbuf, 1, MPI_INT, rowsOnEachProc, 1, MPI_INT, MPI_COMM_WORLD);
+
+        // Determine lower and upper bounds on this process
+        high = -1;
+        for(int i = 0; i <= rank; ++i) {
+          low = high+1;
+          high += rowsOnEachProc[i];
+        }
+        free(rowsOnEachProc);
+
+        feInfo("proc %d : nrows_total = %d - nrows_onproc = %d - low = %d - high = %d", rank, N, _numOwnedRows, low, high);
+
+        // Synchronize the bounds on each process
+        PardisoInt localLow[1] = {low}, localHigh[1] = {high};
+        _ownedUpperBounds = (PardisoInt*) malloc(size*sizeof(PardisoInt));
+        _ownedLowerBounds = (PardisoInt*) malloc(size*sizeof(PardisoInt)); 
+        MPI_Allgather(localLow , 1, MPI_INT, _ownedLowerBounds, 1, MPI_INT, MPI_COMM_WORLD);
+        MPI_Allgather(localHigh, 1, MPI_INT, _ownedUpperBounds, 1, MPI_INT, MPI_COMM_WORLD);
+
+        _numOwnedRowsOnAllProc = (PardisoInt*) malloc(size*sizeof(PardisoInt));
+        for(int i = 0; i < size; ++i) {
+          _numOwnedRowsOnAllProc[i] = (_ownedUpperBounds[i] - _ownedLowerBounds[i]) + 1;
+        }
+
+        // Determine the number of nonzero on this proc knowing _numOwnedRows
+        _numOwnedNNZ = _mat_ia[high+1] - _mat_ia[low];
+
+        // Create the local ia, ja and values arrays
+        PardisoInt *ia_loc = (PardisoInt*) malloc((_numOwnedRows + 1)*sizeof(PardisoInt));
+        PardisoInt *ja_loc = (PardisoInt*) malloc(_numOwnedNNZ*sizeof(PardisoInt));
+        double  *a_loc = (double*) malloc(_numOwnedNNZ*sizeof(double));
+
+        // ia
+        // printf("proc %d ia = ", rank);
+        for(int i = 0; i < _numOwnedRows; ++i) {
+          ia_loc[i] = _mat_ia[low + i] - _mat_ia[low];
+          // printf("%d ", ia_loc[i]);
+        }
+        ia_loc[_numOwnedRows] = _numOwnedNNZ;// nnz
+        // printf("%d", ia_loc[_numOwnedRows]);
+        // printf("\n");
+
+        // ja and matrix entries are simply the local portion of the global arrays
+        PardisoInt offset = _mat_ia[low];
+        for(int i = 0; i < _numOwnedNNZ; ++i) {
+          ja_loc[i] = _mat_ja[offset + i];
+           a_loc[i] = _mat_values[offset + i];
+        }
+
+        // Owned part of the solution array for update
+        _ownedSolution = (double*) malloc(_numOwnedRows * sizeof(double));
+
+        // printf("proc %d ja = ", rank);
+        // for(int i = 0; i < _numOwnedNNZ; ++i) {
+        //   printf("%d ", ja_loc[i]);
+        // }
+        // printf("\n");
+        // printf("proc %d  a = ", rank);
+        // for(int i = 0; i < _numOwnedNNZ; ++i) {
+        //   printf("%d ", a_loc[i]);
+        // }
+        // printf("\n");
+
+        // Set the matrix arrays
+        delete[] _mat_ia;
+        delete[] _mat_ja;
+        delete[] _mat_values;
+        _mat_ia = ia_loc;
+        _mat_ja = ja_loc;
+        _mat_values = a_loc;
+
+        // Create the vector solution and RHS arrays
+        du = new double[_numOwnedRows];
+        residu = new double[_numOwnedRows];
+
+        break;
+      }
+    case 1:
+      // Even number of nnz per proc, possible row overlap
+      // The number of nnz is split according to PetscSplitOwnership()'s formula
+      nNNZPerProc = _nnz/size + ((_nnz % size) > rank);
+      break;
+    case 2:
+      // Even number of nnz per proc (mostly), without row overlap
+      // TODO:
+      // Il faut:
+      // Estimer le nombre de nnz per proc comme dans le cas 1
+      // Synchroniser (sûrement) sur chaque proc la valeur de sur les autres
+      // Progresser dans ia/ja pour voir s'il y a des sauts de lignes
+      // Si la valeur précédente dans ja est plus grande, alors
+      // il y a eu un saut de ligne et c'est suffisant pour accepter le découpage.
+      // Sinon, on ne peut pas conclure et il faut sûrement regarder la valeur dans ia. 
+      break;
+  }
+
+#else
+  _numOwnedNNZ = _nnz;
+  _numOwnedRows = _nInc;
+  _ownedLowerBounds = (PardisoInt*) malloc(1*sizeof(PardisoInt));
+  _ownedLowerBounds[0] = 0; 
+  _ownedUpperBounds = (PardisoInt*) malloc(1*sizeof(PardisoInt));
+  _ownedUpperBounds[0] = _nInc;
+  // Leave the matrix arrays as-is (ia, ja, values),
+  // and allocate solution vector (du) and RHS (residu)
+  du = new double[_nInc];
+  residu = new double[_nInc];
+#endif
+}
+
 feLinearSystemMklPardiso::feLinearSystemMklPardiso(std::vector<feBilinearForm *> bilinearForms,
                                                    int numUnknowns)
   : feLinearSystem(bilinearForms), _nInc(numUnknowns)
 {
   recomputeMatrix = true;
-
-  _nInc = numUnknowns;
-
-  _EZCRS = new feEZCompressedRowStorage(numUnknowns, _formMatrices, _numMatrixForms);
-
-  nz = _EZCRS->getNumNNZ();
-  Ap = new PardisoInt[_nInc + 1];
-  Aj = new PardisoInt[nz];
-  _EZCRS->get_ia_Pardiso(&Ap);
-  _EZCRS->get_ja_Pardiso(&Aj);
-  Ax = _EZCRS->allocateMatrixArray();
-  _EZCRS->setMatrixArrayToZero(Ax);
-
-  du = new double[_nInc];
-  residu = new double[_nInc];
   symbolicFactorization = true;
+
+  feEZCompressedRowStorage _EZCRS(numUnknowns, _formMatrices, _numMatrixForms);
+
+  _nnz = _EZCRS.getNumNNZ();
+  _mat_ia = new PardisoInt[_nInc + 1]; // ia in pardiso doc (beginning of row in ja)
+  _mat_ja = new PardisoInt[_nnz]; // ja in pardiso doc (columns)
+  _mat_values = new double[_nnz]; // a in pardiso doc (matrix coefficients)
+  _EZCRS.get_ia_Pardiso(&_mat_ia);
+  _EZCRS.get_ja_Pardiso(&_mat_ja);
+
+  // Initialize NNZ entries to 0 ( (-: )
+  for(feInt i = 0; i < _nnz; i++) _mat_values[i] = 0.;
+
+  this->setOwnershipAndAllocate();
+
   //=================================================================
   //  INITIALISATION - MATRICE NON SYMETRIQUE
   //=================================================================
@@ -34,11 +189,48 @@ feLinearSystemMklPardiso::feLinearSystemMklPardiso(std::vector<feBilinearForm *>
   IPIVOT = 13;
 
   MTYPE = 11;
-  SOLVER = 0; // sparse direct solver
 
+  // Deprecated
+  // SOLVER = 0; // sparse direct solver
   // pardisoinit (PT,&MYTPE,&SOLVER,IPARM,DPARM,&ERROR);
-  // VERSION MKL PARDISO
+
   for(feInt i = 0; i < 64; i++) IPARM[i] = 0;
+
+#if defined(HAVE_MPI)
+  // Option for Cluster MKL Pardiso
+  IPARM[ 0] =  1; /* Solver default parameters overriden with provided by iparm */
+  IPARM[ 1] =  3; /* Use METIS for fill-in reordering */
+  IPARM[ 5] =  0; /* Write solution into x */
+  IPARM[ 7] =  2; /* Max number of iterative refinement steps */
+  IPARM[ 9] = IPIVOT; /* Perturb the pivot elements with 1E-13 */
+  IPARM[10] =  0; /* Use or not nonsymmetric permutation and scaling MPS */
+  IPARM[12] =  0; /* Switch on Maximum Weighted Matching algorithm (default for non-symmetric) */
+  IPARM[17] = -1; /* Output: Number of nonzeros in the factor LU */
+  IPARM[18] = -1; /* Output: Mflops for LU factorization */
+  IPARM[26] =  1; /* Check input data for correctness */
+  IPARM[34] =  1; /* 0-based indexing - (0) Fortran-style (1-based) - (1) C-style (0-based) */
+  IPARM[39] =  2; /* Input: matrix/rhs/solution are distributed between MPI processes  */
+
+  /* Beginning and ending of input domain. 
+  The number of the matrix A row, RHS element, and, for iparm[39]=2, solution vector
+  that begins the input domain belonging to this MPI process.
+  Only applicable to the distributed assembled matrix input format (iparm[39]> 0).
+
+  If IPARM[40] > IPARM[41], then this rank does not have any part of the domain.
+  This is currently unused, i.e., all MPI processes store at least 1 row.
+  (see cl_solver_unsym_distr_c.c example file) */
+  int rank;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  IPARM[40] = _ownedLowerBounds[rank];
+  IPARM[41] = _ownedUpperBounds[rank];
+
+  NRHS = 1;
+  MAXFCT = 1;
+  MSGLVL = 0;
+  MNUM = 1;
+  ERROR = 0;
+#else
+  // Option for MKL Pardiso
   IPARM[0] = 1; /* No solver default */
   IPARM[1] = 3; /* Fill-in reordering: (0)Min Degree, (2)METIS, (3)OpenMP */
   IPARM[2] = 0; /* Reserved. Set to zero for MKL version. Number of threads otherwise */
@@ -46,13 +238,12 @@ feLinearSystemMklPardiso::feLinearSystemMklPardiso(std::vector<feBilinearForm *>
   IPARM[4] = 0; /* No user fill-in reducing permutation */
   IPARM[5] = 0; /* Write solution into (0)x, (1)b */
   IPARM[6] = 0; /* Not in use - Number of iterative refinement steps performed */
-  IPARM[7] = 2; /* Max numbers of iterative refinement steps. (2)=2 iterations */
+  IPARM[7] = 1; /* Max numbers of iterative refinement steps. (2)=2 iterations */
   IPARM[8] = 0; /* Reserved */
   IPARM[9] = IPIVOT; /* Perturb the pivot elements with 1E-13 */ //-AG
   IPARM[10] = 0; /* (0)Disable scaling, (1) Use nonsymmetric permutation and scaling MPS */ //--AG
   IPARM[11] = 0; /* Not in use - Solve AX=B */
-  IPARM[12] =
-    1; /* Maximum weighted matching algorithm is switched-on (default for non-symmetric) */
+  IPARM[12] = 1; /* Maximum weighted matching algorithm is switched-on (default for non-symmetric) */
   IPARM[13] = 0; /* Output: Number of perturbed pivots */
   IPARM[14] = 0; /* Not in use - Peak memory on symbolic factorization*/
   IPARM[15] = 0; /* Not in use - Permanent memory on symbolic factorization */
@@ -62,50 +253,150 @@ feLinearSystemMklPardiso::feLinearSystemMklPardiso(std::vector<feBilinearForm *>
   IPARM[19] = 0; /* Output: Numbers of CG Iterations */
   IPARM[23] = 1; /* Parallel factorization control - (0) sequential - (1) parallel*/
   IPARM[24] = 0; /* Parallel LU solve control - (0) parallel - (1) sequential */
-
+  IPARM[26] = 1; /* Check input data for correctness */
   IPARM[34] = 1; /* 0-based indexing - (0) Fortran-style (1-based) - (1) C-style (0-based) */
-
-  for(feInt i = 0; i < 64; i++) PT[i] = NULL;
-
-  // N = (feInt) _nInc;
   NRHS = 1;
-  // IPARM[2]= num_procs; // nombre de processeurs
   MAXFCT = 1;
-  MNUM = 1;
   MSGLVL = 0;
+  MNUM = 1;
   ERROR = 0;
+#endif
 
+  for(feInt i = 0; i < 64; i++) PT[i] = 0;
+  
   feInfoCond(FE_VERBOSE > 0, "\t\tCreated a MKL Pardiso linear system of size %d x %d", _nInc, _nInc);
   feInfoCond(FE_VERBOSE > 0, "\t\t\tTODO: Add Pardiso options");
 }
 
-double vectorMaxNorm(feInt N, double *V)
+//
+// Get the maximum absolute value of a vector on all MPI processes
+//
+double vectorMaxNorm(int numOwnedRows, double *vec)
 {
-  double t = 0.0;
-  for(feInt i = 0; i < N; i++) {
-    t = fmax(t, fabs(V[i]));
+  double my_max = 0.;
+  for(feInt i = 0; i < numOwnedRows; i++) {
+    my_max = fmax(my_max, fabs(vec[i]));
   }
-  return t;
+#if defined(HAVE_MPI)
+  double global_max = 0;
+  MPI_Allreduce(&my_max, &global_max, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+  return global_max;
+#else
+  return my_max;
+#endif
 }
 
-// Print the matrix with a layout similar to PETSc's
+//
+// Print the matrix on each process with a layout similar to PETSc's
+//
 void feLinearSystemMklPardiso::viewMatrix()
 {
-  // for(feInt i = 0; i < nz; i++) printf("%ld %g \n", i, Ax[i]);
-  for(feInt i = 0; i < _nInc; i++) {
-    printf("Row %ld: ", i);
-    int debut = Ap[i];
-    int fin = Ap[i + 1];
-    for(feInt j = 0; j < fin - debut; ++j) {
-      printf("(%d, %f)  ", Aj[debut + j], Ax[debut + j]);
+  if(_displayMatrixInConsole) {
+#if defined(HAVE_MPI)
+    int rank, size;
+    MPI_Comm_size(MPI_COMM_WORLD, &size);
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    int ranktoprint = 0;
+    MPI_Barrier(MPI_COMM_WORLD);
+    while(ranktoprint < size) {
+      if(rank == ranktoprint) {
+        // feInfo("Matrix on process %d:", rank);
+#else
+        feInfo("Matrix:");
+#endif
+    // for(feInt i = 0; i < _nnz; i++) printf("%ld %g \n", i, _mat_values[i]);
+    for(feInt i = 0; i < _numOwnedRows; i++) {
+      printf("Row %ld: ", i);
+      int debut = _mat_ia[i];
+      int fin = _mat_ia[i + 1];
+      for(feInt j = 0; j < fin - debut; ++j) {
+        printf("(%d, %g)  ", _mat_ja[debut + j], _mat_values[debut + j]);
+      }
+      printf("\n");
     }
-    printf("\n");
+#if defined(HAVE_MPI)
+      }
+      ranktoprint++;
+      MPI_Barrier(MPI_COMM_WORLD);
+    }
+#endif
   }
+}
+
+//
+// Print the RHS on each process
+//
+void feLinearSystemMklPardiso::viewRHS()
+{
+  if(_displayRHSInConsole) {
+#if defined(HAVE_MPI)
+    int rank, size;
+    MPI_Comm_size(MPI_COMM_WORLD, &size);
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    int ranktoprint = 0;
+    MPI_Barrier(MPI_COMM_WORLD);
+    while(ranktoprint < size) {
+      if(rank == ranktoprint) {
+        feInfo("RHS on process %d:", rank);
+#else
+        feInfo("RHS:");
+#endif
+        for(int i = 0; i < _numOwnedRows; ++i) {
+          feInfo("RHS[%d] = %+-1.16e", i, residu[i]);
+        }
+#if defined(HAVE_MPI)
+      }
+      ranktoprint++;
+      MPI_Barrier(MPI_COMM_WORLD);
+    }
+#endif
+  }
+}
+
+//
+// Print the solution vector (the Newton residual du) on each process
+//
+void feLinearSystemMklPardiso::viewResidual()
+{
+#if defined(HAVE_MPI)
+  int rank, size;
+  MPI_Comm_size(MPI_COMM_WORLD, &size);
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  int ranktoprint = 0;
+  MPI_Barrier(MPI_COMM_WORLD);
+  while(ranktoprint < size) {
+    if(rank == ranktoprint) {
+      feInfo("Residual (solution vector) on process %d:", rank);
+#else
+      feInfo("Residual (solution vector) :");
+#endif
+      for(int i = 0; i < _numOwnedRows; ++i) {
+        feInfo("du[%d] = %+-1.16e", i, du[i]);
+      }
+#if defined(HAVE_MPI)
+    }
+    ranktoprint++;
+    MPI_Barrier(MPI_COMM_WORLD);
+  }
+#endif
 }
 
 void feLinearSystemMklPardiso::assembleMatrices(feSolution *sol)
 {
   tic();
+
+#if defined(HAVE_MPI)
+  int rank;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+#else
+  int rank = 0;
+#endif
+
+  PardisoInt low = _ownedLowerBounds[rank];
+#if defined(HAVE_MPI)
+  PardisoInt high = _ownedUpperBounds[rank];
+#endif
+
   for(feInt eq = 0; eq < _numMatrixForms; ++eq) {
     feBilinearForm *f = _formMatrices[eq];
     feCncGeo *cnc = f->getCncGeo();
@@ -164,14 +455,31 @@ void feLinearSystemMklPardiso::assembleMatrices(feSolution *sol)
                                   [this](const int &x) { return x >= this->_nInc; }),
                    adrJ.end());
 
+#if defined(HAVE_MPI)
+        // Remove row indices in adrI that are not owned by this proc
+        auto it_nielm = niElm.begin();
+        for(auto it_i = adrI.begin();  it_i != adrI.end(); )
+        {
+          if(low <= (*it_i) && (*it_i) <= high) {
+            // In owned range of rows : do nothing
+            ++it_i;
+            ++it_nielm;
+          } else {
+            // Erase in adrI only
+            it_i = adrI.erase(it_i);
+            it_nielm = niElm.erase(it_nielm);
+          }
+        }
+#endif
+
         // Flatten Ae at relevant indices
         sizeI = adrI.size();
         sizeJ = adrJ.size();
 
         for(feInt i = 0; i < sizeI; i++) {
-          feInt I = adrI[i];
-          feInt debut = Ap[I];
-          feInt fin = Ap[I + 1];
+          feInt I = adrI[i] - low;
+          feInt debut = _mat_ia[I];
+          feInt fin = _mat_ia[I + 1];
           feInt numColumns = fin - debut;
 
           // For each entry of the local matrix,
@@ -179,26 +487,38 @@ void feLinearSystemMklPardiso::assembleMatrices(feSolution *sol)
           // The entries of the local matrix are not sorted for P2+ elements.
           for(feInt j = 0; j < sizeJ; ++j) {
             for(feInt J = 0; J < numColumns; ++J) {
-              if(Aj[debut + J] == adrJ[j]) {
-                Ax[debut + J] += Ae[niElm[i]][njElm[j]];
+              if(_mat_ja[debut + J] == adrJ[j]) {
+                _mat_values[debut + J] += Ae[niElm[i]][njElm[j]];
+                break;
               }
             }
           }
-          niElm.clear();
-          njElm.clear();
         }
+        niElm.clear();
+        njElm.clear();
       }
     }
   }
 
-  if(_displayMatrixInConsole) viewMatrix();
-
   feInfoCond(FE_VERBOSE > 1, "\t\t\t\tAssembled jacobian matrix in %f s", toc());
+  
+  viewMatrix();
 }
 
 void feLinearSystemMklPardiso::assembleResiduals(feSolution *sol)
 {
   tic();
+
+#if defined(HAVE_MPI)
+  int rank;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+#else
+  int rank = 0;
+#endif
+
+  PardisoInt low = _ownedLowerBounds[rank];
+  PardisoInt high = _ownedUpperBounds[rank];
+
   for(feInt eq = 0; eq < _numResidualForms; eq++) {
     feBilinearForm *f = _formResiduals[eq];
     feCncGeo *cnc = f->getCncGeo();
@@ -230,18 +550,24 @@ void feLinearSystemMklPardiso::assembleResiduals(feSolution *sol)
         // Compute the element-wise residual
         f->computeResidual(sol, elm);
         Be = f->getBe();
+
+        // Determine global assignment indices
         adrI = f->getAdrI();
         sizeI = adrI.size();
         for(feInt i = 0; i < sizeI; i++) {
-          if(adrI[i] < _nInc) residu[adrI[i]] += Be[i];
+          if(adrI[i] < _nInc) {
+            // Remove indices in adrI that are not owned by this proc
+            if(low <= adrI[i] && adrI[i] <= high) {
+              residu[adrI[i] - low] += Be[i];
+            }
+          }
         }
       }
     }
   }
   feInfoCond(FE_VERBOSE > 1, "\t\t\t\tAssembled global residual in %f s", toc());
-  // for(int i = 0; i < _nInc; ++i){
-  //   printf("%g \n",residu[i]);
-  // }
+
+  viewRHS();
 }
 
 void feLinearSystemMklPardiso::assignResidualToDCResidual(feSolutionContainer *solContainer)
@@ -256,15 +582,33 @@ void feLinearSystemMklPardiso::applyCorrectionToResidual(double coeff, std::vect
 
 void feLinearSystemMklPardiso::correctSolution(feSolution *sol)
 {
-  // Est-ce efficace?
-  // Pourquoi ne pas avoir un pointeur sur le vecteur solution;
-  // Conversion de feInt à int?
-  for(feInt i = 0; i < _nInc; i++) sol->incrementSolAtDOF((int)i, du[i]);
-}
+  std::vector<double> &solArray = sol->getSolutionReference();
 
-void feLinearSystemMklPardiso::correctSolution(double *sol)
-{
-  for(feInt i = 0; i < _nInc; i++) sol[i] += du[i];
+#if defined(HAVE_MPI)
+  int rank;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+  PardisoInt low  = _ownedLowerBounds[rank];
+  PardisoInt high = _ownedUpperBounds[rank];
+
+  for(feInt i = 0; i < high - low + 1; i++) {
+    _ownedSolution[i] = solArray[low + i] + du[i];
+    // feInfo("Owned sol = %f - du = %f", _ownedSolution[i], du[i]);
+  }
+
+  // for(int i = 0; i < _nInc; ++i)
+  //   feInfo("solarray before = %f", solArray[i]);
+
+  // Synchronize the solution vector on all processes
+  MPI_Allgatherv(_ownedSolution, high-low+1, MPI_DOUBLE, solArray.data(),
+    _numOwnedRowsOnAllProc, _ownedLowerBounds, MPI_DOUBLE, MPI_COMM_WORLD);
+
+  // for(int i = 0; i < _nInc; ++i)
+  //   feInfo("solarray after  = %f", solArray[i]);
+#else
+  // Increment the solution array
+  for(feInt i = 0; i < _nInc; i++) { solArray[i] += du[i]; }
+#endif
 }
 
 bool checkPardisoErrorCode(PardisoInt &errorCode, std::string &pardisoStep)
@@ -360,6 +704,11 @@ bool checkPardisoErrorCode(PardisoInt &errorCode, std::string &pardisoStep)
   }
 }
 
+void feLinearSystemMklPardiso::permute()
+{
+  // Do nothing, at least for now (permutation is done by Pardiso)
+}
+
 bool feLinearSystemMklPardiso::solve(double *normDx, double *normResidual, double *normAxb,
                                      int *nIter)
 {
@@ -382,10 +731,12 @@ bool feLinearSystemMklPardiso::solve(double *normDx, double *normResidual, doubl
   if(!checkPardisoErrorCode(ERROR, pardisoStep)) return false;
   feInfoCond(FE_VERBOSE > 1, "\t\t\t\tSolved linear system with MKL Pardiso in %f s", toc());
 
+  // Keep the data structures from first symbolic factorization
+  // for subsequent solves
   symbolicFactorization = false;
 
-  *normDx = vectorMaxNorm(_nInc, du);
-  *normResidual = vectorMaxNorm(_nInc, residu);
+  *normDx = vectorMaxNorm(_numOwnedRows, du);
+  *normResidual = vectorMaxNorm(_numOwnedRows, residu);
   *normAxb = 0.0;
   *nIter = 1;
 
@@ -400,12 +751,14 @@ void feLinearSystemMklPardiso::setToZero()
 
 void feLinearSystemMklPardiso::setMatrixToZero()
 {
-  for(feInt i = 0; i < nz; i++) Ax[i] = 0;
+  // for(feInt i = 0; i < _nnz; i++) _mat_values[i] = 0;
+  for(feInt i = 0; i < _numOwnedNNZ; i++) _mat_values[i] = 0;
 }
 
 void feLinearSystemMklPardiso::setResidualToZero()
 {
-  for(feInt i = 0; i < _nInc; i++) residu[i] = 0;
+  // for(feInt i = 0; i < _nInc; i++) residu[i] = 0;
+  for(feInt i = 0; i < _numOwnedRows; i++) residu[i] = 0;
 }
 
 void feLinearSystemMklPardiso::assemble(feSolution *sol)
@@ -440,6 +793,12 @@ void feLinearSystemMklPardiso::constrainEssentialComponents(feSolution *sol)
                 if(j % nComponents == i) {
                   feInt DOF = adr[j];
                   if(adr[j] < _nInc) {
+
+                    #if defined(HAVE_MPI)
+                      feErrorMsg(FE_STATUS_ERROR, "constrainEssentialComponents must be modified for a distributed matrix!");
+                      finalize();
+                      exit(0);
+                    #endif
                     // A DOF shared between this space and another
                     // essential space has a tag higher than _nInc,
                     // hence  we cannot constrain it, but it's
@@ -466,8 +825,8 @@ void feLinearSystemMklPardiso::constrainEssentialComponents(feSolution *sol)
     {
       feInt row = _rowsToConstrain[i];
       // Find every occurence of 'row' in ja
-      for(feInt j = 0; j < nz; ++j) {
-        if(Aj[j] == row) {
+      for(feInt j = 0; j < _nnz; ++j) {
+        if(_mat_ja[j] == row) {
           _numOccurencesInJa[i]++;
           _posOccurencesInJa[i].insert(j);
         }
@@ -482,17 +841,17 @@ void feLinearSystemMklPardiso::constrainEssentialComponents(feSolution *sol)
     // Constrain columns. For every occurence of 'row' in ja,
     // set the associated value to zero
     for(auto jRow : _posOccurencesInJa[iRow]) {
-      Ax[jRow] = 0.;
+      _mat_values[jRow] = 0.;
     }
 
     // Then constrain rows. Assign 0 to all columns of the row
     // and set 1 at (row,row)
-    int debut = Ap[row];
-    int fin = Ap[row + 1];
+    int debut = _mat_ia[row];
+    int fin = _mat_ia[row + 1];
     for(feInt j = 0; j < fin - debut; ++j) {
-      Ax[debut + j] = 0.;
-      if(Aj[debut + j] == row)
-        Ax[debut + j] = 1.;
+      _mat_values[debut + j] = 0.;
+      if(_mat_ja[debut + j] == row)
+        _mat_values[debut + j] = 1.;
     }
 
     // Constrain RHS
@@ -512,43 +871,76 @@ void feLinearSystemMklPardiso::constrainEssentialComponents(feSolution *sol)
 // ====================================================================
 void feLinearSystemMklPardiso::mklSymbolicFactorization(void)
 {
-  // for(feInt i=0;i<_nInc;i++) Ax[i] = 1.0;  // dubitatif
   PHASE = 11;
-  IPARM[12] = iparm12;
-  pardiso(PT, &MAXFCT, &MNUM, &MTYPE, &PHASE, &_nInc, Ax, Ap, Aj, &IDUM, &NRHS, IPARM, &MSGLVL,
-             &DDUM, &DDUM, &ERROR);
-  // pardiso_64(PT, &MAXFCT, &MNUM, &MTYPE, &PHASE, &N, Ax, Ap, Aj, &IDUM, &NRHS, IPARM, &MSGLVL,
-  //            &DDUM, &DDUM, &ERROR);
+
+#if defined(HAVE_MPI)
+  int comm =  MPI_Comm_c2f( MPI_COMM_WORLD );
+  // Cluster Pardiso automatically falls back to Pardiso if there is a single MPI process
+    cluster_sparse_solver(PT, &MAXFCT, &MNUM, &MTYPE, &PHASE, &_nInc, _mat_values, _mat_ia, _mat_ja, &IDUM, &NRHS, IPARM, &MSGLVL,
+               &DDUM, &DDUM, &comm, &ERROR);
+#else
+    pardiso(PT, &MAXFCT, &MNUM, &MTYPE, &PHASE, &_nInc, _mat_values, _mat_ia, _mat_ja, &IDUM, &NRHS, IPARM, &MSGLVL,
+               &DDUM, &DDUM, &ERROR);
+#endif
 }
 
 void feLinearSystemMklPardiso::mklFactorization(void)
 {
   PHASE = 22;
-  pardiso(PT, &MAXFCT, &MNUM, &MTYPE, &PHASE, &_nInc, Ax, Ap, Aj, &IDUM, &NRHS, IPARM, &MSGLVL,
-             &DDUM, &DDUM, &ERROR);
-  // pardiso_64(PT, &MAXFCT, &MNUM, &MTYPE, &PHASE, &N, Ax, Ap, Aj, &IDUM, &NRHS, IPARM, &MSGLVL,
-  //            &DDUM, &DDUM, &ERROR);
+
+#if defined(HAVE_MPI)
+  int comm =  MPI_Comm_c2f( MPI_COMM_WORLD );
+    cluster_sparse_solver(PT, &MAXFCT, &MNUM, &MTYPE, &PHASE, &_nInc, _mat_values, _mat_ia, _mat_ja, &IDUM, &NRHS, IPARM, &MSGLVL,
+               &DDUM, &DDUM, &comm, &ERROR);
+#else
+    pardiso(PT, &MAXFCT, &MNUM, &MTYPE, &PHASE, &_nInc, _mat_values, _mat_ia, _mat_ja, &IDUM, &NRHS, IPARM, &MSGLVL,
+               &DDUM, &DDUM, &ERROR);
+#endif
 }
 
 void feLinearSystemMklPardiso::mklSolve(void)
 {
   PHASE = 33;
-  IPARM[7] = 1;
 
   // Reset solution vector
-  for(feInt i = 0; i < _nInc; i++) du[i] = 0.0;
+  for(feInt i = 0; i < _numOwnedRows; i++) du[i] = 0.0;
 
-  pardiso(PT, &MAXFCT, &MNUM, &MTYPE, &PHASE, &_nInc, Ax, Ap, Aj, &IDUM, &NRHS, IPARM, &MSGLVL,
-             residu, du, &ERROR);
-// pardiso_64(PT, &MAXFCT, &MNUM, &MTYPE, &PHASE, &N, Ax, Ap, Aj, &IDUM, &NRHS, IPARM, &MSGLVL,
-//              residu, du, &ERROR);
+#if defined(HAVE_MPI)
+  int comm =  MPI_Comm_c2f( MPI_COMM_WORLD );
+    cluster_sparse_solver(PT, &MAXFCT, &MNUM, &MTYPE, &PHASE, &_nInc, _mat_values, _mat_ia, _mat_ja, &IDUM, &NRHS, IPARM, &MSGLVL,
+               residu, du, &comm, &ERROR);
+#else
+    pardiso(PT, &MAXFCT, &MNUM, &MTYPE, &PHASE, &_nInc, _mat_values, _mat_ia, _mat_ja, &IDUM, &NRHS, IPARM, &MSGLVL,
+               residu, du, &ERROR);
+#endif
 }
 
 feLinearSystemMklPardiso::~feLinearSystemMklPardiso(void)
 {
-  delete[] Ap;
-  delete[] Aj;
-  delete[] Ax;
+  /* Release internal memory. */
+  PHASE = -1;
+
+#if defined(HAVE_MPI)
+  int comm =  MPI_Comm_c2f( MPI_COMM_WORLD );
+    cluster_sparse_solver(PT, &MAXFCT, &MNUM, &MTYPE, &PHASE,
+             &_nInc, &DDUM, _mat_ia, _mat_ja, &IDUM, &NRHS,
+             IPARM, &MSGLVL, &DDUM, &DDUM, &comm, &ERROR);
+#else
+    pardiso(PT, &MAXFCT, &MNUM, &MTYPE, &PHASE,
+             &_nInc, &DDUM, _mat_ia, _mat_ja, &IDUM, &NRHS,
+             IPARM, &MSGLVL, &DDUM, &DDUM, &ERROR);
+#endif
+
+  free(_ownedLowerBounds);
+  free(_ownedUpperBounds);
+#if defined(HAVE_MPI)
+  free(_numOwnedRowsOnAllProc);
+  free(_ownedSolution);
+#endif
+
+  delete[] _mat_ia;
+  delete[] _mat_ja;
+  delete[] _mat_values;
   delete[] du;
   delete[] residu;
 }

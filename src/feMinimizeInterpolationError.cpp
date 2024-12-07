@@ -338,6 +338,57 @@ static void getGradientJacobianControlCoefficients(const SPoint2 P[6], SPoint2 g
   gradN[5][5] = gradControlCoefficientP110N110(P002, P110, P200, P011, P020, P101);
 }
 
+// static void getDBezierdLagrange(double grad[6][6])
+// {
+//   // d_P200/dL_j : P200 = L200
+//   grad[0][0] = 1.;
+//   grad[0][1] = 0.;
+//   grad[0][2] = 0.;
+//   grad[0][3] = 0.;
+//   grad[0][4] = 0.;
+//   grad[0][5] = 0.;
+
+//   // d_P020/dL_j : P020 = L020
+//   grad[1][0] = 0.;
+//   grad[1][1] = 1.;
+//   grad[1][2] = 0.;
+//   grad[1][3] = 0.;
+//   grad[1][4] = 0.;
+//   grad[1][5] = 0.;
+
+//   // d_P020/dL_j : P002 = L002
+//   grad[2][0] = 0.;
+//   grad[2][1] = 0.;
+//   grad[2][2] = 1.;
+//   grad[2][3] = 0.;
+//   grad[2][4] = 0.;
+//   grad[2][5] = 0.;
+
+//   // d_P110/dL_j : P110 = 1/2 * (4*L110 - L200 - L020)
+//   grad[3][0] = -0.5;
+//   grad[3][1] = -0.5;
+//   grad[3][2] = 0.;
+//   grad[3][3] = 2.;
+//   grad[3][4] = 0.;
+//   grad[3][5] = 0.;
+
+//   // d_P011/dL_j : P011 = 1/2 * (4*L011 - L020 - L002)
+//   grad[4][0] = 0.;
+//   grad[4][1] = -0.5;
+//   grad[4][2] = -0.5;
+//   grad[4][3] = 0.;
+//   grad[4][4] = 2.;
+//   grad[4][5] = 0.;
+
+//   // d_P101/dL_j : P101 = 1/2 * (4*L101 - L002 - L200)
+//   grad[5][0] = -0.5;
+//   grad[5][1] = 0.;
+//   grad[5][2] = -0.5;
+//   grad[5][3] = 0.;
+//   grad[5][4] = 0.;
+//   grad[5][5] = 2.;
+// }
+
 static bool checkValidity(const SPoint2 lagrangePoints[6], SPoint2 bezierPoints[6], double N[6])
 {
   getBezierControlPoints(lagrangePoints, bezierPoints);

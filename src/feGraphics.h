@@ -41,6 +41,8 @@ public:
   // Create an OpenGL window for 1D curves visualization. See testGraphic.cpp
   // for example use including resizing of the window, drawing and buffer update.
   //
+  // Adapted from the material of MECA1120 Intro to FEM - UCLouvain by V. Legat
+  //
   //               nElm: the number of line elements in the 1D mesh
   // nInteriorPlotNodes: the number of additional interior nodes used to plot
   //                     a smooth curve. 0 means the plot only connects the

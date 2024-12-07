@@ -1,14 +1,25 @@
 #include "feCompressedRowStorage.h"
 #include <mutex>
 
+#if defined(HAVE_PETSC)
+#include "petscksp.h"
+#endif
+
+// Determine the sparsity pattern of the global FE matrix.
+// This is done by doing a "dry" assembly of all the bilinear forms
+// associated to a local (elementwise) matrix.
+// The sparsity pattern is required by Pardiso,
+// and considerably speeds up the PETSc resolution by preallocating the matrix.
+// For a parallel (MPI) PETSc matrix, the number of nonzero
+// on the diagonal and off-diagonal blocks are also required.
 feEZCompressedRowStorage::feEZCompressedRowStorage(int numUnknowns,
                                                    std::vector<feBilinearForm *> &formMatrices,
-                                                   int numMatrixForms)
+                                                   int numMatrixForms,
+                                                   int *ownedUpperBounds)
 {
   nnz.resize(numUnknowns, 0.);
   nnzPerRow.resize(numUnknowns);
   ia_Pardiso.resize(numUnknowns + 1);
-
 
   for(int i = 0; i < numUnknowns; ++i) {
     nnzPerRow[i].clear();
@@ -83,7 +94,9 @@ feEZCompressedRowStorage::feEZCompressedRowStorage(int numUnknowns,
   }
 
   // Sort and unique
+  #if defined(HAVE_OMP)
   #pragma omp parallel for
+  #endif
   for(size_t i = 0; i < numUnknowns; ++i) {
     std::sort( nnzPerRow[i].begin(), nnzPerRow[i].end() );
     nnzPerRow[i].erase( std::unique( nnzPerRow[i].begin(), nnzPerRow[i].end() ), nnzPerRow[i].end() );
@@ -100,10 +113,68 @@ feEZCompressedRowStorage::feEZCompressedRowStorage(int numUnknowns,
   feInt cnt = 0;
   for(int i = 0; i < numUnknowns; ++i) {
     ia_Pardiso[i] = cnt;
-    for(auto &val : nnzPerRow[i])
+    for(auto &val : nnzPerRow[i]) {
       ja_Pardiso[cnt++] = val;
+    }
   }
   ia_Pardiso[numUnknowns] = _num_nnz;
+
+  // Also determine diagonal and off-diagonal nnz for parallel PETSc matrix
+  if(ownedUpperBounds != nullptr) {
+#if defined(HAVE_PETSC)
+    PetscMPIInt size;
+    MPI_Comm_size(PETSC_COMM_WORLD, &size);
+    d_nnz.resize(size);
+    o_nnz.resize(size);
+
+    // for(int i = 0; i < size; ++i) {
+    //   feInfo("Bound = %d", ownedUpperBounds[i]);
+    // }
+
+    int iBound = 0;
+    int currentProc = 0, lowerBound = 0, upperBound = ownedUpperBounds[iBound];
+    d_nnz_flattened.clear();
+    o_nnz_flattened.clear();
+
+    // Loop over the rows
+    for(size_t i = 0; i < numUnknowns; ++i) {
+
+      // Go to the structure on the next proc if necessary
+      if(i >= upperBound) {
+        iBound++;
+        lowerBound = upperBound;
+        upperBound = ownedUpperBounds[iBound];
+        currentProc++;
+      }
+
+      // feInfo("Row %d - Owned by proc %d - num total nnz = %d ", i, currentProc, nnzPerRow[i].size());
+
+      int nnzOnRowOfDiagBlock = 0, nnzOnRowOfOffDiagBlock = 0;
+      for(auto val : nnzPerRow[i]) {
+
+        // feInfo("%d", val);
+
+        if(lowerBound <= val && val < upperBound) {
+          // Nonzero entry is in the diagonal proc owned by this proc
+          nnzOnRowOfDiagBlock++;
+        } else {
+          nnzOnRowOfOffDiagBlock++;
+        }
+
+      }
+
+      // feInfo("%d nnz on diag block - %d on off-diag", nnzOnRowOfDiagBlock, nnzOnRowOfOffDiagBlock);
+      d_nnz[currentProc].push_back(nnzOnRowOfDiagBlock);
+      o_nnz[currentProc].push_back(nnzOnRowOfOffDiagBlock);
+      d_nnz_flattened.push_back(nnzOnRowOfDiagBlock);
+      o_nnz_flattened.push_back(nnzOnRowOfOffDiagBlock);
+    }
+
+#else
+    d_nnz.resize(1);
+    o_nnz.resize(1);
+#endif
+  }
 }
 
 

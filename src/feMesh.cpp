@@ -9,6 +9,10 @@
 #include <iostream>
 #include <fstream>
 
+#if defined(HAVE_MPI)
+  #include "mpi.h"
+#endif
+
 extern int FE_VERBOSE;
 
 int feMesh::getCncGeoTag(const std::string &cncGeoID) const
@@ -30,14 +34,29 @@ feCncGeo *feMesh::getCncGeoByTag(int cncGeoTag) const
   return _cncGeo[cncGeoTag];
 }
 
-double feMesh::getMaxEdgeDisplacement()
+void feMesh::recomputeDisplacementVectors()
+{
+  for(auto p : _edge2midnode) {
+    double x0 = p.first->getVertex(0)->x();
+    double y0 = p.first->getVertex(0)->y();
+    double x1 = p.first->getVertex(1)->x();
+    double y1 = p.first->getVertex(1)->y();
+    double xMid = (x0+x1)/2.;
+    double yMid = (y0+y1)/2.;
+    _edge2alpha[p.first][0] = p.second->x() - xMid;
+    _edge2alpha[p.first][1] = p.second->y() - yMid;
+  }
+}
+
+double feMesh::getMaxNormEdgeDisplacement()
 {
   if(_edge2alpha.empty()) return 0.;
-  double alphaMax = 0.;
+  double alphaNormMax = 0.;
   for(auto p : _edge2alpha) {
-    alphaMax = fmax(alphaMax, p.second);
+    alphaNormMax = fmax(alphaNormMax, fabs(p.second[0]));
+    alphaNormMax = fmax(alphaNormMax, fabs(p.second[1]));
   }
-  return alphaMax;
+  return alphaNormMax;
 }
 
 double feMesh::getLpNormEdgeDisplacement(int p)
@@ -45,7 +64,8 @@ double feMesh::getLpNormEdgeDisplacement(int p)
   if(_edge2alpha.empty()) return 0.;
   double norm = 0.;
   for(auto pair : _edge2alpha) {
-    norm += pow(pair.second, p);
+    double normAlpha = sqrt(pair.second[0]*pair.second[0] + pair.second[1]*pair.second[1]);
+    norm += pow(normAlpha, p);
   }
   return pow(norm, 1./ (double) p);
 }
@@ -377,11 +397,19 @@ feMesh2DP1::feMesh2DP1(const std::string &meshName, const bool curved, const boo
                        const mapType &physicalEntitiesDescription)
   : feMesh()
 {
-  feStatus s = readGmsh(meshName, curved, reversed, physicalEntitiesDescription);
-  if(s != FE_STATUS_OK) {
-    feInfo("Error in readGmsh - mesh not finalized.\n");
-    std::exit(1);
-  }
+// #if defined(HAVE_MPI)
+//   int rank;
+//   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+//   if(rank == 0) {
+// #endif
+    feStatus s = readGmsh(meshName, curved, reversed, physicalEntitiesDescription);
+    if(s != FE_STATUS_OK) {
+      feInfo("Error in readGmsh - mesh not finalized.\n");
+      std::exit(1);
+    }
+// #if defined(HAVE_MPI)
+//   }
+// #endif
 }
 
 feMesh2DP1::~feMesh2DP1()
@@ -624,8 +652,8 @@ feStatus feMesh2DP1::transfer(feMesh2DP1 *targetMesh, feMetaNumber *oldnumbering
         isBC = true;
         feInfoCond(FE_VERBOSE >= VERBOSE_MODERATE,
           "\t\tNot interpolating essential BC field \"%s\" on connectivity \"%s\"", 
-          fS1->getFieldID(),
-          fS1->getCncGeoID());
+          fS1->getFieldID().data(),
+          fS1->getCncGeoID().data());
       }
     }
 
@@ -722,7 +750,7 @@ feStatus feMesh2DP1::transfer(feMesh2DP1 *targetMesh, feMetaNumber *oldnumbering
       oldSolutionContainer->_sol[iSol][iDOF] = scTmp->_sol[iSol][iDOF];
   }
 
-  delete scTmp;
+  // delete scTmp;
 
   return FE_STATUS_OK;
 }

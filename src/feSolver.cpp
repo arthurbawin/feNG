@@ -51,7 +51,7 @@ feStatus solveQNBDF(feSolutionContainer *solDot, feTolerances tol, feMetaNumber 
   feInfoCond(FE_VERBOSE > 0, "\t\t\tNONLINEAR SOLVER:");
   bool stop = false;
   int iter = 0, linearSystemIter;
-  double normDx, normResidual, normAxb, previousResidual = 1e22;
+  double normDx = 0., normResidual = 0., normAxb = 0., previousResidual = 1e22;
   double recomputeMatrixTolerance = 1e-1;
 
   // Newton-Rapshon iteration
@@ -74,14 +74,19 @@ feStatus solveQNBDF(feSolutionContainer *solDot, feTolerances tol, feMetaNumber 
 
     // // Check residual norm and exit if tolerance is reached
     // linearSystem->getResidualMaxNorm(&normResidual);
-    // if(normResidual <= tol.tolResidual) {
+    // if(iter > 0 && normResidual <= tol.tolResidual) {
     //   feInfoCond(FE_VERBOSE > 0,
-    //            "\t\t\t\tNonlinear solver has stopped because residual norm ||NL(u)|| = %10.10e is
-    //            below tolerance (%10.4e)", normResidual, tol.tolResidual);
+    //            "\t\t\t\tNonlinear solver has stopped because residual norm ||NL(u)|| = %10.10e is"
+    //            " below tolerance (%10.4e)", normResidual, tol.tolResidual);
     //   break;
     // }
 
     linearSystem->constrainEssentialComponents(sol);
+
+    if(linearSystem->getReorderingStatus()) {
+      linearSystem->permute();
+    }
+
     bool successSolve = linearSystem->solve(&normDx, &normResidual, &normAxb, &linearSystemIter);
 
     if(!successSolve) {

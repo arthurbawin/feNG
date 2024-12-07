@@ -227,7 +227,7 @@ feStatus feCncGeo::setQuadratureRule(feQuadrature *rule)
   return _geometricInterpolant->setQuadratureRule(rule);
 }
 
-feStatus feCncGeo::computeJacobians()
+feStatus feCncGeo::computeJacobians(const bool ignoreNegativeJacobianWarning)
 {
   int nQuad = _geometricInterpolant->getNumQuadPoints();
   std::vector<double> &wQuad = _geometricInterpolant->getQuadratureWeights();
@@ -324,11 +324,11 @@ feStatus feCncGeo::computeJacobians()
                         _dim);
   }
 
-  if(atLeastOneNegative){
+  // fprintf(myfile, "};\n"); fclose(myfile);
+
+  if(atLeastOneNegative && !ignoreNegativeJacobianWarning) {
     return feErrorMsg(FE_STATUS_ERROR, "Negative or zero jacobian on at least one element )-:");
   }
-
-  // fprintf(myfile, "};\n"); fclose(myfile);
 
   return FE_STATUS_OK;
 }

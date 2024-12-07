@@ -63,9 +63,18 @@ public:
     _dt = (tEnd - t0) / (double)nTimeSteps;
     _sol->initializeTemporalSolution(_t0, _tEnd, _nTimeSteps);
   };
-  virtual ~TimeIntegrator(){};
+  virtual ~TimeIntegrator()
+  {
+    delete _solutionContainer;
+  };
 
+  // Bad: the solution container may be deleted
   feSolutionContainer *getSolutionContainer() { return _solutionContainer; }
+  // Better?
+  void copySolutionContainerInto(feSolutionContainer &targetContainer)
+  {
+    targetContainer.copy(*(this->_solutionContainer));
+  }
 
   void setMetaNumber(feMetaNumber *metaNumber) { _metaNumber = metaNumber; }
   void setLinearSystem(feLinearSystem *linearSystem) { _linearSystem = linearSystem; }

@@ -1,35 +1,18 @@
 #include "feLinearSystem.h"
 
 #if defined(HAVE_PETSC)
+#include "petscksp.h"
 #include "petscdraw.h"
 #endif
 
 extern int FE_VERBOSE;
 
-bool petscWasInitialized = false;
-
-void petscInitialize(int argc, char **argv)
-{
-#if defined(HAVE_PETSC)
-  if(!petscWasInitialized) {
-    petscWasInitialized = true;
-    PetscErrorCode ierr = PetscInitialize(&argc, &argv, (char *)0, nullptr);
-    CHKERRABORT(PETSC_COMM_WORLD, ierr);
-  } else {
-    feErrorMsg(FE_STATUS_ERROR, "PETSc was already initialized\n");
-    return;
-  }
-#endif
-}
-
-void petscFinalize()
-{
-#if defined(HAVE_PETSC)
-  PetscFinalize();
-#endif
-}
-
-void feLinearSystemPETSc::initialize()
+//
+// Create and allocate the FE matrix and vectors (Newton residual, RHS, linear system residual (Ax-b))
+// Create the KSP (PETSc solver) object.
+// Should be removed once the initializeMPI() version is thoroughly tested.
+//
+void feLinearSystemPETSc::initializeSequential()
 {
 #if defined(HAVE_PETSC)
   PetscMPIInt size;
@@ -59,18 +42,17 @@ void feLinearSystemPETSc::initialize()
   ierr = VecSet(_constrainedDOFValue, 0.0);
 
   // Determine the nonzero structure
-  // feCompressedRowStorage CRS(_nInc, _formMatrices, _numMatrixForms);
-  _EZCRS = new feEZCompressedRowStorage(_nInc, _formMatrices, _numMatrixForms);
+  feEZCompressedRowStorage _EZCRS(_nInc, _formMatrices, _numMatrixForms);
 
-  // feInt *NNZ = CRS.getNnz();
+  feInt num_nnz = _EZCRS.getNumNNZ();
+
   std::vector<PetscInt> nnz(_nInc, 0);
   for(int i = 0; i < _nInc; ++i) {
-    // nnz[i] = NNZ[i];
-    nnz[i] = _EZCRS->getNnzAt(i);
+    nnz[i] = _EZCRS.getNnzAt(i);
   }
 
   bool withPrealloc = true;
-  bool printInfos = false;
+  bool printInfos = true;
 
   if(withPrealloc) {
     ierr = MatCreate(PETSC_COMM_WORLD, &_A);
@@ -94,11 +76,13 @@ void feLinearSystemPETSc::initialize()
       nz_un = info.nz_unneeded;
       mem = info.memory;
 
-      std::cout << "mal = " << mal << std::endl;
-      std::cout << "mem = " << mem << std::endl;
-      std::cout << "nz_a = " << nz_a << std::endl;
-      std::cout << "nz_u = " << nz_u << std::endl;
-      std::cout << "nz_un = " << nz_un << std::endl;
+      feInfo("\t\tAdditional info from PETSc for matrix creation:");
+      feInfo("\t\tNumber of mallocs during MatSetValues() = %f", mal);
+      feInfo("\t\tMemory allocated                        = %f", mem );
+      feInfo("\t\tNumber of nonzero allocated             = %f", nz_a);
+      feInfo("\t\tNumber of nonzero used                  = %f", nz_u);
+      feInfo("\t\tNumber of nonzero unneeded              = %f", nz_un);
+      feInfo("");
     }
   } else {
     // Without allocation (bad) :
@@ -126,13 +110,24 @@ void feLinearSystemPETSc::initialize()
   ierr = MatAssemblyEnd(_A, MAT_FLUSH_ASSEMBLY);
   CHKERRABORT(PETSC_COMM_WORLD, ierr);
 
+  // Trivial row ownership arrays for a single process, used in correctSolution()
+  _ownedLowerBounds = (int*) malloc(1*sizeof(int));
+  _ownedUpperBounds = (int*) malloc(1*sizeof(int));
+  _numOwnedRows = (int*) malloc(1*sizeof(int));
+  _ownedLowerBounds[0] = 0;
+  _ownedUpperBounds[0] = _nInc;
+  _numOwnedRows[0] = _nInc;
+
+  // Initialize trivial solution buffer owned on this process (= full solution)
+  _ownedSolution = (double*) malloc(_nInc * sizeof(double));
+
   // Create the Krylov solver (default is GMRES)
   ierr = KSPCreate(PETSC_COMM_WORLD, &ksp);
   CHKERRABORT(PETSC_COMM_WORLD, ierr);
-  ierr = KSPSetType(ksp, KSPGMRES);
-  CHKERRABORT(PETSC_COMM_WORLD, ierr);
-  ierr = KSPSetOperators(ksp, _A, _A);
-  CHKERRABORT(PETSC_COMM_WORLD, ierr);
+  // ierr = KSPSetType(ksp, KSPGMRES);
+  // CHKERRABORT(PETSC_COMM_WORLD, ierr);
+  // ierr = KSPSetOperators(ksp, _A, _A);
+  // CHKERRABORT(PETSC_COMM_WORLD, ierr);
 
   // Set preconditioner
   ierr = KSPGetPC(ksp, &preconditioner);
@@ -173,6 +168,7 @@ void feLinearSystemPETSc::initialize()
   // CHKERRABORT(PETSC_COMM_WORLD, ierr);
 
   feInfoCond(FE_VERBOSE > 0, "\t\tCreated a PETSc linear system of size %d x %d", M, N);
+  feInfoCond(FE_VERBOSE > 0, "\t\tNumber of nonzero elements: %d", num_nnz);
   feInfoCond(FE_VERBOSE > 0, "\t\tIterative linear solver info:");
 
   KSPType krylovType;
@@ -187,7 +183,294 @@ void feLinearSystemPETSc::initialize()
   feInfoCond(FE_VERBOSE > 0, "\t\t\tAbsolute tolerance: %1.4e", _abs_tol);
   feInfoCond(FE_VERBOSE > 0, "\t\t\tDivergence criterion: %1.4e", _div_tol);
   feInfoCond(FE_VERBOSE > 0, "\t\t\tMax number of iterations: %d", _max_iter);
+
 #endif
+}
+
+int feLinearSystemPETSc::initializeMPI()
+{
+#if defined(HAVE_PETSC)
+
+  feInt num_nnz = -1;
+
+  PetscMPIInt size, rank;
+  PetscCallMPI(MPI_Comm_size(PETSC_COMM_WORLD, &size));
+  PetscCallMPI(MPI_Comm_rank(PETSC_COMM_WORLD, &rank));
+
+  // bool readMatrixFile = false;
+  // if(readMatrixFile) {
+  //   PetscViewer viewer;
+  //   PetscCall(PetscViewerBinaryOpen(PETSC_COMM_WORLD, "mat8p2.txt", FILE_MODE_READ, &viewer));
+  //   PetscCall(MatCreate(PETSC_COMM_WORLD, &_A));
+  //   PetscCall(MatSetType(_A, MATMPIAIJ));
+  //   PetscCall(MatLoad(_A, viewer));
+  //   PetscCall(VecCreate(PETSC_COMM_WORLD, &_rhs));
+  //   PetscCall(VecLoad(_rhs, viewer));
+  //   // PetscCall(MatView(_A, PETSC_VIEWER_STDOUT_SELF));
+  //   // PetscCall(VecView(_rhs, PETSC_VIEWER_STDOUT_SELF));
+  //   PetscCall(PetscViewerDestroy(&viewer));
+  // } else {
+    //
+    // Create matrix
+    //
+    PetscCall(MatCreate(PETSC_COMM_WORLD, &_A));
+    PetscCall(MatSetSizes(_A, PETSC_DECIDE, PETSC_DECIDE, _nInc, _nInc));
+    PetscCall(MatSetFromOptions(_A));
+
+    //
+    // Determine sparsity pattern and preallocate matrix
+    //
+    // Get and share the upper bound of the owned (global) indices on each process
+    PetscInt low, high;
+    PetscCall(MatGetOwnershipRange(_A, &low, &high));
+
+    int localLow[1] = {low}, localHigh[1] = {high};
+    _ownedUpperBounds = (int*) malloc(size*sizeof(int));
+    _ownedLowerBounds = (int*) malloc(size*sizeof(int)); 
+    PetscCallMPI(MPI_Allgather(localLow , 1, MPI_INT, _ownedLowerBounds, 1, MPI_INT, PETSC_COMM_WORLD));
+    PetscCallMPI(MPI_Allgather(localHigh, 1, MPI_INT, _ownedUpperBounds, 1, MPI_INT, PETSC_COMM_WORLD));
+
+    _numOwnedRows = (int*) malloc(size*sizeof(int));
+    for(int i = 0; i < size; ++i) {
+      _numOwnedRows[i] = _ownedUpperBounds[i] - _ownedLowerBounds[i];
+    }
+
+    // Initialize solution buffer owned on this process
+    _ownedSolution = (double*) malloc(_numOwnedRows[rank] * sizeof(double));
+
+    PetscInt numRowsOnProc = high - low;
+    std::vector<feInt> diagNNZOnAllProcs, offdiagNNZOnAllProcs;
+    int *diagNNZ = (int *) malloc(numRowsOnProc*sizeof(int));
+    int *offdiagNNZ = (int *) malloc(numRowsOnProc*sizeof(int));
+
+    // For sequential preallocation if running on single process?
+    std::vector<PetscInt> nnz(_nInc, 0);
+
+    if(rank == 0) {
+
+      // Determine the nonzero structure
+      feEZCompressedRowStorage _EZCRS(_nInc, _formMatrices, _numMatrixForms, _ownedUpperBounds);
+      num_nnz = _EZCRS.getNumNNZ();
+
+      for(int i = 0; i < _nInc; ++i) {
+        nnz[i] = _EZCRS.getNnzAt(i);
+      }
+
+      diagNNZOnAllProcs = _EZCRS.getDiagNNZForAllMPIProcs();
+      offdiagNNZOnAllProcs = _EZCRS.getOffDiagNNZForAllMPIProcs();
+    }
+
+    // Get the nonzero structure on each proc
+    PetscCallMPI(MPI_Scatterv(diagNNZOnAllProcs.data(), _numOwnedRows, _ownedLowerBounds, MPI_INT, diagNNZ, numRowsOnProc, MPI_INT, 0, PETSC_COMM_WORLD));
+    PetscCallMPI(MPI_Scatterv(offdiagNNZOnAllProcs.data(), _numOwnedRows, _ownedLowerBounds, MPI_INT, offdiagNNZ, numRowsOnProc, MPI_INT, 0, PETSC_COMM_WORLD));
+
+    // Allocate parallel matrix, or sequential matrix if running on a single process
+    // Only one of these preallocations will do something
+    PetscCall(MatMPIAIJSetPreallocation(_A, 0, diagNNZ, 0, offdiagNNZ));
+    PetscCall(MatSeqAIJSetPreallocation(_A, 0, nnz.data()));
+    
+    bool printInfos = true;
+
+    if(printInfos) {
+      int ranktoprint = 0;
+      while(ranktoprint < size) {
+        if(rank == ranktoprint) {
+          MatInfo info;
+          double mal, nz_a, nz_u, mem, nz_un;
+
+          PetscCall(MatGetInfo(_A, MAT_LOCAL, &info));
+          mal = info.mallocs;
+          nz_a = info.nz_allocated;
+          nz_u = info.nz_used;
+          nz_un = info.nz_unneeded;
+          mem = info.memory;
+
+          feInfo("\t\tAdditional info from PETSc for matrix creation:");
+          feInfo("\t\t\tNumber of mallocs during MatSetValues() on proc %d : %f", rank, mal);
+          feInfo("\t\t\tMemory allocated                        on proc %d : %f", rank, mem );
+          feInfo("\t\t\tNumber of nonzero allocated             on proc %d : %f", rank, nz_a);
+          feInfo("\t\t\tNumber of nonzero used                  on proc %d : %f", rank, nz_u);
+          feInfo("\t\t\tNumber of nonzero unneeded              on proc %d : %f", rank, nz_un);
+        }
+
+        ranktoprint++;
+        MPI_Barrier(PETSC_COMM_WORLD);
+      }
+    }
+
+    // Insert elements on the diagonal and set to zero to
+    // avoid using a weak form for a block of zeros
+    PetscInt indiceDiag;
+    PetscScalar val = 0.;
+    for(int i = 0; i < _nInc; ++i) {
+      indiceDiag = i;
+      PetscCall(MatSetValues(_A, 1, &indiceDiag, 1, &indiceDiag, &val, INSERT_VALUES));
+    }
+    PetscCall(MatAssemblyBegin(_A, MAT_FLUSH_ASSEMBLY));
+    PetscCall(MatAssemblyEnd(_A, MAT_FLUSH_ASSEMBLY));
+  // }
+
+  //
+  // Create vectors
+  //
+  // Create solution vector du
+  PetscCall(VecCreate(PETSC_COMM_WORLD, &_du));
+  PetscCall(VecSetSizes(_du, PETSC_DECIDE, _nInc));
+  PetscCall(VecSetFromOptions(_du));
+
+  // Duplicate into RHS and residual
+  // if(!readMatrixFile) {
+    PetscCall(VecDuplicate(_du, &_rhs));
+  // }
+  PetscCall(VecDuplicate(_du, &_linSysRes));
+  PetscCall(VecSet(_du, 1.0));
+
+  PetscCall(VecDuplicate(_du, &_constrainedDOFValue));
+  PetscCall(VecSet(_constrainedDOFValue, 0.0));
+
+  //
+  // Create the Krylov solver (default is GMRES)
+  //
+  PetscCall(KSPCreate(PETSC_COMM_WORLD, &ksp));
+  PetscCall(KSPSetType(ksp, KSPGMRES));
+  // PetscCall(KSPSetOperators(ksp, _A, _A));
+
+  // Set preconditioner
+  PetscCall(KSPGetPC(ksp, &preconditioner));
+  // PetscCall(PCSetType(preconditioner, PCILU));
+
+  PetscCall(KSPSetTolerances(ksp, (PetscReal)_rel_tol, (PetscReal)_abs_tol, (PetscReal)_div_tol,
+                          (PetscInt)_max_iter));
+  // PetscCall(KSPSetNormType(ksp, KSP_NORM_UNPRECONDITIONED));
+
+  // Set runtime options, overriding the options above
+  PetscCall(KSPSetFromOptions(ksp));
+
+  PetscInt M, N, Nres, Ndx, NlinSysRes;
+  PetscCall(MatGetSize(_A, &M, &N));
+  PetscCall(VecGetSize(_rhs, &Nres));
+  PetscCall(VecGetSize(_du, &Ndx));
+  PetscCall(VecGetSize(_linSysRes, &NlinSysRes));
+
+  if(rank == 0) {
+    feInfoCond(FE_VERBOSE > 0, "");
+    feInfoCond(FE_VERBOSE > 0, "\t\tCreated a PETSc linear system of size %d x %d", M, N);
+    feInfoCond(FE_VERBOSE > 0, "\t\tNumber of nonzero elements: %d", num_nnz);
+    feInfoCond(FE_VERBOSE > 0, "\t\tIterative linear solver info:");
+
+    KSPType ksptype;
+    PetscCall(KSPGetType(ksp, &ksptype));
+    feInfoCond(FE_VERBOSE > 0, "\t\t\tKrylov method: %s", ksptype);
+
+    PCType pctype;
+    PetscCall(PCGetType(preconditioner, &pctype));
+    feInfoCond(FE_VERBOSE > 0, "\t\t\tPreconditioner: %s", pctype);
+
+    feInfoCond(FE_VERBOSE > 0, "\t\t\tRelative tolerance: %1.4e", _rel_tol);
+    feInfoCond(FE_VERBOSE > 0, "\t\t\tAbsolute tolerance: %1.4e", _abs_tol);
+    feInfoCond(FE_VERBOSE > 0, "\t\t\tDivergence criterion: %1.4e", _div_tol);
+    feInfoCond(FE_VERBOSE > 0, "\t\t\tMax number of iterations: %d", _max_iter);
+  }
+#endif
+
+  return 0;
+}
+
+int feLinearSystemPETSc::initializeMPI_dummyFromPetscExample()
+{
+#if defined(HAVE_PETSC)
+
+  //
+  // Create and allocate matrix
+  //
+  PetscInt i, j, Ii, J, Istart, Iend, m = 800, n = 800;
+
+  PetscCall(MatCreate(PETSC_COMM_WORLD, &_A));
+  PetscCall(MatSetSizes(_A, PETSC_DECIDE, PETSC_DECIDE, m * n, m * n));
+  PetscCall(MatSetFromOptions(_A));
+  PetscCall(MatMPIAIJSetPreallocation(_A, 5, NULL, 5, NULL));
+  PetscCall(MatSeqAIJSetPreallocation(_A, 5, NULL));
+  
+  bool printInfos = true;
+
+  if(printInfos) {
+    MatInfo info;
+    double mal, nz_a, nz_u, mem, nz_un;
+
+    PetscCall(MatGetInfo(_A, MAT_LOCAL, &info));
+    mal = info.mallocs;
+    nz_a = info.nz_allocated;
+    nz_u = info.nz_used;
+    nz_un = info.nz_unneeded;
+    mem = info.memory;
+
+    feInfo("Additional info from PETSc for matrix creation:");
+    feInfo("Number of mallocs during MatSetValues() = %f", mal);
+    feInfo("Memory allocated                        = %f", mem );
+    feInfo("Number of nonzero allocated             = %f", nz_a);
+    feInfo("Number of nonzero used                  = %f", nz_u);
+    feInfo("Number of nonzero unneeded              = %f", nz_un);
+  }
+
+  PetscCall(MatGetOwnershipRange(_A, &Istart, &Iend));
+
+  PetscScalar v;
+
+  for (Ii = Istart; Ii < Iend; Ii++) {
+    v = -1.0;
+    i = Ii / n;
+    j = Ii - i * n;
+    if (i > 0) {
+      J = Ii - n;
+      PetscCall(MatSetValues(_A, 1, &Ii, 1, &J, &v, ADD_VALUES));
+    }
+    if (i < m - 1) {
+      J = Ii + n;
+      PetscCall(MatSetValues(_A, 1, &Ii, 1, &J, &v, ADD_VALUES));
+    }
+    if (j > 0) {
+      J = Ii - 1;
+      PetscCall(MatSetValues(_A, 1, &Ii, 1, &J, &v, ADD_VALUES));
+    }
+    if (j < n - 1) {
+      J = Ii + 1;
+      PetscCall(MatSetValues(_A, 1, &Ii, 1, &J, &v, ADD_VALUES));
+    }
+    v = 4.0;
+    PetscCall(MatSetValues(_A, 1, &Ii, 1, &Ii, &v, ADD_VALUES));
+  }
+
+  PetscCall(MatAssemblyBegin(_A, MAT_FINAL_ASSEMBLY));
+  PetscCall(MatAssemblyEnd(_A, MAT_FINAL_ASSEMBLY));
+
+  PetscCall(VecCreate(PETSC_COMM_WORLD, &_linSysRes));
+  PetscCall(VecSetSizes(_linSysRes, PETSC_DECIDE, m * n));
+  PetscCall(VecSetFromOptions(_linSysRes));
+  PetscCall(VecDuplicate(_linSysRes, &_rhs));
+  PetscCall(VecDuplicate(_rhs, &_du));
+  PetscCall(VecSet(_linSysRes, 1.0));
+  PetscCall(MatMult(_A, _linSysRes, _rhs));
+
+  PetscCall(KSPCreate(PETSC_COMM_WORLD, &ksp));
+  // PetscCall(KSPSetOperators(ksp, _A, _A));
+  PetscCall(KSPSetTolerances(ksp, 1.e-2 / ((m + 1) * (n + 1)), 1.e-50, PETSC_CURRENT, PETSC_CURRENT));
+  PetscCall(KSPSetFromOptions(ksp));
+
+  // PetscCall(KSPSolve(ksp, b, x));
+  // PetscCall(VecAXPY(x, -1.0, u));
+  // PetscCall(VecNorm(x, NORM_2, &norm));
+  // PetscCall(KSPGetIterationNumber(ksp, &its));
+  // PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Norm of error %g iterations %" PetscInt_FMT "\n", (double)norm, its));
+#endif
+
+  return 0;
+}
+
+void feLinearSystemPETSc::initialize()
+{
+  // this->initializeSequential();
+  this->initializeMPI();
+  // this->initializeMPI_dummyFromPetscExample();
 }
 
 feLinearSystemPETSc::feLinearSystemPETSc(int argc, char **argv,
@@ -195,8 +478,7 @@ feLinearSystemPETSc::feLinearSystemPETSc(int argc, char **argv,
                                          int numUnknowns)
   : feLinearSystem(bilinearForms), _argc(argc), _argv(argv)
 #if defined(HAVE_PETSC)
-    ,
-    _nInc(numUnknowns)
+    , _nInc(numUnknowns)
 #endif
 {
   this->initialize();
@@ -294,6 +576,12 @@ void feLinearSystemPETSc::assembleMatrices(feSolution *sol)
 
   PetscErrorCode ierr = 0;
 
+  int rank;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+  PetscInt low, high;
+  ierr = MatGetOwnershipRange(_A, &low, &high);
+
   tic();
   for(feInt eq = 0; eq < _numMatrixForms; ++eq) {
     feBilinearForm *f = _formMatrices[eq];
@@ -353,23 +641,71 @@ void feLinearSystemPETSc::assembleMatrices(feSolution *sol)
                                   [this](const int &x) { return x >= this->_nInc; }),
                    adrJ.end());
 
+        // //////////////////////////////////////////////////////////////////
+        // MPI_Comm_rank(PETSC_COMM_WORLD, &rank);
+        // if(iColor == 0 && iElm == 4) {
+        //   feInfo("sizes = %d - %d", adrI.size(), adrJ.size());
+        //   for(size_t i = 0; i < adrI.size(); ++i) {
+        //     feInfo("From P%d - A adri = %d - adrj = %d", rank, adrI[i], adrJ[i]);
+        //   }
+        // }
+        // MPI_Barrier(PETSC_COMM_WORLD);
+
+        // In addition remove row indices in adrI that are not owned by this proc
+        
+        auto it_nielm = niElm.begin();
+        for(auto it_i = adrI.begin();  it_i != adrI.end(); )
+        {
+          if(low <= (*it_i) && (*it_i) < high) {
+            // In owned range of rows : do nothing
+            ++it_i;
+            ++it_nielm;
+          } else {
+            // Erase in adrI only
+            it_i = adrI.erase(it_i);
+            it_nielm = niElm.erase(it_nielm);
+          }
+        }
+
+        // if(iColor == 0 && iElm == 4) {
+        //   int ranktoprint = 0;
+        //   while(ranktoprint < size) {
+        //     if(rank == ranktoprint) {
+        //       feInfo("sizes after erase on P%d = %d - %d", rank, adrI.size(), adrJ.size());
+        //       for(size_t i = 0; i < adrI.size(); ++i) {
+        //         for(size_t j = 0; j < adrJ.size(); ++j) {
+        //           feInfo("proc %d - range %d - %d - assigning at (%d, %d)", rank, Istart, Iend, adrI[i], adrJ[j]);
+        //         }
+        //       }
+        //     }
+
+        //     ranktoprint++;
+        //     MPI_Barrier(PETSC_COMM_WORLD);
+        //   }
+        // }
+        // //////////////////////////////////////////////////////////////////
+
         // Flatten Ae at relevant indices
         sizeI = adrI.size();
         sizeJ = adrJ.size();
 
+        if(!(adrI.size() == niElm.size())){ feErrorMsg(FE_STATUS_ERROR, "assert failed : adrI size = %d - niElm size = %d", adrI.size(), niElm.size()); };
+        if(!(adrJ.size() == njElm.size())){ feErrorMsg(FE_STATUS_ERROR, "assert failed : adrJ size = %d - njElm size = %d", adrJ.size(), njElm.size()); };
+
         values.resize(sizeI * sizeJ);
         for(feInt i = 0; i < sizeI; ++i) {
           for(feInt j = 0; j < sizeJ; ++j) {
+            feInfo("proc %d - local entry (%d,%d)", rank, niElm[i], njElm[j]);
             values[sizeJ * i + j] = Ae[niElm[i]][njElm[j]];
           }
         }
 
 // Increment global matrix
+// Seems to be issues without the critical, even though it should not race 
 #if defined(HAVE_OMP)
 #pragma omp critical
 #endif
-        ierr = MatSetValues(_A, adrI.size(), adrI.data(), adrJ.size(), adrJ.data(), values.data(),
-                            ADD_VALUES);
+        ierr = MatSetValues(_A, adrI.size(), adrI.data(), adrJ.size(), adrJ.data(), values.data(), ADD_VALUES);
         CHKERRABORT(PETSC_COMM_WORLD, ierr);
         niElm.clear();
         njElm.clear();
@@ -377,10 +713,8 @@ void feLinearSystemPETSc::assembleMatrices(feSolution *sol)
     }
   }
 
-  ierr = MatAssemblyBegin(_A, MAT_FINAL_ASSEMBLY);
-  CHKERRABORT(PETSC_COMM_WORLD, ierr);
-  ierr = MatAssemblyEnd(_A, MAT_FINAL_ASSEMBLY);
-  CHKERRABORT(PETSC_COMM_WORLD, ierr);
+  ierr = MatAssemblyBegin(_A, MAT_FINAL_ASSEMBLY); CHKERRABORT(PETSC_COMM_WORLD, ierr);
+  ierr = MatAssemblyEnd(_A, MAT_FINAL_ASSEMBLY);   CHKERRABORT(PETSC_COMM_WORLD, ierr);
 
   feInfoCond(FE_VERBOSE > 1, "\t\t\t\tAssembled jacobian matrix in %f s", toc());
 
@@ -408,6 +742,9 @@ void feLinearSystemPETSc::assembleResiduals(feSolution *sol)
 #if defined(HAVE_PETSC)
 
   PetscErrorCode ierr = 0;
+
+  PetscInt low, high;
+  ierr = VecGetOwnershipRange(_rhs, &low, &high);
 
   tic();
   for(feInt eq = 0; eq < _numResidualForms; ++eq) {
@@ -456,6 +793,23 @@ void feLinearSystemPETSc::assembleResiduals(feSolution *sol)
                                   [this](const int &x) { return x >= this->_nInc; }),
                    adrI.end());
 
+        // //////////////////////////////////////////////////////////////////
+        // Remove indices in adrI that are not owned by this proc
+        auto it_nielm = niElm.begin();
+        for(auto it_i = adrI.begin();  it_i != adrI.end(); )
+        {
+          if(low <= (*it_i) && (*it_i) < high) {
+            // In owned range of rows : do nothing
+            ++it_i;
+            ++it_nielm;
+          } else {
+            // Erase in adrI only
+            it_i = adrI.erase(it_i);
+            it_nielm = niElm.erase(it_nielm);
+          }
+        }
+        // //////////////////////////////////////////////////////////////////
+
         sizeI = adrI.size();
         values.resize(sizeI);
         for(feInt i = 0; i < sizeI; ++i) {
@@ -472,10 +826,8 @@ void feLinearSystemPETSc::assembleResiduals(feSolution *sol)
     }
   }
 
-  ierr = VecAssemblyBegin(_rhs);
-  CHKERRABORT(PETSC_COMM_WORLD, ierr);
-  ierr = VecAssemblyEnd(_rhs);
-  CHKERRABORT(PETSC_COMM_WORLD, ierr);
+  ierr = VecAssemblyBegin(_rhs);  CHKERRABORT(PETSC_COMM_WORLD, ierr);
+  ierr = VecAssemblyEnd(_rhs);    CHKERRABORT(PETSC_COMM_WORLD, ierr);
 
   feInfoCond(FE_VERBOSE > 1, "\t\t\t\tAssembled global residual in %f s", toc());
 
@@ -495,6 +847,7 @@ void feLinearSystemPETSc::assemble(feSolution *sol)
 void feLinearSystemPETSc::constrainEssentialComponents(feSolution *sol)
 {
 #if defined(HAVE_PETSC)
+  tic();
   std::vector<PetscInt> rowsToConstrain;
   std::vector<feInt> adr;
   for(auto space : sol->_spaces) {
@@ -529,6 +882,56 @@ void feLinearSystemPETSc::constrainEssentialComponents(feSolution *sol)
   PetscErrorCode ierr = MatZeroRowsColumns(_A, rowsToConstrain.size(), rowsToConstrain.data(), 1.,
                                            _constrainedDOFValue, _rhs);
   CHKERRABORT(PETSC_COMM_WORLD, ierr);
+  feInfoCond(FE_VERBOSE > 1, "\t\t\t\tConstrained essential DOFs in %f s", toc());
+#endif
+}
+
+//
+// Apply RCMK permutation
+//
+void feLinearSystemPETSc::permute()
+{
+#if defined(HAVE_PETSC)
+
+  PetscErrorCode ierr = 0;
+
+  ierr = MatGetOrdering(_A, MATORDERINGRCM, &_rowMap, &_colMap); CHKERRABORT(PETSC_COMM_WORLD, ierr);
+  // IS _globalRowMap, _globalColMap;
+  // ierr = ISAllGather(_rowMap, &_globalRowMap); CHKERRABORT(PETSC_COMM_WORLD, ierr);
+  // ierr = ISAllGather(_colMap, &_globalColMap); CHKERRABORT(PETSC_COMM_WORLD, ierr);
+  // ierr = MatPermute(_A, _globalRowMap, _globalColMap, &_Ap); CHKERRABORT(PETSC_COMM_WORLD, ierr);
+  ierr = MatPermute(_A, _rowMap, _colMap, &_Ap); CHKERRABORT(PETSC_COMM_WORLD, ierr);
+  ierr = VecPermute(_rhs, _rowMap, PETSC_FALSE); CHKERRABORT(PETSC_COMM_WORLD, ierr);
+  // ierr = MatDestroy(&_A); CHKERRABORT(PETSC_COMM_WORLD, ierr);
+  // _A = _Ap; /* Replace original operator with permuted version */
+
+  // Write matrix and RHS to binary file
+  // const char* fileName = "matrixBinary.txt";
+  // PetscViewer viewer;
+  // ierr = PetscViewerBinaryOpen(PETSC_COMM_WORLD, fileName, FILE_MODE_WRITE, &viewer); CHKERRABORT(PETSC_COMM_WORLD, ierr);
+  // ierr = MatView(_A, viewer); CHKERRABORT(PETSC_COMM_WORLD, ierr);
+  // ierr = VecView(_rhs, viewer); CHKERRABORT(PETSC_COMM_WORLD, ierr);
+  // ierr = PetscViewerDestroy(&viewer); CHKERRABORT(PETSC_COMM_WORLD, ierr);
+
+  PetscViewer viewer;
+  PetscDraw draw;
+  ierr = PetscViewerDrawOpen(PETSC_COMM_WORLD, NULL, NULL, 0, 0, 1200, 1200, &viewer);
+  CHKERRV(ierr);
+  ierr = MatView(_Ap, viewer);
+  CHKERRV(ierr);
+  ierr = PetscViewerDrawGetDraw(viewer, 0, &draw);
+  CHKERRV(ierr);
+  ierr = PetscDrawSetPause(draw, -1);
+  CHKERRV(ierr); // Wait for user
+  PetscDrawPause(draw);
+  ierr = PetscViewerDestroy(&viewer);
+  CHKERRV(ierr);
+
+  // ierr = MatCopy(_Ap, _A, DIFFERENT_NONZERO_PATTERN); CHKERRABORT(PETSC_COMM_WORLD, ierr);
+  // ierr = MatAssemblyBegin(_A, MAT_FINAL_ASSEMBLY); CHKERRABORT(PETSC_COMM_WORLD, ierr);
+  // ierr = MatAssemblyEnd(_A, MAT_FINAL_ASSEMBLY);   CHKERRABORT(PETSC_COMM_WORLD, ierr);
+
+  // ierr = VecPermute(_rhs, _rowMap, PETSC_FALSE); CHKERRABORT(PETSC_COMM_WORLD, ierr);
 #endif
 }
 
@@ -538,7 +941,34 @@ bool feLinearSystemPETSc::solve(double *normSolution, double *normRHS, double *n
 {
 #if defined(HAVE_PETSC)
 
+  // /////////////////////////////////////////////////////
+  // // Divide by nprocs, need to fix this
+  // feInfo("!!!!!!!!!!! Dividing matrix and RHS by number of MPI procs for correct scaling !!!");
+  // feInfo("!!!!!!!!!!! Dividing matrix and RHS by number of MPI procs for correct scaling !!!");
+  // feInfo("!!!!!!!!!!! Dividing matrix and RHS by number of MPI procs for correct scaling !!!");
+  // PetscMPIInt size, rank;
+  // MPI_Comm_size(PETSC_COMM_WORLD, &size);
+  // MPI_Comm_rank(PETSC_COMM_WORLD, &rank);
+  // // if(rank == 0) {
+  //   MatScale(_A, 1./(PetscScalar) size);
+  //   VecScale(_rhs, 1./(PetscScalar) size);
+  // // }
+  // // this->setDisplayMatrixInConsole(true);
+  // // this->setDisplayRHSInConsole(true);
+  // // this->viewMatrix();
+  // // this->viewRHS();
+  // /////////////////////////////////////////////////////
+
   PetscErrorCode ierr = 0;
+
+  if(_permute) {
+    // Use permuted matrix as operator
+    ierr = KSPSetOperators(ksp, _Ap, _Ap);
+    CHKERRABORT(PETSC_COMM_WORLD, ierr);
+  } else {
+    ierr = KSPSetOperators(ksp, _A, _A);
+    CHKERRABORT(PETSC_COMM_WORLD, ierr);
+  }
 
   // Set tolerances, in case the have changed since creation
   ierr = KSPSetTolerances(ksp, (PetscReal)_rel_tol, (PetscReal)_abs_tol, (PetscReal)_div_tol,
@@ -554,6 +984,8 @@ bool feLinearSystemPETSc::solve(double *normSolution, double *normRHS, double *n
   tic();
   ierr = KSPSolve(ksp, _rhs, _du);
   CHKERRABORT(PETSC_COMM_WORLD, ierr);
+  KSPGetIterationNumber(ksp, nIter);
+  // PetscPrintf(PETSC_COMM_WORLD, "Iterations %" PetscInt_FMT "\n", *nIter);
   feInfoCond(FE_VERBOSE > 1, "\t\t\t\tSolved linear system with PETSc in %f s", toc());
 
   KSPConvergedReason reason;
@@ -605,9 +1037,15 @@ bool feLinearSystemPETSc::solve(double *normSolution, double *normRHS, double *n
     }
   }
 
-  KSPGetIterationNumber(ksp, nIter);
   VecSet(_linSysRes, 0.0);
-  MatMult(_A, _du, _linSysRes);
+  if(_permute) {
+    MatMult(_Ap, _du, _linSysRes);
+    ierr = VecPermute(_du, _colMap, PETSC_TRUE);
+    // ierr = VecPermute(_du, _rowMap, PETSC_TRUE);
+    CHKERRABORT(PETSC_COMM_WORLD, ierr);
+  } else {
+    MatMult(_A, _du, _linSysRes);
+  }
   VecAXPY(_linSysRes, -1.0, _rhs);
   ierr = VecNorm(_rhs, NORM_MAX, normRHS);
   CHKERRABORT(PETSC_COMM_WORLD, ierr);
@@ -633,11 +1071,27 @@ bool feLinearSystemPETSc::solve(double *normSolution, double *normRHS, double *n
 void feLinearSystemPETSc::correctSolution(feSolution *sol)
 {
 #if defined(HAVE_PETSC)
-  std::vector<double> &_sol = sol->getSolutionReference();
-  PetscScalar *array;
-  VecGetArray(_du, &array);
-  for(int i = 0; i < _nInc; ++i) _sol[i] += array[i];
-  VecRestoreArray(_du, &array);
+
+  std::vector<double> &solArray = sol->getSolutionReference();
+
+  PetscMPIInt rank;
+  MPI_Comm_rank(PETSC_COMM_WORLD, &rank);
+
+  PetscInt low  = _ownedLowerBounds[rank];
+  PetscInt high = _ownedUpperBounds[rank];
+
+  const PetscScalar *array;
+  VecGetArrayRead(_du, &array);
+  // for(int i = 0; i < _nInc; ++i) solArray[i] += array[i];
+  for(int i = 0; i < high - low; ++i) {
+    _ownedSolution[i] = solArray[low + i] + array[i];
+  }
+  VecRestoreArrayRead(_du, &array);
+
+  // Synchronize the solution vector on all processes
+  MPI_Allgatherv(_ownedSolution, high-low, MPI_DOUBLE, solArray.data(),
+    _numOwnedRows, _ownedLowerBounds, MPI_DOUBLE, PETSC_COMM_WORLD);
+
 #endif
 }
 
@@ -661,10 +1115,13 @@ void feLinearSystemPETSc::applyCorrectionToResidual(double coeff, std::vector<do
 #endif
 }
 
-void feLinearSystemPETSc::finalize()
+feLinearSystemPETSc::~feLinearSystemPETSc()
 {
 #if defined(HAVE_PETSC)
-  delete _EZCRS;
+  free(_ownedLowerBounds);
+  free(_ownedUpperBounds);
+  free(_numOwnedRows);
+  free(_ownedSolution);
   PetscErrorCode ierr = KSPDestroy(&ksp);
   CHKERRABORT(PETSC_COMM_WORLD, ierr);
   ierr = MatDestroy(&_A);
@@ -679,5 +1136,3 @@ void feLinearSystemPETSc::finalize()
   CHKERRABORT(PETSC_COMM_WORLD, ierr);
 #endif
 }
-
-feLinearSystemPETSc::~feLinearSystemPETSc() { this->finalize(); }

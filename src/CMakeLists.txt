@@ -39,6 +39,7 @@ set(feNG_SRC
     feSysElm_1D.cpp
     feSysElm_2D.cpp
     feTriangle.cpp
+    feTetrahedron.cpp
     feVectorSysElm.cpp
     geodesic.cpp
     glfem.cpp)
@@ -57,7 +58,6 @@ set(feNG_API
     feCompressedRowStorage.h
     feEdge.h
     feEigenProblem.h
-    feElement.h
     feExporter.h
     feGraphics.h
     feFunction.h
@@ -82,6 +82,7 @@ set(feNG_API
     feSpace.h
     feSysElm.h
     feTriangle.h
+    feTetrahedron.h
     feVertex.h
     geodesic.h
     glfem.h)

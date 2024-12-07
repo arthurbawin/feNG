@@ -4,6 +4,7 @@
 #include <cmath>
 
 #include "feVertex.h"
+#include <stdio.h>
 
 class Edge
 {
@@ -40,6 +41,8 @@ public:
   void setPhysicalTag(int pTag) { _pTag = pTag; }
   // Tags of the vertices
   inline int getTag(int i) const { return (i == 0) ? _v0->getTag() : _v1->getTag(); }
+
+  double length() const { return sqrt((_v1->x() - _v0->x())*(_v1->x() - _v0->x()) + (_v1->y() - _v0->y())*(_v1->y() - _v0->y())); }
 
   void print() { printf("Edge %4d : %4d - %4d\n", _tag, _v0->getTag(), _v1->getTag()); }
 };

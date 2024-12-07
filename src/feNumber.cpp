@@ -32,7 +32,7 @@ void feNumber::setUnknownVertexDOF(feMesh *mesh, std::string const &cncGeoID, in
 {
   int vert = mesh->getVertex(cncGeoID, numElem, numVertex);
 #if defined(FENG_DEBUG)
-  feInfoCond(FE_VERBOSE > 1,
+  feInfoCond(FE_VERBOSE > 2,
              "Assigning %d DOF_UNKNOWN at global vertex %d defined on "
              "connectivity %s: local elem %d at vertex %d",
              numDOF, vert, cncGeoID.data(), numElem, numVertex);
@@ -48,7 +48,7 @@ void feNumber::setUnknownElementDOF(feMesh *mesh, std::string const &cncGeoID, i
 {
   int elem = mesh->getElement(cncGeoID, numElem);
 #if defined(FENG_DEBUG)
-  feInfoCond(FE_VERBOSE > 1,
+  feInfoCond(FE_VERBOSE > 2,
              "Assigning %d DOF_UNKNOWN at global element %d defined on "
              "connectivity %s: local elem %d",
              numDOF, elem, cncGeoID.data(), numElem);
@@ -64,7 +64,7 @@ void feNumber::setUnknownEdgeDOF(feMesh *mesh, std::string const &cncGeoID, int 
 {
   int edge = fabs(mesh->getEdge(cncGeoID, numElem, numEdge)) - 1;
 #if defined(FENG_DEBUG)
-  feInfoCond(FE_VERBOSE > 1,
+  feInfoCond(FE_VERBOSE > 2,
              "Assigning %d DOF_UNKNOWN at global edge %d defined on "
              "connectivity %s: local elem %d at edge %d",
              numDOF, edge, cncGeoID.data(), numElem, numEdge);
@@ -80,7 +80,7 @@ void feNumber::setEssentialVertexDOF(feMesh *mesh, std::string const &cncGeoID, 
 {
   int vert = mesh->getVertex(cncGeoID, numElem, numVertex);
 #if defined(FENG_DEBUG)
-  feInfoCond(FE_VERBOSE > 1,
+  feInfoCond(FE_VERBOSE > 2,
              "Setting DOF_ESSENTIAL at global vertex %d defined on "
              "connectivity %s: local elem %d at vertex %d",
              vert, cncGeoID.data(), numElem, numVertex);
@@ -99,7 +99,7 @@ void feNumber::setEssentialElementDOF(feMesh *mesh, std::string const &cncGeoID,
 {
   int elem = mesh->getElement(cncGeoID, numElem);
 #if defined(FENG_DEBUG)
-  feInfoCond(FE_VERBOSE > 1,
+  feInfoCond(FE_VERBOSE > 2,
              "Setting DOF_ESSENTIAL at global element %d defined on "
              "connectivity %s: local elem %d",
              elem, cncGeoID.data(), numElem);
@@ -118,7 +118,7 @@ void feNumber::setEssentialEdgeDOF(feMesh *mesh, std::string const &cncGeoID, in
 {
   int edge = fabs(mesh->getEdge(cncGeoID, numElem, numEdge)) - 1;
 #if defined(FENG_DEBUG)
-  feInfoCond(FE_VERBOSE > 1,
+  feInfoCond(FE_VERBOSE > 2,
              "Setting DOF_ESSENTIAL at global edge %d defined on "
              "connectivity %s: local elem %d at edge %d",
              edge, cncGeoID.data(), numElem, numEdge);

@@ -17,6 +17,15 @@ protected:
   std::vector<std::vector<feInt> > nnzPerRow;
   // std::vector<std::set<feInt> > nnzPerRow;
 
+  // For parallel PETSc preallocation:
+  // The number of nonzero on the diagonal block for each MPI process,
+  // and a flattened version to scatter on the procs
+  std::vector<std::vector<feInt>> d_nnz;
+  std::vector<feInt> d_nnz_flattened;
+  // The number of nonzero on the off-diagonal blocks (counted as a whole) for each MPI process
+  std::vector<std::vector<feInt>> o_nnz;
+  std::vector<feInt> o_nnz_flattened;
+
   // From Pardiso's doc:
   // ia_Pardiso[i] (i < n) points to the first column index of row i in the array ja_Pardiso
   std::vector<feInt> ia_Pardiso;
@@ -27,12 +36,15 @@ protected:
 
 public:
   feEZCompressedRowStorage(int numUnknowns, std::vector<feBilinearForm *> &formMatrices,
-                           int numMatrixForms);
+                           int numMatrixForms, int *ownedUpperBounds = nullptr);
   ~feEZCompressedRowStorage(){};
 
   feInt getNumNNZ() { return _num_nnz; };
   feInt *getNnz() { return nnz.data(); };
   feInt getNnzAt(int i) { return nnz[i]; };
+
+  std::vector<feInt> getDiagNNZForAllMPIProcs() { return d_nnz_flattened; };
+  std::vector<feInt> getOffDiagNNZForAllMPIProcs() { return o_nnz_flattened; };
 
 #if defined(HAVE_MKL)
   void get_ia_Pardiso(PardisoInt **array) {
@@ -45,15 +57,16 @@ public:
   }
 #endif
 
-  double *allocateMatrixArray() { return new double[_num_nnz]; };
-  void freeMatrixArray(double *M)
-  {
-    if(M != NULL) delete[] M;
-  };
-  void setMatrixArrayToZero(double *M)
-  {
-    for(feInt i = 0; i < _num_nnz; i++) M[i] = 0.;
-  };
+  // These do not belong here
+  // double *allocateMatrixArray() { return new double[_num_nnz]; };
+  // void freeMatrixArray(double *M)
+  // {
+  //   if(M != NULL) delete[] M;
+  // };
+  // void setMatrixArrayToZero(double *M)
+  // {
+  //   for(feInt i = 0; i < _num_nnz; i++) M[i] = 0.;
+  // };
 };
 
 // Deprecated and should be removed, used only in the eigensolver

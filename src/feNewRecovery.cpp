@@ -16,14 +16,44 @@ extern int FE_VERBOSE;
 
 // The names of the reconstructed fields
 static std::map<std::pair<int, int>, std::string> suffix = {
-  {{0, 0}, ""},       {{1, 0}, "dx"},     {{1, 1}, "dy"},     {{2, 0}, "dxx"},
-  {{2, 1}, "dxy"},    {{2, 2}, "dyx"},    {{2, 3}, "dyy"},    {{3, 0}, "dxxx"},
-  {{3, 1}, "dxxy"},   {{3, 2}, "dxyx"},   {{3, 3}, "dxyy"},   {{3, 4}, "dyxx"},
-  {{3, 5}, "dyxy"},   {{3, 6}, "dyyx"},   {{3, 7}, "dyyy"},   {{4, 0}, "dxxxx"},
-  {{4, 1}, "dxxxy"},  {{4, 2}, "dxxyx"},  {{4, 3}, "dxxyy"},  {{4, 4}, "dxyxx"},
-  {{4, 5}, "dxyxy"},  {{4, 6}, "dxyyx"},  {{4, 7}, "dxyyy"},  {{4, 8}, "dyxxx"},
-  {{4, 9}, "dyxxy"},  {{4, 10}, "dyxyx"}, {{4, 11}, "dyxyy"}, {{4, 12}, "dyyxx"},
-  {{4, 13}, "dyyxy"}, {{4, 14}, "dyyyx"}, {{4, 15}, "dyyyy"}};
+  {{0, 0}, ""},
+
+  {{1, 0}, "dx"},     {{1, 1}, "dy"},
+
+  {{2, 0}, "dxx"},    {{2, 1}, "dxy"},
+  {{2, 2}, "dyx"},    {{2, 3}, "dyy"},
+
+  {{3, 0}, "dxxx"},   {{3, 1}, "dxxy"},
+  {{3, 2}, "dxyx"},   {{3, 3}, "dxyy"},
+  {{3, 4}, "dyxx"},   {{3, 5}, "dyxy"},
+  {{3, 6}, "dyyx"},   {{3, 7}, "dyyy"},
+
+  {{4, 0}, "dxxxx"},  {{4, 1}, "dxxxy"},
+  {{4, 2}, "dxxyx"},  {{4, 3}, "dxxyy"},
+  {{4, 4}, "dxyxx"},  {{4, 5}, "dxyxy"},
+  {{4, 6}, "dxyyx"},  {{4, 7}, "dxyyy"},
+  {{4, 8}, "dyxxx"},  {{4, 9}, "dyxxy"},
+  {{4, 10}, "dyxyx"}, {{4, 11}, "dyxyy"},
+  {{4, 12}, "dyyxx"}, {{4, 13}, "dyyxy"},
+  {{4, 14}, "dyyyx"}, {{4, 15}, "dyyyy"},
+
+  {{5, 0}, "dxxxxx"},  {{5, 1}, "dxxxxy"},
+  {{5, 2}, "dxxxyx"},  {{5, 3}, "dxxxyy"},
+  {{5, 4}, "dxxyxx"},  {{5, 5}, "dxxyxy"},
+  {{5, 6}, "dxxyyx"},  {{5, 7}, "dxxyyy"},
+  {{5, 8}, "dxyxxx"},  {{5, 9}, "dxyxxy"},
+  {{5, 10}, "dxyxyx"}, {{5, 11}, "dxyxyy"},
+  {{5, 12}, "dxyyxx"}, {{5, 13}, "dxyyxy"},
+  {{5, 14}, "dxyyyx"}, {{5, 15}, "dxyyyy"},
+  {{5, 16}, "dyxxxx"}, {{5, 17}, "dyxxxy"},
+  {{5, 18}, "dyxxyx"}, {{5, 19}, "dyxxyy"},
+  {{5, 20}, "dyxyxx"}, {{5, 21}, "dyxyxy"},
+  {{5, 22}, "dyxyyx"}, {{5, 23}, "dyxyyy"},
+  {{5, 24}, "dyyxxx"}, {{5, 25}, "dyyxxy"},
+  {{5, 26}, "dyyxyx"}, {{5, 27}, "dyyxyy"},
+  {{5, 28}, "dyyyxx"}, {{5, 29}, "dyyyxy"},
+  {{5, 30}, "dyyyyx"}, {{5, 31}, "dyyyyy"},
+};
 
 static inline double myPow(double base, int exp)
 {
@@ -125,6 +155,15 @@ feNewPatch::feNewPatch(const feCncGeo *cnc, feMesh *mesh, bool reconstructAtHigh
     }
   }
 
+  for(auto p : vertToElems_singleLayer) {
+    size_t v = p.first;
+    for(auto elm : p.second) {
+      for(int j = 0; j < _nNodePerElm; ++j) {
+        vertToVerts_singleLayer[v].insert(connecNodes[_nNodePerElm * elm + j]);
+      }
+    }
+  }
+
   // Mark boundary vertices
   // Vertices on cnc with dim = dimMesh - 1 are considered boundary
   for(auto cnc : mesh->getCncGeo()) {
@@ -141,8 +180,8 @@ feNewPatch::feNewPatch(const feCncGeo *cnc, feMesh *mesh, bool reconstructAtHigh
   int basisDimension = (_degSol + 2) * (_degSol + 3) / 2;
 
   // int minVertices = basisDimension;
-  int minVertices = round(1.5 * basisDimension);
-  // int minVertices = 2 * basisDimension;
+  // int minVertices = round(1.5 * basisDimension);
+  int minVertices = 2 * basisDimension;
 
   if(_nVertices < minVertices) {
     feErrorMsg(FE_STATUS_ERROR,
@@ -1216,6 +1255,106 @@ void feNewRecovery::computeRHSAndSolve_noIntegral(int numRecoveries, int nRecove
   } // pragma omp parallel
 }
 
+// Solve the least squares system at a given vertex and for each component of the input metric
+// Used to recover the derivatives of M^(-1/2) for curved metrics
+void feNewRecovery::computeRHSAndSolve_noIntegral_inputMetric(
+  const std::map<int, int> &patchVertices2nodeTags,
+  const std::map<int, MetricTensor> &inputMetrics,
+  std::map<int, MetricTensor> &dMdx,
+  std::map<int, MetricTensor> &dMdy)
+{
+  std::vector<int> &vertices = _patch->getVertices();
+  std::map<int, std::set<int> > &vertToVerts = _patch->getVerticesPatches();
+  std::map<int, std::pair<double, double> > &scaling = _patch->getScaling();
+
+  // Number of independent components of the symmetric 2D metric tensors
+  int numRecoveries = 3; 
+
+  #if defined(HAVE_OMP)
+  #pragma omp parallel
+  #endif
+  {
+    std::vector<double> sol(_intSpace->getNumFunctions());
+    std::vector<double> recoveryVector(_dimRecovery, 0.);
+
+    #if defined(HAVE_OMP)
+    #pragma omp for
+    #endif
+    for(size_t iVertex = 0; iVertex < vertices.size(); ++iVertex) {
+      int v = vertices[iVertex];
+      std::set<int> &verticesPatch = vertToVerts[v];
+      int numConnectedVertices = verticesPatch.size();
+
+      // Create and fill the three RHS vectors
+      std::vector<Vector> RHS;
+      RHS.clear();
+      for(int i = 0; i < numRecoveries; ++i) {
+        RHS.push_back(Vector(numConnectedVertices));
+      }
+
+      int iV = 0;
+      for(auto patchVertex : verticesPatch) {
+        int ind = patchVertices2nodeTags.at(patchVertex);
+        double m11 = inputMetrics.at( ind )(0,0);
+        double m12 = inputMetrics.at( ind )(0,1);
+        double m22 = inputMetrics.at( ind )(1,1);
+        RHS[0](iV) = m11;
+        RHS[1](iV) = m12;
+        RHS[2](iV) = m22;
+        ++iV;
+      }
+
+      // Compute least-squares solution
+      for(int iComp = 0; iComp < numRecoveries; ++iComp) {
+
+        Vector sol = _leastSquaresMatrices[v] * RHS[iComp];
+
+        for(int i = 0; i < _dimRecovery; ++i) {
+          #if defined(APPLY_SCALING)
+          // Divide solution vector by scaling coefficient with the right exponent
+          double h = pow(scaling.at(v).first, _expX_recov[i]) * pow(scaling.at(v).second, _expY_recov[i]);
+          sol(i) = sol(i) / h;
+          #endif
+          recoveryVector[i] = sol(i);
+        }
+
+        // Compute the derivative at (0,0)
+        double dmdx, dmdy;
+
+        // Compute only the coefficient at 0
+        for(int i = 0; i < _dimRecovery; ++i) {
+          if(_expX_recov[i] == 1 && _expY_recov[i] == 0) {
+            dmdx = recoveryVector[i];
+            break;
+          }
+        }
+        for(int i = 0; i < _dimRecovery; ++i) {
+          if(_expX_recov[i] == 0 && _expY_recov[i] == 1) {
+            dmdy = recoveryVector[i];
+            break;
+          }
+        }
+
+        int indv = patchVertices2nodeTags.at(v);
+
+        if(iComp == 0) {
+          dMdx.at( indv )(0,0) = dmdx;
+          dMdy.at( indv )(0,0) = dmdy;
+        } else if(iComp == 1) {
+          dMdx.at( indv )(0,1) = dmdx;
+          dMdy.at( indv )(0,1) = dmdy;
+          dMdx.at( indv )(1,0) = dmdx;
+          dMdy.at( indv )(1,0) = dmdy;
+        } else {
+          dMdx.at( indv )(1,1) = dmdx;
+          dMdy.at( indv )(1,1) = dmdy;
+        }
+        
+      }
+    }
+  } // pragma omp parallel
+}
+
 // Recompute the solution recovery at a single vertex (used when curving to minimize interpolation
 // error)
 void feNewRecovery::recomputeRHSAndSolve(const int vertex)
@@ -2067,7 +2206,8 @@ feNewRecovery::feNewRecovery(feSpace *space, int indexComponent, feMesh *mesh, f
                              std::string meshName, std::string metricMeshName,
                              bool reconstructAtHighOrderNodes,
                              bool useOriginalZhangNagaPatchDefinition, bool append,
-                             feMetric *metricField, feMetaNumber *numbering)
+                             feMetric *metricField, feMetaNumber *numbering,
+                             bool skipRecovery)
   : _mesh(mesh), _sol(sol), _numbering(numbering), _componentToRecover(indexComponent),
     _intSpace(space), _cnc(space->getCncGeo()), _nElm(_cnc->getNumElements()),
     _nNodePerElm(_cnc->getNumVerticesPerElem()), _geoSpace(_cnc->getFeSpace()),
@@ -2096,123 +2236,130 @@ feNewRecovery::feNewRecovery(feSpace *space, int indexComponent, feMesh *mesh, f
     exit(-1);
   }
 
-  _patch = new feNewPatch(_cnc, _mesh, reconstructAtHighOrderNodes,
-                          useOriginalZhangNagaPatchDefinition, _degSol, metricField);
+  // If skipRecovery = true, we only initialize the structure
+  // but don't compute the actual recoveries.
+  // This is when analytic derivatives are used to adapt.
+  // Not very pretty, the data should be taken from elsewhere...
+  if(!skipRecovery) {
 
-  // Assign a 1D quadrature rule to compute transformed edges lengths
-  feQuadrature rule1d(8, geometryType::LINE);
-  _nQuad1d = rule1d.getNumQuadPoints();
-  _wQuad1d = rule1d.getWeights();
-  _xQuad1d = rule1d.getXPoints();
+    _patch = new feNewPatch(_cnc, _mesh, reconstructAtHighOrderNodes,
+                            useOriginalZhangNagaPatchDefinition, _degSol, metricField);
 
-  this->setDimensions();
-  this->setPolynomialExponents();
+    // Assign a 1D quadrature rule to compute transformed edges lengths
+    feQuadrature rule1d(8, geometryType::LINE);
+    _nQuad1d = rule1d.getNumQuadPoints();
+    _wQuad1d = rule1d.getWeights();
+    _xQuad1d = rule1d.getXPoints();
 
-  tic();
-#if defined(ORIGINAL_ZHANG_NAGA)
-  this->computeVertexLeastSquareMatrices2D();
-#else
-  this->computeVertexMassMatrices2D();
-#endif
-  feInfoCond(FE_VERBOSE > 0, "\t\tComputed inverse mass/least squares matrices at vertices in %f s",
-             toc());
-
-  std::filebuf fbIn, fbOut;
-  fbIn.open(meshName, std::ios::in);
-  std::istream input(&fbIn);
-  fbOut.open(metricMeshName, std::ios::out);
-  std::ostream output(&fbOut);
-
-  if(_dim > 1) {
-    std::string buffer;
-    if(append) {
-      // Copy .msh file
-      while(getline(input, buffer)) {
-        output << buffer << std::endl;
-      }
-      fbIn.close();
-    } else {
-      // Copy .msh file except for the possible previous NodeData
-      while(getline(input, buffer)) {
-        if(buffer == "$NodeData") {
-          while(buffer != "$EndNodeData") getline(input, buffer);
-          getline(input, buffer);
-        }
-        output << buffer << std::endl;
-      }
-      fbIn.close();
-    }
-  }
-
-  int nRecoveredFields = 0;
-  int nRecoveredDerivatives = 0;
-  int numRecoveries;
-  int maxDerivativeDegree = _degSol + 1;
-  _numTotalRecoveries = 0;
-  _numTotalDerivatives = 0;
-
-  // Need to loop only to maxDerivativeDegree, and not +1 because we take the derivative of the last
-  // recovered So recover up to 2 and take derivative for 3rd order derivative for example.
-  for(int iDerivative = 0; iDerivative < maxDerivativeDegree; ++iDerivative) {
-    // Reconstruct solution (for i = 0) or derivatives (i > 0)
-    numRecoveries = pow(_dim, iDerivative);
-    _numTotalRecoveries += numRecoveries;
-    _numTotalDerivatives += 2. * numRecoveries;
+    this->setDimensions();
+    this->setPolynomialExponents();
 
     tic();
-#if defined(ORIGINAL_ZHANG_NAGA)
-    this->computeRHSAndSolve_noIntegral(numRecoveries, nRecoveredFields, nRecoveredDerivatives,
-                                        iDerivative);
-#else
-    this->computeRHSAndSolve(numRecoveries, nRecoveredFields, nRecoveredDerivatives, iDerivative);
-#endif
+  #if defined(ORIGINAL_ZHANG_NAGA)
+    this->computeVertexLeastSquareMatrices2D();
+  #else
+    this->computeVertexMassMatrices2D();
+  #endif
+    feInfoCond(FE_VERBOSE > 0, "\t\tComputed inverse mass/least squares matrices at vertices in %f s",
+               toc());
 
-    for(int iRecovery = 0; iRecovery < numRecoveries; ++iRecovery) {
-      computeDerivative(nRecoveredFields, iRecovery, iDerivative, output);
+    std::filebuf fbIn, fbOut;
+    fbIn.open(meshName, std::ios::in);
+    std::istream input(&fbIn);
+    fbOut.open(metricMeshName, std::ios::out);
+    std::ostream output(&fbOut);
+
+    if(_dim > 1) {
+      std::string buffer;
+      if(append) {
+        // Copy .msh file
+        while(getline(input, buffer)) {
+          output << buffer << std::endl;
+        }
+        fbIn.close();
+      } else {
+        // Copy .msh file except for the possible previous NodeData
+        while(getline(input, buffer)) {
+          if(buffer == "$NodeData") {
+            while(buffer != "$EndNodeData") getline(input, buffer);
+            getline(input, buffer);
+          }
+          output << buffer << std::endl;
+        }
+        fbIn.close();
+      }
     }
-    feInfoCond(FE_VERBOSE > 0, "\t\tComputed %d derivatives of order %d in %f s", 2 * numRecoveries,
-               iDerivative + 1, toc());
 
-    if(iDerivative > 0) {
-      nRecoveredDerivatives += numRecoveries;
+    int nRecoveredFields = 0;
+    int nRecoveredDerivatives = 0;
+    int numRecoveries;
+    int maxDerivativeDegree = _degSol + 1;
+    _numTotalRecoveries = 0;
+    _numTotalDerivatives = 0;
+
+    // Need to loop only to maxDerivativeDegree, and not +1 because we take the derivative of the last
+    // recovered So recover up to 2 and take derivative for 3rd order derivative for example.
+    for(int iDerivative = 0; iDerivative < maxDerivativeDegree; ++iDerivative) {
+      // Reconstruct solution (for i = 0) or derivatives (i > 0)
+      numRecoveries = pow(_dim, iDerivative);
+      _numTotalRecoveries += numRecoveries;
+      _numTotalDerivatives += 2. * numRecoveries;
+
+      tic();
+  #if defined(ORIGINAL_ZHANG_NAGA)
+      this->computeRHSAndSolve_noIntegral(numRecoveries, nRecoveredFields, nRecoveredDerivatives,
+                                          iDerivative);
+  #else
+      this->computeRHSAndSolve(numRecoveries, nRecoveredFields, nRecoveredDerivatives, iDerivative);
+  #endif
+
+      for(int iRecovery = 0; iRecovery < numRecoveries; ++iRecovery) {
+        computeDerivative(nRecoveredFields, iRecovery, iDerivative, output);
+      }
+      feInfoCond(FE_VERBOSE > 0, "\t\tComputed %d derivatives of order %d in %f s", 2 * numRecoveries,
+                 iDerivative + 1, toc());
+
+      if(iDerivative > 0) {
+        nRecoveredDerivatives += numRecoveries;
+      }
+
+      nRecoveredFields += numRecoveries;
     }
 
-    nRecoveredFields += numRecoveries;
+    // Condense the independant terms in a vector
+
+    // Allocate a big vector with zeros at edge vertices where
+    // we did not reconstruct the fields.
+    // This is ugly, but it's just to have things work when we reconstruct
+    // only at P1 vertices on P2 meshes, to compare.
+    // When comparing, the norms should also be modified to loop only
+    // over the first 3 vertices, otherwise the error at edge vertices 
+    // is complete garbage.
+    // Yes, this is very ugly...
+    std::vector<int> allVertices = _cnc->getVerticesConnectivity();
+    std::sort(allVertices.begin(), allVertices.end());
+    auto last = std::unique(allVertices.begin(), allVertices.end());
+    allVertices.erase(last, allVertices.end());
+    size_t nAllVertices = allVertices.size();
+    recoveryIndependantTerm.resize(nAllVertices * _numTotalRecoveries);
+    derivativeIndependantTerm.resize(nAllVertices * _numTotalDerivatives);
+
+    const std::vector<int> vertices = _patch->getVertices();
+    size_t nVertices = vertices.size();
+
+    for(size_t i = 0; i < nVertices; ++i) {
+      int v = vertices[i];
+      for(size_t j = 0; j < _numTotalRecoveries; ++j) {
+        recoveryIndependantTerm[_numTotalRecoveries * v + j] = recoveryCoeff.at(v)[j][0];
+      }
+      for(size_t j = 0; j < _numTotalDerivatives; ++j) {
+        derivativeIndependantTerm[_numTotalDerivatives * v + j] = derivativeCoeff.at(v)[j][0];
+      }
+    }
+
+    if(_dim > 1) fbOut.close();
+
+    // Compute coefficients of the homogeneous error polynomials
+    this->computeHomogeneousErrorPolynomials();
   }
-
-  // Condense the independant terms in a vector
-
-  // Allocate a big vector with zeros at edge vertices where
-  // we did not reconstruct the fields.
-  // This is ugly, but it's just to have things work when we reconstruct
-  // only at P1 vertices on P2 meshes, to compare.
-  // When comparing, the norms should also be modified to loop only
-  // over the first 3 vertices, otherwise the error at edge vertices 
-  // is complete garbage.
-  // Yes, this is very ugly...
-  std::vector<int> allVertices = _cnc->getVerticesConnectivity();
-  std::sort(allVertices.begin(), allVertices.end());
-  auto last = std::unique(allVertices.begin(), allVertices.end());
-  allVertices.erase(last, allVertices.end());
-  size_t nAllVertices = allVertices.size();
-  recoveryIndependantTerm.resize(nAllVertices * _numTotalRecoveries);
-  derivativeIndependantTerm.resize(nAllVertices * _numTotalDerivatives);
-
-  const std::vector<int> vertices = _patch->getVertices();
-  size_t nVertices = vertices.size();
-
-  for(size_t i = 0; i < nVertices; ++i) {
-    int v = vertices[i];
-    for(size_t j = 0; j < _numTotalRecoveries; ++j) {
-      recoveryIndependantTerm[_numTotalRecoveries * v + j] = recoveryCoeff.at(v)[j][0];
-    }
-    for(size_t j = 0; j < _numTotalDerivatives; ++j) {
-      derivativeIndependantTerm[_numTotalDerivatives * v + j] = derivativeCoeff.at(v)[j][0];
-    }
-  }
-
-  if(_dim > 1) fbOut.close();
-
-  // Compute coefficients of the homogeneous error polynomials
-  this->computeHomogeneousErrorPolynomials();
 }

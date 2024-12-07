@@ -10,6 +10,8 @@
 
 extern int FE_VERBOSE;
 
+#define TOL_ZERO 1e-15
+
 struct gmshEdgeLessThan {
   bool operator()(const std::pair<int, int> &e1, const std::pair<int, int> &e2) const
   {
@@ -39,6 +41,8 @@ inline MetricTensor spanMetric(const GradationSpace space, const double gradatio
       // Mixed space with t = 1/8
       return M.spanMetricInMixedSpace(gradation, pq, 0.125);
     case GradationSpace::ExpMetric:
+      return M.spanMetricInMetricSpace(gradation, pq);
+    default:
       return M.spanMetricInMetricSpace(gradation, pq);
   }
 }
@@ -350,35 +354,34 @@ bool gradationOnEdge(const GradationSpace space, const double gradation, const s
   MetricTensor MpAtq = spanMetric(space, gradation, Mp, pq);
   MpAtq = intersectionReductionSimultanee(Mq, MpAtq);
   ////////////////////
-  if(MpAtq.determinant() < 1e-10) {
-    feInfo("3 - Determinant nul ou negatif: %+-1.4e", MpAtq.determinant());
-    Mq.print();
-    MpAtq.print();
+  if(MpAtq.determinant() < TOL_ZERO) {
 
-    feInfo("Compare with previous function:");
-    SMetric3 mq(1.), mpatq(1.);
-    mq(0,0) = Mq(0,0);
-    mq(0,1) = Mq(0,1);
-    mq(1,0) = Mq(1,0);
-    mq(1,1) = Mq(1,1);
-    feInfo("Check mq:");
-    mq.print("mq");
-    Mq.print();
-    mpatq(0,0) = MpAtq(0,0);
-    mpatq(0,1) = MpAtq(0,1);
-    mpatq(1,0) = MpAtq(1,0);
-    mpatq(1,1) = MpAtq(1,1);
-    feInfo("Check mpatq:");
-    mpatq.print("mpatq");
-    MpAtq.print();
-    SMetric3 res = intersectionReductionSimultaneeExplicite(mq, mpatq);
-    res.print("res");
+    // Skip this edge
+    metricChanged = false;
+    return metricChanged;
 
-    // res(0,0) = 0.0900;
-    // res(0,1) = 0.0026;
-    // res(1,0) = 0.0026;
-    // res(1,1) = 0.0898;
-    // drawSingleEllipse(qifile, xq, res, 10., 100);
+    // feInfo("3 - Determinant nul ou negatif: %+-1.4e", MpAtq.determinant());
+    // Mq.print();
+    // MpAtq.print();
+
+    // feInfo("Compare with previous function:");
+    // SMetric3 mq(1.), mpatq(1.);
+    // mq(0,0) = Mq(0,0);
+    // mq(0,1) = Mq(0,1);
+    // mq(1,0) = Mq(1,0);
+    // mq(1,1) = Mq(1,1);
+    // feInfo("Check mq:");
+    // mq.print("mq");
+    // Mq.print();
+    // mpatq(0,0) = MpAtq(0,0);
+    // mpatq(0,1) = MpAtq(0,1);
+    // mpatq(1,0) = MpAtq(1,0);
+    // mpatq(1,1) = MpAtq(1,1);
+    // feInfo("Check mpatq:");
+    // mpatq.print("mpatq");
+    // MpAtq.print();
+    // SMetric3 res = intersectionReductionSimultaneeExplicite(mq, mpatq);
+    // res.print("res");
 
     // fprintf(pfile, "};"); fclose(pfile);
     // fprintf(qfile, "};"); fclose(qfile);
@@ -400,10 +403,15 @@ bool gradationOnEdge(const GradationSpace space, const double gradation, const s
   MetricTensor MqAtp = spanMetric(space, gradation, Mq, qp);
   MqAtp = intersectionReductionSimultanee(Mp, MqAtp);
   ////////////////////
-  if(MqAtp.determinant() < 1e-10) {
-    feInfo("4 - Determinant nul ou negatif: %+-1.4e", MqAtp.determinant());
-    MqAtp.print();
-    exit(-1);
+  if(MqAtp.determinant() < TOL_ZERO) {
+
+     // Skip this edge
+    metricChanged = false;
+    return metricChanged;
+
+    // feInfo("4 - Determinant nul ou negatif: %+-1.4e", MqAtp.determinant());
+    // MqAtp.print();
+    // exit(-1);
   }
   // drawSingleEllipse(pifile, xp, MqAtp, 10., 100);
   ////////////////////
@@ -440,9 +448,12 @@ bool gradationOnEdgeExpMetric(const GradationSpace space, const double gradation
   // Span Mp to q, intersect and check if Mq needs to be reduced
   MetricTensor MpAtq = spanMetric(space, gradation, Mp, pq);
   MpAtq = intersectionReductionSimultanee(Mnewq, MpAtq);
-  if(MpAtq.determinant() < 1e-10) {
-    feInfo("3 - Determinant nul ou negatif: %+-1.4e", MpAtq.determinant());
-    exit(-1);
+  if(MpAtq.determinant() < TOL_ZERO) {
+     // Skip this edge
+    metricChanged = false;
+    return metricChanged;
+    // feInfo("3 - Determinant nul ou negatif: %+-1.4e", MpAtq.determinant());
+    // exit(-1);
   }
   if(matNorm2Diff(Mnewq, MpAtq) / matNorm2(Mnewq) > REL_TOL_GRADATION) {
     Mnewq.assignMatrixFrom(MpAtq);
@@ -452,9 +463,12 @@ bool gradationOnEdgeExpMetric(const GradationSpace space, const double gradation
   // Span Mq to p
   MetricTensor MqAtp = spanMetric(space, gradation, Mq, qp);
   MqAtp = intersectionReductionSimultanee(Mnewp, MqAtp);
-  if(MqAtp.determinant() < 1e-10) {
-    feInfo("4 - Determinant nul ou negatif: %+-1.4e", MqAtp.determinant());
-    exit(-1);
+  if(MqAtp.determinant() < TOL_ZERO) {
+     // Skip this edge
+    metricChanged = false;
+    return metricChanged;
+    // feInfo("4 - Determinant nul ou negatif: %+-1.4e", MqAtp.determinant());
+    // exit(-1);
   }
   if(matNorm2Diff(Mnewp, MqAtp) / matNorm2(Mnewp) > REL_TOL_GRADATION) {
     Mnewp.assignMatrixFrom(MqAtp);
@@ -466,8 +480,8 @@ bool gradationOnEdgeExpMetric(const GradationSpace space, const double gradation
 
 // Apply gradation to the metric tensor field.
 // Gradation is performed on the Gmsh model, edge by edge according to Alauzet's paper.
-feStatus feMetric::newGradation(std::vector<std::size_t> &nodeTags, std::vector<double> &coord,
-	std::map<int, MetricTensor> &metricsAtNodeTags)
+feStatus feMetric::newGradation(const std::vector<std::size_t> &nodeTags, const std::vector<double> &coord,
+  const double gradation, std::map<int, MetricTensor> &metricsAtNodeTags)
 {
 #if defined(HAVE_GMSH)
 
@@ -502,6 +516,7 @@ feStatus feMetric::newGradation(std::vector<std::size_t> &nodeTags, std::vector<
         size_t n0 = elemNodeTags[0][numNodesPerElem * i + j];
         size_t n1 = elemNodeTags[0][numNodesPerElem * i + (j+1) % numNodesPerElem];
         edges.insert(std::make_pair(n0, n1));
+        fprintf(myFile, "SL(%f,%f,0,%f,%f,0){1,1};", coord[3*(n0-1)], coord[3*(n0-1)+1], coord[3*(n1-1)], coord[3*(n1-1)+1]);
       }
     } else {
       // P2 triangles - Add all possible P2 sub-edges
@@ -538,7 +553,7 @@ feStatus feMetric::newGradation(std::vector<std::size_t> &nodeTags, std::vector<
     {
     	numCorrected = 0; correction = false; iter++;
       for(auto edge : edges) {
-      	if(gradationOnEdge(_options.gradationSpace, _options.gradation, edge, coord, metricsAtNodeTags)) {
+      	if(gradationOnEdge(_options.gradationSpace, gradation, edge, coord, metricsAtNodeTags)) {
           numCorrected++;
       	  correction = true;
         };
@@ -548,7 +563,7 @@ feStatus feMetric::newGradation(std::vector<std::size_t> &nodeTags, std::vector<
   } else {
 
     double alpha = 1.05;
-    double beta = _options.gradation;
+    double beta = gradation;
 
     std::map<int, MetricTensor> mNew;
 

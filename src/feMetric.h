@@ -25,16 +25,21 @@ enum class GradationSpace
 
 enum class adaptationMethod
 { 
+  // Adapt with respect to an analytic Riemannian metric provided
+  // 
+  ANALYTIC_METRIC,
   // Isotropic adaptation minimizing linear interpolation error
   // The metric is simply the most critical size from the ANISO_P1
   // computation times the identity matrix.
   ISO_P1,
   // Anisotropic adaptation minimizing linear interpolation error
   ANISO_P1,
+  ANISO_P1_REFERENCE_SPACE,
   // Same but for any order on straight meshes
   ISO_PN,
   // Compute the analytic solution for the upper bound Q on the 3rd order derivatives
   ANISO_P2,
+  ANISO_P2_REFERENCE_SPACE,
   // Compute an approximate the upper bound Q on the n+1th order derivatives
   // using the logsimplex method from Coulaud & Loseille (2016)
   ANISO_PN,
@@ -51,7 +56,13 @@ enum class adaptationMethod
   // Metric for curved adaptation minimizing P2 interpolation error on P2 meshes.
   // Principal directions (eigenvectors) are the recovered gradient/isolines of the solution
   // Principal sizes are computed from a Taylor expansion on curves approximating grad/iso
-  CURVED_EXTREME_SIZES
+  CURVED_ISOLINES,
+  //
+  //
+  CURVED_REFERENCE_SPACE,
+  //
+  //
+  CURVED_GRAPH_SURFACE
 };
 
 class feMetricOptions
@@ -74,7 +85,7 @@ public:
   // Target number of vertices in adapted mesh
   // Used for anisotropic adaptation and curved adaptation
   // with the log-simplex method, ignored otherwise
-  int nTargetVertices = 100;
+  long int nTargetVertices = 100;
   // Target interpolation error in adapted mesh
   // Used for curved adaptation along iso/grad, ignored otherwise
   double eTargetError = 1e-2;
@@ -87,6 +98,8 @@ public:
   GradationSpace gradationSpace = GradationSpace::Metric;
   // Smooth the directions field
   bool smoothDirectionField = true;
+  // Scale the isocontour metric field as for the optimal metric for straight simplices
+  bool scaleIsolineMetric = false;
   // Target norm or seminorm to minimize - choice between Lp or Wmp
   Norm targetNorm = Norm::Lp;
   // Target Lp norm in which the interpolation error is minimized
@@ -125,6 +138,14 @@ public:
   feVectorFunction *secondDerivatives = nullptr;
   feVectorFunction *thirdDerivatives = nullptr;
   feVectorFunction *fourthDerivatives = nullptr;
+  feVectorFunction *fifthDerivatives = nullptr;
+
+  // Function to compute analytic metric instead of error-based metric
+  feMetricTensorFunction *analyticMetric = nullptr;
+
+  // Derivatives of M^(-1/2) (Mmud = M moins une demi (-: )
+  feMetricTensorFunction *analytic_dMmud_dx = nullptr;
+  feMetricTensorFunction *analytic_dMmud_dy = nullptr;
 
   //
   // More advanced parameters:
@@ -143,6 +164,48 @@ public:
     bool uniformErrorCurve = false;
     int numLoopsUniformErrorCurve = 1;
   } logSimplexOptions;
+
+  struct { 
+    // Number of points for the discretization of a quarter of the unit circle
+    bool enableCurvature = true;
+
+    int maxIterMetrics = 10;
+    double tolMetrics = 1e-10;
+    bool printMetricConvergence = false;
+
+    int maxIterDerivatives = 10;
+    double tolDerivatives = 1e-10;
+
+    double alpha = 0.;
+    double alphaMax = 1.;
+
+    // Number of iterations to go from alpha to alphaMax
+    int numIterAlpha = 5;
+
+    // If true: compute derivatives of M^(-1/2) by averaging adjacent FE gradients
+    // If false: recover the gradient of each components of M^(-1/2) with Zhang and Naga's method
+    bool averageMetricGradient = true;
+
+    // Source term for verification
+    bool addSourceTerm = false;
+    feMetricTensorFunction *sourceTerm = nullptr;
+
+    bool useAnalyticSolution = true;
+    bool enableSmoothing = false;
+    double toleranceDirectionsSmoothing = 0.02;
+    bool enableGradation = false;
+    double gradation = 2.;
+    bool debugPlot = false;
+
+    bool displayDerivatives = false;
+    bool displayQtri = false;
+
+    bool dampMetrics = true;
+    double dampingMetricCoefficient = 0.5;
+
+    bool dampDerivatives = true;
+    double dampingCoefficient = 0.5;
+  } curvedMetricReferenceSpaceOptions;
   
   // Callback that returns true if a point is inside the
   // domain to be meshed
@@ -162,6 +225,30 @@ public:
 public:
   feMetricOptions(const std::string &meshFile) : backgroundMeshfile(meshFile){};
 };
+
+// Compute matrix exponential of 2x2 symmetric matrix [a b; b c]
+template <class MetricType>
+void exponentialMatrix(const double a, const double b, const double c, MetricType &expm)
+{
+  // Check if a = c
+  if(fabs(a - c) < 1e-14) {
+    double expamb = exp(a-b), exp2b = exp(2.*b);
+    expm(0,0) = (expamb*(exp2b+1.0))/2.0;
+    expm(0,1) = (expamb*(exp2b-1.0))/2.0;
+    expm(1,0) = expm(0,1);
+    expm(1,1) = (expamb*(exp2b+1.0))/2.0;
+  } else {
+    double S = sqrt((a-c)*(a-c) + 4.*b*b);
+    double oneOverS = 1./S;
+    double expapcs2 = exp(0.5*(a+c));
+    double sinhss2 = sinh(0.5*S);
+    double coshss2 = cosh(0.5*S);
+    expm(0,0) = coshss2*expapcs2+a*sinhss2*expapcs2*oneOverS-c*sinhss2*expapcs2*oneOverS;
+    expm(0,1) = b*sinhss2*expapcs2*oneOverS*2.0;
+    expm(1,0) = expm(0,1);
+    expm(1,1) = coshss2*expapcs2-a*sinhss2*expapcs2*oneOverS+c*sinhss2*expapcs2*oneOverS;
+  }
+}
 
 class feMetric
 {
@@ -190,6 +277,11 @@ protected:
   std::map<int, MetricTensor> _logMetricTensorAtNodetags;
   std::vector<Eigen::Matrix2d> _logMetricTensorAtNodetags_eigen;
   std::map<int, SMetric3> _smetric3AtNodetags;
+
+  // M^(-1/2) and its derivatives
+  std::map<int, MetricTensor> _mmud;
+  std::map<int, MetricTensor> _dmmud_dy;
+  std::map<int, MetricTensor> _dmmud_dx;
   // =========================================================
 
   std::map<const Vertex *, Eigen::Matrix2d> _metricsOnGmshModelP1;
@@ -237,27 +329,45 @@ public:
   // ====================
   // New interface
   feStatus createVertex2NodeMap(std::vector<std::size_t> &nodeTags, std::vector<double> &coord);
+  feStatus setAnalyticMetric(const std::vector<std::size_t> &nodeTags, const std::vector<double> &coord);
   feStatus computeMetricsP1(std::vector<std::size_t> &nodeTags, std::vector<double> &coord, bool isotropic = false);
-  void computeAnalyticMetricP2ForLpNorm(std::vector<double> &errorCoeff, MetricTensor &Q, const double maxDiameter);
-  void computeAnalyticMetricP2ForH1semiNorm(std::vector<double> &errorCoeff, MetricTensor &Q);
   feStatus computeMetricsP2(std::vector<std::size_t> &nodeTags, std::vector<double> &coord);
+  feStatus computeMetricsP1_referenceSpace(std::vector<std::size_t> &nodeTags, std::vector<double> &coord, int setToIdentity = false);
+  feStatus computeMetricsP2_referenceSpace(std::vector<std::size_t> &nodeTags, std::vector<double> &coord, int setToIdentity = false);
+  feStatus computeMetricsP2_forGraphSurface(std::vector<std::size_t> &nodeTags, std::vector<double> &coord);
   feStatus computeMetricsPn(std::vector<std::size_t> &nodeTags, std::vector<double> &coord, bool isotropic = false);
   feStatus computeMetricsGoalOrientedP1(std::vector<std::size_t> &nodeTags, std::vector<double> &coord);
   feStatus computeMetricsCurvedLogSimplex(std::vector<std::size_t> &nodeTags, std::vector<double> &coord, bool useInducedDirections = false);
 
-  void computeDirectionFieldFromGradient(const double pos[2], const int vertex, double directionV1[2], const double tol);
-  double secondDerivativesAlongCurve(const double pos[2], const int vertex, const double directionV1[2], const int direction);
-  double thirdDerivativesAlongCurve(const double pos[2], const int vertex, const double directionV1[2], const int direction);
+  void averageMetricGradientAtVertices(const std::vector<std::size_t> &nodeTags,
+                                       const std::vector<double> &coord,
+                                       const std::map<int, MetricTensor> &inputMetrics,
+                                       std::map<int, MetricTensor> &dMdx,
+                                       std::map<int, MetricTensor> &dMdy);
+  void computeErrorOnMetricDerivatives(double &errorOnMmud_dx, double &errorOnMmud_dy);
+  
+  feStatus computeMetricsCurvedReferenceSpace(std::vector<std::size_t> &nodeTags, std::vector<double> &coord);
+  feStatus computeMetricsCurvedReferenceSpace2(std::vector<std::size_t> &nodeTags, std::vector<double> &coord);
 
-  double solveSizePolynomialLinear(const double x[2], const int vertex, const double directionV1[2], const int direction, const double targetError);
-  double solveSizePolynomialQuadratic(const double x[2], const int vertex, const double directionV1[2], const int direction, const double targetError);
+  // void computeDirectionFieldFromGradient(const double pos[2], const int vertex, double directionV1[2], const double tol);
+  // double secondDerivativesAlongCurve(const double pos[2], const int vertex, const double directionV1[2], const int direction);
+  // double thirdDerivativesAlongCurve(const double pos[2], const int vertex, const double directionV1[2], const int direction);
+  // double solveSizePolynomialLinear(const double x[2], const int vertex, const double directionV1[2], const int direction, const double targetError);
+  // double solveSizePolynomialQuadratic(const double x[2], const int vertex, const double directionV1[2], const int direction, const double targetError);
 
-  void computeSizeField(const double pos[2], const int vertex, const double directionV1[2], double &hGrad, double &hIso);
+  void getDerivativesAtVertex(const int derivativesOrder, const double *x, const size_t vertex, feNewRecovery *recoveredField, 
+  double *du, double *d2u = nullptr, double *d3u = nullptr, double *d4u = nullptr, double *d5u = nullptr);
 
-  feStatus computeMetricsExtremeSizesOnly(std::vector<std::size_t> &nodeTags, std::vector<double> &coord);
+  void computeSizeField(const double pos[2], const int vertex, const double directionV1[2],
+    double &hGrad, double &hIso, const double *du, const double *d2u, const double *d3u);
+
+  feStatus computeMetricsCurvedIsolines(const std::vector<std::size_t> &nodeTags, const std::vector<double> &coord);
 
   void applyGradation(std::vector<std::size_t> &nodeTags, std::vector<double> &coord);
-  feStatus newGradation(std::vector<std::size_t> &nodeTags, std::vector<double> &coord, std::map<int, MetricTensor> &metricsAtNodeTags);
+  feStatus newGradation(const std::vector<std::size_t> &nodeTags, const std::vector<double> &coord,
+    const double gradation, std::map<int, MetricTensor> &metricsAtNodeTags);
+
+  void computeContinuousErrorModel(const bool withAnalyticMetric, bool computeError, bool plotError, const std::string &errorFileName, double &errorStraight, double &errorCurved, double &complexity);
 
   void writeMetricField(std::vector<std::size_t> &nodeTags, std::vector<double> &coord);
 
@@ -308,6 +418,35 @@ public:
     result = result.exp();
   }
 
+  // Hardcoded symbolic expression of the matrix exponential
+  template <class MetricType>
+  void logEuclidianP1InterpolationExplicit(const double *xsi,
+                                            const MetricType &logM0,
+                                            const MetricType &logM1,
+                                            const MetricType &logM2,
+                                            MetricType &result)
+  {
+    double phi[3] = {1. - xsi[0] - xsi[1], xsi[0], xsi[1]};
+    double L11[3] = {logM0(0,0), logM1(0,0), logM2(0,0)};      
+    double L12[3] = {logM0(0,1), logM1(0,1), logM2(0,1)};      
+    double L22[3] = {logM0(1,1), logM1(1,1), logM2(1,1)};      
+
+    double a = 0., b = 0., c = 0.;
+    for(size_t i = 0; i < 3; ++i) {
+      a += phi[i] * L11[i];
+      b += phi[i] * L12[i];
+      c += phi[i] * L22[i];
+    }
+
+    // Hardcoded exponential matrix
+    exponentialMatrix(a, b, c, result);
+
+    if(isnan(result(0,0)) || isnan(result(0,1)) || isnan(result(1,1))) {
+      feInfo("metric is nan :%+-1.10e - %+-1.10e - %+-1.10e", result(0,0), result(0,1), result(1,1));
+      exit(-1);
+    }
+  }
+
   template <class MetricType>
   void logEuclidianP2Interpolation(const double *xsi,
                                    const MetricType &logM0,
@@ -330,6 +469,43 @@ public:
               logM3 * phi[3] + logM4 * phi[4] + logM5 * phi[5]).exp();
   }
 
+  // Hardcoded symbolic expression of the matrix exponential
+  template <class MetricType>
+  void logEuclidianP2InterpolationExplicit(const double *xsi,
+                                           const MetricType &logM0,
+                                           const MetricType &logM1,
+                                           const MetricType &logM2,
+                                           const MetricType &logM3,
+                                           const MetricType &logM4,
+                                           const MetricType &logM5,
+                                           MetricType &result)
+  {
+    double phi[6] = {(1. - xsi[0] - xsi[1]) * (1. - 2. * xsi[0] - 2. * xsi[1]),
+                      xsi[0] * (2. * xsi[0] - 1.),
+                      xsi[1] * (2. * xsi[1] - 1.),
+                      4. * xsi[0] * (1. - xsi[0] - xsi[1]),
+                      4. * xsi[0] * xsi[1],
+                      4. * xsi[1] * (1. - xsi[0] - xsi[1])}; 
+    double L11[6] = {logM0(0,0), logM1(0,0), logM2(0,0), logM3(0,0), logM4(0,0), logM5(0,0)};      
+    double L12[6] = {logM0(0,1), logM1(0,1), logM2(0,1), logM3(0,1), logM4(0,1), logM5(0,1)};      
+    double L22[6] = {logM0(1,1), logM1(1,1), logM2(1,1), logM3(1,1), logM4(1,1), logM5(1,1)};      
+
+    double a = 0., b = 0., c = 0.;
+    for(size_t i = 0; i < 6; ++i) {
+      a += phi[i] * L11[i];
+      b += phi[i] * L12[i];
+      c += phi[i] * L22[i];
+    }
+
+    // Hardcoded exponential matrix
+    exponentialMatrix(a, b, c, result);
+
+    if(isnan(result(0,0)) || isnan(result(0,1)) || isnan(result(1,1))) {
+      feInfo("metric is nan :%+-1.10e - %+-1.10e - %+-1.10e", result(0,0), result(0,1), result(1,1));
+      exit(-1);
+    }
+  }
+
   void interpolationTest(const std::vector<size_t> &nodeTags, std::vector<double> &coord);
 
 
@@ -338,6 +514,7 @@ public:
   void interpolateMetricP1(const double *x, Eigen::Matrix2d &M,
                            Eigen::Matrix2d &dMdx, Eigen::Matrix2d &dMdy);
   void interpolateMetricP2(const double *x, Eigen::Matrix2d &M);
+  void interpolateMetricP2Explicit(const double *x, Eigen::Matrix2d &M);
   void interpolateMetricP2(const double *x, Eigen::Matrix2d &M,
                            Eigen::Matrix2d &dMdx, Eigen::Matrix2d &dMdy);
   void interpolateMetricP2Log(const double *x, Eigen::Matrix2d &M,
@@ -427,6 +604,7 @@ void drawEllipsoids(const std::string &posFile, std::map<int, MetricType> &metri
 void interpolateMetricP1Callback(void *metricPtr, const double *x, Eigen::Matrix2d &M,
                            Eigen::Matrix2d &dMdx, Eigen::Matrix2d &dMdy);
 void interpolateMetricP2CallbackWithoutDerivatives(void *metricPtr, const double *x, Eigen::Matrix2d &M);
+void interpolateMetricP2CallbackWithoutDerivativesExplicit(void *metricPtr, const double *x, Eigen::Matrix2d &M);
 void interpolateMetricP2CallbackWithDerivatives(void *metricPtr, const double *x, Eigen::Matrix2d &M, Eigen::Matrix2d &dMdx, Eigen::Matrix2d &dMdy);
 void interpolateMetricP2CallbackLog(void *metricPtr, const double *x, Eigen::Matrix2d &M,
                            Eigen::Matrix2d &dMdx, Eigen::Matrix2d &dMdy,

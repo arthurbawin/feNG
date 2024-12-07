@@ -155,7 +155,7 @@ public:
   feMesh *getMeshPtr() { return _mesh; }
   void setMeshPtr(feMesh *mesh) { _mesh = mesh; }
 
-  feStatus computeJacobians();
+  feStatus computeJacobians(const bool ignoreNegativeJacobianWarning = false);
   feStatus recomputeElementJacobian(const int iElm);
   const std::vector<double> &getJacobians() const { return _J; }
   const std::vector<double> &getElementsVolume() const

@@ -26,6 +26,14 @@ public:
     _m(0, 0) = val;
     _m(1, 1) = val;
   }
+  MetricTensorImpl(const double m11, const double m12, const double m22)
+  {
+    _m = Eigen::Matrix2d();
+    _m(0, 0) = m11;
+    _m(0, 1) = m12;
+    _m(1, 0) = m12;
+    _m(1, 1) = m22;
+  }
   MetricTensorImpl(const double eigenvalues[2], const double eigenvector1[2], const double eigenvector2[2])
   {
     // Matrix whose columns are the eigenvectors
@@ -37,6 +45,24 @@ public:
     D << eigenvalues[0], 0., 0., eigenvalues[1];
     _m = V * D * V.transpose();
   }
+  MetricTensorImpl(const SquareMatrix &other)
+  {
+    if(other.getSize() != 2) {
+      printf("Cannot create MetricTensor from SquareMatrix because SquareMatrix has dimension %d\n", other.getSize());
+      exit(-1);
+    }
+    // if(fabs(other(0,1) - other(1,0))/fabs(other(0,1)) > 1e-10) {
+    //   printf("Cannot create MetricTensor from SquareMatrix because SquareMatrix is not symmetric: M12 = %+-1.12e - M21 = %+-1.12e\n",
+    //     other(0,1), other(1,0));
+    //   exit(-1);
+    // }
+
+    _m = Eigen::Matrix2d::Identity();
+    _m(0, 0) = other(0,0);
+    _m(0, 1) = other(0,1);
+    _m(1, 0) = other(0,1);
+    _m(1, 1) = other(1,1);
+  }
 
   void setMatrix(const Eigen::Matrix2d &other) { _m = other; };
 };
@@ -46,10 +72,14 @@ MetricTensor::~MetricTensor() = default;
 MetricTensor::MetricTensor(MetricTensor &&) noexcept = default;
 MetricTensor &MetricTensor::operator=(MetricTensor &&) noexcept = default;
 
-// "Real" constructor
+// "Real" constructors
 MetricTensor::MetricTensor(const double val) : _impl(std::make_unique<MetricTensorImpl>(val)) {}
+MetricTensor::MetricTensor(const double m11, const double m12, const double m22)
+ : _impl(std::make_unique<MetricTensorImpl>(m11, m12, m22)) {}
 MetricTensor::MetricTensor(const double eigenvalues[2], const double eigenvector1[2], const double eigenvector2[2])
   : _impl(std::make_unique<MetricTensorImpl>(eigenvalues, eigenvector1, eigenvector2)) {}
+MetricTensor::MetricTensor(const SquareMatrix &other)
+: _impl(std::make_unique<MetricTensorImpl>(other)) {}
 
 // =============== MetricTensor member functions ===============
 MetricTensor MetricTensor::copy() const
@@ -65,6 +95,14 @@ void MetricTensor::assignMatrixFrom(const MetricTensor &other)
   this->_impl->_m(0,1) = other._impl->_m(0,1);
   this->_impl->_m(1,0) = other._impl->_m(1,0);
   this->_impl->_m(1,1) = other._impl->_m(1,1);
+}
+
+void MetricTensor::assignMatrixFrom(const double other[2][2])
+{
+  this->_impl->_m(0,0) = other[0][0];
+  this->_impl->_m(0,1) = other[0][1];
+  this->_impl->_m(1,0) = other[1][0];
+  this->_impl->_m(1,1) = other[1][1];
 }
 
 double &MetricTensor::operator()(int i, int j) { return _impl->_m(i, j); }
@@ -110,7 +148,9 @@ MetricTensor MetricTensor::operator*(const MetricTensor &other) const
   return tmp;
 }
 
-void MetricTensor::print() const { std::cout << _impl->_m << std::endl; }
+void MetricTensor::print(const int numDigits) const { std::cout << std::setprecision(numDigits) <<_impl->_m << std::endl; }
+
+double MetricTensor::trace() const { return _impl->_m.trace(); }
 
 double MetricTensor::determinant() const { return _impl->_m.determinant(); }
 
@@ -172,6 +212,11 @@ MetricTensor MetricTensor::sqrt() const
   return sqrtm;
 }
 
+double MetricTensor::frobeniusNorm() const
+{
+  return this->_impl->_m.norm();
+}
+
 double MetricTensor::dotProduct(const double x1[2], const double x2[2]) const
 {
   return x2[0] * (this->_impl->_m(0,0) * x1[0] + this->_impl->_m(0,1) * x1[1])
@@ -192,18 +237,57 @@ double MetricTensor::getMinEigenvalue() const
   return fmin(ev(0).real(), ev(1).real());
 }
 
-MetricTensor MetricTensor::absoluteValueEigen() const
+double MetricTensor::getMaxEigenvalue() const
 {
   Eigen::EigenSolver<Eigen::Matrix2d> es;
   Eigen::EigenSolver<Eigen::Matrix2d>::EigenvalueType ev;
   es.compute(_impl->_m, true);
   ev = es.eigenvalues();
-  Eigen::Matrix2d D = Eigen::Matrix2d::Identity();
-  D(0, 0) = fabs(ev(0).real());
-  D(1, 1) = fabs(ev(1).real());
-  MetricTensor res(1.0);
-  res._impl->setMatrix(es.eigenvectors().real() * D * es.eigenvectors().transpose().real());
-  return res;
+  return fmax(ev(0).real(), ev(1).real());
+}
+
+void MetricTensor::getEigenvectorsAndEigenvalues(double v1[2], double v2[2], double &lambda1, double &lambda2) const
+{
+  Eigen::EigenSolver<Eigen::Matrix2d> es;
+  Eigen::EigenSolver<Eigen::Matrix2d>::EigenvalueType ev;
+  es.compute(_impl->_m, true);
+  ev = es.eigenvalues();
+  lambda1 = ev(0).real();
+  lambda2 = ev(1).real();
+  v1[0] = es.eigenvectors().real().col(0)[0];
+  v1[1] = es.eigenvectors().real().col(0)[1];
+  v2[0] = es.eigenvectors().real().col(1)[0];
+  v2[1] = es.eigenvectors().real().col(1)[1];
+}
+
+void MetricTensor::symmetrize()
+{
+  this->_impl->setMatrix( 0.5 * (this->_impl->_m + this->_impl->_m.transpose()) );
+}
+
+MetricTensor MetricTensor::absoluteValueEigen() const
+{
+  if(_impl->_m.isIdentity(1e-12)) {
+    MetricTensor res(1.0);
+    return res;
+  } else {
+    Eigen::EigenSolver<Eigen::Matrix2d> es;
+    Eigen::EigenSolver<Eigen::Matrix2d>::EigenvalueType ev;
+    es.compute(_impl->_m, true);
+    ev = es.eigenvalues();
+    Eigen::Matrix2d D = Eigen::Matrix2d::Identity();
+    D(0, 0) = fabs(ev(0).real());
+    D(1, 1) = fabs(ev(1).real());
+    Eigen::MatrixXcd sol = es.eigenvectors() * D * es.eigenvectors().inverse();
+    if(sol.imag().norm() > 1e-14) {
+      printf("In MetricTensor::absoluteValueEigen: Matrix has nontrivial imaginary part!");
+      std::cout << sol << std::endl;
+      exit(-1);
+    }
+    MetricTensor res(1.0);
+    res._impl->setMatrix(sol.real());
+    return res;
+  }
 }
 
 MetricTensor MetricTensor::boundEigenvalues(const double lMin, const double lMax) const
@@ -212,11 +296,17 @@ MetricTensor MetricTensor::boundEigenvalues(const double lMin, const double lMax
   Eigen::EigenSolver<Eigen::Matrix2d>::EigenvalueType ev;
   es.compute(_impl->_m, true);
   ev = es.eigenvalues();
-  Eigen::Matrix2d D = Eigen::Matrix2d::Identity();
+  Eigen::MatrixXcd D = es.eigenvalues().asDiagonal();
   D(0, 0) = fmin(lMax, fmax(lMin, ev(0).real()));
   D(1, 1) = fmin(lMax, fmax(lMin, ev(1).real()));
+  Eigen::MatrixXcd sol = es.eigenvectors() * D * es.eigenvectors().inverse();
+  if(sol.imag().norm() > 1e-14) {
+    printf("In MetricTensor::boundEigenvalues: Matrix has nontrivial imaginary part after bounding eigenvalues!");
+    std::cout << sol << std::endl;
+    exit(-1);
+  }
   MetricTensor res(1.0);
-  res._impl->setMatrix(es.eigenvectors().real() * D * es.eigenvectors().transpose().real());
+  res._impl->setMatrix(sol.real());
   return res;
 }
 
@@ -226,11 +316,17 @@ MetricTensor MetricTensor::boundEigenvaluesOfAbs(const double lMin, const double
   Eigen::EigenSolver<Eigen::Matrix2d>::EigenvalueType ev;
   es.compute(_impl->_m, true);
   ev = es.eigenvalues();
-  Eigen::Matrix2d D = Eigen::Matrix2d::Identity();
+  Eigen::MatrixXcd D = es.eigenvalues().asDiagonal();
   D(0, 0) = fmin(lMax, fmax(lMin, fabs(ev(0).real())));
   D(1, 1) = fmin(lMax, fmax(lMin, fabs(ev(1).real())));
+  Eigen::MatrixXcd sol = es.eigenvectors() * D * es.eigenvectors().inverse();
+  if(sol.imag().norm() > 1e-14) {
+    printf("In MetricTensor::boundEigenvaluesOfAbs: Matrix has nontrivial imaginary part after bounding eigenvalues!");
+    std::cout << sol << std::endl;
+    exit(-1);
+  }
   MetricTensor res(1.0);
-  res._impl->setMatrix(es.eigenvectors().real() * D * es.eigenvectors().transpose().real());
+  res._impl->setMatrix(sol.real());
   return res;
 }
 
@@ -240,14 +336,18 @@ MetricTensor MetricTensor::boundEigenvaluesOfAbsIsotropic(const double lMin, con
   Eigen::EigenSolver<Eigen::Matrix2d>::EigenvalueType ev;
   es.compute(_impl->_m, true);
   ev = es.eigenvalues();
-  Eigen::Matrix2d D = Eigen::Matrix2d::Identity();
+  Eigen::MatrixXcd D = es.eigenvalues().asDiagonal();
   // Take most critical (largest) eigenvalue
   double lambda = fmax(ev(0).real(), ev(1).real());
   D(0, 0) = fmin(lMax, fmax(lMin, fabs( lambda )));
   D(1, 1) = fmin(lMax, fmax(lMin, fabs( lambda )));
+  if(D.imag().norm() > 1e-14) {
+    printf("In MetricTensor::boundEigenvaluesOfAbsIsotropic: Matrix has nontrivial imaginary part after bounding eigenvalues!");
+    std::cout << D << std::endl;
+    exit(-1);
+  }
   MetricTensor res(1.0);
-  // res._impl->setMatrix(es.eigenvectors().real() * D * es.eigenvectors().transpose().real());
-  res._impl->setMatrix(D);
+  res._impl->setMatrix(D.real());
   return res;
 }
 
@@ -258,7 +358,7 @@ MetricTensor MetricTensor::setEigenvectorsAndBoundEigenvalues(const double ev1[2
   Eigen::EigenSolver<Eigen::Matrix2d>::EigenvalueType ev;
   es.compute(_impl->_m, true);
   ev = es.eigenvalues();
-  Eigen::Matrix2d D = Eigen::Matrix2d::Identity();
+  Eigen::MatrixXcd D = es.eigenvalues().asDiagonal();
   D(0, 0) = fmin(lMax, fmax(lMin, fabs(ev(0).real())));
   D(1, 1) = fmin(lMax, fmax(lMin, fabs(ev(1).real())));
   Eigen::Matrix2d newEigenvectors;
@@ -267,7 +367,7 @@ MetricTensor MetricTensor::setEigenvectorsAndBoundEigenvalues(const double ev1[2
   newEigenvectors(0,1) = ev2[0];
   newEigenvectors(1,1) = ev2[1];
   MetricTensor res(1.0);
-  res._impl->setMatrix(newEigenvectors * D * newEigenvectors.transpose());
+  res._impl->setMatrix(newEigenvectors * D.real() * newEigenvectors.transpose());
   return res;
 }
 
@@ -277,7 +377,7 @@ MetricTensor MetricTensor::limitAnisotropy(const double alpha) const
   Eigen::EigenSolver<Eigen::Matrix2d>::EigenvalueType ev;
   es.compute(_impl->_m, true);
   ev = es.eigenvalues();
-  Eigen::Matrix2d D = Eigen::Matrix2d::Identity();
+  Eigen::MatrixXcd D = es.eigenvalues().asDiagonal();
   double lambda = ev(0).real();
   double mu     = ev(1).real();
   if(lambda >= mu) {
@@ -287,8 +387,14 @@ MetricTensor MetricTensor::limitAnisotropy(const double alpha) const
     D(0, 0) = fmax(lambda, mu / (alpha*alpha));
     D(1, 1) = mu;
   }
+  Eigen::MatrixXcd sol = es.eigenvectors() * D * es.eigenvectors().inverse();
+  if(sol.imag().norm() > 1e-14) {
+    printf("In MetricTensor::limitAnisotropy: Matrix has nontrivial imaginary part after bounding eigenvalues!");
+    std::cout << sol << std::endl;
+    exit(-1);
+  }
   MetricTensor res(1.0);
-  res._impl->setMatrix(es.eigenvectors().real() * D * es.eigenvectors().transpose().real());
+  res._impl->setMatrix(sol.real());
   return res;
 }
 
@@ -312,11 +418,17 @@ MetricTensor MetricTensor::spanMetricInPhysicalSpace(const double gradation, con
   double normPQ = std::sqrt(pq[0]*pq[0] + pq[1]*pq[1]);
   double eta1 = 1. + std::sqrt(l1) * normPQ * std::log(gradation); eta1 = 1. / (eta1*eta1);
   double eta2 = 1. + std::sqrt(l2) * normPQ * std::log(gradation); eta2 = 1. / (eta2*eta2);
-  Eigen::Matrix2d D = Eigen::Matrix2d::Identity();
+  Eigen::MatrixXcd D = es.eigenvalues().asDiagonal();
   D(0, 0) = eta1 * l1;
   D(1, 1) = eta2 * l2;
+  Eigen::MatrixXcd sol = es.eigenvectors() * D * es.eigenvectors().inverse();
+  if(sol.imag().norm() > 1e-14) {
+    printf("In MetricTensor::spanMetricInPhysicalSpace: Matrix has nontrivial imaginary part after bounding eigenvalues!");
+    std::cout << sol << std::endl;
+    exit(-1);
+  }
   MetricTensor res(1.0);
-  res._impl->setMatrix(es.eigenvectors().real() * D * es.eigenvectors().transpose().real());
+  res._impl->setMatrix(sol.real());
   return res;
 }
 
@@ -334,11 +446,17 @@ MetricTensor MetricTensor::spanMetricInMixedSpace(const double gradation, const 
   double etaPhysical2 = 1. + std::sqrt(l2) * normPQ * std::log(gradation);
   double eta1 = std::pow(etaMetric, 1.-t) * std::pow(etaPhysical1, t); eta1 = 1. / (eta1*eta1);
   double eta2 = std::pow(etaMetric, 1.-t) * std::pow(etaPhysical2, t); eta2 = 1. / (eta2*eta2);
-  Eigen::Matrix2d D = Eigen::Matrix2d::Identity();
+  Eigen::Matrix2d D = Eigen::Matrix2d::Identity();  
   D(0, 0) = eta1 * l1;
   D(1, 1) = eta2 * l2;
+  Eigen::MatrixXcd sol = es.eigenvectors() * D * es.eigenvectors().inverse();
+  if(sol.imag().norm() > 1e-14) {
+    printf("In MetricTensor::spanMetricInMixedSpace: Matrix has nontrivial imaginary part after bounding eigenvalues!");
+    std::cout << sol << std::endl;
+    exit(-1);
+  }
   MetricTensor res(1.0);
-  res._impl->setMatrix(es.eigenvectors().real() * D * es.eigenvectors().transpose().real());
+  res._impl->setMatrix(sol.real());
   return res;
 }
 
@@ -428,6 +546,41 @@ Vector SquareMatrix::operator*(const Vector &v)
   return res;
 }
 
+// Product of this (2x2) SquareMatrix with a MetricTensor (symmetric 2x2 matrix)
+SquareMatrix SquareMatrix::operator*(const MetricTensor &other) const
+{
+  if(_impl->_size != 2) {
+    printf("Cannot multiply this SquareMatrix by MetricTensor because SquareMatrix has dimension %d\n", _impl->_size);
+    exit(-1);
+  }
+  SquareMatrix tmp(2);
+  tmp._impl->setMatrix(_impl->_m * other._impl->_m);
+  return tmp;
+}
+
+// Product of this SquareMatrix with another SquareMatrix of same dimensions
+SquareMatrix SquareMatrix::operator*(const SquareMatrix &other) const
+{
+  if(_impl->_size != other._impl->_size) {
+    printf("Cannot multiply two SquareMatrix because their dimensions are %d and %d\n",_impl-> _size, other._impl->_size);
+    exit(-1);
+  }
+  SquareMatrix tmp(_impl->_size);
+  tmp._impl->setMatrix(_impl->_m * other._impl->_m);
+  return tmp;
+}
+
+SquareMatrix MetricTensor::operator*(const SquareMatrix &other) const
+{
+  if(other.getSize() != 2) {
+    printf("Cannot multiply this MetricTensor by SquareMatrix because SquareMatrix has dimension %d\n", other.getSize());
+    exit(-1);
+  }
+  SquareMatrix tmp(2);
+  tmp._impl->setMatrix(_impl->_m * other._impl->_m);
+  return tmp;
+}
+
 void SquareMatrix::print() const { std::cout << _impl->_m << std::endl; }
 
 double SquareMatrix::determinant() const { return _impl->_m.determinant(); }
@@ -444,10 +597,30 @@ void SquareMatrix::inverse(SquareMatrix &res) const
   res._impl->setMatrix(this->_impl->_m.inverse());
 }
 
+SquareMatrix SquareMatrix::transpose() const
+{
+  SquareMatrix tr(_impl->_size);
+  tr._impl->setMatrix(this->_impl->_m.transpose());
+  return tr;
+}
+
 int SquareMatrix::rank() const
 {
   Eigen::FullPivLU<Eigen::MatrixXd> lu_decomp(this->_impl->_m);
   return lu_decomp.rank();
+}
+void SquareMatrix::getEigenvectorsAndEigenvalues(double v1[2], double v2[2], double &lambda1, double &lambda2) const
+{
+  Eigen::EigenSolver<Eigen::Matrix2d> es;
+  Eigen::EigenSolver<Eigen::Matrix2d>::EigenvalueType ev;
+  es.compute(_impl->_m, true);
+  ev = es.eigenvalues();
+  lambda1 = ev(0).real();
+  lambda2 = ev(1).real();
+  v1[0] = es.eigenvectors().real().col(0)[0];
+  v1[1] = es.eigenvectors().real().col(0)[1];
+  v2[0] = es.eigenvectors().real().col(1)[0];
+  v2[1] = es.eigenvectors().real().col(1)[1];
 }
 
 // ============================================================
@@ -494,7 +667,7 @@ double &Matrix::operator()(int i, int j) { return _impl->_m(i, j); }
 Vector Matrix::operator*(const Vector &v) const
 {
 #if defined(FENG_DEBUG)
-  assert(_impl->_sizeM == v.getSize());
+  assert(_impl->_sizeN == v.getSize());
 #endif
   Vector res(this->_impl->_sizeM);
   res._impl->setVector(_impl->_m * v._impl->_v);

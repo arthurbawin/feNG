@@ -1,4 +1,6 @@
+
 #include "ellipseToolbox.h"
+#include "feMessage.h"
 
 #include <iostream>
 #include <cmath>
@@ -99,9 +101,9 @@ void imConicTranslate(std::vector<double> &p, std::vector<double> &t)
 
 double acot(double x)
 {
-  if(fabs(x) < 1e-14) {
-    printf("In acot : Warning : x = %10.16e - 1/x = %10.16e\n", x, 1. / x);
-  }
+  // if(fabs(x) < 1e-14) {
+  //   printf("In acot : Warning : x = %10.16e - 1/x = %10.16e\n", x, 1. / x);
+  // }
   return atan(1. / x);
 }
 
@@ -160,8 +162,7 @@ bool getExplicitEllipse(std::vector<double> &p, double *semiA, double *semiB,
   // std::endl;
 
   if(fabs(d) > 1e-10 || fabs(f) > 1e-10)
-    printf("In getExplicitEllipse : Warning : ignoring extra implicit coefficients beyond p[2] (d "
-           "and/or f).\n");
+    feWarning("Ignoring extra implicit coefficients beyond p[2] (d and/or f).");
 
   // Check that the coefficients are those of an ellipse
   double D = discriminant(p);
@@ -178,11 +179,11 @@ bool getExplicitEllipse(std::vector<double> &p, double *semiA, double *semiB,
         imEllipse(p, semiA, semiB);
       }
     } else {
-      printf("In getExplicitEllipse : Warning : coefficients describe a degenerate ellipse.\n");
+      feWarning("Metric coefficients describe a degenerate ellipse.");
       return false;
     }
   } else {
-    printf("In getExplicitEllipse : Warning : coefficients describe a hyperbola.\n");
+    feWarning("Metric coefficients describe a hyperbola : discriminant = %+-1.6e - p = (%+-1.6e, %+-1.6e, %+-1.6e)", D, a, b, c);
     return false;
   }
 
@@ -197,8 +198,8 @@ bool getExplicitEllipse(std::vector<double> &p, double *semiA, double *semiB,
 /* Return the discretization (x,y) of the ellipse given by the implicit form ax² + b*x*y + cy² = 1
    The ellipse is centered in (xC,yC).
    This ellipse is the unit circle associated to the metric tensor :
-    ( a b )
-    ( b c )
+    ( a   b/2 )
+    ( b/2 c   )
 */
 
 bool getEllipsePoints(double a, double b, double c, double xC, double yC, std::vector<double> &x,

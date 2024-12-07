@@ -80,85 +80,96 @@ void feSolution::initializeUnknowns(feMesh *mesh)
       continue;
     }
 
-    int nElm = fS->getNumElements();
-    std::vector<feInt> adr(fS->getNumFunctions());
-    std::vector<double> coor = fS->getLcoor();
-    int numVerticesPerElem = mesh->getCncGeoByName(fS->getCncGeoID())->getNumVerticesPerElem();
-    std::vector<double> localCoord(3 * numVerticesPerElem);
 
-    feSpace *geoSpace = mesh->getGeometricSpace(fS->getCncGeoID());
+    #if defined(HAVE_OMP)
+    #pragma omp parallel
+    #endif
+    {
 
-    if(fS->getDOFInitialization() == dofInitialization::NODEWISE) {
-      // Node based: the initial condition is imposed at the vertices DOF
-      for(int iElm = 0; iElm < nElm; ++iElm) {
-        fS->initializeAddressingVector(iElm, adr);
-        mesh->getCoord(fS->getCncGeoID(), iElm, localCoord);
+      int nElm = fS->getNumElements();
+      std::vector<feInt> adr(fS->getNumFunctions());
+      std::vector<double> coor = fS->getLcoor();
+      int numVerticesPerElem = mesh->getCncGeoByName(fS->getCncGeoID())->getNumVerticesPerElem();
+      std::vector<double> localCoord(3 * numVerticesPerElem);
 
-        for(int j = 0; j < fS->getNumFunctions(); ++j) {
-          double r[3] = {coor[3 * j], coor[3 * j + 1], coor[3 * j + 2]};
-          geoSpace->interpolateVectorField(localCoord, r, x);
+      feSpace *geoSpace = mesh->getGeometricSpace(fS->getCncGeoID());
 
-          if(fS->getNumComponents() > 1) {
-            // Vector valued finite element space
-            fS->evalFun(_tn, x, vecVal);
-            int indexComponent = j % fS->getNumComponents();
-            val = vecVal[indexComponent];
-          } else {
-            // Scalar valued finite element space
-            val = fS->evalFun(_tn, x);
-          }
+      if(fS->getDOFInitialization() == dofInitialization::NODEWISE) {
+        // Node based: the initial condition is imposed at the vertices DOF
 
-          _sol[adr[j]] = val;
-        }
-      }
-    }
+        #if defined(HAVE_OMP)
+        #pragma omp for
+        #endif
+        for(int iElm = 0; iElm < nElm; ++iElm) {
+          fS->initializeAddressingVector(iElm, adr);
+          mesh->getCoord(fS->getCncGeoID(), iElm, localCoord);
 
-    else if(fS->getDOFInitialization() == dofInitialization::LEAST_SQUARES) {
-      // Assuming 1D Legendre polynomials: the initial condition is satisfied on each element in the
-      // least-square sense:
-      //
-      //  <phi_i, phi_j> U_j^e = <phi_i, funSol> ==> A_ij^e U_j^e = B_j^e
-      //
-      // !!! We assume that the jacobian cancels out from both side, which is true only for P1 line
-      // geometry !!!
-
-      // The analytic diagonal mass matrix A_ii = 2/(2*i+1)
-      std::vector<double> A(fS->getNumFunctions(), 0.);
-      std::vector<double> B(fS->getNumFunctions(), 0.);
-      for(int i = 0; i < fS->getNumFunctions(); ++i) {
-        A[i] = 2. / (2. * i + 1.);
-      }
-
-      int nQuad = geoSpace->getNumQuadPoints();
-      std::vector<double> wQuad = geoSpace->getQuadratureWeights();
-      std::vector<double> xQuad = geoSpace->getRQuadraturePoints();
-
-      double uQuad = 0.;
-      std::vector<double> phi(fS->getNumFunctions(), 0.);
-      for(int iElm = 0; iElm < nElm; ++iElm) {
-        fS->initializeAddressingVector(iElm, adr);
-        mesh->getCoord(fS->getCncGeoID(), iElm, localCoord);
-
-        // Compute the RHS
-        for(int i = 0; i < fS->getNumFunctions(); ++i) {
-          B[i] = 0.;
-          for(int k = 0; k < nQuad; ++k) {
-            // Evaluate analytic solution at quad points
-            double r[3] = {xQuad[k], 0., 0.};
+          for(int j = 0; j < fS->getNumFunctions(); ++j) {
+            double r[3] = {coor[3 * j], coor[3 * j + 1], coor[3 * j + 2]};
             geoSpace->interpolateVectorField(localCoord, r, x);
-            uQuad = fS->evalFun(_tn, x);
-            // Evaluate Legendre polynomials at quad points
-            fS->L(r, phi.data());
-            B[i] += wQuad[k] * phi[i] * uQuad;
+
+            if(fS->getNumComponents() > 1) {
+              // Vector valued finite element space
+              fS->evalFun(_tn, x, vecVal);
+              int indexComponent = j % fS->getNumComponents();
+              val = vecVal[indexComponent];
+            } else {
+              // Scalar valued finite element space
+              val = fS->evalFun(_tn, x);
+            }
+
+            _sol[adr[j]] = val;
           }
         }
+      }
 
-        // Solve Aij Uj = Bj on the element
+      else if(fS->getDOFInitialization() == dofInitialization::LEAST_SQUARES) {
+        // Assuming 1D Legendre polynomials: the initial condition is satisfied on each element in the
+        // least-square sense:
+        //
+        //  <phi_i, phi_j> U_j^e = <phi_i, funSol> ==> A_ij^e U_j^e = B_j^e
+        //
+        // !!! We assume that the jacobian cancels out from both side, which is true only for P1 line
+        // geometry !!!
+
+        // The analytic diagonal mass matrix A_ii = 2/(2*i+1)
+        std::vector<double> A(fS->getNumFunctions(), 0.);
+        std::vector<double> B(fS->getNumFunctions(), 0.);
         for(int i = 0; i < fS->getNumFunctions(); ++i) {
-          _sol[adr[i]] = B[i] / A[i];
+          A[i] = 2. / (2. * i + 1.);
+        }
+
+        int nQuad = geoSpace->getNumQuadPoints();
+        std::vector<double> wQuad = geoSpace->getQuadratureWeights();
+        std::vector<double> xQuad = geoSpace->getRQuadraturePoints();
+
+        double uQuad = 0.;
+        std::vector<double> phi(fS->getNumFunctions(), 0.);
+        for(int iElm = 0; iElm < nElm; ++iElm) {
+          fS->initializeAddressingVector(iElm, adr);
+          mesh->getCoord(fS->getCncGeoID(), iElm, localCoord);
+
+          // Compute the RHS
+          for(int i = 0; i < fS->getNumFunctions(); ++i) {
+            B[i] = 0.;
+            for(int k = 0; k < nQuad; ++k) {
+              // Evaluate analytic solution at quad points
+              double r[3] = {xQuad[k], 0., 0.};
+              geoSpace->interpolateVectorField(localCoord, r, x);
+              uQuad = fS->evalFun(_tn, x);
+              // Evaluate Legendre polynomials at quad points
+              fS->L(r, phi.data());
+              B[i] += wQuad[k] * phi[i] * uQuad;
+            }
+          }
+
+          // Solve Aij Uj = Bj on the element
+          for(int i = 0; i < fS->getNumFunctions(); ++i) {
+            _sol[adr[i]] = B[i] / A[i];
+          }
         }
       }
-    }
+    } // pragma omp parallel
   }
 }
 
@@ -263,6 +274,118 @@ void feSolution::copySpace(feMesh *mesh, feSpace *s1, feSpace *s2)
   }
 }
 
+// Adds coeff * the value of sourceSpace into targetSpace.
+// Interpolation is required if both spaces do not have the same number of DOFs
+// Both spaces should have the same number of components.
+feStatus feSolution::addConstantTimesSpace(feMesh *mesh, 
+  const double coeff, feSpace *sourceSpace, feSpace *targetSpace)
+{
+  int nElm = mesh->getNumElements(sourceSpace->getCncGeoID());
+  int nCompS = sourceSpace->getNumComponents();
+  int nCompT = targetSpace->getNumComponents();
+
+  if(nCompT != nCompS) {
+    return feErrorMsg(FE_STATUS_ERROR, "Cannot add space because target space does not have the same number of components!");
+  }
+
+  int ndofS = sourceSpace->getNumFunctions();
+  int ndofT = targetSpace->getNumFunctions();
+  bool interpolate = (ndofS != ndofT);
+  std::vector<feInt> adrS(ndofS);
+  std::vector<feInt> adrT(ndofT);
+
+  // Very ugly: keep a set of already incremented DOFs...
+  std::set<feInt> incrementedDOFs;
+
+  if(interpolate) {
+    
+    const std::vector<double> &Lcoor = targetSpace->getLcoor();
+    double r[3];
+    std::vector<double> localSol(ndofS);
+
+    // Add coeff * interpolated field 
+    for(int iElm = 0; iElm < nElm; ++iElm) {
+      sourceSpace->initializeAddressingVector(iElm, adrS);
+      targetSpace->initializeAddressingVector(iElm, adrT);
+      this->getSolAtDOF(adrS, localSol);
+
+      // Interpolate each component
+      for(int j = 0; j < nCompS; ++j) {
+        for(int k = 0; k < ndofT / nCompT; ++k) {
+          if(incrementedDOFs.find(adrT[nCompT * k + j]) == incrementedDOFs.end()) {
+            r[0] = Lcoor[3 * nCompT * k + 3 * j + 0];
+            r[1] = Lcoor[3 * nCompT * k + 3 * j + 1];
+            r[2] = Lcoor[3 * nCompT * k + 3 * j + 2];
+            double res = sourceSpace->interpolateVectorFieldComponent(localSol, j, r);
+            _sol[adrT[nCompT * k + j]] += coeff * res;
+            incrementedDOFs.insert(adrT[nCompT * k + j]);
+          }
+        }
+      }
+    }
+
+  } else {
+    // Add coeff * field at each DOF
+    for(int iElm = 0; iElm < nElm; ++iElm) {
+      sourceSpace->initializeAddressingVector(iElm, adrS);
+      targetSpace->initializeAddressingVector(iElm, adrT);
+      for(int j = 0; j < ndofS; ++j) {
+        if(incrementedDOFs.find(adrT[j]) == incrementedDOFs.end()) {
+          _sol[adrT[j]] += coeff * _sol[adrS[j]];
+          incrementedDOFs.insert(adrT[j]);
+        }
+      }
+    }
+  }
+
+  return FE_STATUS_OK;
+}
+
+// Adds coeff * the squared norm of a space sourceSpace into targetSpace.
+// The target space must have as many DOFs as the number of DOFs of a 
+// scalar component of the source space.
+feStatus feSolution::addSquaredNormOfVectorSpace(feMesh *mesh, 
+  const double coeff, feSpace *sourceSpace, feSpace *targetSpace)
+{
+  int nElm = mesh->getNumElements(sourceSpace->getCncGeoID());
+  int nCompS = sourceSpace->getNumComponents();
+  int nCompT = targetSpace->getNumComponents();
+
+  if(nCompT != 1) {
+    return feErrorMsg(FE_STATUS_ERROR,
+      "Source space has %d components and target space has %d components. "
+      "Cannot copy norm into target space because target space is not a scalar FE space!\n",
+      nCompS, nCompT);
+  }
+
+  // Very ugly: keep a set of already incremented DOFs...
+  std::set<feInt> incrementedDOFs;
+
+  int ndofS = sourceSpace->getNumFunctions();
+  int ndofT = targetSpace->getNumFunctions();
+  std::vector<feInt> adrS(ndofS);
+  std::vector<feInt> adrT(ndofT);
+
+  for(int iElm = 0; iElm < nElm; ++iElm) {
+    sourceSpace->initializeAddressingVector(iElm, adrS);
+    targetSpace->initializeAddressingVector(iElm, adrT);
+    for(int j = 0; j < ndofT; ++j) {
+      double normSquared = 0.;
+      for(int k = 0; k < nCompS; ++k) {
+        normSquared += _sol[adrS[nCompS * j + k]] * _sol[adrS[nCompS * j + k]];
+      }
+      if(incrementedDOFs.find(adrT[j]) == incrementedDOFs.end()) {
+        _sol[adrT[j]] += coeff * normSquared;
+        incrementedDOFs.insert(adrT[j]);
+      }
+    }
+  }
+
+  return FE_STATUS_OK;
+}
+
+
+
 void feSolution::setSolFromContainer(feSolutionContainer *solContainer, int iSol)
 {
   std::vector<double> &solFromContainer = solContainer->getSolution(iSol);
@@ -282,6 +405,9 @@ void feSolution::setSolDotToZero()
   for(size_t i = 0; i < nDOFs; ++i) _dsoldt[i] = 0.0;
 }
 
+// Only prints the current solution, not the full container
+// The export function should be for the container
+// to export the full solution history
 void feSolution::printSol(std::string file)
 {
   FILE *f;

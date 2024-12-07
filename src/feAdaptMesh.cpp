@@ -46,7 +46,13 @@ feStatus feMesh2DP1::adapt(std::vector<feNewRecovery*> recoveredFields, feMetric
                            feVectorFunction *exactGradient,
                            bool curve, bool isBackmeshP2, bool curveMMGmesh,
                            curveToMinimize target,
-                           bool generateAnisoMeshBeforeCurving, feRecovery *oldRecovery)
+                           bool generateAnisoMeshBeforeCurving
+#if defined(HAVE_GMSH)
+                           ,
+                           directionField targetDirectionField,
+                           vertexSpawning targetVertexSpawning
+#endif
+                 )
 {
   if(curve && !isBackmeshP2) {
     return feErrorMsg(FE_STATUS_ERROR, "Backmesh must be P2 when curving the mesh.");
@@ -243,6 +249,9 @@ feStatus feMesh2DP1::adapt(std::vector<feNewRecovery*> recoveredFields, feMetric
     meshOptions.modelForMesh = modelName.data();
     meshOptions.VIEW_TAG = metricField.getMetricViewTag();
 
+    meshOptions.targetDirectionField = targetDirectionField;
+    meshOptions.targetVertexSpawning = targetVertexSpawning;
+
     meshOptions.faceTag = faceTag;
     meshOptions.inside = options.insideCallback;
     meshOptions.curveMMGmesh = curveMMGmesh;
@@ -256,6 +265,7 @@ feStatus feMesh2DP1::adapt(std::vector<feNewRecovery*> recoveredFields, feMetric
     meshOptions.metricUserPointer = (void *) &metricField;
     meshOptions.interpolateMetricP1Callback = interpolateMetricP1Callback;
     meshOptions.interpolateMetricP2CallbackWithoutDerivatives = interpolateMetricP2CallbackWithoutDerivatives;
+    meshOptions.interpolateMetricP2CallbackWithoutDerivativesExplicit = interpolateMetricP2CallbackWithoutDerivativesExplicit;
     meshOptions.interpolateMetricP2CallbackWithDerivatives = interpolateMetricP2CallbackWithDerivatives;
     meshOptions.interpolateMetricP2CallbackLog = interpolateMetricP2CallbackLog;
 
@@ -283,7 +293,8 @@ feStatus feMesh2DP1::adapt(std::vector<feNewRecovery*> recoveredFields, feMetric
   gmsh::finalize();
 
   gmshWasInitialized = false;
-
+#else
+  return feErrorMsg(FE_STATUS_ERROR, "Gmsh is required to compute metric tensors and adapt the mesh!");
 #endif
   return FE_STATUS_OK;
 }

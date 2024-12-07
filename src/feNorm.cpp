@@ -208,6 +208,7 @@ double feNorm::computeLpNorm(int p, bool error)
       res += errorOnElementsToThePowerP[i];
   }
 
+  feInfo("Summed feNorm on %d elements = %+-1.6e", _nElm, pow(res, 1. / (double)p));
   return pow(res, 1. / (double)p);
 }
 
@@ -1202,7 +1203,7 @@ double feNorm::computeH1SemiNormErrorEstimator()
   double res = 0.0, jac, dotProd, t = _solution->getCurrentTime();
   double graduh[3] = {0., 0., 0.};
   double graduRec[3] = {0., 0., 0.};
-  std::vector<double> gradu(3, 0.);
+  // std::vector<double> gradu(3, 0.);
 
   if(_rec == nullptr) {
     feErrorMsg(FE_STATUS_ERROR, "Cannot compute H1 error estimate "
@@ -1222,18 +1223,18 @@ double feNorm::computeH1SemiNormErrorEstimator()
       _cnc->computeElementTransformation(_geoCoord, k, jac, T);
 
       _spaces[0]->interpolateFieldAtQuadNode_physicalGradient(_localSol[0], k, T, graduh);
-      _geoSpace->interpolateVectorFieldAtQuadNode(_geoCoord, k, _pos);
-      _vectorSolution->eval(t, _pos, gradu);
+      // _geoSpace->interpolateVectorFieldAtQuadNode(_geoCoord, k, _pos);
+      // _vectorSolution->eval(t, _pos, gradu);
 
       graduRec[0] = _rec->evaluateRecoveryAtQuadNode(PPR::DERIVATIVE, 0, iElm, k);
       graduRec[1] = _rec->evaluateRecoveryAtQuadNode(PPR::DERIVATIVE, 1, iElm, k);
       graduRec[2] = 0.;
 
-      gradu[2] = 0.;
+      // gradu[2] = 0.;
 
-      graduRec[0] -= gradu[0];
-      graduRec[1] -= gradu[1];
-      graduRec[2] -= gradu[2];
+      graduRec[0] -= graduh[0];
+      graduRec[1] -= graduh[1];
+      graduRec[2] -= graduh[2];
       dotProd = graduRec[0] * graduRec[0] + graduRec[1] * graduRec[1] + graduRec[2] * graduRec[2];
 
       res += dotProd * jac * _w[k];
@@ -1419,8 +1420,8 @@ double feNorm::computePressureLift()
     feErrorMsg(FE_STATUS_ERROR, "Can only compute lift force on 1D connectivities for now.");
   }
 
-  // FILE *myf = fopen("NORMALES.pos", "w");
-  // fprintf(myf, "View \"normales\"{\n");
+  FILE *myf = fopen("NORMALES.pos", "w");
+  fprintf(myf, "View \"normales\"{\n");
 
   std::vector<double> normalVectors; // Size = 3 * nQuad * nElm
   _cnc->computeNormalVectors(normalVectors);
@@ -1436,44 +1437,23 @@ double feNorm::computePressureLift()
       double ny = normalVectors[3 * _nQuad * iElm + 3 * k + 1];
 
       res += ph * ny * _J[_nQuad * iElm + k] * _w[k];
-      // fprintf(myf, "VP(%.16g,%.16g,%.16g){%.16g,%.16g,%.16g};\n",_pos[0], _pos[1], 0.,
-      //   normalVectors[3*_nQuad*iElm + 3*k + 0],
-      //   normalVectors[3*_nQuad*iElm + 3*k + 1],
-      //   normalVectors[3*_nQuad*iElm + 3*k + 2]);
+      fprintf(myf, "VP(%.16g,%.16g,%.16g){%.16g,%.16g,%.16g};\n",_pos[0], _pos[1], 0.,
+        normalVectors[3*_nQuad*iElm + 3*k + 0],
+        normalVectors[3*_nQuad*iElm + 3*k + 1],
+        normalVectors[3*_nQuad*iElm + 3*k + 2]);
     }
   }
 
-  // fprintf(myf, "};\n"); fclose(myf);
+  fprintf(myf, "};\n"); fclose(myf);
 
   return res;
 }
 
 double feNorm::computeViscousLift()
 {
-  double res = 0.0, ph;
-
-  if(_cnc->getDim() != 1) {
-    feErrorMsg(FE_STATUS_ERROR, "Can only compute lift force on 1D connectivities for now.");
-  }
-
-  std::vector<double> normalVectors; // Size = 3 * nQuad * nElm
-  _cnc->computeNormalVectors(normalVectors);
-
-  for(int iElm = 0; iElm < _nElm; ++iElm) {
-    this->initializeLocalSolutionOnSpace(0, iElm);
-    _spaces[0]->_mesh->getCoord(_cnc, iElm, _geoCoord);
-
-    for(int k = 0; k < _nQuad; ++k) {
-      ph = _spaces[0]->interpolateFieldAtQuadNode(_localSol[0], k);
-      _geoSpace->interpolateVectorFieldAtQuadNode(_geoCoord, k, _pos);
-
-      double ny = normalVectors[3 * _nQuad * iElm + 3 * k + 1];
-
-      res += ph * ny * _J[_nQuad * iElm + k] * _w[k];
-    }
-  }
-
-  return res;
+  // To implement
+  feErrorMsg(FE_STATUS_ERROR, "Viscous lift not implemented.");
+  return 0.;
 }
 
 // Compute drag force by evaluating integral of provided field (assumed to be pressure)

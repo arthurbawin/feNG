@@ -5,12 +5,14 @@
 
 extern int FE_VERBOSE;
 
-#define TOL_DISC 3e-16
+#define TOL_DISC 1e-15
 #define TOL_HESS 1e-14
 #define TOL_LEADING_COEFF 1e-14
 #define TOL_ZERO 1e-15
+#define TOL_LAMBDA 1e-10
 #define TOL_CHECK 1
 #define TOL_ROTATION 1e-8
+#define TOL_COMPARED_TO_LEADING_COEFF 1e10
 
 double LARGE_VALUE = 1e16;
 
@@ -108,7 +110,7 @@ int getCubicPolynomialRoots(const double a, const double b, const double c, cons
     if(disc > 0) {
       // Three distinct real roots (but complex parameters in the process)
       if(delta > 0) {
-        if(fabs(delta / disc) > 1e-10) {
+        if(fabs(delta) > 1e-12 && fabs(disc) > 1e-12 && fabs(delta / disc) > 1e-8) {
           feInfo("Discriminant and delta should have different sign! 1");
           feInfo("disc = %+-1.10e == delta = %+-1.10e", disc, delta);
           exit(-1);
@@ -128,7 +130,7 @@ int getCubicPolynomialRoots(const double a, const double b, const double c, cons
     } else {
       // One real root and two complex conjugate roots
       if(delta < 0) {
-        if(fabs(delta / disc) > 1e-10) {
+        if(fabs(delta) > 1e-12 && fabs(disc) > 1e-12 && fabs(delta / disc) > 1e-8) {
           feInfo("Discriminant and delta should have different sign! 2");
           feInfo("disc = %+-1.10e == delta = %+-1.10e", disc, delta);
           exit(-1);
@@ -316,7 +318,7 @@ thread_local Eigen::VectorXd COEFF_DEG3 = Eigen::VectorXd::Zero(4);
 // - mu, the diameter of the largest disc centered at 0 and inscribed in the level curve 1 of pi
 // - alpha, the diameter of the largest ellipse inscribed in the level curve and containing the disc of radius mu
 // - U, the rotation matrix associated to zPi the contact point of the largest circle inscribed in the level curve
-void computeDiameters(const double a, const double b, const double c, const double d, const double disc,
+bool computeDiameters(const double a, const double b, const double c, const double d, const double disc,
   const int factorizationCase, const SquareMatrix &phi, const SquareMatrix &invPhi, SquareMatrix &U, double &mu, double &alpha)
 {
   double roots[3];
@@ -357,7 +359,7 @@ void computeDiameters(const double a, const double b, const double c, const doub
   if(factorizationCase == 1) {
     // Triple root, there exists phi s.t. pi o phi = x^3.
     alpha = 0.;
-    return;
+    return true;
   }
 
   // invPhi*zPi, phi^T*zPi, then same for zPiO 
@@ -374,19 +376,18 @@ void computeDiameters(const double a, const double b, const double c, const doub
       {
         // disc = 0: pi o phi = x^2y
         if(fabs(zI[0]) < TOL_ZERO || fabs(zTO[0]) < TOL_ZERO) {
-          feErrorMsg(FE_STATUS_ERROR, "FIXME: Unexpected zero component after rotation. Case 2.");
-          exit(-1);
+          feWarning("FIXME: Unexpected zero component after rotation. Case 2.");
+          return false;
         }
         double lambdaC = mu * zT[0]/zI[0];
         alpha = lambdaC * zIO[0]/zTO[0];
         double check1 = 4./(27.*lambdaC*lambdaC) * zI[1] - mu*zT[1];
         double check2 = 4./(27.*lambdaC*lambdaC) * zIO[1] - alpha*zTO[1];
         if(fabs(check1) > TOL_CHECK || fabs(check2) > TOL_CHECK) {
-          feErrorMsg(FE_STATUS_ERROR, "Check failed for case 2: check1 = %+-1.4e - check2 = %+-1.4e",
-            check1, check2);
-          exit(-1);
+          feWarning("Check failed for case 2: check1 = %+-1.4e - check2 = %+-1.4e", check1, check2);
+          return false;
         }
-        return;
+        return true;
       }
     case 3 :
       {
@@ -399,14 +400,15 @@ void computeDiameters(const double a, const double b, const double c, const doub
         }
         if(fabs(zTO[1]) < TOL_ZERO) {
           // Should not happen even if invPhi = phi^T (rotation) because zPi and zPiO are orthogonal
-          feErrorMsg(FE_STATUS_ERROR, "Simultaneous zero component in rotated eigenvectors. Should not happen?");
-          exit(-1);
+          feWarning("Simultaneous zero component in rotated eigenvectors. Should not happen?");
+          return false;
         }
         alpha = lambdaC * zIO[1]/zTO[1];
         double check1 = (4. - sign(disc) * lambdaC*lambdaC*lambdaC)/(3*lambdaC*lambdaC) * zI[0] - mu*zT[0];
         double check2 = (4. - sign(disc) * lambdaC*lambdaC*lambdaC)/(3*lambdaC*lambdaC) * zIO[0] - alpha*zTO[0];
         double normH = sqrt((4. - sign(disc) * lambdaC*lambdaC*lambdaC)/(3*lambdaC*lambdaC) * (4. - sign(disc) * lambdaC*lambdaC*lambdaC)/(3*lambdaC*lambdaC) + lambdaC*lambdaC);
         if(fabs(check1)/normH > TOL_CHECK || fabs(check2)/normH > TOL_CHECK) {
+          PRINT(normH);
           PRINT(zI[1]);
           PRINT(zT[1]);
           feInfo("%+-1.8e", zT[1]/zI[1]);
@@ -417,11 +419,11 @@ void computeDiameters(const double a, const double b, const double c, const doub
           PRINT(mu);
           PRINT(lambdaC);
           PRINT(alpha);
-          feErrorMsg(FE_STATUS_ERROR, "Check failed for case 3: check1 = %+-1.4e - check2 = %+-1.4e",
+          feWarning("Check failed for case 3: check1 = %+-1.4e - check2 = %+-1.4e",
             check1, check2);
-          exit(-1);
+          return false;
         }
-        return;
+        return true;
       }
     case 4 :
       // disc > 0: pi o phi = x(x^2 - 3y^2)
@@ -449,8 +451,11 @@ void computeDiameters(const double a, const double b, const double c, const doub
         double lambdaC2 = (fabs(zItmp_y2) < TOL_ZERO) ? upperBound : mu * zTtmp_y2/zItmp_y2;
 
         bool OK = false;
-        if(lambdaC0 > 0. && lambdaC0 <= 1.) { lambdaC = lambdaC0; OK = true; }
-        if(lambdaC1 > 0. && lambdaC1 <= 1.) {
+        if(lambdaC0 > 0. && lambdaC0 <= 1. + TOL_LAMBDA) {
+          lambdaC = lambdaC0;
+          OK = true;
+        }
+        if(lambdaC1 > 0. && lambdaC1 <= 1. + TOL_LAMBDA) {
           lambdaC = lambdaC1;
           OK = true;
           zI[0] = V1[1] * zI[0] - V1[0] * zI[1];
@@ -461,7 +466,7 @@ void computeDiameters(const double a, const double b, const double c, const doub
           zTO[0] = V1[1] * zTO[0] - V1[0] * zTO[1];
           zTO[1] = V1[0] * zTOtmp + V1[1] * zTO[1];
         }
-        if(lambdaC2 > 0. && lambdaC2 <= 1.) {
+        if(lambdaC2 > 0. && lambdaC2 <= 1. + TOL_LAMBDA) {
           lambdaC = lambdaC2;
           OK = true;
           zI[0] = V2[1] * zI[0] - V2[0] * zI[1];
@@ -477,13 +482,14 @@ void computeDiameters(const double a, const double b, const double c, const doub
           PRINT(lambdaC0);
           PRINT(lambdaC1);
           PRINT(lambdaC2);
-          feErrorMsg(FE_STATUS_ERROR, "No rotation provide an acceptable lambdaC.");
-          exit(-1);
+          feWarning("No rotation provide an acceptable lambdaC for cubic polynomial: %+-1.4e - %+-1.4e - %+-1.4e - %+-1.4e.",
+            a, b, c, d);
+          return false;
         }
 
         if(fabs(zTO[1]) < TOL_ZERO) {
-          feErrorMsg(FE_STATUS_ERROR, "FIXME: Unexpected zero component in rotated eigenvectors. Case 4.2.");
-          exit(-1);
+          feWarning("FIXME: Unexpected zero component in rotated eigenvectors. Case 4.2.");
+          return false;
         }
 
         alpha = lambdaC * zIO[1]/zTO[1];
@@ -491,12 +497,12 @@ void computeDiameters(const double a, const double b, const double c, const doub
         double check2 = (4. - sign(disc) * lambdaC*lambdaC*lambdaC)/(3*lambdaC*lambdaC) * zIO[0] - alpha*zTO[0];
         double normH = sqrt((4. - sign(disc) * lambdaC*lambdaC*lambdaC)/(3*lambdaC*lambdaC) * (4. - sign(disc) * lambdaC*lambdaC*lambdaC)/(3*lambdaC*lambdaC) + lambdaC*lambdaC);
         if(fabs(check1)/normH > TOL_CHECK || fabs(check2)/normH > TOL_CHECK) {
-          feErrorMsg(FE_STATUS_ERROR, "Check failed for case 4: check1 = %+-1.4e - check2 = %+-1.4e",
+          feWarning("Check failed for case 4: check1 = %+-1.4e - check2 = %+-1.4e",
             check1, check2);
-          exit(-1);
+          return false;
         }
 
-        return;
+        return true;
       }
     default:
       feErrorMsg(FE_STATUS_ERROR, "Unexpected factorizationCase. Aborting.");
@@ -528,13 +534,13 @@ thread_local Eigen::VectorXd LAMBDA_COEFF_DEG4 = Eigen::VectorXd::Zero(5);
 
 // Compute the transition metric between the largest ellipse containing Dpi (disc of largest radius included
 // in the level curve 1) and the unconstrained optimal metric.
-void getTransitionMetric(const int factorizationCase, const double disc, const double alpha, 
+bool getTransitionMetric(const int factorizationCase, const double disc, const double alpha, 
   const SquareMatrix &phi, SquareMatrix &invPhi, MetricTensor &Q)
 {
   switch(factorizationCase) {
     case 1 :
       // Does not apply
-      return;
+      return true;
     case 2 :
       {
         // Compute lambda (L) such that alpha is an eigenvalue of h = invPhi^T * H * invPhi,
@@ -563,8 +569,8 @@ void getTransitionMetric(const int factorizationCase, const double disc, const d
           PRINT(LAMBDA_COEFF_DEG3(1));
           PRINT(LAMBDA_COEFF_DEG3(2));
           PRINT(LAMBDA_COEFF_DEG3(3));
-          feErrorMsg(FE_STATUS_ERROR, "No root found for transition metric in case 2.");
-          exit(-1);
+          feWarning("No root found for transition metric in case 2.");
+          return false;
         }
 
         // Keep the root that minimizes the determinant.
@@ -582,7 +588,7 @@ void getTransitionMetric(const int factorizationCase, const double disc, const d
         }
 
         multiplyATMAdiag(invPhi, L, 4./(27.*L*L), Q);
-        return;
+        return true;
       }
     case 3 :
       {
@@ -599,8 +605,8 @@ void getTransitionMetric(const int factorizationCase, const double disc, const d
         LAMBDA_ROOTS = RootFinder::solvePolynomial(LAMBDA_COEFF_DEG4, 0., 2., 1e-8);
 
         if(LAMBDA_ROOTS.size() == 0) {
-          feErrorMsg(FE_STATUS_ERROR, "No root found for transition metric in case 3.");
-          exit(-1);
+          feWarning("No root found for transition metric in case 3.");
+          return false;
         }
 
         double L, minDet = 1e22;
@@ -614,7 +620,7 @@ void getTransitionMetric(const int factorizationCase, const double disc, const d
         }
 
         multiplyATMAdiag(invPhi, (4. + L*L*L)/(3.*L*L), L, Q);
-        return;
+        return true;
       }
     case 4 :
       {
@@ -655,8 +661,8 @@ void getTransitionMetric(const int factorizationCase, const double disc, const d
         }
 
         if(nAcceptableRoots == 0) {
-          feErrorMsg(FE_STATUS_ERROR, "No root found for transition metric in case 4.");
-          exit(-1);
+          feWarning("No root found for transition metric in case 4.");
+          return false;
         }
 
         if(whichTheta != 0) {
@@ -671,25 +677,28 @@ void getTransitionMetric(const int factorizationCase, const double disc, const d
         }
 
         multiplyATMAdiag(invPhi, (4. - L*L*L)/(3.*L*L), L, Q);
-        return;
+        return true;
       }
   }
+  return false;
 }
                              
-void feMetric::computeAnalyticMetricP2ForLpNorm(std::vector<double> &errorCoeff, MetricTensor &Q, const double maxDiameter)
+bool computeAnalyticMetricP2ForLpNorm(std::vector<double> &errorCoeff, MetricTensor &Q, const double maxDiameter)
 {
   double A = fabs(errorCoeff[0]) > DBL_EPSILON ? errorCoeff[0] : 0.;
   double B = fabs(errorCoeff[1]) > DBL_EPSILON ? errorCoeff[1] : 0.;
   double C = fabs(errorCoeff[2]) > DBL_EPSILON ? errorCoeff[2] : 0.;
   double D = fabs(errorCoeff[3]) > DBL_EPSILON ? errorCoeff[3] : 0.;
 
-  double TOL_ISOTROPIC = 1e-10;
+  double alpha = 4. / (maxDiameter*maxDiameter);
+
+  double TOL_ISOTROPIC = 1e-5;
   if(fabs(A) < TOL_ISOTROPIC && fabs(B) < TOL_ISOTROPIC && fabs(C) < TOL_ISOTROPIC && fabs(D) < TOL_ISOTROPIC) {
-    Q(0,0) = 1.;
+    Q(0,0) = alpha;
     Q(0,1) = 0.;
     Q(1,0) = 0.;
-    Q(1,1) = 1.;
-    return;
+    Q(1,1) = alpha;
+    return true;
   }
 
   double a, b, c, d;
@@ -705,9 +714,9 @@ void feMetric::computeAnalyticMetricP2ForLpNorm(std::vector<double> &errorCoeff,
     d = (   A + B + C +      D) * val;
 
     if(fabs(a) < TOL_ROTATION) {
-      feInfo("Need another rotation for coefficients:");
-      feInfo("coeff = [%+-1.10e; %+-1.10e; %+-1.10e; %+-1.10e];", A, B, C, D);
-      exit(-1);
+      feWarning("Need another rotation for coefficients:");
+      feWarning("coeff = [%+-1.10e; %+-1.10e; %+-1.10e; %+-1.10e];", A, B, C, D);
+      return false;
     }
   } else {
     a = A;
@@ -725,6 +734,14 @@ void feMetric::computeAnalyticMetricP2ForLpNorm(std::vector<double> &errorCoeff,
   c /= sc;
   d /= sc;
 
+  // // Ignore coefficients much smaller than the leading coefficient
+  // // Maxcoeff should be exactly 1
+  // double maxCoeff = fmax(fmax(fabs(a), fabs(b)), fmax(fabs(c), fabs(d)));
+  // if(fabs(a)/maxCoeff < TOL_COMPARED_TO_LEADING_COEFF) a = 0.;
+  // if(fabs(b)/maxCoeff < TOL_COMPARED_TO_LEADING_COEFF) b = 0.;
+  // if(fabs(c)/maxCoeff < TOL_COMPARED_TO_LEADING_COEFF) c = 0.;
+  // if(fabs(d)/maxCoeff < TOL_COMPARED_TO_LEADING_COEFF) d = 0.;
+
   double disc;
   int cas = getFactorizationCase(a,b,c,d,disc);
 
@@ -737,12 +754,12 @@ void feMetric::computeAnalyticMetricP2ForLpNorm(std::vector<double> &errorCoeff,
   getPhiAndInverse(a,b,c,d, cas, disc, phi, invPhi);
 
   double muPi, alphaPi, betaPi = 0.;
-  computeDiameters(a, b, c, d, disc, cas, phi, invPhi, U, muPi, alphaPi);
+  bool success = computeDiameters(a, b, c, d, disc, cas, phi, invPhi, U, muPi, alphaPi);
+  if(!success)
+    return false;
 
   MetricTensor hPi;
   getUnconstrainedOptimalMetric(a,b,c,d,cas,disc,phi,invPhi,hPi,betaPi);
-
-  double alpha = 4. / (maxDiameter*maxDiameter);
 
   if(alpha >= muPi)
   {
@@ -762,7 +779,9 @@ void feMetric::computeAnalyticMetricP2ForLpNorm(std::vector<double> &errorCoeff,
     // Ellipse is tangent at 4 points and has diameter 2*alpha^(-1/2).
     // Transition between the previous case and the optimal unconstrained case
     // Cannot happen for case 1 since the level curve is the one of x^3 after some transformation
-    getTransitionMetric(cas, disc, alpha, phi, invPhi, Q);
+    bool success = getTransitionMetric(cas, disc, alpha, phi, invPhi, Q);
+    if(!success)
+      return false;
 
   } else {
     // Optimal unconstrained case
@@ -778,14 +797,14 @@ void feMetric::computeAnalyticMetricP2ForLpNorm(std::vector<double> &errorCoeff,
 
   if(Q.determinant() <= 0) {
     Q.print();
-    feInfo("Negative determinant for Q = %+-1.16e", Q.determinant());
-    exit(-1);
+    feWarning("Negative determinant for Q = %+-1.16e", Q.determinant());
+    return false;
   }
 
   if(isnan(Q(0,0)) || isnan(Q(0,1)) || isnan(Q(1,0)) || isnan(Q(1,1))) {
     Q.print();
-    feInfo("Nan in Q");
-    exit(-1);
+    feWarning("Nan in Q");
+    return false;
   }
 
   // Apply scaling to the metric
@@ -803,10 +822,12 @@ void feMetric::computeAnalyticMetricP2ForLpNorm(std::vector<double> &errorCoeff,
     Q(1,0) = Q(0,1);
     Q(1,1) = 0.5 * (Q11 - 2. * Q12 + Q22);
   }
+
+  return true;
 }
 
 // errorCoeff = [fxxx, 3*fxxy, 3*fxyy, fyyy]
-void feMetric::computeAnalyticMetricP2ForH1semiNorm(std::vector<double> &errorCoeff, MetricTensor &Q)
+bool computeAnalyticMetricP2ForH1semiNorm(std::vector<double> &errorCoeff, MetricTensor &Q)
 {
   // Those coefficients are such that
   // pi(x,y) = a*x^3 + 3*b*x^2y + 3*c*xy^2 + d*y^3 
@@ -815,9 +836,9 @@ void feMetric::computeAnalyticMetricP2ForH1semiNorm(std::vector<double> &errorCo
   double c = errorCoeff[2] / 3.;
   double d = errorCoeff[3];
   double disc = b*b*c*c - 4.*a*c*c*c - 4.*b*b*b*d + 18.*a*b*c*d - 27.*a*a*d*d;
-  if(fabs(disc) < 1e-6) {
-    feInfo("Polynomial is univariate: disc = %+-1.4e", disc);
-    exit(-1);
+  if(fabs(disc) < 1e-10) {
+    feWarning("Polynomial is univariate: disc = %+-1.4e", disc);
+    return false;
   }
   Q(0,0) = 9. * (a*a + 2.*b*b + c*c);
   Q(0,1) = 9. * (a*b + 2.*b*c + c*d);
@@ -825,26 +846,28 @@ void feMetric::computeAnalyticMetricP2ForH1semiNorm(std::vector<double> &errorCo
   Q(1,1) = 9. * (b*b + 2.*c*c + d*d);
   Q = Q.sqrt();
 
+  return true;
+
   /////////////////////////////////////
   // Check that the bound is satisfied, i.e. check that
   //
   //  || grad(pi) o (sqrt(2) * Q)^(-1/2) || <= 1
   //
-  int nTheta = 100;
-  double dT = M_PI/nTheta;
-  double sup = 0.;
-  for(int iT = 0; iT < nTheta; ++iT) {
-    double z[2] = {cos(dT * iT), sin(dT * iT)};
-    MetricTensor S = Q * sqrt(2.);
-    double normz = sqrt(z[0]*(S(0,0)*z[0] + S(0,1)*z[1]) + z[1]*(S(0,1)*z[0] + S(1,1)*z[1]));
-    double gx = 3.*a*z[0]*z[0] + 2.*(3.*b)*z[0]*z[1] + (3.*c)*z[1]*z[1];
-    double gy = 3.*d*z[1]*z[1] + 2.*(3.*c)*z[0]*z[1] + (3.*b)*z[0]*z[0];
-    double normu = sqrt(gx*gx + gy*gy);
-    sup = fmax(sup, normu/(normz*normz));
-  }
-  if(sup > 1. + 1e-3) {
-    feInfo("sup = %+-1.10e", sup);
-    exit(-1);
-  }
+  // int nTheta = 100;
+  // double dT = M_PI/nTheta;
+  // double sup = 0.;
+  // for(int iT = 0; iT < nTheta; ++iT) {
+  //   double z[2] = {cos(dT * iT), sin(dT * iT)};
+  //   MetricTensor S = Q * sqrt(2.);
+  //   double normz = sqrt(z[0]*(S(0,0)*z[0] + S(0,1)*z[1]) + z[1]*(S(0,1)*z[0] + S(1,1)*z[1]));
+  //   double gx = 3.*a*z[0]*z[0] + 2.*(3.*b)*z[0]*z[1] + (3.*c)*z[1]*z[1];
+  //   double gy = 3.*d*z[1]*z[1] + 2.*(3.*c)*z[0]*z[1] + (3.*b)*z[0]*z[0];
+  //   double normu = sqrt(gx*gx + gy*gy);
+  //   sup = fmax(sup, normu/(normz*normz));
+  // }
+  // if(sup > 1. + 1e-3) {
+  //   feInfo("sup = %+-1.10e", sup);
+  //   exit(-1);
+  // }
   /////////////////////////////////////
 }

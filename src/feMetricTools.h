@@ -3,6 +3,7 @@
 
 #include "feMatrixInterface.h"
 #include "feRecovery.h"
+#include "feNewRecovery.h"
 #include "STensor3.h"
 
 #include "../contrib/Eigen/Eigen"
@@ -48,25 +49,17 @@ struct gmshEdgeLessThan {
   }
 };
 
+bool computeAnalyticMetricP2ForLpNorm(std::vector<double> &errorCoeff, MetricTensor &Q, const double maxDiameter);
+bool computeAnalyticMetricP2ForH1semiNorm(std::vector<double> &errorCoeff, MetricTensor &Q);
+
+void computeDirectionFieldFromGradient(const double x[2], const int vertex, const double firstDerivatives[2], const double tol, double grad[2]);
+
+void solveSizePolynomialLinear(const double targetError, const double directionGrad[2], const double du[2], const double d2u[4], double &Liso, double &Lgrad);
+void solveSizePolynomialQuadratic(const double targetError, const double directionGrad[2], const double du[2], const double d2u[4], const double d3u[8], double &Liso, double &Lgrad);
+
 double evaluateFieldFromRecovery(int indexDerivative, feRecovery *rec, double *x);
 
 double evaluateFieldFromRecoveryCallback(int indexDerivative, void *recUserPtr, double *x);
-
-// double f(feRecovery *rec, double *x);
-// double fx(feRecovery *rec, double *x);
-// double fy(feRecovery *rec, double *x);
-// double fxx(feRecovery *rec, double *x);
-// double fxy(feRecovery *rec, double *x);
-// double fyx(feRecovery *rec, double *x);
-// double fyy(feRecovery *rec, double *x);
-// double fxxx(feRecovery *rec, double *x);
-// double fxxy(feRecovery *rec, double *x);
-// double fxyx(feRecovery *rec, double *x);
-// double fxyy(feRecovery *rec, double *x);
-// double fyxx(feRecovery *rec, double *x);
-// double fyxy(feRecovery *rec, double *x);
-// double fyyx(feRecovery *rec, double *x);
-// double fyyy(feRecovery *rec, double *x);
 
 void computeDirectionFieldFromGradient(double *x, double &C, double &S, double tol, feRecovery *rec,
                                        FILE *F_grad = nullptr, FILE *F_iso = nullptr);
@@ -74,7 +67,11 @@ void computeDirectionFieldFromHessian(double *x, double &C, double &S, double to
                                       FILE *F = nullptr);
 
 void smoothDirections(std::map<size_t, double> &C, std::map<size_t, double> &S, int nIter = 100,
-                      double tol = 0.1);
+                      double tol = 0.1, bool plot = false);
+
+void smoothDirections(const std::vector<std::size_t> &nodeTags,
+                      const std::vector<double> &coord,
+                      std::map<int, MetricTensor> &metrics, int nIter = 100, double tol = 0.1);
 
 void smoothSizes(std::map<size_t, double> &L1, std::map<size_t, double> &L2, int nIter, double tol);
 
@@ -96,79 +93,25 @@ void metricHechtKuate(int nbpoints, double *x, double *y, double &A, double &B, 
 #if defined(HAVE_SOPLEX)
 bool computeMetricLogSimplexStraight(const double *x, const std::vector<double> &errorCoefficients,
                                      const int degree, const int nThetaPerQuadrant,
-                                     const int maxIter, const double tol, MetricTensor &Qres,
+                                     const int maxIter, const double tol, 
+                                     const bool applyBinomialCoefficients, MetricTensor &Qres,
                                      int &numIter, linearProblem &myLP);
+
+bool logSimplexOneIteration(const double *x, const std::vector<double> &errorCoefficients,
+                            const int degree, const int nThetaPerQuadrant, const bool applyBinomialCoefficients,
+                            MetricTensor &Qres, linearProblem &myLP);
 
 bool computeMetricLogSimplexCurved(const int vertex, double *x, double directionGradient[2], feNewRecovery *rec,
                                    MetricTensor &Qres, int maxIter, int nThetaPerQuadrant,
                                    double tol, int &numIter, linearProblem &myLP);
 #endif
 
-// int computePointsUsingScaledCrossFieldPlanarP2(
-//   const char *modelForMetric,
-//   const char *modelForMesh,
-//   int VIEW_TAG,
-//   int faceTag,
-//   std::vector<double> &pts,
-//   // double computeInterpolationError(const int whichElements[2],
-//   //                                  const int iVertexToMove_globalTag,
-//   //                                  const int iVertexToMove_localTag[2],
-//   //                                  double *modifiedCoord),
-//   double computeInterpolationError(const edgeAndVertexData &data, double *modifiedCoord),
-//   void computeInterpolationErrorGradient(const edgeAndVertexData &data,
-//                                          const double *modifiedCoord,
-//                                          double gradient[2]),
-//   void applyCurvatureToFeMesh(const edgeAndVertexData &data, const double *modifiedCoord),
-//   void getMidnodeTags(const SPoint2 edge[2], const double tol, int &elementTag, int &localTag, int &globalTag),
-//   void getPolyMeshVertexTags(const SPoint2 &p, const double tol, 
-//                              std::vector<int> &elementTags, std::vector<int> &localTags, int &globalTag),
-//   bool inside(double *, bool), double pointwiseError(double *),
-//   int onlyGenerateVertices,
-//   double evaluateFieldFromRecovery(int, void *, double *),
-//   void *recoveryUserPointer,
+void reconstructManifoldFromMetric(const std::vector<std::size_t> &nodeTags,
+  const std::vector<double> &coord,
+  const std::map<int, MetricTensor> &metricsAtNodeTags,
+  const std::vector<int> sequentialTag2nodeTag,
+  feNewRecovery *recoveredField);
 
-//   void interpolateMetricP1WithDerivativesWrapper(void *, const double *, Eigen::Matrix2d &,
-//                                                  Eigen::Matrix2d &, Eigen::Matrix2d &),
-
-//   void interpolateMetricP1Wrapper(void *, const double *, Eigen::Matrix2d &, Eigen::Matrix2d &,
-//                                   Eigen::Matrix2d &),
-
-//   void interpolateMetricAndDerivativeOnP2EdgeWrapper(
-//     void *, const double, const Eigen::Matrix2d &, const Eigen::Matrix2d &, const Eigen::Matrix2d &,
-//     const Eigen::Matrix2d &, const Eigen::Matrix2d &, Eigen::Matrix2d &, Eigen::Matrix2d &,
-//     Eigen::Matrix2d &),
-
-//   void interpolateMetricP1Wrapper1D(void *, const double *, const double *, Eigen::Matrix2d &,
-//                                     Eigen::Matrix2d &),
-
-//   void interpolateMetricAndDerivativeOnP2EdgeWrapper1D(
-//     void *, const double, const Eigen::Matrix2d &, const Eigen::Matrix2d &, const Eigen::Matrix2d &,
-//     const Eigen::Matrix2d &, Eigen::Matrix2d &, Eigen::Matrix2d &),
-
-//   void *metric);
-
-    // Old example call:
-    // createCurvedMesh(
-    //   options.modelForMetric.c_str(),
-    //   options.modelForMetric.c_str(),
-    //   metricField.getMetricViewTag(),
-    //   faceTag,
-    //   pts,
-    //   computeInterpolationError,
-    //   computeInterpolationErrorGradient,
-    //   applyCurvatureToFeMesh,
-    //   getMidnodeTags,
-    //   getPolyMeshVertexTags,
-    //   options.insideCallback,
-    //   nullptr,
-    //   onlyGenerateVertices, 
-    //   evaluateFieldFromRecoveryCallback, 
-    //   (void *) oldRecovery,
-    //   interpolateMetricP1WithDerivativesWrapper,
-    //   interpolateMetricP1Wrapper,
-    //   interpolateMetricAndDerivativeOnP2EdgeWrapper,
-    //   interpolateMetricP1Wrapper1D,
-    //   interpolateMetricAndDerivativeOnP2EdgeWrapper1D,
-    //   (void *) &metricField);
+void computeGraphSurfaceMetric(const double *x, const double *df, const double *d2f, const double *d3f, MetricTensor &M, FILE *file);
 
 #endif

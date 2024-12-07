@@ -51,17 +51,20 @@ protected:
   // The linear forms with only a residual
   std::vector<feBilinearForm *> _formResiduals;
 
-  // Sparse CRS structure
-  feEZCompressedRowStorage *_EZCRS;
+  // // Sparse CRS structure
+  // feEZCompressedRowStorage *_EZCRS;
 
   // Recompute the jacobian matrix at current Newton-Raphson step?
   bool recomputeMatrix;
 
+  // Reorder the matrix?
+  bool _permute = false;
+
   // Options for iterative solver:
-  double _rel_tol = 1e-6;
+  double _rel_tol = 1e-8;
   double _abs_tol = 1e-14;
   double _div_tol = 1e6;
-  int _max_iter = 5e3;
+  int _max_iter = 1e4;
 
   // Display and export options:
   bool _displayMatrixInConsole = false;
@@ -74,7 +77,7 @@ public:
   // Create an abstract linear system. Do not call directly,
   // call the derived constructors instead.
   feLinearSystem(std::vector<feBilinearForm *> bilinearForms);
-  virtual ~feLinearSystem() {}
+  virtual ~feLinearSystem();
 
   // Return the size m of the linear system (dimension of the square matrix m x m)
   virtual feInt getSystemSize() = 0;
@@ -93,6 +96,9 @@ public:
   bool getRecomputeStatus() { return recomputeMatrix; }
   void setRecomputeStatus(bool status) { recomputeMatrix = status; }
 
+  bool getReorderingStatus() { return _permute; }
+  void setReorderingStatus(bool status) { _permute = status; }
+
   virtual void getRHSMaxNorm(double *norm) = 0;
   virtual void getResidualMaxNorm(double *norm) = 0;
 
@@ -107,6 +113,8 @@ public:
   virtual void assembleResiduals(feSolution *sol) = 0;
 
   virtual void constrainEssentialComponents(feSolution *sol) = 0;
+
+  virtual void permute() = 0;
 
   // Solve the linear system Ax = b, which is J*du = -NL(u) (or -R(u)) in a Newton step
   //
@@ -168,6 +176,13 @@ protected:
   KSP ksp;
   // Preconditioner (default is ILU(0))
   PC preconditioner;
+
+  // Row ownership arrays (bounds and number of rows owned by each MPI process)
+  int *_ownedLowerBounds, *_ownedUpperBounds, *_numOwnedRows;
+  // Owned solution buffer
+  // Currently each process knows the whole solution vector,
+  // but only updates its owned portion, then the vector is Allgatherv'ed
+  double *_ownedSolution;
 #endif
 
 public:
@@ -194,6 +209,7 @@ public:
   void assembleMatrices(feSolution *sol);
   void assembleResiduals(feSolution *sol);
   void constrainEssentialComponents(feSolution *sol);
+  void permute();
   bool solve(double *normSolution, double *normRHS, double *normResidualAxMinusb, int *nIter);
   void correctSolution(feSolution *sol);
   void assignResidualToDCResidual(feSolutionContainer *solContainer);
@@ -204,7 +220,9 @@ public:
 
 private:
   void initialize();
-  void finalize();
+  void initializeSequential();
+  int initializeMPI();
+  int initializeMPI_dummyFromPetscExample();
 };
 
 //
@@ -221,11 +239,29 @@ protected:
   double *residu;
   bool symbolicFactorization = true;
 
-  // CRS data for Pardiso
-  PardisoInt nz;
-  PardisoInt *Ap; // dimension ordre+1, IA
-  PardisoInt *Aj; // dimension nz, JA
-  double *Ax; // dimension nz
+  // CRS (compressed row storage) data for Pardiso
+  PardisoInt _nnz;
+  PardisoInt *_mat_ia; // dimension _nInc+1, IA
+  PardisoInt *_mat_ja; // dimension _nnz, JA
+  double *_mat_values; // dimension _nnz
+
+  // Row ownership arrays (bounds and number of rows owned by each MPI process)
+  // For single process run, these are the data for the whole matrix
+  // stored on the process.
+  // Ownership can be determined as follows:
+  //  - 0 : Even split of rows between processes according to PetscSplitOwnership()'s formula:
+  //        n = N/size + ((N % size) > rank)
+  //    Independent of the number of nnz per row, thus 
+  //    does not guarantee a load-balancing distribution.
+  //  - 1 : Even split of nonzero entries in the matrix (how is the RHS split then?)
+  //    Causes overlapping rows in general between consecutive processes,
+  //    as the split will probably happen in the middle of a row
+  //  - 2 : Even split of nonzero entries without overlapping rows
+  int _ownershipSplit = 0;
+  PardisoInt _numOwnedRows, _numOwnedNNZ;
+  PardisoInt *_ownedLowerBounds, *_ownedUpperBounds, *_numOwnedRowsOnAllProc;
+  // Owned solution buffer
+  double *_ownedSolution;
 
   // Data to speedup DOF constraining:
   // For each row, store the number and positions of its occurences in JA
@@ -235,7 +271,6 @@ protected:
   std::vector<std::set<feInt>> _posOccurencesInJa;
 
   // Pardiso options
-  feInt iparm12 = 1; // Modification de IPARM[12]
   void *PT[64];
   PardisoInt MYTPE;
   PardisoInt IPARM[64];
@@ -288,16 +323,17 @@ public:
   void assembleMatrices(feSolution *sol);
   void assembleResiduals(feSolution *sol);
   void constrainEssentialComponents(feSolution *sol);
+  void permute();
   bool solve(double *normDx, double *normResidual, double *normAxb, int *nIter);
   void assignResidualToDCResidual(feSolutionContainer *solContainer);
   void applyCorrectionToResidual(double coeff, std::vector<double> &d);
   void correctSolution(feSolution *sol);
-  void correctSolution(double *sol);
   void viewMatrix();
-  void viewRHS(){};
-  void viewResidual(){};
+  void viewRHS();
+  void viewResidual();
 
 private:
+  void setOwnershipAndAllocate(void);
   void mklSymbolicFactorization(void);
   void mklFactorization(void);
   void mklSolve(void);

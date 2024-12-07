@@ -1,6 +1,17 @@
 #include "feSolutionContainer.h"
 #include "feLinearSystem.h"
 
+feSolutionContainer::feSolutionContainer(int nSol, double tn, int nDOF)
+  : _nDofs(nDOF), _nSol(nSol)
+{
+  _t.resize(_nSol);
+  _t[0] = tn;
+  _sol.resize(_nSol);
+  _fResidual.resize(_nSol);
+  _cn.resize(3);
+  _d.resize(_nDofs);
+}
+
 feSolutionContainer::feSolutionContainer(int nSol, double tn, feMetaNumber *metaNumber)
   : _nDofs(metaNumber->getNbDOFs()), _nSol(nSol)
 {
@@ -14,19 +25,38 @@ feSolutionContainer::feSolutionContainer(int nSol, double tn, feMetaNumber *meta
 
 void feSolutionContainer::copy(const feSolutionContainer &other) 
 {
-  std::copy(other._t.begin(), other._t.end(), std::back_inserter(this->_t));
-  std::copy(other._sol.begin(), other._sol.end(), std::back_inserter(this->_sol));
+  // std::copy(other._t.begin(), other._t.end(), std::back_inserter(this->_t));
+  // std::copy(other._sol.begin(), other._sol.end(), std::back_inserter(this->_sol));
+  // _sol.resize(other._sol.size());
+  // for(size_t i = 0; i < other._sol.size(); ++i) {
+  //   this->_sol[i].resize(other._sol[i].size());
+  //   feInfo("Copying solution with %d dofs", other._sol[i].size());
+  //   for(size_t j = 0; j < other._sol[i].size(); ++j) {
+  //     this->_sol[i][j] = other._sol[i][j];
+  //   }
+  // }
+  // std::copy(other._fResidual.begin(), other._fResidual.end(), std::back_inserter(this->_fResidual));
+  // std::copy(other._cn.begin(), other._cn.end(), std::back_inserter(this->_cn));
+  // std::copy(other._d.begin(), other._d.end(), std::back_inserter(this->_d));
+
+  _nDofs = other._nDofs;
+  _nSol = other._nSol;
+
+  this->_t.assign(other._t.begin(), other._t.end());
+  this->_cn.assign(other._cn.begin(), other._cn.end());
+  this->_d.assign(other._d.begin(), other._d.end());
+
+  // this->sol.assign(std::copy(other._sol.begin(), other._sol.end());
   _sol.resize(other._sol.size());
   for(size_t i = 0; i < other._sol.size(); ++i) {
-    this->_sol[i].resize(other._sol[i].size());
+    // this->_sol[i].resize(other._sol[i].size());
     feInfo("Copying solution with %d dofs", other._sol[i].size());
-    for(size_t j = 0; j < other._sol[i].size(); ++j) {
-      this->_sol[i][j] = other._sol[i][j];
-    }
+    // for(size_t j = 0; j < other._sol[i].size(); ++j) {
+    //   this->_sol[i][j] = other._sol[i][j];
+    // }
+    this->_sol[i].assign(other._sol[i].begin(), other._sol[i].end());
   }
-  std::copy(other._fResidual.begin(), other._fResidual.end(), std::back_inserter(this->_fResidual));
-  std::copy(other._cn.begin(), other._cn.end(), std::back_inserter(this->_cn));
-  std::copy(other._d.begin(), other._d.end(), std::back_inserter(this->_d));
+  this->_fResidual.assign(other._fResidual.begin(), other._fResidual.end());
 }
 
 void feSolutionContainer::initialize(feSolution *sol, feMesh *mesh, feMetaNumber *metaNumber)

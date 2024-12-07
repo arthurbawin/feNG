@@ -2,7 +2,7 @@
 
 extern int FE_VERBOSE;
 
-extern bool petscWasInitialized;
+extern bool wasInitialized;
 
 feStatus createLinearSystem(feLinearSystem *&system, linearSolverType type,
                             std::vector<feBilinearForm *> bilinearForms, int numUnknowns, int argc,
@@ -42,10 +42,10 @@ feStatus createLinearSystem(feLinearSystem *&system, linearSolverType type,
         return feErrorMsg(FE_STATUS_ERROR,
                           "Please provide argc and argv to create a PETSc linear system.");
       }
-      if(!petscWasInitialized) {
+      if(!wasInitialized) {
         return feErrorMsg(FE_STATUS_ERROR,
                           "PETSc was not initialized : please initialize PETSc first by calling "
-                          "petscInitialize(argc, argv) as the very first line of your program.");
+                          "initialize(argc, argv) as the very first line of your program.");
       }
       system = new feLinearSystemPETSc(argc, argv, bilinearForms, numUnknowns);
       break;
@@ -86,3 +86,12 @@ feLinearSystem::feLinearSystem(std::vector<feBilinearForm *> bilinearForms) : re
     }
   }
 };
+
+feLinearSystem::~feLinearSystem()
+{
+  // Delete the copies of the (bi)linear forms
+#if defined(HAVE_OMP)
+  for(auto *fCpy : _formResiduals)
+    delete fCpy;
+#endif
+}

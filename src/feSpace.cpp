@@ -88,10 +88,13 @@ feStatus createFiniteElementSpace(feSpace *&space, feMesh *mesh, const elementTy
           case 3:
             space = new feSpaceVecP3<2>(mesh, fieldName, cncGeoID, (feVectorFunction *)fct);
             break;
+          case 4:
+            space = new feSpaceVecP4<2>(mesh, fieldName, cncGeoID, (feVectorFunction *)fct);
+            break;
           default:
             return feErrorMsg(
               FE_STATUS_ERROR,
-              "No vector-valued finite element space implemented for deg > 2 or = 0.");
+              "No vector-valued Lagrange finite element space implemented for deg > 4 or = 0.");
         }
       } else if(element == elementType::DG_LAGRANGE) {
         feInfoCond(FE_VERBOSE > 0, "\t\t\tFinite element: Discontinuous Lagrange");
@@ -163,10 +166,13 @@ feStatus createFiniteElementSpace(feSpace *&space, feMesh *mesh, const elementTy
           case 3:
             space = new feSpaceVecTriP3<2>(mesh, fieldName, cncGeoID, (feVectorFunction *)fct);
             break;
+          case 4:
+            space = new feSpaceVecTriP4<2>(mesh, fieldName, cncGeoID, (feVectorFunction *)fct);
+            break;
           default:
             return feErrorMsg(
               FE_STATUS_ERROR,
-              "No vector-valued finite element space implemented for deg > 2 or = 0.");
+              "No vector-valued finite element space implemented for deg > 4 or = 0.");
         }
       } else if(element == elementType::CROUZEIX_RAVIART) {
         feInfoCond(FE_VERBOSE > 0, "\t\t\tFinite element: non-conforming Crouzeix-Raviart");
@@ -227,6 +233,12 @@ feSpace::feSpace(const int dimension, feMesh *mesh, const std::string &fieldID,
     _cnc = mesh->getCncGeoByName(cncGeoID);
     _cncGeoTag = mesh->getCncGeoTag(cncGeoID);
   }
+}
+
+feSpace::~feSpace()
+{
+  // if(_scalarFct) delete _scalarFct;
+  // if(_vectorFct) delete _vectorFct;
 }
 
 feScalarSpace::feScalarSpace(const int dimension, feMesh *mesh, const std::string &fieldID,
@@ -334,7 +346,10 @@ feStatus feSpace::setQuadratureRule(feQuadrature *rule)
   }
 
   if(_isGeometricInterpolant) {
-    feStatus s = this->getCncGeo()->computeJacobians();
+    ////////////////////////////////////////////////////////////////////////
+    _ignoreNegativeJacobianWarning = true;
+    ////////////////////////////////////////////////////////////////////////
+    feStatus s = this->getCncGeo()->computeJacobians(_ignoreNegativeJacobianWarning);
     if(s != FE_STATUS_OK) {
       return s;
     }

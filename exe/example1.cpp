@@ -9,6 +9,7 @@
 
 */
 
+// #include "mpi.h"
 #include "feAPI.h"
 
 double fSol(const double t, const std::vector<double> &pos, const std::vector<double> &par)
@@ -34,10 +35,11 @@ int main(int argc, char **argv)
   petscInitialize(argc, argv);
 
   // Set the default parameters.
-  const char *meshFile = "../data/square1.msh";
+  const char *meshFile = "../data/square8.msh";
   int verbosity = 2;
-  int order = 1;
+  int order = 2;
   int degreeQuadrature = 4;
+  const char *linearSolverType = "PETSc";
 
   // Create an option parser and parse the command line arguments.
   // The parser is not compatible with the PETSc options for now.
@@ -50,6 +52,7 @@ int main(int argc, char **argv)
   options.addOption(&order, "-o", "--order", "Finite element space order (polynomial degree)");
   options.addOption(&degreeQuadrature, "-dquad", "--degreeQuadrature", "Degree of the quadrature");
   options.addOption(&verbosity, "-v", "--verbosity", "Verbosity level");
+  options.addOption(&linearSolverType, "-linsol", "--linear_solver_type", "Choice of linear solver (PETSc or MKL Pardiso)");
   feCheck(options.parse());
 
   // Set the global verbosity level :
@@ -121,8 +124,14 @@ int main(int argc, char **argv)
   // performed in the solve step below ("makeSteps"). Two linear solvers are available:
   // MKL Pardiso (direct solver) and PETSc (collection of iterative solvers).
   feLinearSystem *system;
-  // feCheck(createLinearSystem(system, PETSC, {diff, source}, numbering.getNbUnknowns(), argc, argv));
-  feCheck(createLinearSystem(system, MKLPARDISO, {diff, source}, numbering.getNbUnknowns()));
+  if(std::string(linearSolverType).compare("PETSc") == 0) {
+    feCheck(createLinearSystem(system, PETSC, {diff, source}, numbering.getNbUnknowns(), argc, argv));
+  } else if(std::string(linearSolverType).compare("Pardiso") == 0) {
+    feCheck(createLinearSystem(system, MKLPARDISO, {diff, source}, numbering.getNbUnknowns()));
+  } else {
+    feErrorMsg(FE_STATUS_ERROR, "Unrecognized linear solver type: %s", linearSolverType);
+    return 1;
+  }
 
   // Post-processing tools to compute norms and whatnot
   feNorm normU(L2_ERROR, {uDomaine}, &sol, &funSol);
@@ -134,7 +143,8 @@ int main(int argc, char **argv)
   feCheck(createVisualizationExporter(exporter, VTK, &numbering, &sol, &mesh, spaces));
   int exportEveryNSteps = 1;
   std::string vtkFileRoot = "output";
-  feExportData exportData = {exporter, exportEveryNSteps, vtkFileRoot};
+  // feExportData exportData = {exporter, exportEveryNSteps, vtkFileRoot};
+  feExportData exportData = {nullptr, 1, ""};
 
   // Solve the discrete problem. Initialize a TimeIntegrator object and tolerances on the
   // Newton-Raphson nonlinear solver (tolerance on the solution correction dx, tolerance on the

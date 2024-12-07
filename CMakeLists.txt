@@ -33,9 +33,9 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/lib)
   #                     #"-Wall;-Wextra;-O3;-ansi;-m64"
   #                     )
 
-# add_compile_options(-pedantic)
-# add_compile_options(-pedantic-errors)
-add_compile_options(-Wreturn-type)
+add_compile_options(-pedantic)
+add_compile_options(-pedantic-errors)
+add_compile_options(-Werror=return-type)
 add_compile_options(-Wunused-variable)
 add_compile_options(-Wdisabled-optimization)
 
@@ -57,10 +57,20 @@ macro(feNG_add_library LIBNAME SRC API_H)
 endmacro()
 
 #  Macro pour ajouter un executable
+# (FIXME: alglib and other contrib libraries should be added to feNG)
 macro(feNG_add_executable EXENAME SRC LIBS)
   add_executable(${EXENAME} ${SRC})
-  target_link_libraries(${EXENAME} ${LIBS} feNG ${feNG_EXTERNAL_LIBS})
+  target_link_libraries(${EXENAME} ${LIBS} feNG alglib ${feNG_EXTERNAL_LIBS})
   install(TARGETS ${EXENAME} DESTINATION bin)
+endmacro()
+
+# Macro pour ajouter des dependances dans contrib/
+macro(append_feng_src DIRNAME FILES)
+  foreach(FILE ${FILES})
+    list(APPEND LIST ${DIRNAME}/${FILE})
+  endforeach()
+  set(GMSH_SRC ${GMSH_SRC};${LIST} PARENT_SCOPE)
+  set(GMSH_DIRS ${GMSH_DIRS};${DIRNAME} PARENT_SCOPE)
 endmacro()
 
 if(CMAKE_BUILD_TYPE STREQUAL Debug)
@@ -235,6 +245,10 @@ endif()
 # See also src/CmakeLists.txt for the .cpp files
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/contrib/gmsh)
 
+# AlgLib for unconstrained optimization
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/contrib/alglib)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/contrib/alglib)
+
 if(ENABLE_PROFILER)
   # For profiling with Google Perftools
   list(APPEND feNG_EXTERNAL_LIBS "-Wl,-no-as-needed,-lprofiler")
@@ -249,6 +263,19 @@ if(ENABLE_GLFW)
   add_definitions("-DHAVE_GLFW")
 endif()
 
+# list(APPEND feNG_EXTERNAL_LIBS "-m64  -L${MKLROOT}/lib/intel64 -Wl,--no-as-needed -lmkl_intel_ilp64 -lmkl_intel_thread -lmkl_core -lmkl_blacs_openmpi_ilp64 -liomp5 -lpthread -lm -ldl")
+
+if(ENABLE_MPI AND ENABLE_MKL)
+  # Temporary fix to add the mpi compilation flags for MKL
+  list(APPEND feNG_EXTERNAL_LIBS "-lmkl_blacs_openmpi_ilp64")
+  # list(APPEND feNG_EXTERNAL_LIBS "-lmkl_blacs_intelmpi_ilp64")
+  # list(APPEND feNG_EXTERNAL_LIBS "-lmkl_intel_ilp64 -lmkl_intel_thread -lmkl_core -lmkl_blacs_openmpi_ilp64 -liomp5 -lpthread -lm -ldl")
+  # list(APPEND feNG_EXTERNAL_LIBS "-m64  -L/intel/mkl/lib/intel64 -Wl,--no-as-needed -lmkl_intel_ilp64 -lmkl_gnu_thread -lmkl_core -lmkl_blacs_openmpi_ilp64 -lgomp -lpthread -lm -ldl")
+  # list(APPEND feNG_EXTERNAL_LIBS "-march=native")
+  # list(APPEND feNG_EXTERNAL_LIBS "-DMKL_ILP64 -m64 -I/home/bawina/intel/compilers_and_libraries_2020.4.304/linux/mkl/include")
+  # list(APPEND feNG_EXTERNAL_LIBS "-L/home/bawina/intel/compilers_and_libraries_2020.4.304/linux/mkl/lib/intel64 -Wl,--no-as-needed -lmkl_blacs_openmpi_ilp64 -lmkl_intel_ilp64 -lmkl_gnu_thread -lmkl_core -lgomp -lpthread -lm -ldl")
+endif()
+ 
 MESSAGE(STATUS "External libs for feNG : ${feNG_EXTERNAL_LIBS}")
 
 add_subdirectory(src)

@@ -5,10 +5,11 @@
 #include "feMessage.h"
 #include "feCncGeo.h"
 #include "feSpace.h"
+
 #include "feVertex.h"
 #include "feEdge.h"
-#include "feElement.h"
 #include "feTriangle.h"
+
 #include "rtree.h"
 
 #if defined(HAVE_GMSH)
@@ -59,10 +60,22 @@ public:
   // Unordered vector of edges
   std::vector<const Edge *> _edgesVec;
   std::map<int, const Edge *> _edgesMap;
+  // The P2 edge vertex for each edge, if curved. Empty otherwise.
+  std::map<const Edge*, Vertex*> _edge2midnode;
   // The P2 displacement vector xMid - (x0+x1)/2 for each edge
-  std::map<const Edge*, double> _edge2alpha;
+  std::map<const Edge*, double[2]> _edge2alpha;
   // Mesh elements, hardcoded triangles for now
   std::vector<Triangle *> _elements;
+
+// ///////////////////////////////////////////////
+// protected:
+//   // The elements by dimension.
+//   // The lower dimensional elements are created as boundaries of the higher-dimensional elements.
+//   // std::vector<Vertex> _vertices_vec;
+//   std::vector<Edge> _edges_vec;
+//   std::vector<Triangle> _triangles_vec;
+//   std::vector<Tetrahedron> _tetrahedra_vec;
+// ///////////////////////////////////////////////
 
 public:
   // The constructor of the base class should not be called directly. Instead,
@@ -91,7 +104,9 @@ public:
   const Edge *getEdge(int edgeTag) { return _edgesMap[edgeTag]; }
   std::vector<Vertex> &getVertices() { return _vertices; }
   std::vector<const Edge *> &getEdges() { return _edgesVec; }
-  double getMaxEdgeDisplacement();
+
+  void recomputeDisplacementVectors();
+  double getMaxNormEdgeDisplacement();
   double getLpNormEdgeDisplacement(int p);
 
   // Write in geoCoord the physical coordinates of the nodes on the
@@ -346,8 +361,14 @@ protected:
   // might be lost after remeshing.
   mapType _physicalEntitiesDescription;
 
+  // FIXME: This should be removed
+  // Gmsh vertex tags for the elements on 1, 2, and 3 dimensional entities,
+  // in a contiguous array.
+  // Unused for now
   std::vector<int> _globalCurvesNodeConnectivity;
   std::vector<int> _globalSurfacesNodeConnectivity;
+  std::vector<int> _globalVolumesNodeConnectivity;
+
   std::vector<int> _sequentialNodeToGmshNode;
 
   // The number of Gmsh's Points, Curves, Surfaces and Volumes
@@ -429,8 +450,13 @@ public:
                  bool isBackmeshP2,
                  bool curveMMGmesh,
                  curveToMinimize target,
-                 bool generateAnisoMeshBeforeCurving = true, 
-                 feRecovery *oldRecovery = nullptr);
+                 bool generateAnisoMeshBeforeCurving
+#if defined(HAVE_GMSH)
+                 ,
+                 directionField targetDirectionField,
+                 vertexSpawning targetVertexSpawning
+#endif
+                 );
 
   void drawConnectivityToPOSfile(const std::string &cncName, const std::string &fileName);
 };

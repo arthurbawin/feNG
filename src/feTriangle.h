@@ -1,9 +1,9 @@
 #ifndef _FETRIANGLE_
 #define _FETRIANGLE_
 
+#include "feNG.h"
 #include "feVertex.h"
-
-#include <cmath>
+#include "feEdge.h"
 
 // Adapted from Gmsh's MTriangle
 
@@ -13,10 +13,29 @@ protected:
   int _tag; // Global (unique) tag in the mesh
   int _localTag; // Local tag on its Physical Entity
   int _pTag;
+  Vertex *_vlin[3]; // The vertices of the underlying linear triangle to a linear or high-order triangle
+
+  // Boundary is made of 3 edges and their orientation (+1 or -1 for reversed)
+  Edge* _edges[3];
+  int _edgesOrientation[3];
 
 public:
+  // The former constructor, which may be removed
   Triangle(int tag = -1, int localTag = -1, int pTag = -1)
     : _tag(tag), _localTag(localTag), _pTag(pTag){}
+  //
+  // Create a generic (topological) triangle by providing its 3 vertices and a unique tag
+  // The derived triangle can be linear, in which case they coincide,
+  // or high-order, in which case this base class is the underlying linear triangle.
+  // Used to create the Edges as boundary entities.
+  //
+  Triangle(Vertex *v0, Vertex *v1, Vertex *v2, int tag = -1)
+    : _tag(tag), _localTag(-1), _pTag(-1)
+    {
+      _vlin[0] = v0;
+      _vlin[1] = v1;
+      _vlin[2] = v2;
+    }
   ~Triangle() {}
 
   int getTag() { return _tag; }
@@ -52,10 +71,16 @@ public:
     return true;
   }
 
+  // Create the topological edges of the boundary of this triangle.
+  // New edges (if any) are added to the set of edges.
+  // Returns the number of edges after creation of the boundary,
+  // that is, the size of meshEdges.
+  int createBoundary(std::set<Edge, EdgeLessThan> &meshEdges, int numEdges);
+
 protected:
   // Compute the reference (u,v) coordinates for P1 triangle.
   // If derived class is P1 triangle, it is the true (u,v) coordinates.
-  // If dervied class is P2 traignel, it is the (u,v) coordinates
+  // If dervied class is P2 triangle, it is the (u,v) coordinates
   // of the P1 triangle formed by the 3 first vertices.
   void getP1ReferenceCoordinates(double xyz[3], double uvw[3], Vertex **v);
 };
@@ -86,6 +111,10 @@ class TriangleP2 : public Triangle
 protected:
   Vertex *_v[6];
 
+  // Localization falls back to P1 case if the triangle is actually linear
+  double _tolP2Straight = 1e-10;
+  bool _isP2Straight = false;
+
 public:
   TriangleP2(Vertex *v0, Vertex *v1, Vertex *v2, Vertex *v3, Vertex *v4, Vertex *v5,
              int tag = -1, int localTag = -1, int pTag = -1)
@@ -97,6 +126,14 @@ public:
     _v[3] = v3;
     _v[4] = v4;
     _v[5] = v5;
+
+    // Check if triangle is actually linear
+    double dist1 = sqrt( (v3->x() - (v0->x()+v1->x())/2.) * (v3->x() - (v0->x()+v1->x())/2.) + (v3->y() - (v0->y()+v1->y())/2.) * (v3->y() - (v0->y()+v1->y())/2.) );
+    double dist2 = sqrt( (v4->x() - (v1->x()+v2->x())/2.) * (v4->x() - (v1->x()+v2->x())/2.) + (v4->y() - (v1->y()+v2->y())/2.) * (v4->y() - (v1->y()+v2->y())/2.) );
+    double dist3 = sqrt( (v5->x() - (v2->x()+v0->x())/2.) * (v5->x() - (v2->x()+v0->x())/2.) + (v5->y() - (v2->y()+v0->y())/2.) * (v5->y() - (v2->y()+v0->y())/2.) );
+    if(dist1 < _tolP2Straight && dist2 < _tolP2Straight && dist3 < _tolP2Straight) {
+      _isP2Straight = true;
+    }
   }
 
   int getNumVertices(){ return 6; };

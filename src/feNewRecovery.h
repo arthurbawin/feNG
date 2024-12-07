@@ -56,6 +56,8 @@ protected:
   std::map<int, std::set<int> > vertToVerts;
   // A set of interior vertices tags for boundary mesh vertices (the interior vertices of its elem patch)
   std::map<int, std::set<int> > vertToInteriorVerts;
+  // A set of vertices tags for each mesh vertex - Only the first layer of adjacent vertices
+  std::map<int, std::set<int> > vertToVerts_singleLayer;
   // A set of element tags for each mesh edge
   std::map<int, std::set<int> > edgeToElems;
 
@@ -74,6 +76,7 @@ public:
   std::vector<int> &getVertices() { return _vertices; }
   std::map<int, std::set<int>> &getElementPatches() { return vertToElems; };
   std::map<int, std::set<int>> &getVerticesPatches() { return vertToVerts; };
+  std::map<int, std::set<int>> &getVerticesPatches_singleLayer() { return vertToVerts_singleLayer; };
   std::set<int> &getPatch(int iVertex) { return vertToElems[iVertex]; }
   std::set<int> &getPatchOfInteriorVertices(int iVertex) { return vertToInteriorVerts.at(iVertex); }
   std::set<int> &getEdgePatch(int iEdge) { return edgeToElems[iEdge]; }
@@ -103,7 +106,7 @@ public:
   int _componentToRecover = 0;
   feSpace *_geoSpace;
 
-  feNewPatch *_patch;
+  feNewPatch *_patch = nullptr;
 
   std::map<int, std::map<int, std::vector<double> > > recoveryCoeff; // #vert : {#rec , coeffs}
 
@@ -177,7 +180,8 @@ public:
                 bool useOriginalZhangNagaPatchDefinition = false,
                 bool append = false,
                 feMetric *metricField = nullptr,
-                feMetaNumber *numbering = nullptr);
+                feMetaNumber *numbering = nullptr,
+                bool skipRecovery = false);
   feNewRecovery(feSpace *space, feMesh *mesh, std::string recoveryFile);
   ~feNewRecovery() { delete _patch; }
 
@@ -188,6 +192,8 @@ public:
   void setVectorComponentToRecover(int component) { _componentToRecover = component; };
 
   std::vector<int> &getVertices() { return _patch->getVertices(); }
+  std::map<int, std::set<int>> &getVerticesPatches() { return _patch->getVerticesPatches(); };
+  std::map<int, std::set<int>> &getVerticesPatches_singleLayer() { return _patch->getVerticesPatches_singleLayer(); };
 
   // std::vector<int> &getXExponentsRecovery() { return _expXRecovery; }
   // std::vector<int> &getYExponentsRecovery() { return _expYRecovery; }
@@ -209,6 +215,13 @@ public:
   void recomputeLeastSquareMatrix(const int vertex);
   void recomputeRHSAndSolve(const int vertex);
   void recomputeFirstDerivative(const int vertex);
+
+  // Reconstruct gradient of metric tensor
+  void computeRHSAndSolve_noIntegral_inputMetric(
+    const std::map<int, int> &patchVertices2nodeTags,
+    const std::map<int, MetricTensor> &inputMetrics,
+    std::map<int, MetricTensor> &dMdx,
+    std::map<int, MetricTensor> &dMdy);
 
 private:
   void setDimensions();

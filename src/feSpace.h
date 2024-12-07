@@ -92,6 +92,8 @@ protected:
 
   bool _isGeometricInterpolant = false;
 
+  bool _ignoreNegativeJacobianWarning = false;
+
   int _dim;
 
   int _nComponents = 1;
@@ -152,11 +154,11 @@ public:
   feSpace(const int dimension, feMesh *mesh = nullptr, const std::string &fieldID = "",
           const std::string &cncGeoID = "", feFunction *scalarField = nullptr,
           feVectorFunction *vectorField = nullptr, const bool useGlobalShapeFunctions = false);
-  virtual ~feSpace(){};
+  virtual ~feSpace();
 
-  const std::string &getFieldID() { return _fieldID; }
+  const std::string &getFieldID() const { return _fieldID; }
   int getFieldTag() { return _fieldTag; }
-  const std::string &getCncGeoID() { return _cncGeoID; }
+  const std::string &getCncGeoID() const { return _cncGeoID; }
   int getCncGeoTag() { return _cncGeoTag; }
 
   // Assign the tag of a geometric space after the mesh has been created
@@ -170,7 +172,7 @@ public:
   void setNumberingPtr(feNumber *numbering) { _numbering = numbering; }
 
   // Return the number of field components (1 for scalar finite element, 1/2/3 for vector element)
-  int getNumComponents() { return _nComponents; };
+  int getNumComponents() const { return _nComponents; };
 
   void setEssentialComponent(int iComponent, bool flag)
   {
@@ -195,14 +197,14 @@ public:
   void useGlobalFunctions(bool flag) { _useGlobalShapeFunctions = flag; }
 
   // Return the number of shape functions (DOF) on an element
-  virtual int getNumFunctions() = 0;
+  virtual int getNumFunctions() const = 0;
   // Return highest degree of the polynomial basis
   virtual int getPolynomialDegree() = 0;
 
   EigenMat innerProductBasisFunctions(int iElm);
   double innerProductBasisFunctions(int iElm, int ex, int ey);
 
-  const std::vector<double> &getLcoor() { return _Lcoor; }
+  const std::vector<double> &getLcoor() const { return _Lcoor; }
 
   const std::vector<double> &getBarycentricCoordinatesAtQuadNode() { return _barycentricCoordinates; }
 
@@ -422,7 +424,7 @@ public:
   feSpace0DP0(feMesh *mesh, const std::string fieldID, const std::string cncGeoID, feFunction *fct);
   ~feSpace0DP0(){};
 
-  int getNumFunctions() { return 1; }
+  int getNumFunctions() const { return 1; }
   int getPolynomialDegree() { return 0; }
 
   std::vector<double> L(double *r);
@@ -443,7 +445,7 @@ public:
                     feFunction *fct);
   ~feSpace0D_Hermite(){};
 
-  int getNumFunctions() { return 2; }
+  int getNumFunctions() const { return 2; }
   int getPolynomialDegree() { return 0; }
 
   std::vector<double> L(double *r);
@@ -464,7 +466,7 @@ public:
   feSpace1DP0(feMesh *mesh, const std::string fieldID, const std::string cncGeoID, feFunction *fct);
   ~feSpace1DP0(){};
 
-  int getNumFunctions() { return 1; }
+  int getNumFunctions() const { return 1; }
   int getPolynomialDegree() { return 0; }
 
   std::vector<double> L(double *r);
@@ -486,7 +488,7 @@ public:
   feSpace1DP1(feMesh *mesh, const std::string fieldID, const std::string cncGeoID, feFunction *fct);
   ~feSpace1DP1(){};
 
-  int getNumFunctions() { return 2; }
+  int getNumFunctions() const { return 2; }
   int getPolynomialDegree() { return 1; }
 
   std::vector<double> L(double *r);
@@ -509,7 +511,7 @@ public:
                feVectorFunction *fct);
   ~feSpaceVecP1(){};
 
-  int getNumFunctions() { return 2 * dim; }
+  int getNumFunctions() const { return 2 * dim; }
   int getPolynomialDegree() { return 1; }
 
   std::vector<double> L(double *r);
@@ -532,7 +534,7 @@ public:
                   feFunction *fct);
   ~feSpace1D_DG_P1(){};
 
-  int getNumFunctions() { return 2; }
+  int getNumFunctions() const { return 2; }
   int getPolynomialDegree() { return 1; }
 
   std::vector<double> L(double *r);
@@ -556,7 +558,7 @@ public:
                 feFunction *fct);
   ~feSpace1D_CR0() {}
 
-  int getNumFunctions() { return 1; }
+  int getNumFunctions() const { return 1; }
   int getPolynomialDegree() { return 0; }
 
   std::vector<double> L(double *r);
@@ -578,7 +580,7 @@ public:
   feSpace1DP2(feMesh *mesh, const std::string fieldID, const std::string cncGeoID, feFunction *fct);
   ~feSpace1DP2() {}
 
-  int getNumFunctions() { return 3; }
+  int getNumFunctions() const { return 3; }
   int getPolynomialDegree() { return 2; }
 
   std::vector<double> L(double *r);
@@ -601,8 +603,8 @@ public:
                feVectorFunction *fct);
   ~feSpaceVecP2(){};
 
-  int getNumFunctions() { return 3 * dim; }
-  int getPolynomialDegree() { return 1; }
+  int getNumFunctions() const { return 3 * dim; }
+  int getPolynomialDegree() { return 2; }
 
   std::vector<double> L(double *r);
   void L(double *r, double *L);
@@ -624,7 +626,7 @@ public:
   feSpace1DP3(feMesh *mesh, const std::string fieldID, const std::string cncGeoID, feFunction *fct);
   ~feSpace1DP3() {}
 
-  int getNumFunctions() { return 4; }
+  int getNumFunctions() const { return 4; }
   int getPolynomialDegree() { return 3; }
 
   std::vector<double> L(double *r);
@@ -647,8 +649,8 @@ public:
                feVectorFunction *fct);
   ~feSpaceVecP3(){};
 
-  int getNumFunctions() { return 4 * dim; }
-  int getPolynomialDegree() { return 1; }
+  int getNumFunctions() const { return 4 * dim; }
+  int getPolynomialDegree() { return 3; }
 
   std::vector<double> L(double *r);
   void L(double *r, double *L);
@@ -670,7 +672,7 @@ public:
                feFunction *fct);
   ~feSpace1D_H3() {}
 
-  int getNumFunctions() { return 4; }
+  int getNumFunctions() const { return 4; }
   int getPolynomialDegree() { return 3; }
 
   std::vector<double> L(double *r);
@@ -694,7 +696,30 @@ public:
   feSpace1DP4(feMesh *mesh, const std::string fieldID, const std::string cncGeoID, feFunction *fct);
   ~feSpace1DP4() {}
 
-  int getNumFunctions() { return 5; }
+  int getNumFunctions() const { return 5; }
+  int getPolynomialDegree() { return 4; }
+
+  std::vector<double> L(double *r);
+  void L(double *r, double *L);
+  std::vector<double> dLdr(double *r);
+
+  void initializeNumberingUnknowns();
+  void initializeNumberingEssential();
+  void initializeAddressingVector(int numElem, std::vector<feInt> &adr);
+};
+
+// -----------------------------------------------------------------------------
+// Vector Lagrange element of degree 4 on 1D reference element [-1,1]
+// -----------------------------------------------------------------------------
+template <int dim> class feSpaceVecP4 : public feVectorSpace
+{
+protected:
+public:
+  feSpaceVecP4(feMesh *mesh, const std::string fieldID, const std::string cncGeoID,
+               feVectorFunction *fct);
+  ~feSpaceVecP4(){};
+
+  int getNumFunctions() const { return 5 * dim; }
   int getPolynomialDegree() { return 4; }
 
   std::vector<double> L(double *r);
@@ -719,7 +744,7 @@ public:
                      const std::string cncGeoID, feFunction *fct);
   ~feSpace1D_Legendre() {}
 
-  int getNumFunctions() { return _nFunctions; }
+  int getNumFunctions() const { return _nFunctions; }
   int getPolynomialDegree() { return _degree; }
 
   std::vector<double> L(double *r);
@@ -743,7 +768,7 @@ public:
                const bool useGlobalShapeFunctions = false);
   ~feSpaceTriP1() {}
 
-  int getNumFunctions() { return 3; }
+  int getNumFunctions() const { return 3; }
   int getPolynomialDegree() { return 1; }
 
   std::vector<double> L(double *r);
@@ -771,7 +796,7 @@ public:
                   feVectorFunction *fct, const bool useGlobalShapeFunctions = false);
   ~feSpaceVecTriP1() {}
 
-  int getNumFunctions() { return 3 * dim; }
+  int getNumFunctions() const { return 3 * dim; }
   int getPolynomialDegree() { return 1; }
 
   std::vector<double> L(double *r);
@@ -799,7 +824,7 @@ public:
                  feFunction *fct);
   ~feSpaceTri_CR1() {}
 
-  int getNumFunctions() { return 3; }
+  int getNumFunctions() const { return 3; }
   int getPolynomialDegree() { return 1; }
 
   std::vector<double> L(double *r);
@@ -827,7 +852,7 @@ public:
                const bool useGlobalShapeFunctions = false);
   ~feSpaceTriP2() {}
 
-  int getNumFunctions() { return 6; }
+  int getNumFunctions() const { return 6; }
   int getPolynomialDegree() { return 2; }
 
   std::vector<double> L(double *r);
@@ -856,7 +881,7 @@ public:
                   feVectorFunction *fct, const bool useGlobalShapeFunctions = false);
   ~feSpaceVecTriP2() {}
 
-  int getNumFunctions() { return 6 * dim; }
+  int getNumFunctions() const { return 6 * dim; }
   int getPolynomialDegree() { return 2; }
 
   std::vector<double> L(double *r);
@@ -884,7 +909,7 @@ public:
                  feFunction *fct);
   ~feSpaceTri_CR2() {}
 
-  int getNumFunctions() { return 7; }
+  int getNumFunctions() const { return 7; }
   int getPolynomialDegree() { return 2; }
 
   std::vector<double> L(double *r);
@@ -909,7 +934,7 @@ public:
                const bool useGlobalShapeFunctions = false);
   ~feSpaceTriP3() {}
 
-  int getNumFunctions() { return 10; }
+  int getNumFunctions() const { return 10; }
   int getPolynomialDegree() { return 3; }
 
   std::vector<double> L(double *r);
@@ -932,7 +957,7 @@ public:
                   feVectorFunction *fct, const bool useGlobalShapeFunctions = false);
   ~feSpaceVecTriP3() {}
 
-  int getNumFunctions() { return 10 * dim; }
+  int getNumFunctions() const { return 10 * dim; }
   int getPolynomialDegree() { return 3; }
 
   std::vector<double> L(double *r);
@@ -958,11 +983,35 @@ public:
                const bool useGlobalShapeFunctions = false);
   ~feSpaceTriP4() {}
 
-  int getNumFunctions() { return 15; }
+  int getNumFunctions() const { return 15; }
   int getPolynomialDegree() { return 4; }
 
   std::vector<double> L(double *r);
   void L(double *r, double *L);
+  std::vector<double> dLdr(double *r);
+  std::vector<double> dLds(double *r);
+
+  void initializeNumberingUnknowns();
+  void initializeNumberingEssential();
+  void initializeAddressingVector(int numElem, std::vector<feInt> &adr);
+};
+
+// -----------------------------------------------------------------------------
+// Vector Lagrange element of degree 4 on reference triangle r = [0,1], s = [0,1-r]
+// -----------------------------------------------------------------------------
+template <int dim> class feSpaceVecTriP4 : public feVectorSpace
+{
+public:
+  feSpaceVecTriP4(feMesh *mesh, const std::string fieldID, const std::string cncGeoID,
+                  feVectorFunction *fct, const bool useGlobalShapeFunctions = false);
+  ~feSpaceVecTriP4() {}
+
+  int getNumFunctions() const { return 15 * dim; }
+  int getPolynomialDegree() { return 4; }
+
+  std::vector<double> L(double *r);
+  void L(double *r, double *L);
+
   std::vector<double> dLdr(double *r);
   std::vector<double> dLds(double *r);
 

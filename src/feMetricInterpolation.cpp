@@ -1,6 +1,16 @@
 #include "feMetric.h"
 #include "../contrib/Eigen/QR"
 
+// // Explicit instantiation
+// template void logEuclidianP2InterpolationExplicit<Eigen::Matrix2d>(const double *xsi,
+//                                                                    const Eigen::Matrix2d &logM0,
+//                                                                    const Eigen::Matrix2d &logM1,
+//                                                                    const Eigen::Matrix2d &logM2,
+//                                                                    const Eigen::Matrix2d &logM3,
+//                                                                    const Eigen::Matrix2d &logM4,
+//                                                                    const Eigen::Matrix2d &logM5,
+//                                                                    Eigen::Matrix2d &result);
+
 // Wrapper to give gmsh
 void interpolateMetricP1Callback(void *metricPtr, const double *x, Eigen::Matrix2d &M,
                            Eigen::Matrix2d &dMdx, Eigen::Matrix2d &dMdy)
@@ -204,6 +214,12 @@ void interpolateMetricP2CallbackWithoutDerivatives(void *metricPtr, const double
   static_cast<feMetric*>(metricPtr)->interpolateMetricP2(x, M);
 }
 
+// Wrapper to give gmsh without the metric derivatives with hardcoded exponential metric
+void interpolateMetricP2CallbackWithoutDerivativesExplicit(void *metricPtr, const double *x, Eigen::Matrix2d &M)
+{
+  static_cast<feMetric*>(metricPtr)->interpolateMetricP2Explicit(x, M);
+}
+
 // Wrapper to give gmsh with the metric derivatives
 void interpolateMetricP2CallbackWithDerivatives(void *metricPtr, const double *x, Eigen::Matrix2d &M,
                            Eigen::Matrix2d &dMdx, Eigen::Matrix2d &dMdy)
@@ -242,6 +258,37 @@ void feMetric::interpolateMetricP2(const double *x, Eigen::Matrix2d &M)
                                            _logMetricTensorAtNodetags_eigen[GMSHNODETAGS_P2[3]-1],
                                            _logMetricTensorAtNodetags_eigen[GMSHNODETAGS_P2[4]-1],
                                            _logMetricTensorAtNodetags_eigen[GMSHNODETAGS_P2[5]-1], M);
+  }
+}
+
+//
+// Version with explicit expression for the matrix exponential
+// Avoids diagonalization
+//
+void feMetric::interpolateMetricP2Explicit(const double *x, Eigen::Matrix2d &M)
+{
+  // Locate point in the feMesh
+  int elm;
+  bool isFound = static_cast<feMesh2DP1 *>(_recoveredFields[0]->_mesh)->locateVertex(x, elm, UVW);
+  if(!isFound) {
+    // Point was not found in the mesh
+  } else {
+
+    double xsi[2] = {UVW[0], UVW[1]};
+
+    // Get the vertex tags from the feMesh
+    for(int i = 0; i < 6; ++i) {
+      int vertexTag = _recoveredFields[0]->_cnc->getVertexConnectivity(elm, i);
+      // GMSHNODETAGS_P2[i] = _sequentialTag2nodeTag[vertexTag];
+      GMSHNODETAGS_P2[i] = _sequentialTag2nodeTagVec[vertexTag];
+    }
+
+    this->logEuclidianP2InterpolationExplicit(xsi, _logMetricTensorAtNodetags_eigen[GMSHNODETAGS_P2[0]-1],
+                                             _logMetricTensorAtNodetags_eigen[GMSHNODETAGS_P2[1]-1],
+                                             _logMetricTensorAtNodetags_eigen[GMSHNODETAGS_P2[2]-1],
+                                             _logMetricTensorAtNodetags_eigen[GMSHNODETAGS_P2[3]-1],
+                                             _logMetricTensorAtNodetags_eigen[GMSHNODETAGS_P2[4]-1],
+                                             _logMetricTensorAtNodetags_eigen[GMSHNODETAGS_P2[5]-1], M);
   }
 }
 
@@ -403,6 +450,13 @@ void getPhiTriP2(double r, double s, double phi[6], double dphidr[6], double dph
 
 Eigen::Matrix2d IDENTITY = Eigen::Matrix2d::Identity();
 
+thread_local Eigen::Matrix2d JAC, invJ, U, dUdx, dUdy, TMP_L, dLdx, dLdy, L_l, gradL, expD, gradExp;
+thread_local Eigen::Vector2d u1, u2, lambda, gradU, w, v;
+thread_local Eigen::RowVector2d dN0dx, dN1dx, dN2dx, dN3dx, dN4dx, dN5dx;
+thread_local Eigen::EigenSolver<Eigen::Matrix2d> es;
+thread_local Eigen::EigenSolver<Eigen::Matrix2d>::EigenvalueType eigenvalues;
+thread_local Eigen::EigenSolver<Eigen::Matrix2d>::EigenvectorsType eigenvectors;
+
 // Gradient of the interpolated log-metric on P1 background mesh
 // with respect to front mesh coordinates
 void feMetric::gradLogEuclidianP2Interpolation(const double xsi[2],
@@ -448,19 +502,20 @@ void feMetric::gradLogEuclidianP2Interpolation(const double xsi[2],
   double y2 = t->getVertex(2)->y();
 
   // FIXME: TRANSFORMATION SHOULD BE QUADRATIC!
-  Eigen::Matrix2d Jac;
-  Jac(0,0) = x1 - x0;
-  Jac(0,1) = x2 - x0;
-  Jac(1,0) = y1 - y0;
-  Jac(1,1) = y2 - y0;
-  Eigen::Matrix2d invJ = Jac.inverse();
+  // Eigen::Matrix2d JAC;
+  JAC(0,0) = x1 - x0;
+  JAC(0,1) = x2 - x0;
+  JAC(1,0) = y1 - y0;
+  JAC(1,1) = y2 - y0;
+  // Eigen::Matrix2d invJ = JAC.inverse();
+  invJ = JAC.inverse();
 
-  // Step 2: compute gradient of BGM shape functions with respect to 
+  // Step 2: compute gradient of background mesh shape functions with respect to 
   // the coordinates in the front mesh. This is dphiHat/dxsiHat * dxsiHat/dx,
   // where hat are the background mesh quantities.
 
   // Hardcoded gradient of the 6 P2 shape functions with respect to xj, yj in front mesh
-  Eigen::RowVector2d dN0dx, dN1dx, dN2dx, dN3dx, dN4dx, dN5dx;
+  // Eigen::RowVector2d dN0dx, dN1dx, dN2dx, dN3dx, dN4dx, dN5dx;
   dN0dx << dphidr[0], dphids[0]; dN0dx = dN0dx * invJ;
   dN1dx << dphidr[1], dphids[1]; dN1dx = dN1dx * invJ;
   dN2dx << dphidr[2], dphids[2]; dN2dx = dN2dx * invJ;
@@ -468,28 +523,35 @@ void feMetric::gradLogEuclidianP2Interpolation(const double xsi[2],
   dN4dx << dphidr[4], dphids[4]; dN4dx = dN4dx * invJ;
   dN5dx << dphidr[5], dphids[5]; dN5dx = dN5dx * invJ;
 
-  Eigen::Matrix2d L    = logM0 * phi[0] + logM1 * phi[1] + logM2 * phi[2]
+  // Eigen::Matrix2d
+  TMP_L    = logM0 * phi[0] + logM1 * phi[1] + logM2 * phi[2]
                        + logM3 * phi[3] + logM4 * phi[4] + logM5 * phi[5];
-  Eigen::Matrix2d dLdx = logM0 * dN0dx(0) + logM1 * dN1dx(0) + logM2 * dN2dx(0)
+  // Eigen::Matrix2d
+  dLdx = logM0 * dN0dx(0) + logM1 * dN1dx(0) + logM2 * dN2dx(0)
                        + logM3 * dN3dx(0) + logM4 * dN4dx(0) + logM5 * dN5dx(0);
-  Eigen::Matrix2d dLdy = logM0 * dN0dx(1) + logM1 * dN1dx(1) + logM2 * dN2dx(1)
+  // Eigen::Matrix2d
+  dLdy = logM0 * dN0dx(1) + logM1 * dN1dx(1) + logM2 * dN2dx(1)
                        + logM3 * dN3dx(1) + logM4 * dN4dx(1) + logM5 * dN5dx(1);
 
   // Step 3: compute gradient of eigenvalues and eigenvectors of L　from Aparicio-Estrems et al, High order
   // metric interpolation for curved r-adaptation by distortion minimization)
 
-  Eigen::EigenSolver<Eigen::Matrix2d> es;
-  Eigen::EigenSolver<Eigen::Matrix2d>::EigenvalueType eigenvalues;
-  Eigen::EigenSolver<Eigen::Matrix2d>::EigenvectorsType eigenvectors;
+  // Eigen::EigenSolver<Eigen::Matrix2d> es;
+  // Eigen::EigenSolver<Eigen::Matrix2d>::EigenvalueType eigenvalues;
+  // Eigen::EigenSolver<Eigen::Matrix2d>::EigenvectorsType eigenvectors;
 
-  es.compute(L, true);
+  es.compute(TMP_L, true);
   eigenvalues = es.eigenvalues();
-  Eigen::Vector2d lambda = eigenvalues.real();
+  // Eigen::Vector2d
+  lambda = eigenvalues.real();
 
   eigenvectors = es.eigenvectors();
-  Eigen::Matrix2d U = eigenvectors.real();
-  Eigen::Vector2d u1 = U.col(0);
-  Eigen::Vector2d u2 = U.col(1);
+  // Eigen::Matrix2d
+  U = eigenvectors.real();
+  // Eigen::Vector2d
+  u1 = U.col(0);
+  // Eigen::Vector2d
+  u2 = U.col(1);
 
   // Gradient des valeurs propres d_j lambda_l
   double dl1dx = u1.transpose() * dLdx * u1;
@@ -558,25 +620,28 @@ void feMetric::gradLogEuclidianP2Interpolation(const double xsi[2],
   ////////////////////////////////////////////////////////
   // Gradient des vecteurs propres d_j u_l
   // Solve one at the time to avoid creating a lot of Eigen::Matrix2d
-  Eigen::Matrix2d dUdx, dUdy;
+  // Eigen::Matrix2d dUdx, dUdy;
 
-  Eigen::Matrix2d L_l;
-  L_l(0,0) = L(0,0) - lambda(0);
-  L_l(0,1) = L(0,1);
-  L_l(1,0) = L(1,0);
-  L_l(1,1) = L(1,1) - lambda(0);
+  // Eigen::Matrix2d L_l;
+  L_l(0,0) = TMP_L(0,0) - lambda(0);
+  L_l(0,1) = TMP_L(0,1);
+  L_l(1,0) = TMP_L(1,0);
+  L_l(1,1) = TMP_L(1,1) - lambda(0);
   const Eigen::CompleteOrthogonalDecomposition<Eigen::Matrix2d> L_l_decomposition = L_l.completeOrthogonalDecomposition();
 
   // // Solve for du1dx - gradL is dL1dx - gradU is du1dx
-  Eigen::Matrix2d gradL; // = dLdx - dl1dx * IDENTITY;
+  // Eigen::Matrix2d gradL; // = dLdx - dl1dx * IDENTITY;
   gradL(0,0) = dLdx(0,0) - dl1dx;
   gradL(0,1) = dLdx(0,1);
   gradL(1,0) = dLdx(1,0);
   gradL(1,1) = dLdx(1,1) - dl1dx;
-  Eigen::Vector2d gradU = L_l_decomposition.solve(-gradL * u1);
+  // Eigen::Vector2d
+  gradU = L_l_decomposition.solve(-gradL * u1);
   // // Correction de https://math.stackexchange.com/questions/2689374/derivative-of-eigenvectors-of-a-symmetric-matrix-valued-function
-  Eigen::Vector2d w = gradU;
-  Eigen::Vector2d v = u1;
+  // Eigen::Vector2d
+  w = gradU;
+  // Eigen::Vector2d
+  v = u1;
   gradU = w - (v.transpose() * w) * v;
   dUdx.col(0) = gradU;
   du1dxres = gradU;
@@ -593,7 +658,7 @@ void feMetric::gradLogEuclidianP2Interpolation(const double xsi[2],
   dUdy.col(0) = gradU;
   du1dyres = gradU;
 
-  L_l = L - lambda(1) * IDENTITY;
+  L_l = TMP_L - lambda(1) * IDENTITY;
   const Eigen::CompleteOrthogonalDecomposition<Eigen::Matrix2d> L_l_decomposition2 = L_l.completeOrthogonalDecomposition();
 
   // Solve for du2dx - gradL is dL2dx - gradU is du2dx
@@ -641,10 +706,10 @@ void feMetric::gradLogEuclidianP2Interpolation(const double xsi[2],
   // dMdx = dUdx * expD * U.transpose() + U * dexpDdx * U.transpose() + U * expD * dUdx.transpose();
   // dMdy = dUdy * expD * U.transpose() + U * dexpDdy * U.transpose() + U * expD * dUdy.transpose();
 
-  Eigen::Matrix2d expD;
+  // Eigen::Matrix2d expD;
   expD << exp(lambda(0)), 0., 0., exp(lambda(1));
 
-  Eigen::Matrix2d gradExp;
+  // Eigen::Matrix2d gradExp;
   gradExp << dl1dx, 0., 0., dl2dx;
   gradExp *= expD;
   dMdx = dUdx * expD * U.transpose() + U * gradExp * U.transpose() + U * expD * dUdx.transpose();

@@ -1,4 +1,12 @@
 #include "feNG.h"
+#include "feMessage.h"
+#if defined(HAVE_PETSC)
+  #include "petscsys.h"
+#endif
+#if defined(HAVE_MPI)
+  #include "mpi.h"
+#endif
+
 
 using namespace std::chrono_literals;
 
@@ -19,3 +27,40 @@ double tic(int mode)
 }
 
 double toc() { return tic(1); }
+
+bool wasInitialized = false;
+
+void initialize(int argc, char **argv)
+{
+#if defined(HAVE_PETSC)
+  if(!wasInitialized) {
+    wasInitialized = true;
+    PetscErrorCode ierr = PetscInitialize(&argc, &argv, (char *)0, nullptr);
+    CHKERRABORT(PETSC_COMM_WORLD, ierr);
+  } else {
+    feErrorMsg(FE_STATUS_ERROR, "PETSc was already initialized\n");
+    return;
+  }
+#elif defined(HAVE_MPI)
+  if(!wasInitialized) {
+    wasInitialized = true;
+    MPI_Init(&argc, &argv);
+  } else {
+    feErrorMsg(FE_STATUS_ERROR, "MPI was already initialized\n");
+    return;
+  }
+#else
+  // Do nothing
+#endif
+}
+
+void finalize()
+{
+#if defined(HAVE_PETSC)
+  PetscFinalize();
+#elif defined(HAVE_MPI)
+  MPI_Finalize();
+#else
+  // Do nothing
+#endif
+}

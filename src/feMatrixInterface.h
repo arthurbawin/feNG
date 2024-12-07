@@ -13,12 +13,18 @@
 // https://stackoverflow.com/questions/71104545/constructor-
 // and-destructor-in-c-when-using-the-pimpl-idiom
 
+class SquareMatrix;
+
 class MetricTensor
 {
 public:
+  friend class SquareMatrix;
+
   // "Real" constructor, for us mere mortals
   MetricTensor(const double val = 1.0);
+  MetricTensor(const double m11, const double m12, const double m22);
   MetricTensor(const double eigenvalues[2], const double eigenvector1[2], const double eigenvector2[2]);
+  MetricTensor(const SquareMatrix &other);
 
   // Default, copy/move constructors/assignments
   // To make insertion in e.g. maps safe
@@ -31,6 +37,7 @@ public:
   // Return a new MetricTensor whose matrix is a copy of this
   MetricTensor copy() const;
   void assignMatrixFrom(const MetricTensor &other);
+  void assignMatrixFrom(const double other[2][2]);
 
   double &operator()(int i, int j);
   double operator()(int i, int j) const;
@@ -40,7 +47,9 @@ public:
   MetricTensor operator+(const MetricTensor &other) const;
   MetricTensor operator-(const MetricTensor &other) const;
   MetricTensor operator*(const MetricTensor &other) const;
+  SquareMatrix operator*(const SquareMatrix &other) const;
 
+  double trace() const;
   double determinant() const;
   MetricTensor inverse() const;
   MetricTensor transpose() const;
@@ -49,12 +58,20 @@ public:
   MetricTensor pow(const double &power) const;
   MetricTensor sqrt() const;
 
+  double frobeniusNorm() const;
+
   // Returns the dot product weighted by the metric x1^T * M * x2
   double dotProduct(const double x1[2], const double x2[2]) const;
 
   double maxCoeff() const;
 
   double getMinEigenvalue() const;
+  double getMaxEigenvalue() const;
+
+  void getEigenvectorsAndEigenvalues(double v1[2], double v2[2], double &lambda1, double &lambda2) const;
+
+  // Set matrix to (m + m^T)/2
+  void symmetrize();
 
   // Compute diagonalization M = R * |D| * Rt
   // with |D| = diag( |lambda1|, |lambda2| )
@@ -72,7 +89,7 @@ public:
   MetricTensor spanMetricInPhysicalSpace(const double gradation, const double pq[2]) const;
   MetricTensor spanMetricInMixedSpace(const double gradation, const double pq[2], const double t) const;
 
-  void print() const;
+  void print(const int numDigits = 8) const;
 
 private:
   class MetricTensorImpl;
@@ -110,6 +127,7 @@ private:
 class SquareMatrix
 {
 public:
+  friend class MetricTensor;
   friend class Matrix;
 
   // "Real" constructor, for us mere mortals
@@ -126,15 +144,20 @@ public:
   int getSize() const;
   int rank() const;
 
+  void getEigenvectorsAndEigenvalues(double v1[2], double v2[2], double &lambda1, double &lambda2) const;
+
   double &operator()(int i, int j);
   double operator()(int i, int j) const;
   Vector operator*(const Vector &v);
+  SquareMatrix operator*(const MetricTensor &other) const;
+  SquareMatrix operator*(const SquareMatrix &other) const;
 
   void print() const;
 
   double determinant() const;
   SquareMatrix inverse() const;
   void inverse(SquareMatrix &) const;
+  SquareMatrix transpose() const;
 
 private:
   class SquareMatrixImpl;

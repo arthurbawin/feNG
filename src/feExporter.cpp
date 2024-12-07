@@ -6,6 +6,8 @@
 #include <fstream>
 #include <map>
 
+#define TOL_ZERO_VTK 1e-20
+
 extern bool FE_VERBOSE;
 
 static int VTK_VERTEX = 1;
@@ -346,7 +348,9 @@ feStatus feExporterVTK::createVTKNodes(std::vector<feSpace *> &spacesToExport,
 
             // FIXME: This is only valid for Lagrange type elements,
             // where to DOF is the function evaluation. We should interpolate.
-            _vtkNodes[globalTag].data[iField][iComp] = solVec[iDOF];
+            val = solVec[iDOF];
+            if(fabs(val) < TOL_ZERO_VTK) val = 0.;
+            _vtkNodes[globalTag].data[iField][iComp] = val;
 
           } else {
             /* No dof associated to the mesh vertex,
@@ -373,6 +377,7 @@ feStatus feExporterVTK::createVTKNodes(std::vector<feSpace *> &spacesToExport,
               val = space->interpolateVectorFieldComponent(sol, iComp, r);
             }
 
+            if(fabs(val) < TOL_ZERO_VTK) val = 0.;
             _vtkNodes[globalTag].data[iField][iComp] = val;
           }
         }
@@ -421,6 +426,7 @@ feStatus feExporterVTK::createVTKNodes(std::vector<feSpace *> &spacesToExport,
           if(space->useGlobalFunctions()) {
             val = space->interpolateField(sol, elm, x);
             // FIXME: vector field with global functions?
+            if(fabs(val) < TOL_ZERO_VTK) val = 0.;
             _vtkNodes[globalTag].data[iField][0] = val;
           } else {
             if(nComponents > 1) {
@@ -430,6 +436,7 @@ feStatus feExporterVTK::createVTKNodes(std::vector<feSpace *> &spacesToExport,
               }
             } else {
               val = space->interpolateField(sol, r);
+              if(fabs(val) < TOL_ZERO_VTK) val = 0.;
               _vtkNodes[globalTag].data[iField][0] = val;
             }
           }

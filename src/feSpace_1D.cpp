@@ -868,6 +868,123 @@ void feSpace1DP4::initializeAddressingVector(int numElem, std::vector<feInt> &ad
 }
 
 // -----------------------------------------------------------------------------
+// Vector Lagrange interpolation functions of degree 4 on 1D reference element [-1,1]
+// -----------------------------------------------------------------------------
+template <int dim>
+feSpaceVecP4<dim>::feSpaceVecP4(feMesh *mesh, const std::string fieldID, const std::string cncGeoID,
+                                feVectorFunction *fct)
+  : feVectorSpace(1, mesh, fieldID, cncGeoID, fct)
+{
+  _nComponents = dim;
+  _nFunctions = 5 * dim;
+  double coor[5 * 3] = {-1., 0., 0., 1., 0., 0., -1. / 2., 0., 0., 0., 0., 0., 1. / 2., 0., 0.};
+  _Lcoor.resize(5 * 3 * dim);
+  duplicateScalarArray(5 * 3, 3, coor, dim, _Lcoor);
+};
+
+template <int dim> std::vector<double> feSpaceVecP4<dim>::L(double *r)
+{
+  double phi[5] = {r[0] * (r[0] - 1.0) * (r[0] - 1.0 / 2.0) * (r[0] + 1.0 / 2.0) * (2.0 / 3.0),
+                  r[0] * (r[0] + 1.0) * (r[0] - 1.0 / 2.0) * (r[0] + 1.0 / 2.0) * (2.0 / 3.0),
+                  r[0] * (r[0] - 1.0) * (r[0] + 1.0) * (r[0] - 1.0 / 2.0) * (-8.0 / 3.0),
+                  (r[0] - 1.0) * (r[0] + 1.0) * (r[0] - 1.0 / 2.0) * (r[0] + 1.0 / 2.0) * 4.0,
+                  r[0] * (r[0] - 1.0) * (r[0] + 1.0) * (r[0] + 1.0 / 2.0) * (-8.0 / 3.0)};
+  std::vector<double> res(_nFunctions);
+  duplicateScalarArray(5, 1, phi, dim, res);
+  return res;
+};
+
+template <int dim> void feSpaceVecP4<dim>::L(double *r, double *res)
+{
+  double phi[4] = {-9. / 16. * (r[0] + 1. / 3.) * (r[0] - 1. / 3.) * (r[0] - 1.),
+                   9. / 16. * (r[0] + 1. / 3.) * (r[0] - 1. / 3.) * (r[0] + 1.),
+                   27. / 16. * (r[0] + 1.) * (r[0] - 1. / 3.) * (r[0] - 1.),
+                   -27. / 16. * (r[0] + 1.) * (r[0] + 1. / 3.) * (r[0] - 1.)};
+  duplicateScalarArray(4, 1, phi, dim, res);
+};
+
+template <int dim> std::vector<double> feSpaceVecP4<dim>::dLdr(double *r)
+{
+  double dldr[5] = {r[0] * (r[0] - 1.0) * (r[0] - 1.0 / 2.0) * (2.0 / 3.0) +
+            r[0] * (r[0] - 1.0) * (r[0] + 1.0 / 2.0) * (2.0 / 3.0) +
+            r[0] * (r[0] - 1.0 / 2.0) * (r[0] + 1.0 / 2.0) * (2.0 / 3.0) +
+            (r[0] - 1.0) * (r[0] - 1.0 / 2.0) * (r[0] + 1.0 / 2.0) * (2.0 / 3.0),
+          r[0] * (r[0] + 1.0) * (r[0] - 1.0 / 2.0) * (2.0 / 3.0) +
+            r[0] * (r[0] + 1.0) * (r[0] + 1.0 / 2.0) * (2.0 / 3.0) +
+            r[0] * (r[0] - 1.0 / 2.0) * (r[0] + 1.0 / 2.0) * (2.0 / 3.0) +
+            (r[0] + 1.0) * (r[0] - 1.0 / 2.0) * (r[0] + 1.0 / 2.0) * (2.0 / 3.0),
+          r[0] * (r[0] - 1.0) * (r[0] + 1.0) * (-8.0 / 3.0) -
+            r[0] * (r[0] - 1.0) * (r[0] - 1.0 / 2.0) * (8.0 / 3.0) -
+            r[0] * (r[0] + 1.0) * (r[0] - 1.0 / 2.0) * (8.0 / 3.0) -
+            (r[0] - 1.0) * (r[0] + 1.0) * (r[0] - 1.0 / 2.0) * (8.0 / 3.0),
+          (r[0] - 1.0) * (r[0] + 1.0) * (r[0] - 1.0 / 2.0) * 4.0 +
+            (r[0] - 1.0) * (r[0] + 1.0) * (r[0] + 1.0 / 2.0) * 4.0 +
+            (r[0] - 1.0) * (r[0] - 1.0 / 2.0) * (r[0] + 1.0 / 2.0) * 4.0 +
+            (r[0] + 1.0) * (r[0] - 1.0 / 2.0) * (r[0] + 1.0 / 2.0) * 4.0,
+          r[0] * (r[0] - 1.0) * (r[0] + 1.0) * (-8.0 / 3.0) -
+            r[0] * (r[0] - 1.0) * (r[0] + 1.0 / 2.0) * (8.0 / 3.0) -
+            r[0] * (r[0] + 1.0) * (r[0] + 1.0 / 2.0) * (8.0 / 3.0) -
+            (r[0] - 1.0) * (r[0] + 1.0) * (r[0] + 1.0 / 2.0) * (8.0 / 3.0)};
+  std::vector<double> res(_nFunctions);
+  duplicateScalarArray(5, 1, dldr, dim, res);
+  return res;
+};
+
+template <int dim> void feSpaceVecP4<dim>::initializeNumberingUnknowns()
+{
+  int nDOFPerEdge = 3;
+  int nDOFPerElem = nDOFPerEdge;
+  for(int i = 0; i < _mesh->getNumElements(_cncGeoID); ++i) {
+    // Do not loop over all geometric vertices : only 0 and 1
+    _numbering->setUnknownVertexDOF(_mesh, _cncGeoID, i, 0, dim);
+    _numbering->setUnknownVertexDOF(_mesh, _cncGeoID, i, 1, dim);
+    /* The mid-edge vertex does not match any of the element dofs,
+    so they must both be added. */
+    _numbering->setUnknownElementDOF(_mesh, _cncGeoID, i, nDOFPerElem * dim);
+    // TODO : add a test to check if it is in the situation of Verwer
+    _numbering->setUnknownEdgeDOF(_mesh, _cncGeoID, i, 0, nDOFPerEdge * dim);
+  }
+}
+
+template <int dim> void feSpaceVecP4<dim>::initializeNumberingEssential()
+{
+  for(int i = 0; i < _mesh->getNumElements(_cncGeoID); ++i) {
+    _numbering->setEssentialVertexDOF(_mesh, _cncGeoID, i, 0);
+    _numbering->setEssentialVertexDOF(_mesh, _cncGeoID, i, 1);
+    _numbering->setEssentialElementDOF(_mesh, _cncGeoID, i);
+    _numbering->setEssentialEdgeDOF(_mesh, _cncGeoID, i, 0);
+  }
+}
+
+template <int dim>
+void feSpaceVecP4<dim>::initializeAddressingVector(int numElem, std::vector<feInt> &adr)
+{
+  adr[0] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 0, 0);
+  adr[1] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 0, 1);
+  adr[2] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 1, 0);
+  adr[3] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 1, 1);
+  int e = _mesh->getEdge(_cncGeoID, numElem, 0);
+  if(e > 0) {
+    adr[4] = _numbering->getElementDOF(_mesh, _cncGeoID, numElem, 0);
+    adr[5] = _numbering->getElementDOF(_mesh, _cncGeoID, numElem, 1);
+    adr[6] = _numbering->getElementDOF(_mesh, _cncGeoID, numElem, 2);
+    adr[7] = _numbering->getElementDOF(_mesh, _cncGeoID, numElem, 3);
+    adr[8] = _numbering->getElementDOF(_mesh, _cncGeoID, numElem, 4);
+    adr[9] = _numbering->getElementDOF(_mesh, _cncGeoID, numElem, 5);
+  } else {
+    adr[4] = _numbering->getElementDOF(_mesh, _cncGeoID, numElem, 4);
+    adr[5] = _numbering->getElementDOF(_mesh, _cncGeoID, numElem, 5);
+    adr[6] = _numbering->getElementDOF(_mesh, _cncGeoID, numElem, 2);
+    adr[7] = _numbering->getElementDOF(_mesh, _cncGeoID, numElem, 3);
+    adr[8] = _numbering->getElementDOF(_mesh, _cncGeoID, numElem, 0);
+    adr[9] = _numbering->getElementDOF(_mesh, _cncGeoID, numElem, 1);
+  }
+}
+
+template class feSpaceVecP4<1>;
+template class feSpaceVecP4<2>;
+
+// -----------------------------------------------------------------------------
 // Legendre interpolation functions of arbitrary degree on 1D reference element [-1,1]
 // -----------------------------------------------------------------------------
 feSpace1D_Legendre::feSpace1D_Legendre(const int degree, feMesh *mesh, const std::string fieldID,

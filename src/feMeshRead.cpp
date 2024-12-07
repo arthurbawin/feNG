@@ -1,5 +1,4 @@
 #include "feMesh.h"
-#include "feElement.h"
 #include "feTriangle.h"
 
 #include <iostream>
@@ -667,8 +666,12 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, const bool curved, const bool
     }
   }
 
-  while(input >> buffer) {
-    if(buffer == "$PhysicalNames") { // Read physical entities
+  while(input >> buffer)
+  {
+    //
+    // Read physical entities (named groups of geometric entities)
+    //
+    if(buffer == "$PhysicalNames") {
       input >> _nPhysicalEntities;
       getline(input, buffer);
       for(int i = 0; i < _nPhysicalEntities; ++i) {
@@ -701,7 +704,10 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, const bool curved, const bool
       }
     }
 
-    else if(buffer == "$Entities") { // Read geometric entities
+    //
+    // Read geometric entities (building blocks of the geometry)
+    //
+    else if(buffer == "$Entities") {
 
       if(_nPhysicalEntities == 0) {
         return feErrorMsg(FE_STATUS_ERROR, "No physical entities defined on the mesh.");
@@ -905,7 +911,10 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, const bool curved, const bool
       }
     }
 
-    else if(buffer == "$Nodes") { // Read nodes
+    //
+    // Read nodes
+    //
+    else if(buffer == "$Nodes") {
       int numEntityBlocks, countVertex = 0;
       double x, y, z;
       // numEntityBlocks(size_t) numNodes(size_t) minNodeTag(size_t) maxNodeTag(size_t)
@@ -938,11 +947,20 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, const bool curved, const bool
       }
     }
 
-    else if(buffer == "$Elements") { // Read elements
+    //
+    // Read elements
+    //
+    else if(buffer == "$Elements") {
       int numEntityBlocks, serialNumber, maxElementTag;
       // numEntityBlocks(size_t) numElements(size_t) minElementTag(size_t) maxElementTag(size_t)
       input >> numEntityBlocks >> _nElm >> ph1 >> maxElementTag;
+
+      // Total number of elements of all dimensions, unused for now
       _nTotalElm = _nElm;
+
+      int numEdges = 0;
+      int numTriangles = 0;
+      int numTetrahedra = 0;
 
       int countElems = 0;
       _nVerticesWithNoPhysical = 0;
@@ -950,7 +968,11 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, const bool curved, const bool
       getline(input, buffer);
       int nEdges = 1; // Starting edge numbering at 0 to distinguish + or - in the connectivity
 
-      for(int i = 0; i < numEntityBlocks; ++i) {
+      for(int i = 0; i < numEntityBlocks; ++i)
+      {
+        //
+        // Step 1 : read first line of entity (elementType) and allocate
+        //
         int numElementsInBlock, elemType, entityTag, entityDim;
         // entityDim(int) entityTag(int) elementType(int) numElementsInBlock(size_t)
         input >> entityDim >> entityTag >> elemType >> numElementsInBlock;
@@ -958,6 +980,7 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, const bool curved, const bool
         std::pair<int, int> p = {entityDim, entityTag};
         bool printNodeWarning = false;
         _entities[p].nElm = numElementsInBlock;
+
         // Element connectivity : there may be gaps in Gmsh's element numbering.
         // We use a serial numbering instead (countElems).
         _entities[p].connecElem.resize(numElementsInBlock);
@@ -1099,13 +1122,17 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, const bool curved, const bool
             _entities[p].connecNodes.resize(numElementsInBlock * _entities[p].nNodePerElem);
             _entities[p].connecEdges.resize(numElementsInBlock * _entities[p].nEdgePerElem);
             return feErrorMsg(FE_STATUS_ERROR,
-                              "Interpolant pas pris en charge pour la géométrie de "
-                              "l'entité %d (quad).\n",
+                              "Geometric entity %d : quadrangles are not supported.\n",
                               entityTag);
             break;
           }
-          case 4:
-            [[gnu::fallthrough]]; //   4-node tetrahedron
+          case 4: //   4-node tetrahedron
+            _entities[p].interp = geometricInterpolant::TETP1;
+            _entities[p].nNodePerElem = nodes_of_gmsh_element[elemType - 1];
+            _entities[p].nEdgePerElem = 3;
+            _entities[p].connecNodes.resize(numElementsInBlock * _entities[p].nNodePerElem);
+            _entities[p].connecEdges.resize(numElementsInBlock * _entities[p].nEdgePerElem);
+            break;
           case 11:
             [[gnu::fallthrough]]; //  10-node tetrahedron (2nd order)
           case 29:
@@ -1125,8 +1152,7 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, const bool curved, const bool
           case 75: // 286-node tetrahedron (10th order)
           {
             return feErrorMsg(FE_STATUS_ERROR,
-                              "Interpolant pas pris en charge pour la géométrie de "
-                              "l'entité %d (tet).\n",
+                              "Geometric entity %d : high-order tetrahedra are not supported.\n",
                               entityTag);
           }
           case 5:
@@ -1148,8 +1174,7 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, const bool curved, const bool
           case 98: // 1000-node hexahedron (9th order)
           {
             return feErrorMsg(FE_STATUS_ERROR,
-                              "Interpolant pas pris en charge pour la géométrie de "
-                              "l'entité %d (hex).\n",
+                              "Geometric entity %d : hexahedra are not supported.\n",
                               entityTag);
           }
           case 15: // 1-node point
@@ -1172,6 +1197,9 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, const bool curved, const bool
             return feErrorMsg(FE_STATUS_ERROR, "Unsupported Gmsh element type.");
         } // switch(elemType)
 
+        //
+        // Step 2 : read remaining lines of entity and create elements
+        //
         std::map<int, int>::const_iterator it;
         for(int iElm = 0; iElm < numElementsInBlock; ++iElm) {
           // int nElemNodes = nodes_of_gmsh_element[elemType-1];
@@ -1188,15 +1216,22 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, const bool curved, const bool
 
           for(int j = 0; j < nElemNodes; ++j) {
             input >> ph1;
-            // Verification
+
+            // FIXME: This is slow! Each vertex of each element is searched :/
+            // Check that vertex exists in the map
             it = _verticesMap.find(ph1);
             if(it == _verticesMap.end()) {
               return feErrorMsg(FE_STATUS_ERROR, "Element node %d does not exist /-:", ph1);
             }
-            elemNodesGmsh[j] = ph1; // The Gmsh number stored in ph1 is used to create the edges
-            elemNodes[j] =
-              it->second; // The node number (0...nNode) is used to create the connectivity
+
+            // The Gmsh number stored in ph1 is used to create the edges
+            elemNodesGmsh[j] = ph1;
+            // The node number (0...nNode) is used to create the connectivity
+            elemNodes[j] = it->second;
+
+            // FIXME: This should be removed, unused
             /* Add the raw node number to the global connectivity table */
+            /* Note : this is unused for now! */
             if(entityDim == 0) {
               // Skip ?
             } else if(entityDim == 1) {
@@ -1204,8 +1239,7 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, const bool curved, const bool
             } else if(entityDim == 2) {
               _globalSurfacesNodeConnectivity.push_back(ph1);
             } else {
-              feErrorMsg(FE_STATUS_ERROR,
-                         "Cannot create global connectivity table for entity with dim > 2.");
+              _globalVolumesNodeConnectivity.push_back(ph1);
             }
           }
 
@@ -1245,6 +1279,25 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, const bool curved, const bool
             }
             case 2:
               [[gnu::fallthrough]]; //  3-node triangle
+              // // Idéalement ce serait:
+              // {
+              //   Vertex *v0 = &_vertices[_verticesMap[elemNodesGmsh[0]]];
+              //   Vertex *v1 = &_vertices[_verticesMap[elemNodesGmsh[1]]];
+              //   Vertex *v2 = &_vertices[_verticesMap[elemNodesGmsh[2]]];
+
+              //   TriangleP1 *t;
+              //   if(reversed) {
+              //     t = new TriangleP1(v0, v2, v1, numTriangles++);
+              //   } else {
+              //     t = new TriangleP1(v0, v1, v2, numTriangles++);
+              //   }
+
+              //   // Create the boundary edges of t
+              //   // They are added to the set if they (or their reverse) do not exist yet
+              //   t->createBoundary(_edges);
+                
+              //   break;
+              // }
             case 9:
               [[gnu::fallthrough]]; //  6-node triangle (2nd order)
             case 21:
@@ -1281,6 +1334,8 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, const bool curved, const bool
                   _entities[p].connecNodes[nElemNodes * iElm + 5] = elemNodes[5];
                 }
 
+                ///////////////////////////////////////////////////////
+                /* For the thesis
                 /* Add a perturbation on the high-order nodes */
                 bool addPerturbation = false;
                 if(addPerturbation) {
@@ -1309,6 +1364,7 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, const bool curved, const bool
                     }
                   }
                 }
+                ///////////////////////////////////////////////////////
 
               } else {
                 // Reverse if required or if Physical Entity is negative
@@ -1338,13 +1394,6 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, const bool curved, const bool
                     v1 = &_vertices[_verticesMap[elemNodesGmsh[0]]];
                   }
                 } else {
-                  // if(k == 2) {
-                  //   v0 = &_vertices[_verticesMap[elemNodesGmsh[2]]];
-                  //   v1 = &_vertices[_verticesMap[elemNodesGmsh[0]]];
-                  // } else {
-                  //   v0 = &_vertices[_verticesMap[elemNodesGmsh[k]]];
-                  //   v1 = &_vertices[_verticesMap[elemNodesGmsh[k + 1]]];
-                  // }
                   v0 = &_vertices[_verticesMap[elemNodesGmsh[k]]];
                   v1 = &_vertices[_verticesMap[elemNodesGmsh[(k + 1) % 3]]];
                 }
@@ -1360,10 +1409,12 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, const bool curved, const bool
                     vMid = &_vertices[_verticesMap[elemNodesGmsh[k + 3]]];
                     double xMid = (v0->x() + v1->x()) / 2.;
                     double yMid = (v0->y() + v1->y()) / 2.;
-                    double normAlpha = sqrt((vMid->x() - xMid) * (vMid->x() - xMid) +
-                                            (vMid->y() - yMid) * (vMid->y() - yMid));
+                    // double normAlpha = sqrt((vMid->x() - xMid) * (vMid->x() - xMid) +
+                    //                         (vMid->y() - yMid) * (vMid->y() - yMid));
                     auto it = _edges.find(e);
-                    _edge2alpha[&(*it)] = normAlpha;
+                    _edge2midnode[&(*it)] = vMid;
+                    _edge2alpha[&(*it)][0] = vMid->x() - xMid;
+                    _edge2alpha[&(*it)][1] = vMid->y() - yMid;
                   }
 
                 } else {
@@ -1395,10 +1446,27 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, const bool curved, const bool
               [[gnu::fallthrough]]; // 100-node quadrangle (9th order)
             case 51: // 121-node quadrangle (10th order)
             {
-              return feErrorMsg(FE_STATUS_ERROR, "Interpolant pas pris en charge (quad).\n");
+              return feErrorMsg(FE_STATUS_ERROR, "Quadrangles are not supported.\n");
             }
-            case 4:
-              [[gnu::fallthrough]]; //   4-node tetrahedron
+            case 4: //   4-node tetrahedron
+            {
+              // Reverse if required or if Physical Entity is negative
+              if(reversed || _entities[p].physicalTags[0] < 0) {
+                _entities[p].connecNodes[nElemNodes * iElm + 0] = elemNodes[0];
+                _entities[p].connecNodes[nElemNodes * iElm + 1] = elemNodes[3];
+                _entities[p].connecNodes[nElemNodes * iElm + 2] = elemNodes[2];
+                _entities[p].connecNodes[nElemNodes * iElm + 3] = elemNodes[1];
+              } else {
+                for(int j = 0; j < nElemNodes; ++j) {
+                  _entities[p].connecNodes[nElemNodes * iElm + j] = elemNodes[j];
+                }
+              }
+
+              // Create the facets
+              
+
+              break;
+            }
             case 11:
               [[gnu::fallthrough]]; //  10-node tetrahedron (2nd order)
             case 29:
@@ -1417,7 +1485,7 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, const bool curved, const bool
               [[gnu::fallthrough]]; // 220-node tetrahedron (9th order)
             case 75: // 286-node tetrahedron (10th order)
             {
-              return feErrorMsg(FE_STATUS_ERROR, "Interpolant pas pris en charge (tet).\n");
+              return feErrorMsg(FE_STATUS_ERROR, "High-order tetrahedra are not supported.\n");
             }
             case 5:
               [[gnu::fallthrough]]; //    8-node hexahedron
@@ -1437,7 +1505,7 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, const bool curved, const bool
               [[gnu::fallthrough]]; //  729-node hexahedron (8th order)
             case 98: // 1000-node hexahedron (9th order)
             {
-              return feErrorMsg(FE_STATUS_ERROR, "Interpolant pas pris en charge (hex).\n");
+              return feErrorMsg(FE_STATUS_ERROR, "Hexahedra are not supported.\n");
             }
             case 15: // 1-node point
             {

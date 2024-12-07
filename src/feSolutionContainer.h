@@ -20,6 +20,7 @@ public:
   std::vector<std::vector<double> > _fResidual; // F
 public:
   feSolutionContainer(){};
+  feSolutionContainer(int nSol, double tn, int nDOF);
   feSolutionContainer(int nSol, double tn, feMetaNumber *metaNumber);
   virtual ~feSolutionContainer() {}
 

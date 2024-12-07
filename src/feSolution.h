@@ -95,6 +95,10 @@ public:
   void initializeTemporalSolution(double t0, double t1, int nTimeSteps);
 
   void copySpace(feMesh *mesh, feSpace *s1, feSpace *s2);
+  feStatus addConstantTimesSpace(feMesh *mesh, 
+  const double coeff, feSpace *sourceSpace, feSpace *targetSpace);
+  feStatus addSquaredNormOfVectorSpace(feMesh *mesh, 
+    const double coeff, feSpace *sourceSpace, feSpace *targetSpace);
 
   void printSol(std::string file = "");
 };

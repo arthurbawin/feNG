@@ -51,4 +51,13 @@ typedef int PardisoInt;
 double tic(int mode = 0);
 double toc();
 
+//
+// Initialize/finalize routines, to call at the beginning/end of a main function.
+// If compiled with PETSc, they call PetscInitialize() and PetscFinalize().
+// If not, but if compiled with MPI, they call MPI_Init() and MPI_Finalize() instead.
+// If compiled with neither PETSc nor MPI, these are dummy functions.
+//
+void initialize(int argc, char **argv);
+void finalize();
+
 #endif
