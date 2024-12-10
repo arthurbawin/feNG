@@ -14,6 +14,7 @@ option(ENABLE_MKL           "Enable MKL"                        OFF)
 option(ENABLE_METIS         "Enable Metis"                      OFF)
 option(ENABLE_SOPLEX        "Enable SoPlex"                     OFF)
 option(ENABLE_CERES         "Enable Ceres-Solver"               OFF)
+option(ENABLE_ALGLIB        "Enable AlgLib"                     OFF)
 option(ENABLE_PROFILER      "Compile with -lprofiler"           OFF)
 option(ENABLE_GLFW          "Enable basic GLFW graphics"        OFF)
 
@@ -57,10 +58,9 @@ macro(feNG_add_library LIBNAME SRC API_H)
 endmacro()
 
 #  Macro pour ajouter un executable
-# (FIXME: alglib and other contrib libraries should be added to feNG)
 macro(feNG_add_executable EXENAME SRC LIBS)
   add_executable(${EXENAME} ${SRC})
-  target_link_libraries(${EXENAME} ${LIBS} feNG alglib ${feNG_EXTERNAL_LIBS})
+  target_link_libraries(${EXENAME} ${LIBS} feNG ${feNG_EXTERNAL_LIBS})
   install(TARGETS ${EXENAME} DESTINATION bin)
 endmacro()
 
@@ -245,9 +245,12 @@ endif()
 # See also src/CmakeLists.txt for the .cpp files
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/contrib/gmsh)
 
-# AlgLib for unconstrained optimization
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/contrib/alglib)
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/contrib/alglib)
+if(ENABLE_ALGLIB)
+  # AlgLib for unconstrained optimization
+  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/contrib/alglib)
+  include_directories(${CMAKE_CURRENT_SOURCE_DIR}/contrib/alglib)
+  list(APPEND feNG_EXTERNAL_LIBS alglib)
+endif()
 
 if(ENABLE_PROFILER)
   # For profiling with Google Perftools
