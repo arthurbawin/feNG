@@ -397,19 +397,11 @@ feMesh2DP1::feMesh2DP1(const std::string &meshName, const bool curved, const boo
                        const mapType &physicalEntitiesDescription)
   : feMesh()
 {
-// #if defined(HAVE_MPI)
-//   int rank;
-//   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-//   if(rank == 0) {
-// #endif
-    feStatus s = readGmsh(meshName, curved, reversed, physicalEntitiesDescription);
-    if(s != FE_STATUS_OK) {
-      feInfo("Error in readGmsh - mesh not finalized.\n");
-      std::exit(1);
-    }
-// #if defined(HAVE_MPI)
-//   }
-// #endif
+  feStatus s = readGmsh(meshName, curved, reversed, physicalEntitiesDescription);
+  if(s != FE_STATUS_OK) {
+    feInfo("Error in readGmsh - mesh not finalized.\n");
+    std::exit(1);
+  }
 }
 
 feMesh2DP1::~feMesh2DP1()

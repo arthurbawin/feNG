@@ -32,7 +32,8 @@ void petscFinalize();
 // argc and argv are provided for PETSc command line options
 feStatus createLinearSystem(feLinearSystem *&system, linearSolverType type,
                             std::vector<feBilinearForm *> bilinearForms, int numUnknowns,
-                            int argc = 0, char **argv = nullptr);
+                            int argc = 0, char **argv = nullptr,
+                            int ownershipSplit = -1);
 
 //
 // Abstract class handling the linear system to be solved at each step
@@ -50,9 +51,6 @@ protected:
   std::vector<feBilinearForm *> _formMatrices;
   // The linear forms with only a residual
   std::vector<feBilinearForm *> _formResiduals;
-
-  // // Sparse CRS structure
-  // feEZCompressedRowStorage *_EZCRS;
 
   // Recompute the jacobian matrix at current Newton-Raphson step?
   bool recomputeMatrix;
@@ -222,7 +220,6 @@ private:
   void initialize();
   void initializeSequential();
   int initializeMPI();
-  int initializeMPI_dummyFromPetscExample();
 };
 
 //
@@ -249,15 +246,16 @@ protected:
   // For single process run, these are the data for the whole matrix
   // stored on the process.
   // Ownership can be determined as follows:
-  //  - 0 : Even split of rows between processes according to PetscSplitOwnership()'s formula:
-  //        n = N/size + ((N % size) > rank)
-  //    Independent of the number of nnz per row, thus 
-  //    does not guarantee a load-balancing distribution.
-  //  - 1 : Even split of nonzero entries in the matrix (how is the RHS split then?)
-  //    Causes overlapping rows in general between consecutive processes,
-  //    as the split will probably happen in the middle of a row
-  //  - 2 : Even split of nonzero entries without overlapping rows
-  int _ownershipSplit = 0;
+  //  - -1 : Matrix is stored sequentially on process 0
+  //  -  0 : Even split of rows between processes according to PetscSplitOwnership()'s formula:
+  //         n = N/size + ((N % size) > rank)
+  //         Independent of the number of nnz per row, thus 
+  //         does not guarantee a load-balancing distribution.
+  //  -  1 : Even split of nonzero entries in the matrix (how is the RHS split then?)
+  //         Causes overlapping rows in general between consecutive processes,
+  //         as the split will probably happen in the middle of a row
+  //  -  2 : Even split of nonzero entries without overlapping rows
+  int _ownershipSplit = -1;
   PardisoInt _numOwnedRows, _numOwnedNNZ;
   PardisoInt *_ownedLowerBounds, *_ownedUpperBounds, *_numOwnedRowsOnAllProc;
   // Owned solution buffer
@@ -288,7 +286,7 @@ protected:
   PardisoInt IPIVOT;
 
 public:
-  feLinearSystemMklPardiso(std::vector<feBilinearForm *> bilinearForms, int numUnknowns);
+  feLinearSystemMklPardiso(std::vector<feBilinearForm *> bilinearForms, int numUnknowns, int ownershipSplit);
   ~feLinearSystemMklPardiso();
 
   // ====================================================================

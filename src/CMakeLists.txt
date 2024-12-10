@@ -3,6 +3,7 @@ set(feNG_SRC
     feAdaptMesh.cpp
     feBilinearForm.cpp
     feCncGeo.cpp
+    feColoring.cpp
     feCompressedRowStorage.cpp
     feEigenProblem.cpp
     feExporter.cpp
@@ -35,6 +36,7 @@ set(feNG_SRC
     feSpace.cpp
     feSpace_1D.cpp
     feSpace_2D.cpp
+    feSpace_3D.cpp
     feSysElm.cpp
     feSysElm_1D.cpp
     feSysElm_2D.cpp
@@ -55,6 +57,7 @@ set(feNG_API
     feAPI.h
     feBilinearForm.h
     feCncGeo.h
+    feColoring.h
     feCompressedRowStorage.h
     feEdge.h
     feEigenProblem.h

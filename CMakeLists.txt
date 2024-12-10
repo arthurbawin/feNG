@@ -267,7 +267,9 @@ endif()
 
 if(ENABLE_MPI AND ENABLE_MKL)
   # Temporary fix to add the mpi compilation flags for MKL
-  list(APPEND feNG_EXTERNAL_LIBS "-lmkl_blacs_openmpi_ilp64")
+  # add_definitions("-DMKL_ILP64")
+  # list(APPEND feNG_EXTERNAL_LIBS "-lmkl_blacs_openmpi_ilp64")
+  list(APPEND feNG_EXTERNAL_LIBS "-m64 -Wl,--no-as-needed -lmkl_intel_lp64 -lmkl_gnu_thread -lmkl_core -lmkl_blacs_openmpi_lp64 -lgomp -lpthread -lm -ldl")
   # list(APPEND feNG_EXTERNAL_LIBS "-lmkl_blacs_intelmpi_ilp64")
   # list(APPEND feNG_EXTERNAL_LIBS "-lmkl_intel_ilp64 -lmkl_intel_thread -lmkl_core -lmkl_blacs_openmpi_ilp64 -liomp5 -lpthread -lm -ldl")
   # list(APPEND feNG_EXTERNAL_LIBS "-m64  -L/intel/mkl/lib/intel64 -Wl,--no-as-needed -lmkl_intel_ilp64 -lmkl_gnu_thread -lmkl_core -lmkl_blacs_openmpi_ilp64 -lgomp -lpthread -lm -ldl")

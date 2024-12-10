@@ -107,7 +107,13 @@ else()
 
     # check that the tools exists or quit
     if (NOT EXISTS "${MKL_LINK_TOOL}")
-        message(FATAL_ERROR "cannot find MKL tool: ${MKL_LINK_TOOL}")
+
+        # Modified for mkl 2025.0: try again in bin/
+        set(MKL_LINK_TOOL ${MKL_ROOT_DIR}/bin/mkl_link_tool)
+
+        if (NOT EXISTS "${MKL_LINK_TOOL}")
+            message(FATAL_ERROR "cannot find MKL tool: ${MKL_LINK_TOOL}")
+        endif()
     endif()
 
     # first the libs

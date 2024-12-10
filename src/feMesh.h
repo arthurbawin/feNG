@@ -9,6 +9,7 @@
 #include "feVertex.h"
 #include "feEdge.h"
 #include "feTriangle.h"
+#include "feTetrahedron.h"
 
 #include "rtree.h"
 
@@ -67,15 +68,17 @@ public:
   // Mesh elements, hardcoded triangles for now
   std::vector<Triangle *> _elements;
 
-// ///////////////////////////////////////////////
-// protected:
-//   // The elements by dimension.
-//   // The lower dimensional elements are created as boundaries of the higher-dimensional elements.
-//   // std::vector<Vertex> _vertices_vec;
-//   std::vector<Edge> _edges_vec;
-//   std::vector<Triangle> _triangles_vec;
-//   std::vector<Tetrahedron> _tetrahedra_vec;
-// ///////////////////////////////////////////////
+///////////////////////////////////////////////
+protected:
+  // The elements by dimension.
+  // The lower dimensional elements are created as boundaries of the higher-dimensional elements.
+  std::set<Triangle, TriangleLessThan> _allTriangles;
+
+  // // std::vector<Vertex> _vertices_vec;
+  // std::vector<Edge> _edges_vec;
+  // std::vector<Triangle> _triangles_vec;
+  // std::vector<Tetrahedron> _tetrahedra_vec;
+///////////////////////////////////////////////
 
 public:
   // The constructor of the base class should not be called directly. Instead,
@@ -306,13 +309,25 @@ private:
     int nElm;
     int nNodePerElem = 0;
     int nEdgePerElem;
-    std::vector<int> connecElem;
+    int nTriPerElem;
+    int nTetPerElem;
     std::vector<int> connecNodes;
     std::vector<int> connecEdges;
+    std::vector<int> connecTri;
+    std::vector<int> connecTet;
+    // The global tag of the elements on this entity,
+    // regardless of their dimension.
+    std::vector<int> connecElem;
     std::vector<int> isBoundedBy;
     std::vector<int> isBoundaryOf;
+
+    std::vector<int> connecEdgesDebug;
+    std::vector<int> connecTrianglesDebug;
   } entity;
 
+  // FIXME: Should probably simply be a feCncGeo, which
+  // contains the same (and more) information on a physical entity.
+  //
   // A Physical Entity.
   // A group of Geometric Entities of same dimension, with
   // a name. Physical Entities cannot overlap.
@@ -329,9 +344,13 @@ private:
     int nElm;
     int nNodePerElem;
     int nEdgePerElem;
-    std::vector<int> connecElem;
+    int nTriPerElem;
+    int nTetPerElem;
     std::vector<int> connecNodes;
     std::vector<int> connecEdges;
+    std::vector<int> connecTri;
+    std::vector<int> connecTet;
+    std::vector<int> connecElem;
     std::vector<int> isBoundedBy;
     std::vector<int> isBoundaryOf;
   } physicalEntity;
@@ -360,14 +379,6 @@ protected:
   // Used during mesh adaptation, where the Physical Entities
   // might be lost after remeshing.
   mapType _physicalEntitiesDescription;
-
-  // FIXME: This should be removed
-  // Gmsh vertex tags for the elements on 1, 2, and 3 dimensional entities,
-  // in a contiguous array.
-  // Unused for now
-  std::vector<int> _globalCurvesNodeConnectivity;
-  std::vector<int> _globalSurfacesNodeConnectivity;
-  std::vector<int> _globalVolumesNodeConnectivity;
 
   std::vector<int> _sequentialNodeToGmshNode;
 

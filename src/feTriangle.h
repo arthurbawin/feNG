@@ -5,6 +5,20 @@
 #include "feVertex.h"
 #include "feEdge.h"
 
+// To sort 3 integers
+static void sort3(int *d) {
+#define SWAP(x, y)                                                             \
+  if(d[y] < d[x]) {                                                            \
+    int tmp = d[x];                                                         \
+    d[x] = d[y];                                                               \
+    d[y] = tmp;                                                                \
+  }
+  SWAP(0, 1);
+  SWAP(1, 2);
+  SWAP(0, 1);
+#undef SWAP
+}
+
 // Adapted from Gmsh's MTriangle
 
 class Triangle
@@ -16,7 +30,7 @@ protected:
   Vertex *_vlin[3]; // The vertices of the underlying linear triangle to a linear or high-order triangle
 
   // Boundary is made of 3 edges and their orientation (+1 or -1 for reversed)
-  Edge* _edges[3];
+  const Edge* _edges[3];
   int _edgesOrientation[3];
 
 public:
@@ -29,8 +43,8 @@ public:
   // or high-order, in which case this base class is the underlying linear triangle.
   // Used to create the Edges as boundary entities.
   //
-  Triangle(Vertex *v0, Vertex *v1, Vertex *v2, int tag = -1)
-    : _tag(tag), _localTag(-1), _pTag(-1)
+  Triangle(Vertex *v0, Vertex *v1, Vertex *v2, int tag = -1, int localTag = -1, int pTag = -1)
+    : _tag(tag), _localTag(localTag), _pTag(pTag)
     {
       _vlin[0] = v0;
       _vlin[1] = v1;
@@ -38,11 +52,16 @@ public:
     }
   ~Triangle() {}
 
-  int getTag() { return _tag; }
+  // Tag of the triangle
+  int getTag() const { return _tag; }
+  // Tag of the linear vertices
+  int getTag(int i) const { return _vlin[i]->getTag(); }
   int getLocalTag() { return _localTag; }
   int getPhysicalTag() { return _pTag; }
-  virtual int getNumVertices() = 0;
-  virtual Vertex *getVertex(int num) = 0;
+  const Edge *getEdge(int num) const { return _edges[num]; }
+  int getEdgeOrientation(int num) const { return _edgesOrientation[num]; }
+  virtual int getNumVertices() const { return 3; };
+  virtual Vertex *getVertex(int num) { return _vlin[num]; };
 
   // Compute the reference (u,v) coordinates and returns true on success.
   // For P1 triangle simply invert the linear transformation, always a success
@@ -51,7 +70,14 @@ public:
   // success if converged to the prescribed tolerance.
   // The tolerance used here should probably be smaller than the tolerance used
   // to check if the (u,v) coordinates are inside the reference triangle (isInside)
-  virtual bool xyz2uvw(double xyz[3], double uvw[3], double tol = 1e-5) = 0;
+  virtual bool xyz2uvw(double xyz[3], double uvw[3], double tol = 1e-5);
+
+  // Reference element is the same for linear and high-order triangles
+  bool isInsideReference(double u, double v, double w, double tol)
+  {
+    if(u < (-tol) || v < (-tol) || u > ((1. + tol) - v) || fabs(w) > tol) return false;
+    return true;
+  }
 
   // Check if physical point xyz is inside triangle.
   // For P1 triangle, we compute the uvw coordinates first to check, although
@@ -60,55 +86,41 @@ public:
   // parabolic edges using their implicit equation.
   // THERE ARE STILL SOME ISSUES, AND ITS POSSIBLY DEPRECATED BECAUSE
   // JUST CHECKING THE NEWTON RESULTS SEEMS ROBUST ENOUGH
-  virtual bool isInsidePhysical(double xyz[3], double tol) = 0;
+  // virtual bool isInsidePhysical(double xyz[3], double tol);
 
-  virtual double sliverness() = 0;
-
-  // Reference element is the same for P1 and P2 triangles
-  bool isInsideReference(double u, double v, double w, double tol)
-  {
-    if(u < (-tol) || v < (-tol) || u > ((1. + tol) - v) || fabs(w) > tol) return false;
-    return true;
-  }
+  virtual double sliverness();
 
   // Create the topological edges of the boundary of this triangle.
   // New edges (if any) are added to the set of edges.
   // Returns the number of edges after creation of the boundary,
   // that is, the size of meshEdges.
-  int createBoundary(std::set<Edge, EdgeLessThan> &meshEdges, int numEdges);
-
-protected:
-  // Compute the reference (u,v) coordinates for P1 triangle.
-  // If derived class is P1 triangle, it is the true (u,v) coordinates.
-  // If dervied class is P2 triangle, it is the (u,v) coordinates
-  // of the P1 triangle formed by the 3 first vertices.
-  void getP1ReferenceCoordinates(double xyz[3], double uvw[3], Vertex **v);
+  void createBoundary(std::set<Edge, EdgeLessThan> &meshEdges, int &numEdges);
 };
 
-class TriangleP1 : public Triangle
-{
-protected:
-  Vertex *_v[3];
-
-public:
-  TriangleP1(Vertex *v0, Vertex *v1, Vertex *v2, int tag = -1, int localTag = -1, int pTag = -1)
-    : Triangle(tag, localTag, pTag)
+struct TriangleLessThan {
+  bool operator()(const Triangle &t0, const Triangle &t1) const
   {
-    _v[0] = v0;
-    _v[1] = v1;
-    _v[2] = v2;
+    int tags0[3] = {t0.getTag(0), t0.getTag(1), t0.getTag(2)};
+    int tags1[3] = {t1.getTag(0), t1.getTag(1), t1.getTag(2)};
+    sort3(tags0);
+    sort3(tags1);
+    int diffMin = tags0[0] - tags1[0];
+    int diffMid = tags0[1] - tags1[1];
+    int diffMax = tags0[2] - tags1[2];
+    if(diffMin < 0) return true;
+    if(diffMin > 0) return false;
+    if(diffMid < 0) return true;
+    if(diffMid > 0) return false;
+    if(diffMax < 0) return true;
+    if(diffMax > 0) return false;
+    return false;
   }
-
-  int getNumVertices(){ return 3; };
-  Vertex *getVertex(int num) { return _v[num]; }
-  bool isInsidePhysical(double xyz[3], double tol);
-  bool xyz2uvw(double xyz[3], double uvw[3], double tol = 1e-5);
-  double sliverness();
 };
 
 class TriangleP2 : public Triangle
 {
 protected:
+  // FIXME: Redundant, should only store the high-order vertices
   Vertex *_v[6];
 
   // Localization falls back to P1 case if the triangle is actually linear
@@ -118,7 +130,7 @@ protected:
 public:
   TriangleP2(Vertex *v0, Vertex *v1, Vertex *v2, Vertex *v3, Vertex *v4, Vertex *v5,
              int tag = -1, int localTag = -1, int pTag = -1)
-    : Triangle(tag, localTag, pTag)
+    : Triangle(v0, v1, v2, tag, localTag, pTag)
   {
     _v[0] = v0;
     _v[1] = v1;
@@ -143,6 +155,6 @@ public:
   double sliverness() { return -1.; };
 };
 
-bool isInConvexRegionOfImplicitParabola(const double implicitParameters[6], double xyz[3]);
+// bool isInConvexRegionOfImplicitParabola(const double implicitParameters[6], double xyz[3]);
 
 #endif

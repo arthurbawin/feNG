@@ -46,6 +46,10 @@ std::string toString(geometricInterpolant t)
       return "TRIP2";
     case geometricInterpolant::TRIP3:
       return "TRIP3";
+    case geometricInterpolant::TETP1:
+      return "TETP1";
+    case geometricInterpolant::TETP2:
+      return "TETP2";
     default:
       return "Unknown geometric interpolant";
   }
@@ -111,7 +115,10 @@ feCncGeo::feCncGeo(const int tag, const int dimension, const int nVerticesPerEle
   _nEdges = _connecEdgesOnly.size();
 
   // Color the elements for partitioning
-  colorElements(1);
+  colorElements(3);
+  printColoringStatistics();
+
+  // _mycoloring = new feColoring(1, _nVerticesPerElm, _connecVertices, _connecElem);
 };
 
 int feCncGeo::getUniqueVertexConnectivity(const int iVertex) const
@@ -603,6 +610,8 @@ static int colorChoice(std::vector<bool> availableColor, std::vector<int> &nbElm
 void feCncGeo::colorElements(int coloringAlgorithm)
 {
   feInfoCond(FE_VERBOSE > 0, "\t\tColoring connectivity %s...", _ID.c_str());
+  tic();
+
   // Create the node patch :
   int size = *std::max_element(_connecVertices.begin(), _connecVertices.end()) + 1;
   _listElmPerNode.resize(size);
@@ -771,7 +780,45 @@ void feCncGeo::colorElements(int coloringAlgorithm)
   _coloring.numElemPerColor = _nbElmPerColor;
   _coloring.elementsInColor = _listElmPerColor;
 
-  feInfoCond(FE_VERBOSE > 0, "\t\tDone");
+  feInfoCond(FE_VERBOSE > 0, "\t\tDone in %f s", toc());
+}
+
+void feCncGeo::printColoringStatistics()
+{
+  feInfoCond(FE_VERBOSE > 0, "\t\tColoring statistics:");
+  for(size_t i = 0; i < _nbElmPerColor.size(); ++i) {
+    feInfoCond(FE_VERBOSE > 0, "\t\t\tNumber of elements in color %d: %d", i, _nbElmPerColor[i]);
+  }
+}
+
+// From built-in routines to remove
+void feCncGeo::printColoring(std::string fileName)
+{
+  FILE *myfile = fopen(fileName.data(), "w");
+  fprintf(myfile, "View \"%s\"{\n", fileName.data());
+  std::vector<double> geoCoord(3 * _nVerticesPerElm);
+
+  for(int iElm = 0; iElm < _elmToColor.size(); ++iElm) {
+    _mesh->getCoord(_tag, iElm, geoCoord);
+    writeElementToPOS(myfile, geoCoord, (double) _elmToColor[iElm]);
+  }
+  fprintf(myfile, "};\n"); fclose(myfile);
+}
+
+// From class feColoring
+void feCncGeo::printColoring2(std::string fileName)
+{
+  FILE *myfile = fopen(fileName.data(), "w");
+  fprintf(myfile, "View \"%s\"{\n", fileName.data());
+  std::vector<double> geoCoord(3 * _nVerticesPerElm);
+
+  const std::vector<int> &_elemToColor = _mycoloring->getColorElm();
+
+  for(int iElm = 0; iElm < _elmToColor.size(); ++iElm) {
+    _mesh->getCoord(_tag, iElm, geoCoord);
+    writeElementToPOS(myfile, geoCoord, (double) _elmToColor[iElm]);
+  }
+  fprintf(myfile, "};\n"); fclose(myfile);
 }
 
 void feCncGeo::writeElementToPOS(FILE *posFile, const std::vector<double> &elementCoord,

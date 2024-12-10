@@ -5,8 +5,10 @@ extern int FE_VERBOSE;
 extern bool wasInitialized;
 
 feStatus createLinearSystem(feLinearSystem *&system, linearSolverType type,
-                            std::vector<feBilinearForm *> bilinearForms, int numUnknowns, int argc,
-                            char **argv)
+                            std::vector<feBilinearForm *> bilinearForms,
+                            int numUnknowns,
+                            int argc, char **argv,
+                            int ownershipSplit)
 {
   feInfoCond(FE_VERBOSE > 0, "");
   feInfoCond(FE_VERBOSE > 0, "LINEAR SYSTEM:");
@@ -26,9 +28,7 @@ feStatus createLinearSystem(feLinearSystem *&system, linearSolverType type,
   switch(type) {
     case MKLPARDISO:
 #if defined(HAVE_MKL)
-      // tic();
-      system = new feLinearSystemMklPardiso(bilinearForms, numUnknowns);
-      // feInfo("Created linear system in %f s", toc());
+      system = new feLinearSystemMklPardiso(bilinearForms, numUnknowns, ownershipSplit);
       break;
 #else
       return feErrorMsg(FE_STATUS_ERROR,

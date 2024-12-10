@@ -1,12 +1,7 @@
 #ifndef _FECNCGEO_
 #define _FECNCGEO_
 
-#include <vector>
-#include <map>
-#include <string>
-#include <iostream>
-#include <algorithm>
-
+#include "feColoring.h"
 #include "feMessage.h"
 
 // Supported geometries are only POINT, LINE and TRI so far
@@ -77,9 +72,9 @@ protected:
   // Number of facets (edges for now) per element
   int _nEdgesPerElem;
 
-  // Global numbering of the entities (vertex/edge/element)
-  // on this connectivity.
-
+  //
+  // Global numbering of the mesh elements on this connectivity.
+  //
   // The global tag of vertices classified on this connectivity: size = nVertices
   std::vector<int> _connecVerticesOnly;
   // The global tag of vertices of elements on this connectivity: size = nElm * nVerticesPerElm
@@ -88,7 +83,11 @@ protected:
   std::vector<int> _connecEdgesOnly;
   // The global tag of edges of elements on this connectivity: size = nElm * nEdgesPerElm
   std::vector<int> _connecEdges;
+  // The global tag of triangles classified on this connectivity: size = nTri
+  std::vector<int> _connecFacesOnly;
+  // The global tag of triangles of elements on this connectivity: size = nElm * nTriPerElm
   std::vector<int> _connecFaces;
+
   std::vector<int> _connecElem;
 
   // Pointers to the FE space used to interpolate the geometry
@@ -124,6 +123,8 @@ public:
 
   coloring _coloring;
 
+  feColoring *_mycoloring;
+
 public:
   // Create a geometric connectivity. Called when parsing the mesh.
   feCncGeo(const int tag, const int dimension, const int nVerticesPerElement, const int nElements,
@@ -132,7 +133,9 @@ public:
            std::vector<int> connecElem = std::vector<int>(),
            std::vector<int> connecEdges = std::vector<int>(),
            std::vector<int> connecFaces = std::vector<int>());
-  ~feCncGeo() {}
+  ~feCncGeo() {
+    // delete _mycoloring;
+  }
 
   const std::string &getID() const { return _ID; }
   int getTag() const { return _tag; }
@@ -197,6 +200,9 @@ public:
   int getNbElmPerColorI(int i) const { return _nbElmPerColor[i]; };
   const std::vector<int> &getListElmPerColorI(int i) const { return _listElmPerColor[i]; };
   int getElmColored(int iColor, int iElmC) const { return _listElmPerColor[iColor][iElmC]; };
+  void printColoringStatistics();
+  void printColoring(std::string fileName);
+  void printColoring2(std::string fileName);
 
   // Write constant field on an element to a .pos file (Gmsh visualization)
   void writeElementToPOS(FILE *posFile, const std::vector<double> &elementCoord, const double value) const;

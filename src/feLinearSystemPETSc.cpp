@@ -132,14 +132,14 @@ void feLinearSystemPETSc::initializeSequential()
   // Set preconditioner
   ierr = KSPGetPC(ksp, &preconditioner);
   CHKERRABORT(PETSC_COMM_WORLD, ierr);
-  ierr = PCSetType(preconditioner, PCILU);
-  CHKERRABORT(PETSC_COMM_WORLD, ierr);
+  // ierr = PCSetType(preconditioner, PCILU);
+  // CHKERRABORT(PETSC_COMM_WORLD, ierr);
 
   ierr = KSPSetTolerances(ksp, (PetscReal)_rel_tol, (PetscReal)_abs_tol, (PetscReal)_div_tol,
                           (PetscInt)_max_iter);
   CHKERRABORT(PETSC_COMM_WORLD, ierr);
-  ierr = KSPSetNormType(ksp, KSP_NORM_UNPRECONDITIONED);
-  CHKERRABORT(PETSC_COMM_WORLD, ierr);
+  // ierr = KSPSetNormType(ksp, KSP_NORM_UNPRECONDITIONED);
+  // CHKERRABORT(PETSC_COMM_WORLD, ierr);
   ierr = KSPSetFromOptions(ksp);
   CHKERRABORT(PETSC_COMM_WORLD, ierr);
 
@@ -169,6 +169,10 @@ void feLinearSystemPETSc::initializeSequential()
 
   feInfoCond(FE_VERBOSE > 0, "\t\tCreated a PETSc linear system of size %d x %d", M, N);
   feInfoCond(FE_VERBOSE > 0, "\t\tNumber of nonzero elements: %d", num_nnz);
+  MatType   matType;
+  ierr = MatGetType(_A, &matType);
+  CHKERRABORT(PETSC_COMM_WORLD, ierr);
+  feInfoCond(FE_VERBOSE > 0, "\t\tPETSc matrix type: %s", matType);
   feInfoCond(FE_VERBOSE > 0, "\t\tIterative linear solver info:");
 
   KSPType krylovType;
@@ -197,118 +201,104 @@ int feLinearSystemPETSc::initializeMPI()
   PetscCallMPI(MPI_Comm_size(PETSC_COMM_WORLD, &size));
   PetscCallMPI(MPI_Comm_rank(PETSC_COMM_WORLD, &rank));
 
-  // bool readMatrixFile = false;
-  // if(readMatrixFile) {
-  //   PetscViewer viewer;
-  //   PetscCall(PetscViewerBinaryOpen(PETSC_COMM_WORLD, "mat8p2.txt", FILE_MODE_READ, &viewer));
-  //   PetscCall(MatCreate(PETSC_COMM_WORLD, &_A));
-  //   PetscCall(MatSetType(_A, MATMPIAIJ));
-  //   PetscCall(MatLoad(_A, viewer));
-  //   PetscCall(VecCreate(PETSC_COMM_WORLD, &_rhs));
-  //   PetscCall(VecLoad(_rhs, viewer));
-  //   // PetscCall(MatView(_A, PETSC_VIEWER_STDOUT_SELF));
-  //   // PetscCall(VecView(_rhs, PETSC_VIEWER_STDOUT_SELF));
-  //   PetscCall(PetscViewerDestroy(&viewer));
-  // } else {
-    //
-    // Create matrix
-    //
-    PetscCall(MatCreate(PETSC_COMM_WORLD, &_A));
-    PetscCall(MatSetSizes(_A, PETSC_DECIDE, PETSC_DECIDE, _nInc, _nInc));
-    PetscCall(MatSetFromOptions(_A));
+  //
+  // Create matrix
+  //
+  PetscCall(MatCreate(PETSC_COMM_WORLD, &_A));
+  PetscCall(MatSetSizes(_A, PETSC_DECIDE, PETSC_DECIDE, _nInc, _nInc));
+  PetscCall(MatSetFromOptions(_A));
 
-    //
-    // Determine sparsity pattern and preallocate matrix
-    //
-    // Get and share the upper bound of the owned (global) indices on each process
-    PetscInt low, high;
-    PetscCall(MatGetOwnershipRange(_A, &low, &high));
+  //
+  // Determine sparsity pattern and preallocate matrix
+  //
+  // Get and share the upper bound of the owned (global) indices on each process
+  PetscInt low, high;
+  PetscCall(MatGetOwnershipRange(_A, &low, &high));
 
-    int localLow[1] = {low}, localHigh[1] = {high};
-    _ownedUpperBounds = (int*) malloc(size*sizeof(int));
-    _ownedLowerBounds = (int*) malloc(size*sizeof(int)); 
-    PetscCallMPI(MPI_Allgather(localLow , 1, MPI_INT, _ownedLowerBounds, 1, MPI_INT, PETSC_COMM_WORLD));
-    PetscCallMPI(MPI_Allgather(localHigh, 1, MPI_INT, _ownedUpperBounds, 1, MPI_INT, PETSC_COMM_WORLD));
+  int localLow[1] = {low}, localHigh[1] = {high};
+  _ownedUpperBounds = (int*) malloc(size*sizeof(int));
+  _ownedLowerBounds = (int*) malloc(size*sizeof(int)); 
+  PetscCallMPI(MPI_Allgather(localLow , 1, MPI_INT, _ownedLowerBounds, 1, MPI_INT, PETSC_COMM_WORLD));
+  PetscCallMPI(MPI_Allgather(localHigh, 1, MPI_INT, _ownedUpperBounds, 1, MPI_INT, PETSC_COMM_WORLD));
 
-    _numOwnedRows = (int*) malloc(size*sizeof(int));
-    for(int i = 0; i < size; ++i) {
-      _numOwnedRows[i] = _ownedUpperBounds[i] - _ownedLowerBounds[i];
-    }
+  _numOwnedRows = (int*) malloc(size*sizeof(int));
+  for(int i = 0; i < size; ++i) {
+    _numOwnedRows[i] = _ownedUpperBounds[i] - _ownedLowerBounds[i];
+  }
 
-    // Initialize solution buffer owned on this process
-    _ownedSolution = (double*) malloc(_numOwnedRows[rank] * sizeof(double));
+  // Initialize solution buffer owned on this process
+  _ownedSolution = (double*) malloc(_numOwnedRows[rank] * sizeof(double));
 
-    PetscInt numRowsOnProc = high - low;
-    std::vector<feInt> diagNNZOnAllProcs, offdiagNNZOnAllProcs;
-    int *diagNNZ = (int *) malloc(numRowsOnProc*sizeof(int));
-    int *offdiagNNZ = (int *) malloc(numRowsOnProc*sizeof(int));
+  PetscInt numRowsOnProc = high - low;
+  std::vector<feInt> diagNNZOnAllProcs, offdiagNNZOnAllProcs;
+  int *diagNNZ = (int *) malloc(numRowsOnProc*sizeof(int));
+  int *offdiagNNZ = (int *) malloc(numRowsOnProc*sizeof(int));
 
-    // For sequential preallocation if running on single process?
-    std::vector<PetscInt> nnz(_nInc, 0);
+  // For sequential preallocation if running on single process?
+  std::vector<PetscInt> nnz(_nInc, 0);
 
-    if(rank == 0) {
+  if(rank == 0) {
 
-      // Determine the nonzero structure
-      feEZCompressedRowStorage _EZCRS(_nInc, _formMatrices, _numMatrixForms, _ownedUpperBounds);
-      num_nnz = _EZCRS.getNumNNZ();
+    // Determine the nonzero structure
+    feEZCompressedRowStorage _EZCRS(_nInc, _formMatrices, _numMatrixForms, _ownedUpperBounds);
+    num_nnz = _EZCRS.getNumNNZ();
 
-      for(int i = 0; i < _nInc; ++i) {
-        nnz[i] = _EZCRS.getNnzAt(i);
-      }
-
-      diagNNZOnAllProcs = _EZCRS.getDiagNNZForAllMPIProcs();
-      offdiagNNZOnAllProcs = _EZCRS.getOffDiagNNZForAllMPIProcs();
-    }
-
-    // Get the nonzero structure on each proc
-    PetscCallMPI(MPI_Scatterv(diagNNZOnAllProcs.data(), _numOwnedRows, _ownedLowerBounds, MPI_INT, diagNNZ, numRowsOnProc, MPI_INT, 0, PETSC_COMM_WORLD));
-    PetscCallMPI(MPI_Scatterv(offdiagNNZOnAllProcs.data(), _numOwnedRows, _ownedLowerBounds, MPI_INT, offdiagNNZ, numRowsOnProc, MPI_INT, 0, PETSC_COMM_WORLD));
-
-    // Allocate parallel matrix, or sequential matrix if running on a single process
-    // Only one of these preallocations will do something
-    PetscCall(MatMPIAIJSetPreallocation(_A, 0, diagNNZ, 0, offdiagNNZ));
-    PetscCall(MatSeqAIJSetPreallocation(_A, 0, nnz.data()));
-    
-    bool printInfos = true;
-
-    if(printInfos) {
-      int ranktoprint = 0;
-      while(ranktoprint < size) {
-        if(rank == ranktoprint) {
-          MatInfo info;
-          double mal, nz_a, nz_u, mem, nz_un;
-
-          PetscCall(MatGetInfo(_A, MAT_LOCAL, &info));
-          mal = info.mallocs;
-          nz_a = info.nz_allocated;
-          nz_u = info.nz_used;
-          nz_un = info.nz_unneeded;
-          mem = info.memory;
-
-          feInfo("\t\tAdditional info from PETSc for matrix creation:");
-          feInfo("\t\t\tNumber of mallocs during MatSetValues() on proc %d : %f", rank, mal);
-          feInfo("\t\t\tMemory allocated                        on proc %d : %f", rank, mem );
-          feInfo("\t\t\tNumber of nonzero allocated             on proc %d : %f", rank, nz_a);
-          feInfo("\t\t\tNumber of nonzero used                  on proc %d : %f", rank, nz_u);
-          feInfo("\t\t\tNumber of nonzero unneeded              on proc %d : %f", rank, nz_un);
-        }
-
-        ranktoprint++;
-        MPI_Barrier(PETSC_COMM_WORLD);
-      }
-    }
-
-    // Insert elements on the diagonal and set to zero to
-    // avoid using a weak form for a block of zeros
-    PetscInt indiceDiag;
-    PetscScalar val = 0.;
     for(int i = 0; i < _nInc; ++i) {
-      indiceDiag = i;
-      PetscCall(MatSetValues(_A, 1, &indiceDiag, 1, &indiceDiag, &val, INSERT_VALUES));
+      nnz[i] = _EZCRS.getNnzAt(i);
     }
-    PetscCall(MatAssemblyBegin(_A, MAT_FLUSH_ASSEMBLY));
-    PetscCall(MatAssemblyEnd(_A, MAT_FLUSH_ASSEMBLY));
-  // }
+
+    diagNNZOnAllProcs = _EZCRS.getDiagNNZForAllMPIProcs();
+    offdiagNNZOnAllProcs = _EZCRS.getOffDiagNNZForAllMPIProcs();
+  }
+
+  // Get the nonzero structure on each proc
+  PetscCallMPI(MPI_Scatterv(diagNNZOnAllProcs.data(), _numOwnedRows, _ownedLowerBounds, MPI_INT, diagNNZ, numRowsOnProc, MPI_INT, 0, PETSC_COMM_WORLD));
+  PetscCallMPI(MPI_Scatterv(offdiagNNZOnAllProcs.data(), _numOwnedRows, _ownedLowerBounds, MPI_INT, offdiagNNZ, numRowsOnProc, MPI_INT, 0, PETSC_COMM_WORLD));
+
+  // Allocate parallel matrix, or sequential matrix if running on a single process
+  // Only one of these preallocations will do something
+  PetscCall(MatMPIAIJSetPreallocation(_A, 0, diagNNZ, 0, offdiagNNZ));
+  PetscCall(MatSeqAIJSetPreallocation(_A, 0, nnz.data()));
+  
+  bool printInfos = true;
+
+  if(printInfos) {
+    int ranktoprint = 0;
+    while(ranktoprint < size) {
+      if(rank == ranktoprint) {
+        MatInfo info;
+        double mal, nz_a, nz_u, mem, nz_un;
+
+        PetscCall(MatGetInfo(_A, MAT_LOCAL, &info));
+        mal = info.mallocs;
+        nz_a = info.nz_allocated;
+        nz_u = info.nz_used;
+        nz_un = info.nz_unneeded;
+        mem = info.memory;
+
+        feInfo("\t\tAdditional info from PETSc for matrix creation:");
+        feInfo("\t\t\tNumber of mallocs during MatSetValues() on proc %d : %f", rank, mal);
+        feInfo("\t\t\tMemory allocated                        on proc %d : %f", rank, mem );
+        feInfo("\t\t\tNumber of nonzero allocated             on proc %d : %f", rank, nz_a);
+        feInfo("\t\t\tNumber of nonzero used                  on proc %d : %f", rank, nz_u);
+        feInfo("\t\t\tNumber of nonzero unneeded              on proc %d : %f", rank, nz_un);
+      }
+
+      ranktoprint++;
+      MPI_Barrier(PETSC_COMM_WORLD);
+    }
+  }
+
+  // Insert elements on the diagonal and set to zero to
+  // avoid using a weak form for a block of zeros
+  PetscInt indiceDiag;
+  PetscScalar val = 0.;
+  for(int i = 0; i < _nInc; ++i) {
+    indiceDiag = i;
+    PetscCall(MatSetValues(_A, 1, &indiceDiag, 1, &indiceDiag, &val, INSERT_VALUES));
+  }
+  PetscCall(MatAssemblyBegin(_A, MAT_FLUSH_ASSEMBLY));
+  PetscCall(MatAssemblyEnd(_A, MAT_FLUSH_ASSEMBLY));
 
   //
   // Create vectors
@@ -319,9 +309,7 @@ int feLinearSystemPETSc::initializeMPI()
   PetscCall(VecSetFromOptions(_du));
 
   // Duplicate into RHS and residual
-  // if(!readMatrixFile) {
-    PetscCall(VecDuplicate(_du, &_rhs));
-  // }
+  PetscCall(VecDuplicate(_du, &_rhs));
   PetscCall(VecDuplicate(_du, &_linSysRes));
   PetscCall(VecSet(_du, 1.0));
 
@@ -332,7 +320,7 @@ int feLinearSystemPETSc::initializeMPI()
   // Create the Krylov solver (default is GMRES)
   //
   PetscCall(KSPCreate(PETSC_COMM_WORLD, &ksp));
-  PetscCall(KSPSetType(ksp, KSPGMRES));
+  // PetscCall(KSPSetType(ksp, KSPGMRES));
   // PetscCall(KSPSetOperators(ksp, _A, _A));
 
   // Set preconditioner
@@ -356,6 +344,9 @@ int feLinearSystemPETSc::initializeMPI()
     feInfoCond(FE_VERBOSE > 0, "");
     feInfoCond(FE_VERBOSE > 0, "\t\tCreated a PETSc linear system of size %d x %d", M, N);
     feInfoCond(FE_VERBOSE > 0, "\t\tNumber of nonzero elements: %d", num_nnz);
+    MatType   matType;
+    PetscCall(MatGetType(_A, &matType));
+    feInfoCond(FE_VERBOSE > 0, "\t\tPETSc matrix type: %s", matType);
     feInfoCond(FE_VERBOSE > 0, "\t\tIterative linear solver info:");
 
     KSPType ksptype;
@@ -376,101 +367,13 @@ int feLinearSystemPETSc::initializeMPI()
   return 0;
 }
 
-int feLinearSystemPETSc::initializeMPI_dummyFromPetscExample()
-{
-#if defined(HAVE_PETSC)
-
-  //
-  // Create and allocate matrix
-  //
-  PetscInt i, j, Ii, J, Istart, Iend, m = 800, n = 800;
-
-  PetscCall(MatCreate(PETSC_COMM_WORLD, &_A));
-  PetscCall(MatSetSizes(_A, PETSC_DECIDE, PETSC_DECIDE, m * n, m * n));
-  PetscCall(MatSetFromOptions(_A));
-  PetscCall(MatMPIAIJSetPreallocation(_A, 5, NULL, 5, NULL));
-  PetscCall(MatSeqAIJSetPreallocation(_A, 5, NULL));
-  
-  bool printInfos = true;
-
-  if(printInfos) {
-    MatInfo info;
-    double mal, nz_a, nz_u, mem, nz_un;
-
-    PetscCall(MatGetInfo(_A, MAT_LOCAL, &info));
-    mal = info.mallocs;
-    nz_a = info.nz_allocated;
-    nz_u = info.nz_used;
-    nz_un = info.nz_unneeded;
-    mem = info.memory;
-
-    feInfo("Additional info from PETSc for matrix creation:");
-    feInfo("Number of mallocs during MatSetValues() = %f", mal);
-    feInfo("Memory allocated                        = %f", mem );
-    feInfo("Number of nonzero allocated             = %f", nz_a);
-    feInfo("Number of nonzero used                  = %f", nz_u);
-    feInfo("Number of nonzero unneeded              = %f", nz_un);
-  }
-
-  PetscCall(MatGetOwnershipRange(_A, &Istart, &Iend));
-
-  PetscScalar v;
-
-  for (Ii = Istart; Ii < Iend; Ii++) {
-    v = -1.0;
-    i = Ii / n;
-    j = Ii - i * n;
-    if (i > 0) {
-      J = Ii - n;
-      PetscCall(MatSetValues(_A, 1, &Ii, 1, &J, &v, ADD_VALUES));
-    }
-    if (i < m - 1) {
-      J = Ii + n;
-      PetscCall(MatSetValues(_A, 1, &Ii, 1, &J, &v, ADD_VALUES));
-    }
-    if (j > 0) {
-      J = Ii - 1;
-      PetscCall(MatSetValues(_A, 1, &Ii, 1, &J, &v, ADD_VALUES));
-    }
-    if (j < n - 1) {
-      J = Ii + 1;
-      PetscCall(MatSetValues(_A, 1, &Ii, 1, &J, &v, ADD_VALUES));
-    }
-    v = 4.0;
-    PetscCall(MatSetValues(_A, 1, &Ii, 1, &Ii, &v, ADD_VALUES));
-  }
-
-  PetscCall(MatAssemblyBegin(_A, MAT_FINAL_ASSEMBLY));
-  PetscCall(MatAssemblyEnd(_A, MAT_FINAL_ASSEMBLY));
-
-  PetscCall(VecCreate(PETSC_COMM_WORLD, &_linSysRes));
-  PetscCall(VecSetSizes(_linSysRes, PETSC_DECIDE, m * n));
-  PetscCall(VecSetFromOptions(_linSysRes));
-  PetscCall(VecDuplicate(_linSysRes, &_rhs));
-  PetscCall(VecDuplicate(_rhs, &_du));
-  PetscCall(VecSet(_linSysRes, 1.0));
-  PetscCall(MatMult(_A, _linSysRes, _rhs));
-
-  PetscCall(KSPCreate(PETSC_COMM_WORLD, &ksp));
-  // PetscCall(KSPSetOperators(ksp, _A, _A));
-  PetscCall(KSPSetTolerances(ksp, 1.e-2 / ((m + 1) * (n + 1)), 1.e-50, PETSC_CURRENT, PETSC_CURRENT));
-  PetscCall(KSPSetFromOptions(ksp));
-
-  // PetscCall(KSPSolve(ksp, b, x));
-  // PetscCall(VecAXPY(x, -1.0, u));
-  // PetscCall(VecNorm(x, NORM_2, &norm));
-  // PetscCall(KSPGetIterationNumber(ksp, &its));
-  // PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Norm of error %g iterations %" PetscInt_FMT "\n", (double)norm, its));
-#endif
-
-  return 0;
-}
-
 void feLinearSystemPETSc::initialize()
 {
-  // this->initializeSequential();
+  //   this->initializeSequential();
+
+  // This allocates a sequential matrix if #MPI proc = 1
+  // or if given the runtime option -mpi_linear_solver_server
   this->initializeMPI();
-  // this->initializeMPI_dummyFromPetscExample();
 }
 
 feLinearSystemPETSc::feLinearSystemPETSc(int argc, char **argv,
@@ -695,7 +598,6 @@ void feLinearSystemPETSc::assembleMatrices(feSolution *sol)
         values.resize(sizeI * sizeJ);
         for(feInt i = 0; i < sizeI; ++i) {
           for(feInt j = 0; j < sizeJ; ++j) {
-            feInfo("proc %d - local entry (%d,%d)", rank, niElm[i], njElm[j]);
             values[sizeJ * i + j] = Ae[niElm[i]][njElm[j]];
           }
         }
@@ -896,10 +798,6 @@ void feLinearSystemPETSc::permute()
   PetscErrorCode ierr = 0;
 
   ierr = MatGetOrdering(_A, MATORDERINGRCM, &_rowMap, &_colMap); CHKERRABORT(PETSC_COMM_WORLD, ierr);
-  // IS _globalRowMap, _globalColMap;
-  // ierr = ISAllGather(_rowMap, &_globalRowMap); CHKERRABORT(PETSC_COMM_WORLD, ierr);
-  // ierr = ISAllGather(_colMap, &_globalColMap); CHKERRABORT(PETSC_COMM_WORLD, ierr);
-  // ierr = MatPermute(_A, _globalRowMap, _globalColMap, &_Ap); CHKERRABORT(PETSC_COMM_WORLD, ierr);
   ierr = MatPermute(_A, _rowMap, _colMap, &_Ap); CHKERRABORT(PETSC_COMM_WORLD, ierr);
   ierr = VecPermute(_rhs, _rowMap, PETSC_FALSE); CHKERRABORT(PETSC_COMM_WORLD, ierr);
   // ierr = MatDestroy(&_A); CHKERRABORT(PETSC_COMM_WORLD, ierr);
@@ -913,25 +811,21 @@ void feLinearSystemPETSc::permute()
   // ierr = VecView(_rhs, viewer); CHKERRABORT(PETSC_COMM_WORLD, ierr);
   // ierr = PetscViewerDestroy(&viewer); CHKERRABORT(PETSC_COMM_WORLD, ierr);
 
-  PetscViewer viewer;
-  PetscDraw draw;
-  ierr = PetscViewerDrawOpen(PETSC_COMM_WORLD, NULL, NULL, 0, 0, 1200, 1200, &viewer);
-  CHKERRV(ierr);
-  ierr = MatView(_Ap, viewer);
-  CHKERRV(ierr);
-  ierr = PetscViewerDrawGetDraw(viewer, 0, &draw);
-  CHKERRV(ierr);
-  ierr = PetscDrawSetPause(draw, -1);
-  CHKERRV(ierr); // Wait for user
-  PetscDrawPause(draw);
-  ierr = PetscViewerDestroy(&viewer);
-  CHKERRV(ierr);
-
-  // ierr = MatCopy(_Ap, _A, DIFFERENT_NONZERO_PATTERN); CHKERRABORT(PETSC_COMM_WORLD, ierr);
-  // ierr = MatAssemblyBegin(_A, MAT_FINAL_ASSEMBLY); CHKERRABORT(PETSC_COMM_WORLD, ierr);
-  // ierr = MatAssemblyEnd(_A, MAT_FINAL_ASSEMBLY);   CHKERRABORT(PETSC_COMM_WORLD, ierr);
-
-  // ierr = VecPermute(_rhs, _rowMap, PETSC_FALSE); CHKERRABORT(PETSC_COMM_WORLD, ierr);
+  if(_displayMatrixInWindow) {
+    PetscViewer viewer;
+    PetscDraw draw;
+    ierr = PetscViewerDrawOpen(PETSC_COMM_WORLD, NULL, NULL, 0, 0, 1200, 1200, &viewer);
+    CHKERRV(ierr);
+    ierr = MatView(_Ap, viewer);
+    CHKERRV(ierr);
+    ierr = PetscViewerDrawGetDraw(viewer, 0, &draw);
+    CHKERRV(ierr);
+    ierr = PetscDrawSetPause(draw, -1);
+    CHKERRV(ierr); // Wait for user
+    PetscDrawPause(draw);
+    ierr = PetscViewerDestroy(&viewer);
+    CHKERRV(ierr);
+  }
 #endif
 }
 
@@ -941,38 +835,25 @@ bool feLinearSystemPETSc::solve(double *normSolution, double *normRHS, double *n
 {
 #if defined(HAVE_PETSC)
 
-  // /////////////////////////////////////////////////////
-  // // Divide by nprocs, need to fix this
-  // feInfo("!!!!!!!!!!! Dividing matrix and RHS by number of MPI procs for correct scaling !!!");
-  // feInfo("!!!!!!!!!!! Dividing matrix and RHS by number of MPI procs for correct scaling !!!");
-  // feInfo("!!!!!!!!!!! Dividing matrix and RHS by number of MPI procs for correct scaling !!!");
-  // PetscMPIInt size, rank;
-  // MPI_Comm_size(PETSC_COMM_WORLD, &size);
-  // MPI_Comm_rank(PETSC_COMM_WORLD, &rank);
-  // // if(rank == 0) {
-  //   MatScale(_A, 1./(PetscScalar) size);
-  //   VecScale(_rhs, 1./(PetscScalar) size);
-  // // }
-  // // this->setDisplayMatrixInConsole(true);
-  // // this->setDisplayRHSInConsole(true);
-  // // this->viewMatrix();
-  // // this->viewRHS();
-  // /////////////////////////////////////////////////////
-
   PetscErrorCode ierr = 0;
+
+  // PetscCall(KSPSetOptionsPrefix(ksp, "prefix_test_"));
 
   if(_permute) {
     // Use permuted matrix as operator
     ierr = KSPSetOperators(ksp, _Ap, _Ap);
     CHKERRABORT(PETSC_COMM_WORLD, ierr);
+    // MatSetOptionsPrefix(_Ap, "prefix_test_");
   } else {
+    // Use FE matrix as operator
     ierr = KSPSetOperators(ksp, _A, _A);
     CHKERRABORT(PETSC_COMM_WORLD, ierr);
+    // MatSetOptionsPrefix(_A, "prefix_test_");
   }
 
   // Set tolerances, in case the have changed since creation
-  ierr = KSPSetTolerances(ksp, (PetscReal)_rel_tol, (PetscReal)_abs_tol, (PetscReal)_div_tol,
-                          (PetscInt)_max_iter);
+  ierr = KSPSetTolerances(ksp, (PetscReal) _rel_tol, (PetscReal) _abs_tol, (PetscReal) _div_tol, (PetscInt) _max_iter);
+
   // Override with command line options
   ierr = KSPSetFromOptions(ksp);
   CHKERRABORT(PETSC_COMM_WORLD, ierr);

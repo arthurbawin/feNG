@@ -1,9 +1,6 @@
+#include "feNG.h"
 #include "feMesh.h"
 #include "feTriangle.h"
-
-#include <iostream>
-#include <fstream>
-#include <algorithm>
 
 #include "SBoundingBox3d.h"
 
@@ -270,7 +267,6 @@ feStatus feMesh2DP1::readMsh2(std::istream &input, const bool curved, const bool
   int ph1; // Placeholder
   // std::map<int, int> _verticesMap; // Gmsh tag (which may include gaps) to sequential tag. Just
   // in case : not sure there are gaps in msh2...
-  std::vector<int> numNodesInBlock;
   _nPhysicalEntities = 0;
 
   if(physicalEntitiesDescription.size() > 0) {
@@ -283,6 +279,8 @@ feStatus feMesh2DP1::readMsh2(std::istream &input, const bool curved, const bool
       pE.nElm = 0;
       pE.nNodePerElem = -1;
       pE.nEdgePerElem = -1;
+      pE.nTriPerElem = -1;
+      pE.nTetPerElem = -1;
       pE.interp = geometricInterpolant::NONE;
       _physicalEntities[pair.first] = pE;
     }
@@ -639,6 +637,9 @@ feStatus feMesh2DP1::readMsh2(std::istream &input, const bool curved, const bool
   return FE_STATUS_OK;
 }
 
+//
+// FIXME: Give the list of modified attributes in feMesh
+//
 feStatus feMesh2DP1::readMsh4(std::istream &input, const bool curved, const bool reversed,
                               const mapType physicalEntitiesDescription)
 {
@@ -646,7 +647,6 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, const bool curved, const bool
   // Placeholders
   int ph1, ph2, ph3;
   double ph1D, ph2D, ph3D, ph4D, ph5D, ph6D;
-  std::vector<int> numNodesInBlock;
   _nPhysicalEntities = 0;
 
   if(physicalEntitiesDescription.size() > 0) {
@@ -659,6 +659,8 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, const bool curved, const bool
       pE.nElm = 0;
       pE.nNodePerElem = -1;
       pE.nEdgePerElem = -1;
+      pE.nTriPerElem = -1;
+      pE.nTetPerElem = -1;
       pE.interp = geometricInterpolant::NONE;
       _physicalEntities[pair.first] = pE;
       feInfoCond(FE_VERBOSE > VERBOSE_THRESHOLD, "\t\tCreated Physical entity \"%s\"",
@@ -671,8 +673,14 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, const bool curved, const bool
     //
     // Read physical entities (named groups of geometric entities)
     //
-    if(buffer == "$PhysicalNames") {
+    if(buffer == "$PhysicalNames")
+    {
       input >> _nPhysicalEntities;
+
+      if(_nPhysicalEntities == 0) {
+        return feErrorMsg(FE_STATUS_ERROR, "No physical entities defined on the mesh.");
+      }
+
       getline(input, buffer);
       for(int i = 0; i < _nPhysicalEntities; ++i) {
         physicalEntity pE;
@@ -686,8 +694,9 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, const bool curved, const bool
         pE.nElm = 0;
         pE.nNodePerElem = -1;
         pE.nEdgePerElem = -1;
+        pE.nTriPerElem = -1;
+        pE.nTetPerElem = -1;
         pE.interp = geometricInterpolant::NONE;
-
         _physicalEntities[{pE.dim, pE.tag}] = pE;
         feInfoCond(FE_VERBOSE > VERBOSE_THRESHOLD,
                    "\t\tCreated Physical entity \"%s\" with dimension %d and gmsh tag %d",
@@ -707,21 +716,17 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, const bool curved, const bool
     //
     // Read geometric entities (building blocks of the geometry)
     //
-    else if(buffer == "$Entities") {
-
-      if(_nPhysicalEntities == 0) {
-        return feErrorMsg(FE_STATUS_ERROR, "No physical entities defined on the mesh.");
-      }
-
+    else if(buffer == "$Entities")
+    {
       // numPoints(size_t) numCurves(size_t) numSurfaces(size_t) numVolumes(size_t)
       input >> _nPoints >> _nCurves >> _nSurfaces >> _nVolumes;
 
-      // Pour le moment : pas de cncGeo sur les Points
-      numNodesInBlock.resize(_nCurves + _nSurfaces + _nVolumes);
-
       int tagCount = 1;
       int tagUnnumberedEntities = 0;
+
+      //
       // Points
+      //
       for(int i = 0; i < _nPoints; ++i) {
         entity e;
         e.dim = 0;
@@ -760,7 +765,10 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, const bool curved, const bool
 
         _entities.insert({{e.dim, e.tagGmsh}, e});
       }
+
+      //
       // Curves
+      //
       for(int i = 0; i < _nCurves; ++i) {
         entity e;
         e.dim = 1;
@@ -815,7 +823,10 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, const bool curved, const bool
         _entities.insert({{e.dim, e.tagGmsh}, e});
         getline(input, buffer);
       }
+
+      //
       // Surfaces
+      //
       for(int i = 0; i < _nSurfaces; ++i) {
         entity e;
         e.dim = 2;
@@ -867,7 +878,10 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, const bool curved, const bool
         _entities.insert({{e.dim, e.tagGmsh}, e});
         getline(input, buffer);
       }
+
+      //
       // Volumes
+      //
       for(int i = 0; i < _nVolumes; ++i) {
         entity e;
         e.dim = 3;
@@ -914,7 +928,8 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, const bool curved, const bool
     //
     // Read nodes
     //
-    else if(buffer == "$Nodes") {
+    else if(buffer == "$Nodes")
+    {
       int numEntityBlocks, countVertex = 0;
       double x, y, z;
       // numEntityBlocks(size_t) numNodes(size_t) minNodeTag(size_t) maxNodeTag(size_t)
@@ -922,13 +937,10 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, const bool curved, const bool
       getline(input, buffer);
       _vertices.resize(_nVertices);
       _sequentialNodeToGmshNode.resize(_nVertices);
-      // A counter for the dim > 0 entities
-      int entityCount = 0;
       for(int i = 0; i < numEntityBlocks; ++i) {
         int entityDim, numNodes;
         // entityDim(int) entityTag(int) parametric(int; 0 or 1) numNodesInBlock(size_t)
         input >> entityDim >> ph2 >> ph3 >> numNodes;
-        if(entityDim > 0) numNodesInBlock[entityCount++] = numNodes;
         std::vector<int> gmshNodeTag(numNodes);
         for(int iNode = 0; iNode < numNodes; ++iNode) {
           input >> ph1;
@@ -950,7 +962,8 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, const bool curved, const bool
     //
     // Read elements
     //
-    else if(buffer == "$Elements") {
+    else if(buffer == "$Elements")
+    {
       int numEntityBlocks, serialNumber, maxElementTag;
       // numEntityBlocks(size_t) numElements(size_t) minElementTag(size_t) maxElementTag(size_t)
       input >> numEntityBlocks >> _nElm >> ph1 >> maxElementTag;
@@ -962,16 +975,25 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, const bool curved, const bool
       int numTriangles = 0;
       int numTetrahedra = 0;
 
+      // Starting facets numbering at 1 to distinguish + or - in the connectivity
+      int tagEdges = 1; 
+      int tagEdgesDebug = 1;
+      int tagTrianglesDebug = 1;
+
+      // Sets of elements, transformed in vectors after all elements are added
+      std::set<Edge, EdgeLessThan> allEdges;
+      // std::set<Triangle, TriangleLessThan> allTriangles;
+      std::set<Tetrahedron, TetrahedronLessThan> allTetrahedra;
+
       int countElems = 0;
       _nVerticesWithNoPhysical = 0;
 
       getline(input, buffer);
-      int nEdges = 1; // Starting edge numbering at 0 to distinguish + or - in the connectivity
 
       for(int i = 0; i < numEntityBlocks; ++i)
       {
         //
-        // Step 1 : read first line of entity (elementType) and allocate
+        // Step 1 : read first line of entity (elementType) and allocate the connectivity tables
         //
         int numElementsInBlock, elemType, entityTag, entityDim;
         // entityDim(int) entityTag(int) elementType(int) numElementsInBlock(size_t)
@@ -981,9 +1003,17 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, const bool curved, const bool
         bool printNodeWarning = false;
         _entities[p].nElm = numElementsInBlock;
 
-        // Element connectivity : there may be gaps in Gmsh's element numbering.
-        // We use a serial numbering instead (countElems).
+        // Element connectivity:
+        // Each element in the mesh is assigned a unique tag,
+        // regardless of its dimension. There may be gaps in Gmsh's element numbering,
+        // so a new sequential tag (countElems) is used instead.
         _entities[p].connecElem.resize(numElementsInBlock);
+
+        // These are overwritten afterwards if necessary
+        _entities[p].nNodePerElem = 0;
+        _entities[p].nEdgePerElem = 0;
+        _entities[p].nTriPerElem = 0;
+        _entities[p].nTetPerElem = 0;
 
         // Determine geometric feSpace and allocate nodes connectivity based on elemType
         switch(elemType) {
@@ -1041,8 +1071,9 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, const bool curved, const bool
                 _entities[p].interp = geometricInterpolant::LINEP1;
               }
               _entities[p].nNodePerElem = (curved) ? nodes_of_gmsh_element[elemType - 1] : 2;
-              _entities[p].nEdgePerElem = 0;
+              _entities[p].nEdgePerElem = 1;
               _entities[p].connecNodes.resize(numElementsInBlock * _entities[p].nNodePerElem);
+              _entities[p].connecEdges.resize(numElementsInBlock);
               break;
             }
           case 2: //  3-node triangle
@@ -1093,8 +1124,12 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, const bool curved, const bool
             }
             _entities[p].nNodePerElem = (curved) ? nodes_of_gmsh_element[elemType - 1] : 3;
             _entities[p].nEdgePerElem = 3;
+            _entities[p].nTriPerElem = 1;
             _entities[p].connecNodes.resize(numElementsInBlock * _entities[p].nNodePerElem);
-            _entities[p].connecEdges.resize(numElementsInBlock * _entities[p].nEdgePerElem);
+            _entities[p].connecEdges.resize(numElementsInBlock * 3);
+            _entities[p].connecEdgesDebug.resize(numElementsInBlock * 3);
+            _entities[p].connecTri.resize(numElementsInBlock);
+            _entities[p].connecTrianglesDebug.resize(numElementsInBlock);
             break;
           }
           case 3:
@@ -1117,10 +1152,10 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, const bool curved, const bool
             [[gnu::fallthrough]]; // 100-node quadrangle (9th order)
           case 51: // 121-node quadrangle (10th order)
           {
-            _entities[p].nNodePerElem = (curved) ? nodes_of_gmsh_element[elemType - 1] : 4;
-            _entities[p].nEdgePerElem = 4;
-            _entities[p].connecNodes.resize(numElementsInBlock * _entities[p].nNodePerElem);
-            _entities[p].connecEdges.resize(numElementsInBlock * _entities[p].nEdgePerElem);
+            // _entities[p].nNodePerElem = (curved) ? nodes_of_gmsh_element[elemType - 1] : 4;
+            // _entities[p].nEdgePerElem = 4;
+            // _entities[p].connecNodes.resize(numElementsInBlock * _entities[p].nNodePerElem);
+            // _entities[p].connecEdges.resize(numElementsInBlock * _entities[p].nEdgePerElem);
             return feErrorMsg(FE_STATUS_ERROR,
                               "Geometric entity %d : quadrangles are not supported.\n",
                               entityTag);
@@ -1129,9 +1164,15 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, const bool curved, const bool
           case 4: //   4-node tetrahedron
             _entities[p].interp = geometricInterpolant::TETP1;
             _entities[p].nNodePerElem = nodes_of_gmsh_element[elemType - 1];
-            _entities[p].nEdgePerElem = 3;
+            _entities[p].nEdgePerElem = 6;
+            _entities[p].nTriPerElem = 4;
+            // Number of *boundary* tet per element is 0, and attribute should be removed in general
+            // _entities[p].nTetPerElem = 0;
             _entities[p].connecNodes.resize(numElementsInBlock * _entities[p].nNodePerElem);
-            _entities[p].connecEdges.resize(numElementsInBlock * _entities[p].nEdgePerElem);
+            _entities[p].connecEdges.resize(numElementsInBlock * 6);
+            _entities[p].connecTri.resize(numElementsInBlock * 4);
+            _entities[p].connecTrianglesDebug.resize(numElementsInBlock * _entities[p].nTriPerElem);
+            // _entities[p].connecTet.resize(numElementsInBlock);
             break;
           case 11:
             [[gnu::fallthrough]]; //  10-node tetrahedron (2nd order)
@@ -1209,7 +1250,9 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, const bool curved, const bool
           // elementTag(size_t) nodeTag(size_t) ...
           input >> serialNumber; // Unused
 
-          // Point entity has vector connecElem of size 1 : do not modify it here
+          // Element connectivity, i.e., unique global tag assigned to
+          // all elements regardless of their dimension.
+          // "Point" entities have connecElem of size 1, assigned a bit further
           if(elemType != 15) {
             _entities[p].connecElem[iElm] = countElems++;
           }
@@ -1228,19 +1271,6 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, const bool curved, const bool
             elemNodesGmsh[j] = ph1;
             // The node number (0...nNode) is used to create the connectivity
             elemNodes[j] = it->second;
-
-            // FIXME: This should be removed, unused
-            /* Add the raw node number to the global connectivity table */
-            /* Note : this is unused for now! */
-            if(entityDim == 0) {
-              // Skip ?
-            } else if(entityDim == 1) {
-              _globalCurvesNodeConnectivity.push_back(ph1);
-            } else if(entityDim == 2) {
-              _globalSurfacesNodeConnectivity.push_back(ph1);
-            } else {
-              _globalVolumesNodeConnectivity.push_back(ph1);
-            }
           }
 
           switch(elemType) {
@@ -1275,29 +1305,54 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, const bool curved, const bool
                   _entities[p].connecNodes[nElemNodes * iElm + j] = elemNodes[j];
                 }
               }
+
+              // FIXME: We should only do this when maxDim = 1 actually
+              // This will in general be overwritten when transferring cnc from higher-dimensional entities
+              _entities[p].connecEdges[iElm] = numEdges;
+              numEdges++;
               break;
             }
             case 2:
-              [[gnu::fallthrough]]; //  3-node triangle
-              // // Idéalement ce serait:
-              // {
-              //   Vertex *v0 = &_vertices[_verticesMap[elemNodesGmsh[0]]];
-              //   Vertex *v1 = &_vertices[_verticesMap[elemNodesGmsh[1]]];
-              //   Vertex *v2 = &_vertices[_verticesMap[elemNodesGmsh[2]]];
+              // [[gnu::fallthrough]]; //  3-node triangle
+              // Cleaner version:
+              {
+                Vertex *v0 = &_vertices[_verticesMap[elemNodesGmsh[0]]];
+                Vertex *v1 = &_vertices[_verticesMap[elemNodesGmsh[1]]];
+                Vertex *v2 = &_vertices[_verticesMap[elemNodesGmsh[2]]];
 
-              //   TriangleP1 *t;
-              //   if(reversed) {
-              //     t = new TriangleP1(v0, v2, v1, numTriangles++);
-              //   } else {
-              //     t = new TriangleP1(v0, v1, v2, numTriangles++);
-              //   }
+                Triangle *tri;
+                if(reversed || _entities[p].physicalTags[0] < 0) {
+                  tri = new Triangle(v0, v2, v1, numTriangles);
+                } else {
+                  tri = new Triangle(v0, v1, v2, numTriangles);
+                }
 
-              //   // Create the boundary edges of t
-              //   // They are added to the set if they (or their reverse) do not exist yet
-              //   t->createBoundary(_edges);
-                
-              //   break;
-              // }
+                // Create the boundary edges of tri
+                // They are added to the set if they (or their reverse) do not exist yet
+                tri->createBoundary(allEdges, tagEdgesDebug);
+                _allTriangles.insert(*tri);
+
+                //
+                // Update connectivities on this geometric entity:
+                //
+
+                // Vertices
+                // TODO, see below
+
+                // Edges
+                // Add the edges (with orientation) to the edge connectivity of this entity
+                for(int k = 0; k < 3; ++k) {
+                  _entities[p].connecEdgesDebug[3 * iElm + k] = tri->getEdgeOrientation(k) * tri->getEdge(k)->getTag();
+                }
+
+                // Triangles (trivial) (needed?)
+                _entities[p].connecTrianglesDebug[iElm] = numTriangles;
+                numTriangles++;
+
+                // Do not break while debugging (-:
+                // feWarning("Creating both data structures for 3-node triangles for debug");
+                // break;
+              }
             case 9:
               [[gnu::fallthrough]]; //  6-node triangle (2nd order)
             case 21:
@@ -1333,39 +1388,6 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, const bool curved, const bool
                   _entities[p].connecNodes[nElemNodes * iElm + 4] = elemNodes[4];
                   _entities[p].connecNodes[nElemNodes * iElm + 5] = elemNodes[5];
                 }
-
-                ///////////////////////////////////////////////////////
-                /* For the thesis
-                /* Add a perturbation on the high-order nodes */
-                bool addPerturbation = false;
-                if(addPerturbation) {
-                  feWarning(" ======= !!! Adding a perturbation to the curved mesh !!! ======= ");
-                  for(int j = 0; j < 3; ++j) {
-                    Vertex *v0 = &_vertices[_entities[p].connecNodes[nElemNodes * iElm + j]];
-                    Vertex *vMid = &_vertices[_entities[p].connecNodes[nElemNodes * iElm + j + 3]];
-                    // Normal vector
-                    std::vector<double> n(3, 0.);
-                    n[0] = vMid->y() - v0->y();
-                    n[1] = -(vMid->x() - v0->x());
-                    n[2] = 0.0;
-                    double N = sqrt(n[0] * n[0] + n[1] * n[1] + n[2] * n[2]);
-                    n[0] /= N;
-                    n[1] /= N;
-                    n[2] /= N;
-                    if(fabs(n[0] - 1. / sqrt(2.)) < 1e-5 && fabs(n[1] - 1. / sqrt(2.)) < 1e-5) {
-                      double *coord = (*vMid)();
-                      double alpha = 0.2;
-                      std::vector<double> gamma = {2.0 * (vMid->x() - v0->x()),
-                                                   2.0 *
-                                                     (vMid->y() - v0->y())}; // vMid - v0 = gamma/2
-                      std::vector<double> gammaOrth = {gamma[1], -gamma[0]};
-                      coord[0] = v0->x() + 0.5 * gamma[0] + alpha * gammaOrth[0];
-                      coord[1] = v0->y() + 0.5 * gamma[1] + alpha * gammaOrth[1];
-                    }
-                  }
-                }
-                ///////////////////////////////////////////////////////
-
               } else {
                 // Reverse if required or if Physical Entity is negative
                 if(reversed || _entities[p].physicalTags[0] < 0) {
@@ -1398,11 +1420,11 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, const bool curved, const bool
                   v1 = &_vertices[_verticesMap[elemNodesGmsh[(k + 1) % 3]]];
                 }
                 std::pair<std::set<Edge, EdgeLessThan>::iterator, bool> ret;
-                Edge e(v0, v1, nEdges, _entities[p].physicalTags[0]);
+                Edge e(v0, v1, tagEdges, _entities[p].physicalTags[0]);
                 ret = _edges.insert(e);
                 if(ret.second) {
-                  // Edge was added to the set : nEdges is added to connecEdges
-                  _entities[p].connecEdges[3 * iElm + k] = nEdges++;
+                  // Edge was added to the set : tagEdges is added to connecEdges
+                  _entities[p].connecEdges[3 * iElm + k] = tagEdges++;
 
                   if(curved) {
                     // Compute displacement of midnode (alpha)
@@ -1450,21 +1472,59 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, const bool curved, const bool
             }
             case 4: //   4-node tetrahedron
             {
-              // Reverse if required or if Physical Entity is negative
+              Vertex *v0 = &_vertices[_verticesMap[elemNodesGmsh[0]]];
+              Vertex *v1 = &_vertices[_verticesMap[elemNodesGmsh[1]]];
+              Vertex *v2 = &_vertices[_verticesMap[elemNodesGmsh[2]]];
+              Vertex *v3 = &_vertices[_verticesMap[elemNodesGmsh[3]]];
+
+              Tetrahedron *tet;
               if(reversed || _entities[p].physicalTags[0] < 0) {
-                _entities[p].connecNodes[nElemNodes * iElm + 0] = elemNodes[0];
-                _entities[p].connecNodes[nElemNodes * iElm + 1] = elemNodes[3];
-                _entities[p].connecNodes[nElemNodes * iElm + 2] = elemNodes[2];
-                _entities[p].connecNodes[nElemNodes * iElm + 3] = elemNodes[1];
+                tet = new Tetrahedron(v0, v3, v2, v1, numTetrahedra);
               } else {
-                for(int j = 0; j < nElemNodes; ++j) {
-                  _entities[p].connecNodes[nElemNodes * iElm + j] = elemNodes[j];
+                tet = new Tetrahedron(v0, v1, v2, v3, numTetrahedra);
+              }
+
+              // Create the boundary facets of tet
+              // They are added to the set if they (or their reverse) do not exist yet
+              // This also creates the mesh edges, as boundaries of the facets.
+              tet->createBoundary(_allTriangles, tagTrianglesDebug, allEdges, tagEdgesDebug);
+
+              // Create the boundary edges of the facets of tet
+              allTetrahedra.insert(*tet);
+
+              //
+              // Update connectivities on this geometric entity:
+              //
+
+              // Vertices
+              if(reversed || _entities[p].physicalTags[0] < 0) {
+                _entities[p].connecNodes[4 * iElm + 0] = elemNodes[0];
+                _entities[p].connecNodes[4 * iElm + 1] = elemNodes[3];
+                _entities[p].connecNodes[4 * iElm + 2] = elemNodes[2];
+                _entities[p].connecNodes[4 * iElm + 3] = elemNodes[1];
+              } else {
+                for(int j = 0; j < 4; ++j) {
+                  _entities[p].connecNodes[4 * iElm + j] = elemNodes[j];
                 }
               }
 
-              // Create the facets
-              
+              // Edges
+              // Add the facets (with orientation) to the triangle connectivity of this entity
+              // TODO
+              feWarning("Add edge connectivity for 3D entities if needed");
 
+              // Triangles
+              // Add the facets (with orientation) to the triangle connectivity of this entity
+              for(int k = 0; k < 4; ++k) {
+                _entities[p].connecTri           [4 * iElm + k] = tet->getFacetOrientation(k) * tet->getFacet(k)->getTag();
+                _entities[p].connecTrianglesDebug[4 * iElm + k] = tet->getFacetOrientation(k) * tet->getFacet(k)->getTag();
+              }
+
+              // Tet (trivial) (needed? redundant with connecElem?)
+              // _entities[p].connecTet[iElm] = numTetrahedra;
+              numTetrahedra++;
+              
+              feWarning("Creating data structures for 4-node tetrahedron for debug");
               break;
             }
             case 11:
@@ -1533,12 +1593,35 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, const bool curved, const bool
 
         } // for numElemInEntity
       } // for numEntities
+
+      feInfo("There are %d mesh edges", allEdges.size());
+      feInfo("There are %d mesh triangles", _allTriangles.size());
+      feInfo("There are %d mesh tetrahedra", allTetrahedra.size());
+
     } // if buffer = "Elements"
   } // while input
 
   return FE_STATUS_OK;
 }
 
+//
+// Read a mesh in Gmsh's .msh format.
+// The elements and connectivity tables are created here:
+// The highest dimensional elements are created and lower dimensional
+// elements are created as their boundary.
+//
+// For instance, in a 2D triangulation, the mesh edges are created as
+// boundaries of the triangles. If there are 1D physical entities in the mesh,
+// for example to apply boundary conditions, their 1D elements are identified
+// to the edges of existing triangles.
+//
+// This assumes that there are no "stray" 1D physical entities (i.e., the mesh
+// is the triangulation of a manifold).
+//
+// For a 3D mesh, the tetrahedra are created, then triangles on 2D physical entities
+// are identified to existing facets of tetrahedra, then 1D physical entities (if any)
+// are identified to the edges of the facets.
+//
 feStatus feMesh2DP1::readGmsh(const std::string meshName, const bool curved, const bool reversed,
                               const mapType physicalEntitiesDescription)
 {
@@ -1568,6 +1651,9 @@ feStatus feMesh2DP1::readGmsh(const std::string meshName, const bool curved, con
       return feErrorMsg(FE_STATUS_ERROR, "Only reading ASCII files.");
     }
 
+    //
+    // Read mesh file, create elements and connectivity tables of the geometric entities
+    //
     if(_gmshVersion == 2.2) {
       feCheck(readMsh2(input, curved, reversed, physicalEntitiesDescription));
     } else if(_gmshVersion >= 4) {
@@ -1580,41 +1666,63 @@ feStatus feMesh2DP1::readGmsh(const std::string meshName, const bool curved, con
   } // if fb.open
 
   feInfoCond(FE_VERBOSE > VERBOSE_THRESHOLD,
-             "\t\tList of geometric entities with their attributes :");
+             "\t\tList of geometric entities (belonging to physical) with their attributes:");
   for(auto const &x : _entities) {
     entity e = x.second;
-    feInfoCond(FE_VERBOSE > VERBOSE_THRESHOLD,
-               "\t\t\tEntity #%2d : dim = %1d - gmshTag = %3d - nElm = %6d - nNodePerElem = %2d - "
-               "geometric interpolant : %10s "
-               "- part of physical groups : %2d",
-               e.tag, e.dim, e.tagGmsh, e.nElm, e.nNodePerElem, toString(e.interp).data(),
-               (e.numPhysicalTags > 0) ? e.physicalTags[0] : -1);
+    if(e.numPhysicalTags > 0) {
+      feInfoCond(FE_VERBOSE > VERBOSE_THRESHOLD,
+                 "\t\t\tEntity #%2d : dim = %1d - gmshTag = %3d - nElm = %6d - nNodePerElem = %2d - "
+                 "geometric interpolant : %10s "
+                 "- part of physical groups : %2d",
+                 e.tag, e.dim, e.tagGmsh, e.nElm, e.nNodePerElem, toString(e.interp).data(),
+                 (e.numPhysicalTags > 0) ? e.physicalTags[0] : -1);
+    }
   }
 
-  // Geometric connectivities are defined on the physical entities (named domains) :
-  // we need to transfer the information to the physical entities.
-  // Sequential tag for all entities, different from the Gmsh entity tag (reset for each dimension)
+  // Check that the geometric entities defined on a physical entity are compatible.
+  // Each geometric entity has a sequential tag in [0, nEntitiesOfThisDimension].
+  // The tag is reset for each dimension and is thus different from the Gmsh entity tag.
   for(auto const &x : _entities) {
     entity e = x.second;
     for(auto &p : _physicalEntities) {
       physicalEntity &pE = p.second;
       bool error = false;
       for(auto ent : pE.listEntities) {
-        if(ent == e.tag && pE.dim == e.dim) {
+
+        // If geometric entity is in tested physical entity, transfer the information.
+        if(ent == e.tag && pE.dim == e.dim)
+        {
           pE.nElm += e.nElm;
+
           // Assign and check nNodePerElem
           if(pE.nNodePerElem == -1)
             pE.nNodePerElem = e.nNodePerElem;
           else {
             if(pE.nNodePerElem != e.nNodePerElem) error = true;
           }
+
           // Assign and check nEdgePerElem
           if(pE.nEdgePerElem == -1)
             pE.nEdgePerElem = e.nEdgePerElem;
           else {
             if(pE.nEdgePerElem != e.nEdgePerElem) error = true;
           }
-          // Assign and check geoSpace and cncID
+
+          // Assign and check nTriPerElem
+          if(pE.nTriPerElem == -1)
+            pE.nTriPerElem = e.nTriPerElem;
+          else {
+            if(pE.nTriPerElem != e.nTriPerElem) error = true;
+          }
+
+          // Assign and check nTetPerElem
+          if(pE.nTetPerElem == -1)
+            pE.nTetPerElem = e.nTetPerElem;
+          else {
+            if(pE.nTetPerElem != e.nTetPerElem) error = true;
+          }
+
+          // Assign and check interpolant for the geometry
           if(pE.interp == geometricInterpolant::NONE) {
             pE.interp = e.interp;
           } else {
@@ -1624,37 +1732,54 @@ feStatus feMesh2DP1::readGmsh(const std::string meshName, const bool curved, con
       }
       if(error) {
         return feErrorMsg(FE_STATUS_ERROR,
-                          "Multiple geometric connectivities on physical entity "
+                          "Geometric entities with conflicting properties are defined on physical entity "
                           "%s.\n",
                           pE.name.data());
       }
     }
   }
 
-  // Construct the intrinsic (physical) connectivities
-  for(auto &p : _physicalEntities) {
+  // Transfer the connectivity tables from the geometric entities
+  // to the physical entities (named domains).
+  for(auto &p : _physicalEntities)
+  {
     physicalEntity &pE = p.second;
     pE.connecElem.resize(pE.nElm);
     pE.connecNodes.resize(pE.nElm * pE.nNodePerElem);
     pE.connecEdges.resize(pE.nElm * pE.nEdgePerElem);
+    pE.connecTri.resize(pE.nElm * pE.nTriPerElem);
+    // Those are for boundaries only? So tet is not needed as max dimension is 3 (-:
+    // pE.connecTet.resize(pE.nElm * pE.nTetPerElem);
+
     int countElm = 0;
     for(auto const &x : _entities) {
       entity e = x.second;
       for(auto ent : pE.listEntities) {
         if(ent == e.tag) {
-          for(int iElm = 0; iElm < e.nElm; ++iElm) {
-            // Connec elem
+          for(int iElm = 0; iElm < e.nElm; ++iElm)
+          {
+            // Element connectivity
             pE.connecElem[countElm] = e.connecElem[iElm];
-            // Connec nodes
+
+            // Connectivity of vertices
             for(int j = 0; j < e.nNodePerElem; ++j) {
               pE.connecNodes[e.nNodePerElem * countElm + j] =
                 e.connecNodes[e.nNodePerElem * iElm + j];
             }
-            // Connec edges
+
+            // Connectivity of boundary edges
             for(int j = 0; j < e.nEdgePerElem; ++j) {
               pE.connecEdges[e.nEdgePerElem * countElm + j] =
                 e.connecEdges[e.nEdgePerElem * iElm + j];
+              // feInfo("V1: %s : connecEdges[%d] = %d", pE.name.data(),e.nEdgePerElem * countElm + j, pE.connecEdges[e.nEdgePerElem * countElm + j]);
             }
+
+            // Connectivity of boundary triangles (facets)
+            for(int j = 0; j < e.nTriPerElem; ++j) {
+              pE.connecTri[e.nTriPerElem * countElm + j] =
+                e.connecTri[e.nTriPerElem * iElm + j];
+            }
+
             ++countElm;
           }
         }
@@ -1662,44 +1787,109 @@ feStatus feMesh2DP1::readGmsh(const std::string meshName, const bool curved, con
     }
   }
 
-  // Transfer edge/face connectivity to boundary elements
+  // Transfer connectivity to boundary elements.
+  // This overwrites the existing connectivity tables
+  // of n-dimensional physical entities with n < maxDim.
+  //
+  // Maybe we could *only* create the highest-dimensional elements,
+  // then transfer the connectivities to boundary entities?
+  //
+  // For now, we loop over lower dimensional entities and
+  // recreate the Edges and Triangles then find them in the sets,
+  // which does not seem optimal...
   int maxDim = 0;
   for(auto &pE : _physicalEntities) {
     maxDim = fmax(maxDim, pE.second.dim);
   }
 
-  for(auto &p : _physicalEntities) {
+  for(auto &p : _physicalEntities)
+  {
     physicalEntity &pE = p.second;
-    if(maxDim == 2) {
-      // Transfer edge connectivity to boundary edges
-      if(pE.dim == maxDim - 1) {
-        pE.nEdgePerElem = 1;
-        pE.connecEdges.resize(pE.nElm);
-        // Brute force : build and find edge in the edges set
-        Vertex *v0, *v1;
-        std::set<Edge, EdgeLessThan>::iterator it;
-        for(int i = 0; i < pE.nElm; ++i) {
-          v0 = &_vertices[pE.connecNodes[pE.nNodePerElem * i]];
-          v1 = &_vertices[pE.connecNodes[pE.nNodePerElem * i + 1]];
-          Edge e(v0, v1);
-          it = _edges.find(e);
-          if(it != _edges.end()) {
-            pE.connecEdges[i] = it->getTag();
-            if(pE.connecEdges[i] < 0) {
-              // Boundary edges should be positively oriented
-              feWarning("Boundary edge (%d,%d) orientation is negative.", v0->getTag(),
-                        v1->getTag());
-            }
-          } else {
-            // Edge should be in the set...
+
+    //
+    // Transfer edge connectivity to boundary edges, i.e.,
+    // set the edge connectivity of 1D phys. entities with the
+    // edge tags created as boundaries of 2D phys. entities.
+    //
+    if(pE.dim == 1 && pE.dim < maxDim)
+    {
+      // Create and find edge in the set of all edges
+      Vertex *v0, *v1;
+      for(int i = 0; i < pE.nElm; ++i) {
+        v0 = &_vertices[pE.connecNodes[pE.nNodePerElem * i]];
+        v1 = &_vertices[pE.connecNodes[pE.nNodePerElem * i + 1]];
+        Edge e(v0, v1);
+        auto it = _edges.find(e);
+        if(it != _edges.end()) {
+          pE.connecEdges[i] = it->getTag();
+          if(v0->getTag() != it->getTag(0)) {
+            // Boundary edges is reversed w.r.t. the stored edge,
+            // which should not happen if we have correctly respected
+            // Gmsh's ordering.
             return feErrorMsg(FE_STATUS_ERROR,
-                              "Boundary edge (%d,%d) was not found in the set of edges...",
-                              v0->getTag(), v1->getTag());
+              "Error when transferring connectivity tables to lower-dimensional physical entity:\n"
+              "Boundary edge (%d,%d) on entity %s with dimension %d is negatively oriented."
+              "Check that the element ordering on the boundary is consistent with the higher-dimensional entity.",
+              pE.name.data(), pE.dim, v0->getTag(), v1->getTag());
           }
+        } else {
+          // Edge is not in the set: this should not happen
+          // unless this entity is *not* the boundary of a higher-dimensional entity
+          // (i.e., if the mesh is not a manifold).
+          return feErrorMsg(FE_STATUS_ERROR,
+            "Error when transferring connectivity tables to lower-dimensional physical entity:\n"
+            "Boundary edge (%d,%d) on entity %s with dimension %d was not found in the set of mesh edges.\n"
+            "Check that this entity is indeed the boundary of higher-dimensional physical entity.\n"
+            "(i.e., check that the mesh is a manifold)",
+            pE.name.data(), pE.dim, v0->getTag(), v1->getTag());
         }
       }
-    } else if(maxDim == 3) {
-      // Transfer face and edge connectivities to elements
+
+      // for(auto val : pE.connecEdges) {
+      //   feInfo("V2: %s : connecEdges[] = %d", pE.name.data(), val);
+      // } 
+    }
+
+    //
+    // Transfer triangle connectivity to boundary edges, i.e.,
+    // set the tri connectivity of 2D phys. entities with the
+    // triangles tags created as facets of 3D phys. entities.
+    //
+    if(pE.dim == 2 && pE.dim < maxDim)
+    {
+      // Create and find triangle in the set of all edges
+      Vertex *v0, *v1, *v2;
+      for(int i = 0; i < pE.nElm; ++i) {
+        v0 = &_vertices[pE.connecNodes[pE.nNodePerElem * i]];
+        v1 = &_vertices[pE.connecNodes[pE.nNodePerElem * i + 1]];
+        v2 = &_vertices[pE.connecNodes[pE.nNodePerElem * i + 2]];
+        Triangle t(v0, v1, v2);
+        auto it = _allTriangles.find(t);
+        if(it != _allTriangles.end()) {
+          pE.connecEdges[i] = it->getTag();
+          bool sameOrder = (v0->getTag() == it->getTag(0) && v1->getTag() == it->getTag(1) && v2->getTag() == it->getTag(2));
+          if(!sameOrder) {
+            // Boundary triangle is reversed w.r.t. the stored triangle,
+            // which should not happen if we have correctly respected
+            // Gmsh's ordering.
+            return feErrorMsg(FE_STATUS_ERROR,
+              "Error when transferring connectivity tables to lower-dimensional physical entity:\n"
+              "Boundary triangle (%d,%d,%d) on entity %s with dimension %d is negatively oriented."
+              "Check that the element ordering on the boundary is consistent with the higher-dimensional entity.",
+              pE.name.data(), pE.dim, v0->getTag(), v1->getTag(), v2->getTag());
+          }
+        } else {
+          // Triangle is not in the set: this should not happen
+          // unless this entity is *not* the boundary of a higher-dimensional entity
+          // (i.e., if the mesh is not a manifold).
+          return feErrorMsg(FE_STATUS_ERROR,
+            "Error when transferring connectivity tables to lower-dimensional physical entity:\n"
+            "Boundary edge (%d,%d,%d) on entity %s with dimension %d was not found in the set of mesh edges.\n"
+            "Check that this entity is indeed the boundary of higher-dimensional physical entity.\n"
+            "(i.e., check that the mesh is a manifold)",
+            pE.name.data(), pE.dim, v0->getTag(), v1->getTag(), v2->getTag());
+        }
+      }
     }
   }
 
@@ -1727,6 +1917,9 @@ feStatus feMesh2DP1::readGmsh(const std::string meshName, const bool curved, con
     } else if(pE.interp == geometricInterpolant::TRIP3) {
       pE.geometry = geometryType::TRI;
       pE.geoSpace = new feSpaceTriP3("xyz");
+    } else if(pE.interp == geometricInterpolant::TETP1) {
+      pE.geometry = geometryType::TET;
+      pE.geoSpace = new feSpaceTetP1("xyz");
     } else {
       return feErrorMsg(FE_STATUS_ERROR,
                         "Unknown geometric connectivity interpolant \"%s\" on domain \"%s\".",
@@ -1745,7 +1938,12 @@ feStatus feMesh2DP1::readGmsh(const std::string meshName, const bool curved, con
       toString(pE.interp).data());
   }
 
+  // CONTINUER ICI
+  //
   // Finally, create geometric connectivities
+  //
+  // FIXME: Name is misleading as these are connectivities on Physical entities,
+  // not on geometric entities. Physical entities should be replaced by feCncgeo entirely.
   int nCncGeo = 0;
   for(auto &p : _physicalEntities) {
     physicalEntity &pE = p.second;
@@ -1793,7 +1991,7 @@ feStatus feMesh2DP1::readGmsh(const std::string meshName, const bool curved, con
           v2 = &_vertices[pE.connecNodes[pE.nNodePerElem * i + 2]];
           // The triangle tag is i because it is local to the pE's cncgeo, hence the tag is not
           // unique...
-          _elements[cnt] = new TriangleP1(v0, v1, v2, cnt, i, pE.tag);
+          _elements[cnt] = new Triangle(v0, v1, v2, cnt, i, pE.tag);
         } else if(pE.interp == geometricInterpolant::TRIP2) {
           v0 = &_vertices[pE.connecNodes[pE.nNodePerElem * i]];
           v1 = &_vertices[pE.connecNodes[pE.nNodePerElem * i + 1]];
@@ -1821,6 +2019,10 @@ feStatus feMesh2DP1::readGmsh(const std::string meshName, const bool curved, con
     cnc->setMeshPtr(this);
     cnc->getFeSpace()->setMeshPtr(this);
   }
+
+  _cncGeo[1]->printColoring("coloring.pos");
+  _cncGeo[1]->printColoring2("coloring2.pos");
+
   // Assign to each geometric FE space a pointer to its connectivity
   for(feCncGeo *cnc : _cncGeo) {
     cnc->getFeSpace()->setCncPtr(cnc);
