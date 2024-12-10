@@ -1,5 +1,5 @@
 # Build the library without any dependency
-name: buildLibraryNoDependency
+name: debug
 
 # Controls when the action will run. 
 on:
