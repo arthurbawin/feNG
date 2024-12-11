@@ -45,8 +45,10 @@ add_compile_options(-Wdisabled-optimization)
 
 # Eigen and "unsupported" Eigen routines
 # Set as system headers (SYSTEM) to silence Eigen's warnings such as -Wshadow
-include_directories(SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}/contrib/Eigen)
-include_directories(SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}/contrib/unsupported)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/contrib/eigen)
+# include_directories(SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}/contrib/allEigen)
+# include_directories(SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}/contrib/Eigen)
+# include_directories(SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}/contrib/unsupported)
 add_definitions("-DHAVE_EIGEN")
 
 #  Macro pour definir une bibliotheque

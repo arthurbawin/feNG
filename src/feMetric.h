@@ -5,7 +5,7 @@
 #include "feNewRecovery.h"
 
 #include <Eigen/Dense>
-#include <Eigen/MatrixFunctions>
+#include <unsupported/Eigen/MatrixFunctions>
 
 #include "STensor3.h"
 

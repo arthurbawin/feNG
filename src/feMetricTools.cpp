@@ -13,7 +13,7 @@ using namespace soplex;
 #include "ellipseToolbox.h"
 #include "../contrib/root_finder/root_finder.hpp"
 #include <Eigen/Eigen>
-#include <Eigen/MatrixFunctions>
+#include <unsupported/Eigen/MatrixFunctions>
 
 extern int FE_VERBOSE;
 

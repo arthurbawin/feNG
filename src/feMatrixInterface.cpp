@@ -4,7 +4,7 @@
 // #include "../contrib/unsupported/Eigen/MatrixFunctions"
 
 #include <Eigen/Dense>
-#include <Eigen/MatrixFunctions>
+#include <unsupported/Eigen/MatrixFunctions>
 
 // ============================================================
 // Implementation of MetricTensor
