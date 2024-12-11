@@ -124,7 +124,7 @@ feCncGeo::feCncGeo(const int tag, const int dimension, const int nVerticesPerEle
 int feCncGeo::getUniqueVertexConnectivity(const int iVertex) const
 {
 #if defined(FENG_DEBUG)
-  if(iVertex >= _connecVerticesOnly.size())
+  if((size_t) iVertex >= _connecVerticesOnly.size())
     feErrorMsg(FE_STATUS_ERROR,
                "Out of bounds: accessing entry %d in _connecVerticesOnly"
                " of size %u",
@@ -136,7 +136,7 @@ int feCncGeo::getUniqueVertexConnectivity(const int iVertex) const
 int feCncGeo::getVertexConnectivity(const int iVertex) const
 {
 #if defined(FENG_DEBUG)
-  if(iVertex >= _connecVertices.size())
+  if((size_t) iVertex >= _connecVertices.size())
     feErrorMsg(FE_STATUS_ERROR,
                "Out of bounds: accessing entry %d in _connecVertices"
                " of size %u",
@@ -160,7 +160,7 @@ int feCncGeo::getVertexConnectivity(const int numElem, const int iVertex) const
 void feCncGeo::setVertexConnectivity(const int numElem, const int iVertex, const int val)
 {
 #if defined(FENG_DEBUG)
-  if((size_t) _(nVerticesPerElm * numElem + iVertex) >= _connecVertices.size())
+  if((size_t) (_nVerticesPerElm * numElem + iVertex) >= _connecVertices.size())
     feErrorMsg(FE_STATUS_ERROR,
                "Out of bounds: accessing entry %d in _connecVertices"
                " of size %u",
@@ -220,7 +220,7 @@ int feCncGeo::getEdgeConnectivity(const int numElem, const int iEdge) const
 void feCncGeo::setEdgeConnectivity(const int numElem, const int iEdge, const int val)
 {
 #if defined(FENG_DEBUG)
-  if(_nEdgesPerElem * numElem + iEdge >= _connecEdges.size())
+  if((size_t) (_nEdgesPerElem * numElem + iEdge) >= _connecEdges.size())
     feErrorMsg(FE_STATUS_ERROR,
                "Out of bounds: accessing entry %d in _connecEdges"
                " of size %u",

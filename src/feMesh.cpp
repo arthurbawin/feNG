@@ -74,7 +74,7 @@ void feMesh::getCoord(const feCncGeo *cnc, const int numElem, std::vector<double
 {
   int nVerticesPerElem = cnc->getNumVerticesPerElem();
 #ifdef FENG_DEBUG
-  if(geoCoord.size() != 3 * nVerticesPerElem) {
+  if(geoCoord.size() != 3 * (size_t) nVerticesPerElem) {
     feErrorMsg(FE_STATUS_ERROR, " In feMesh::getCoord : Wrong size for vector geoCoord\n");
   }
 #endif
@@ -91,7 +91,7 @@ void feMesh::getCoord(std::string const &cncGeoID, const int numElem, std::vecto
   feCncGeo *cnc = getCncGeoByName(cncGeoID);
   int nVerticesPerElem = cnc->getNumVerticesPerElem();
 #ifdef FENG_DEBUG
-  if(geoCoord.size() != 3 * nVerticesPerElem) {
+  if(geoCoord.size() != 3 * (size_t) nVerticesPerElem) {
     printf(" In feMesh::getCoord : Wrong size for vector geoCoord\n");
   }
 #endif
@@ -108,7 +108,7 @@ void feMesh::getCoord(const int cncGeoTag, const int numElem, std::vector<double
   feCncGeo *cnc = getCncGeoByTag(cncGeoTag);
   int nVerticesPerElem = cnc->getNumVerticesPerElem();
 #ifdef FENG_DEBUG
-  if(geoCoord.size() != 3 * nVerticesPerElem) {
+  if(geoCoord.size() != 3 * (size_t) nVerticesPerElem) {
     printf(" In feMesh::getCoord : Wrong Size for vector geoCoord\n");
   }
 #endif
@@ -123,7 +123,7 @@ void feMesh::getCoord(const int cncGeoTag, const int numElem, std::vector<double
 void feMesh::getVertexCoord(const int iVertex, double coord[3])
 {
 #ifdef FENG_DEBUG
-  if(iVertex > _vertices.size()) {
+  if((size_t) iVertex > _vertices.size()) {
     feErrorMsg(FE_STATUS_ERROR,
                "Out of bounds: accessing entry %d in mesh->_vertices"
                " of size %u",
@@ -139,7 +139,7 @@ void feMesh::getVertexCoord(const int iVertex, double coord[3])
 feStatus feMesh::setVertexCoord(const int iVertex, const double coord[3])
 {
 #ifdef FENG_DEBUG
-  if(iVertex > _vertices.size()) {
+  if((size_t) iVertex > _vertices.size()) {
     feErrorMsg(FE_STATUS_ERROR,
                "Out of bounds: accessing entry %d in mesh->_vertices"
                " of size %u",
