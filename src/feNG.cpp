@@ -51,6 +51,7 @@ void initialize(int argc, char **argv)
   }
 #else
   // Do nothing
+  UNUSED(argc, argv);
 #endif
 }
 

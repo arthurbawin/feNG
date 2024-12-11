@@ -26,6 +26,8 @@ void Triangle::createBoundary(std::set<Edge, EdgeLessThan> &meshEdges, int &numE
 
 bool Triangle::xyz2uvw(double xyz[3], double uvw[3], double tol)
 {
+  UNUSED(tol);
+  
   // Purely 2D version
   // const double O[2] = {v[0]->x(), v[0]->y()};
   // const double d[2] = {xyz[0] - O[0], xyz[1] - O[1]};

@@ -11,7 +11,7 @@
 #include "feCncGeo.h"
 #include "feNG.h"
 
-#include "../contrib/Eigen/Dense"
+#include <Eigen/Dense>
 
 typedef Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> EigenMat;
 
@@ -211,18 +211,19 @@ public:
   // Evaluate the local shape functions and derivatives at quadrature nodes
   virtual std::vector<double> L(double *r) = 0;
   virtual void L(double *r, double *L) = 0;
-  virtual std::vector<double> dLdr(double *r) { return std::vector<double>(_nFunctions, 0.); };
-  virtual std::vector<double> dLds(double *r) { return std::vector<double>(_nFunctions, 0.); };
-  virtual std::vector<double> dLdt(double *r) { return std::vector<double>(_nFunctions, 0.); };
-  virtual std::vector<double> d2Ldr2(double *r) { return std::vector<double>(_nFunctions, 0.); };
-  virtual std::vector<double> d2Ldrs(double *r) { return std::vector<double>(_nFunctions, 0.); };
-  virtual std::vector<double> d2Lds2(double *r) { return std::vector<double>(_nFunctions, 0.); };
-  virtual std::vector<double> d2Ldt2(double *r) { return std::vector<double>(_nFunctions, 0.); };
+  virtual std::vector<double> dLdr(double *r) { UNUSED(r); return std::vector<double>(_nFunctions, 0.); };
+  virtual std::vector<double> dLds(double *r) { UNUSED(r); return std::vector<double>(_nFunctions, 0.); };
+  virtual std::vector<double> dLdt(double *r) { UNUSED(r); return std::vector<double>(_nFunctions, 0.); };
+  virtual std::vector<double> d2Ldr2(double *r) { UNUSED(r); return std::vector<double>(_nFunctions, 0.); };
+  virtual std::vector<double> d2Ldrs(double *r) { UNUSED(r); return std::vector<double>(_nFunctions, 0.); };
+  virtual std::vector<double> d2Lds2(double *r) { UNUSED(r); return std::vector<double>(_nFunctions, 0.); };
+  virtual std::vector<double> d2Ldt2(double *r) { UNUSED(r); return std::vector<double>(_nFunctions, 0.); };
 
   // Evaluate the global shape functions at quadrature nodes
   virtual feStatus Lphys(int iElm, std::vector<double> &x, std::vector<double> &L,
                          std::vector<double> &dLdx, std::vector<double> &dLdy)
   {
+    UNUSED(iElm, x, L, dLdx, dLdy); 
     printf("Not implemented\n");
     exit(-1);
   };

@@ -294,6 +294,8 @@ feStatus feMesh2DP1::adapt(std::vector<feNewRecovery*> recoveredFields, feMetric
 
   gmshWasInitialized = false;
 #else
+  UNUSED(recoveredFields, options, spaces, essentialSpaces, spaceForAdaptation,
+    discreteSolution, exactSolution, exactGradient, curveMMGmesh, target, generateAnisoMeshBeforeCurving);
   return feErrorMsg(FE_STATUS_ERROR, "Gmsh is required to compute metric tensors and adapt the mesh!");
 #endif
   return FE_STATUS_OK;

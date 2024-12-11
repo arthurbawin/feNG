@@ -67,6 +67,7 @@ int sys3x3(double mat[3][3], double b[3], double res[3], double *det)
 
 bool Tetrahedron::xyz2uvw(double xyz[3], double uvw[3], double tol)
 {
+  UNUSED(tol);
   double mat[3][3], b[3], det;
   mat[0][0] = _vlin[1]->x() - _vlin[0]->x();
   mat[0][1] = _vlin[2]->x() - _vlin[0]->x();

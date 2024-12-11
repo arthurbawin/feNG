@@ -1,5 +1,5 @@
 #include "feMetric.h"
-#include "../contrib/Eigen/QR"
+#include <Eigen/QR>
 
 // // Explicit instantiation
 // template void logEuclidianP2InterpolationExplicit<Eigen::Matrix2d>(const double *xsi,
@@ -292,7 +292,7 @@ void feMetric::interpolateMetricP2Explicit(const double *x, Eigen::Matrix2d &M)
   }
 }
 
-thread_local Eigen::Matrix2d L, DLDX, DLDY;
+thread_local Eigen::Matrix2d Lmat, DLDX, DLDY;
 thread_local double L1, L2, DL1DX, DL1DY, DL2DX, DL2DY;
 thread_local Eigen::Vector2d U1, U2, DU1DX, DU1DY, DU2DX, DU2DY;
 
@@ -342,7 +342,7 @@ void feMetric::interpolateMetricP2(const double *x, Eigen::Matrix2d &M,
                                               _logMetricTensorAtNodetags_eigen[GMSHNODETAGS_P2[2]-1],
                                               _logMetricTensorAtNodetags_eigen[GMSHNODETAGS_P2[3]-1],
                                               _logMetricTensorAtNodetags_eigen[GMSHNODETAGS_P2[4]-1],
-                                              _logMetricTensorAtNodetags_eigen[GMSHNODETAGS_P2[5]-1], dMdx, dMdy, L, DLDX, DLDY,
+                                              _logMetricTensorAtNodetags_eigen[GMSHNODETAGS_P2[5]-1], dMdx, dMdy, Lmat, DLDX, DLDY,
                                               L1, DL1DX, DL1DY, L2, DL2DX, DL2DY, U1, DU1DX, DU1DY, U2, DU2DX, DU2DY);
   }
 }
@@ -385,7 +385,7 @@ void feMetric::interpolateMetricP2Log(const double *x, Eigen::Matrix2d &M,
 {
   // Locate point in the feMesh
   int elm;
-  double UVW[3];
+  // double UVW[3];
   bool isFound = static_cast<feMesh2DP1 *>(_recoveredFields[0]->_mesh)->locateVertex(x, elm, UVW);
   if(!isFound) {
     feWarning("In interpolateMetricP2 : Point (%f, %f) was not found in the mesh.", x[0], x[1]);
@@ -485,6 +485,8 @@ void feMetric::gradLogEuclidianP2Interpolation(const double xsi[2],
                                                Eigen::Vector2d &du2dxres,
                                                Eigen::Vector2d &du2dyres)
 {
+  UNUSED(LRES, DLDXRES, DLDYRES);
+
   double phi[6], dphidr[6], dphids[6];
   double r = xsi[0];
   double s = xsi[1];

@@ -31,9 +31,19 @@
 #include "omp.h"
 #endif
 
+#if defined(HAVE_MPI)
+  // This is advised here: https://github.com/open-mpi/ompi/issues/5157
+  // to silence cast-function-type warnings when compiling with -Wextra
+  #define OMPI_SKIP_MPICXX 1
+#endif
+
 #if defined(HAVE_PETSC)
 #include "petscsystypes.h"
 #endif
+
+// Macro to specify unused parameters
+// and avoid compiler warnings
+#define UNUSED(...) (void)sizeof(__VA_ARGS__)
 
 #if defined(HAVE_PETSC)
 typedef PetscInt feInt;

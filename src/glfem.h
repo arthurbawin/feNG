@@ -13,6 +13,8 @@
 #ifndef _GLFEM_H_
 #define _GLFEM_H_
 
+#include "feNG.h"
+
 #if defined(HAVE_GLFW)
 #include <../contrib/glfw/include/GLFW/glfw3.h>
 #endif

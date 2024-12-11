@@ -32,7 +32,7 @@ feEZCompressedRowStorage::feEZCompressedRowStorage(int numUnknowns,
     nnzPerRow[i].push_back(i);
   }
 
-  for(size_t iForm = 0; iForm < numMatrixForms; ++iForm)
+  for(int iForm = 0; iForm < numMatrixForms; ++iForm)
   {
     // feBilinearForm *f = formMatrices[iForm];
     feCncGeo *cnc = formMatrices[iForm]->getCncGeo();
@@ -97,13 +97,13 @@ feEZCompressedRowStorage::feEZCompressedRowStorage(int numUnknowns,
   #if defined(HAVE_OMP)
   #pragma omp parallel for
   #endif
-  for(size_t i = 0; i < numUnknowns; ++i) {
+  for(int i = 0; i < numUnknowns; ++i) {
     std::sort( nnzPerRow[i].begin(), nnzPerRow[i].end() );
     nnzPerRow[i].erase( std::unique( nnzPerRow[i].begin(), nnzPerRow[i].end() ), nnzPerRow[i].end() );
   }
 
   _num_nnz = 0;
-  for(size_t i = 0; i < numUnknowns; ++i) {
+  for(int i = 0; i < numUnknowns; ++i) {
     nnz[i] = fmax(1, nnzPerRow[i].size());
     _num_nnz += nnz[i];
   }
@@ -465,8 +465,9 @@ void feCompressedRowStorageMklPardiso::print_info()
 {
   // for(feInt i=0;i<nz;i++) printf(" %ld \n", Aj[i]);
   for(feInt i = 0; i < ordre; i++) {
-    printf("rangee (%d) ", i + 1);
-    for(feInt j = 0; j < Ap[i + 1] - Ap[i]; j++) printf(" %d ", Aj[Ap[i] - 1 + j]);
+    printf("rangee (%ld) ", i + 1);
+    for(feInt j = 0; j < Ap[i + 1] - Ap[i]; j++)
+      printf(" %ld ", Aj[Ap[i] - 1 + j]);
     printf("\n");
   }
 }

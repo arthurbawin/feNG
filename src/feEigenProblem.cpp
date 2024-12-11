@@ -16,6 +16,8 @@ void slepcInitialize(int argc, char **argv)
     printf("In slepcInitialize : Error : SLEPc was already initialized\n");
     return;
   }
+#else
+  UNUSED(argc, argv);
 #endif
 }
 
@@ -77,6 +79,7 @@ feStatus createEigenProblem(feEigenProblem *&eigenProblem, eigenSolverType type,
       eigenProblem = new feEigenProblem(argc, argv, lhsForms, rhsForms, metaNumber, mesh);
       break;
 #else
+      UNUSED(eigenProblem, mesh, argc, argv);
       return feErrorMsg(FE_STATUS_ERROR,
                         "feNG must be compiled with MPI, PETSc and SLEPc to solve with SLEPc.");
 #endif
@@ -89,7 +92,7 @@ feStatus createEigenProblem(feEigenProblem *&eigenProblem, eigenSolverType type,
 feEigenProblem::feEigenProblem(int argc, char **argv, std::vector<feBilinearForm *> lhsForms,
                                std::vector<feBilinearForm *> rhsForms, feMetaNumber *metaNumber,
                                feMesh *mesh)
-  : _argc(argc), _argv(argv), _metaNumber(metaNumber), _mesh(mesh)
+  : _metaNumber(metaNumber), _mesh(mesh), _argc(argc), _argv(argv)
 #if defined(HAVE_SLEPC)
     ,
     _nInc(metaNumber->getNbUnknowns()), _nDofs(metaNumber->getNbDOFs())
@@ -283,6 +286,8 @@ void feEigenProblem::assembleLHSMatrix(feSolution *sol)
   MatView(_A, viewer);
   PetscViewerPopFormat(viewer);
   PetscViewerDestroy(&viewer);
+#else
+  UNUSED(sol);
 #endif
 }
 
@@ -377,6 +382,8 @@ void feEigenProblem::assembleRHSMatrix(feSolution *sol)
   MatView(_B, viewer);
   PetscViewerPopFormat(viewer);
   PetscViewerDestroy(&viewer);
+#else
+  UNUSED(sol);
 #endif
 }
 
@@ -458,6 +465,8 @@ void feEigenProblem::solve(feSolution *sol)
     VecScale(_eigenPairs[i].vecReal, 1. / norm);
   }
 
+#else
+  UNUSED(sol);
 #endif
 }
 
@@ -476,6 +485,8 @@ void feEigenProblem::setEigenmodeAsActiveSolution(feSolution *sol, size_t eigenP
     sol->setSolAtDOF(dof, vecRealArray[dof]);
   }
   VecRestoreArray(_eigenPairs[eigenPairIndex].vecReal, &vecRealArray);
+#else
+  UNUSED(sol,eigenPairIndex,fieldID);
 #endif
 }
 

@@ -48,28 +48,19 @@ public:
 
 #if defined(HAVE_MKL)
   void get_ia_Pardiso(PardisoInt **array) {
-    for(feInt i = 0; i < ia_Pardiso.size(); i++)
+    for(size_t i = 0; i < ia_Pardiso.size(); i++)
       (*array)[i] = (PardisoInt) ia_Pardiso[i];
   }
   void get_ja_Pardiso(PardisoInt **array) { 
-  for(feInt i = 0; i < ja_Pardiso.size(); i++)
+  for(size_t i = 0; i < ja_Pardiso.size(); i++)
       (*array)[i] = (PardisoInt) ja_Pardiso[i];
   }
 #endif
-
-  // These do not belong here
-  // double *allocateMatrixArray() { return new double[_num_nnz]; };
-  // void freeMatrixArray(double *M)
-  // {
-  //   if(M != NULL) delete[] M;
-  // };
-  // void setMatrixArrayToZero(double *M)
-  // {
-  //   for(feInt i = 0; i < _num_nnz; i++) M[i] = 0.;
-  // };
 };
 
+//
 // Deprecated and should be removed, used only in the eigensolver
+//
 class feCompressedRowStorage
 {
 public:

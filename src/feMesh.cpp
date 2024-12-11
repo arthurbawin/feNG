@@ -326,6 +326,7 @@ feMesh1DP1::~feMesh1DP1()
 bool feMesh1DP1::locateVertex(const double *x, int &iElm, double *u, double tol,
                               bool returnLocalElmTag, std::string targetConnectivity)
 {
+  UNUSED(tol, returnLocalElmTag, targetConnectivity);
   for(int i = 0; i < _nInteriorElm; ++i) {
     double x0 = _vertices[i].x();
     double x1 = _vertices[i + 1].x();
@@ -345,6 +346,7 @@ bool feMesh1DP1::locateVertex(const double *x, int &iElm, double *u, double tol,
 bool feMesh1DP1::locateVertexInElements(feCncGeo *cnc, const double *x, const std::vector<int> &elementsToSearch, int &iElm,
                                       double *u, double tol)
 {
+  UNUSED(cnc, x, elementsToSearch, iElm, u, tol);
   feErrorMsg(FE_STATUS_ERROR, "locateVertexInElements not implemented for 1D meshes :/");
   return false;
 }
@@ -584,6 +586,7 @@ thread_local std::vector<double> ELEM_COORD(18,0.);
 bool feMesh2DP1::locateVertexInElements(feCncGeo *cnc, const double *x, const std::vector<int> &elementsToSearch, int &iElm,
                                       double *u, double tol)
 {
+  UNUSED(tol);
   size_t numElem = elementsToSearch.size();
   for(size_t i = 0; i < numElem; ++i) {
     feInfo("Searching %d/%d elements: %d", i+1, numElem, elementsToSearch[i]);
@@ -607,6 +610,8 @@ feStatus feMesh2DP1::transfer(feMesh2DP1 *targetMesh, feMetaNumber *oldnumbering
                           const std::vector<feSpace *> &mySpacesEssBC,
                           const std::vector<feSpace *> &targetSpaces)
 {
+  UNUSED(oldnumbering);
+  
   feInfoCond(FE_VERBOSE > 0, "");
   feInfoCond(FE_VERBOSE > 0, "SOLUTION PROJECTION:");
 

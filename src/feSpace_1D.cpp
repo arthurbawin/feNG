@@ -50,9 +50,9 @@ feSpace0DP0::feSpace0DP0(feMesh *mesh, const std::string fieldID, const std::str
   _Lcoor = {1., 0., 0.};
 };
 
-std::vector<double> feSpace0DP0::L(double *r) { return {1.}; };
+std::vector<double> feSpace0DP0::L(double *r) { UNUSED(r); return {1.}; };
 
-void feSpace0DP0::L(double *r, double *L) { L[0] = 1.; };
+void feSpace0DP0::L(double *r, double *L) { UNUSED(r); L[0] = 1.; };
 
 void feSpace0DP0::initializeNumberingUnknowns()
 {
@@ -82,10 +82,11 @@ feSpace0D_Hermite::feSpace0D_Hermite(feMesh *mesh, const std::string fieldID,
   _Lcoor = {1., 0., 0., 1., 0., 0.};
 };
 
-std::vector<double> feSpace0D_Hermite::L(double *r) { return {1., 1.}; };
+std::vector<double> feSpace0D_Hermite::L(double *r) { UNUSED(r); return {1., 1.}; };
 
 void feSpace0D_Hermite::L(double *r, double *L)
 {
+  UNUSED(r);
   L[0] = 1.;
   L[1] = 1.;
 };
@@ -129,9 +130,9 @@ feSpace1DP0::feSpace1DP0(feMesh *mesh, const std::string fieldID, const std::str
   _Lcoor = {1., 0., 0.};
 };
 
-std::vector<double> feSpace1DP0::L(double *r) { return {1.}; };
+std::vector<double> feSpace1DP0::L(double *r) { UNUSED(r); return {1.}; };
 
-void feSpace1DP0::L(double *r, double *L) { L[0] = 1.; };
+void feSpace1DP0::L(double *r, double *L) { UNUSED(r); L[0] = 1.; };
 
 void feSpace1DP0::initializeNumberingUnknowns()
 {
@@ -176,7 +177,7 @@ void feSpace1DP1::L(double *r, double *L)
   L[1] = (1. + r[0]) / 2.;
 };
 
-std::vector<double> feSpace1DP1::dLdr(double *r) { return {-1. / 2., 1. / 2.}; };
+std::vector<double> feSpace1DP1::dLdr(double *r) { UNUSED(r); return {-1. / 2., 1. / 2.}; };
 
 void feSpace1DP1::initializeNumberingUnknowns()
 {
@@ -231,6 +232,7 @@ template <int dim> void feSpaceVecP1<dim>::L(double *r, double *res)
 
 template <int dim> std::vector<double> feSpaceVecP1<dim>::dLdr(double *r)
 {
+  UNUSED(r);
   double dldr[2] = {-1. / 2., 1. / 2.};
   std::vector<double> res(_nFunctions);
   duplicateScalarArray(2, 1, dldr, dim, res);
@@ -291,7 +293,7 @@ void feSpace1D_DG_P1::L(double *r, double *L)
   L[1] = (1. + r[0]) / 2.;
 };
 
-std::vector<double> feSpace1D_DG_P1::dLdr(double *r) { return {-1. / 2., 1. / 2.}; };
+std::vector<double> feSpace1D_DG_P1::dLdr(double *r) { UNUSED(r); return {-1. / 2., 1. / 2.}; };
 
 void feSpace1D_DG_P1::initializeNumberingUnknowns()
 {
@@ -326,9 +328,9 @@ feSpace1D_CR0::feSpace1D_CR0(feMesh *mesh, const std::string fieldID, const std:
   _Lcoor = {0., 0., 0.};
 };
 
-std::vector<double> feSpace1D_CR0::L(double *r) { return {1.}; };
+std::vector<double> feSpace1D_CR0::L(double *r) { UNUSED(r); return {1.}; };
 
-void feSpace1D_CR0::L(double *r, double *L) { L[0] = 1.; };
+void feSpace1D_CR0::L(double *r, double *L) { UNUSED(r); L[0] = 1.; };
 
 void feSpace1D_CR0::initializeNumberingUnknowns()
 {

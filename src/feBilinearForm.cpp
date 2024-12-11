@@ -85,14 +85,20 @@ static inline void setMatrixToZero(feInt m, feInt n, double **A)
 
 static inline void freeMatrix(feInt m, double **A)
 {
+  UNUSED(m);
   delete[] A[0];
   delete[] A;
 }
 
 static inline void printMatrix(feInt m, feInt n, double ***A)
 {
+#if defined(HAVE_PETSC)
   for(feInt i = 0; i < m; ++i)
     for(feInt j = 0; j < n; ++j) printf("A[%d][%d] = %+10.16e\n", i, j, (*A)[i][j]);
+#else
+  for(feInt i = 0; i < m; ++i)
+    for(feInt j = 0; j < n; ++j) printf("A[%ld][%ld] = %+10.16e\n", i, j, (*A)[i][j]);
+#endif
 }
 
 static inline void allocateResidual(feInt m, double **b)
@@ -110,15 +116,19 @@ static inline void setResidualToZero(feInt m, double **b)
 
 static inline void printResidual(feInt m, double **b)
 {
+#if defined(HAVE_PETSC)
   for(feInt i = 0; i < m; ++i) printf("b[%d] = %+10.16e\n", i, (*b)[i]);
+#else
+  for(feInt i = 0; i < m; ++i) printf("b[%ld] = %+10.16e\n", i, (*b)[i]);
+#endif
 }
 
 static inline void freeResidual(double **b) { free(*b); }
 
 feBilinearForm::feBilinearForm(std::vector<feSpace *> spaces, feSysElm *elementarySystem)
   : _sysElm(elementarySystem), _intSpaces(spaces), _cnc(spaces[0]->getCncGeo()),
-    _cncGeoID(spaces[0]->getCncGeoID()), _cncGeoTag(spaces[0]->getCncGeoTag()),
-    _geoSpace(_cnc->getFeSpace()), _J(_cnc->getJacobians())
+    _geoSpace(_cnc->getFeSpace()), _J(_cnc->getJacobians()),
+    _cncGeoTag(spaces[0]->getCncGeoTag()), _cncGeoID(spaces[0]->getCncGeoID())
 {
   _geoCoord.resize(3 * _cnc->getNumVerticesPerElem());
 
@@ -178,11 +188,12 @@ feBilinearForm::feBilinearForm(std::vector<feSpace *> spaces, feSysElm *elementa
 
 // Copy constructor
 feBilinearForm::feBilinearForm(const feBilinearForm &f)
-  : _intSpaces(f._intSpaces), _cnc(f._cnc), _cncGeoID(f._cncGeoID), _cncGeoTag(f._cncGeoTag),
-    _geoSpace(f._geoSpace), _fieldsLayoutI(f._fieldsLayoutI), _fieldsLayoutJ(f._fieldsLayoutJ),
-    _M(f._M), _N(f._N), _J(f._J), _adr(f._adr), _adrI(f._adrI), _adrJ(f._adrJ), _sol(f._sol),
-    _solDot(f._solDot), _solPrev(f._solPrev), _solNext(f._solNext), _R0(f._R0), _Rh(f._Rh),
-    _h0(f._h0), ptrComputeMatrix(f.ptrComputeMatrix), _geoCoord(f._geoCoord)
+  : _intSpaces(f._intSpaces), _cnc(f._cnc), _geoSpace(f._geoSpace), _geoCoord(f._geoCoord),
+  _J(f._J), _cncGeoTag(f._cncGeoTag), _cncGeoID(f._cncGeoID),
+  _fieldsLayoutI(f._fieldsLayoutI), _fieldsLayoutJ(f._fieldsLayoutJ),
+  _M(f._M), _N(f._N), _adrI(f._adrI), _adrJ(f._adrJ), _R0(f._R0), _Rh(f._Rh),
+  _h0(f._h0), ptrComputeMatrix(f.ptrComputeMatrix), _adr(f._adr), _sol(f._sol),
+  _solDot(f._solDot), _solPrev(f._solPrev), _solNext(f._solNext)
 {
   _Ae = allocateMatrix(_M, _N);
   allocateResidual(_M, &_Be);

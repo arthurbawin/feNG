@@ -20,13 +20,13 @@ extern int FE_VERBOSE;
 // #define TEST_ANALYTIC_METRIC
 
 feMetric::feMetric(feRecovery *recovery, feMetricOptions metricOptions)
-  : _recovery(recovery), _options(metricOptions)
+  : _options(metricOptions), _recovery(recovery)
 {
   _options.polynomialDegree = _recovery->getDegreeSolution();
 }
 
 feMetric::feMetric(std::vector<feNewRecovery *> &recoveredFields, feMetricOptions metricOptions)
-  : _recoveredFields(recoveredFields), _options(metricOptions)
+  : _options(metricOptions), _recoveredFields(recoveredFields)
 {
   // Min and max eigenvalues based on sizes
   _lambdaMax = 1. / (_options.hMin * _options.hMin);
@@ -85,6 +85,8 @@ feStatus feMetric::createVertex2NodeMap(std::vector<std::size_t> &nodeTags,
   //     return feErrorMsg(FE_STATUS_ERROR, "No Gmsh tag was associated to vertex %f - %f", v.x(),
   //                       v.y());
   // }
+#else
+  UNUSED(nodeTags, coord);
 #endif
   return FE_STATUS_OK;
 }
@@ -456,7 +458,8 @@ void feMetric::interpolationTest(const std::vector<size_t> &nodeTags, std::vecto
   fprintf(file, "};\n");
   fclose(file);
   _options.userValue = error;
-
+#else
+  UNUSED(nodeTags, coord);
 #endif
 }
 //
@@ -612,7 +615,8 @@ void feMetric::writeMetricField(std::vector<std::size_t> &nodeTags, std::vector<
 
   // Reset the initial model as active
   gmsh::model::setCurrent(initialMesh);
-
+#else
+  UNUSED(nodeTags, coord);
 #endif
 }
 
@@ -775,13 +779,13 @@ feStatus feMetric::computeMetricsGoalOrientedP1(std::vector<std::size_t> &nodeTa
       "goal oriented adaptation.");
   }
 
-  double x[2], fxx, fxy, fyx, fyy, p, px, py;
+  double x[2], fxx, fxy, fyx, fyy, p; //, px, py;
   MetricTensor H;
 
   // Test pour la perturbation singuliere
-  double epsilon = 1e-2;
-  double velocity[2] = {1. - 2. * epsilon, 1. - 2. * epsilon};
-  double a = 2. * (1 - epsilon);
+  // double epsilon = 1e-2;
+  // double velocity[2] = {1. - 2. * epsilon, 1. - 2. * epsilon};
+  // double a = 2. * (1 - epsilon);
 
   // Compute bounded absolute value of hessian at vertices (at nodetags)
   for(size_t i = 0; i < nodeTags.size(); i++) {
@@ -796,10 +800,10 @@ feStatus feMetric::computeMetricsGoalOrientedP1(std::vector<std::size_t> &nodeTa
 
     // Evaluate adjoint and its gradient
     p = _recoveredFields[1]->evaluateRecovery(PPR::RECOVERY, 0, x);
-    px = _recoveredFields[1]->evaluateRecovery(PPR::DERIVATIVE, 0, x);
-    py = _recoveredFields[1]->evaluateRecovery(PPR::DERIVATIVE, 1, x);
+    // px = _recoveredFields[1]->evaluateRecovery(PPR::DERIVATIVE, 0, x);
+    // py = _recoveredFields[1]->evaluateRecovery(PPR::DERIVATIVE, 1, x);
 
-    double dotProd = px * velocity[0] + py * velocity[1];
+    // double dotProd = px * velocity[0] + py * velocity[1];
 
     H(0, 0) = fxx;
     H(0, 1) = (fxy + fyx) / 2.;
@@ -956,7 +960,7 @@ feStatus feMetric::computeMetricsP1_referenceSpace(std::vector<std::size_t> &nod
 #endif
   {
     double x[2];
-    MetricTensor Qprev, Q, Qtri, Mmud, Mud;
+    MetricTensor Qprev, Qtri, Mmud, Mud;
     std::vector<double> D2U_EXACT(4, 0.), pos(3, 0.);
 
     // Initialize all metrics to identity for the first iteration
@@ -997,10 +1001,10 @@ feStatus feMetric::computeMetricsP1_referenceSpace(std::vector<std::size_t> &nod
       double uxx, uxy, uyy;
 
       // Get the coefficients of the homogeneous error polynomial at vertex
-      // std::vector<double> &errorCoeff = errorCoeffAtVertices[_nodeTag2sequentialTag[nodeTags[i]]];
-      // uxx = errorCoeff[0];
-      // uxy = errorCoeff[1] / 2.;
-      // uyy = errorCoeff[2];
+      std::vector<double> &errorCoeff = errorCoeffAtVertices[_nodeTag2sequentialTag[nodeTags[i]]];
+      uxx = errorCoeff[0];
+      uxy = errorCoeff[1] / 2.;
+      uyy = errorCoeff[2];
 
       // IMPORTANT: This should be correct and t converges with rate 3 for tanh and a = 10.
       // The error coefficient are multiplied by the corresponding binomial coefficient
@@ -1108,7 +1112,7 @@ feStatus feMetric::computeMetricsP2_referenceSpace(std::vector<std::size_t> &nod
 #endif
   {
     double x[2];
-    MetricTensor Qprev, Q, Qtri, Mmud, Mud, foo;
+    MetricTensor Qprev, Qtri, Mmud, Mud, foo;
     std::vector<double> D3U_EXACT(8, 0.), pos(3, 0.);
 
     // Initialize all metrics to identity for the first iteration
@@ -1284,9 +1288,9 @@ void setUpLinearProblem(linearProblem &myLP, feMetricOptions &options, int nThet
 }
 #endif
 
+#if defined(TEST_ANALYTIC_METRIC)
 static MetricTensor metricAparicioEstrems(double x, double y)
 {
-  double pi = M_PI;
   double A = 10.;
   double c = sqrt(A * A + 4. * M_PI * M_PI);
   double HMIN = 0.1;
@@ -1298,8 +1302,8 @@ static MetricTensor metricAparicioEstrems(double x, double y)
   // double dhdy = b * sgn(y);
 
   double h = HMIN + b * fabs((A * y - cos(2. * M_PI * x)) / c);
-  double dhdx = b * (2. * pi * sin(2. * pi * x) * sgn(A * y - cos(2. * pi * x))) / c;
-  double dhdy = b * (A * sgn(A * y - cos(2. * pi * x))) / c;
+  // double dhdx = b * (2. * pi * sin(2. * pi * x) * sgn(A * y - cos(2. * pi * x))) / c;
+  // double dhdy = b * (A * sgn(A * y - cos(2. * pi * x))) / c;
 
   MetricTensor D(0.);
   D(0, 0) = 1.;
@@ -1315,6 +1319,7 @@ static MetricTensor metricAparicioEstrems(double x, double y)
 
   return gradPhi.transpose() * D * gradPhi;
 }
+#endif
 
 feStatus feMetric::computeMetricsP2_forGraphSurface(std::vector<std::size_t> &nodeTags, std::vector<double> &coord)
 {
@@ -1326,7 +1331,7 @@ feStatus feMetric::computeMetricsP2_forGraphSurface(std::vector<std::size_t> &no
              "Computing metric tensors (ANISO_P2_GRAPH_SURFACE) for %d vertices...", nodeTags.size());
 
   size_t numVertices = nodeTags.size();
-  std::map<int, std::vector<double> > &errorCoeffAtVertices = _recoveredFields[0]->getErrorCoefficients();
+  // std::map<int, std::vector<double> > &errorCoeffAtVertices = _recoveredFields[0]->getErrorCoefficients();
 
   FILE *myFile = fopen("graphSurface.pos", "w");
   fprintf(myFile, "View \" graphSurface \"{ \n");
@@ -1765,6 +1770,7 @@ feStatus feMetric::computeMetricsPn(std::vector<std::size_t> &nodeTags, std::vec
 
   return FE_STATUS_OK;
 #else
+  UNUSED(coord, isotropic);
   return feErrorMsg(
     FE_STATUS_ERROR,
     "SoPlex (optimization library) is required to compute metric tensors for Pn adaptation");
@@ -1774,6 +1780,7 @@ feStatus feMetric::computeMetricsPn(std::vector<std::size_t> &nodeTags, std::vec
  void feMetric::computeSizeField(const double pos[2], const int vertex, const double directionGrad[2],
   double &hGrad, double &hIso, const double *du, const double *d2u, const double *d3u)
 {
+  UNUSED(pos, vertex);
   switch(_options.polynomialDegree) {
     case 1:
       {
@@ -1926,7 +1933,7 @@ feStatus feMetric::computeMetricsCurvedIsolines(const std::vector<std::size_t> &
 {
   size_t numVertices = nodeTags.size();
 
-  FILE *directions, *dirSmoothed;
+  FILE *directions = nullptr, *dirSmoothed = nullptr;
   if(_options.debug) {
     directions = fopen("directions.pos", "w");
     dirSmoothed = fopen("directionsSmoothed.pos", "w");
@@ -2182,6 +2189,7 @@ feStatus feMetric::computeMetricsCurvedLogSimplex(std::vector<std::size_t> &node
 
   return FE_STATUS_OK;
 #else
+  UNUSED(nodeTags, coord, useInducedDirections);
   return feErrorMsg(
     FE_STATUS_ERROR,
     "SoPlex (optimization library) is required to compute metric tensors for curved P2 adaptation");
@@ -2412,6 +2420,8 @@ void feMetric::averageMetricGradientAtVertices(const std::vector<std::size_t> &n
       exit(-1);
     }
   }
+#else
+  UNUSED(nodeTags, coord, inputMetrics, dMdx, dMdy);
 #endif
 }
 
@@ -2428,7 +2438,7 @@ feStatus feMetric::computeMetricsCurvedReferenceSpace(std::vector<std::size_t> &
 
   // Ugly: create a map between the tags of the patch and GMSH's nodeTags
   // The tags of the patch should be in sequential order.
-  double tol = 1e-12;
+  double tolNodes = 1e-12;
   std::map<int, int> patchVertices2nodeTags;
   std::vector<int> &patchVertices = _recoveredFields[0]->getVertices();
   for(size_t i = 0; i < patchVertices.size(); i++) {
@@ -2440,7 +2450,7 @@ feStatus feMetric::computeMetricsCurvedReferenceSpace(std::vector<std::size_t> &
       const double x = coord[3 * j + 0];
       const double y = coord[3 * j + 1];
 
-      if(fabs(x - xv) < tol && fabs(y - yv) < tol) {
+      if(fabs(x - xv) < tolNodes && fabs(y - yv) < tolNodes) {
         patchVertices2nodeTags[v] = nodeTags[j];
         break;
       }
@@ -2474,7 +2484,9 @@ feStatus feMetric::computeMetricsCurvedReferenceSpace(std::vector<std::size_t> &
     new_mmud_dyZN[nodeTags[i]] = MetricTensor(0.);
   }
 
+  #if defined(HAVE_SOPLEX)
   bool applyBinomialCoefficients = true;
+  #endif
 
   bool firstMetric = true;
 
@@ -2514,12 +2526,11 @@ feStatus feMetric::computeMetricsCurvedReferenceSpace(std::vector<std::size_t> &
         // std::vector<double> DU_EXACT(2, 0.), D2U_EXACT(4, 0.), D3U_EXACT(8, 0.), pos(3, 0.);
         std::vector<double> pos(3, 0.);
 
+        #if defined(HAVE_SOPLEX)
         int numIter;
         int nTheta = _options.logSimplexOptions.nThetaPerQuadrant;
         int maxIter = _options.logSimplexOptions.maxIter;
         double tol = _options.logSimplexOptions.tol;
-
-        #if defined(HAVE_SOPLEX)
         linearProblem myLP;
         setUpLinearProblem(myLP, _options, nTheta);
         #endif
@@ -2797,8 +2808,8 @@ feStatus feMetric::computeMetricsCurvedReferenceSpace(std::vector<std::size_t> &
                 // Update M with Q
                 // Damping (useless because we converge the metric independently anyway?)
                 if(_options.curvedMetricReferenceSpaceOptions.dampMetrics) {
-                  double damp = _options.curvedMetricReferenceSpaceOptions.dampingMetricCoefficient;
-                  M.assignMatrixFrom(M * (1.-damp) + Q * damp);
+                  double dampCoeff = _options.curvedMetricReferenceSpaceOptions.dampingMetricCoefficient;
+                  M.assignMatrixFrom(M * (1.-dampCoeff) + Q * dampCoeff);
                 } else {
                   M.assignMatrixFrom(Q);
                 }
@@ -2840,7 +2851,7 @@ feStatus feMetric::computeMetricsCurvedReferenceSpace(std::vector<std::size_t> &
             OK = false;
             feWarning("Could not compute metric at (%+-1.4e, %+-1.4e) after %d iterations", x[0], x[1], iterMetric);
             feWarning("Historic of last 100 differences with previous metric:");
-            for(int iHist = historicMetricDifferences.size()-100; iHist < historicMetricDifferences.size(); ++iHist)
+            for(size_t iHist = historicMetricDifferences.size()-100; iHist < historicMetricDifferences.size(); ++iHist)
               feWarning("Difference history at iter %3d = %+-1.6e", iHist, historicMetricDifferences[iHist]);
           }
 
@@ -3386,7 +3397,8 @@ void feMetric::computeErrorOnMetricDerivatives(double &errorOnMmud_dx, double &e
 
   errorOnMmud_dx = E_DMMUD_DX;
   errorOnMmud_dy = E_DMMUD_DY;
-
+#else
+  UNUSED(errorOnMmud_dx, errorOnMmud_dy);
 #endif
 }
 
@@ -3793,6 +3805,8 @@ void feMetric::computeContinuousErrorModel(const bool withAnalyticMetric, bool c
     fprintf(fileCurved, "};"); fclose(fileCurved);
   }
 
+#else
+  UNUSED(withAnalyticMetric, computeError, plotError, errorFileName, errorStraight, errorCurved, complexity);
 #endif
 }
 

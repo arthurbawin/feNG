@@ -33,6 +33,11 @@ public:
   SMetric3(const double l1, // l1 = h1^-2
            const double l2, const double l3, const SVector3 &t1,
            const SVector3 &t2, const SVector3 &t3);
+  SMetric3 &operator=(const SMetric3 &other)
+  {
+    for(int i = 0; i < 6; i++) _val[i] = other._val[i];
+    return *this;
+  }
   inline int getIndex(int i, int j) const
   {
     static int _index[3][3] = {{0, 1, 3}, {1, 2, 4}, {3, 4, 5}};

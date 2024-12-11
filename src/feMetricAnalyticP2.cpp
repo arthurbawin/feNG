@@ -283,6 +283,8 @@ void getPhiAndInverse(const double a, const double b, const double c, const doub
 void getUnconstrainedOptimalMetric(const double a, const double b, const double c, const double d, const int factorizationCase, const double disc, 
   const SquareMatrix &phi, const SquareMatrix &invPhi, MetricTensor &hPi, double &betaPi)
 {
+  UNUSED(phi);
+
   if(factorizationCase == 1 || factorizationCase == 2)
     return;
 
@@ -537,6 +539,8 @@ thread_local Eigen::VectorXd LAMBDA_COEFF_DEG4 = Eigen::VectorXd::Zero(5);
 bool getTransitionMetric(const int factorizationCase, const double disc, const double alpha, 
   const SquareMatrix &phi, SquareMatrix &invPhi, MetricTensor &Q)
 {
+  UNUSED(disc, phi);
+
   switch(factorizationCase) {
     case 1 :
       // Does not apply
@@ -577,7 +581,7 @@ bool getTransitionMetric(const int factorizationCase, const double disc, const d
         // The transformed metric is invPhi^T * H * invPhi.
         // We have det(H) = L*f(L) and det(h) = det(invPhi)^2 * det(H),
         // so its sufficient to check det(H) without assembling the metric.
-        double L, minDet = 1e22;
+        double L = 1., minDet = 1e22;
         for(auto it = LAMBDA_ROOTS.begin(); it != LAMBDA_ROOTS.end(); it++) {
           double l = *it;
           double detH = l * 4./(27.*l*l);
@@ -609,7 +613,7 @@ bool getTransitionMetric(const int factorizationCase, const double disc, const d
           return false;
         }
 
-        double L, minDet = 1e22;
+        double L = 1., minDet = 1e22;
         for(auto it = LAMBDA_ROOTS.begin(); it != LAMBDA_ROOTS.end(); it++) {
           double l = *it;
           double detH = l * (4. + l*l*l)/(3.*l*l);
@@ -626,9 +630,9 @@ bool getTransitionMetric(const int factorizationCase, const double disc, const d
       {
         // Same as case 3, but f(L) = (4 - L^3)/(3 * L^2)
         // and we need to check the three rotations 0, pi/3, 2pi/3.
-        double L, minDet = 1e22;
+        double L = 1., minDet = 1e22;
         size_t nAcceptableRoots = 0;
-        int whichTheta;
+        int whichTheta = 0;
         double allV[6] = {1., 0., 0.5, 8.660254037844386e-01, -0.5, 8.660254037844386e-01};
         for(int i = 0; i < 3; ++i) {
           double V[2] = {allV[2*i], allV[2*i+1]};
@@ -779,8 +783,8 @@ bool computeAnalyticMetricP2ForLpNorm(std::vector<double> &errorCoeff, MetricTen
     // Ellipse is tangent at 4 points and has diameter 2*alpha^(-1/2).
     // Transition between the previous case and the optimal unconstrained case
     // Cannot happen for case 1 since the level curve is the one of x^3 after some transformation
-    bool success = getTransitionMetric(cas, disc, alpha, phi, invPhi, Q);
-    if(!success)
+    bool successTransition = getTransitionMetric(cas, disc, alpha, phi, invPhi, Q);
+    if(!successTransition)
       return false;
 
   } else {

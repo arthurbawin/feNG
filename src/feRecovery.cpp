@@ -1,8 +1,7 @@
-#include "feRecovery.h"
 #include "feNG.h"
+#include "feRecovery.h"
 
-#include <algorithm>
-#include "../contrib/Eigen/Dense"
+#include <Eigen/Dense>
 
 static bool isBoundary(feMesh *mesh, int vertex)
 {
@@ -11,7 +10,7 @@ static bool isBoundary(feMesh *mesh, int vertex)
          fabs(mesh->getVertex(vertex)->x() - 5.0) < 1e-10;
 }
 
-static bool isBoundary(feMesh *mesh, Edge edge) { return false; }
+static bool isBoundary(feMesh *mesh, Edge edge) { UNUSED(mesh, edge); return false; }
 
 static double boundaryCondition(feMesh *mesh, int vertex, feFunction *solRef)
 {
@@ -27,11 +26,12 @@ static void boundaryConditionVec(feMesh *mesh, int vertex, feVectorFunction *sol
     res);
 }
 
-static double boundaryCondition(feMesh *mesh, Edge edge, feFunction *solRef) { return 0.0; }
+static double boundaryCondition(feMesh *mesh, Edge edge, feFunction *solRef) { UNUSED(mesh, edge, solRef); return 0.0; }
 
 static void boundaryConditionVec(feMesh *mesh, Edge edge, feVectorFunction *solRefGrad,
                                  std::vector<double> &res)
 {
+  UNUSED(mesh, edge, solRefGrad, res);
 }
 
 static inline double matNorm2(const std::vector<double> &v1, const std::vector<double> &v2, int n)
@@ -1902,6 +1902,8 @@ void feRecovery::derivative(int indRecovery, int iDerivative, std::ostream &outp
 
 void feRecovery::secondDerivative(int indRecovery, int iDerivative, std::ostream &output)
 {
+  UNUSED(iDerivative, output);
+
   std::vector<int> &vertices = _patch->getVertices();
 
   if(_dim == 1) {
@@ -2816,7 +2818,7 @@ void feRecovery::writeRecovery(std::string fileName)
       feInfo("Printing recovery %ld/%ld on %d DOFs", i + 1, derivAtVertices.size(),
              derivAtVertices[i].size());
       fprintf(f, "%ld\n", derivAtVertices[i].size()); // Number of DOFs
-      for(int j = 0; j < derivAtVertices[i].size(); ++j) {
+      for(size_t j = 0; j < derivAtVertices[i].size(); ++j) {
         fprintf(f, "%+-1.17e\n", derivAtVertices[i][j]);
       }
     }
@@ -2826,7 +2828,7 @@ void feRecovery::writeRecovery(std::string fileName)
       feInfo("Printing recovery %ld/%ld on %ld DOFs", i + 1, derivAtEdges.size(),
              derivAtEdges[i].size());
       fprintf(f, "%ld\n", derivAtEdges[i].size()); // Number of DOFs
-      for(int j = 0; j < derivAtEdges[i].size(); ++j) {
+      for(size_t j = 0; j < derivAtEdges[i].size(); ++j) {
         fprintf(f, "%+-1.17e\n", derivAtEdges[i][j]);
       }
     }

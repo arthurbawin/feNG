@@ -340,7 +340,7 @@ double bisectionAngle(const double x0[2], const double x1[2], const MetricFuncti
       theta_a, fa, theta_b, fb);
   }
   int iter = 0;
-  double theta;
+  double theta = 0.;
   while(iter++ <= maxIter) {
     theta = (theta_a + theta_b)/2.;
     double fc = bisectionAngle_callback(theta, x0, x1, getMetric, targetLength, ds);
@@ -378,7 +378,7 @@ double bisectionAngle(const double x0[2], const double x1[2], const MetricFuncti
     }
   }
   int iter = 0;
-  double theta;
+  double theta = 0.;
   while(iter++ <= maxIter) {
     theta = (theta_a + theta_b)/2.;
     double fc = bisectionAngle_callback(theta, x0, x1, getMetric, targetLength, ds);
@@ -494,7 +494,7 @@ double computeEdgeLengthInMetric(const double x0[2], const double x1[2], const M
 {
   double L = 0.;
   double x[2], diff[2] = {x1[0]-x0[0], x1[1]-x0[1]};
-  for(size_t i = 0; i < nQuad; ++i)
+  for(int i = 0; i < nQuad; ++i)
   {
     // Map from [-1,1] to [0,1]
     double t = (xQuad[i] + 1.)/2.;
@@ -511,7 +511,7 @@ double computeEdgeLengthSquaredInMetric(const double x0[2], const double x1[2], 
 {
   double L = 0.;
   double x[2], diff[2] = {x1[0]-x0[0], x1[1]-x0[1]};
-  for(size_t i = 0; i < nQuad; ++i)
+  for(int i = 0; i < nQuad; ++i)
   {
     // Map from [-1,1] to [0,1]
     double t = (xQuad[i] + 1.)/2.;
@@ -698,5 +698,7 @@ void geodesicBetweenTwoPoints_arrayPtr_minimizeLength(std::vector<Vertex> &verti
     (*v)(0) = optimalPos[cnt]; cnt++;
     (*v)(1) = optimalPos[cnt]; cnt++;
   }
+#else
+  UNUSED(vertices, getMetric, length);
 #endif
 }

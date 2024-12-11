@@ -30,8 +30,8 @@ feStatus createNorm(feNorm *&norm, normType type, const std::vector<feSpace *> &
 
 feNorm::feNorm(normType type, const std::vector<feSpace *> &spaces, feSolution *sol,
                feFunction *scalarSolution, feVectorFunction *vectorSolution)
-  : _type(type), _spaces(spaces), _solution(sol), _scalarSolution(scalarSolution),
-    _vectorSolution(vectorSolution), _cnc(spaces[0]->getCncGeo()), _J(_cnc->getJacobians())
+  : _type(type), _spaces(spaces), _solution(sol), _cnc(spaces[0]->getCncGeo()),
+  _J(_cnc->getJacobians()), _scalarSolution(scalarSolution), _vectorSolution(vectorSolution)
 {
   _nQuad = spaces[0]->getNumQuadPoints();
   _w = spaces[0]->getQuadratureWeights();
@@ -51,8 +51,7 @@ feNorm::feNorm(normType type, const std::vector<feSpace *> &spaces, feSolution *
 }
 
 feNorm::feNorm(feCncGeo *cnc, feFunction *scalarSolution, feVectorFunction *vectorSolution)
-  : _cnc(cnc), _scalarSolution(scalarSolution), _vectorSolution(vectorSolution),
-    _J(_cnc->getJacobians())
+  : _cnc(cnc), _J(_cnc->getJacobians()), _scalarSolution(scalarSolution), _vectorSolution(vectorSolution)
 {
   _nQuad = cnc->getFeSpace()->getNumQuadPoints();
   _w = cnc->getFeSpace()->getQuadratureWeights();
@@ -75,7 +74,7 @@ double feNorm::compute(normType type)
     exit(-1);
   }
 
-  double res;
+  double res = 0.;
   switch(type) {
     case L1:
       res = this->computeLpNorm(1, false);
@@ -124,22 +123,20 @@ double feNorm::compute(normType type)
       break;
     case INTEGRAL:
       return this->computeIntegral();
-      break;
     case INTEGRAL_F:
       return this->computeIntegralUserFunction();
-      break;
     case DOT_PRODUCT:
       return this->computeIntegralDotProduct();
-      break;
     case PRESSURE_LIFT_FORCE:
       return this->computePressureLift();
-      break;
     case PRESSURE_DRAG_FORCE:
       return this->computePressureDrag();
-      break;
     case VISCOUS_LIFT_FORCE:
       return this->computeViscousLift();
-      break;
+    case VISCOUS_DRAG_FORCE:
+      feErrorMsg(FE_STATUS_ERROR, "Viscous drag computation requires providing reconstructed u and v velocities."
+        " Call with e.g. : norm->computeViscousDrag(viscosity, &recU, &recV); ");
+      return 0.;
   }
   return res;
 }
@@ -162,7 +159,7 @@ double feNorm::computeLpNorm(int p, bool error)
     exit(-1);
   }
 
-  FILE *myfile;
+  FILE *myfile = nullptr;
   if(_plotErrorToFile) {
     myfile = fopen(_errorPlotFileName.data(), "w");
     fprintf(myfile, "View \"LpNorm_errorOnElements\"{\n");
@@ -292,7 +289,7 @@ double feNorm::computeSquaredErrorFromEstimatorOnElement(int iElm, bool useAvera
     exit(-1);
   }
 
-  double t = _solution->getCurrentTime();
+  // double t = _solution->getCurrentTime();
 
   this->initializeLocalSolutionOnSpace(0, iElm);
   _spaces[0]->_mesh->getCoord(_cnc, iElm, _geoCoord);
@@ -1141,7 +1138,7 @@ double feNorm::computeH1SemiNorm(bool error)
 
   ElementTransformation T;
 
-  FILE *myfile;
+  FILE *myfile = nullptr;
   if(_plotErrorToFile) {
     myfile = fopen(_errorPlotFileName.data(), "w");
     fprintf(myfile, "View \"H1_seminorm_errorOnElements\"{\n");
@@ -1200,7 +1197,7 @@ double feNorm::computeH1SemiNorm(bool error)
 
 double feNorm::computeH1SemiNormErrorEstimator()
 {
-  double res = 0.0, jac, dotProd, t = _solution->getCurrentTime();
+  double res = 0.0, jac, dotProd; //, t = _solution->getCurrentTime();
   double graduh[3] = {0., 0., 0.};
   double graduRec[3] = {0., 0., 0.};
   // std::vector<double> gradu(3, 0.);
@@ -1336,6 +1333,8 @@ feStatus feNorm::computeErrorNormFromExternalSolution(feMetaNumber *metaNumber, 
                                                       const std::vector<feSpace *> refSpaces,
                                                       double &res)
 {
+  UNUSED(metaNumber, refMN);
+
   double normL2 = 0.0, solInt, solRef;
   std::vector<feInt> adr(_spaces[0]->getNumFunctions());
   std::vector<double> sol0(adr.size());
@@ -1486,7 +1485,7 @@ double feNorm::computePressureDrag()
 
 double feNorm::computeViscousDrag(double viscosity, feNewRecovery *recU, feNewRecovery *recV)
 {
-  double res = 0.0, uh, vh;
+  double res = 0.0; //, uh, vh;
 
   if(_cnc->getDim() != 1) {
     feErrorMsg(FE_STATUS_ERROR, "Can only compute drag force on 1D connectivities for now.");
@@ -1507,15 +1506,15 @@ double feNorm::computeViscousDrag(double viscosity, feNewRecovery *recU, feNewRe
   std::vector<double> normalVectors; // Size = 3 * nQuad * nElm
   _cnc->computeNormalVectors(normalVectors);
 
-  double grad_u[4];
-  ElementTransformation transformation;
+  // double grad_u[4];
+  // ElementTransformation transformation;
 
   for(int iElm = 0; iElm < _nElm; ++iElm) {
     this->initializeLocalSolutionOnSpace(0, iElm);
     _spaces[0]->_mesh->getCoord(_cnc, iElm, _geoCoord);
 
     for(int k = 0; k < _nQuad; ++k) {
-      double jac = _J[_nQuad * iElm + k];
+      // double jac = _J[_nQuad * iElm + k];
       // _cnc->computeElementTransformation(_geoCoord, k, jac, transformation);
       // _spaces[0]->interpolateVectorFieldAtQuadNode_physicalGradient(_localSol[0], 2, k,
       // transformation, grad_u); double dudx = grad_u[0]; double dudy = grad_u[1]; double dvdx =
@@ -1562,7 +1561,7 @@ double feNorm::computeForcesFromLagrangeMultiplier(int iComponent)
     _spaces[0]->_mesh->getCoord(_cnc, iElm, _geoCoord);
 
     for(int k = 0; k < _nQuad; ++k) {
-      double jac = _J[_nQuad * iElm + k];
+      // double jac = _J[_nQuad * iElm + k];
       lambda = _spaces[0]->interpolateVectorFieldComponentAtQuadNode_fullField(_localSol[0], k,
                                                                                iComponent);
       res += lambda * _J[_nQuad * iElm + k] * _w[k];

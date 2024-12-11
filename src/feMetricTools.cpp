@@ -1,6 +1,5 @@
 #include "feMetricTools.h"
 #include "feNewRecovery.h"
-#include "feNewRecovery.h"
 
 #if defined(HAVE_GMSH)
 #include "gmsh.h"
@@ -13,8 +12,8 @@ using namespace soplex;
 #include "fullMatrix.h"
 #include "ellipseToolbox.h"
 #include "../contrib/root_finder/root_finder.hpp"
-#include "../contrib/Eigen/Eigen"
-#include "../contrib/unsupported/Eigen/MatrixFunctions"
+#include <Eigen/Eigen>
+#include <Eigen/MatrixFunctions>
 
 extern int FE_VERBOSE;
 
@@ -466,6 +465,8 @@ void gradationMetriques(double gradation, int nmax, std::vector<double> &coord1,
   }
   // feInfo("%d coord size", coord.size());
   // feInfo("%d edges size", edges.size());
+#else
+  UNUSED(gradation, nmax, coord1, metricsOnGmshModel);
 #endif
 }
 
@@ -587,6 +588,8 @@ void smoothDirections(std::map<size_t, double> &C, std::map<size_t, double> &S, 
     fprintf(fGra, "};");
     fclose(fGra);
   }
+#else
+  UNUSED(C,S,nIter,tol,plot);
 #endif
 }
 
@@ -1374,6 +1377,8 @@ bool computeMetricLogSimplexCurved(const int vertex, double *x, double direction
 void computeDirectionFieldFromGradient(const double x[2], const int vertex, const double firstDerivatives[2],
   const double tol, double grad[2])
 {
+  UNUSED(x, vertex);
+
   // if(_options.useAnalyticDerivatives) {
   //   // Evaluate the analytic gradient
   //   POS[0] = x[0];
@@ -1456,12 +1461,12 @@ static double smallestRootOfPolynomial_degree4(Eigen::VectorXd &coeff, int &numR
       coeffQuadratic(0) = coeff(2);
       coeffQuadratic(1) = coeff(3);
       coeffQuadratic(2) = coeff(4);
-      for(size_t i = 1; i < coeffQuadratic.size(); ++i) {
+      for(int i = 1; i < coeffQuadratic.size(); ++i) {
         coeffQuadratic(i) /= coeffQuadratic(0);
       }
       coeffQuadratic(0) = 1.;
       // Remove all small coeff multiplying powers of L
-      for(size_t i = 1; i < coeffQuadratic.size() - 1; ++i) {
+      for(int i = 1; i < coeffQuadratic.size() - 1; ++i) {
         if(fabs(coeffQuadratic(i)) < tolCoeff) coeffQuadratic(i) = 0.;
       }
       // Bound the independent term
@@ -1483,12 +1488,12 @@ static double smallestRootOfPolynomial_degree4(Eigen::VectorXd &coeff, int &numR
     coeffCubic(1) = coeff(2);
     coeffCubic(2) = coeff(3);
     coeffCubic(3) = coeff(4);
-    for(size_t i = 1; i < coeffCubic.size(); ++i) {
+    for(int i = 1; i < coeffCubic.size(); ++i) {
       coeffCubic(i) /= coeffCubic(0);
     }
     coeffCubic(0) = 1.;
     // Remove all small coeff multiplying powers of L
-    for(size_t i = 1; i < coeffCubic.size() - 1; ++i) {
+    for(int i = 1; i < coeffCubic.size() - 1; ++i) {
       if(fabs(coeffCubic(i)) < tolCoeff) coeffCubic(i) = 0.;
     }
     // Bound the independent term
@@ -1507,13 +1512,13 @@ static double smallestRootOfPolynomial_degree4(Eigen::VectorXd &coeff, int &numR
   }
 
   // Scale polynomial based on leading coefficient
-  for(size_t i = 1; i < coeff.size(); ++i) {
+  for(int i = 1; i < coeff.size(); ++i) {
     coeff(i) /= coeff(0);
   }
   coeff(0) = 1.;
 
   // Remove all small coeff multiplying powers of L
-  for(size_t i = 1; i < coeff.size() - 1; ++i) {
+  for(int i = 1; i < coeff.size() - 1; ++i) {
     if(fabs(coeff(i)) < tolCoeff) coeff(i) = 0.;
   }
 
@@ -1534,7 +1539,7 @@ static double smallestRootOfPolynomial_degree4(Eigen::VectorXd &coeff, int &numR
 
 void solveSizePolynomialLinear(const double targetError, const double directionGrad[2], const double du[2], const double d2u[4], double &Liso, double &Lgrad)
 {
-  double TOL = 1e-12;
+  // double TOL = 1e-12;
 
   double fx = du[0]; //maxFabs(du[0], TOL);
   double fy = du[1]; //maxFabs(du[1], TOL);
@@ -1545,7 +1550,7 @@ void solveSizePolynomialLinear(const double targetError, const double directionG
 
   double G[2] = {fx,fy};
   double H[2][2] = {{fxx,fxy},{fxy,fyy}};
-  double normGrad = sqrt(fx*fx+fy*fy);
+  // double normGrad = sqrt(fx*fx+fy*fy);
 
   //
   // Only compute sizes if this is not an isotropic region
@@ -1563,7 +1568,7 @@ void solveSizePolynomialLinear(const double targetError, const double directionG
     double  kiso = (-fy * fy * fxx + 2.0 * fx * fy * fxy - fx * fx * fyy) / (pow(fx * fx + fy * fy, 3. / 2.));
     double kgrad = (fx * fy * (fyy - fxx) + (fx * fx - fy * fy) * fxy)    / (pow(fx * fx + fy * fy, 3. / 2.));
 
-    double solveTol = 1e-14;
+    // double solveTol = 1e-14;
     double c2, c3, c4;
 
     ///////////////////////////////////////////////////////
@@ -1690,20 +1695,20 @@ inline double contract(const double C[2][2][2], const double u[2], const double 
   return res;
 }
 
-static double analyze2dMetric(const MetricTensor &M, double &C, double &S, double &h1, double &h2)
-{
-  double a = M(0,0);
-  double c = M(0,1);
-  double b = M(1,1);
-  double l1 = 0.5 * (a + b + sqrt((a - b) * (a - b) + 4 * c * c));
-  double l2 = 0.5 * (a + b - sqrt((a - b) * (a - b) + 4 * c * c));
-  h1 = 1. / sqrt(l1);
-  h2 = 1. / sqrt(l2);
-  double theta = 0.5 * atan2(2 * c, a - b);
-  C = cos(theta);
-  S = sin(theta);
-  return theta;
-}
+// static double analyze2dMetric(const MetricTensor &M, double &C, double &S, double &h1, double &h2)
+// {
+//   double a = M(0,0);
+//   double c = M(0,1);
+//   double b = M(1,1);
+//   double l1 = 0.5 * (a + b + sqrt((a - b) * (a - b) + 4 * c * c));
+//   double l2 = 0.5 * (a + b - sqrt((a - b) * (a - b) + 4 * c * c));
+//   h1 = 1. / sqrt(l1);
+//   h2 = 1. / sqrt(l2);
+//   double theta = 0.5 * atan2(2 * c, a - b);
+//   C = cos(theta);
+//   S = sin(theta);
+//   return theta;
+// }
 
 thread_local std::set<double> ROOTS_L_QUADRATIC, ROOTS_TMP;
 thread_local Eigen::VectorXd COEFF_L_QUADRATIC = Eigen::VectorXd::Zero(7);
@@ -1734,12 +1739,12 @@ static double smallestRootOfPolynomial_degree6(Eigen::VectorXd &coeff, int &numR
         coeffCubic(1) = coeff(4);
         coeffCubic(2) = coeff(5);
         coeffCubic(3) = coeff(6);
-        for(size_t i = 1; i < coeffCubic.size(); ++i) {
+        for(int i = 1; i < coeffCubic.size(); ++i) {
           coeffCubic(i) /= coeffCubic(0);
         }
         coeffCubic(0) = 1.;
         // Remove all small coeff multiplying powers of L
-        for(size_t i = 1; i < coeffCubic.size() - 1; ++i) {
+        for(int i = 1; i < coeffCubic.size() - 1; ++i) {
           if(fabs(coeffCubic(i)) < tolCoeff) coeffCubic(i) = 0.;
         }
         // Bound the independent term
@@ -1763,12 +1768,12 @@ static double smallestRootOfPolynomial_degree6(Eigen::VectorXd &coeff, int &numR
       coeffQuartic(2) = coeff(4);
       coeffQuartic(3) = coeff(5);
       coeffQuartic(4) = coeff(6);
-      for(size_t i = 1; i < coeffQuartic.size(); ++i) {
+      for(int i = 1; i < coeffQuartic.size(); ++i) {
         coeffQuartic(i) /= coeffQuartic(0);
       }
       coeffQuartic(0) = 1.;
       // Remove all small coeff multiplying powers of L
-      for(size_t i = 1; i < coeffQuartic.size() - 1; ++i) {
+      for(int i = 1; i < coeffQuartic.size() - 1; ++i) {
         if(fabs(coeffQuartic(i)) < tolCoeff) coeffQuartic(i) = 0.;
       }
       // Bound the independent term
@@ -1790,12 +1795,12 @@ static double smallestRootOfPolynomial_degree6(Eigen::VectorXd &coeff, int &numR
     coeffQuintic(3) = coeff(4);
     coeffQuintic(4) = coeff(5);
     coeffQuintic(5) = coeff(6);
-    for(size_t i = 1; i < coeffQuintic.size(); ++i) {
+    for(int i = 1; i < coeffQuintic.size(); ++i) {
       coeffQuintic(i) /= coeffQuintic(0);
     }
     coeffQuintic(0) = 1.;
     // Remove all small coeff multiplying powers of L
-    for(size_t i = 1; i < coeffQuintic.size() - 1; ++i) {
+    for(int i = 1; i < coeffQuintic.size() - 1; ++i) {
       if(fabs(coeffQuintic(i)) < tolCoeff) coeffQuintic(i) = 0.;
     }
     // Bound the independent term
@@ -1811,13 +1816,13 @@ static double smallestRootOfPolynomial_degree6(Eigen::VectorXd &coeff, int &numR
 
   // All coefficients are not negligible
   // Scale polynomial based on leading coefficient
-  for(size_t i = 1; i < coeff.size(); ++i) {
+  for(int i = 1; i < coeff.size(); ++i) {
     coeff(i) /= coeff(0);
   }
   coeff(0) = 1.;
 
   // Remove all small coeff multiplying powers of L
-  for(size_t i = 1; i < coeff.size() - 1; ++i) {
+  for(int i = 1; i < coeff.size() - 1; ++i) {
     if(fabs(coeff(i)) < tolCoeff) coeff(i) = 0.;
   }
 
@@ -1839,7 +1844,7 @@ static double smallestRootOfPolynomial_degree6(Eigen::VectorXd &coeff, int &numR
 void solveSizePolynomialQuadratic(const double targetError, const double directionGrad[2], const double du[2], 
   const double d2u[4], const double d3u[8], double &Liso, double &Lgrad)
 {
-  double TOL = 1e-12;
+  // double TOL = 1e-12;
 
   double fx = du[0]; //maxFabs(du[0], TOL);
   double fy = du[1]; //maxFabs(du[1], TOL);
@@ -1856,7 +1861,7 @@ void solveSizePolynomialQuadratic(const double targetError, const double directi
   double H[2][2] = {{fxx,fxy},{fxy,fyy}};
   double C[2][2][2] = {{{fxxx,fxxy},{fxxy,fxyy}},{{fxxy,fxyy},{fxyy,fyyy}}};
 
-  double normGrad = fmax(TOL, sqrt(fx*fx+fy*fy));
+  // double normGrad = fmax(TOL, sqrt(fx*fx+fy*fy));
 
   // double g[2]     = { fx/normGrad, fy/normGrad};
   // double gOrth[2] = {-fy/normGrad, fx/normGrad};
@@ -1886,7 +1891,7 @@ void solveSizePolynomialQuadratic(const double targetError, const double directi
   c3 = 1./6. * contract(C,gOrth,gOrth,gOrth) + kiso/2. * contract(H,g,gOrth);
 
   Liso = 1e10;
-  int numRoots = 0;
+  // int numRoots = 0;
   double minRoot;
   int nRootsIso = 0, nTotalRootsIso = 0;
 
@@ -1947,7 +1952,7 @@ void solveSizePolynomialQuadratic(const double targetError, const double directi
   c3 = 1./6. * contract(C,g,g,g) + kgrad/2. * contract(H,gOrth,g);
 
   Lgrad = 1e10;
-  numRoots = 0;
+  // numRoots = 0;
   int nRootsGrad = 0, nTotalRootsGrad = 0;
 
   // Solve p(L) = error
@@ -2156,7 +2161,6 @@ void reconstructManifoldFromMetric(const std::vector<std::size_t> &nodeTags,
   // known by the induced metric
   double z0 = 0.;
   double nextz0 = 0.;
-  size_t lastNeighbour;
 
   double dx = 0.01;
   double dy = 0.01;
@@ -2240,7 +2244,7 @@ void reconstructManifoldFromMetric(const std::vector<std::size_t> &nodeTags,
 
     fprintf(myFile, "SP(%f,%f,%f){1};\n", x, y, z0);
 
-    size_t next = -1;
+    int next = -1;
     for(auto v : verticesPatches.at(i)) {
 
       const double xj = coord[3 * (sequentialTag2nodeTag[v]-1) + 0];
@@ -2365,6 +2369,8 @@ inline double dotprod(const double v1[3], const double v2[3])
 
 void computeGraphSurfaceMetric(const double *x, const double *df, const double *d2f, const double *d3f, MetricTensor &M, FILE *file)
 {
+  UNUSED(d3f);
+  
   double fu = df[0];
   double fv = df[1];
 
@@ -2372,10 +2378,10 @@ void computeGraphSurfaceMetric(const double *x, const double *df, const double *
   double fuv = d2f[1];
   double fvv = d2f[3];
 
-  double fuuu = d2f[0];
-  double fuuv = d2f[1];
-  double fuvv = d2f[3];
-  double fvvv = d2f[7];
+  // double fuuu = d3f[0];
+  // double fuuv = d3f[1];
+  // double fuvv = d3f[3];
+  // double fvvv = d3f[7];
 
   double xu[3] = {1.,0.,fu};
   double xv[3] = {0.,1.,fv};
@@ -2384,10 +2390,10 @@ void computeGraphSurfaceMetric(const double *x, const double *df, const double *
   double xuv[3] = {0.,0.,fuv};
   double xvv[3] = {0.,0.,fvv};
 
-  double xuuu[3] = {0.,0.,fuuu};
-  double xuuv[3] = {0.,0.,fuuv};
-  double xuvv[3] = {0.,0.,fuvv};
-  double xvvv[3] = {0.,0.,fvvv};
+  // double xuuu[3] = {0.,0.,fuuu};
+  // double xuuv[3] = {0.,0.,fuuv};
+  // double xuvv[3] = {0.,0.,fuvv};
+  // double xvvv[3] = {0.,0.,fvvv};
 
   // Unit normal
   double nN = sqrt(1. + fu*fu + fv*fv);
@@ -2401,10 +2407,10 @@ void computeGraphSurfaceMetric(const double *x, const double *df, const double *
   // double invI_times_II[2][2] =  {{-(fuu*fv*fv - fu*fuv*fv + fuu)/(fu*fu + fv*fv + 1), -(fuv*fv*fv - fu*fvv*fv + fuv)/(fu*fu + fv*fv + 1)}
   //                                {-(fuv*fu*fu - fuu*fv*fu + fuv)/(fu*fu + fv*fv + 1), -(fvv*fu*fu - fuv*fv*fu + fvv)/(fu*fu + fv*fv + 1)}};
 
-  double G = (fuu*fvv - fuv*fuv)/((1 + fu*fu+fv*fv)*(1 + fu*fu+fv*fv));
-  double H = ((1+fv*fv)*fuu - 2*fu*fv*fuv + (1+fu*fu)*fvv)/(2*pow(1+fu*fu+fv*fv, 3./2.));
-  double kmax = H + sqrt(H*H-G);
-  double kmin = H - sqrt(H*H-G);
+  // double G = (fuu*fvv - fuv*fuv)/((1 + fu*fu+fv*fv)*(1 + fu*fu+fv*fv));
+  // double H = ((1+fv*fv)*fuu - 2*fu*fv*fuv + (1+fu*fu)*fvv)/(2*pow(1+fu*fu+fv*fv, 3./2.));
+  // double kmax = H + sqrt(H*H-G);
+  // double kmin = H - sqrt(H*H-G);
 
   // Curvature vectors in the basis (xu,xv)
   // double v1[2] = {(fuu-fvv+sqrt(fuu*fvv*-2.0+fuu*fuu+(fuv*fuv)*4.0+fvv*fvv+(fu*fu)*(fuv*fuv)*4.0+(fuu*fuu)*(fv*fv)*2.0+(fuu*fuu)*(fv*fv*fv*fv)+(fu*fu)*(fvv*fvv)*2.0+(fuv*fuv)*(fv*fv)*4.0+(fu*fu*fu*fu)*(fvv*fvv)+(fu*fu)*(fuv*fuv)*(fv*fv)*4.0-(fu*fu)*fuu*fvv*2.0-fuu*(fv*fv)*fvv*2.0-fu*fuu*fuv*(fv*fv*fv)*4.0-(fu*fu*fu)*fuv*fv*fvv*4.0+(fu*fu)*fuu*(fv*fv)*fvv*2.0-fu*fuu*fuv*fv*4.0-fu*fuv*fv*fvv*4.0)+fuu*(fv*fv)-(fu*fu)*fvv)/(fuv*2.0+(fu*fu)*fuv*2.0-fu*fuu*fv*2.0), 1.};
@@ -2502,17 +2508,17 @@ void computeGraphSurfaceMetric(const double *x, const double *df, const double *
   // Coefficients du développement de Z(X,Y) au second ordre
   // À comparer avec diag(k1, k2) ?
 
-  double Zu = 0.;
-  double Zv = 0.;
+  // double Zu = 0.;
+  // double Zv = 0.;
 
   double Zuu = dotprod(xuu,N);
   double Zuv = dotprod(xuv,N);
   double Zvv = dotprod(xvv,N);
 
-  double Zuuu = dotprod(xuuu,N);
-  double Zuuv = dotprod(xuuv,N);
-  double Zuvv = dotprod(xuvv,N);
-  double Zvvv = dotprod(xvvv,N);
+  // double Zuuu = dotprod(xuuu,N);
+  // double Zuuv = dotprod(xuuv,N);
+  // double Zuvv = dotprod(xuvv,N);
+  // double Zvvv = dotprod(xvvv,N);
 
   // double C[2][2] = {{0.,0.},{0.,0.}};
   // Linear terms of (u-u0)^2, (u-u0)*(v-v0) and (v-v0)^2

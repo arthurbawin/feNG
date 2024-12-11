@@ -6,7 +6,7 @@
 #include "feNewRecovery.h"
 #include "STensor3.h"
 
-#include "../contrib/Eigen/Eigen"
+#include <Eigen/Eigen>
 
 #if defined(HAVE_GMSH)
 #include "gmsh.h"

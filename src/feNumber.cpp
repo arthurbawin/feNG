@@ -311,7 +311,7 @@ void feNumber::compactFieldDOF()
 {
   _allEssentialDOF.clear();
   _allUnknownDOF.clear();
-  for(size_t i = 0; i < _nNod; ++i) {
+  for(int i = 0; i < _nNod; ++i) {
     for(int j = 0; j < _maxDOFperVertex; ++j) {
       if(_codeDOFVertices[_maxDOFperVertex * i + j] == DOF_ESSENTIAL) {
         _allEssentialDOF.insert(_numberingVertices[_maxDOFperVertex * i + j]);

@@ -164,6 +164,8 @@ void feExporterVTK::writeElementsConnectivity(std::ostream &output)
 void feExporterVTK::writeField(std::ostream &output, feCncGeo *cnc, feSpace *intSpace,
                                std::string fieldID, bool loopOverCnc)
 {
+  UNUSED(cnc, loopOverCnc);
+
   std::vector<double> &solVec = _sol->getSolutionReference();
   std::vector<feInt> adr(intSpace->getNumFunctions());
   std::vector<double> sol(intSpace->getNumFunctions());
@@ -365,8 +367,8 @@ feStatus feExporterVTK::createVTKNodes(std::vector<feSpace *> &spacesToExport,
             }
             space->initializeAddressingVector(elm, adr);
 
-            for(size_t i = 0; i < adr.size(); ++i) {
-              sol[i] = solVec[adr[i]];
+            for(size_t j = 0; j < adr.size(); ++j) {
+              sol[j] = solVec[adr[j]];
             }
 
             if(space->useGlobalFunctions()) {
@@ -566,7 +568,7 @@ feStatus feExporterVTK::writeStep(std::string fileName)
     }
 
     // Grab the connectivity from any matching fespace
-    feCncGeo *cnc;
+    feCncGeo *cnc = nullptr;
     for(feSpace *fS : spacesToExport) {
       if(fS->getCncGeoID() == *cncToExport.begin()) {
         cnc = fS->getCncGeo();
@@ -736,6 +738,8 @@ void feExporterVTK::writeEigenvector(std::ostream &output, feCncGeo *cnc, feSpac
 
   VecRestoreArray(ep.vecReal, &vecRealArray);
 
+#else
+  UNUSED(output, cnc, intSpace, fieldID, eigenPairIndex, nEigenPairs, ep, loopOverCnc);
 #endif
 }
 
@@ -761,7 +765,7 @@ feStatus feExporterVTK::writeEigenvectors(std::string fileName)
                 "exported.");
     }
 
-    feCncGeo *cnc;
+    feCncGeo *cnc = nullptr;
     for(feSpace *fS : spacesToExport) {
       if(fS->getCncGeoID() == *cncToExport.begin()) {
         cnc = fS->getCncGeo();

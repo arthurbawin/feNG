@@ -384,6 +384,9 @@ feLinearSystemPETSc::feLinearSystemPETSc(int argc, char **argv,
     , _nInc(numUnknowns)
 #endif
 {
+#if !defined(HAVE_PETSC)
+  UNUSED(numUnknowns);
+#endif
   this->initialize();
 }
 
@@ -438,6 +441,8 @@ void feLinearSystemPETSc::getRHSMaxNorm(double *norm)
 #if defined(HAVE_PETSC)
   PetscErrorCode ierr = VecNorm(_rhs, NORM_MAX, norm);
   CHKERRABORT(PETSC_COMM_WORLD, ierr);
+#else
+  UNUSED(norm);
 #endif
 }
 
@@ -446,6 +451,8 @@ void feLinearSystemPETSc::getResidualMaxNorm(double *norm)
 #if defined(HAVE_PETSC)
   PetscErrorCode ierr = VecNorm(_du, NORM_MAX, norm);
   CHKERRABORT(PETSC_COMM_WORLD, ierr);
+#else
+  UNUSED(norm);
 #endif
 }
 
@@ -635,7 +642,8 @@ void feLinearSystemPETSc::assembleMatrices(feSolution *sol)
     PetscViewerPopFormat(viewer);
     PetscViewerDestroy(&viewer);
   }
-
+#else
+  UNUSED(sol);
 #endif
 }
 
@@ -734,7 +742,8 @@ void feLinearSystemPETSc::assembleResiduals(feSolution *sol)
   feInfoCond(FE_VERBOSE > 1, "\t\t\t\tAssembled global residual in %f s", toc());
 
   viewRHS();
-
+#else
+  UNUSED(sol);
 #endif
 }
 
@@ -785,6 +794,8 @@ void feLinearSystemPETSc::constrainEssentialComponents(feSolution *sol)
                                            _constrainedDOFValue, _rhs);
   CHKERRABORT(PETSC_COMM_WORLD, ierr);
   feInfoCond(FE_VERBOSE > 1, "\t\t\t\tConstrained essential DOFs in %f s", toc());
+#else
+  UNUSED(sol);
 #endif
 }
 
@@ -945,8 +956,10 @@ bool feLinearSystemPETSc::solve(double *normSolution, double *normRHS, double *n
   }
 
   return reason > 0;
-#endif
+#else
+  UNUSED(normSolution, normRHS, normResidualAxMinusb, nIter);
   return false;
+#endif
 }
 
 void feLinearSystemPETSc::correctSolution(feSolution *sol)
@@ -972,7 +985,8 @@ void feLinearSystemPETSc::correctSolution(feSolution *sol)
   // Synchronize the solution vector on all processes
   MPI_Allgatherv(_ownedSolution, high-low, MPI_DOUBLE, solArray.data(),
     _numOwnedRows, _ownedLowerBounds, MPI_DOUBLE, PETSC_COMM_WORLD);
-
+#else
+  UNUSED(sol);
 #endif
 }
 
@@ -983,6 +997,8 @@ void feLinearSystemPETSc::assignResidualToDCResidual(feSolutionContainer *solCon
   VecGetArray(_rhs, &array);
   for(int i = 0; i < _nInc; ++i) solContainer->_fResidual[0][i] = array[i];
   VecRestoreArray(_rhs, &array);
+#else
+  UNUSED(solContainer);
 #endif
 }
 
@@ -993,6 +1009,8 @@ void feLinearSystemPETSc::applyCorrectionToResidual(double coeff, std::vector<do
   VecGetArray(_rhs, &array);
   for(int i = 0; i < _nInc; ++i) array[i] += coeff * d[i];
   VecRestoreArray(_rhs, &array);
+#else
+  UNUSED(coeff, d);
 #endif
 }
 

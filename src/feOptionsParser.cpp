@@ -90,7 +90,7 @@ void feOptionsParser::Parse()
       return;
     }
 
-    for(int j = 0; true; j++) {
+    for(size_t j = 0; true; j++) {
       if(j >= options.size()) {
         // unrecognized option
         error_type = 2;
@@ -152,7 +152,7 @@ void feOptionsParser::Parse()
   }
 
   // check for missing required options
-  for(int i = 0; i < options.size(); i++)
+  for(size_t i = 0; i < options.size(); i++)
     if(options[i].required &&
        (option_check[i] == 0 || (options[i].type == ENABLE && option_check[++i] == 0))) {
       error_type = 6; // required option missing
@@ -248,7 +248,7 @@ void feOptionsParser::PrintHelp(std::ostream &out) const
 
   out << indent << "-h" << seprtr << "--help" << descr_sep << "Print this help message and exit.\n"
       << line_sep;
-  for(int j = 0; j < options.size(); j++) {
+  for(size_t j = 0; j < options.size(); j++) {
     OptionType type = options[j].type;
 
     out << indent << options[j].short_name << types[type] << seprtr << options[j].long_name

@@ -10,6 +10,18 @@ feStatus createLinearSystem(feLinearSystem *&system, linearSolverType type,
                             int argc, char **argv,
                             int ownershipSplit)
 {
+#if !defined(HAVE_PETSC)
+  UNUSED(argc, argv);
+#endif
+
+#if !defined(HAVE_MKL)
+  UNUSED(ownershipSplit);
+#endif
+
+#if !defined(HAVE_PETSC) && !defined(HAVE_MKL)
+  UNUSED(system);
+#endif
+
   feInfoCond(FE_VERBOSE > 0, "");
   feInfoCond(FE_VERBOSE > 0, "LINEAR SYSTEM:");
 

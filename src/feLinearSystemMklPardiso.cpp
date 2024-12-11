@@ -27,8 +27,8 @@ void feLinearSystemMklPardiso::setOwnershipAndAllocate(void)
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
     // Number of rows
-    PardisoInt nNNZPerProc, N = _nInc;
-    PardisoInt low, high;
+    PardisoInt N = _nInc;
+    PardisoInt low = 0, high;
 
     if(_ownershipSplit != 0 && _ownershipSplit != 1 && _ownershipSplit != 2) {
       _ownershipSplit = 0;
@@ -136,7 +136,7 @@ void feLinearSystemMklPardiso::setOwnershipAndAllocate(void)
       case 1:
         // TODO: Even number of nnz per proc, possible row overlap
         // The number of nnz is split according to PetscSplitOwnership()'s formula
-        nNNZPerProc = _nnz/size + ((_nnz % size) > rank);
+        // PardisoInt nNNZPerProc = _nnz/size + ((_nnz % size) > rank);
         feErrorMsg(FE_STATUS_ERROR, "Even split of nonzero not yet implemented. Choose ownershipSplit = 0.");
         exit(-1);
         break;

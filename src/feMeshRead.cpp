@@ -263,6 +263,8 @@ int dim_of_gmsh_element[] = {
 feStatus feMesh2DP1::readMsh2(std::istream &input, const bool curved, const bool reversed,
                               const mapType physicalEntitiesDescription)
 {
+  UNUSED(reversed);
+
   std::string buffer;
   int ph1; // Placeholder
   // std::map<int, int> _verticesMap; // Gmsh tag (which may include gaps) to sequential tag. Just
@@ -1312,8 +1314,7 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, const bool curved, const bool
               numEdges++;
               break;
             }
-            case 2:
-              // [[gnu::fallthrough]]; //  3-node triangle
+            case 2: //  3-node triangle
               // Cleaner version:
               {
                 Vertex *v0 = &_vertices[_verticesMap[elemNodesGmsh[0]]];
@@ -1353,6 +1354,7 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, const bool curved, const bool
                 // feWarning("Creating both data structures for 3-node triangles for debug");
                 // break;
               }
+              [[gnu::fallthrough]];
             case 9:
               [[gnu::fallthrough]]; //  6-node triangle (2nd order)
             case 21:
@@ -1433,10 +1435,10 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, const bool curved, const bool
                     double yMid = (v0->y() + v1->y()) / 2.;
                     // double normAlpha = sqrt((vMid->x() - xMid) * (vMid->x() - xMid) +
                     //                         (vMid->y() - yMid) * (vMid->y() - yMid));
-                    auto it = _edges.find(e);
-                    _edge2midnode[&(*it)] = vMid;
-                    _edge2alpha[&(*it)][0] = vMid->x() - xMid;
-                    _edge2alpha[&(*it)][1] = vMid->y() - yMid;
+                    auto edgeIt = _edges.find(e);
+                    _edge2midnode[&(*edgeIt)] = vMid;
+                    _edge2alpha[&(*edgeIt)][0] = vMid->x() - xMid;
+                    _edge2alpha[&(*edgeIt)][1] = vMid->y() - yMid;
                   }
 
                 } else {
@@ -2033,11 +2035,11 @@ feStatus feMesh2DP1::readGmsh(const std::string meshName, const bool curved, con
 
   // Create an RTree storing the elements of highest dimension
   // Elements are hardcoded "Triangle" for now
-  for(int i = 0; i < _elements.size(); ++i) {
-    Triangle *t = _elements[i];
+  for(size_t iElm = 0; iElm < _elements.size(); ++iElm) {
+    Triangle *t = _elements[iElm];
     SBoundingBox3d bbox;
-    for(int i = 0; i < t->getNumVertices(); ++i) {
-      Vertex *v = t->getVertex(i);
+    for(int j = 0; j < t->getNumVertices(); ++j) {
+      Vertex *v = t->getVertex(j);
       SPoint3 pt(v->x(), v->y(), v->z());
       bbox += pt;
     }

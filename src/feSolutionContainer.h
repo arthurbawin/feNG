@@ -41,57 +41,52 @@ public:
   double getRes(int iSol, int iDOF) { return _fResidual[iSol][iDOF]; }
   std::vector<double> &getResidual(int iSol) { return _fResidual[iSol]; }
   void setResidual(int iSol, std::vector<double> res) { _fResidual[iSol] = res; }
-  virtual void computeSolTimeDerivative(feSolution *sol, feLinearSystem *linearSystem){};
+  virtual void computeSolTimeDerivative(feSolution *sol, feLinearSystem *linearSystem);
 };
 
 class feStationarySolution : public feSolutionContainer
 {
-protected:
 public:
   feStationarySolution(int nSol, double tn, feMetaNumber *metaNumber)
     : feSolutionContainer(nSol, tn, metaNumber){};
-  virtual ~feStationarySolution() {}
-  virtual void computeSolTimeDerivative(feSolution *sol, feLinearSystem *linearSystem);
+  ~feStationarySolution() {}
+  void computeSolTimeDerivative(feSolution *sol, feLinearSystem *linearSystem);
 };
 
 class feSolutionBDF1 : public feSolutionContainer
 {
-protected:
 public:
   feSolutionBDF1(int nSol, double tn, feMetaNumber *metaNumber)
     : feSolutionContainer(nSol, tn, metaNumber){};
-  virtual ~feSolutionBDF1() {}
-  virtual void computeSolTimeDerivative(feSolution *sol, feLinearSystem *linearSystem);
+  ~feSolutionBDF1() {}
+  void computeSolTimeDerivative(feSolution *sol, feLinearSystem *linearSystem);
 };
 
 class feSolutionBDF2 : public feSolutionContainer
 {
-protected:
 public:
   feSolutionBDF2(int nSol, double tn, feMetaNumber *metaNumber)
     : feSolutionContainer(nSol, tn, metaNumber){};
-  virtual ~feSolutionBDF2() {}
-  virtual void computeSolTimeDerivative(feSolution *sol, feLinearSystem *linearSystem);
+  ~feSolutionBDF2() {}
+  void computeSolTimeDerivative(feSolution *sol, feLinearSystem *linearSystem);
 };
 
 class feSolutionDCF : public feSolutionContainer
 {
-protected:
 public:
   feSolutionDCF(int nSol, double tn, feMetaNumber *metaNumber)
     : feSolutionContainer(nSol, tn, metaNumber){};
-  virtual ~feSolutionDCF() {}
-  virtual void computeSolTimeDerivative(feSolution *sol, feLinearSystem *linearSystem);
+  ~feSolutionDCF() {}
+  void computeSolTimeDerivative(feSolution *sol, feLinearSystem *linearSystem);
 };
 
 class feSolutionDC2F : public feSolutionContainer
 {
-protected:
 public:
   feSolutionDC2F(int nSol, double tn, feMetaNumber *metaNumber)
     : feSolutionContainer(nSol, tn, metaNumber){};
-  virtual ~feSolutionDC2F() {}
-  virtual void computeSolTimeDerivative(feSolution *sol, feLinearSystem *linearSystem);
+  ~feSolutionDC2F() {}
+  void computeSolTimeDerivative(feSolution *sol, feLinearSystem *linearSystem);
 };
 
 void initializeBDF2(feSolution *sol, feMetaNumber *metaNumber, feMesh *mesh,

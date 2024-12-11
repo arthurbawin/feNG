@@ -23,6 +23,7 @@ feBasicViewer::feBasicViewer(const std::string &windowTitle, int nElm, int nInte
   _mach = (double *)malloc(sizeof(double) * _nPlotNodes);
   _p = (double *)malloc(sizeof(double) * _nPlotNodes);
 #else
+  UNUSED(windowTitle, nElm, nInteriorPlotNodes);
   feWarning("Cannot create a display window without GLFW support :/");
 #endif
 }
@@ -63,6 +64,8 @@ void feBasicViewer::reshapeWindowBox(double xMin, double xMax, double yMin, doub
 {
 #if defined(HAVE_GLFW)
   glfemReshapeWindowsBox(xMin, xMax, yMin, yMax, _windowWidth, _windowHeight);
+#else
+  UNUSED(xMin, xMax, yMin, yMax);
 #endif
 }
 
@@ -91,6 +94,8 @@ void feBasicViewer::reshapeWindowBox(double scaleFactorX, double scaleFactorY, f
   double dy = yMax - yMin;
   this->reshapeWindowBox(xC - dx / 2. * scaleFactorX, xC + dx / 2. * scaleFactorX,
                          yC - dy / 2. * scaleFactorY, yC + dy / 2. * scaleFactorY);
+#else
+  UNUSED(scaleFactorX, scaleFactorY, mesh, solution);
 #endif
 }
 
@@ -209,14 +214,18 @@ void feBasicViewer::draw1DCurve(feMesh &mesh, feMetaNumber &numbering, feSolutio
     drawAxes();
   }
 
+#else
+  UNUSED(mesh, numbering, solution,space, analyticSolution, yScaling, color);
 #endif
 }
 
+#if defined(HAVE_GLFW)
 static double area(double x)
 {
   return 1. + 2.2 * (x - 1.5) * (x - 1.5);
   // return 1.398 + 0.347 * tanh(0.8*x-4.);
 }
+#endif
 
 void feBasicViewer::drawEulerNozzle(feMesh &mesh, feMetaNumber &numbering, feSolution &solution,
                                     std::vector<feSpace *> &spaces, double yScaling[3],
@@ -317,5 +326,7 @@ void feBasicViewer::drawEulerNozzle(feMesh &mesh, feMetaNumber &numbering, feSol
     drawAxes();
   }
 
+#else
+  UNUSED(mesh, numbering, solution, spaces, yScaling, analyticSolution);
 #endif
 }

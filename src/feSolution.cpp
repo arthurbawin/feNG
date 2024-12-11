@@ -5,7 +5,7 @@
 
 feSolution::feSolution(int numDOF, const std::vector<feSpace *> &space,
                        const std::vector<feSpace *> &essentialSpaces)
-  : _spaces(space), _essentialSpaces(essentialSpaces), _nDOF(numDOF), _c0(0.), _tn(0.)
+  : _nDOF(numDOF), _c0(0.), _tn(0.), _spaces(space), _essentialSpaces(essentialSpaces)
 {
   _sol.resize(numDOF);
   _dsoldt.resize(numDOF);
@@ -17,7 +17,7 @@ feSolution::feSolution(int numDOF, const std::vector<feSpace *> &space,
 
 /* Constructs an feSolution from a file created by feSolution::printSol. */
 feSolution::feSolution(std::string solutionFile)
-  : _spaces(std::vector<feSpace *>()), _essentialSpaces(std::vector<feSpace *>()), _c0(0.)
+  : _c0(0.), _spaces(std::vector<feSpace *>()), _essentialSpaces(std::vector<feSpace *>())
 {
   feInfo("Reading solution file : %s\n", solutionFile.c_str());
   std::filebuf fb;

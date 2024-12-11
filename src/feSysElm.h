@@ -161,7 +161,7 @@ public:
 public:
   // Do not call directly, call derived classes instead
   feSysElm(int dim, int nFields, elementSystemType ID, bool hasMatrix)
-    : _dim(dim), _nFields(nFields), _ID(ID), _hasMatrix(hasMatrix), _pos(3, 0.)
+    : _ID(ID), _dim(dim), _nFields(nFields), _hasMatrix(hasMatrix), _pos(3, 0.)
   {
     _fieldsLayoutI.resize(1);
     _fieldsLayoutJ.resize(1);
@@ -180,8 +180,8 @@ public:
   bool hasMatrix() { return _hasMatrix; }
   bool isThreadSafe() { return _isThreadSafe; }
 
-  virtual void createElementarySystem(std::vector<feSpace *> &spaces){};
-  virtual void computeAe(feBilinearForm *form){};
+  virtual void createElementarySystem(std::vector<feSpace *> &spaces){ UNUSED(spaces); };
+  virtual void computeAe(feBilinearForm *form){ UNUSED(form); };
   virtual void computeBe(feBilinearForm *form) = 0;
 };
 
@@ -811,7 +811,7 @@ public:
   feSysElm_ZeroBlock() : feSysElm(-1, 2, ZERO_BLOCK, true) { _computeMatrixWithFD = false; };
   ~feSysElm_ZeroBlock(){};
   void createElementarySystem(std::vector<feSpace *> &space);
-  void computeBe(feBilinearForm *form){};
+  void computeBe(feBilinearForm *form){ UNUSED(form); };
   CLONEABLE(feSysElm_ZeroBlock)
 };
 
@@ -841,7 +841,6 @@ public:
     : feSysElm(1, 1, NEUMANN_1D, false), _neumannBC(neumannBC){};
   ~feSysElm_1D_NeumannBC() {}
   void createElementarySystem(std::vector<feSpace *> &space);
-  void computeAe(feBilinearForm *form){};
   void computeBe(feBilinearForm *form);
   CLONEABLE(feSysElm_1D_NeumannBC)
 };
@@ -909,8 +908,8 @@ protected:
 public:
   feSysElm_2D_SUPGStab(feFunction *reactionCoeff, feFunction *diffusivity,
                        feVectorFunction *velocity, feFunction *source)
-    : feSysElm(2, 1, SUPG_STABILIZATION_2D, true), _reactionCoeff(reactionCoeff),
-      _velocity(velocity), _diffusivity(diffusivity), _source(source)
+    : feSysElm(2, 1, SUPG_STABILIZATION_2D, true), _velocity(velocity),
+    _diffusivity(diffusivity), _reactionCoeff(reactionCoeff), _source(source)
   {
     _computeMatrixWithFD = true;
   };

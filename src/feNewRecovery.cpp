@@ -166,9 +166,9 @@ feNewPatch::feNewPatch(const feCncGeo *cnc, feMesh *mesh, bool reconstructAtHigh
 
   // Mark boundary vertices
   // Vertices on cnc with dim = dimMesh - 1 are considered boundary
-  for(auto cnc : mesh->getCncGeo()) {
-    if(cnc->getDim() == mesh->getDim() - 1) {
-      for(auto bnd_vertex : cnc->getVerticesConnectivity()) {
+  for(auto cncGeo : mesh->getCncGeo()) {
+    if(cncGeo->getDim() == mesh->getDim() - 1) {
+      for(auto bnd_vertex : cncGeo->getVerticesConnectivity()) {
         _isVertexBoundary.at(bnd_vertex) = true;
       }
     }
@@ -289,9 +289,9 @@ feNewPatch::feNewPatch(const feCncGeo *cnc, feMesh *mesh, bool reconstructAtHigh
 
         pair.second *= 2.;
 
-        if(_isVertexBoundary.at(vertex) && vertToVerts.at(vertex).size() >= minVerticesOnBoundary)
+        if(_isVertexBoundary.at(vertex) && vertToVerts.at(vertex).size() >= (size_t) minVerticesOnBoundary)
           enoughAdjacentVertices = true;
-        if(!_isVertexBoundary.at(vertex) && vertToVerts.at(vertex).size() >= minVertices)
+        if(!_isVertexBoundary.at(vertex) && vertToVerts.at(vertex).size() >= (size_t) minVertices)
           enoughAdjacentVertices = true;
 
       } while(!enoughAdjacentVertices);
@@ -348,7 +348,7 @@ feNewPatch::feNewPatch(const feCncGeo *cnc, feMesh *mesh, bool reconstructAtHigh
           }
 
           // Check that there are enough adjacent vertices
-          if(!_isVertexBoundary[vertex] && vertToVerts[vertex].size() >= minVertices)
+          if(!_isVertexBoundary[vertex] && vertToVerts[vertex].size() >= (size_t) minVertices)
             enoughAdjacentVertices = true;
 
           if(!enoughAdjacentVertices) {
@@ -391,7 +391,7 @@ feNewPatch::feNewPatch(const feCncGeo *cnc, feMesh *mesh, bool reconstructAtHigh
         boundaryVertToElems[v] = vertToElems_singleLayer.at(v);
 
         // Check if there is an interior vertex connected
-        bool OK = false;
+        OK = false;
         for(auto connectedElem : boundaryVertToElems.at(v)) {
           for(int i = 0; i < 3; ++i) {
             int connectedVertex = connecNodes[_nNodePerElm * connectedElem + i];
@@ -508,7 +508,7 @@ feNewPatch::feNewPatch(const feCncGeo *cnc, feMesh *mesh, bool reconstructAtHigh
 
   // Some debug plots
   if(false) {
-    system("rm vertexPatch*.pos");
+    // system("rm vertexPatch*.pos");
     // Draw connected interior vertices
     for(auto v : vertToVerts) {
       // if(_isVertexBoundary[v.first]) {
@@ -528,7 +528,7 @@ feNewPatch::feNewPatch(const feCncGeo *cnc, feMesh *mesh, bool reconstructAtHigh
   }
 
   if(false) {
-    system("rm interiorVertices*.pos");
+    // system("rm interiorVertices*.pos");
     // Draw connected interior vertices
     for(auto &v : vertToInteriorVerts) {
       std::string posfile = "interiorVertices" + std::to_string(v.first) + ".pos";
@@ -546,7 +546,7 @@ feNewPatch::feNewPatch(const feCncGeo *cnc, feMesh *mesh, bool reconstructAtHigh
   }
 
   if(false) {
-    system("rm elementPatch*.pos");
+    // system("rm elementPatch*.pos");
     // Draw patches of elements
     for(auto v : vertToElems) {
       std::string posfile = "elementPatch" + std::to_string(v.first) + ".pos";
@@ -562,7 +562,7 @@ feNewPatch::feNewPatch(const feCncGeo *cnc, feMesh *mesh, bool reconstructAtHigh
   }
 
    if(false) {
-    system("rm scalingBox*.pos");
+    // system("rm scalingBox*.pos");
     for(auto pair : _scaling) {
       std::string posfile = "scalingBox_" + std::to_string(pair.first) + ".pos";
       FILE *file = fopen(posfile.data(), "w");
@@ -845,10 +845,10 @@ void feNewRecovery::computeRHSAndSolve(int numRecoveries, int nRecoveredFields,
   const std::vector<double> &J = _cnc->getJacobians();
 
   std::vector<int> &vertices = _patch->getVertices();
-  std::map<int, bool> &isVertexBoundary = _patch->getBoundaryVertices();
   std::map<int, std::pair<double, double> > &scaling = _patch->getScaling();
-
-  int _nVertPerElm = _nNodePerElm;
+#if defined(TREAT_BOUNDARIES)
+  std::map<int, bool> &isVertexBoundary = _patch->getBoundaryVertices();
+#endif
 
   std::vector<double> &solVec = _sol->getSolutionReference();
 
@@ -1005,7 +1005,6 @@ void feNewRecovery::computeVertexLeastSquareMatrices2D()
       const std::set<int> &verticesPatch = vertToVerts.at(v);
 
       bool rankIsOk = false;
-      bool rankWasBad = false;
       int numPatchIncrease = 0;
 
       do {
@@ -1131,9 +1130,12 @@ void feNewRecovery::computeRHSAndSolve_noIntegral(int numRecoveries, int nRecove
 {
   std::vector<int> &vertices = _patch->getVertices();
   std::map<int, std::set<int> > &vertToVerts = _patch->getVerticesPatches();
-  std::map<int, bool> &isVertexBoundary = _patch->getBoundaryVertices();
   std::map<int, std::pair<double, double> > &scaling = _patch->getScaling();
   std::vector<double> &solVec = _sol->getSolutionReference();
+
+#if defined(TREAT_BOUNDARIES)
+  std::map<int, bool> &isVertexBoundary = _patch->getBoundaryVertices();
+#endif
 
   std::map<int, Vector> allSOL;
   std::map<int, Vector> allRHS;
@@ -1160,8 +1162,8 @@ void feNewRecovery::computeRHSAndSolve_noIntegral(int numRecoveries, int nRecove
       std::set<int> &verticesPatch = vertToVerts[v];
       int numConnectedVertices = verticesPatch.size();
 
-      double xv = _mesh->getVertex(v)->x();
-      double yv = _mesh->getVertex(v)->y();
+      // double xv = _mesh->getVertex(v)->x();
+      // double yv = _mesh->getVertex(v)->y();
 
       std::vector<Vector> RHS;
       RHS.clear();
@@ -1230,18 +1232,18 @@ void feNewRecovery::computeRHSAndSolve_noIntegral(int numRecoveries, int nRecove
 
       for(int iComp = 0; iComp < numRecoveries; ++iComp) {
 
-        Vector sol = _leastSquaresMatrices[v] * RHS[iComp];
+        Vector solution = _leastSquaresMatrices[v] * RHS[iComp];
 
         #if defined(APPLY_SCALING)
         // Divide solution vector by scaling coefficient with the right exponent
         for(int iii = 0; iii < _dimRecovery; ++iii) {
           double h = pow(scaling.at(v).first, _expX_recov[iii]) * pow(scaling.at(v).second, _expY_recov[iii]);
-         sol(iii) = sol(iii) / h;
+         solution(iii) = solution(iii) / h;
         }
         #endif
 
         for(int i = 0; i < _dimRecovery; ++i) {
-          recoveryVector[i] = sol(i);
+          recoveryVector[i] = solution(i);
         }
 
 #if defined(HAVE_OMP)
@@ -1307,19 +1309,19 @@ void feNewRecovery::computeRHSAndSolve_noIntegral_inputMetric(
       // Compute least-squares solution
       for(int iComp = 0; iComp < numRecoveries; ++iComp) {
 
-        Vector sol = _leastSquaresMatrices[v] * RHS[iComp];
+        Vector solution = _leastSquaresMatrices[v] * RHS[iComp];
 
         for(int i = 0; i < _dimRecovery; ++i) {
           #if defined(APPLY_SCALING)
           // Divide solution vector by scaling coefficient with the right exponent
           double h = pow(scaling.at(v).first, _expX_recov[i]) * pow(scaling.at(v).second, _expY_recov[i]);
-          sol(i) = sol(i) / h;
+          solution(i) = solution(i) / h;
           #endif
-          recoveryVector[i] = sol(i);
+          recoveryVector[i] = solution(i);
         }
 
         // Compute the derivative at (0,0)
-        double dmdx, dmdy;
+        double dmdx = 0., dmdy = 0.;
 
         // Compute only the coefficient at 0
         for(int i = 0; i < _dimRecovery; ++i) {
@@ -1389,8 +1391,10 @@ void feNewRecovery::computeDerivative(int nRecoveredFields, int indexRecovery, i
                                       std::ostream &output)
 {
   std::vector<int> &vertices = _patch->getVertices();
+  // const std::map<int, std::pair<double, double> > &scaling = _patch->getScaling();
+#if defined(TREAT_BOUNDARIES)
   std::map<int, bool> &isVertexBoundary = _patch->getBoundaryVertices();
-  const std::map<int, std::pair<double, double> > &scaling = _patch->getScaling();
+#endif
 
   // If a coefficient in the derivative is less than this relative threshold,
   // it is ignored
@@ -1571,7 +1575,9 @@ void feNewRecovery::computeHomogeneousErrorPolynomials()
 {
   if(_dim == 2) {
     std::vector<int> &vertices = _patch->getVertices();
+  #if defined(TREAT_BOUNDARIES)
     std::map<int, bool> &isVertexBoundary = _patch->getBoundaryVertices();
+  #endif
 
     std::vector<double> error(_degSol + 2, 0.);
 
@@ -1657,7 +1663,6 @@ feNewRecovery::evaluatePolynomialAtBoundaryVertex(PPR recoveredField, const int 
                                                   const std::set<int> &connectedInteriorVertices)
 {
   double xLoc[2];
-  std::map<int, std::pair<double, double> > &scaling = _patch->getScaling();
   Vertex *vInt, *vBnd = _mesh->getVertex(vertex);
   double res = 0.;
   for(auto v : connectedInteriorVertices) {
@@ -1701,7 +1706,7 @@ void feNewRecovery::computeTransformedEdgeLength(std::vector<double> &geoCoord,
   double drdt[3] = {1., -1., 0.};
   double dsdt[3] = {0., 1., -1.};
 
-  for(size_t i = 0; i < _nQuad1d; ++i) {
+  for(int i = 0; i < _nQuad1d; ++i) {
     // Map from [-1,1] to parameter space t in [0,tEnd] or in [tEnd,1]
     t1 = _xQuad1d[i] * tEnd / 2. + tEnd / 2.;
     w1 = _wQuad1d[i] * tEnd / 2.;
@@ -1767,7 +1772,7 @@ double computeApproximateLength(feSpace *geoSpace, std::vector<double> &geoCoord
   double xprev[2] = {x[0], x[1]};
   double dt = (max_t - min_t) / N;
   double t = min_t;
-  for(size_t i = 0; i < N+1; ++i) {
+  for(int i = 0; i < N+1; ++i) {
 
     fprintf(file, "SP(%1.14e,%1.14e,0.){%f};\n", x[0], x[1], 1.);
     
@@ -1814,7 +1819,7 @@ double feNewRecovery::computeTransformedEdgeLength2(std::vector<double> &geoCoor
   double drdt[3] = {1., -1., 0.};
   double dsdt[3] = {0., 1., -1.};
 
-  for(size_t i = 0; i < _nQuad1d; ++i) {
+  for(int i = 0; i < _nQuad1d; ++i) {
     // Map from [-1,1] to parameter space t in [t0,tEnd]
     t = (tEnd - t0)/2. * _xQuad1d[i] + (tEnd + t0)/2.;
     w = _wQuad1d[i] * (tEnd - t0) / 2.;
@@ -2208,10 +2213,9 @@ feNewRecovery::feNewRecovery(feSpace *space, int indexComponent, feMesh *mesh, f
                              bool useOriginalZhangNagaPatchDefinition, bool append,
                              feMetric *metricField, feMetaNumber *numbering,
                              bool skipRecovery)
-  : _mesh(mesh), _sol(sol), _numbering(numbering), _componentToRecover(indexComponent),
-    _intSpace(space), _cnc(space->getCncGeo()), _nElm(_cnc->getNumElements()),
-    _nNodePerElm(_cnc->getNumVerticesPerElem()), _geoSpace(_cnc->getFeSpace()),
-    _degSol(space->getPolynomialDegree()), _degRec(_degSol + 1), _dim(mesh->getDim()),
+  : _cnc(space->getCncGeo()), _nElm(_cnc->getNumElements()), _nNodePerElm(_cnc->getNumVerticesPerElem()), 
+    _mesh(mesh), _sol(sol), _numbering(numbering), _intSpace(space), _componentToRecover(indexComponent),
+     _geoSpace(_cnc->getFeSpace()), _degSol(space->getPolynomialDegree()), _degRec(_degSol + 1), _dim(mesh->getDim()),
     _reconstructAtHighOrderNodes(reconstructAtHighOrderNodes)
 {
   feInfoCond(FE_VERBOSE > 0, "");
@@ -2349,10 +2353,10 @@ feNewRecovery::feNewRecovery(feSpace *space, int indexComponent, feMesh *mesh, f
 
     for(size_t i = 0; i < nVertices; ++i) {
       int v = vertices[i];
-      for(size_t j = 0; j < _numTotalRecoveries; ++j) {
+      for(int j = 0; j < _numTotalRecoveries; ++j) {
         recoveryIndependantTerm[_numTotalRecoveries * v + j] = recoveryCoeff.at(v)[j][0];
       }
-      for(size_t j = 0; j < _numTotalDerivatives; ++j) {
+      for(int j = 0; j < _numTotalDerivatives; ++j) {
         derivativeIndependantTerm[_numTotalDerivatives * v + j] = derivativeCoeff.at(v)[j][0];
       }
     }

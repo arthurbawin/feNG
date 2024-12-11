@@ -596,6 +596,7 @@ feStatus feMetric::newGradation(const std::vector<std::size_t> &nodeTags, const 
 
   return FE_STATUS_OK;
 #else
+  UNUSED(nodeTags, coord, gradation, metricsAtNodeTags);
   return feErrorMsg(FE_STATUS_ERROR, "Gmsh is required to apply gradation to the metric tensor field!");
 #endif
 }

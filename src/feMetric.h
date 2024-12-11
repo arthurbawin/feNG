@@ -4,8 +4,8 @@
 #include "feRecovery.h"
 #include "feNewRecovery.h"
 
-#include "../contrib/Eigen/Eigen"
-#include "../contrib/unsupported/Eigen/MatrixFunctions"
+#include <Eigen/Dense>
+#include <Eigen/MatrixFunctions>
 
 #include "STensor3.h"
 

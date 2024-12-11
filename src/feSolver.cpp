@@ -48,6 +48,8 @@ feStatus createTimeIntegrator(TimeIntegrator *&solver, timeIntegratorScheme sche
 feStatus solveQNBDF(feSolutionContainer *solDot, feTolerances tol, feMetaNumber *metaNumber,
                     feLinearSystem *linearSystem, feSolution *sol, feMesh *mesh)
 {
+  UNUSED(metaNumber, mesh);
+
   feInfoCond(FE_VERBOSE > 0, "\t\t\tNONLINEAR SOLVER:");
   bool stop = false;
   int iter = 0, linearSystemIter;
@@ -182,7 +184,7 @@ StationarySolver::StationarySolver(feTolerances tol, feMetaNumber *metaNumber,
 
 feStatus StationarySolver::makeStep() { return this->makeSteps(0); }
 
-feStatus StationarySolver::makeSteps(int nSteps)
+feStatus StationarySolver::makeSteps(int /* nSteps */)
 {
   // Recompute global matrix at every Newton iteration if stationary
   _linearSystem->setRecomputeStatus(true);
@@ -1275,8 +1277,8 @@ feStatus DC3Solver::makeSteps(int nSteps)
       _normL2[0][_currentStep] = DC2F[0]; // value at t1
       _normL2[1][_currentStep] = DC3F[0]; // value ay t1
       // for(int j=0; j<testBDF1.size() ; j++)std::cout<<"Norme BDF1  "<<testBDF1[j]<<std::endl;
-      for(int j = 0; j < DC2F.size(); j++) std::cout << "Norme DC2F  " << DC2F[j] << std::endl;
-      for(int j = 0; j < DC3F.size(); j++) std::cout << "DC3F   " << DC3F[j] << std::endl;
+      for(size_t j = 0; j < DC2F.size(); j++) std::cout << "Norme DC2F  " << DC2F[j] << std::endl;
+      for(size_t j = 0; j < DC3F.size(); j++) std::cout << "DC3F   " << DC3F[j] << std::endl;
       // for(int j=0; j<2 ; j++)std::cout<<"Norme DC2F  "<<_norms[0]->getNorm()<<std::endl;
       // for(int j=0; j<2 ; j++)std::cout<<"Norme DC3F  "<<_norms[1]->getNorm()<<std::endl;
 

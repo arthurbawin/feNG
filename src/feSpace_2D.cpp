@@ -65,11 +65,11 @@ void feSpaceTriP1::L(double *r, double *L)
   L[1] = r[0];
   L[2] = r[1];
 }
-std::vector<double> feSpaceTriP1::dLdr(double *r) { return {-1.0, 1.0, 0.0}; }
-std::vector<double> feSpaceTriP1::dLds(double *r) { return {-1.0, 0.0, 1.0}; }
-std::vector<double> feSpaceTriP1::d2Ldr2(double *r) { return {0., 0., 0.}; }
-std::vector<double> feSpaceTriP1::d2Ldrs(double *r) { return {0., 0., 0.}; }
-std::vector<double> feSpaceTriP1::d2Lds2(double *r) { return {0., 0., 0.}; }
+std::vector<double> feSpaceTriP1::dLdr(double *r) { UNUSED(r); return {-1.0, 1.0, 0.0}; }
+std::vector<double> feSpaceTriP1::dLds(double *r) { UNUSED(r); return {-1.0, 0.0, 1.0}; }
+std::vector<double> feSpaceTriP1::d2Ldr2(double *r) { UNUSED(r); return {0., 0., 0.}; }
+std::vector<double> feSpaceTriP1::d2Ldrs(double *r) { UNUSED(r); return {0., 0., 0.}; }
+std::vector<double> feSpaceTriP1::d2Lds2(double *r) { UNUSED(r); return {0., 0., 0.}; }
 
 void feSpaceTriP1::initializeNumberingUnknowns()
 {
@@ -130,6 +130,7 @@ template <int dim> void feSpaceVecTriP1<dim>::L(double *r, double *res)
 
 template <int dim> std::vector<double> feSpaceVecTriP1<dim>::dLdr(double *r)
 {
+  UNUSED(r);
   double dldr[3] = {-1.0, 1.0, 0.0};
   std::vector<double> res(_nFunctions);
   duplicateScalarArray(3, 1, dldr, dim, res);
@@ -138,6 +139,7 @@ template <int dim> std::vector<double> feSpaceVecTriP1<dim>::dLdr(double *r)
 
 template <int dim> std::vector<double> feSpaceVecTriP1<dim>::dLds(double *r)
 {
+  UNUSED(r);
   double dlds[3] = {-1.0, 0.0, 1.0};
   std::vector<double> res(_nFunctions);
   duplicateScalarArray(3, 1, dlds, dim, res);
@@ -146,6 +148,7 @@ template <int dim> std::vector<double> feSpaceVecTriP1<dim>::dLds(double *r)
 
 template <int dim> std::vector<double> feSpaceVecTriP1<dim>::d2Ldr2(double *r)
 {
+  UNUSED(r);
   double d2ldr2[3] = {0., 0., 0.};
   std::vector<double> res(_nFunctions);
   duplicateScalarArray(3, 1, d2ldr2, dim, res);
@@ -154,6 +157,7 @@ template <int dim> std::vector<double> feSpaceVecTriP1<dim>::d2Ldr2(double *r)
 
 template <int dim> std::vector<double> feSpaceVecTriP1<dim>::d2Ldrs(double *r)
 {
+  UNUSED(r);
   double d2ldrs[3] = {0., 0., 0.};
   std::vector<double> res(_nFunctions);
   duplicateScalarArray(3, 1, d2ldrs, dim, res);
@@ -162,6 +166,7 @@ template <int dim> std::vector<double> feSpaceVecTriP1<dim>::d2Ldrs(double *r)
 
 template <int dim> std::vector<double> feSpaceVecTriP1<dim>::d2Lds2(double *r)
 {
+  UNUSED(r);
   double d2lds2[3] = {0., 0., 0.};
   std::vector<double> res(_nFunctions);
   duplicateScalarArray(3, 1, d2lds2, dim, res);
@@ -226,11 +231,11 @@ void feSpaceTri_CR1::L(double *r, double *L)
   L[1] = -1.0 + 2.0 * r[0] + 2.0 * r[1];
   L[2] = 1 - 2.0 * r[0];
 }
-std::vector<double> feSpaceTri_CR1::dLdr(double *r) { return {0.0, 2.0, -2.0}; }
-std::vector<double> feSpaceTri_CR1::dLds(double *r) { return {-2.0, 2.0, 0.0}; }
-std::vector<double> feSpaceTri_CR1::d2Ldr2(double *r) { return {0., 0., 0.}; }
-std::vector<double> feSpaceTri_CR1::d2Ldrs(double *r) { return {0., 0., 0.}; }
-std::vector<double> feSpaceTri_CR1::d2Lds2(double *r) { return {0., 0., 0.}; }
+std::vector<double> feSpaceTri_CR1::dLdr(double *r) { UNUSED(r); return {0.0, 2.0, -2.0}; }
+std::vector<double> feSpaceTri_CR1::dLds(double *r) { UNUSED(r); return {-2.0, 2.0, 0.0}; }
+std::vector<double> feSpaceTri_CR1::d2Ldr2(double *r) { UNUSED(r); return {0., 0., 0.}; }
+std::vector<double> feSpaceTri_CR1::d2Ldrs(double *r) { UNUSED(r); return {0., 0., 0.}; }
+std::vector<double> feSpaceTri_CR1::d2Lds2(double *r) { UNUSED(r); return {0., 0., 0.}; }
 
 void feSpaceTri_CR1::initializeNumberingUnknowns()
 {
@@ -484,9 +489,9 @@ std::vector<double> feSpaceTriP2::dLds(double *r)
           4. * (1. - r[0] - 2. * r[1])};
 }
 
-std::vector<double> feSpaceTriP2::d2Ldr2(double *r) { return {4., 4., 0., -8., 0., 0.}; }
-std::vector<double> feSpaceTriP2::d2Ldrs(double *r) { return {4., 0., 0., -4., 4., -4.}; }
-std::vector<double> feSpaceTriP2::d2Lds2(double *r) { return {4., 0., 4., 0., 0., -8.}; }
+std::vector<double> feSpaceTriP2::d2Ldr2(double *r) { UNUSED(r); return {4., 4., 0., -8., 0., 0.}; }
+std::vector<double> feSpaceTriP2::d2Ldrs(double *r) { UNUSED(r); return {4., 0., 0., -4., 4., -4.}; }
+std::vector<double> feSpaceTriP2::d2Lds2(double *r) { UNUSED(r); return {4., 0., 4., 0., 0., -8.}; }
 
 void feSpaceTriP2::initializeNumberingUnknowns()
 {
@@ -597,6 +602,7 @@ template <int dim> std::vector<double> feSpaceVecTriP2<dim>::dLds(double *r)
 
 template <int dim> std::vector<double> feSpaceVecTriP2<dim>::d2Ldr2(double *r)
 {
+  UNUSED(r);
   double d2ldr2[6] = {4., 4., 0., -8., 0., 0.};
   std::vector<double> res(_nFunctions);
   duplicateScalarArray(6, 1, d2ldr2, dim, res);
@@ -605,6 +611,7 @@ template <int dim> std::vector<double> feSpaceVecTriP2<dim>::d2Ldr2(double *r)
 
 template <int dim> std::vector<double> feSpaceVecTriP2<dim>::d2Ldrs(double *r)
 {
+  UNUSED(r);
   double d2ldrs[6] = {4., 0., 0., -4., 4., -4.};
   std::vector<double> res(_nFunctions);
   duplicateScalarArray(6, 1, d2ldrs, dim, res);
@@ -613,6 +620,7 @@ template <int dim> std::vector<double> feSpaceVecTriP2<dim>::d2Ldrs(double *r)
 
 template <int dim> std::vector<double> feSpaceVecTriP2<dim>::d2Lds2(double *r)
 {
+  UNUSED(r);
   double d2lds2[6] = {4., 0., 4., 0., 0., -8.};
   std::vector<double> res(_nFunctions);
   duplicateScalarArray(6, 1, d2lds2, dim, res);

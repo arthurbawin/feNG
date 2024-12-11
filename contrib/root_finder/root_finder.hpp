@@ -29,7 +29,7 @@
 #include <cfloat>
 #include <cmath>
 #include <set>
-#include <../Eigen/Eigen>
+#include <Eigen/Eigen>
 
 namespace RootFinderParam
 {

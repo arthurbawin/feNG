@@ -27,12 +27,14 @@ typedef std::function<void(const double, const std::vector<double> &, const std:
 static double constantCallback(const double t, const std::vector<double> &pos,
                                const std::vector<double> &par)
 {
+  UNUSED(t, pos);
   return par[0];
 }
 
 static void constantVectorCallback(const double t, const std::vector<double> &pos,
                                    const std::vector<double> &par, std::vector<double> &res)
 {
+  UNUSED(t, pos);
   res[0] = par[0];
   res[1] = par[1];
 }

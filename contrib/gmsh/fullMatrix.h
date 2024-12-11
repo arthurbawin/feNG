@@ -18,7 +18,7 @@
 #undef Success
 #endif
 #include <sstream>
-#include <../contrib/Eigen/Dense>
+#include <Eigen/Dense>
 #endif
 
 template <class scalar> class fullMatrix;

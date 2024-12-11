@@ -1,7 +1,10 @@
 #include "feMatrixInterface.h"
 
-#include "../contrib/Eigen/Dense"
-#include "../contrib/unsupported/Eigen/MatrixFunctions"
+// #include "../contrib/Eigen/Dense"
+// #include "../contrib/unsupported/Eigen/MatrixFunctions"
+
+#include <Eigen/Dense>
+#include <Eigen/MatrixFunctions>
 
 // ============================================================
 // Implementation of MetricTensor

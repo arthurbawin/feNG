@@ -50,7 +50,7 @@ public:
       _vlin[1] = v1;
       _vlin[2] = v2;
     }
-  ~Triangle() {}
+  virtual ~Triangle() {}
 
   // Tag of the triangle
   int getTag() const { return _tag; }
@@ -147,6 +147,7 @@ public:
       _isP2Straight = true;
     }
   }
+  ~TriangleP2() {}
 
   int getNumVertices(){ return 6; };
   Vertex *getVertex(int num) { return _v[num]; }

@@ -41,10 +41,12 @@ void feSysElm_1D_SUPGStab::createElementarySystem(std::vector<feSpace *> &space)
 
 void feSysElm_1D_SUPGStab::computeAe(feBilinearForm *form)
 {
+  UNUSED(form);
   // Finite differences
 }
 
 void feSysElm_1D_SUPGStab::computeBe(feBilinearForm *form)
 {
+  UNUSED(form);
   // ...
 }

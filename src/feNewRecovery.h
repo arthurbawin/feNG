@@ -17,9 +17,7 @@
 #include <iostream>
 #include <fstream>
 
-#if defined(HAVE_EIGEN)
-#include "../contrib/Eigen/Dense"
-#endif
+#include <Eigen/Dense>
 
 enum class PPR { RECOVERY, DERIVATIVE };
 

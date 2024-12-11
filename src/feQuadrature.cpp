@@ -70,17 +70,17 @@ void feQuadrature::computeWeightAndRoot(int nQuadLocal)
   }
 }
 
-void feQuadrature::computePolynomialValueAndDerivative(double x, double *result)
+void feQuadrature::computePolynomialValueAndDerivative(double x, double *res)
 {
-  result[0] = x;
-  result[1] = 0.0;
+  res[0] = x;
+  res[1] = 0.0;
   double value_minus_1 = 1;
   const double f = 1 / (x * x - 1);
   for(int i = 2; i <= _nQuad1D; i++) {
-    const double value = ((2 * i - 1) * x * result[0] - (i - 1) * value_minus_1) / i;
-    result[1] = i * f * (x * value - result[0]);
-    value_minus_1 = result[0];
-    result[0] = value;
+    const double value = ((2 * i - 1) * x * res[0] - (i - 1) * value_minus_1) / i;
+    res[1] = i * f * (x * value - res[0]);
+    value_minus_1 = res[0];
+    res[0] = value;
   }
 }
 

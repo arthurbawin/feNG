@@ -86,8 +86,8 @@ feCncGeo::feCncGeo(const int tag, const int dimension, const int nVerticesPerEle
                    std::vector<int> connecEdges, std::vector<int> connecFaces)
   : _ID(ID), _tag(tag), _dim(dimension), _geometry(geometry), _interpolant(interpolant),
     _nVerticesPerElm(nVerticesPerElement), _nElements(nElements), _nEdgesPerElem(nEdgesPerElement),
-    _connecVertices(connecVertices), _connecElem(connecElem), _connecEdges(connecEdges),
-    _connecFaces(connecFaces), _geometricInterpolant(space)
+    _connecVertices(connecVertices),  _connecEdges(connecEdges), _connecFaces(connecFaces),
+    _connecElem(connecElem), _geometricInterpolant(space)
 {
   if(connecElem.size() == 0) _connecElem.resize(nElements);
   if(connecEdges.size() == 0) _connecEdges.resize(nElements * nEdgesPerElement);
@@ -119,7 +119,7 @@ feCncGeo::feCncGeo(const int tag, const int dimension, const int nVerticesPerEle
   printColoringStatistics();
 
   // _mycoloring = new feColoring(1, _nVerticesPerElm, _connecVertices, _connecElem);
-};
+}
 
 int feCncGeo::getUniqueVertexConnectivity(const int iVertex) const
 {
@@ -148,7 +148,7 @@ int feCncGeo::getVertexConnectivity(const int iVertex) const
 int feCncGeo::getVertexConnectivity(const int numElem, const int iVertex) const
 {
 // #if defined(FENG_DEBUG)
-  if(_nVerticesPerElm * numElem + iVertex >= _connecVertices.size())
+  if((size_t) (_nVerticesPerElm * numElem + iVertex) >= _connecVertices.size())
     feErrorMsg(FE_STATUS_ERROR,
                "Out of bounds: accessing entry %d in _connecVertices"
                " of size %u",
@@ -160,7 +160,7 @@ int feCncGeo::getVertexConnectivity(const int numElem, const int iVertex) const
 void feCncGeo::setVertexConnectivity(const int numElem, const int iVertex, const int val)
 {
 #if defined(FENG_DEBUG)
-  if(_nVerticesPerElm * numElem + iVertex >= _connecVertices.size())
+  if((size_t) _(nVerticesPerElm * numElem + iVertex) >= _connecVertices.size())
     feErrorMsg(FE_STATUS_ERROR,
                "Out of bounds: accessing entry %d in _connecVertices"
                " of size %u",
@@ -172,7 +172,7 @@ void feCncGeo::setVertexConnectivity(const int numElem, const int iVertex, const
 int feCncGeo::getElementConnectivity(const int numElem) const
 {
 #if defined(FENG_DEBUG)
-  if(numElem >= _connecElem.size())
+  if((size_t) numElem >= _connecElem.size())
     feErrorMsg(FE_STATUS_ERROR,
                "Out of bounds: accessing entry %d in _connecElem"
                " of size %u",
@@ -184,7 +184,7 @@ int feCncGeo::getElementConnectivity(const int numElem) const
 void feCncGeo::setElementConnectivity(const int numElem, const int val)
 {
 #if defined(FENG_DEBUG)
-  if(numElem >= _connecElem.size())
+  if((size_t) numElem >= _connecElem.size())
     feErrorMsg(FE_STATUS_ERROR,
                "Out of bounds: accessing entry %d in _connecElem"
                " of size %u",
@@ -196,7 +196,7 @@ void feCncGeo::setElementConnectivity(const int numElem, const int val)
 int feCncGeo::getUniqueEdgeConnectivity(const int iEdge) const
 {
 #if defined(FENG_DEBUG)
-  if(iEdge >= _connecEdgesOnly.size())
+  if((size_t) iEdge >= _connecEdgesOnly.size())
     feErrorMsg(FE_STATUS_ERROR,
                "Out of bounds: accessing entry %d in _connecEdgesOnly"
                " of size %u",
@@ -208,7 +208,7 @@ int feCncGeo::getUniqueEdgeConnectivity(const int iEdge) const
 int feCncGeo::getEdgeConnectivity(const int numElem, const int iEdge) const
 {
 #if defined(FENG_DEBUG)
-  if(_nEdgesPerElem * numElem + iEdge >= _connecEdges.size())
+  if((size_t) (_nEdgesPerElem * numElem + iEdge) >= _connecEdges.size())
     feErrorMsg(FE_STATUS_ERROR,
                "Out of bounds: accessing entry %d in _connecEdges"
                " of size %u",
@@ -350,9 +350,9 @@ feStatus feCncGeo::recomputeElementJacobian(const int iElm)
 
   switch(_dim) {
     case 0:
-      for(int iElm = 0; iElm < _nElements; ++iElm) {
+      for(int i = 0; i < _nElements; ++i) {
         for(int k = 0; k < nQuad; ++k) {
-          _J[nQuad * iElm + k] = 1.0;
+          _J[nQuad * i + k] = 1.0;
         }
       }
       break;
@@ -360,13 +360,13 @@ feStatus feCncGeo::recomputeElementJacobian(const int iElm)
     case 1: {
       std::vector<double> dxdr(3, 0.0);
 
-      for(int iElm = 0; iElm < _nElements; ++iElm) {
-        _mesh->getCoord(_tag, iElm, geoCoord);
-        _elementsVolume[iElm] = 0.;
+      for(int i = 0; i < _nElements; ++i) {
+        _mesh->getCoord(_tag, i, geoCoord);
+        _elementsVolume[i] = 0.;
         for(int k = 0; k < nQuad; ++k) {
           _geometricInterpolant->interpolateVectorFieldAtQuadNode_rDerivative(geoCoord, k, dxdr);
-          _J[nQuad * iElm + k] = sqrt(dxdr[0] * dxdr[0] + dxdr[1] * dxdr[1]);
-          _elementsVolume[iElm] += wQuad[k] * _J[nQuad * iElm + k];
+          _J[nQuad * i + k] = sqrt(dxdr[0] * dxdr[0] + dxdr[1] * dxdr[1]);
+          _elementsVolume[i] += wQuad[k] * _J[nQuad * i + k];
         }
       }
       break;
@@ -466,16 +466,18 @@ inline double computeDeterminant(const SPoint2 &P0, const SPoint2 &P1)
 }
 
 double controlCoefficientN200(const SPoint2 &P200, const SPoint2 &P011,
-                                     const SPoint2 &P020, const SPoint2 &P101,
-                                     const SPoint2 &P002, const SPoint2 &P110)
+                              const SPoint2 &P020, const SPoint2 &P101,
+                              const SPoint2 &P002, const SPoint2 &P110)
 {
+  UNUSED(P011, P020, P002);
   return 4. * computeDeterminant(P200 - P110, P200 - P101);
 }
 
 double controlCoefficientN110(const SPoint2 &P200, const SPoint2 &P011,
-                                     const SPoint2 &P020, const SPoint2 &P101,
-                                     const SPoint2 &P002, const SPoint2 &P110)
+                              const SPoint2 &P020, const SPoint2 &P101,
+                              const SPoint2 &P002, const SPoint2 &P110)
 {
+  UNUSED(P002);
   return 2. * computeDeterminant(P200 - P101, P020 - P011) + 2. * computeDeterminant(P110 - P011, P110 - P101);
 }
 
@@ -798,7 +800,7 @@ void feCncGeo::printColoring(std::string fileName)
   fprintf(myfile, "View \"%s\"{\n", fileName.data());
   std::vector<double> geoCoord(3 * _nVerticesPerElm);
 
-  for(int iElm = 0; iElm < _elmToColor.size(); ++iElm) {
+  for(size_t iElm = 0; iElm < _elmToColor.size(); ++iElm) {
     _mesh->getCoord(_tag, iElm, geoCoord);
     writeElementToPOS(myfile, geoCoord, (double) _elmToColor[iElm]);
   }
@@ -812,9 +814,9 @@ void feCncGeo::printColoring2(std::string fileName)
   fprintf(myfile, "View \"%s\"{\n", fileName.data());
   std::vector<double> geoCoord(3 * _nVerticesPerElm);
 
-  const std::vector<int> &_elemToColor = _mycoloring->getColorElm();
+  // const std::vector<int> &_elemToColor = _mycoloring->getColorElm();
 
-  for(int iElm = 0; iElm < _elmToColor.size(); ++iElm) {
+  for(size_t iElm = 0; iElm < _elmToColor.size(); ++iElm) {
     _mesh->getCoord(_tag, iElm, geoCoord);
     writeElementToPOS(myfile, geoCoord, (double) _elmToColor[iElm]);
   }

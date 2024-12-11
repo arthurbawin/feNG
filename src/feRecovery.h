@@ -16,9 +16,7 @@
 #include <iostream>
 #include <fstream>
 
-#if defined(HAVE_EIGEN)
-#include "../contrib/Eigen/Dense"
-#endif
+#include <Eigen/Dense>
 
 // A structure for the patches of elements around vertices of a connectivity
 class fePatch

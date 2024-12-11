@@ -201,6 +201,8 @@ void glfemDrawMessage(int h, int v, char *s)
   glPopMatrix();
   glMatrixMode(GL_MODELVIEW);
   glPopAttrib();
+#else
+  UNUSED(h,v,s);
 #endif
 }
 
@@ -237,6 +239,8 @@ void glfemDrawNodes(double *x, double *y, int n)
     glVertex2d(x[i], y[i]);
   }
   glEnd();
+#else
+  UNUSED(x,y,n);
 #endif
 }
 
@@ -251,6 +255,8 @@ void glfemDrawCurve(double *x, double *y, int n)
     glVertex2d(x[i + 1], y[i + 1]);
   }
   glEnd();
+#else
+  UNUSED(x,y,n);
 #endif
 }
 
@@ -277,6 +283,8 @@ void glfemDrawCurveDG(double *x, double *y, int n, int m)
       glVertex2d(x[i * m + j + 1], y[i * m + j + 1]);
     }
   glEnd();
+#else
+  UNUSED(x,y,n,m);
 #endif
 }
 
@@ -303,6 +311,8 @@ void glfemReshapeWindowsBox(double minX, double maxX, double minY, double maxY, 
   glOrtho((GLdouble)left, (GLdouble)right, (GLdouble)bottom, (GLdouble)top, -5.0, 5.0);
   glMatrixMode(GL_MODELVIEW);
   glLoadIdentity();
+#else
+  UNUSED(minX,maxX,minY,maxY,w,h);
 #endif
 }
 

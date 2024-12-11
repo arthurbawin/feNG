@@ -10,7 +10,7 @@
 class feOptionsParser
 {
 public:
-  enum OptionType { INT, FEINT, DOUBLE, STRING, ENABLE, DISABLE };
+  enum OptionType { INT, DOUBLE, STRING, ENABLE, DISABLE };
 
 private:
   struct Option {

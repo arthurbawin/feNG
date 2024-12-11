@@ -212,6 +212,7 @@ public:
   bool locateVertex(const double *x, int &iElm, double *u, double tol = 1e-12,
                             bool returnLocalElmTag = false, std::string targetConnectivity = "")
   {
+    UNUSED(x,tol,returnLocalElmTag,targetConnectivity);
     iElm = 0;
     u[0] = 1.;
     return true;
@@ -219,6 +220,7 @@ public:
   bool locateVertexInElements(feCncGeo *cnc, const double *x, const std::vector<int> &elementsToSearch, int &iElm,
                                       double *u, double tol = 1e-12)
   {
+    UNUSED(cnc,x,elementsToSearch,tol);
     iElm = 0;
     u[0] = 1.;
     return true;

@@ -538,6 +538,7 @@ void feSysElm_MixedCurl::createElementarySystem(std::vector<feSpace *> &space)
 
 void feSysElm_MixedCurl::computeAe(feBilinearForm *form)
 {
+  UNUSED(form);
   // ...
 }
 
@@ -690,6 +691,7 @@ void feSysElm_VectorAdjointConvectiveAcceleration::createElementarySystem(std::v
 
 void feSysElm_VectorAdjointConvectiveAcceleration::computeAe(feBilinearForm *form)
 {
+  UNUSED(form);
   // double jac, coeff;
   // for(int k = 0; k < _nQuad; ++k) {
   //   jac = form->_J[_nQuad * form->_numElem + k];
@@ -794,6 +796,7 @@ void feSysElm_DivergenceNewtonianStress::createElementarySystem(std::vector<feSp
 
 void feSysElm_DivergenceNewtonianStress::computeAe(feBilinearForm *form)
 {
+  UNUSED(form);
   // Computed with finite differences for now
 }
 
@@ -841,60 +844,60 @@ void feSysElm_DivergenceNewtonianStress::computeBe(feBilinearForm *form)
 // -----------------------------------------------------------------------------
 // Bilinear forms: Stabilization for the (Navier-)Stokes equations
 // -----------------------------------------------------------------------------
-static double hFortin(int dim, const double velocity[3], double normVelocity, int nFunctions,
-                      const std::vector<double> &gradphi)
-{
-  // Compute h from (13.17) in Fortin & Garon
-  double res = 0., dotprod;
-  for(int i = 0; i < nFunctions; ++i) {
-    dotprod = 0.;
-    for(int iDim = 0; iDim < dim; ++iDim) {
-      dotprod += velocity[iDim] / normVelocity * gradphi[i * dim + iDim];
-    }
-    res += dotprod * dotprod;
-  }
+// static double hFortin(int dim, const double velocity[3], double normVelocity, int nFunctions,
+//                       const std::vector<double> &gradphi)
+// {
+//   // Compute h from (13.17) in Fortin & Garon
+//   double res = 0., dotprod;
+//   for(int i = 0; i < nFunctions; ++i) {
+//     dotprod = 0.;
+//     for(int iDim = 0; iDim < dim; ++iDim) {
+//       dotprod += velocity[iDim] / normVelocity * gradphi[i * dim + iDim];
+//     }
+//     res += dotprod * dotprod;
+//   }
 
-  return sqrt(2.) / sqrt(res);
-}
+//   return sqrt(2.) / sqrt(res);
+// }
 
-static double getInnerRadius(const std::vector<double> &triCoord)
-{
-  // radius of inscribed circle = 2 * Area / sum(Line_i)
-  double dist[3], k = 0.;
-  for(int i = 0; i < 3; i++) {
-    double x0 = triCoord[3 * i + 0];
-    double y0 = triCoord[3 * i + 1];
-    double x1 = triCoord[3 * ((i + 1) % 3) + 0];
-    double y1 = triCoord[3 * ((i + 1) % 3) + 1];
-    dist[i] = sqrt((x1 - x0) * (x1 - x0) + (y1 - y0) * (y1 - y0));
-    k += 0.5 * dist[i];
-  }
-  double const area = std::sqrt(k * (k - dist[0]) * (k - dist[1]) * (k - dist[2]));
-  return area / k;
-}
+// static double getInnerRadius(const std::vector<double> &triCoord)
+// {
+//   // radius of inscribed circle = 2 * Area / sum(Line_i)
+//   double dist[3], k = 0.;
+//   for(int i = 0; i < 3; i++) {
+//     double x0 = triCoord[3 * i + 0];
+//     double y0 = triCoord[3 * i + 1];
+//     double x1 = triCoord[3 * ((i + 1) % 3) + 0];
+//     double y1 = triCoord[3 * ((i + 1) % 3) + 1];
+//     dist[i] = sqrt((x1 - x0) * (x1 - x0) + (y1 - y0) * (y1 - y0));
+//     k += 0.5 * dist[i];
+//   }
+//   double const area = std::sqrt(k * (k - dist[0]) * (k - dist[1]) * (k - dist[2]));
+//   return area / k;
+// }
 
-static double getOuterRadius(const std::vector<double> &triCoord)
-{
-  // radius of circle circumscribing a triangle
-  double dist[3], k = 0.0;
-  for(int i = 0; i < 3; i++) {
-    double x0 = triCoord[3 * i + 0];
-    double y0 = triCoord[3 * i + 1];
-    double x1 = triCoord[3 * ((i + 1) % 3) + 0];
-    double y1 = triCoord[3 * ((i + 1) % 3) + 1];
-    dist[i] = sqrt((x1 - x0) * (x1 - x0) + (y1 - y0) * (y1 - y0));
-    k += 0.5 * dist[i];
-  }
-  double const area = std::sqrt(k * (k - dist[0]) * (k - dist[1]) * (k - dist[2]));
-  return dist[0] * dist[1] * dist[2] / (4 * area);
-}
+// static double getOuterRadius(const std::vector<double> &triCoord)
+// {
+//   // radius of circle circumscribing a triangle
+//   double dist[3], k = 0.0;
+//   for(int i = 0; i < 3; i++) {
+//     double x0 = triCoord[3 * i + 0];
+//     double y0 = triCoord[3 * i + 1];
+//     double x1 = triCoord[3 * ((i + 1) % 3) + 0];
+//     double y1 = triCoord[3 * ((i + 1) % 3) + 1];
+//     dist[i] = sqrt((x1 - x0) * (x1 - x0) + (y1 - y0) * (y1 - y0));
+//     k += 0.5 * dist[i];
+//   }
+//   double const area = std::sqrt(k * (k - dist[0]) * (k - dist[1]) * (k - dist[2]));
+//   return dist[0] * dist[1] * dist[2] / (4 * area);
+// }
 
-static double hCircumInscr(const std::vector<double> &triCoord)
-{
-  double hInscribed = 2. * getInnerRadius(triCoord);
-  double hCircumscribed = 2. * getOuterRadius(triCoord);
-  return (hInscribed + hCircumscribed) / 2.;
-}
+// static double hCircumInscr(const std::vector<double> &triCoord)
+// {
+//   double hInscribed = 2. * getInnerRadius(triCoord);
+//   double hCircumscribed = 2. * getOuterRadius(triCoord);
+//   return (hInscribed + hCircumscribed) / 2.;
+// }
 
 // Diameter of circle of equivalent area
 inline double hEquivalentCircle(const double jac) { return 2. * sqrt(jac / (2. * M_PI)); }
@@ -903,17 +906,20 @@ static double compute_tau(const std::vector<double> &triCoord, int dim, double v
                           double viscosity, int nFunctions, std::vector<double> &gradphi,
                           double jac)
 {
+  // Unused parameters unless using hFortin above
+  UNUSED(triCoord, nFunctions, gradphi);
+
   double normV = 0.;
   for(int i = 0; i < dim; ++i) {
     normV += velocity[i] * velocity[i];
   }
   normV = sqrt(normV);
 
-  double h1 = hFortin(dim, velocity, normV, nFunctions, gradphi);
+  // double h1 = hFortin(dim, velocity, normV, nFunctions, gradphi);
   if(normV < 1e-12) {
     return 0.;
   }
-  double h2 = hCircumInscr(triCoord);
+  // double h2 = hCircumInscr(triCoord);
   double h3 = hEquivalentCircle(jac);
 
   double h = h3;
@@ -948,6 +954,7 @@ void feSysElm_Stokes_SUPG_PSPG::createElementarySystem(std::vector<feSpace *> &s
 
 void feSysElm_Stokes_SUPG_PSPG::computeAe(feBilinearForm *form)
 {
+  UNUSED(form);
   // Computed with finite differences
 }
 
@@ -1047,6 +1054,7 @@ void feSysElm_NS_SUPG_PSPG::createElementarySystem(std::vector<feSpace *> &space
 
 void feSysElm_NS_SUPG_PSPG::computeAe(feBilinearForm *form)
 {
+  UNUSED(form);
   // Computed with finite differences
 }
 
@@ -1158,11 +1166,13 @@ void feSysElm_GLS_Stokes::createElementarySystem(std::vector<feSpace *> &space)
 
 void feSysElm_GLS_Stokes::computeAe(feBilinearForm *form)
 {
+  UNUSED(form);
   // ...
 }
 
 void feSysElm_GLS_Stokes::computeBe(feBilinearForm *form)
 {
+  UNUSED(form);
   // ...
 }
 
@@ -1192,10 +1202,12 @@ void feSysElm_GLS_NavierStokes::createElementarySystem(std::vector<feSpace *> &s
 
 void feSysElm_GLS_NavierStokes::computeAe(feBilinearForm *form)
 {
+  UNUSED(form);
   // ...
 }
 
 void feSysElm_GLS_NavierStokes::computeBe(feBilinearForm *form)
 {
+  UNUSED(form);
   // ...
 }

@@ -18,14 +18,13 @@ option(ENABLE_ALGLIB        "Enable AlgLib"                     OFF)
 option(ENABLE_PROFILER      "Compile with -lprofiler"           OFF)
 option(ENABLE_GLFW          "Enable basic GLFW graphics"        OFF)
 
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src)
+# include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
+include_directories(SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/bin)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/lib)
 
   # #### Options de compilation
-  # add_compile_options("-ansi;-m64")
 
   # add_compile_options("$<$<CONFIG:RELEASE>:-ansi;-m64;-O3;-fast>"
   #                     "$<$<CONFIG:RELWITHDEBINFO>:-Wall;-ansi;-m64;-O3;-fast;-g>"
@@ -36,17 +35,21 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/lib)
 
 add_compile_options(-pedantic)
 add_compile_options(-pedantic-errors)
+add_compile_options(-Wall)
+add_compile_options(-Wextra)
+add_compile_options(-Werror)
 add_compile_options(-Werror=return-type)
-add_compile_options(-Wunused-variable)
+add_compile_options(-Wno-error=bool-compare)
+add_compile_options(-Wshadow)
 add_compile_options(-Wdisabled-optimization)
 
-#  Eigen
-# include_directories(${CMAKE_CURRENT_SOURCE_DIR}/contrib/Eigen)
+# Eigen and "unsupported" Eigen routines
+# Set as system headers (SYSTEM) to silence Eigen's warnings such as -Wshadow
+include_directories(SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}/contrib/Eigen)
+include_directories(SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}/contrib/unsupported)
 add_definitions("-DHAVE_EIGEN")
 
-############################################
 #  Macro pour definir une bibliotheque
-############################################
 macro(feNG_add_library LIBNAME SRC API_H)
   foreach(HFILE ${API_H})
     list(APPEND feNG_API_H "${CMAKE_CURRENT_SOURCE_DIR}/${HFILE}")
@@ -62,15 +65,6 @@ macro(feNG_add_executable EXENAME SRC LIBS)
   add_executable(${EXENAME} ${SRC})
   target_link_libraries(${EXENAME} ${LIBS} feNG ${feNG_EXTERNAL_LIBS})
   install(TARGETS ${EXENAME} DESTINATION bin)
-endmacro()
-
-# Macro pour ajouter des dependances dans contrib/
-macro(append_feng_src DIRNAME FILES)
-  foreach(FILE ${FILES})
-    list(APPEND LIST ${DIRNAME}/${FILE})
-  endforeach()
-  set(GMSH_SRC ${GMSH_SRC};${LIST} PARENT_SCOPE)
-  set(GMSH_DIRS ${GMSH_DIRS};${DIRNAME} PARENT_SCOPE)
 endmacro()
 
 if(CMAKE_BUILD_TYPE STREQUAL Debug)

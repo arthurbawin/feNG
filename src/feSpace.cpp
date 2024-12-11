@@ -224,9 +224,9 @@ feStatus createFiniteElementSpace(feSpace *&space, feMesh *mesh, const elementTy
 feSpace::feSpace(const int dimension, feMesh *mesh, const std::string &fieldID,
                  const std::string &cncGeoID, feFunction *scalarField,
                  feVectorFunction *vectorField, bool useGlobalShapeFunctions)
-  : _dim(dimension), _mesh(mesh), _fieldID(fieldID), _fieldTag(-1), _cncGeoID(cncGeoID),
-    _cncGeoTag(-1), _nQuad(-1), _nFunctions(0), _scalarFct(scalarField), _vectorFct(vectorField),
-    _useGlobalShapeFunctions(useGlobalShapeFunctions)
+  : _mesh(mesh), _fieldID(fieldID), _fieldTag(-1), _cncGeoID(cncGeoID),
+    _cncGeoTag(-1), _dim(dimension), _nQuad(-1), _nFunctions(0), _useGlobalShapeFunctions(useGlobalShapeFunctions),
+    _scalarFct(scalarField), _vectorFct(vectorField)    
 {
   // Called with mesh = nullptr when creating the geometric interpolation space
   if(mesh != nullptr) {
@@ -1069,6 +1069,8 @@ void feSpace::interpolateVectorFieldAtQuadNode(std::vector<double> &field, int i
 
 double feSpace::interpolateVectorFieldComponentAtQuadNode(std::vector<double> &field, int iNode, int iComponent)
 {
+  UNUSED(iComponent); // (?? Check this at some point)
+  feWarning("Component index is not used in interpolation function!");
   double res = 0.;
   for(int i = 0; i < _nFunctions / _nComponents; ++i) {
     res += field[i] * _L[_nFunctions * iNode + _nComponents * i];
