@@ -11,36 +11,54 @@
 
 // #include "mpi.h"
 #include "feAPI.h"
+#if defined(HAVE_PETSC)
+  #include "petscsys.h"
+#endif
 
-double fSol(const double t, const std::vector<double> &pos, const std::vector<double> &par)
+double fSol(const double /* t */, const std::vector<double> &pos, const std::vector<double>& /* par */)
 {
   double x = pos[0];
   return pow(x, 6);
 }
 
-double fSource(const double t, const std::vector<double> &pos, const std::vector<double> &par)
+double fSource(const double /* t */, const std::vector<double> &pos, const std::vector<double>& par)
 {
   double x = pos[0];
-  double y = pos[1];
-  double a = 10.0;
-  double b = 2.;
   double k = par[0];
-  return -k * 30. * pos[0] * pos[0] * pos[0] * pos[0];
+  return -k * 30. * x * x * x * x;
 }
 
 int main(int argc, char **argv)
 {
   // The executable should start with petscInitialize and end with petscFinalize.
   // If the library was not compiled with PETSc, these functions are dummy.
-  petscInitialize(argc, argv);
+  initialize(argc, argv);
 
   // Set the default parameters.
-  const char *meshFile = "../data/square8.msh";
+  const char *meshFile = "../data/square1.msh";
+  // const char *meshFile = "../data/cubeDummy.msh";
   int verbosity = 2;
   int order = 2;
-  int degreeQuadrature = 4;
-  const char *linearSolverType = "PETSc";
+  int degreeQuadrature = 10;
 
+  const char *solverType = "PETSc";
+  // Decide if the Pardiso linear system is stored on a single process (-1)
+  // or distributed on the processes (>= 0)
+  int ownershipSplit = -1;
+
+#if defined(HAVE_PETSC)
+  char meshFileTmp[64];
+  PetscBool permute;
+  PetscOptionsBegin(PETSC_COMM_WORLD, NULL, "Poisson example options", "");
+  {
+    PetscCall(PetscOptionsString("-m", "Mesh file", "", meshFileTmp, meshFileTmp, sizeof(meshFileTmp), NULL));
+    PetscCall(PetscOptionsInt("-o", "Finite element space order (polynomial degree)", "", order, &order, NULL));
+    permute  = PETSC_FALSE;
+    PetscCall(PetscOptionsBool("-permute", "Reorder the matrix?", "", permute, &permute, NULL));
+  }
+  PetscOptionsEnd();
+  meshFile = &meshFileTmp[0];
+#else
   // Create an option parser and parse the command line arguments.
   // The parser is not compatible with the PETSc options for now.
   // Returns an error if a command line argument is ill-formed.
@@ -52,8 +70,10 @@ int main(int argc, char **argv)
   options.addOption(&order, "-o", "--order", "Finite element space order (polynomial degree)");
   options.addOption(&degreeQuadrature, "-dquad", "--degreeQuadrature", "Degree of the quadrature");
   options.addOption(&verbosity, "-v", "--verbosity", "Verbosity level");
-  options.addOption(&linearSolverType, "-linsol", "--linear_solver_type", "Choice of linear solver (PETSc or MKL Pardiso)");
+  options.addOption(&solverType, "-linsol", "--linear_solver_type", "Choice of linear solver (PETSc or MKL Pardiso)");
+  options.addOption(&ownershipSplit, "-own_split", "--ownership_split", "Store linear system on single (-1) or multiple (>= 0) MPI processes");
   feCheck(options.parse());
+#endif
 
   // Set the global verbosity level :
   // - 0 : No information messages, only print warnings and errors
@@ -63,6 +83,8 @@ int main(int argc, char **argv)
 
   // Create a mesh structure from a Gmsh mesh file (version 2.2 or 4.1+)
   feMesh2DP1 mesh(meshFile);
+  finalize();
+  return 0;
 
   // Create function objects for the analytic solution and the source term.
   // Here the model PDE is the stationary heat equation div(k grad u) + f = 0,
@@ -124,14 +146,19 @@ int main(int argc, char **argv)
   // performed in the solve step below ("makeSteps"). Two linear solvers are available:
   // MKL Pardiso (direct solver) and PETSc (collection of iterative solvers).
   feLinearSystem *system;
-  if(std::string(linearSolverType).compare("PETSc") == 0) {
+  if(std::string(solverType).compare("PETSc") == 0) {
     feCheck(createLinearSystem(system, PETSC, {diff, source}, numbering.getNbUnknowns(), argc, argv));
-  } else if(std::string(linearSolverType).compare("Pardiso") == 0) {
-    feCheck(createLinearSystem(system, MKLPARDISO, {diff, source}, numbering.getNbUnknowns()));
+  } else if(std::string(solverType).compare("Pardiso") == 0) {
+    feCheck(createLinearSystem(system, MKLPARDISO, {diff, source}, numbering.getNbUnknowns(), argc, argv, ownershipSplit));
   } else {
-    feErrorMsg(FE_STATUS_ERROR, "Unrecognized linear solver type: %s", linearSolverType);
+    feErrorMsg(FE_STATUS_ERROR, "Unrecognized linear solver type: %s", solverType);
     return 1;
   }
+
+#if defined(HAVE_PETSC)
+  system->setRelativeTol(1e-10);
+  system->setReorderingStatus(permute);
+#endif
 
   // Post-processing tools to compute norms and whatnot
   feNorm normU(L2_ERROR, {uDomaine}, &sol, &funSol);
@@ -141,7 +168,7 @@ int main(int argc, char **argv)
   // supported format for visualization is VTK.
   feExporter *exporter;
   feCheck(createVisualizationExporter(exporter, VTK, &numbering, &sol, &mesh, spaces));
-  int exportEveryNSteps = 1;
+  // int exportEveryNSteps = 1;
   std::string vtkFileRoot = "output";
   // feExportData exportData = {exporter, exportEveryNSteps, vtkFileRoot};
   feExportData exportData = {nullptr, 1, ""};
@@ -174,6 +201,6 @@ int main(int argc, char **argv)
   delete norm;
   delete system;
 
-  petscFinalize();
+  finalize();
   return 0;
 }

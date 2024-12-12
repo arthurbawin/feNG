@@ -1,0 +1,32 @@
+
+// Template file for a new test
+
+#include "feAPI.h"
+#include "tests.h"
+
+#include <gtest/gtest.h>
+
+namespace {
+
+  void doSomething()
+  {
+    // Call the library functions and do computations here.
+  }
+
+}
+
+TEST(TestTopic, TestName) {
+
+  std::string testRoot = "../../tests/testName";
+
+  doSomething();
+
+  std::stringstream resultBuffer;    
+  resultBuffer << "Write test output in buffer" << std::endl;
+
+  // Compare the resultBuffer with the file testRoot.output
+  // If output file does not exist, a temporary file .tmp_output
+  // is created, which may be used as the new .output file for this test.
+  EXPECT_EQ(compareOutputFiles(testRoot, resultBuffer), 0);
+}
+

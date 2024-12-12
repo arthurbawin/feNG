@@ -4,6 +4,7 @@ project(feNG)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+option(ENABLE_TESTING       "Enable testing"                    OFF)
 option(ENABLE_OPENMP        "Enable OpenMP"                     OFF)
 option(ENABLE_MPI           "Enable MPI"                        OFF)
 option(ENABLE_PETSC         "Enable PETSc"                      OFF)
@@ -281,3 +282,14 @@ MESSAGE(STATUS "External libs for feNG : ${feNG_EXTERNAL_LIBS}")
 
 add_subdirectory(src)
 add_subdirectory(exe)
+
+if(ENABLE_TESTING)
+  # Testing inspired by
+  # https://github.com/cpp-for-yourself/lectures-and-homeworks/blob/main/lectures/googletest.md
+
+  # Update the submodules here (googletest)
+  include(cmake/UpdateSubmodules.cmake)
+
+  include(CTest)
+  add_subdirectory(tests)
+endif()
