@@ -29,6 +29,6 @@ jobs:
       # Runs a set of commands using the runners shell
       - name: Run CMake, build and test
         run: |
-          cmake -DCMAKE_BUILD_TYPE=Debug -DENABLE_TESTING -DUPDATE_SUBMODULES $GITHUB_WORKSPACE
+          cmake -DCMAKE_BUILD_TYPE=Debug -DENABLE_TESTING=1 -DUPDATE_SUBMODULES=1 $GITHUB_WORKSPACE
           make feNG -j$COMPILE_JOBS
           ctest --output-on-failure
