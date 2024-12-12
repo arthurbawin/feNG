@@ -12,6 +12,9 @@ on:
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
+env:
+  COMPILE_JOBS: 12
+
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
   # This workflow contains a single job called "build"
@@ -34,4 +37,4 @@ jobs:
       - name: cmake and compile
         run: |
           cmake -DPETSC_DIR=/usr/lib/petscdir/petsc3.22/ -DPETSC_ARCH=x86_64-linux-gnu-real $GITHUB_WORKSPACE
-          make
+          make feNG -j$COMPILE_JOBS
