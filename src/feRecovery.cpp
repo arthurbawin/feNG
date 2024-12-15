@@ -981,14 +981,14 @@ void feRecovery::solveLeastSquareEigen1D(int indRecovery, int iDerivative)
       if(iDerivative < 3 && isBoundary(_mesh, v)) {
         if(iDerivative == 0) RHSCont[0](_dimRecovery) = boundaryCondition(_mesh, v, _solRef);
         if(iDerivative == 1) {
-          std::vector<double> res(_dim, 0.0);
-          boundaryConditionVec(_mesh, v, _solRefGrad, res);
-          RHSCont[0](_dimRecovery) = res[0];
+          std::vector<double> result(_dim, 0.0);
+          boundaryConditionVec(_mesh, v, _solRefGrad, result);
+          RHSCont[0](_dimRecovery) = result[0];
         }
         if(iDerivative == 2) {
-          std::vector<double> res(_dim, 0.0);
-          boundaryConditionVec(_mesh, v, _solRefHess, res);
-          RHSCont[0](_dimRecovery) = res[0];
+          std::vector<double> result(_dim, 0.0);
+          boundaryConditionVec(_mesh, v, _solRefHess, result);
+          RHSCont[0](_dimRecovery) = result[0];
         }
       }
     }
@@ -1119,14 +1119,14 @@ void feRecovery::solveLeastSquareEigen1D(int indRecovery, int iDerivative)
           RHSCont[0](_dimRecovery) = boundaryCondition(_mesh, e, _solRef);
         }
         if(iDerivative == 1) {
-          std::vector<double> res(_dim, 0.0);
-          boundaryConditionVec(_mesh, e, _solRefGrad, res);
-          RHSCont[0](_dimRecovery) = res[0];
+          std::vector<double> result(_dim, 0.0);
+          boundaryConditionVec(_mesh, e, _solRefGrad, result);
+          RHSCont[0](_dimRecovery) = result[0];
         }
         if(iDerivative == 2) {
-          std::vector<double> res(_dim, 0.0);
-          boundaryConditionVec(_mesh, e, _solRefHess, res);
-          RHSCont[0](_dimRecovery) = res[0];
+          std::vector<double> result(_dim, 0.0);
+          boundaryConditionVec(_mesh, e, _solRefHess, result);
+          RHSCont[0](_dimRecovery) = result[0];
         }
       }
     }
@@ -2234,10 +2234,10 @@ void feRecovery::estimateDudxError(std::vector<double> &norm, feVectorFunction *
       norm[14] += J[nQuad * iElm + k] * w[k] * pow(dudxReconstruit - duhdx, 2);
       norm[15] += J[nQuad * iElm + k] * w[k] * pow(dudyReconstruit - duhdy, 2);
       if(solRefGrad) {
-        std::vector<double> res(2, 0.);
-        solRefGrad->eval(0, x, res);
-        norm[16] += J[nQuad * iElm + k] * w[k] * pow(dudxReconstruit - res[0], 2);
-        norm[17] += J[nQuad * iElm + k] * w[k] * pow(dudyReconstruit - res[1], 2);
+        std::vector<double> result(2, 0.);
+        solRefGrad->eval(0, x, result);
+        norm[16] += J[nQuad * iElm + k] * w[k] * pow(dudxReconstruit - result[0], 2);
+        norm[17] += J[nQuad * iElm + k] * w[k] * pow(dudyReconstruit - result[1], 2);
       }
     }
   }
@@ -2408,17 +2408,17 @@ void feRecovery::estimateH1Error(std::vector<double> &norm, feVectorFunction *so
       norm[4] += J[nQuad * iElm + k] * w[k] *
                  (pow(dudxReconstruit - duhdx, 2) + pow(dudyReconstruit - duhdy, 2));
       if(solRefGrad) {
-        std::vector<double> res(2, 0.);
-        solRefGrad->eval(0, x, res);
-        norm[5] += J[nQuad * iElm + k] * w[k] * pow(dudxReconstruit - res[0], 2);
-        norm[6] += J[nQuad * iElm + k] * w[k] * pow(dudyReconstruit - res[1], 2);
+        std::vector<double> result(2, 0.);
+        solRefGrad->eval(0, x, result);
+        norm[5] += J[nQuad * iElm + k] * w[k] * pow(dudxReconstruit - result[0], 2);
+        norm[6] += J[nQuad * iElm + k] * w[k] * pow(dudyReconstruit - result[1], 2);
         norm[7] += J[nQuad * iElm + k] * w[k] *
-                   (pow(dudxReconstruit - res[0], 2) + pow(dudyReconstruit - res[1], 2));
-        norm[18] += J[nQuad * iElm + k] * w[k] * pow(duhdx - res[0], 2);
-        norm[19] += J[nQuad * iElm + k] * w[k] * pow(duhdy - res[1], 2);
-        norm[20] += J[nQuad * iElm + k] * w[k] * (pow(duhdx - res[0], 2) + pow(duhdy - res[1], 2));
+                   (pow(dudxReconstruit - result[0], 2) + pow(dudyReconstruit - result[1], 2));
+        norm[18] += J[nQuad * iElm + k] * w[k] * pow(duhdx - result[0], 2);
+        norm[19] += J[nQuad * iElm + k] * w[k] * pow(duhdy - result[1], 2);
+        norm[20] += J[nQuad * iElm + k] * w[k] * (pow(duhdx - result[0], 2) + pow(duhdy - result[1], 2));
         fprintf(f, "%+-12.12e \t %+-12.12e \t %+-12.12e \t %+-12.12e\n", x[0], x[1],
-                dudxReconstruit, res[0]);
+                dudxReconstruit, result[0]);
       }
     }
   }
@@ -2590,18 +2590,18 @@ void feRecovery::estimateHessError(std::vector<double> &norm, feVectorFunction *
       // pow(d2udy2Reconstruit - duhdy, 2));
 
       if(solRefHess) {
-        std::vector<double> res(4, 0.);
-        solRefHess->eval(0, x, res);
-        norm[8] += J[nQuad * iElm + k] * w[k] * pow(d2udx2Reconstruit - res[0], 2);
-        norm[9] += J[nQuad * iElm + k] * w[k] * pow(d2udxyReconstruit - res[1], 2);
+        std::vector<double> result(4, 0.);
+        solRefHess->eval(0, x, result);
+        norm[8] += J[nQuad * iElm + k] * w[k] * pow(d2udx2Reconstruit - result[0], 2);
+        norm[9] += J[nQuad * iElm + k] * w[k] * pow(d2udxyReconstruit - result[1], 2);
         norm[10] += J[nQuad * iElm + k] * w[k] *
-                    (pow(d2udx2Reconstruit - res[0], 2) + pow(d2udxyReconstruit - res[1], 2));
-        norm[11] += J[nQuad * iElm + k] * w[k] * pow(d2udyxReconstruit - res[2], 2);
-        norm[12] += J[nQuad * iElm + k] * w[k] * pow(d2udy2Reconstruit - res[3], 2);
+                    (pow(d2udx2Reconstruit - result[0], 2) + pow(d2udxyReconstruit - result[1], 2));
+        norm[11] += J[nQuad * iElm + k] * w[k] * pow(d2udyxReconstruit - result[2], 2);
+        norm[12] += J[nQuad * iElm + k] * w[k] * pow(d2udy2Reconstruit - result[3], 2);
         norm[13] += J[nQuad * iElm + k] * w[k] *
-                    (pow(d2udyxReconstruit - res[2], 2) + pow(d2udy2Reconstruit - res[3], 2));
+                    (pow(d2udyxReconstruit - result[2], 2) + pow(d2udy2Reconstruit - result[3], 2));
         fprintf(f, "%+-12.12e \t %+-12.12e \t %+-12.12e \t %+-12.12e\n", x[0], x[1],
-                d2udx2Reconstruit, res[0]);
+                d2udx2Reconstruit, result[0]);
       }
     }
   }

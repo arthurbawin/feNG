@@ -195,7 +195,29 @@ feStatus createFiniteElementSpace(feSpace *&space, feMesh *mesh, const elementTy
       break;
 
     case 3:
-      return feErrorMsg(FE_STATUS_ERROR, "Finite element space in dim = 3 not implemented yet.");
+      if(geometry != geometryType::TET)
+        return feErrorMsg(FE_STATUS_ERROR, "Unsupported geometry.");
+
+      feInfoCond(FE_VERBOSE > 0, "\t\t\tGeometry: Tetrahedron");
+
+      if(element == elementType::LAGRANGE) {
+        feInfoCond(FE_VERBOSE > 0, "\t\t\tFinite element: Lagrange");
+
+        space = new feSpaceTetPn(degree, mesh, fieldName, cncGeoID, (feFunction *)fct);
+
+        // switch(degree) {
+        //   case 1:
+        //     space = new feSpaceTriP1(mesh, fieldName, cncGeoID, (feFunction *)fct);
+        //     break;
+        //   default:
+        //     return feErrorMsg(
+        //       FE_STATUS_ERROR,
+        //       "No LAGRANGE 2D finite element space implemented on triangles for deg > 4 or = 0.");
+        // }
+      } else {
+        return feErrorMsg(FE_STATUS_ERROR, "Unsupported finite element.");
+      }
+      break;
 
     default:
       return feErrorMsg(FE_STATUS_ERROR,

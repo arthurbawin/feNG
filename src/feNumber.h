@@ -129,12 +129,12 @@ protected:
   void compactFieldDOF();
 
 public:
-  void printNumberingVertices();
-  void printNumberingElements();
-  void printNumberingEdges();
-  void printCodeVertices();
-  void printCodeElements();
-  void printCodeEdges();
+  void printNumberingVertices(std::ostream &os = std::cout);
+  void printNumberingElements(std::ostream &os = std::cout);
+  void printNumberingEdges(std::ostream &os = std::cout);
+  void printCodeVertices(std::ostream &os = std::cout);
+  void printCodeElements(std::ostream &os = std::cout);
+  void printCodeEdges(std::ostream &os = std::cout);
 };
 
 //
@@ -200,9 +200,9 @@ public:
   // Export the vertex DOFs and their coordinates in file.
   feStatus exportNumberingVertices(feMesh *mesh, std::string fileName);
 
-  void printFields();
-  void printNumberings();
-  void printCodes();
+  void printFields(std::ostream &os = std::cout);
+  void printNumberings(std::ostream &os = std::cout);
+  void printCodes(std::ostream &os = std::cout);
 };
 
 #endif

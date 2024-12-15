@@ -28,6 +28,7 @@ enum class elementType {
 enum class dofLocation {
   VERTEX,
   EDGE,
+  FACE,
   ELEMENT
 };
 
@@ -1015,6 +1016,45 @@ public:
 
   std::vector<double> dLdr(double *r);
   std::vector<double> dLds(double *r);
+
+  void initializeNumberingUnknowns();
+  void initializeNumberingEssential();
+  void initializeAddressingVector(int numElem, std::vector<feInt> &adr);
+};
+
+// -----------------------------------------------------------------------------
+// Lagrange element of degree n on reference tetrahedron
+// -----------------------------------------------------------------------------
+class feSpaceTetPn : public feScalarSpace
+{
+protected:
+  int _n;
+  // Dimension of the polynomial basis = (n+1)(n+2)(n+3)/6
+  int _nFunctions;
+
+  std::vector<double> _refBarycentric;
+
+public:
+  feSpaceTetPn(int n, std::string cncGeoID);
+  feSpaceTetPn(int n, feMesh *mesh, const std::string fieldID, const std::string cncGeoID, feFunction *fct,
+               const bool useGlobalShapeFunctions = false);
+  ~feSpaceTetPn() {}
+
+  int getNumFunctions() const { return _nFunctions; }
+  int getPolynomialDegree() { return _n; }
+
+  std::vector<double> L(double *r);
+  void L(double *r, double *L);
+
+  std::vector<double> dLdr(double *r);
+  std::vector<double> dLds(double *r);
+  std::vector<double> dLdt(double *r);
+  std::vector<double> d2Ldr2(double *r);
+  std::vector<double> d2Ldrs(double *r);
+  std::vector<double> d2Lds2(double *r);
+  // std::vector<double> d2Ldt2(double *r);
+  // std::vector<double> d2Ldrt(double *r);
+  // std::vector<double> d2Ldst(double *r);
 
   void initializeNumberingUnknowns();
   void initializeNumberingEssential();

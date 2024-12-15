@@ -2,6 +2,7 @@
 #include "feMesh.h"
 #include "feNumber.h"
 #include "fePolynomial.h"
+#include "feTetrahedron.h"
 
 // // Copy array "dim" times by chunks of size "chunksize"
 // static void duplicateScalarArray(const int scalarSize, const int chunkSize,
@@ -34,6 +35,110 @@
 //     }
 //   }
 // }
+
+// -----------------------------------------------------------------------------
+// Lagrange element of degree n on reference tetrahedron
+// -----------------------------------------------------------------------------
+feSpaceTetPn::feSpaceTetPn(int n, std::string cncGeoID)
+  // : feScalarSpace(3, nullptr, "GEO", cncGeoID, nullptr), _n(n)
+ : feSpaceTetPn(n, nullptr, "GEO", cncGeoID, nullptr, false)
+{
+  _isGeometricInterpolant = true;
+}
+
+feSpaceTetPn::feSpaceTetPn(int n, feMesh *mesh, const std::string fieldID, const std::string cncGeoID,
+                           feFunction *fct, const bool useGlobalShapeFunctions)
+  : feScalarSpace(3, mesh, fieldID, cncGeoID, fct, useGlobalShapeFunctions), _n(n)
+{
+  _nFunctions = (n+1)*(n+2)*(n+3)/6;
+  _Lcoor.clear();
+  _Lcoor.reserve(3*(n+1)*(n+2)*(n+3)/6);
+
+  // Get reference barycentric coordinates, see feTetrahedron.cpp
+  getTetLagrangeBarycentricCoord(_n, _refBarycentric);
+  assert(_refBarycentric.size()/4 == (size_t) _nFunctions);
+
+  // The Lagrange points are the barycentric components [2, ..., n+1] divided by n:
+  for(int i = 0; i < _nFunctions; ++i) {
+    double sum = _refBarycentric[4*i+0] + _refBarycentric[4*i+1]
+               + _refBarycentric[4*i+2] + _refBarycentric[4*i+3];
+    assert(fabs(sum - (double) _n) < 1e-14);
+
+    // Add components [2, ..., n+1]
+    _Lcoor.push_back(_refBarycentric[4*i+1] / (double) n);
+    _Lcoor.push_back(_refBarycentric[4*i+2] / (double) n);
+    _Lcoor.push_back(_refBarycentric[4*i+3] / (double) n);
+  }
+
+  for(int i = 0; i < _nFunctions; ++i) {
+    feInfo("%1.3f - %1.3f - %1.3f",
+      _Lcoor[3*i+0],_Lcoor[3*i+1],_Lcoor[3*i+2]);
+  }
+
+  _dofLocations.resize(_nFunctions);
+  int start = 0;
+  for(int i = 0; i < 4; ++i)
+    { _dofLocations[i] = dofLocation::VERTEX; }
+  if(n >= 2) {
+    start += 4;
+    for(int i = start; i < start + 6*(n-1); ++i)
+      { _dofLocations[i] = dofLocation::EDGE; }
+  }
+  if(n >= 3) {
+    start += 6*(n-1);
+    for(int i = start; i < start + 4*(n-1)*(n-2)/2; ++i)
+      { _dofLocations[i] = dofLocation::FACE; }
+  }
+  if(n >= 4) {
+    start += 4*(n-1)*(n-2)/2;
+    for(int i = start; i < _nFunctions; ++i)
+      { _dofLocations[i] = dofLocation::ELEMENT; }
+  }
+}
+
+CONTINUER ICI
+std::vector<double> feSpaceTetPn::L(double *r) { return {1.0 - r[0] - r[1] - r[2], r[0], r[1], r[2]}; }
+void feSpaceTetPn::L(double *r, double *L)
+{
+  L[0] = 1. - r[0] - r[1] - r[2];
+  L[1] = r[0];
+  L[2] = r[1];
+  L[3] = r[2];
+}
+std::vector<double> feSpaceTetPn::dLdr(double *r) { UNUSED(r); return {-1., 1., 0., 0.}; }
+std::vector<double> feSpaceTetPn::dLds(double *r) { UNUSED(r); return {-1., 0., 1., 0.}; }
+std::vector<double> feSpaceTetPn::dLdt(double *r) { UNUSED(r); return {-1., 0., 0., 1.}; }
+std::vector<double> feSpaceTetPn::d2Ldr2(double *r) { UNUSED(r); return {0., 0., 0., 0.}; }
+std::vector<double> feSpaceTetPn::d2Ldrs(double *r) { UNUSED(r); return {0., 0., 0., 0.}; }
+std::vector<double> feSpaceTetPn::d2Lds2(double *r) { UNUSED(r); return {0., 0., 0., 0.}; }
+
+void feSpaceTetPn::initializeNumberingUnknowns()
+{
+  for(int i = 0; i < _mesh->getNumElements(_cncGeoID); ++i) {
+    _numbering->setUnknownVertexDOF(_mesh, _cncGeoID, i, 0);
+    _numbering->setUnknownVertexDOF(_mesh, _cncGeoID, i, 1);
+    _numbering->setUnknownVertexDOF(_mesh, _cncGeoID, i, 2);
+    _numbering->setUnknownVertexDOF(_mesh, _cncGeoID, i, 3);
+  }
+}
+
+void feSpaceTetPn::initializeNumberingEssential()
+{
+  for(int i = 0; i < _mesh->getNumElements(_cncGeoID); ++i) {
+    _numbering->setEssentialVertexDOF(_mesh, _cncGeoID, i, 0);
+    _numbering->setEssentialVertexDOF(_mesh, _cncGeoID, i, 1);
+    _numbering->setEssentialVertexDOF(_mesh, _cncGeoID, i, 2);
+    _numbering->setEssentialVertexDOF(_mesh, _cncGeoID, i, 3);
+  }
+}
+
+void feSpaceTetPn::initializeAddressingVector(int numElem, std::vector<feInt> &adr)
+{
+  adr[0] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 0);
+  adr[1] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 1);
+  adr[2] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 2);
+  adr[2] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 3);
+}
 
 // -----------------------------------------------------------------------------
 // Lagrange element of degree 1 on reference tetrahedron
@@ -100,4 +205,3 @@ void feSpaceTetP1::initializeAddressingVector(int numElem, std::vector<feInt> &a
   adr[2] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 2);
   adr[2] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 3);
 }
-

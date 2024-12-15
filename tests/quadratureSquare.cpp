@@ -115,7 +115,7 @@ int computeQuadrature(double &I1, double &I2, double &I3)
   return 0;
 }
 
-TEST(TestQuadrature, QuadratureSquare) {
+TEST(Quadrature, QuadratureSquare) {
 
   std::string testRoot = "../../tests/quadratureSquare";
 

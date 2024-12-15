@@ -716,10 +716,7 @@ void feExporterVTK::writeEigenvector(std::ostream &output, feCncGeo *cnc, feSpac
     like in feExporterVTK::writeNodes. Both must be modified together. */
     Vertex *v0;
     Vertex *v1;
-    int elm;
     double val;
-    std::vector<double> x;
-    double r[3];
     for(auto e : _mesh->_edges) {
       v0 = e.getVertex(0);
       v1 = e.getVertex(1);

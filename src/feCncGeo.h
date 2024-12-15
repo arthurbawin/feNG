@@ -1,6 +1,7 @@
 #ifndef _FECNCGEO_
 #define _FECNCGEO_
 
+#include <memory>
 #include "feColoring.h"
 #include "feMessage.h"
 
@@ -52,48 +53,51 @@ class feCncGeo
 protected:
   // Name of the Physical Entity
   std::string _ID;
-  // Sequential unique number
+  // Unique sequential number
   int _tag;
   // Dimension
   int _dim;
-  // Elements geometry (see enum above)
+  // Elements geometry
   geometryType _geometry;
   // Interpolation functions used to describe the geometry (see enum above)
   geometricInterpolant _interpolant;
 
-  // Number of vertices in the Physical Entity
-  int _nVertices;
-  // Number of vertices per element
-  int _nVerticesPerElm;
-  // Number of elements
+  // Pointers to the mesh and to the FE space used to interpolate the geometry
+  feMesh *_mesh;
+  feSpace *_geometricInterpolant;
+
+  // Number of elements of the dimension of the Physical Entity
+  // (i.e., elements of highest dimension for this entity)
   int _nElements;
-  // Number of edges
+
+  // Total number of mesh elements classified on this Physical Entity
+  int _nVertices;
   int _nEdges;
-  // Number of facets (edges for now) per element
+  int _nTriangles;
+  int _nTetrahedra;
+
+  // Number of lower-dimensional elements for the elements of this entity
+  int _nVerticesPerElm;
   int _nEdgesPerElem;
+  int _nTrianglesPerElem;
 
   //
   // Global numbering of the mesh elements on this connectivity.
   //
-  // The global tag of vertices classified on this connectivity: size = nVertices
-  std::vector<int> _connecVerticesOnly;
-  // The global tag of vertices of elements on this connectivity: size = nElm * nVerticesPerElm
-  std::vector<int> _connecVertices;
-  // The global tag of edges classified on this connectivity: size = nEdges
-  std::vector<int> _connecEdgesOnly;
-  // The global tag of edges of elements on this connectivity: size = nElm * nEdgesPerElm
-  std::vector<int> _connecEdges;
-  // The global tag of triangles classified on this connectivity: size = nTri
-  std::vector<int> _connecFacesOnly;
-  // The global tag of triangles of elements on this connectivity: size = nElm * nTriPerElm
-  std::vector<int> _connecFaces;
-
   std::vector<int> _connecElem;
 
-  // Pointers to the FE space used to interpolate the geometry
-  // and to the mesh
-  feSpace *_geometricInterpolant;
-  feMesh *_mesh;
+  // The global tags of mesh elements classified on this connectivity
+  // Size : _nVertices // _nEdges // _nTriangles // _nTetrahedra
+  std::vector<int> _connecVerticesOnly;
+  std::vector<int> _connecEdgesOnly;
+  std::vector<int> _connecTriOnly;
+  std::vector<int> _connecTetOnly;
+
+  // The global tags of boundary elements on this connectivity
+  // Size : _nElements * (_nVerticesPerElem // _nEdgesPerElem // _nTrianglesPerElem)
+  std::vector<int> _connecVertices;
+  std::vector<int> _connecEdges;
+  std::vector<int> _connecTriangles;
 
   // Determinants of the jacobian matrix of the reference-to-physical
   // transformation, stored at all quadrature nodes of all elements
@@ -102,6 +106,7 @@ protected:
   std::vector<double> _elementsVolume;
   std::vector<double> _minimumScaledJacobianControlCoeffs;
 
+  // ======= To be replaced by just a feColoring ==============
   // Mesh coloring
   std::vector<int> _nbElmPerNode;
   std::vector<int> _nbElmPerElm;
@@ -112,18 +117,10 @@ protected:
   std::vector<int> _elmToColor;
   std::vector<int> _nbElmPerColor;
   std::vector<std::vector<int> > _listElmPerColor;
+  // ==========================================================
 
 public:
-  struct coloring {
-    int numColors;
-    std::vector<int> elem2Color;
-    std::vector<int> numElemPerColor;
-    std::vector<std::vector<int> > elementsInColor;
-  };
-
-  coloring _coloring;
-
-  feColoring *_mycoloring;
+  std::unique_ptr<feColoring> _mycoloring;
 
 public:
   // Create a geometric connectivity. Called when parsing the mesh.
@@ -132,7 +129,7 @@ public:
            const geometricInterpolant interpolant, feSpace *space, std::vector<int> connecVertices,
            std::vector<int> connecElem = std::vector<int>(),
            std::vector<int> connecEdges = std::vector<int>(),
-           std::vector<int> connecFaces = std::vector<int>());
+           std::vector<int> connecTriangles = std::vector<int>());
   ~feCncGeo() {
     // delete _mycoloring;
   }

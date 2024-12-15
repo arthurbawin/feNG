@@ -35,11 +35,11 @@ int main(int argc, char **argv)
   initialize(argc, argv);
 
   // Set the default parameters.
-  const char *meshFile = "../data/square1.msh";
-  // const char *meshFile = "../data/cubeDummy.msh";
+  // const char *meshFile = "../data/square1.msh";
+  const char *meshFile = "../data/cubeDummy.msh";
   int verbosity = 2;
-  int order = 2;
-  int degreeQuadrature = 10;
+  int order = 1;
+  int degreeQuadrature = 2;
 
   const char *solverType = "PETSc";
   // Decide if the Pardiso linear system is stored on a single process (-1)
@@ -83,8 +83,9 @@ int main(int argc, char **argv)
 
   // Create a mesh structure from a Gmsh mesh file (version 2.2 or 4.1+)
   feMesh2DP1 mesh(meshFile);
-  finalize();
-  return 0;
+
+  // finalize();
+  // return 0;
 
   // Create function objects for the analytic solution and the source term.
   // Here the model PDE is the stationary heat equation div(k grad u) + f = 0,
@@ -106,10 +107,13 @@ int main(int argc, char **argv)
   // element space, with parameter "degreeQuadrature" governing the number of quadrature nodes.
   // The feFunction provided is used to initialize the degrees of freedom on the feSpace.
   feSpace *uBord, *uDomaine;
-  feCheck(createFiniteElementSpace(uBord, &mesh, elementType::LAGRANGE, order, "U", "Bord",
-                                   degreeQuadrature, &funSol));
+  // feCheck(createFiniteElementSpace(uBord, &mesh, elementType::LAGRANGE, order, "U", "Bord",
+  //                                  degreeQuadrature, &funSol));
   feCheck(createFiniteElementSpace(uDomaine, &mesh, elementType::LAGRANGE, order, "U", "Domaine",
                                    degreeQuadrature, &funZero));
+
+  finalize();
+  return 0;
 
   // Define the set of all finite elements spaces and the set of FE spaces
   // forming the essential (Dirichlet) boundary conditions. The second set must always be

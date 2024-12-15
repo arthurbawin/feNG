@@ -83,11 +83,18 @@ feCncGeo::feCncGeo(const int tag, const int dimension, const int nVerticesPerEle
                    const int nElements, const int nEdgesPerElement, const std::string &ID,
                    const geometryType geometry, const geometricInterpolant interpolant,
                    feSpace *space, std::vector<int> connecVertices, std::vector<int> connecElem,
-                   std::vector<int> connecEdges, std::vector<int> connecFaces)
-  : _ID(ID), _tag(tag), _dim(dimension), _geometry(geometry), _interpolant(interpolant),
-    _nVerticesPerElm(nVerticesPerElement), _nElements(nElements), _nEdgesPerElem(nEdgesPerElement),
-    _connecVertices(connecVertices),  _connecEdges(connecEdges), _connecFaces(connecFaces),
-    _connecElem(connecElem), _geometricInterpolant(space)
+                   std::vector<int> connecEdges, std::vector<int> connecTriangles)
+  : _ID(ID), _tag(tag), _dim(dimension),
+  _geometry(geometry),
+  _interpolant(interpolant),
+  _geometricInterpolant(space),
+  _nElements(nElements),
+  _nVerticesPerElm(nVerticesPerElement),
+  _nEdgesPerElem(nEdgesPerElement),
+  _connecElem(connecElem),
+  _connecVertices(connecVertices), 
+  _connecEdges(connecEdges),
+  _connecTriangles(connecTriangles)
 {
   if(connecElem.size() == 0) _connecElem.resize(nElements);
   if(connecEdges.size() == 0) _connecEdges.resize(nElements * nEdgesPerElement);
@@ -115,10 +122,10 @@ feCncGeo::feCncGeo(const int tag, const int dimension, const int nVerticesPerEle
   _nEdges = _connecEdgesOnly.size();
 
   // Color the elements for partitioning
-  colorElements(3);
+  colorElements(1);
   printColoringStatistics();
 
-  // _mycoloring = new feColoring(1, _nVerticesPerElm, _connecVertices, _connecElem);
+  _mycoloring = std::make_unique<feColoring>(1, _nVerticesPerElm, _connecVertices, _connecElem);
 }
 
 int feCncGeo::getUniqueVertexConnectivity(const int iVertex) const
@@ -777,10 +784,10 @@ void feCncGeo::colorElements(int coloringAlgorithm)
     }
   }
 
-  _coloring.numColors = _nbColor;
-  _coloring.elem2Color = _elmToColor;
-  _coloring.numElemPerColor = _nbElmPerColor;
-  _coloring.elementsInColor = _listElmPerColor;
+  // _coloring.numColors = _nbColor;
+  // _coloring.elem2Color = _elmToColor;
+  // _coloring.numElemPerColor = _nbElmPerColor;
+  // _coloring.elementsInColor = _listElmPerColor;
 
   feInfoCond(FE_VERBOSE > 0, "\t\tDone in %f s", toc());
 }
@@ -856,6 +863,13 @@ void feCncGeo::writeElementToPOS(FILE *posFile, const std::vector<double> &eleme
               elementCoord[10], elementCoord[11], elementCoord[12], elementCoord[13],
               elementCoord[14], elementCoord[15], elementCoord[16], elementCoord[17], value, value,
               value, value, value, value);
+      break;
+    case geometricInterpolant::TETP1:
+      fprintf(posFile,
+              "SS(%g,%g,%g,%g,%g,%g,%g,%g,%g,%g,%g,%g){%g,%g,%g,%g};\n",
+              elementCoord[0], elementCoord[1], elementCoord[2], elementCoord[3], elementCoord[4],
+              elementCoord[5], elementCoord[6], elementCoord[7], elementCoord[8], elementCoord[9],
+              elementCoord[10], elementCoord[11], value, value, value, value);
       break;
     default:
       feWarning(

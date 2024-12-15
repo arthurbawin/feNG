@@ -329,7 +329,7 @@ bool computeDiameters(const double a, const double b, const double c, const doub
 
   int res = getCubicPolynomialRoots(-b,3.*a-2.*c,2.*b-3.*d,c,roots);
   int nRealRoots = (res == -1) ? 1 : 3;
-  double zPi[2], max_pz = 0.;
+  double zPi[2] = {0., 0.}, max_pz = 0.;
   for(int i = 0; i < nRealRoots; ++i) {
     double z = roots[i];
     double pz = fabs( (a*z*z*z + b*z*z + c*z + d)/pow(sqrt(z*z+1.),3) );

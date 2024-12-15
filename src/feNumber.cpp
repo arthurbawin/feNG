@@ -344,19 +344,18 @@ void feNumber::compactFieldDOF()
   }
 }
 
-void feNumber::printNumberingVertices()
+void feNumber::printNumberingVertices(std::ostream &os)
 {
-  feInfo("\t Number of vertices = %d", _nNod);
-  feInfo("\t Max number of DOF per vertex = %d", _maxDOFperVertex);
+  os << "Number of vertices = " << _nNod << std::endl;
+  os << "Max number of DOF per vertex = " << _maxDOFperVertex << std::endl;
   for(int i = 0; i < _nNod; ++i) {
     for(int j = 0; j < _maxDOFperVertex; ++j) {
       if(_codeDOFVertices[i] == DOF_ESSENTIAL)
-        feInfo("\t DOF: %d \t %s", _numberingVertices[_maxDOFperVertex * i + j], "DOF_ESSENTIAL");
+        os << "DOF: " << std::to_string(_numberingVertices[_maxDOFperVertex * i + j]) << " - DOF_ESSENTIAL" << std::endl;
       else if(_codeDOFVertices[i] == DOF_UNKNOWN)
-        feInfo("\t DOF: %d \t %s", _numberingVertices[_maxDOFperVertex * i + j], "DOF_UNKNOWN");
+        os << "DOF: " << std::to_string(_numberingVertices[_maxDOFperVertex * i + j]) << " - DOF_UNKNOWN" << std::endl;
       else if(_codeDOFVertices[i] == DOF_NOT_ASSIGNED)
-        feInfo("\t DOF: %d \t %s", _numberingVertices[_maxDOFperVertex * i + j],
-               "DOF_NOT_ASSIGNED");
+        os << "DOF: " << std::to_string(_numberingVertices[_maxDOFperVertex * i + j]) << " - DOF_NOT_ASSIGNED" << std::endl;
       else {
         feErrorMsg(FE_STATUS_ERROR, "Unexpected value %d for vertex DOF %d - %d :/",
                    _numberingVertices[_maxDOFperVertex * i + j], i, j);
@@ -366,21 +365,18 @@ void feNumber::printNumberingVertices()
   }
 }
 
-void feNumber::printNumberingElements()
+void feNumber::printNumberingElements(std::ostream &os)
 {
-  feInfo("\t Number of elements = %d", _nElm);
-  feInfo("\t Max number of DOF per element = %d", _maxDOFperElem);
+  os << "Number of elements = " << _nElm << std::endl;
+  os << "Max number of DOF per element = " << _maxDOFperElem << std::endl;
   for(int i = 0; i < _nElm; ++i) {
     for(int j = 0; j < _maxDOFperElem; ++j) {
       if(_codeDOFElements[i] == DOF_ESSENTIAL)
-        feInfo("\t elm %d - dof %d : %d \t %s", i, j, _numberingElements[_maxDOFperElem * i + j],
-               "DOF_ESSENTIAL");
+        os << "elm " << std::to_string(i) << " - dof " << std::to_string(j) << " : " << std::to_string(_numberingElements[_maxDOFperElem * i + j]) << " - DOF_ESSENTIAL" << std::endl;
       else if(_codeDOFElements[i] == DOF_UNKNOWN)
-        feInfo("\t elm %d - dof %d : %d \t %s", i, j, _numberingElements[_maxDOFperElem * i + j],
-               "DOF_UNKNOWN");
+        os << "elm " << std::to_string(i) << " - dof " << std::to_string(j) << " : " << std::to_string(_numberingElements[_maxDOFperElem * i + j]) << " - DOF_UNKNOWN" << std::endl;
       else if(_codeDOFElements[i] == DOF_NOT_ASSIGNED)
-        feInfo("\t elm %d - dof %d : %d \t %s", i, j, _numberingElements[_maxDOFperElem * i + j],
-               "DOF_NOT_ASSIGNED");
+        os << "elm " << std::to_string(i) << " - dof " << std::to_string(j) << " : " << std::to_string(_numberingElements[_maxDOFperElem * i + j]) << " - DOF_NOT_ASSIGNED" << std::endl;
       else {
         feErrorMsg(FE_STATUS_ERROR, "Unexpected value %d for element DOF %d - %d :/",
                    _numberingElements[_maxDOFperElem * i + j], i, j);
@@ -390,18 +386,18 @@ void feNumber::printNumberingElements()
   }
 }
 
-void feNumber::printNumberingEdges()
+void feNumber::printNumberingEdges(std::ostream &os)
 {
-  feInfo("\t Number of edges = %d", _nEdg);
-  feInfo("\t Max number of DOF per edge = %d", _maxDOFperEdge);
+  os << "Number of edges = " << _nEdg << std::endl;
+  os << "Max number of DOF per edge = " << _maxDOFperEdge << std::endl;
   for(int i = 0; i < _nEdg; ++i) {
     for(int j = 0; j < _maxDOFperEdge; ++j) {
       if(_codeDOFEdges[i] == DOF_ESSENTIAL)
-        feInfo("\t %d \t %s", _numberingEdges[_maxDOFperEdge * i + j], "DOF_ESSENTIAL");
+        os << std::to_string(_numberingEdges[_maxDOFperEdge * i + j]) << " - DOF_ESSENTIAL" << std::endl;
       else if(_codeDOFEdges[i] == DOF_UNKNOWN)
-        feInfo("\t %d \t %s", _numberingEdges[_maxDOFperEdge * i + j], "DOF_UNKNOWN");
+        os << std::to_string(_numberingEdges[_maxDOFperEdge * i + j]) << " - DOF_UNKNOWN" << std::endl;
       else if(_codeDOFEdges[i] == DOF_NOT_ASSIGNED)
-        feInfo("\t %d \t %s", _numberingEdges[_maxDOFperEdge * i + j], "DOF_NOT_ASSIGNED");
+        os << std::to_string(_numberingEdges[_maxDOFperEdge * i + j]) << " - DOF_NOT_ASSIGNED" << std::endl;
       else {
         feErrorMsg(FE_STATUS_ERROR, "Unexpected value %d for edge DOF %d - %d :/",
                    _numberingEdges[_maxDOFperEdge * i + j], i, j);
@@ -411,19 +407,19 @@ void feNumber::printNumberingEdges()
   }
 }
 
-void feNumber::printCodeVertices()
+void feNumber::printCodeVertices(std::ostream &os)
 {
-  for(auto val : _codeDOFVertices) std::cout << val << std::endl;
+  for(auto val : _codeDOFVertices) os << val << std::endl;
 }
 
-void feNumber::printCodeElements()
+void feNumber::printCodeElements(std::ostream &os)
 {
-  for(auto val : _codeDOFElements) std::cout << val << std::endl;
+  for(auto val : _codeDOFElements) os << val << std::endl;
 }
 
-void feNumber::printCodeEdges()
+void feNumber::printCodeEdges(std::ostream &os)
 {
-  for(auto val : _codeDOFEdges) std::cout << val << std::endl;
+  for(auto val : _codeDOFEdges) os << val << std::endl;
 }
 
 feMetaNumber::feMetaNumber(feMesh *mesh, const std::vector<feSpace *> &spaces,
@@ -557,31 +553,32 @@ feStatus feMetaNumber::exportNumberingVertices(feMesh *mesh, std::string fileNam
   return FE_STATUS_OK;
 }
 
-void feMetaNumber::printFields()
+void feMetaNumber::printFields(std::ostream &os)
 {
-  for(auto s : _fieldIDs) std::cout << s << std::endl;
+  for(auto s : _fieldIDs) os << s << std::endl;
 }
 
-void feMetaNumber::printNumberings()
+void feMetaNumber::printNumberings(std::ostream &os)
 {
   for(int i = 0; i < _nFields; ++i) {
-    feInfo("Field \"%s\" - Numbering of vertex degrees of freedom:", _fieldIDs[i].data());
-    _numberings[_fieldIDs[i]]->printNumberingVertices();
-    feInfo("Field \"%s\" - Numbering of element degrees of freedom:", _fieldIDs[i].data());
-    _numberings[_fieldIDs[i]]->printNumberingElements();
-    feInfo("Field \"%s\" - Numbering of edge degrees of freedom:", _fieldIDs[i].data());
-    _numberings[_fieldIDs[i]]->printNumberingEdges();
+    os << "Field " << _fieldIDs[i] << " - Numbering of vertex degrees of freedom:" << std::endl;
+    _numberings[_fieldIDs[i]]->printNumberingVertices(os);
+    os << "Field " << _fieldIDs[i] << " - Numbering of element degrees of freedom:" << std::endl;
+    _numberings[_fieldIDs[i]]->printNumberingElements(os);
+    os << "Field " << _fieldIDs[i] << " - Numbering of edge degrees of freedom:" << std::endl;
+    _numberings[_fieldIDs[i]]->printNumberingEdges(os);
   }
 }
 
-void feMetaNumber::printCodes()
-{ // Attention : ordre dépend du nom des variables (ordre du map.first)
+void feMetaNumber::printCodes(std::ostream &os)
+{ 
+  // Attention : ordre dépend du nom des variables (ordre du map.first)
   for(auto const &secondIsNumber : _numberings) {
-    std::cout << "Field " << secondIsNumber.first << " - vertices :" << std::endl;
-    secondIsNumber.second->printCodeVertices();
-    std::cout << "Field " << secondIsNumber.first << " - elements :" << std::endl;
-    secondIsNumber.second->printCodeElements();
-    std::cout << "Field " << secondIsNumber.first << " - edges :" << std::endl;
-    secondIsNumber.second->printCodeEdges();
+    os << "Field " << secondIsNumber.first << " - vertices :" << std::endl;
+    secondIsNumber.second->printCodeVertices(os);
+    os << "Field " << secondIsNumber.first << " - elements :" << std::endl;
+    secondIsNumber.second->printCodeElements(os);
+    os << "Field " << secondIsNumber.first << " - edges :" << std::endl;
+    secondIsNumber.second->printCodeEdges(os);
   }
 }

@@ -43,9 +43,9 @@ static void duplicateScalarArray(const int scalarSize, const int chunkSize,
 feSpaceTriP1::feSpaceTriP1(std::string cncGeoID)
   : feScalarSpace(2, nullptr, "GEO", cncGeoID, nullptr)
 {
+  _isGeometricInterpolant = true;
   _nFunctions = 3;
   _Lcoor = {0., 0., 0., 1., 0., 0., 0., 1., 0.};
-  _isGeometricInterpolant = true;
   _dofLocations = {dofLocation::VERTEX, dofLocation::VERTEX, dofLocation::VERTEX};
 }
 
@@ -269,9 +269,9 @@ void feSpaceTri_CR1::initializeAddressingVector(int numElem, std::vector<feInt> 
 feSpaceTriP2::feSpaceTriP2(std::string cncGeoID)
   : feScalarSpace(2, nullptr, "GEO", cncGeoID, nullptr)
 {
+  _isGeometricInterpolant = true;
   _nFunctions = 6;
   _Lcoor = {0., 0., 0., 1., 0., 0., 0., 1., 0., 0.5, 0., 0., 0.5, 0.5, 0., 0., 0.5, 0.};
-  _isGeometricInterpolant = true;
   _dofLocations = {dofLocation::VERTEX, dofLocation::VERTEX, dofLocation::VERTEX,
                    dofLocation::EDGE,   dofLocation::EDGE,   dofLocation::EDGE};
 }

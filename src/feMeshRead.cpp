@@ -985,7 +985,7 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, const bool curved, const bool
       // Sets of elements, transformed in vectors after all elements are added
       std::set<Edge, EdgeLessThan> allEdges;
       // std::set<Triangle, TriangleLessThan> allTriangles;
-      std::set<Tetrahedron, TetrahedronLessThan> allTetrahedra;
+      // std::set<Tetrahedron, TetrahedronLessThan> _allTetrahedra;
 
       int countElems = 0;
       _nVerticesWithNoPhysical = 0;
@@ -1315,6 +1315,10 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, const bool curved, const bool
               break;
             }
             case 2: //  3-node triangle
+
+              // FIXME: We should only do this when maxDim = 2 actually
+              // In general, we construct the mesh elements starting from the highest-dimensional elements.
+              // Then lower dimensional elements are identified from among the existing set of triangles or edges.
               // Cleaner version:
               {
                 Vertex *v0 = &_vertices[_verticesMap[elemNodesGmsh[0]]];
@@ -1492,7 +1496,7 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, const bool curved, const bool
               tet->createBoundary(_allTriangles, tagTrianglesDebug, allEdges, tagEdgesDebug);
 
               // Create the boundary edges of the facets of tet
-              allTetrahedra.insert(*tet);
+              _allTetrahedra.insert(*tet);
 
               //
               // Update connectivities on this geometric entity:
@@ -1598,7 +1602,9 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, const bool curved, const bool
 
       feInfo("There are %d mesh edges", allEdges.size());
       feInfo("There are %d mesh triangles", _allTriangles.size());
-      feInfo("There are %d mesh tetrahedra", allTetrahedra.size());
+      feInfo("There are %d mesh tetrahedra", _allTetrahedra.size());
+
+      _tetrahedra.assign(_allTetrahedra.begin(), _allTetrahedra.end());
 
     } // if buffer = "Elements"
   } // while input
@@ -1750,8 +1756,6 @@ feStatus feMesh2DP1::readGmsh(const std::string meshName, const bool curved, con
     pE.connecNodes.resize(pE.nElm * pE.nNodePerElem);
     pE.connecEdges.resize(pE.nElm * pE.nEdgePerElem);
     pE.connecTri.resize(pE.nElm * pE.nTriPerElem);
-    // Those are for boundaries only? So tet is not needed as max dimension is 3 (-:
-    // pE.connecTet.resize(pE.nElm * pE.nTetPerElem);
 
     int countElm = 0;
     for(auto const &x : _entities) {
@@ -1952,18 +1956,18 @@ feStatus feMesh2DP1::readGmsh(const std::string meshName, const bool curved, con
 
     feCncGeo *cnc =
       new feCncGeo(nCncGeo, pE.dim, pE.nNodePerElem, pE.nElm, pE.nEdgePerElem, pE.name, pE.geometry,
-                   pE.interp, pE.geoSpace, pE.connecNodes, pE.connecElem, pE.connecEdges);
+                   pE.interp, pE.geoSpace, pE.connecNodes, pE.connecElem, pE.connecEdges, pE.connecTri);
 
     _cncGeo.push_back(cnc);
     _cncGeoMap[pE.name] = nCncGeo;
     cnc->getFeSpace()->setCncGeoTag(nCncGeo++);
 
-    // Create a vector of vertices for each Physical Entity
-    std::vector<Vertex> entityVertices(pE.connecNodes.size());
-    for(size_t i = 0; i < pE.connecNodes.size(); ++i) {
-      entityVertices[i] = _vertices[pE.connecNodes[i]];
-    }
-    _verticesPerCnc[cnc] = entityVertices;
+    // // Create a vector of vertices for each Physical Entity
+    // std::vector<Vertex> entityVertices(pE.connecNodes.size());
+    // for(size_t i = 0; i < pE.connecNodes.size(); ++i) {
+    //   entityVertices[i] = _vertices[pE.connecNodes[i]];
+    // }
+    // _verticesPerCnc[cnc] = entityVertices;
   }
 
   _nEdges = _edges.size();
@@ -2016,43 +2020,65 @@ feStatus feMesh2DP1::readGmsh(const std::string meshName, const bool curved, con
 
   // TODO : Also add boundaryElements when necessary
 
+  // Create an RTree storing the elements of highest dimension
+  // Elements are hardcoded "Triangle" for now
+  if(maxDim == 2)
+  {
+    double min2[2], max2[2];
+    for(size_t iElm = 0; iElm < _elements.size(); ++iElm) {
+      Triangle *t = _elements[iElm];
+      SBoundingBox3d bbox;
+      for(int j = 0; j < t->getNumVertices(); ++j) {
+        Vertex *v = t->getVertex(j);
+        SPoint3 pt(v->x(), v->y(), v->z());
+        bbox += pt;
+      }
+      // _rtree.Insert((double *)(bbox.min()), (double *)(bbox.max()), t->getTag());
+      min2[0] = bbox.min()[0];
+      min2[1] = bbox.min()[1];
+      max2[0] = bbox.max()[0];
+      max2[1] = bbox.max()[1];
+      _rtree2d.Insert(min2, max2, t->getTag());
+    }
+  }
+
+  if(maxDim == 3)
+  {
+    double min3[3], max3[3];
+    for(auto &tet : _tetrahedra) {
+      SBoundingBox3d bbox;
+      for(int j = 0; j < tet.getNumVertices(); ++j) {
+        Vertex *v = tet.getVertex(j);
+        SPoint3 pt(v->x(), v->y(), v->z());
+        bbox += pt;
+      }
+      // _rtree.Insert((double *)(bbox.min()), (double *)(bbox.max()), t->getTag());
+      min3[0] = bbox.min()[0];
+      min3[1] = bbox.min()[1];
+      min3[2] = bbox.min()[2];
+      max3[0] = bbox.max()[0];
+      max3[1] = bbox.max()[1];
+      max3[2] = bbox.max()[2];
+      _rtree.Insert(min3, max3, tet.getTag());
+    }
+  }
+
   // Assign a pointer to this mesh to each of its geometric connectivities and their fespace
   for(feCncGeo *cnc : _cncGeo) {
     cnc->setMeshPtr(this);
     cnc->getFeSpace()->setMeshPtr(this);
   }
 
-  _cncGeo[1]->printColoring("coloring.pos");
-  _cncGeo[1]->printColoring2("coloring2.pos");
+  if(_cncGeo.size() > 0) {
+    _cncGeo[1]->printColoring("coloring.pos");
+    _cncGeo[1]->printColoring2("coloring2.pos");
+  }
 
   // Assign to each geometric FE space a pointer to its connectivity
   for(feCncGeo *cnc : _cncGeo) {
     cnc->getFeSpace()->setCncPtr(cnc);
   }
   _nCncGeo = _cncGeo.size();
-
-  double min2d[2], max2d[2];
-
-  // Create an RTree storing the elements of highest dimension
-  // Elements are hardcoded "Triangle" for now
-  for(size_t iElm = 0; iElm < _elements.size(); ++iElm) {
-    Triangle *t = _elements[iElm];
-    SBoundingBox3d bbox;
-    for(int j = 0; j < t->getNumVertices(); ++j) {
-      Vertex *v = t->getVertex(j);
-      SPoint3 pt(v->x(), v->y(), v->z());
-      bbox += pt;
-    }
-    _rtree.Insert((double *)(bbox.min()), (double *)(bbox.max()), t->getTag());
-    min2d[0] = bbox.min()[0];
-    min2d[1] = bbox.min()[1];
-    max2d[0] = bbox.max()[0];
-    max2d[1] = bbox.max()[1];
-    _rtree2d.Insert(min2d, max2d, t->getTag());
-  }
-
-  // Initialize the search context structure that is used to search in the RTree
-  // _searchCtx.elements = &_elements;
 
   // Add edges pointer to a vector for faster access (is it true tho?)
   _edgesVec.resize(_edges.size());

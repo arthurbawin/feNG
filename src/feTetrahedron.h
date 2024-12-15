@@ -21,6 +21,18 @@ static void sort4(int *d) {
 #undef SWAP
 }
 
+// This numbering is given by the boundary operator del = (-1)^i * [v0, ..., \hat{vi}, ..., vn],
+// where \hat{vi} means vi is omitted on the facet.
+static const int _faces[4][3] = {{0, 2, 1}, {0, 1, 3}, {0, 3, 2}, {3, 1, 2}};
+static const int _edges[6][2] = {{0,2}, {2,1}, {1,0}, {1,3}, {3,0}, {3,2}};
+
+// Compute the reference barycentric coordinates
+// used to define Lagrange interpolation.
+// For a degree n tetrahedron, these are the (n+1)(n+2)(n+3)/6
+// uniformly spaced points with components (u,v,w,z) s.t. u+v+w+z = 1.
+// Stored in a continuous vector of size 4 * (n+1)(n+2)(n+3)/6.
+void getTetLagrangeBarycentricCoord(int n, std::vector<double> &barycentricCoord);
+
 // Adapted from Gmsh's MTetrahedron
 
 class Tetrahedron
@@ -79,12 +91,14 @@ public:
   virtual double sliverness();
 
   // From Gmsh's MTetrahedron.h.
-  // This numbering is given by the boundary operator del = (-1)^i * [v0, ..., \hat{vi}, ..., vn],
-  // where \hat{vi} means vi is omitted on the facet.
   static int faces_tetra(const int face, const int vert)
   {
-    static const int f[4][3] = {{0, 2, 1}, {0, 1, 3}, {0, 3, 2}, {3, 1, 2}};
-    return f[face][vert];
+    return _faces[face][vert];
+  }
+
+  static int edges_tetra(const int edge, const int vert)
+  {
+    return _edges[edge][vert];
   }
 
   // Create the topological triangles of the boundary of this tetrahedron.

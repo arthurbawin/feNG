@@ -46,7 +46,7 @@ protected:
   // Mesh vertices (all)
   std::vector<Vertex> _vertices;
   // Mesh vertices for each Physical Entity (geometric connectivity)
-  std::map<const feCncGeo *, std::vector<Vertex> > _verticesPerCnc;
+  // std::map<const feCncGeo *, std::vector<Vertex> > _verticesPerCnc;
 
   // Number, vector and map of geometric connectivities (domains) in the mesh
   int _nCncGeo;
@@ -73,11 +73,12 @@ protected:
   // The elements by dimension.
   // The lower dimensional elements are created as boundaries of the higher-dimensional elements.
   std::set<Triangle, TriangleLessThan> _allTriangles;
+  std::set<Tetrahedron, TetrahedronLessThan> _allTetrahedra;
 
   // // std::vector<Vertex> _vertices_vec;
   // std::vector<Edge> _edges_vec;
   // std::vector<Triangle> _triangles_vec;
-  // std::vector<Tetrahedron> _tetrahedra_vec;
+  std::vector<Tetrahedron> _tetrahedra;
 ///////////////////////////////////////////////
 
 public:
@@ -313,10 +314,11 @@ private:
     int nEdgePerElem;
     int nTriPerElem;
     int nTetPerElem;
+    // The global tag of the lower-dimensional boundary elements
+    // for the elements on this entity
     std::vector<int> connecNodes;
     std::vector<int> connecEdges;
     std::vector<int> connecTri;
-    std::vector<int> connecTet;
     // The global tag of the elements on this entity,
     // regardless of their dimension.
     std::vector<int> connecElem;
@@ -351,7 +353,6 @@ private:
     std::vector<int> connecNodes;
     std::vector<int> connecEdges;
     std::vector<int> connecTri;
-    std::vector<int> connecTet;
     std::vector<int> connecElem;
     std::vector<int> isBoundedBy;
     std::vector<int> isBoundaryOf;
@@ -360,7 +361,6 @@ private:
   // RTrees and context to quickly search for nodes inside the mesh
   RTree<int, double, 3> _rtree;
   RTree<int, double, 2> _rtree2d;
-  // rtreeSearchCtx _searchCtx;
 
 public:
   // FIXME : Choose more explicit name, for example "physicalEntitiesDescription"
