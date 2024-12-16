@@ -43,7 +43,8 @@
 
 // Macro to specify unused parameters
 // and avoid compiler warnings
-#define UNUSED(...) (void)sizeof(__VA_ARGS__)
+// #define UNUSED(...) (void)sizeof(__VA_ARGS__)
+template<class... T> void UNUSED(T&&...){}
 
 #if defined(HAVE_PETSC)
 typedef PetscInt feInt;

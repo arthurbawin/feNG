@@ -232,13 +232,9 @@ feStatus createFiniteElementSpace(feSpace *&space, feMesh *mesh, const elementTy
   // FIXME: the FE space of the geometric connectivity is the one of the last created space...
   feStatus s;
   s = space->getCncGeo()->getFeSpace()->setQuadratureRule(&rule);
-  if(s != FE_STATUS_OK) {
-    return s;
-  }
+  if(s != FE_STATUS_OK) { return s; }
   s = space->setQuadratureRule(&rule);
-  if(s != FE_STATUS_OK) {
-    return s;
-  }
+  if(s != FE_STATUS_OK) { return s; }
 
   return FE_STATUS_OK;
 }
@@ -297,7 +293,7 @@ feStatus feSpace::setQuadratureRule(feQuadrature *rule)
   _d2Lds2.resize(_nFunctions * _nQuad, 0.0);
   _d2Ldt2.resize(_nFunctions * _nQuad, 0.0);
 
-  _barycentricCoordinates.resize(3 * _nQuad, 0.);
+  // _barycentricCoordinates.resize(3 * _nQuad, 0.);
 
   /* Reference frame discretization : shape functions are computed once on the reference element,
   then evaluated at the quadrature nodes. */
@@ -320,17 +316,16 @@ feStatus feSpace::setQuadratureRule(feQuadrature *rule)
     for(int j = 0; j < _nFunctions; ++j) _d2Lds2[_nFunctions * i + j] = d2lds2[j];
     for(int j = 0; j < _nFunctions; ++j) _d2Ldt2[_nFunctions * i + j] = d2ldt2[j];
 
-    _barycentricCoordinates[3 * i + 0] = 1. - r[0] - r[1];
-    _barycentricCoordinates[3 * i + 1] = r[0];
-    _barycentricCoordinates[3 * i + 2] = r[1];
+    // _barycentricCoordinates[3 * i + 0] = 1. - r[0] - r[1];
+    // _barycentricCoordinates[3 * i + 1] = r[0];
+    // _barycentricCoordinates[3 * i + 2] = r[1];
   }
 
+  /* Physical frame discretization : shape functions are computed on the physical element. */
   if(_fieldID != "GEO" && _useGlobalShapeFunctions) {
     feInfo("USING GLOBAL FUNCTIONS on space %s - %s", this->_fieldID.c_str(),
            this->_cncGeoID.c_str());
-    feInfo("USING GLOBAL FUNCTIONS");
-    feInfo("USING GLOBAL FUNCTIONS");
-    /* Physical frame discretization : shape functions are computed on the physical element. */
+    
     feCncGeo *cnc = this->getCncGeo();
     int nElm = cnc->getNumElements();
     _Lglob.resize(nElm);
@@ -369,7 +364,7 @@ feStatus feSpace::setQuadratureRule(feQuadrature *rule)
 
   if(_isGeometricInterpolant) {
     ////////////////////////////////////////////////////////////////////////
-    _ignoreNegativeJacobianWarning = true;
+    _ignoreNegativeJacobianWarning = false;
     ////////////////////////////////////////////////////////////////////////
     feStatus s = this->getCncGeo()->computeJacobians(_ignoreNegativeJacobianWarning);
     if(s != FE_STATUS_OK) {

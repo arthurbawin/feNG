@@ -55,8 +55,9 @@ protected:
   std::string _ID;
   // Unique sequential number
   int _tag;
-  // Dimension
+  // Dimension of this Physical entity and dimension of the ambient space
   int _dim;
+  int _ambientDim;
   // Elements geometry
   geometryType _geometry;
   // Interpolation functions used to describe the geometry (see enum above)
@@ -124,7 +125,8 @@ public:
 
 public:
   // Create a geometric connectivity. Called when parsing the mesh.
-  feCncGeo(const int tag, const int dimension, const int nVerticesPerElement, const int nElements,
+  feCncGeo(const int tag, const int dimension, const int ambientDimension,
+           const int nVerticesPerElement, const int nElements,
            const int nEdgesPerElement, const std::string &ID, const geometryType geometry,
            const geometricInterpolant interpolant, feSpace *space, std::vector<int> connecVertices,
            std::vector<int> connecElem = std::vector<int>(),

@@ -1299,7 +1299,7 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, const bool curved, const bool
             {
               // Keep Gmsh numbering for the high order nodes ?
               for(int j = 0; j < nElemNodes; ++j) {
-                if(_entities[p].physicalTags[0] < 0) {
+                if(reversed || _entities[p].physicalTags[0] < 0) {
                   // Physical entity is reversed
                   _entities[p].connecNodes[nElemNodes * iElm + j] = elemNodes[(nElemNodes - 1) - j];
                 } else {
@@ -1834,7 +1834,7 @@ feStatus feMesh2DP1::readGmsh(const std::string meshName, const bool curved, con
             // Gmsh's ordering.
             return feErrorMsg(FE_STATUS_ERROR,
               "Error when transferring connectivity tables to lower-dimensional physical entity:\n"
-              "Boundary edge (%d,%d) on entity %s with dimension %d is negatively oriented."
+              "Boundary edge (%d,%d) on entity %s with dimension %d is negatively oriented.\n"
               "Check that the element ordering on the boundary is consistent with the higher-dimensional entity.",
               pE.name.data(), pE.dim, v0->getTag(), v1->getTag());
           }
@@ -1880,7 +1880,7 @@ feStatus feMesh2DP1::readGmsh(const std::string meshName, const bool curved, con
             // Gmsh's ordering.
             return feErrorMsg(FE_STATUS_ERROR,
               "Error when transferring connectivity tables to lower-dimensional physical entity:\n"
-              "Boundary triangle (%d,%d,%d) on entity %s with dimension %d is negatively oriented."
+              "Boundary triangle (%d,%d,%d) on entity %s with dimension %d is negatively oriented.\n"
               "Check that the element ordering on the boundary is consistent with the higher-dimensional entity.",
               pE.name.data(), pE.dim, v0->getTag(), v1->getTag(), v2->getTag());
           }
@@ -1925,7 +1925,8 @@ feStatus feMesh2DP1::readGmsh(const std::string meshName, const bool curved, con
       pE.geoSpace = new feSpaceTriP3("xyz");
     } else if(pE.interp == geometricInterpolant::TETP1) {
       pE.geometry = geometryType::TET;
-      pE.geoSpace = new feSpaceTetP1("xyz");
+      // pE.geoSpace = new feSpaceTetP1("xyz");
+      pE.geoSpace = new feSpaceTetPn(1, "xyz");
     } else {
       return feErrorMsg(FE_STATUS_ERROR,
                         "Unknown geometric connectivity interpolant \"%s\" on domain \"%s\".",
@@ -1955,7 +1956,7 @@ feStatus feMesh2DP1::readGmsh(const std::string meshName, const bool curved, con
     physicalEntity &pE = p.second;
 
     feCncGeo *cnc =
-      new feCncGeo(nCncGeo, pE.dim, pE.nNodePerElem, pE.nElm, pE.nEdgePerElem, pE.name, pE.geometry,
+      new feCncGeo(nCncGeo, pE.dim, maxDim, pE.nNodePerElem, pE.nElm, pE.nEdgePerElem, pE.name, pE.geometry,
                    pE.interp, pE.geoSpace, pE.connecNodes, pE.connecElem, pE.connecEdges, pE.connecTri);
 
     _cncGeo.push_back(cnc);

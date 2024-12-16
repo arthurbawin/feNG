@@ -125,7 +125,7 @@ protected:
   std::vector<double> _d2Ldt2;
 
   // Barycentric (linear) coordinates at quadrature nodes
-  std::vector<double> _barycentricCoordinates;
+  // std::vector<double> _barycentricCoordinates;
 
   // Use global (physical) interpolation functions (experimental, do not use yet)
   bool _useGlobalShapeFunctions = false;
@@ -207,7 +207,7 @@ public:
 
   const std::vector<double> &getLcoor() const { return _Lcoor; }
 
-  const std::vector<double> &getBarycentricCoordinatesAtQuadNode() { return _barycentricCoordinates; }
+  // const std::vector<double> &getBarycentricCoordinatesAtQuadNode() { return _barycentricCoordinates; }
 
   // Evaluate the local shape functions and derivatives at quadrature nodes
   virtual std::vector<double> L(double *r) = 0;
@@ -219,6 +219,17 @@ public:
   virtual std::vector<double> d2Ldrs(double *r) { UNUSED(r); return std::vector<double>(_nFunctions, 0.); };
   virtual std::vector<double> d2Lds2(double *r) { UNUSED(r); return std::vector<double>(_nFunctions, 0.); };
   virtual std::vector<double> d2Ldt2(double *r) { UNUSED(r); return std::vector<double>(_nFunctions, 0.); };
+
+  // These should eventually replace the ones above
+  // virtual void shape(const double *r, std::vector<double> &res) = 0;
+  // virtual void shape(const double *r, double *res) = 0;
+  // virtual void dLdr(const double *r, std::vector<double> &res) { UNUSED(r, res); };
+  // virtual void dLds(const double *r, std::vector<double> &res) { UNUSED(r, res); };
+  // virtual void dLdt(const double *r, std::vector<double> &res) { UNUSED(r, res); };
+  // virtual void d2Ldr2(const double *r, std::vector<double> &res) { UNUSED(r, res); };
+  // virtual void d2Ldrs(const double *r, std::vector<double> &res) { UNUSED(r, res); };
+  // virtual void d2Lds2(const double *r, std::vector<double> &res) { UNUSED(r, res); };
+  // virtual void d2Ldt2(const double *r, std::vector<double> &res) { UNUSED(r, res); };
 
   // Evaluate the global shape functions at quadrature nodes
   virtual feStatus Lphys(int iElm, std::vector<double> &x, std::vector<double> &L,
@@ -1024,13 +1035,12 @@ public:
 
 // -----------------------------------------------------------------------------
 // Lagrange element of degree n on reference tetrahedron
+// Dimension of the polynomial basis = (n+1)(n+2)(n+3)/6
 // -----------------------------------------------------------------------------
 class feSpaceTetPn : public feScalarSpace
 {
 protected:
   int _n;
-  // Dimension of the polynomial basis = (n+1)(n+2)(n+3)/6
-  int _nFunctions;
 
   std::vector<double> _refBarycentric;
 

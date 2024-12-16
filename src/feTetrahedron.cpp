@@ -31,14 +31,14 @@ void Tetrahedron::createBoundary(std::set<Triangle, TriangleLessThan> &meshTrian
 }
 
 // From Gmsh's Numeric.cpp
-double det3x3(double mat[3][3])
+static double det3x3(double mat[3][3])
 {
   return (mat[0][0] * (mat[1][1] * mat[2][2] - mat[1][2] * mat[2][1]) -
           mat[0][1] * (mat[1][0] * mat[2][2] - mat[1][2] * mat[2][0]) +
           mat[0][2] * (mat[1][0] * mat[2][1] - mat[1][1] * mat[2][0]));
 }
 
-int sys3x3(double mat[3][3], double b[3], double res[3], double *det)
+static int sys3x3(double mat[3][3], double b[3], double res[3], double *det)
 {
   double ud;
   int i;

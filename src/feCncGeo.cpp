@@ -79,12 +79,13 @@ int getGeometricInterpolantDegree(geometricInterpolant t)
   }
 }
 
-feCncGeo::feCncGeo(const int tag, const int dimension, const int nVerticesPerElement,
+feCncGeo::feCncGeo(const int tag, const int dimension, const int ambientDimension,
+                   const int nVerticesPerElement,
                    const int nElements, const int nEdgesPerElement, const std::string &ID,
                    const geometryType geometry, const geometricInterpolant interpolant,
                    feSpace *space, std::vector<int> connecVertices, std::vector<int> connecElem,
                    std::vector<int> connecEdges, std::vector<int> connecTriangles)
-  : _ID(ID), _tag(tag), _dim(dimension),
+  : _ID(ID), _tag(tag), _dim(dimension), _ambientDim(ambientDimension),
   _geometry(geometry),
   _interpolant(interpolant),
   _geometricInterpolant(space),
@@ -123,9 +124,10 @@ feCncGeo::feCncGeo(const int tag, const int dimension, const int nVerticesPerEle
 
   // Color the elements for partitioning
   colorElements(1);
-  printColoringStatistics();
+  // printColoringStatistics();
 
-  _mycoloring = std::make_unique<feColoring>(1, _nVerticesPerElm, _connecVertices, _connecElem);
+  feWarning("Replace the coloring members in feCncGeo with a feColoring");
+  // _mycoloring = std::make_unique<feColoring>(1, _nVerticesPerElm, _connecVertices, _connecElem);
 }
 
 int feCncGeo::getUniqueVertexConnectivity(const int iVertex) const
@@ -241,6 +243,13 @@ feStatus feCncGeo::setQuadratureRule(feQuadrature *rule)
   return _geometricInterpolant->setQuadratureRule(rule);
 }
 
+static double det3x3(double mat[3][3])
+{
+  return (mat[0][0] * (mat[1][1] * mat[2][2] - mat[1][2] * mat[2][1]) -
+          mat[0][1] * (mat[1][0] * mat[2][2] - mat[1][2] * mat[2][0]) +
+          mat[0][2] * (mat[1][0] * mat[2][1] - mat[1][1] * mat[2][0]));
+}
+
 feStatus feCncGeo::computeJacobians(const bool ignoreNegativeJacobianWarning)
 {
   int nQuad = _geometricInterpolant->getNumQuadPoints();
@@ -279,7 +288,8 @@ feStatus feCncGeo::computeJacobians(const bool ignoreNegativeJacobianWarning)
       break;
     }
 
-    case 2: {
+    case 2:
+    {
       std::vector<double> dxdr(3, 0.); // [dx/dr, dy/dr, dz/dr]
       std::vector<double> dxds(3, 0.); // [dx/ds, dy/ds, dz/ds]
       for(int iElm = 0; iElm < _nElements; ++iElm)
@@ -291,36 +301,71 @@ feStatus feCncGeo::computeJacobians(const bool ignoreNegativeJacobianWarning)
         for(int k = 0; k < nQuad; ++k) {
           _geometricInterpolant->interpolateVectorFieldAtQuadNode_rDerivative(geoCoord, k, dxdr);
           _geometricInterpolant->interpolateVectorFieldAtQuadNode_sDerivative(geoCoord, k, dxds);
-          _J[nQuad * iElm + k] = dxdr[0] * dxds[1] - dxdr[1] * dxds[0];
+
+          // This assumes the max dimension is 2 (determinant of jac)
+          // _J[nQuad * iElm + k] = dxdr[0] * dxds[1] - dxdr[1] * dxds[0];
+          double detJ = dxdr[0] * dxds[1] - dxdr[1] * dxds[0];
+          // This assumes the max dimension is 3, i.e.,
+          // triangles can be embedded in R^3. (determinant of jac^T*jac)
+          double detJtJ = (dxdr[0]*dxdr[0]+dxdr[1]*dxdr[1]+dxdr[2]*dxdr[2]) * 
+                          (dxds[0]*dxds[0]+dxds[1]*dxds[1]+dxds[2]*dxds[2]) -
+                          (dxdr[0]*dxds[0]+dxdr[1]*dxds[1]+dxdr[2]*dxds[2]) *
+                          (dxdr[0]*dxds[0]+dxdr[1]*dxds[1]+dxdr[2]*dxds[2]);
+
+          if(_ambientDim == 2) { _J[nQuad * iElm + k] = detJ; }
+          if(_ambientDim == 3) { _J[nQuad * iElm + k] = sqrt(detJtJ); }
+
+          _elementsVolume[iElm] += wQuad[k] * _J[nQuad * iElm + k];
+          jMin = fmin(jMin, _J[nQuad * iElm + k]);
+
+          if(_J[nQuad * iElm + k] <= 0 || detJtJ <= 0) {
+          // if(detJtJ <= 0) {
+            atLeastOneNegative = true;
+            feWarning("Negative or zero jacobian = %+-12.12e on elm %d with coordinates:", _J[nQuad * iElm + k], iElm);
+            for(int i = 0; i < _nVerticesPerElm; ++i) {
+              printf("Info : %+-1.4e - %+-1.4e - %+-1.4e \n", geoCoord[3*i+0], geoCoord[3*i+1], geoCoord[3*i+2]);
+            }
+          }
+        }
+
+        // Plot jacobian
+        // writeElementToPOS(myfile, geoCoord, jMin);
+      }
+
+      break;
+    }
+
+    case 3: {
+      double jac[3][3];
+      std::vector<double> dxdr(3, 0.); // [dx/dr, dy/dr, dz/dr]
+      std::vector<double> dxds(3, 0.); // [dx/ds, dy/ds, dz/ds]
+      std::vector<double> dxdt(3, 0.); // [dx/dt, dy/dt, dz/dt]
+      for(int iElm = 0; iElm < _nElements; ++iElm)
+      {
+        _mesh->getCoord(_tag, iElm, geoCoord);
+        _elementsVolume[iElm] = 0.;
+
+        double jMin = 1e22;
+        for(int k = 0; k < nQuad; ++k) {
+          _geometricInterpolant->interpolateVectorFieldAtQuadNode_rDerivative(geoCoord, k, dxdr);
+          _geometricInterpolant->interpolateVectorFieldAtQuadNode_sDerivative(geoCoord, k, dxds);
+          _geometricInterpolant->interpolateVectorFieldAtQuadNode_tDerivative(geoCoord, k, dxdt);
+
+          for(int i = 0; i < 3; ++i) {
+            jac[i][0] = dxdr[i];
+            jac[i][1] = dxds[i];
+            jac[i][2] = dxdt[i];
+          }
+
+          _J[nQuad * iElm + k] = det3x3(jac);
           _elementsVolume[iElm] += wQuad[k] * _J[nQuad * iElm + k];
           jMin = fmin(jMin, _J[nQuad * iElm + k]);
 
           if(_J[nQuad * iElm + k] <= 0) {
             atLeastOneNegative = true;
-            if(_nVerticesPerElm == 2) {
-              feWarning("Negative or zero jacobian = %+-12.12e on elm %d with coordinates "
-                         "(%+-1.4e - %+-1.4e) - (%+-1.4e - %+-1.4e)\n",
-                         _J[nQuad * iElm + k], iElm,
-                         geoCoord[3 * 0 + 0], geoCoord[3 * 0 + 1],
-                         geoCoord[3 * 1 + 0], geoCoord[3 * 1 + 1]);
-            } else if(_nVerticesPerElm == 3) {
-              feWarning("Negative or zero jacobian = %+-12.12e on elm %d with coordinates "
-                       "(%+-1.4e - %+-1.4e) - (%+-1.4e - %+-1.4e) - (%+-1.4e - %+-1.4e)\n",
-                       _J[nQuad * iElm + k], iElm,
-                       geoCoord[3 * 0 + 0], geoCoord[3 * 0 + 1],
-                       geoCoord[3 * 1 + 0], geoCoord[3 * 1 + 1],
-                       geoCoord[3 * 2 + 0], geoCoord[3 * 2 + 1]);
-            } else if(_nVerticesPerElm == 6) {
-              feWarning("Negative or zero jacobian = %+-12.12e on elm %d with coordinates "
-                       "(%+-1.4e - %+-1.4e) - (%+-1.4e - %+-1.4e) - (%+-1.4e - %+-1.4e) - "
-                       "(%+-1.4e - %+-1.4e) - (%+-1.4e - %+-1.4e) - (%+-1.4e - %+-1.4e)\n",
-                       _J[nQuad * iElm + k], iElm, 
-                       geoCoord[3 * 0 + 0], geoCoord[3 * 0 + 1],
-                       geoCoord[3 * 1 + 0], geoCoord[3 * 1 + 1],
-                       geoCoord[3 * 2 + 0], geoCoord[3 * 2 + 1],
-                       geoCoord[3 * 3 + 0], geoCoord[3 * 3 + 1],
-                       geoCoord[3 * 4 + 0], geoCoord[3 * 4 + 1],
-                       geoCoord[3 * 5 + 0], geoCoord[3 * 5 + 1]);
+            feWarning("Negative or zero jacobian = %+-12.12e on elm %d with coordinates:", _J[nQuad * iElm + k], iElm);
+            for(int i = 0; i < _nVerticesPerElm; ++i) {
+              printf("Info : %+-1.4e - %+-1.4e - %+-1.4e \n", geoCoord[3*i+0], geoCoord[3*i+1], geoCoord[3*i+2]);
             }
           }
         }
@@ -333,9 +378,7 @@ feStatus feCncGeo::computeJacobians(const bool ignoreNegativeJacobianWarning)
 
     default:
       return feErrorMsg(FE_STATUS_ERROR,
-                        "Element jacobian not implemented "
-                        "for elements with dim = %d.\n",
-                        _dim);
+                        "Element jacobian not implemented for elements with dim = %d.\n", _dim);
   }
 
   // fprintf(myfile, "};\n"); fclose(myfile);
