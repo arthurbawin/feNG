@@ -869,7 +869,11 @@ void feNewRecovery::computeRHSAndSolve(int numRecoveries, int nRecoveredFields,
     #if defined(HAVE_OMP)
     #pragma omp for
     #endif
-    for(auto v : vertices) {
+    // Range-based loop with OpenMP does not compile on Hydre
+    // for(auto v : vertices) {
+    for(size_t iV = 0; iV < vertices.size(); ++iV)
+    {
+      int v = vertices[iV];
 #if defined(TREAT_BOUNDARIES)
       // Only reconstruct on non-boundary vertices
       if(!isVertexBoundary[v]) {
@@ -959,7 +963,10 @@ void feNewRecovery::computeRHSAndSolve(int numRecoveries, int nRecoveredFields,
     #if defined(HAVE_OMP)
     #pragma omp for
     #endif
-    for(auto v : vertices) {
+    // for(auto v : vertices) {
+    for(size_t iV = 0; iV < vertices.size(); ++iV)
+    {
+      int v = vertices[iV];
       // Only reconstruct on non-boundary vertices
       if(isVertexBoundary[v]) {
         // Get patch of interior vertices
