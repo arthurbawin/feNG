@@ -268,7 +268,7 @@ std::vector<SPoint2> integrateRK4(const double x0[2], const double u0[2],
   return geodesic;
 }
 
-inline double sign(double x){return x > 0 ? 1. : (x < 0 ? -1. : 0.); };
+inline double sign(double x){return x > 0 ? 1. : (x < 0 ? -1. : 0.); }
 
 // Compute the signed distance from a geodesic to a point
 double distGeodesicToPoint(const double x[2], const std::vector<SPoint2> &geodesic)

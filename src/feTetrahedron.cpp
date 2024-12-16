@@ -275,7 +275,7 @@ void getTetLagrangeBarycentricCoord(int n, std::vector<double> &barycentricCoord
 
         {
           std::vector<int> &ft = q.front();
-          int sum = std::reduce(ft.begin(), ft.end());
+          int sum = std::accumulate(ft.begin(), ft.end(), 0);
           if(sum > n) {
             // Do nothing and remove point
           } else if(sum == n) {
