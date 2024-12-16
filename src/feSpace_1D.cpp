@@ -132,7 +132,7 @@ feSpace1DP0::feSpace1DP0(feMesh *mesh, const std::string fieldID, const std::str
 
 std::vector<double> feSpace1DP0::L(double *r) { UNUSED(r); return {1.}; }
 
-void feSpace1DP0::L(double *r, double *L) { UNUSED(r); L[0] = 1.; };
+void feSpace1DP0::L(double *r, double *L) { UNUSED(r); L[0] = 1.; }
 
 void feSpace1DP0::initializeNumberingUnknowns()
 {
@@ -175,7 +175,7 @@ void feSpace1DP1::L(double *r, double *L)
 {
   L[0] = (1. - r[0]) / 2.;
   L[1] = (1. + r[0]) / 2.;
-};
+}
 
 std::vector<double> feSpace1DP1::dLdr(double *r) { UNUSED(r); return {-1. / 2., 1. / 2.}; }
 
