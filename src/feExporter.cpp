@@ -639,7 +639,7 @@ feExporterVTK::feExporterVTK(feMesh *mesh, feSolution *sol, feEigenProblem *eige
   : feExporter(mesh, sol, metaNumber, feSpaces)
 {
   _eigenProblem = eigenProblem;
-};
+}
 
 void feExporterVTK::writeEigenvector(std::ostream &output, feCncGeo *cnc, feSpace *intSpace,
                                      std::string fieldID, int eigenPairIndex, size_t nEigenPairs,

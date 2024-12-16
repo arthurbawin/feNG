@@ -168,7 +168,7 @@ feEigenProblem::feEigenProblem(int argc, char **argv, std::vector<feBilinearForm
   feInfoCond(FE_VERBOSE > 0, "Created an eigen problem with matrix A of size %d x %d", Ma, Na);
   feInfoCond(FE_VERBOSE > 0, "                         with matrix B of size %d x %d", Mb, Nb);
 #endif
-};
+}
 
 void feEigenProblem::viewLHSMatrix()
 {

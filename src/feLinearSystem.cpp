@@ -97,7 +97,7 @@ feLinearSystem::feLinearSystem(std::vector<feBilinearForm *> bilinearForms) : re
       if(f->hasMatrix() && i == 0) _numMatrixForms++;
     }
   }
-};
+}
 
 feLinearSystem::~feLinearSystem()
 {
