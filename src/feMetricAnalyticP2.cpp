@@ -71,9 +71,9 @@ int getSecondDegreeRoots(const double a, const double b, const double c, double 
   }
 }
 
-inline double sign(double x){return x > 0 ? 1. : (x < 0 ? -1. : 0.); };
-inline double sqrt3(double x){return x >= 0 ? pow(x,1./3.) : -pow(-x, 1./3.); };
-inline double maxAbs(double x, double y) { return fabs(x) > fabs(y) ? x : y; };
+inline double sign(double x){return x > 0 ? 1. : (x < 0 ? -1. : 0.); }
+inline double sqrt3(double x){return x >= 0 ? pow(x,1./3.) : -pow(-x, 1./3.); }
+inline double maxAbs(double x, double y) { return fabs(x) > fabs(y) ? x : y; }
 
 // Solve ax^3 + bx^2 + cx + d = 0.
 // Adapted from J-M Mirebeau's routines.
