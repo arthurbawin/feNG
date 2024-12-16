@@ -40,7 +40,7 @@ feSpace0DP0::feSpace0DP0(const std::string &cncGeoID)
   _nFunctions = 1;
   _Lcoor = {1., 0., 0.};
   _isGeometricInterpolant = true;
-};
+}
 
 feSpace0DP0::feSpace0DP0(feMesh *mesh, const std::string fieldID, const std::string cncGeoID,
                          feFunction *fct)
@@ -48,7 +48,7 @@ feSpace0DP0::feSpace0DP0(feMesh *mesh, const std::string fieldID, const std::str
 {
   _nFunctions = 1;
   _Lcoor = {1., 0., 0.};
-};
+}
 
 std::vector<double> feSpace0DP0::L(double *r) { UNUSED(r); return {1.}; };
 
@@ -80,7 +80,7 @@ feSpace0D_Hermite::feSpace0D_Hermite(feMesh *mesh, const std::string fieldID,
 {
   _nFunctions = 2;
   _Lcoor = {1., 0., 0., 1., 0., 0.};
-};
+}
 
 std::vector<double> feSpace0D_Hermite::L(double *r) { UNUSED(r); return {1., 1.}; };
 
@@ -89,7 +89,7 @@ void feSpace0D_Hermite::L(double *r, double *L)
   UNUSED(r);
   L[0] = 1.;
   L[1] = 1.;
-};
+}
 
 void feSpace0D_Hermite::initializeNumberingUnknowns()
 {
@@ -120,7 +120,7 @@ feSpace1DP0::feSpace1DP0(const std::string &cncGeoID)
   _nFunctions = 1;
   _Lcoor = {1., 0., 0.};
   _isGeometricInterpolant = true;
-};
+}
 
 feSpace1DP0::feSpace1DP0(feMesh *mesh, const std::string fieldID, const std::string cncGeoID,
                          feFunction *fct)
@@ -128,7 +128,7 @@ feSpace1DP0::feSpace1DP0(feMesh *mesh, const std::string fieldID, const std::str
 {
   _nFunctions = 1;
   _Lcoor = {1., 0., 0.};
-};
+}
 
 std::vector<double> feSpace1DP0::L(double *r) { UNUSED(r); return {1.}; };
 
@@ -159,7 +159,7 @@ feSpace1DP1::feSpace1DP1(std::string cncGeoID) : feScalarSpace(1, nullptr, "GEO"
   _nFunctions = 2;
   _Lcoor = {-1., 0., 0., 1., 0., 0.};
   _isGeometricInterpolant = true;
-};
+}
 
 feSpace1DP1::feSpace1DP1(feMesh *mesh, const std::string fieldID, const std::string cncGeoID,
                          feFunction *fct)
@@ -167,7 +167,7 @@ feSpace1DP1::feSpace1DP1(feMesh *mesh, const std::string fieldID, const std::str
 {
   _nFunctions = 2;
   _Lcoor = {-1., 0., 0., 1., 0., 0.};
-};
+}
 
 std::vector<double> feSpace1DP1::L(double *r) { return {(1. - r[0]) / 2., (1. + r[0]) / 2.}; };
 
@@ -214,7 +214,7 @@ feSpaceVecP1<dim>::feSpaceVecP1(feMesh *mesh, const std::string fieldID, const s
   double coor[6] = {-1., 0., 0., 1., 0., 0.};
   _Lcoor.resize(6 * dim);
   duplicateScalarArray(6, 3, coor, dim, _Lcoor);
-};
+}
 
 template <int dim> std::vector<double> feSpaceVecP1<dim>::L(double *r)
 {
@@ -222,13 +222,13 @@ template <int dim> std::vector<double> feSpaceVecP1<dim>::L(double *r)
   std::vector<double> res(_nFunctions);
   duplicateScalarArray(2, 1, phi, dim, res);
   return res;
-};
+}
 
 template <int dim> void feSpaceVecP1<dim>::L(double *r, double *res)
 {
   double phi[2] = {(1. - r[0]) / 2., (1. + r[0]) / 2.};
   duplicateScalarArray(2, 1, phi, dim, res);
-};
+}
 
 template <int dim> std::vector<double> feSpaceVecP1<dim>::dLdr(double *r)
 {
@@ -237,7 +237,7 @@ template <int dim> std::vector<double> feSpaceVecP1<dim>::dLdr(double *r)
   std::vector<double> res(_nFunctions);
   duplicateScalarArray(2, 1, dldr, dim, res);
   return res;
-};
+}
 
 template <int dim> void feSpaceVecP1<dim>::initializeNumberingUnknowns()
 {
@@ -283,7 +283,7 @@ feSpace1D_DG_P1::feSpace1D_DG_P1(feMesh *mesh, const std::string fieldID,
   _nFunctions = 2;
   _Lcoor = {-1., 0., 0., 1., 0., 0.};
   _DOFinitialization = dofInitialization::NODEWISE;
-};
+}
 
 std::vector<double> feSpace1D_DG_P1::L(double *r) { return {(1. - r[0]) / 2., (1. + r[0]) / 2.}; };
 
@@ -291,7 +291,7 @@ void feSpace1D_DG_P1::L(double *r, double *L)
 {
   L[0] = (1. - r[0]) / 2.;
   L[1] = (1. + r[0]) / 2.;
-};
+}
 
 std::vector<double> feSpace1D_DG_P1::dLdr(double *r) { UNUSED(r); return {-1. / 2., 1. / 2.}; };
 
@@ -326,7 +326,7 @@ feSpace1D_CR0::feSpace1D_CR0(feMesh *mesh, const std::string fieldID, const std:
 {
   _nFunctions = 1;
   _Lcoor = {0., 0., 0.};
-};
+}
 
 std::vector<double> feSpace1D_CR0::L(double *r) { UNUSED(r); return {1.}; };
 
@@ -372,24 +372,24 @@ feSpace1DP2::feSpace1DP2(feMesh *mesh, const std::string fieldID, const std::str
 {
   _nFunctions = 3;
   _Lcoor = {-1., 0., 0., 1., 0., 0., 0., 0., 0.};
-};
+}
 
 std::vector<double> feSpace1DP2::L(double *r)
 {
   return {-r[0] * (1. - r[0]) / 2., r[0] * (1. + r[0]) / 2., -(r[0] + 1.) * (r[0] - 1.)};
-};
+}
 
 void feSpace1DP2::L(double *r, double *L)
 {
   L[0] = -r[0] * (1. - r[0]) / 2.;
   L[1] = r[0] * (1. + r[0]) / 2.;
   L[2] = -(r[0] + 1.) * (r[0] - 1.);
-};
+}
 
 std::vector<double> feSpace1DP2::dLdr(double *r)
 {
   return {(2. * r[0] - 1.) / 2., (2. * r[0] + 1.) / 2., -2. * r[0]};
-};
+}
 
 void feSpace1DP2::initializeNumberingUnknowns()
 {
@@ -451,7 +451,7 @@ feSpaceVecP2<dim>::feSpaceVecP2(feMesh *mesh, const std::string fieldID, const s
   double coor[3 * 3] = {-1., 0., 0., 1., 0., 0., 0., 0., 0.};
   _Lcoor.resize(3 * 3 * dim);
   duplicateScalarArray(3 * 3, 3, coor, dim, _Lcoor);
-};
+}
 
 template <int dim> std::vector<double> feSpaceVecP2<dim>::L(double *r)
 {
@@ -459,13 +459,13 @@ template <int dim> std::vector<double> feSpaceVecP2<dim>::L(double *r)
   std::vector<double> res(_nFunctions);
   duplicateScalarArray(3, 1, phi, dim, res);
   return res;
-};
+}
 
 template <int dim> void feSpaceVecP2<dim>::L(double *r, double *res)
 {
   double phi[3] = {-r[0] * (1. - r[0]) / 2., r[0] * (1. + r[0]) / 2., -(r[0] + 1.) * (r[0] - 1.)};
   duplicateScalarArray(3, 1, phi, dim, res);
-};
+}
 
 template <int dim> std::vector<double> feSpaceVecP2<dim>::dLdr(double *r)
 {
@@ -473,7 +473,7 @@ template <int dim> std::vector<double> feSpaceVecP2<dim>::dLdr(double *r)
   std::vector<double> res(_nFunctions);
   duplicateScalarArray(3, 1, dldr, dim, res);
   return res;
-};
+}
 
 template <int dim> void feSpaceVecP2<dim>::initializeNumberingUnknowns()
 {
@@ -535,7 +535,7 @@ feSpace1DP3::feSpace1DP3(std::string cncGeoID) : feScalarSpace(1, nullptr, "GEO"
   _nFunctions = 4;
   _Lcoor = {-1., 0., 0., 1., 0., 0., -1. / 3., 0., 0., 1. / 3., 0., 0.};
   _isGeometricInterpolant = true;
-};
+}
 
 feSpace1DP3::feSpace1DP3(feMesh *mesh, const std::string fieldID, const std::string cncGeoID,
                          feFunction *fct)
@@ -543,7 +543,7 @@ feSpace1DP3::feSpace1DP3(feMesh *mesh, const std::string fieldID, const std::str
 {
   _nFunctions = 4;
   _Lcoor = {-1., 0., 0., 1., 0., 0., -1. / 3., 0., 0., 1. / 3., 0., 0.};
-};
+}
 
 std::vector<double> feSpace1DP3::L(double *r)
 {
@@ -551,7 +551,7 @@ std::vector<double> feSpace1DP3::L(double *r)
           9. / 16. * (r[0] + 1. / 3.) * (r[0] - 1. / 3.) * (r[0] + 1.),
           27. / 16. * (r[0] + 1.) * (r[0] - 1. / 3.) * (r[0] - 1.),
           -27. / 16. * (r[0] + 1.) * (r[0] + 1. / 3.) * (r[0] - 1.)};
-};
+}
 
 void feSpace1DP3::L(double *r, double *L)
 {
@@ -559,7 +559,7 @@ void feSpace1DP3::L(double *r, double *L)
   L[1] = 9. / 16. * (r[0] + 1. / 3.) * (r[0] - 1. / 3.) * (r[0] + 1.);
   L[2] = 27. / 16. * (r[0] + 1.) * (r[0] - 1. / 3.) * (r[0] - 1.);
   L[3] = -27. / 16. * (r[0] + 1.) * (r[0] + 1. / 3.) * (r[0] - 1.);
-};
+}
 
 std::vector<double> feSpace1DP3::dLdr(double *r)
 {
@@ -567,7 +567,7 @@ std::vector<double> feSpace1DP3::dLdr(double *r)
           r[0] * (9. / 8.) + r[0] * r[0] * (27. / 16.) - 1. / 16.,
           r[0] * (-9. / 8.) + r[0] * r[0] * (81. / 16.) - 27. / 16.,
           r[0] * (-9. / 8.) - r[0] * r[0] * (81. / 16.) + 27. / 16.};
-};
+}
 
 void feSpace1DP3::initializeNumberingUnknowns()
 {
@@ -620,7 +620,7 @@ feSpaceVecP3<dim>::feSpaceVecP3(feMesh *mesh, const std::string fieldID, const s
   double coor[4 * 3] = {-1., 0., 0., 1., 0., 0., -1. / 3., 0., 0., 1. / 3., 0., 0.};
   _Lcoor.resize(4 * 3 * dim);
   duplicateScalarArray(4 * 3, 3, coor, dim, _Lcoor);
-};
+}
 
 template <int dim> std::vector<double> feSpaceVecP3<dim>::L(double *r)
 {
@@ -631,7 +631,7 @@ template <int dim> std::vector<double> feSpaceVecP3<dim>::L(double *r)
   std::vector<double> res(_nFunctions);
   duplicateScalarArray(4, 1, phi, dim, res);
   return res;
-};
+}
 
 template <int dim> void feSpaceVecP3<dim>::L(double *r, double *res)
 {
@@ -640,7 +640,7 @@ template <int dim> void feSpaceVecP3<dim>::L(double *r, double *res)
                    27. / 16. * (r[0] + 1.) * (r[0] - 1. / 3.) * (r[0] - 1.),
                    -27. / 16. * (r[0] + 1.) * (r[0] + 1. / 3.) * (r[0] - 1.)};
   duplicateScalarArray(4, 1, phi, dim, res);
-};
+}
 
 template <int dim> std::vector<double> feSpaceVecP3<dim>::dLdr(double *r)
 {
@@ -651,7 +651,7 @@ template <int dim> std::vector<double> feSpaceVecP3<dim>::dLdr(double *r)
   std::vector<double> res(_nFunctions);
   duplicateScalarArray(4, 1, dldr, dim, res);
   return res;
-};
+}
 
 template <int dim> void feSpaceVecP3<dim>::initializeNumberingUnknowns()
 {
@@ -710,7 +710,7 @@ feSpace1D_H3::feSpace1D_H3(feMesh *mesh, const std::string fieldID, const std::s
 {
   _nFunctions = 4;
   _Lcoor = {-1., 0., 0., -1., 0., 0., 1., 0., 0., 1., 0., 0.};
-};
+}
 
 std::vector<double> feSpace1D_H3::L(double *r)
 {
@@ -719,7 +719,7 @@ std::vector<double> feSpace1D_H3::L(double *r)
           x * (-1.0 / 4.0) - (x * x) / 4.0 + (x * x * x) / 4.0 + 1.0 / 4.0,
           x * (3.0 / 4.0) - (x * x * x) / 4.0 + 1.0 / 2.0,
           x * (-1.0 / 4.0) + (x * x) / 4.0 + (x * x * x) / 4.0 - 1.0 / 4.0};
-};
+}
 
 void feSpace1D_H3::L(double *r, double *L)
 {
@@ -735,14 +735,14 @@ std::vector<double> feSpace1D_H3::dLdr(double *r)
   double x = r[0];
   return {(x * x) * (3.0 / 4.0) - 3.0 / 4.0, x * (-1.0 / 2.0) + (x * x) * (3.0 / 4.0) - 1.0 / 4.0,
           (x * x) * (-3.0 / 4.0) + 3.0 / 4.0, x / 2.0 + (x * x) * (3.0 / 4.0) - 1.0 / 4.0};
-};
+}
 
 std::vector<double> feSpace1D_H3::d2Ldr2(double *r)
 {
   double x = r[0];
   return {x * (3.0 / 2.0), x * (3.0 / 2.0) - 1.0 / 2.0, x * (-3.0 / 2.0),
           x * (3.0 / 2.0) + 1.0 / 2.0};
-};
+}
 
 void feSpace1D_H3::initializeNumberingUnknowns()
 {
@@ -776,7 +776,7 @@ feSpace1DP4::feSpace1DP4(std::string cncGeoID) : feScalarSpace(1, nullptr, "GEO"
   _nFunctions = 5;
   _Lcoor = {-1., 0., 0., 1., 0., 0., -1. / 2., 0., 0., 0., 0., 0., 1. / 2., 0., 0.};
   _isGeometricInterpolant = true;
-};
+}
 
 feSpace1DP4::feSpace1DP4(feMesh *mesh, const std::string fieldID, const std::string cncGeoID,
                          feFunction *fct)
@@ -784,7 +784,7 @@ feSpace1DP4::feSpace1DP4(feMesh *mesh, const std::string fieldID, const std::str
 {
   _nFunctions = 5;
   _Lcoor = {-1., 0., 0., 1., 0., 0., -1. / 2., 0., 0., 0., 0., 0., 1. / 2., 0., 0.};
-};
+}
 
 std::vector<double> feSpace1DP4::L(double *r)
 {
@@ -826,7 +826,7 @@ std::vector<double> feSpace1DP4::dLdr(double *r)
             r[0] * (r[0] - 1.0) * (r[0] + 1.0 / 2.0) * (8.0 / 3.0) -
             r[0] * (r[0] + 1.0) * (r[0] + 1.0 / 2.0) * (8.0 / 3.0) -
             (r[0] - 1.0) * (r[0] + 1.0) * (r[0] + 1.0 / 2.0) * (8.0 / 3.0)};
-};
+}
 
 void feSpace1DP4::initializeNumberingUnknowns()
 {
@@ -882,7 +882,7 @@ feSpaceVecP4<dim>::feSpaceVecP4(feMesh *mesh, const std::string fieldID, const s
   double coor[5 * 3] = {-1., 0., 0., 1., 0., 0., -1. / 2., 0., 0., 0., 0., 0., 1. / 2., 0., 0.};
   _Lcoor.resize(5 * 3 * dim);
   duplicateScalarArray(5 * 3, 3, coor, dim, _Lcoor);
-};
+}
 
 template <int dim> std::vector<double> feSpaceVecP4<dim>::L(double *r)
 {
@@ -894,7 +894,7 @@ template <int dim> std::vector<double> feSpaceVecP4<dim>::L(double *r)
   std::vector<double> res(_nFunctions);
   duplicateScalarArray(5, 1, phi, dim, res);
   return res;
-};
+}
 
 template <int dim> void feSpaceVecP4<dim>::L(double *r, double *res)
 {
@@ -903,7 +903,7 @@ template <int dim> void feSpaceVecP4<dim>::L(double *r, double *res)
                    27. / 16. * (r[0] + 1.) * (r[0] - 1. / 3.) * (r[0] - 1.),
                    -27. / 16. * (r[0] + 1.) * (r[0] + 1. / 3.) * (r[0] - 1.)};
   duplicateScalarArray(4, 1, phi, dim, res);
-};
+}
 
 template <int dim> std::vector<double> feSpaceVecP4<dim>::dLdr(double *r)
 {
@@ -930,7 +930,7 @@ template <int dim> std::vector<double> feSpaceVecP4<dim>::dLdr(double *r)
   std::vector<double> res(_nFunctions);
   duplicateScalarArray(5, 1, dldr, dim, res);
   return res;
-};
+}
 
 template <int dim> void feSpaceVecP4<dim>::initializeNumberingUnknowns()
 {
@@ -997,7 +997,7 @@ feSpace1D_Legendre::feSpace1D_Legendre(const int degree, feMesh *mesh, const std
   _nFunctions = degree + 1;
   _Lcoor = {};
   _DOFinitialization = dofInitialization::LEAST_SQUARES;
-};
+}
 
 void legendrePolynomials(double x, int p, double *phi)
 {
@@ -1031,7 +1031,7 @@ std::vector<double> feSpace1D_Legendre::dLdr(double *r)
   legendrePolynomials(r[0], _degree, phi.data());
   legendrePolynomialsDerivative(r[0], _degree, phi.data(), dphi.data());
   return dphi;
-};
+}
 
 void feSpace1D_Legendre::initializeNumberingUnknowns()
 {
