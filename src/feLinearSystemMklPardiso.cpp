@@ -810,9 +810,12 @@ bool feLinearSystemMklPardiso::solve(double *normDx, double *normResidual, doubl
   pardisoStep = "solve";
   if(!checkPardisoErrorCode(ERROR, pardisoStep)) return false;
 
+#if defined(HAVE_MPI)
   int rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  if(rank == 0) {
+  if(rank == 0)
+#endif
+  {
     feInfoCond(FE_VERBOSE > 1, "\t\t\t\tSolved linear system with MKL Pardiso in %f s", toc());
   }
 
