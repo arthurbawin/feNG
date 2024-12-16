@@ -852,9 +852,9 @@ void feNewRecovery::computeRHSAndSolve(int numRecoveries, int nRecoveredFields,
 
   std::vector<double> &solVec = _sol->getSolutionReference();
 
-#if defined(HAVE_OMP)
-#pragma omp parallel
-#endif
+  #if defined(HAVE_OMP)
+  #pragma omp parallel
+  #endif
   {
     std::vector<feInt> adr(_intSpace->getNumFunctions());
     std::vector<double> solution(_intSpace->getNumFunctions());
@@ -866,9 +866,9 @@ void feNewRecovery::computeRHSAndSolve(int numRecoveries, int nRecoveredFields,
     std::vector<double> recoveryVectorOnBoundary(1, 0.);
     std::vector<double> u(numRecoveries, 0.);
 
-#if defined(HAVE_OMP)
-#pragma omp for
-#endif
+    #if defined(HAVE_OMP)
+    #pragma omp for
+    #endif
     for(auto v : vertices) {
 #if defined(TREAT_BOUNDARIES)
       // Only reconstruct on non-boundary vertices
@@ -939,9 +939,9 @@ void feNewRecovery::computeRHSAndSolve(int numRecoveries, int nRecoveredFields,
             recoveryVector[i] = sol(i);
           }
 
-#if defined(HAVE_OMP)
-#pragma omp critical
-#endif
+          #if defined(HAVE_OMP)
+          #pragma omp critical
+          #endif
           recoveryCoeff[v][nRecoveredFields + iComp] = recoveryVector;
         }
 #if defined(TREAT_BOUNDARIES)
@@ -950,15 +950,15 @@ void feNewRecovery::computeRHSAndSolve(int numRecoveries, int nRecoveredFields,
     }
 
 #if defined(TREAT_BOUNDARIES)
-// Wait for all recoveries to be computed at interior vertices
-#if defined(HAVE_OMP)
-#pragma omp barrier
-#endif
+    // Wait for all recoveries to be computed at interior vertices
+    #if defined(HAVE_OMP)
+    #pragma omp barrier
+    #endif
 
-// Now treat the boundary vertices
-#if defined(HAVE_OMP)
-#pragma omp for
-#endif
+    // Now treat the boundary vertices
+    #if defined(HAVE_OMP)
+    #pragma omp for
+    #endif
     for(auto v : vertices) {
       // Only reconstruct on non-boundary vertices
       if(isVertexBoundary[v]) {

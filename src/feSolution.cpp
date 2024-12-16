@@ -410,7 +410,7 @@ void feSolution::setSolDotToZero()
 // to export the full solution history
 void feSolution::printSol(std::string file)
 {
-  FILE *f;
+  FILE *f = nullptr;
   if(file != "") {
     f = fopen(file.c_str(), "w");
     fprintf(f, "%12.16f\n", _tn); // Print the current time
