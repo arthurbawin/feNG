@@ -266,7 +266,7 @@ feLinearSystemMklPardiso::feLinearSystemMklPardiso(std::vector<feBilinearForm *>
 
   NRHS = 1;
   MAXFCT = 1;
-  MSGLVL = 1;
+  MSGLVL = 0;
   MNUM = 1;
   ERROR = 0;
 #else
@@ -302,7 +302,7 @@ feLinearSystemMklPardiso::feLinearSystemMklPardiso(std::vector<feBilinearForm *>
   IPARM[34] = 1; /* 0-based indexing - (0) Fortran-style (1-based) - (1) C-style (0-based) */
   NRHS = 1;
   MAXFCT = 1;
-  MSGLVL = 1;
+  MSGLVL = 0;
   MNUM = 1;
   ERROR = 0;
 #endif

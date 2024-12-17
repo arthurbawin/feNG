@@ -1,9 +1,6 @@
 #ifndef _FENG_TESTS_
 #define _FENG_TESTS_
 
-extern int my_argc;
-extern char** my_argv;
-
 int compareOutputFiles(std::string &testRoot, std::stringstream &resultBuffer)
 {
   std::string expectedFile = testRoot + ".output";

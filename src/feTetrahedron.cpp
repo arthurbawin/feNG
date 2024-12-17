@@ -123,7 +123,7 @@ static int sum4Digits(int val) {
 }
 
 //
-// This is slow for very high polynomial degrees n (>10)
+// This is slow for very high polynomial degrees n (>12)
 //
 void getTetLagrangeBarycentricCoord(int n, std::vector<double> &barycentricCoord)
 {
@@ -139,21 +139,14 @@ void getTetLagrangeBarycentricCoord(int n, std::vector<double> &barycentricCoord
 
   // Edges: add n-1 reference vertices per edge
   if(n >= 2) {
-    int numEdgeDOF = n-1;
-    if(n > 1) {
-      for(int i = 0; i < 6; ++i) {
-        for(int j = 0; j < numEdgeDOF; ++j) {
-
-          double pt[4] = {0.,0.,0.,0.};
-
-          for(int k = 0; k < 4; ++k) {
-            pt[k] = (n-(j+1))/ (double) n * barycentricCoord[4*_edges[i][0]+k] +
-                       (j+1) / (double) n * barycentricCoord[4*_edges[i][1]+k];
-          }
-
-          barycentricCoord.insert(barycentricCoord.end(), std::begin(pt), std::end(pt));
-
+    for(int i = 0; i < 6; ++i) {
+      for(int j = 0; j < n-1; ++j) {
+        double pt[4] = {0.,0.,0.,0.};
+        for(int k = 0; k < 4; ++k) {
+          pt[k] = (n-(j+1))/ (double) n * barycentricCoord[4*_edges[i][0]+k] +
+                     (j+1) / (double) n * barycentricCoord[4*_edges[i][1]+k];
         }
+        barycentricCoord.insert(barycentricCoord.end(), std::begin(pt), std::end(pt));
       }
     }
   }
@@ -180,8 +173,6 @@ void getTetLagrangeBarycentricCoord(int n, std::vector<double> &barycentricCoord
 
     for(int i = 0; i < 4; ++i)
     {
-      // feInfo("Face %d,%d,%d", _faces[i][0], _faces[i][1], _faces[i][2]);
-
       // Shift coefficients to the right by chunks of an outer spiral?
       std::vector<int> c2(spiralCoeff);
       int start = 0, end = 0, shift = fmax(0,n-3);
@@ -218,24 +209,23 @@ void getTetLagrangeBarycentricCoord(int n, std::vector<double> &barycentricCoord
     }
   }
 
-  // Volume reference vertices
+  // Volume reference vertices.
   // The order does not matter for those vertices,
   // as they are not shared between two tets and there are
-  // no orientation issues during the DOF numbering
+  // no orientation issues during the DOF numbering.
   // We just need to generate the complete list of barycentric
   // components in any order.
   if(n >= 4) {
-
     if(n < 13) {
       // If n < 13, we can represent a point in barycentric coordinates
-      // using a integer of 4 digits which sum to up to 12,
+      // using an integer with 4 digits which sum to up to 12,
       // this is faster than using vectors and sets.
       std::vector<int> allPts;
-      std::queue<int> q2;
+      std::queue<int> q;
       int ini = 1111;
-      q2.push(ini);
-      while(!q2.empty()) {
-        int ft = q2.front();
+      q.push(ini);
+      while(!q.empty()) {
+        int ft = q.front();
         int sum = sum4Digits(ft);
         if(sum > n) {
           // Do nothing and remove point
@@ -244,12 +234,12 @@ void getTetLagrangeBarycentricCoord(int n, std::vector<double> &barycentricCoord
           allPts.push_back(ft);
         } else {
           // Add all possible increments to the queue
-          q2.push(ft+1000);
-          q2.push(ft+100);
-          q2.push(ft+10);
-          q2.push(ft+1);
+          q.push(ft+1000);
+          q.push(ft+100);
+          q.push(ft+10);
+          q.push(ft+1);
         }
-        q2.pop();
+        q.pop();
       }
 
       std::sort(allPts.begin(), allPts.end());
@@ -272,25 +262,22 @@ void getTetLagrangeBarycentricCoord(int n, std::vector<double> &barycentricCoord
       std::vector<int> pt = {1,1,1,1};
       q.push(pt);
       while(!q.empty()) {
-
-        {
-          std::vector<int> &ft = q.front();
-          int sum = std::accumulate(ft.begin(), ft.end(), 0);
-          if(sum > n) {
-            // Do nothing and remove point
-          } else if(sum == n) {
-            // Keep point
-            allPts.insert(ft);
-          } else {
-            // Add all possible increments to the queue
-            for(int i = 0; i < 4; ++i) {
-              std::vector<int> pt2 = ft;
-              pt2[i]++;
-              q.push(pt2);
-            }
+        std::vector<int> &ft = q.front();
+        int sum = std::accumulate(ft.begin(), ft.end(), 0);
+        if(sum > n) {
+          // Do nothing and remove point
+        } else if(sum == n) {
+          // Keep point
+          allPts.insert(ft);
+        } else {
+          // Add all possible increments to the queue
+          for(int i = 0; i < 4; ++i) {
+            std::vector<int> pt2 = ft;
+            pt2[i]++;
+            q.push(pt2);
           }
-          q.pop();
         }
+        q.pop();
       }
 
       for(auto &val : allPts) {

@@ -16,10 +16,6 @@
 /* Supported linear solvers */
 typedef enum { MKLPARDISO, PETSC } linearSolverType;
 
-// To call at the very beginning and the very end of the program
-void petscInitialize(int argc, char **argv);
-void petscFinalize();
-
 // Create a linear system and perform safety checks.
 // This is the recommended way of creating a linear system.
 // Call within feCheck( ... ) to safely exit if a problem arises.
