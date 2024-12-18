@@ -145,16 +145,22 @@ static void feMessageGeneral(int messageLevel, const char *func, const char *fil
 feStatus feMessageInfo(const char *func, const char *file, const char *line, const char *fmt, ...)
 {
 #if defined(HAVE_MPI)
-  int rank;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  if(rank == 0)
+  int initialized;
+  MPI_Initialized(&initialized);
+  if(initialized) {
+    int rank;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    if(rank == 0)
 #endif
-  {
-    va_list args;
-    va_start(args, fmt);
-    feMessageGeneral(FE_MSGLEVEL_INFO, func, file, line, encodingIssue, "", fmt, args);
-    va_end(args);
+    {
+      va_list args;
+      va_start(args, fmt);
+      feMessageGeneral(FE_MSGLEVEL_INFO, func, file, line, encodingIssue, "", fmt, args);
+      va_end(args);
+    }
+#if defined(HAVE_MPI)
   }
+#endif
   return FE_STATUS_OK;
 }
 
