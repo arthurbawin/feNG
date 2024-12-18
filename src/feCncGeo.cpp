@@ -126,7 +126,7 @@ feCncGeo::feCncGeo(const int tag, const int dimension, const int ambientDimensio
   colorElements(1);
   // printColoringStatistics();
 
-  feWarning("Replace the coloring members in feCncGeo with a feColoring");
+  // feWarning("Replace the coloring members in feCncGeo with a feColoring");
   // _mycoloring = std::make_unique<feColoring>(1, _nVerticesPerElm, _connecVertices, _connecElem);
 }
 

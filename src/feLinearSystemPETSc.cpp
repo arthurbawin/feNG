@@ -82,7 +82,7 @@ void feLinearSystemPETSc::initializeSequential()
       feInfo("\t\tNumber of nonzero allocated             = %f", nz_a);
       feInfo("\t\tNumber of nonzero used                  = %f", nz_u);
       feInfo("\t\tNumber of nonzero unneeded              = %f", nz_un);
-      feInfo("");
+      // feInfo("");
     }
   } else {
     // Without allocation (bad) :
@@ -276,12 +276,12 @@ int feLinearSystemPETSc::initializeMPI()
         nz_un = info.nz_unneeded;
         mem = info.memory;
 
-        feInfo("\t\tAdditional info from PETSc for matrix creation:");
-        feInfo("\t\t\tNumber of mallocs during MatSetValues() on proc %d : %f", rank, mal);
-        feInfo("\t\t\tMemory allocated                        on proc %d : %f", rank, mem );
-        feInfo("\t\t\tNumber of nonzero allocated             on proc %d : %f", rank, nz_a);
-        feInfo("\t\t\tNumber of nonzero used                  on proc %d : %f", rank, nz_u);
-        feInfo("\t\t\tNumber of nonzero unneeded              on proc %d : %f", rank, nz_un);
+        feInfoCollective("\t\tAdditional info from PETSc for matrix creation:");
+        feInfoCollective("\t\t\tNumber of mallocs during MatSetValues() on proc %d : %f", rank, mal);
+        feInfoCollective("\t\t\tMemory allocated                        on proc %d : %f", rank, mem );
+        feInfoCollective("\t\t\tNumber of nonzero allocated             on proc %d : %f", rank, nz_a);
+        feInfoCollective("\t\t\tNumber of nonzero used                  on proc %d : %f", rank, nz_u);
+        feInfoCollective("\t\t\tNumber of nonzero unneeded              on proc %d : %f", rank, nz_un);
       }
 
       ranktoprint++;

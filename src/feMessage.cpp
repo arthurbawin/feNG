@@ -4,11 +4,15 @@
   Original author : Celestin Marot
 */
 
+#include "feNG.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdarg.h>
 #if defined(HAVE_OMP)
 #include "omp.h"
+#endif
+#if defined(HAVE_MPI)
+#include "mpi.h"
 #endif
 #include "feMessage.h"
 
@@ -71,6 +75,17 @@ feStatus defaultMessageCallback(feMessage *msg)
 {
   if(msg->level == FE_MSGLEVEL_INFO)
     fprintf(stdout, "Info : %s\n", msg->string);
+  else if(msg->level == FE_MSGLEVEL_INFO_COLLECTIVE) {
+#if defined(HAVE_MPI)
+      int rank, size;
+      MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+      MPI_Comm_size(MPI_COMM_WORLD, &size);
+      char processor_name[MPI_MAX_PROCESSOR_NAME];
+      int name_len;
+      MPI_Get_processor_name(processor_name, &name_len);
+      fprintf(stdout, "Info %s - %d/%d : %s\n", processor_name, rank, size, msg->string);
+#endif
+  }
   else if(msg->level == FE_MSGLEVEL_ERROR)
     fprintf(stderr, "\n= X = Error : %s   \n in %s -> %s:%s\n", msg->string, msg->func, msg->file,
             msg->line);
@@ -129,9 +144,25 @@ static void feMessageGeneral(int messageLevel, const char *func, const char *fil
 
 feStatus feMessageInfo(const char *func, const char *file, const char *line, const char *fmt, ...)
 {
+#if defined(HAVE_MPI)
+  int rank;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  if(rank == 0)
+#endif
+  {
+    va_list args;
+    va_start(args, fmt);
+    feMessageGeneral(FE_MSGLEVEL_INFO, func, file, line, encodingIssue, "", fmt, args);
+    va_end(args);
+  }
+  return FE_STATUS_OK;
+}
+
+feStatus feMessageInfoCollective(const char *func, const char *file, const char *line, const char *fmt, ...)
+{
   va_list args;
   va_start(args, fmt);
-  feMessageGeneral(FE_MSGLEVEL_INFO, func, file, line, encodingIssue, "", fmt, args);
+  feMessageGeneral(FE_MSGLEVEL_INFO_COLLECTIVE, func, file, line, encodingIssue, "", fmt, args);
   va_end(args);
   return FE_STATUS_OK;
 }

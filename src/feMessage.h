@@ -17,6 +17,7 @@
 
 typedef enum {
   FE_MSGLEVEL_INFO = 0,
+  FE_MSGLEVEL_INFO_COLLECTIVE = 5,
   FE_MSGLEVEL_DEBUG = 1,
   FE_MSGLEVEL_WARNING = 2,
   FE_MSGLEVEL_ERROR = 3,
@@ -64,6 +65,7 @@ typedef enum {
 
 #define feInfo(...) feMessageInfo(__func__, __FILE__, STRINGIFY(__LINE__), ##__VA_ARGS__)
 #define feInfoCond(cond, ...) ((cond) ? feInfo(__VA_ARGS__) : 0)
+#define feInfoCollective(...) feMessageInfoCollective(__func__, __FILE__, STRINGIFY(__LINE__), ##__VA_ARGS__)
 #define feWarning(...) feMessageWarning(__func__, __FILE__, STRINGIFY(__LINE__), ##__VA_ARGS__)
 
 /* print an error message corresponding to a status */
@@ -94,7 +96,11 @@ typedef enum {
 
 void setVerbose(int level);
 
+// Prints info on MPI rank 0 if MPI is enabled
 feStatus feMessageInfo(const char *func, const char *file, const char *line, const char *fmt, ...);
+// Prints info on all MPI ranks
+feStatus feMessageInfoCollective(const char *func, const char *file, const char *line, const char *fmt, ...);
+
 feStatus feMessageWarning(const char *func, const char *file, const char *line, const char *fmt,
                           ...);
 feStatus feMessageError(feStatus status, const char *func, const char *file, const char *line,
