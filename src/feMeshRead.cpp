@@ -2070,11 +2070,6 @@ feStatus feMesh2DP1::readGmsh(const std::string meshName, const bool curved, con
     cnc->getFeSpace()->setMeshPtr(this);
   }
 
-  if(_cncGeo.size() > 0) {
-    _cncGeo[1]->printColoring("coloring.pos");
-    _cncGeo[1]->printColoring2("coloring2.pos");
-  }
-
   // Assign to each geometric FE space a pointer to its connectivity
   for(feCncGeo *cnc : _cncGeo) {
     cnc->getFeSpace()->setCncPtr(cnc);
