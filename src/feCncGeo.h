@@ -128,7 +128,8 @@ public:
   feCncGeo(const int tag, const int dimension, const int ambientDimension,
            const int nVerticesPerElement, const int nElements,
            const int nEdgesPerElement, const std::string &ID, const geometryType geometry,
-           const geometricInterpolant interpolant, feSpace *space, std::vector<int> connecVertices,
+           const geometricInterpolant interpolant, feSpace *space,
+           std::vector<int> connecVertices,
            std::vector<int> connecElem = std::vector<int>(),
            std::vector<int> connecEdges = std::vector<int>(),
            std::vector<int> connecTriangles = std::vector<int>());
@@ -144,54 +145,51 @@ public:
   int getNumElements() const { return _nElements; }
   int getNumEdges() const { return _nEdges; }
   int getNumEdgesPerElem() const { return _nEdgesPerElem; }
-
   geometryType getGeometry() const { return _geometry; };
   geometricInterpolant getInterpolant() const { return _interpolant; };
-
   feSpace *getFeSpace() const { return _geometricInterpolant; }
+  feMesh *getMeshPtr() { return _mesh; }
+  void setMeshPtr(feMesh *mesh) { _mesh = mesh; }
+
+  const std::vector<int> &getVerticesConnectivity() const { return _connecVertices; }
+  const std::vector<int> &getEdgeConnectivity() const { return _connecEdges; }
+  const std::vector<int> &getElemConnectivity() const { return _connecElem; }
+
+  //
+  // Get (and rarely set) vertex connectivity
+  //
+  int getUniqueVertexConnectivity(const int iVertex) const;
+  int getVertexConnectivity(const int iVertex) const;
+  int getVertexConnectivity(const int numElem, const int iVertex) const;
+  // void setVertexConnectivity(const int numElem, const int iVertex, const int val);
+  int getElementConnectivity(const int numElem) const;
+  void setElementConnectivity(const int numElem, const int val);
+  int getUniqueEdgeConnectivity(const int iEdge) const;
+  int getEdgeConnectivity(const int numElem, const int iEdge) const;
+  // void setEdgeConnectivity(const int numElem, const int iEdge, const int val);
+  int getFaceConnectivity(const int numElem, const int iFace) const;
+
+  const std::vector<double> &getJacobians() const { return _J; }
+  const std::vector<double> &getElementsVolume() const
+    { return _elementsVolume; };
+  const std::vector<double> &getMinimumScaledJacobianControlCoeffs() const
+    { return _minimumScaledJacobianControlCoeffs; };
+
+  feStatus computeJacobians(const bool ignoreNegativeJacobianWarning = false);
+  feStatus recomputeElementJacobian(const int iElm);
 
   // Set quadrature rule for the interpolation space.
   // Triggers the computation of jacobian determinants.
   feStatus setQuadratureRule(feQuadrature *rule);
-
-  feMesh *getMeshPtr() { return _mesh; }
-  void setMeshPtr(feMesh *mesh) { _mesh = mesh; }
-
-  feStatus computeJacobians(const bool ignoreNegativeJacobianWarning = false);
-  feStatus recomputeElementJacobian(const int iElm);
-  const std::vector<double> &getJacobians() const { return _J; }
-  const std::vector<double> &getElementsVolume() const
-    { return _elementsVolume; };
   feStatus computeMinimumScaledJacobianControlCoefficients();
-  const std::vector<double> &getMinimumScaledJacobianControlCoeffs() const
-    { return _minimumScaledJacobianControlCoeffs; };
 
   void computeElementTransformation(std::vector<double> &elementCoord, const int iQuadNode,
                                     const double jac, ElementTransformation &transformation) const;
 
   feStatus computeNormalVectors(std::vector<double> &normalVectors) const;
 
-  const std::vector<int> &getVerticesConnectivity() const { return _connecVertices; }
-  const std::vector<int> &getEdgeConnectivity() const { return _connecEdges; }
-  const std::vector<int> &getElemConnectivity() const { return _connecElem; }
-
-  // Get and set vertex connectivity
-  int getUniqueVertexConnectivity(const int iVertex) const;
-  int getVertexConnectivity(const int iVertex) const;
-  int getVertexConnectivity(const int numElem, const int iVertex) const;
-  void setVertexConnectivity(const int numElem, const int iVertex, const int val);
-
-  // Get and set element connectivity
-  int getElementConnectivity(const int numElem) const;
-  void setElementConnectivity(const int numElem, const int val);
-
-  // Get and set edge connectivity
-  int getUniqueEdgeConnectivity(const int iEdge) const;
-  int getEdgeConnectivity(const int numElem, const int iEdge) const;
-  void setEdgeConnectivity(const int numElem, const int iEdge, const int val);
-
+  // ========== To wrap in a feColoring ================
   void colorElements(int coloringAlgorithm);
-
   int getNbColor() const { return _nbColor; };
   const std::vector<int> &getColorElm() const { return _elmToColor; };
   const std::vector<int> &getNbElmPerColor() const { return _nbElmPerColor; };
@@ -202,6 +200,7 @@ public:
   void printColoringStatistics();
   void printColoring(std::string fileName);
   void printColoring2(std::string fileName);
+  // ===================================================
 
   // Write constant field on an element to a .pos file (Gmsh visualization)
   void writeElementToPOS(FILE *posFile, const std::vector<double> &elementCoord, const double value) const;

@@ -28,8 +28,9 @@ set(feNG_SRC
     fePolynomial.cpp
     feRecovery.cpp
     feNewRecovery.cpp
-    feQuadratureTri.cpp
     feQuadrature.cpp
+    feQuadratureTet.cpp
+    feQuadratureTri.cpp
     feSolution.cpp
     feSolutionContainer.cpp
     feSolver.cpp

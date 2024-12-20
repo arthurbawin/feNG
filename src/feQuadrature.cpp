@@ -35,7 +35,7 @@ feQuadrature::feQuadrature(int degree, geometryType geometry) : _degQuad(degree)
   } else if(geometry == geometryType::HEX) {
     computeWeightAndRootCube();
   } else if(geometry == geometryType::TET) {
-    computeWeightAndRootTetra();
+    computeWeightAndRootTetra(degree);
   } else {
     feErrorMsg(FE_STATUS_ERROR, "Could not create a quadrature rule for geometry \"%s\".",
                toString(geometry).data());
@@ -149,22 +149,42 @@ void feQuadrature::computeWeightAndRootTri(int degree, int method)
   }
 }
 
-void feQuadrature::computeWeightAndRootTetra()
+void feQuadrature::computeWeightAndRootTetra(int degree)
 {
-  _w.resize(pow(_nQuad1D, _dim));
-  _xr.resize(pow(_nQuad1D, _dim));
-  _yr.resize(pow(_nQuad1D, _dim));
-  _zr.resize(pow(_nQuad1D, _dim));
-  computeWeightAndRoot(_nQuad1D);
-  int l = 0;
-  for(int i = 0; i < _nQuad1D; ++i) {
-    for(int j = 0; j < _nQuad1D; ++j) {
-      for(int k = 0; k < _nQuad1D; ++k) {
-        _xr[l] = (1 - _x1D[i]) / 2;
-        _yr[l] = (1 + _x1D[i]) * (1 - _x1D[j]) / 4;
-        _zr[l] = (1 + _x1D[i]) * (1 + _x1D[j]) * (1 - _x1D[k]) / 8;
-        _w[l] = _w1D[j] * _w1D[i] * _w1D[k] * (1 + _x1D[i]) * (1 + _x1D[i]) * (1 + _x1D[j]) / 64;
-        ++l;
+  if(degree <= 21) {
+    // Get hardcoded quadrature points from Gmsh
+    // Weights for high-order rules may be negative
+    IntPt *rule = getGQTetPts(degree);
+    int nQuad = getNGQTetPts(degree);
+
+    _w.resize(nQuad);
+    _xr.resize(nQuad);
+    _yr.resize(nQuad);
+    _zr.resize(nQuad);
+
+    for(int i = 0; i < nQuad; ++i) {
+      _xr[i] = rule[i].pt[0];
+      _yr[i] = rule[i].pt[1];
+      _zr[i] = rule[i].pt[2];
+      _w[i] = rule[i].weight;
+    }
+
+  } else {
+    _w.resize(pow(_nQuad1D, _dim));
+    _xr.resize(pow(_nQuad1D, _dim));
+    _yr.resize(pow(_nQuad1D, _dim));
+    _zr.resize(pow(_nQuad1D, _dim));
+    computeWeightAndRoot(_nQuad1D);
+    int l = 0;
+    for(int i = 0; i < _nQuad1D; ++i) {
+      for(int j = 0; j < _nQuad1D; ++j) {
+        for(int k = 0; k < _nQuad1D; ++k) {
+          _xr[l] = (1 - _x1D[i]) / 2;
+          _yr[l] = (1 + _x1D[i]) * (1 - _x1D[j]) / 4;
+          _zr[l] = (1 + _x1D[i]) * (1 + _x1D[j]) * (1 - _x1D[k]) / 8;
+          _w[l] = _w1D[j] * _w1D[i] * _w1D[k] * (1 + _x1D[i]) * (1 + _x1D[i]) * (1 + _x1D[j]) / 64;
+          ++l;
+        }
       }
     }
   }

@@ -233,8 +233,8 @@ feLinearSystemMklPardiso::feLinearSystemMklPardiso(std::vector<feBilinearForm *>
   */
   IPARM[ 1] =  3;
 
-  if(IPARM[1] = 10 && _ownershipSplit < 0) {
-    feErrorMsg("iparm[1] = 10 is for distributed matrices only - Incompatible with ownershipSplit = -1");
+  if(IPARM[1] == 10 && _ownershipSplit < 0) {
+    feErrorMsg(FE_STATUS_ERROR, "iparm[1] = 10 is for distributed matrices only - Incompatible with ownershipSplit = -1");
     exit(-1);
   }
 

@@ -12,9 +12,13 @@ struct IntPt {
   double weight;
 };
 
-// Hardcoded quadrature points and weights
+// Hardcoded quadrature points and weights for triangles
 int getNGQTPts(int order);
 IntPt *getGQTPts(int order);
+
+// Hardcoded quadrature points and weights for tetrahedra
+int getNGQTetPts(int order);
+IntPt *getGQTetPts(int order);
 
 class feQuadrature
 {
@@ -43,7 +47,7 @@ private:
   void computeWeightAndRootTri(int degree, int method);
   void computeWeightAndRootSquare();
   void computeWeightAndRootCube();
-  void computeWeightAndRootTetra();
+  void computeWeightAndRootTetra(int degree);
 
 public:
   std::vector<double> getXPoints() { return _xr; }

@@ -131,6 +131,7 @@ void feSpaceTetPn::L(double *r, double *phi)
   }
 }
 
+// À modifier
 std::vector<double> feSpaceTetPn::dLdr(double *r) { UNUSED(r); return {-1., 1., 0., 0.}; }
 std::vector<double> feSpaceTetPn::dLds(double *r) { UNUSED(r); return {-1., 0., 1., 0.}; }
 std::vector<double> feSpaceTetPn::dLdt(double *r) { UNUSED(r); return {-1., 0., 0., 1.}; }

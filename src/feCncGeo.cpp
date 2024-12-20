@@ -83,8 +83,11 @@ feCncGeo::feCncGeo(const int tag, const int dimension, const int ambientDimensio
                    const int nVerticesPerElement,
                    const int nElements, const int nEdgesPerElement, const std::string &ID,
                    const geometryType geometry, const geometricInterpolant interpolant,
-                   feSpace *space, std::vector<int> connecVertices, std::vector<int> connecElem,
-                   std::vector<int> connecEdges, std::vector<int> connecTriangles)
+                   feSpace *space,
+                   std::vector<int> connecVertices,
+                   std::vector<int> connecElem,
+                   std::vector<int> connecEdges,
+                   std::vector<int> connecTriangles)
   : _ID(ID), _tag(tag), _dim(dimension), _ambientDim(ambientDimension),
   _geometry(geometry),
   _interpolant(interpolant),
@@ -100,18 +103,22 @@ feCncGeo::feCncGeo(const int tag, const int dimension, const int ambientDimensio
   if(connecElem.size() == 0) _connecElem.resize(nElements);
   if(connecEdges.size() == 0) _connecEdges.resize(nElements * nEdgesPerElement);
 
-  _elementsVolume.resize(_nElements, 0.);
+  _elementsVolume.resize(nElements, 0.);
   _minimumScaledJacobianControlCoeffs.resize(nElements, 0.);
-
-  std::sort(connecVertices.begin(), connecVertices.end());
-  _nVertices = std::unique(connecVertices.begin(), connecVertices.end()) - connecVertices.begin();
 
   // Create the connectivity of unique vertices
   // (_connecVertices has size nElm * nVerticesperElm)
+
+  // _nVertices = std::unique(connecVertices.begin(), connecVertices.end()) - connecVertices.begin();
+  std::unique(connecVertices.begin(), connecVertices.end()) - connecVertices.begin();
+  std::sort(connecVertices.begin(), connecVertices.end());
   _connecVerticesOnly = connecVertices;
+
   std::sort(_connecVerticesOnly.begin(), _connecVerticesOnly.end());
   auto last = std::unique(_connecVerticesOnly.begin(), _connecVerticesOnly.end());
   _connecVerticesOnly.erase(last, _connecVerticesOnly.end());
+  _nVertices = (int) _connecVerticesOnly.size();
+
 
   // Create the connectivity of unique edges
   _connecEdgesOnly = connecEdges;
@@ -121,6 +128,8 @@ feCncGeo::feCncGeo(const int tag, const int dimension, const int ambientDimensio
   last = std::unique(_connecEdgesOnly.begin(), _connecEdgesOnly.end());
   _connecEdgesOnly.erase(last, _connecEdgesOnly.end());
   _nEdges = _connecEdgesOnly.size();
+
+  // Create connectivity of unique triangles
 
   // Color the elements for partitioning
   colorElements(1);
@@ -156,18 +165,6 @@ int feCncGeo::getVertexConnectivity(const int iVertex) const
 
 int feCncGeo::getVertexConnectivity(const int numElem, const int iVertex) const
 {
-// #if defined(FENG_DEBUG)
-  if((size_t) (_nVerticesPerElm * numElem + iVertex) >= _connecVertices.size())
-    feErrorMsg(FE_STATUS_ERROR,
-               "Out of bounds: accessing entry %d in _connecVertices"
-               " of size %u",
-               _nVerticesPerElm * numElem + iVertex, _connecVertices.size());
-// #endif
-  return _connecVertices[_nVerticesPerElm * numElem + iVertex];
-}
-
-void feCncGeo::setVertexConnectivity(const int numElem, const int iVertex, const int val)
-{
 #if defined(FENG_DEBUG)
   if((size_t) (_nVerticesPerElm * numElem + iVertex) >= _connecVertices.size())
     feErrorMsg(FE_STATUS_ERROR,
@@ -175,8 +172,20 @@ void feCncGeo::setVertexConnectivity(const int numElem, const int iVertex, const
                " of size %u",
                _nVerticesPerElm * numElem + iVertex, _connecVertices.size());
 #endif
-  _connecVertices[_nVerticesPerElm * numElem + iVertex] = val;
+  return _connecVertices[_nVerticesPerElm * numElem + iVertex];
 }
+
+// void feCncGeo::setVertexConnectivity(const int numElem, const int iVertex, const int val)
+// {
+// #if defined(FENG_DEBUG)
+//   if((size_t) (_nVerticesPerElm * numElem + iVertex) >= _connecVertices.size())
+//     feErrorMsg(FE_STATUS_ERROR,
+//                "Out of bounds: accessing entry %d in _connecVertices"
+//                " of size %u",
+//                _nVerticesPerElm * numElem + iVertex, _connecVertices.size());
+// #endif
+//   _connecVertices[_nVerticesPerElm * numElem + iVertex] = val;
+// }
 
 int feCncGeo::getElementConnectivity(const int numElem) const
 {
@@ -226,16 +235,28 @@ int feCncGeo::getEdgeConnectivity(const int numElem, const int iEdge) const
   return _connecEdges[_nEdgesPerElem * numElem + iEdge];
 }
 
-void feCncGeo::setEdgeConnectivity(const int numElem, const int iEdge, const int val)
+// void feCncGeo::setEdgeConnectivity(const int numElem, const int iEdge, const int val)
+// {
+// #if defined(FENG_DEBUG)
+//   if((size_t) (_nEdgesPerElem * numElem + iEdge) >= _connecEdges.size())
+//     feErrorMsg(FE_STATUS_ERROR,
+//                "Out of bounds: accessing entry %d in _connecEdges"
+//                " of size %u",
+//                _nEdgesPerElem * numElem + iEdge, _connecEdges.size());
+// #endif
+//   _connecEdges[_nEdgesPerElem * numElem + iEdge] = val;
+// }
+
+int feCncGeo::getFaceConnectivity(const int numElem, const int iFace) const
 {
 #if defined(FENG_DEBUG)
-  if((size_t) (_nEdgesPerElem * numElem + iEdge) >= _connecEdges.size())
+  if((size_t) (_nTrianglesPerElem * numElem + iFace) >= _connecTriangles.size())
     feErrorMsg(FE_STATUS_ERROR,
-               "Out of bounds: accessing entry %d in _connecEdges"
+               "Out of bounds: accessing entry %d in _connecTriangles"
                " of size %u",
-               _nEdgesPerElem * numElem + iEdge, _connecEdges.size());
+               _nTrianglesPerElem * numElem + iFace, _connecTriangles.size());
 #endif
-  _connecEdges[_nEdgesPerElem * numElem + iEdge] = val;
+  return _connecTriangles[_nTrianglesPerElem * numElem + iFace];
 }
 
 feStatus feCncGeo::setQuadratureRule(feQuadrature *rule)
