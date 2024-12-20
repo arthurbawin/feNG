@@ -232,6 +232,12 @@ feLinearSystemMklPardiso::feLinearSystemMklPardiso(std::vector<feBilinearForm *>
           [iparm[36] > 1 (BSR format)               ]
   */
   IPARM[ 1] =  3;
+
+  if(IPARM[1] = 10 && _ownershipSplit < 0) {
+    feErrorMsg("iparm[1] = 10 is for distributed matrices only - Incompatible with ownershipSplit = -1");
+    exit(-1);
+  }
+
   IPARM[ 5] =  0; /* Write solution into x */
   IPARM[ 7] =  1; /* Max number of iterative refinement steps */
   IPARM[ 9] = IPIVOT; /* Perturb the pivot elements with 1E-13 */
