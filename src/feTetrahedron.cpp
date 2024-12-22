@@ -14,6 +14,8 @@ void Tetrahedron::createBoundary(std::set<Triangle, TriangleLessThan> &meshTrian
     Vertex *v1 = _vlin[faces_tetra(i,1)];
     Vertex *v2 = _vlin[faces_tetra(i,2)];
 
+    feInfo("Creating tri with tag %d", numTriangles);
+
     Triangle tri(v0, v1, v2, numTriangles);
     tri.createBoundary(meshEdges, numEdges);
     ret = meshTriangles.insert(tri);
@@ -22,11 +24,51 @@ void Tetrahedron::createBoundary(std::set<Triangle, TriangleLessThan> &meshTrian
     _facets[i] = &(*ret.first);
 
     if(ret.second) { // Facet was added to the set
+      feInfo("New  tri with tag %d", ret.first->getTag());
       _facetsOrientation[i] = 1;
       numTriangles++;
     } else { // Facet is already in the set : orientation is negative
+      feInfo("Existing tri with tag %d", ret.first->getTag());
       _facetsOrientation[i] = -1;
     }
+  }
+
+  // Determine the orientation of the boundary edges
+  // Edge is positive if the (global) ordering of its vertices
+  // agrees with _edgesOrder in feTetrahedron.h, negative otherwise
+  for(int iE = 0; iE < 6; ++iE)
+  {
+    int v0 = _vlin[_edgesOrder[iE][0]]->getTag();
+    int v1 = _vlin[_edgesOrder[iE][1]]->getTag();
+
+    // Get this edge from the boundary faces.
+    // The lookup into the right boundary face could be hardcoded,
+    // but by fetching it here we can modify the numbering _facesOrder and _edgesOrder
+    // without consequences
+    bool found = false;
+    for(int iF = 0; iF < 4; ++iF) {
+      for(int j = 0; j < 3; ++j) {
+        if(_facets[iF]->getEdge(j)->getTag(0) == v0 && _facets[iF]->getEdge(j)->getTag(1) == v1) {
+          _edges[iE] = _facets[iF]->getEdge(j);
+          _edgesOrientation[iE] = 1;
+          found = true;
+          goto escape;
+        } else if(_facets[iF]->getEdge(j)->getTag(0) == v1 && _facets[iF]->getEdge(j)->getTag(1) == v0) {
+          _edges[iE] = _facets[iF]->getEdge(j);
+          _edgesOrientation[iE] = -1;
+          found = true;
+          goto escape;
+        } else{
+           // Continue looking          
+        } 
+      } 
+    }
+
+    escape: // Edge was found in boundary faces
+      if(!found) {
+        feErrorMsg(FE_STATUS_ERROR, "Boundary edge of Tetrahedron was not found in its boundary faces!");
+        exit(-1);
+      }
   }
 }
 
@@ -143,8 +185,8 @@ void getTetLagrangeBarycentricCoord(int n, std::vector<double> &barycentricCoord
       for(int j = 0; j < n-1; ++j) {
         double pt[4] = {0.,0.,0.,0.};
         for(int k = 0; k < 4; ++k) {
-          pt[k] = (n-(j+1))/ (double) n * barycentricCoord[4*_edges[i][0]+k] +
-                     (j+1) / (double) n * barycentricCoord[4*_edges[i][1]+k];
+          pt[k] = (n-(j+1))/ (double) n * barycentricCoord[4*_edgesOrder[i][0]+k] +
+                     (j+1) / (double) n * barycentricCoord[4*_edgesOrder[i][1]+k];
         }
         barycentricCoord.insert(barycentricCoord.end(), std::begin(pt), std::end(pt));
       }
@@ -197,9 +239,9 @@ void getTetLagrangeBarycentricCoord(int n, std::vector<double> &barycentricCoord
       }
       
       std::vector<std::vector<int>> all(4, std::vector<int>(spiralCoeff.size(), 0));
-      all[_faces[i][0]] = spiralCoeff;
-      all[_faces[i][1]] = c2;
-      all[_faces[i][2]] = c3;
+      all[_facesOrder[i][0]] = spiralCoeff;
+      all[_facesOrder[i][1]] = c2;
+      all[_facesOrder[i][2]] = c3;
 
       for(size_t k = 0; k < spiralCoeff.size(); ++k) {
         // feInfo("%d - %d - %d - %d - sum = %d", all[0][k], all[1][k], all[2][k], all[3][k], all[0][k]+all[1][k]+all[2][k]+all[3][k]);

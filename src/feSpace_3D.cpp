@@ -72,11 +72,6 @@ feSpaceTetPn::feSpaceTetPn(int n, feMesh *mesh, const std::string fieldID, const
     _Lcoor.push_back(_refBarycentric[4*i+3] / (double) n);
   }
 
-  // for(int i = 0; i < _nFunctions; ++i) {
-  //   feInfo("%1.3f - %1.3f - %1.3f",
-  //     _Lcoor[3*i+0],_Lcoor[3*i+1],_Lcoor[3*i+2]);
-  // }
-
   _dofLocations.resize(_nFunctions);
   int start = 0;
   for(int i = 0; i < 4; ++i)
@@ -109,7 +104,7 @@ static int factorial(const int n)
 std::vector<double> feSpaceTetPn::L(double *r)
 { 
   std::vector<double> phi(_nFunctions);
-  this->L(r,phi.data());
+  this->L(r, phi.data());
   return phi;
 }
 
@@ -117,8 +112,17 @@ void feSpaceTetPn::L(double *r, double *phi)
 {
   double u[4] = {1.0 - r[0] - r[1] - r[2], r[0], r[1], r[2]};
 
-  for(int iF = 0; iF < _nFunctions; ++iF) {
-    int alpha[4] = {(int) _refBarycentric[4*iF+0], (int) _refBarycentric[4*iF+1], (int) _refBarycentric[4*iF+2], (int) _refBarycentric[4*iF+3]};
+#if defined(FENG_DEBUG)
+  double sum = 0.;
+#endif
+
+  for(int iF = 0; iF < _nFunctions; ++iF)
+  {
+    int alpha[4] = {(int) _refBarycentric[4*iF+0],
+                    (int) _refBarycentric[4*iF+1],
+                    (int) _refBarycentric[4*iF+2],
+                    (int) _refBarycentric[4*iF+3]};
+
     double res = 1., factor = 1.;
     for(int i = 0; i < 4; ++i) {
       factor *= (double) factorial(alpha[i]);
@@ -126,45 +130,220 @@ void feSpaceTetPn::L(double *r, double *phi)
         res *= u[i] - (double) j / (double) _n;
       }
     }
-    res *= pow(_n,_n) / factor;
+    res *= pow((double) _n,_n) / factor;
     phi[iF] = res;
+#if defined(FENG_DEBUG)
+    sum += res;
+#endif
   }
+
+#if defined(FENG_DEBUG)
+  assert(fabs(sum - 1.) < 1e-14);
+#endif
 }
 
-// À modifier
-std::vector<double> feSpaceTetPn::dLdr(double *r) { UNUSED(r); return {-1., 1., 0., 0.}; }
-std::vector<double> feSpaceTetPn::dLds(double *r) { UNUSED(r); return {-1., 0., 1., 0.}; }
-std::vector<double> feSpaceTetPn::dLdt(double *r) { UNUSED(r); return {-1., 0., 0., 1.}; }
-std::vector<double> feSpaceTetPn::d2Ldr2(double *r) { UNUSED(r); return {0., 0., 0., 0.}; }
-std::vector<double> feSpaceTetPn::d2Ldrs(double *r) { UNUSED(r); return {0., 0., 0., 0.}; }
-std::vector<double> feSpaceTetPn::d2Lds2(double *r) { UNUSED(r); return {0., 0., 0., 0.}; }
+// Jacobian matrix dg_ij/dxsi^m where g_ij(xsi) = (u^i(xsi) - j/k)
+// and u(xsi) are the barycentric coordinates written in terms of the
+// reference coordinates xsi.
+static double jacg[4][3] = {{-1., -1., -1.}, {1., 0., 0.}, {0., 1., 0.}, {0., 0., 1.}};
+
+//
+// Compute the derivative of all Lagrange shape functions w.r.t. the m-th component of xsi.
+// Obtained by applying the product rule to the general expression of the shape functions:
+//
+//                        n^n         dim+1 alpha_i-1
+// phi_alpha(xsi) = --------------- * prod  prod      (u_i(xsi) - j/k)
+//                  dim +1            i = 1 j = 0
+//                   prod  alpha_i!
+//                  i = 1
+//
+// For the product rule of an arbitrary number of functions,
+// see e.g. https://en.wikipedia.org/wiki/Product_rule#Generalizations
+//
+std::vector<double> feSpaceTetPn::shapeTetDerivatives(const double xsi[3], const int m)
+{
+  std::vector<double> res(_nFunctions);
+
+  // Barycentric coordinates
+  double u[4] = {1. - xsi[0] - xsi[1] - xsi[2], xsi[0], xsi[1], xsi[2]};
+
+  double nn = pow((double) _n, _n);
+
+#if defined(FENG_DEBUG)
+  double sum = 0.;
+#endif
+
+  for(int iPhi = 0; iPhi < _nFunctions; ++iPhi)
+  {
+    int alpha[4] = {(int) _refBarycentric[4*iPhi+0],
+                    (int) _refBarycentric[4*iPhi+1],
+                    (int) _refBarycentric[4*iPhi+2],
+                    (int) _refBarycentric[4*iPhi+3]};
+
+    double factor = 1.;
+    for(int i = 0; i < 4; ++i) {
+      factor *= (double) factorial(alpha[i]);
+    }
+    double C_alpha = nn / factor;
+
+    double h[4] = {1., 1., 1., 1.};
+
+    for(int i = 0; i < 4; ++i) {
+      for(int j = 0; j <= alpha[i]-1; ++j) {
+        h[i] *= u[i] - (double) j / (double) _n;
+      }
+    }
+
+    double dhdxsi_m[4] = {0., 0., 0., 0.};
+
+    for(int i = 0; i < 4; ++i) {
+      // j is constant in gij, so derivatives of all gij with variable j are the same
+      double dgijdxsi_m = jacg[i][m];
+      for(int j = 0; j <= alpha[i]-1; ++j) {
+        double prod = 1.;
+        for(int s = 0; s <= alpha[i]-1; ++s) {
+          if(s != j) {
+            prod *= u[i] - (double) s / (double) _n;
+          }
+        }
+        dhdxsi_m[i] += dgijdxsi_m * prod;
+      }
+    }
+
+    double dphidxsi_m = 0.;
+    for(int i = 0; i < 4; ++i) {
+      double prod = 1.;
+      for(int s = 0; s < 4; ++s) {
+        if(s != i) {
+          prod *= h[s];
+        }
+      }
+      dphidxsi_m += dhdxsi_m[i] * prod;
+    }
+
+    res[iPhi] = C_alpha * dphidxsi_m;
+#if defined(FENG_DEBUG)
+    sum += res[iPhi];
+#endif
+  }
+
+#if defined(FENG_DEBUG)
+  assert(fabs(sum) < 1e-14);
+#endif
+
+  return res;
+}
+
+std::vector<double> feSpaceTetPn::dLdr(double *r) { return this->shapeTetDerivatives(r, 0); }
+std::vector<double> feSpaceTetPn::dLds(double *r) { return this->shapeTetDerivatives(r, 1); }
+std::vector<double> feSpaceTetPn::dLdt(double *r) { return this->shapeTetDerivatives(r, 2); }
+std::vector<double> feSpaceTetPn::d2Ldr2(double *r) { UNUSED(r); std::vector<double> res(_nFunctions, 0.); return res; }
+std::vector<double> feSpaceTetPn::d2Ldrs(double *r) { UNUSED(r); std::vector<double> res(_nFunctions, 0.); return res; }
+std::vector<double> feSpaceTetPn::d2Lds2(double *r) { UNUSED(r); std::vector<double> res(_nFunctions, 0.); return res; }
 
 void feSpaceTetPn::initializeNumberingUnknowns()
 {
+  int nDOFPerVert = 1;
+  int nDOFPerEdge = _n-1;
+  int nDOFPerFace = (_n-1)*(_n-2)/2;
+  int nDOFPerElem = _nFunctions - 4 - 6 * nDOFPerEdge - 4 * nDOFPerFace;
+
   for(int i = 0; i < _mesh->getNumElements(_cncGeoID); ++i) {
-    _numbering->setUnknownVertexDOF(_mesh, _cncGeoID, i, 0);
-    _numbering->setUnknownVertexDOF(_mesh, _cncGeoID, i, 1);
-    _numbering->setUnknownVertexDOF(_mesh, _cncGeoID, i, 2);
-    _numbering->setUnknownVertexDOF(_mesh, _cncGeoID, i, 3);
+    for(int j = 0; j < 4; ++j) {
+      _numbering->setUnknownVertexDOF(_mesh, _cncGeoID, i, j, nDOFPerVert);
+    }
+    if(_n >= 2) {
+      for(int j = 0; j < 6; ++j) {
+        _numbering->setUnknownEdgeDOF(_mesh, _cncGeoID, i, j, nDOFPerEdge);
+      }
+    }
+    if(_n >= 3) {
+      for(int j = 0; j < 4; ++j) {
+        _numbering->setUnknownFaceDOF(_mesh, _cncGeoID, i, j, nDOFPerFace);
+      }
+    }
+    if(_n >= 4) {
+      _numbering->setUnknownElementDOF(_mesh, _cncGeoID, i, nDOFPerElem);
+    }
   }
 }
 
 void feSpaceTetPn::initializeNumberingEssential()
 {
   for(int i = 0; i < _mesh->getNumElements(_cncGeoID); ++i) {
-    _numbering->setEssentialVertexDOF(_mesh, _cncGeoID, i, 0);
-    _numbering->setEssentialVertexDOF(_mesh, _cncGeoID, i, 1);
-    _numbering->setEssentialVertexDOF(_mesh, _cncGeoID, i, 2);
-    _numbering->setEssentialVertexDOF(_mesh, _cncGeoID, i, 3);
+    for(int j = 0; j < 4; ++j) {
+      _numbering->setEssentialVertexDOF(_mesh, _cncGeoID, i, j);
+    }
+    if(_n >= 2) {
+      for(int j = 0; j < 6; ++j) {
+        _numbering->setEssentialEdgeDOF(_mesh, _cncGeoID, i, j);
+      }
+    }
+    if(_n >= 3) {
+      for(int j = 0; j < 4; ++j) {
+        _numbering->setEssentialFaceDOF(_mesh, _cncGeoID, i, j);
+      }
+    }
+    if(_n >= 4) {
+      _numbering->setEssentialElementDOF(_mesh, _cncGeoID, i);
+    }
   }
 }
 
 void feSpaceTetPn::initializeAddressingVector(int numElem, std::vector<feInt> &adr)
 {
-  adr[0] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 0);
-  adr[1] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 1);
-  adr[2] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 2);
-  adr[2] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 3);
+  for(int j = 0; j < 4; ++j) {
+    adr[j] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, j);
+  }
+  int start = 4;
+  if(_n >= 2) {
+    // Loop over the edges
+    for(int iE = 0; iE < 6; ++iE) {
+      int e = _mesh->getEdge(_cncGeoID, numElem, iE);
+
+      if(e > 0) {
+        // Edge orientation is positive: Number edge DOF in default order
+        for(int j = 0; j < _n-1; ++j) {
+          adr[start + iE * (_n-1) + j] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, iE, j);
+        }
+      } else {
+        // Edge orientation is negative: Number edge DOF in reverse order
+        for(int j = 0; j < _n-1; ++j) {
+          adr[start + (iE+1) * (_n-1) - j - 1] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, iE, j);
+        }
+      }
+    }
+  }
+  if(_n >= 3) {
+    start += 6 * (_n-1);
+    int nDOFPerFace = (_n-1)*(_n-2)/2;
+    // Loop over the edges
+    for(int iF = 0; iF < 4; ++iF) {
+
+      int f = _mesh->getFace(_cncGeoID, numElem, iF);
+
+      // MODIFY: Rotate when necessary
+      if(f > 0) {
+        // Face orientation is positive: Number face DOF in default order
+        for(int j = 0; j < nDOFPerFace; ++j) {
+          adr[start + iF * nDOFPerFace + j] = _numbering->getFaceDOF(_mesh, _cncGeoID, numElem, iF, j);
+        }
+      } else {
+        // Face orientation is negative: Number face DOF in reverse order
+        for(int j = 0; j < nDOFPerFace; ++j) {
+          adr[start + (iF+1) * (nDOFPerFace) - j - 1] = _numbering->getFaceDOF(_mesh, _cncGeoID, numElem, iF, j);
+        }
+      }
+
+    }
+  }
+  if(_n >= 4) {
+    start += 4 * (_n-1)*(_n-2)/2;
+    int nDOFPerElem = _nFunctions - 4 - 6 * (_n-1) - 4 * (_n-1)*(_n-2)/2;
+    for(int i = 0; i < nDOFPerElem; ++i) {
+      adr[start + i] = _numbering->getElementDOF(_mesh, _cncGeoID, numElem, i);
+    }
+  }
 }
 
 // -----------------------------------------------------------------------------

@@ -53,6 +53,14 @@ feNorm::feNorm(normType type, const std::vector<feSpace *> &spaces, feSolution *
 feNorm::feNorm(feCncGeo *cnc, feFunction *scalarSolution, feVectorFunction *vectorSolution)
   : _cnc(cnc), _J(_cnc->getJacobians()), _scalarSolution(scalarSolution), _vectorSolution(vectorSolution)
 {
+  // FIXME: do not exit from constructor
+  if(!cnc->jacobiansWereComputed()) {
+    feErrorMsg(FE_STATUS_ERROR, "Jacobian determinants were not computed on Physical Entity \"%s\". "
+      "Define a finite element space on this entity first to compute areas and integrals.",
+      cnc->getID().data());
+    exit(-1);
+  }
+
   _nQuad = cnc->getFeSpace()->getNumQuadPoints();
   _w = cnc->getFeSpace()->getQuadratureWeights();
   _geoSpace = cnc->getFeSpace();
@@ -204,6 +212,9 @@ double feNorm::computeLpNorm(int p, bool error)
     for(size_t i = 0; i < errorOnElementsToThePowerP.size() - numElmToIgnore; ++i)
       res += errorOnElementsToThePowerP[i];
   }
+
+  // Negative quadrature weights can sum to a very small but negative integral
+  if(res < 0 && fabs(res) < 1e-14) { res = fabs(res); }
 
   feInfo("Summed feNorm on %d elements = %+-1.6e", _nElm, pow(res, 1. / (double)p));
   return pow(res, 1. / (double)p);

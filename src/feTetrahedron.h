@@ -23,8 +23,12 @@ static void sort4(int *d) {
 
 // This numbering is given by the boundary operator del = (-1)^i * [v0, ..., \hat{vi}, ..., vn],
 // where \hat{vi} means vi is omitted on the facet.
-static const int _faces[4][3] = {{0, 2, 1}, {0, 1, 3}, {0, 3, 2}, {3, 1, 2}};
-static const int _edges[6][2] = {{0,2}, {2,1}, {1,0}, {1,3}, {3,0}, {3,2}};
+//
+// IMPORTANT: These numberings are used to create the shape functions
+// and number the degrees of freedom. Changes to these numbering also affect
+// those structures.
+static const int _facesOrder[4][3] = {{0, 2, 1}, {0, 1, 3}, {0, 3, 2}, {3, 1, 2}};
+static const int _edgesOrder[6][2] = {{0,2}, {2,1}, {1,0}, {1,3}, {3,0}, {3,2}};
 
 // Compute the reference barycentric coordinates
 // used to define Lagrange interpolation.
@@ -44,8 +48,11 @@ protected:
   Vertex *_vlin[4]; // The vertices of the underlying linear tetrahedron to a linear or high-order tet
 
   // Boundary is made of 4 triangles and their orientation (+1 or -1 for reversed)
+  // and 6 edges and their orientation
   const Triangle* _facets[4];
   int _facetsOrientation[4];
+  const Edge* _edges[6];
+  int _edgesOrientation[6];
 
 public:
   // Create a generic (topological) tetrahedron by providing its 4 vertices and a unique tag
@@ -71,6 +78,8 @@ public:
   int getPhysicalTag() const { return _pTag; }
   const Triangle *getFacet(int num) const { return _facets[num]; }
   int getFacetOrientation(int num) const { return _facetsOrientation[num]; }
+  const Edge *getEdge(int num) const { return _edges[num]; }
+  int getEdgeOrientation(int num) const { return _edgesOrientation[num]; }
   virtual int getNumVertices() const { return 4; };
   virtual Vertex *getVertex(int num) { return _vlin[num]; };
 
@@ -93,12 +102,12 @@ public:
   // From Gmsh's MTetrahedron.h.
   static int faces_tetra(const int face, const int vert)
   {
-    return _faces[face][vert];
+    return _facesOrder[face][vert];
   }
 
   static int edges_tetra(const int edge, const int vert)
   {
-    return _edges[edge][vert];
+    return _edgesOrder[edge][vert];
   }
 
   // Create the topological triangles of the boundary of this tetrahedron.

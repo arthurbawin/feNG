@@ -81,8 +81,12 @@ int getGeometricInterpolantDegree(geometricInterpolant t)
 
 feCncGeo::feCncGeo(const int tag, const int dimension, const int ambientDimension,
                    const int nVerticesPerElement,
-                   const int nElements, const int nEdgesPerElement, const std::string &ID,
-                   const geometryType geometry, const geometricInterpolant interpolant,
+                   const int nElements,
+                   const int nEdgesPerElement,
+                   const int nTrianglesPerElement,
+                   const std::string &ID,
+                   const geometryType geometry,
+                   const geometricInterpolant interpolant,
                    feSpace *space,
                    std::vector<int> connecVertices,
                    std::vector<int> connecElem,
@@ -95,6 +99,7 @@ feCncGeo::feCncGeo(const int tag, const int dimension, const int ambientDimensio
   _nElements(nElements),
   _nVerticesPerElm(nVerticesPerElement),
   _nEdgesPerElem(nEdgesPerElement),
+  _nTrianglesPerElem(nTrianglesPerElement),
   _connecElem(connecElem),
   _connecVertices(connecVertices), 
   _connecEdges(connecEdges),
@@ -102,6 +107,7 @@ feCncGeo::feCncGeo(const int tag, const int dimension, const int ambientDimensio
 {
   if(connecElem.size() == 0) _connecElem.resize(nElements);
   if(connecEdges.size() == 0) _connecEdges.resize(nElements * nEdgesPerElement);
+  if(connecTriangles.size() == 0) _connecTriangles.resize(nElements * nTrianglesPerElement);
 
   _elementsVolume.resize(nElements, 0.);
   _minimumScaledJacobianControlCoeffs.resize(nElements, 0.);
@@ -347,6 +353,7 @@ feStatus feCncGeo::computeJacobians(const bool ignoreNegativeJacobianWarning)
               printf("Info : %+-1.4e - %+-1.4e - %+-1.4e \n", geoCoord[3*i+0], geoCoord[3*i+1], geoCoord[3*i+2]);
             }
           }
+          feWarning("jacobian = %+-12.12e", _J[nQuad * iElm + k]);
         }
 
         // Plot jacobian
@@ -407,6 +414,8 @@ feStatus feCncGeo::computeJacobians(const bool ignoreNegativeJacobianWarning)
   if(atLeastOneNegative && !ignoreNegativeJacobianWarning) {
     return feErrorMsg(FE_STATUS_ERROR, "Negative or zero jacobian on at least one element )-:");
   }
+
+  _jacobiansWereComputed = true;
 
   return FE_STATUS_OK;
 }

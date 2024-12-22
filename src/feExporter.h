@@ -45,6 +45,9 @@ public:
   bool _addP2Nodes;
   int _writtenNodes;
 
+  int _nNodePerElem;
+  int _nEdgePerElem;
+
   std::map<int, int> _edgeGlobalTag;
 
   std::set<feCncGeo*> _exportedConnectivities;

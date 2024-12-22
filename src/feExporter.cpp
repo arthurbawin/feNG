@@ -14,7 +14,7 @@ static int VTK_VERTEX = 1;
 static int VTK_LINE = 3;
 static int VTK_TRIANGLE = 5;
 // static int VTK_QUAD = 9;
-// static int VTK_TETRA = 10;
+static int VTK_TETRA = 10;
 // static int VTK_HEXAHEDRON = 12;
 // static int VTK_PYRAMID = 14;
 static int VTK_QUADRATIC_EDGE = 21;
@@ -23,13 +23,32 @@ static int VTK_QUADRATIC_TRIANGLE = 22;
 // static int VTK_QUADRATIC_TETRA = 24;
 // static int VTK_QUADRATIC_HEXAHEDRON = 25;
 
-// A etoffer au fur et a mesure
 std::map<geometricInterpolant, int> cncToVTKmap = {
   {geometricInterpolant::POINTP0, VTK_VERTEX},
-  {geometricInterpolant::LINEP1, VTK_LINE},
-  {geometricInterpolant::TRIP1, VTK_TRIANGLE},
-  {geometricInterpolant::LINEP2, VTK_QUADRATIC_EDGE},
-  {geometricInterpolant::TRIP2, VTK_QUADRATIC_TRIANGLE}};
+  {geometricInterpolant::LINEP1,  VTK_LINE},
+  {geometricInterpolant::LINEP2,  VTK_QUADRATIC_EDGE},
+  {geometricInterpolant::TRIP1,   VTK_TRIANGLE},
+  {geometricInterpolant::TRIP2,   VTK_QUADRATIC_TRIANGLE},
+  {geometricInterpolant::TETP1,   VTK_TETRA},
+};
+
+static std::map<geometricInterpolant, int> verticesPerElem = {
+  {geometricInterpolant::POINTP0, 1},
+  {geometricInterpolant::LINEP1,  2},
+  {geometricInterpolant::LINEP2,  2},
+  {geometricInterpolant::TRIP1,   3},
+  {geometricInterpolant::TRIP2,   6},
+  {geometricInterpolant::TETP1,   4}
+};
+
+static std::map<geometricInterpolant, int> edgePerElem = {
+  {geometricInterpolant::POINTP0, 0},
+  {geometricInterpolant::LINEP1,  1},
+  {geometricInterpolant::LINEP2,  1},
+  {geometricInterpolant::TRIP1,   3},
+  {geometricInterpolant::TRIP2,   3},
+  {geometricInterpolant::TETP1,   6}
+};
 
 feStatus createVisualizationExporter(feExporter *&exporter, visualizationFormat format,
                                      feMetaNumber *metaNumber, feSolution *solution, feMesh *mesh,
@@ -466,19 +485,18 @@ void feExporterVTK::writeMesh(std::ostream &output)
   }
 
   int nElm = 0;
-  int nNodePerElem = _addP2Nodes ? 6 : 3;
   for(auto *cnc : _exportedConnectivities) {
     nElm += cnc->getNumElements();
-    if(cnc->getInterpolant() == geometricInterpolant::TRIP2)
-      nNodePerElem = 6;
   }
 
-  // Write elements connectivities for each cnc wih dim = 2
-  output << "CELLS " << nElm << " " << nElm * (nNodePerElem + 1) << std::endl;
+  //
+  // Write elements connectivities for each cnc of maximum dimension
+  //
+  output << "CELLS " << nElm << " " << nElm * (_nNodePerElem + 1) << std::endl;
 
   for(auto *cnc : _exportedConnectivities) {
     for(int iElm = 0; iElm < cnc->getNumElements(); ++iElm) {
-      output << nNodePerElem << " ";
+      output << _nNodePerElem << " ";
 
       if(_addP2Nodes) {
         // Mid-points were added and do not exist in the mesh
@@ -536,6 +554,12 @@ void feExporterVTK::writeVTKNodes(std::ostream &output,
   }
 }
 
+//
+// Write the solution on the mesh at current time.
+// Only implemented for triangles and tetrahedra.
+// For now, only a single highest dimensional connectivity is exported, i.e.,
+// it does not treat meshes with two domains.
+//
 feStatus feExporterVTK::writeStep(std::string fileName)
 {
   tic();
@@ -553,7 +577,7 @@ feStatus feExporterVTK::writeStep(std::string fileName)
     std::unordered_map<std::string, std::pair<int, int> > fields;
 
     for(feSpace *fS : _spaces) {
-      if(fS->getDim() == 2) {
+      if(fS->getDim() == _mesh->getDim()) {
         spacesToExport.push_back(fS);
         cncToExport.insert(fS->getCncGeoID());
         fieldsToExport.insert(fS->getFieldID());
@@ -567,23 +591,30 @@ feStatus feExporterVTK::writeStep(std::string fileName)
       }
     }
 
-    // Grab the connectivity from any matching fespace
-    feCncGeo *cnc = nullptr;
-    for(feSpace *fS : spacesToExport) {
-      if(fS->getCncGeoID() == *cncToExport.begin()) {
-        cnc = fS->getCncGeo();
-        break;
-      }
+    if(_exportedConnectivities.size() > 1) {
+      return feErrorMsg(FE_STATUS_ERROR,
+        "Currently only a single Physical Entity can be exported to a VTK file");
     }
+    feCncGeo *cnc = *(_exportedConnectivities.begin());
 
     int cnt = 0;
     for(auto field : fieldsToExport) {
-      fieldTags[field] = cnt++;
-      fields[field].first = fieldTags[field];
+      fieldTags[field] = cnt;
+      fields[field].first = cnt++;
     }
 
     feInfoCond(FE_VERBOSE > 0, "\t\tExporting geometric connectivity \"%s\" to file \"%s\"",
                cnc->getID().c_str(), fileName.c_str());
+
+    geometricInterpolant interpolant = cnc->getInterpolant();
+
+    if(interpolant != geometricInterpolant::TRIP1 &&
+       interpolant != geometricInterpolant::TRIP2 &&
+       interpolant != geometricInterpolant::TETP1)
+    {
+      return feErrorMsg(FE_STATUS_ERROR,
+                        "Only triangles and tetrahedra can be exported to a VTK file");
+    }
 
     /* Although VTK_HIGHER_ORDER_TRIANGLE and VTK_LAGRANGE_TRIANGLE
     exist in the VTK documentation, I can't find tutorials on how to use them...
@@ -593,30 +624,24 @@ feStatus feExporterVTK::writeStep(std::string fileName)
       - any field has a P2 or greater interpolant
     In the second case, the mesh is not made of 6-node triangles, so we need to create them
     and evaluate the fields at those mid-edge nodes. */
-    int geometryPolynomialDegree;
-    if(cnc->getInterpolant() == geometricInterpolant::TRIP1) {
-      geometryPolynomialDegree = 1;
-    } else if(cnc->getInterpolant() == geometricInterpolant::TRIP2) {
-      geometryPolynomialDegree = 2;
-    } else {
-      return feErrorMsg(FE_STATUS_WRITE_ERROR,
-                        "Only P1 and P2 triangles can be exported to a VTK file...");
-    }
-
+    int geometryPolynomialDegree = getGeometricInterpolantDegree(interpolant);
     int highestFieldPolynomialDegree = 0;
     for(feSpace *fS : spacesToExport)
       highestFieldPolynomialDegree = fmax(highestFieldPolynomialDegree, fS->getPolynomialDegree());
 
     _addP2Nodes = (geometryPolynomialDegree == 1) && (highestFieldPolynomialDegree >= 2);
 
+    _nNodePerElem = verticesPerElem.at(interpolant);
+    _nEdgePerElem = edgePerElem.at(interpolant);
+
+    if(_addP2Nodes) {
+      // Add one visualization vertex per edge
+      _nNodePerElem += _nEdgePerElem;
+    }
+
     // Export vtkNodes
     feStatus s = createVTKNodes(spacesToExport, fieldTags);
     if(s != FE_STATUS_OK) { return s; }
-
-    ////////////////////////////////////////////////////////////////////
-    // Test locateMesh for P2 triangles
-    
-    ////////////////////////////////////////////////////////////////////
 
     writeMesh(output);
     output << "POINT_DATA " << _vtkNodes.size() << std::endl;

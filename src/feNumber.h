@@ -22,20 +22,23 @@ protected:
   int _nInc;
   // Total number of DOF in this field
   int _nDofs;
-  // A copy of the number of vertices, elements and edges in the mesh
+  // A copy of the number of vertices, elements, edges and faces in the mesh
   int _nNod;
   int _nElm;
   int _nEdg;
+  int _nFac;
 
   // Maximum number of DOF on a vertex, element or edge
   int _maxDOFperVertex;
   int _maxDOFperElem;
   int _maxDOFperEdge;
+  int _maxDOFperFace;
 
-  // Acutal number of DOF at each vertex/element/edge
+  // Acutal number of DOF at each vertex/element/edge/face
   std::vector<int> _nDOFVertices;
   std::vector<int> _nDOFElements;
   std::vector<int> _nDOFEdges;
+  std::vector<int> _nDOFFaces;
 
   // Arrays of size nNod/nElm/nEdg x (max # DOF)
   // Contains the global number of the DOF or DOF_NOT_ASSIGNED is
@@ -43,11 +46,13 @@ protected:
   std::vector<int> _numberingVertices;
   std::vector<int> _numberingElements;
   std::vector<int> _numberingEdges;
+  std::vector<int> _numberingFaces;
 
   // Code (see enum above) of each DOF
   std::vector<int> _codeDOFVertices;
   std::vector<int> _codeDOFElements;
   std::vector<int> _codeDOFEdges;
+  std::vector<int> _codeDOFFaces;
 
   std::vector<int> _elemToEdge;
 
@@ -84,6 +89,10 @@ public:
   // of geometric connectivity cncGeoID as UNKNOWN.
   void setUnknownEdgeDOF(feMesh *mesh, std::string const &cncGeoID, int numElem, int numEdge,
                          int numDOF);
+  // Set the numDOF-th DOF associated to the numFace-th face on the numElem-th element
+  // of geometric connectivity cncGeoID as UNKNOWN.
+  void setUnknownFaceDOF(feMesh *mesh, std::string const &cncGeoID, int numElem, int numFace,
+                         int numDOF);
 
   // Same as above, but mark the DOF as ESSENTIAL.
   // Multiple degrees of freedom defined on the same entity (vertex/element/edge) cannot
@@ -94,6 +103,8 @@ public:
   void setEssentialElementDOF(feMesh *mesh, std::string const &cncGeoID, int numElem,
                               int numDOF = -1);
   void setEssentialEdgeDOF(feMesh *mesh, std::string const &cncGeoID, int numElem, int numEdge,
+                           int numDOF = -1);
+  void setEssentialFaceDOF(feMesh *mesh, std::string const &cncGeoID, int numElem, int numFace,
                            int numDOF = -1);
 
   // Get the global number of the specified DOF
@@ -106,6 +117,7 @@ public:
   };
   int getElementDOF(feMesh *mesh, std::string const &cncGeoID, int numElem, int numDOF);
   int getEdgeDOF(feMesh *mesh, std::string const &cncGeoID, int numElem, int numEdge, int numDOF);
+  int getFaceDOF(feMesh *mesh, std::string const &cncGeoID, int numElem, int numFace, int numDOF);
 
   int getDOFCodeAtVertex(int iVertex) { return _codeDOFVertices[iVertex]; };
 

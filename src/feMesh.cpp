@@ -193,6 +193,16 @@ int feMesh::getEdge(const int cncGeoTag, const int numElem, const int numEdge)
   return getCncGeoByTag(cncGeoTag)->getEdgeConnectivity(numElem, numEdge);
 }
 
+int feMesh::getFace(std::string const &cncGeoID, const int numElem, const int numFace)
+{
+  return getCncGeoByName(cncGeoID)->getFaceConnectivity(numElem, numFace);
+}
+
+int feMesh::getFace(const int cncGeoTag, const int numElem, const int numFace)
+{
+  return getCncGeoByTag(cncGeoTag)->getFaceConnectivity(numElem, numFace);
+}
+
 int feMesh::getNumElements(std::string const &cncGeoID)
 {
   return getCncGeoByName(cncGeoID)->getNumElements();
@@ -259,7 +269,7 @@ feMesh1DP1::feMesh1DP1(const double xBegin, const double xEnd, const int numElem
   int nCncGeo = 0;
 
   feCncGeo *geoDom =
-    new feCncGeo(nCncGeo, dimDomain, 1, _nNodDomain, _nInteriorElm, 1, _domID, geometryType::LINE,
+    new feCncGeo(nCncGeo, dimDomain, 1, _nNodDomain, _nInteriorElm, 1, 0, _domID, geometryType::LINE,
                  geometricInterpolant::LINEP1, new feSpace1DP1("xyz"), connecNodeDomain,
                  std::vector<int>(), connecEdgeDomain);
 
@@ -275,7 +285,7 @@ feMesh1DP1::feMesh1DP1(const double xBegin, const double xEnd, const int numElem
   connecBoundaryB[0] = _nVertices - 1;
 
   // Create the local connectivity for the left boundary
-  feCncGeo *geoBndA = new feCncGeo(nCncGeo, dimBoundary, 1, _nNodBoundary, _nElmPerBoundary, 0,
+  feCncGeo *geoBndA = new feCncGeo(nCncGeo, dimBoundary, 1, _nNodBoundary, _nElmPerBoundary, 0, 0,
                                    _bndA_ID, geometryType::POINT, geometricInterpolant::POINTP0,
                                    new feSpace0DP0("xyz"), connecBoundaryA);
 
@@ -284,7 +294,7 @@ feMesh1DP1::feMesh1DP1(const double xBegin, const double xEnd, const int numElem
   geoBndA->getFeSpace()->setCncGeoTag(nCncGeo++);
 
   // Create the local connectivity for the right boundary
-  feCncGeo *geoBndB = new feCncGeo(nCncGeo, dimBoundary, 1, _nNodBoundary, _nElmPerBoundary, 0,
+  feCncGeo *geoBndB = new feCncGeo(nCncGeo, dimBoundary, 1, _nNodBoundary, _nElmPerBoundary, 0, 0,
                                    _bndB_ID, geometryType::POINT, geometricInterpolant::POINTP0,
                                    new feSpace0DP0("xyz"), connecBoundaryB);
 
@@ -367,7 +377,7 @@ feMesh0DP0::feMesh0DP0(double xA, int nElm, std::string domID)
 
   int nCncGeo = 0;
   feCncGeo *geoDom =
-    new feCncGeo(nCncGeo, dimDomain, 0, _nNodDomain, _nElmDomain, 0, _domID, geometryType::POINT,
+    new feCncGeo(nCncGeo, dimDomain, 0, _nNodDomain, _nElmDomain, 0, 0, _domID, geometryType::POINT,
                  geometricInterpolant::POINTP0, new feSpace1DP0("xyz"), connecDomain);
   _cncGeo.push_back(geoDom);
   _cncGeoMap[_domID] = nCncGeo;

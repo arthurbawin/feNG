@@ -100,6 +100,18 @@ protected:
   std::vector<int> _connecEdges;
   std::vector<int> _connecTriangles;
 
+  // Computing the Jacobian determinants on a Physical Entity
+  // requires knowing the quadrature points at which they are evaluated,
+  // thus setting a quadrature rule, which requires knowing the maximum
+  // polynomial degree to integrate exactly, which is not required to create a mesh.
+  // The quadrature rule is set whenever a finite element
+  // space is created on this entity.
+  // Alternatively, we could:
+  // - require a polynomial degree to create the mesh structure (a bit counterintuitive)
+  // - create a rule with an arbitrary degree
+  // - ... ?
+  bool _jacobiansWereComputed = false;
+
   // Determinants of the jacobian matrix of the reference-to-physical
   // transformation, stored at all quadrature nodes of all elements
   // on this connectivity. Size = nQuad x nElm
@@ -126,8 +138,11 @@ public:
 public:
   // Create a geometric connectivity. Called when parsing the mesh.
   feCncGeo(const int tag, const int dimension, const int ambientDimension,
-           const int nVerticesPerElement, const int nElements,
-           const int nEdgesPerElement, const std::string &ID, const geometryType geometry,
+           const int nVerticesPerElement,
+           const int nElements,
+           const int nEdgesPerElement, 
+           const int nTrianglesPerElement,
+           const std::string &ID, const geometryType geometry,
            const geometricInterpolant interpolant, feSpace *space,
            std::vector<int> connecVertices,
            std::vector<int> connecElem = std::vector<int>(),
@@ -156,7 +171,7 @@ public:
   const std::vector<int> &getElemConnectivity() const { return _connecElem; }
 
   //
-  // Get (and rarely set) vertex connectivity
+  // Get (and rarely set) connectivities on this Physical Entity
   //
   int getUniqueVertexConnectivity(const int iVertex) const;
   int getVertexConnectivity(const int iVertex) const;
@@ -175,6 +190,7 @@ public:
   const std::vector<double> &getMinimumScaledJacobianControlCoeffs() const
     { return _minimumScaledJacobianControlCoeffs; };
 
+  bool jacobiansWereComputed() const { return _jacobiansWereComputed; };
   feStatus computeJacobians(const bool ignoreNegativeJacobianWarning = false);
   feStatus recomputeElementJacobian(const int iElm);
 

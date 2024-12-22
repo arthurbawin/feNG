@@ -3,7 +3,10 @@
 extern int FE_VERBOSE;
 static bool COUNT_ONLY = true;
 
-feNumber::feNumber(feMesh *mesh) : _nNod(mesh->getNumVertices()), _nEdg(mesh->getNumEdges())
+feNumber::feNumber(feMesh *mesh) :
+  _nNod(mesh->getNumVertices()),
+  _nEdg(mesh->getNumEdges()),
+  _nFac(mesh->getNumFaces())
 {
   _nElm = 0;
   for(auto *cnc : mesh->getCncGeo()) {
@@ -22,9 +25,12 @@ feNumber::feNumber(feMesh *mesh) : _nNod(mesh->getNumVertices()), _nEdg(mesh->ge
     }
   }
 
+  // TODO: same map for triangle facets
+
   _nDOFVertices.resize(_nNod);
   _nDOFElements.resize(_nElm);
   _nDOFEdges.resize(_nEdg);
+  _nDOFFaces.resize(_nFac);
 }
 
 void feNumber::setUnknownVertexDOF(feMesh *mesh, std::string const &cncGeoID, int numElem,
@@ -72,6 +78,22 @@ void feNumber::setUnknownEdgeDOF(feMesh *mesh, std::string const &cncGeoID, int 
   _nDOFEdges[edge] = numDOF;
   if(!COUNT_ONLY) {
     for(int i = 0; i < numDOF; ++i) _codeDOFEdges[_maxDOFperEdge * edge + i] = DOF_UNKNOWN;
+  }
+}
+
+void feNumber::setUnknownFaceDOF(feMesh *mesh, std::string const &cncGeoID, int numElem,
+                                 int numFace, int numDOF)
+{
+  int face = fabs(mesh->getFace(cncGeoID, numElem, numFace)) - 1;
+#if defined(FENG_DEBUG)
+  feInfoCond(FE_VERBOSE > 2,
+             "Assigning %d DOF_UNKNOWN at global face %d defined on "
+             "connectivity %s: local elem %d at face %d",
+             numDOF, face, cncGeoID.data(), numElem, numFace);
+#endif
+  _nDOFFaces[face] = numDOF;
+  if(!COUNT_ONLY) {
+    for(int i = 0; i < numDOF; ++i) _codeDOFFaces[_maxDOFperFace * face + i] = DOF_UNKNOWN;
   }
 }
 
@@ -132,17 +154,37 @@ void feNumber::setEssentialEdgeDOF(feMesh *mesh, std::string const &cncGeoID, in
   }
 }
 
+void feNumber::setEssentialFaceDOF(feMesh *mesh, std::string const &cncGeoID, int numElem,
+                                   int numFace, int numDOF)
+{
+  int face = fabs(mesh->getFace(cncGeoID, numElem, numFace)) - 1;
+#if defined(FENG_DEBUG)
+  feInfoCond(FE_VERBOSE > 2,
+             "Setting DOF_ESSENTIAL at global face %d defined on "
+             "connectivity %s: local elem %d at face %d",
+             face, cncGeoID.data(), numElem, numFace);
+#endif
+  if(numDOF == -1) {
+    // Mark all DOFs on this entity as essential
+    for(int i = 0; i < _nDOFFaces[face]; ++i)
+      _codeDOFFaces[_maxDOFperFace * face + i] = DOF_ESSENTIAL;
+  } else {
+    _codeDOFFaces[_maxDOFperFace * face + numDOF] = DOF_ESSENTIAL;
+  }
+}
+
 int feNumber::getVertexDOF(feMesh *mesh, std::string const &cncGeoID, int numElem, int numVertex,
                            int numDOF)
 {
   int vert = mesh->getVertex(cncGeoID, numElem, numVertex);
-  // return _numberingVertices[vert];
+  assert(_numberingVertices[_maxDOFperVertex * vert + numDOF] != DOF_NOT_ASSIGNED);
   return _numberingVertices[_maxDOFperVertex * vert + numDOF];
 }
 
 int feNumber::getElementDOF(feMesh *mesh, std::string const &cncGeoID, int numElem, int numDOF)
 {
   int elem = mesh->getElement(cncGeoID, numElem);
+  assert(_numberingElements[_maxDOFperElem * elem + numDOF] != DOF_NOT_ASSIGNED);
   return _numberingElements[_maxDOFperElem * elem + numDOF];
 }
 
@@ -151,7 +193,17 @@ int feNumber::getEdgeDOF(feMesh *mesh, std::string const &cncGeoID, int numElem,
 {
   // In connecEdges, edges are numbered starting from 1 and can be negative
   int edge = fabs(mesh->getEdge(cncGeoID, numElem, numEdge)) - 1;
+  assert(_numberingEdges[_maxDOFperEdge * edge + numDOF] != DOF_NOT_ASSIGNED);
   return _numberingEdges[_maxDOFperEdge * edge + numDOF];
+}
+
+int feNumber::getFaceDOF(feMesh *mesh, std::string const &cncGeoID, int numElem, int numFace,
+                         int numDOF)
+{
+  // In _connecTriangles, faces are numbered starting from 1 and can be negative
+  int face = fabs(mesh->getFace(cncGeoID, numElem, numFace)) - 1;
+  assert(_numberingFaces[_maxDOFperFace * face + numDOF] != DOF_NOT_ASSIGNED);
+  return _numberingFaces[_maxDOFperFace * face + numDOF];
 }
 
 void feNumber::allocateStructures()
@@ -163,12 +215,18 @@ void feNumber::allocateStructures()
   if(_nEdg > 0) {
     _maxDOFperEdge = *std::max_element(_nDOFEdges.begin(), _nDOFEdges.end());
   }
+  _maxDOFperFace = 0;
+  if(_nFac > 0) {
+    _maxDOFperFace = *std::max_element(_nDOFFaces.begin(), _nDOFFaces.end());
+  }
   _codeDOFVertices.resize(_nNod * _maxDOFperVertex, DOF_NOT_ASSIGNED);
   _codeDOFElements.resize(_nElm * _maxDOFperElem, DOF_NOT_ASSIGNED);
   _codeDOFEdges.resize(_nEdg * _maxDOFperEdge, DOF_NOT_ASSIGNED);
+  _codeDOFFaces.resize(_nFac * _maxDOFperFace, DOF_NOT_ASSIGNED);
   _numberingVertices.resize(_nNod * _maxDOFperVertex, DOF_NOT_ASSIGNED);
   _numberingElements.resize(_nElm * _maxDOFperElem, DOF_NOT_ASSIGNED);
   _numberingEdges.resize(_nEdg * _maxDOFperEdge, DOF_NOT_ASSIGNED);
+  _numberingFaces.resize(_nFac * _maxDOFperFace, DOF_NOT_ASSIGNED);
 }
 
 void feNumber::prepareNumbering()
@@ -196,6 +254,12 @@ void feNumber::prepareNumbering()
       _numberingEdges[_maxDOFperEdge * iEdg + iDOF] = _codeDOFEdges[_maxDOFperEdge * iEdg + iDOF];
     }
   }
+
+  for(int iFace = 0; iFace < _nFac; ++iFace) {
+    for(int iDOF = 0; iDOF < _nDOFFaces[iFace]; ++iDOF) {
+      _numberingFaces[_maxDOFperFace * iFace + iDOF] = _codeDOFFaces[_maxDOFperFace * iFace + iDOF];
+    }
+  }
 }
 
 int feNumber::numberUnknowns(int globalNum)
@@ -213,6 +277,7 @@ int feNumber::numberUnknowns(int globalNum)
   }
 
   // Number the unknown elements DOF
+  // TODO : Like for the edges, identify the boundary triangles which are also faces of tetrahedra
   for(int i = 0; i < _nElm; ++i) {
     for(int j = 0; j < _nDOFElements[i]; ++j) {
       if(_numberingElements[_maxDOFperElem * i + j] == DOF_UNKNOWN) {
@@ -242,6 +307,16 @@ int feNumber::numberUnknowns(int globalNum)
     }
   }
 
+  // Number the unknown faces DOF
+  for(int i = 0; i < _nFac; ++i) {
+    for(int j = 0; j < _nDOFFaces[i]; ++j) {
+      if(_numberingFaces[_maxDOFperFace * i + j] == DOF_UNKNOWN) {
+        ++_nInc;
+        _numberingFaces[_maxDOFperFace * i + j] = globalNum++;
+      }
+    }
+  }
+
   return globalNum;
 }
 
@@ -260,6 +335,7 @@ int feNumber::numberEssential(int globalNum)
   }
 
   // Number the essential elements DOF
+  // TODO : Modify for faces like above
   for(int i = 0; i < _nElm; ++i) {
     for(int j = 0; j < _nDOFElements[i]; ++j) {
       if(_numberingElements[_maxDOFperElem * i + j] == DOF_ESSENTIAL) {
@@ -284,6 +360,16 @@ int feNumber::numberEssential(int globalNum)
       if(_numberingEdges[_maxDOFperEdge * i + j] == DOF_ESSENTIAL) {
         ++_nDofs;
         _numberingEdges[_maxDOFperEdge * i + j] = globalNum++;
+      }
+    }
+  }
+
+  // Number the essential edges DOF
+  for(int i = 0; i < _nFac; ++i) {
+    for(int j = 0; j < _nDOFFaces[i]; ++j) {
+      if(_numberingFaces[_maxDOFperFace * i + j] == DOF_ESSENTIAL) {
+        ++_nDofs;
+        _numberingFaces[_maxDOFperFace * i + j] = globalNum++;
       }
     }
   }

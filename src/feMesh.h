@@ -36,6 +36,8 @@ protected:
   int _nVerticesWithNoPhysical;
   // Number of edges (1D-facets)
   int _nEdges;
+  // Number of triangle facets (2D-facets)
+  int _nFaces;
   // Total number of elements of all types and all dimensions
   int _nTotalElm;
   // Number of non-boundary elements
@@ -72,6 +74,7 @@ public:
 protected:
   // The elements by dimension.
   // The lower dimensional elements are created as boundaries of the higher-dimensional elements.
+  std::set<Edge, EdgeLessThan> _allEdges;
   std::set<Triangle, TriangleLessThan> _allTriangles;
   std::set<Tetrahedron, TetrahedronLessThan> _allTetrahedra;
 
@@ -93,6 +96,7 @@ public:
   int getNumVertices() { return _nVertices; }
   int getNumVerticesWithoutPhysical() { return _nVerticesWithNoPhysical; }
   int getNumEdges() { return _nEdges; }
+  int getNumFaces() { return _nFaces; }
   int getNumElements() { return _nTotalElm; }
   int getNumInteriorElements() { return _nInteriorElm; }
   int getNumBoundaryElements() { return _nBoundaryElm; }
@@ -150,20 +154,25 @@ public:
   int getNumVerticesPerElem(std::string const &cncGeoID);
   int getNumVerticesPerElem(const int cncGeoTag);
 
-  // Return the global (unique) tag of the numVertex-th vertex
-  // of element with local tag numElem in matching connectivity.
-  int getVertex(std::string const &cncGeoID, const int numElem, const int numVertex);
-  int getVertex(const int cncGeoTag, const int numElem, const int numVertex);
-
   // Return the global (unique) tag of element with local
   // tag numElem in matching connectivity.
   int getElement(std::string const &cncGeoID, const int numElem);
   int getElement(const int cncGeoTag, const int numElem);
 
+  // Return the global (unique) tag of the numVertex-th vertex
+  // of element with local tag numElem in matching connectivity.
+  int getVertex(std::string const &cncGeoID, const int numElem, const int numVertex);
+  int getVertex(const int cncGeoTag, const int numElem, const int numVertex);
+
   // Return the global (unique) tag of the numEdge-th edge
   // of element with local tag numElem in matching connectivity
   int getEdge(std::string const &cncGeoID, const int numElem, const int numEdge);
   int getEdge(const int cncGeoTag, const int numElem, const int numEdge);
+
+  // Return the global (unique) tag of the numFace-th facet (triangle)
+  // of element with local tag numElem in matching connectivity
+  int getFace(std::string const &cncGeoID, const int numElem, const int numFace);
+  int getFace(const int cncGeoTag, const int numElem, const int numFace);
 
   // Return a pointer to the FE space of matching connectivity
   feSpace *getGeometricSpace(std::string const &cncGeoID);

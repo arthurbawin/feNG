@@ -974,7 +974,7 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, const bool curved, const bool
       _nTotalElm = _nElm;
 
       int numEdges = 0;
-      int numTriangles = 0;
+      // int numTriangles = 0;
       int numTetrahedra = 0;
 
       // Starting facets numbering at 1 to distinguish + or - in the connectivity
@@ -983,7 +983,7 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, const bool curved, const bool
       int tagTrianglesDebug = 1;
 
       // Sets of elements, transformed in vectors after all elements are added
-      std::set<Edge, EdgeLessThan> allEdges;
+      // std::set<Edge, EdgeLessThan> allEdges;
       // std::set<Triangle, TriangleLessThan> allTriangles;
       // std::set<Tetrahedron, TetrahedronLessThan> _allTetrahedra;
 
@@ -1327,14 +1327,14 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, const bool curved, const bool
 
                 Triangle *tri;
                 if(reversed || _entities[p].physicalTags[0] < 0) {
-                  tri = new Triangle(v0, v2, v1, numTriangles);
+                  tri = new Triangle(v0, v2, v1, tagTrianglesDebug);
                 } else {
-                  tri = new Triangle(v0, v1, v2, numTriangles);
+                  tri = new Triangle(v0, v1, v2, tagTrianglesDebug);
                 }
 
                 // Create the boundary edges of tri
                 // They are added to the set if they (or their reverse) do not exist yet
-                tri->createBoundary(allEdges, tagEdgesDebug);
+                tri->createBoundary(_allEdges, tagEdgesDebug);
                 _allTriangles.insert(*tri);
 
                 //
@@ -1351,8 +1351,8 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, const bool curved, const bool
                 }
 
                 // Triangles (trivial) (needed?)
-                _entities[p].connecTrianglesDebug[iElm] = numTriangles;
-                numTriangles++;
+                _entities[p].connecTrianglesDebug[iElm] = tagTrianglesDebug;
+                tagTrianglesDebug++;
 
                 // Do not break while debugging (-:
                 // feWarning("Creating both data structures for 3-node triangles for debug");
@@ -1493,7 +1493,7 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, const bool curved, const bool
               // Create the boundary facets of tet
               // They are added to the set if they (or their reverse) do not exist yet
               // This also creates the mesh edges, as boundaries of the facets.
-              tet->createBoundary(_allTriangles, tagTrianglesDebug, allEdges, tagEdgesDebug);
+              tet->createBoundary(_allTriangles, tagTrianglesDebug, _allEdges, tagEdgesDebug);
 
               // Create the boundary edges of the facets of tet
               _allTetrahedra.insert(*tet);
@@ -1516,14 +1516,18 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, const bool curved, const bool
 
               // Edges
               // Add the facets (with orientation) to the triangle connectivity of this entity
-              // TODO
-              feWarning("Add edge connectivity for 3D entities if needed");
+              for(int k = 0; k < 6; ++k) {
+                _entities[p].connecEdges[6 * iElm + k] = tet->getEdgeOrientation(k) * tet->getEdge(k)->getTag();
+              }
 
               // Triangles
               // Add the facets (with orientation) to the triangle connectivity of this entity
               for(int k = 0; k < 4; ++k) {
                 _entities[p].connecTri           [4 * iElm + k] = tet->getFacetOrientation(k) * tet->getFacet(k)->getTag();
                 _entities[p].connecTrianglesDebug[4 * iElm + k] = tet->getFacetOrientation(k) * tet->getFacet(k)->getTag();
+                assert(tet->getFacetOrientation(k) != 0);
+                assert(tet->getFacet(k)->getTag() > 0);
+                assert(tet->getFacetOrientation(k) * tet->getFacet(k)->getTag() != 0);
               }
 
               // Tet (trivial) (needed? redundant with connecElem?)
@@ -1600,9 +1604,11 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, const bool curved, const bool
         } // for numElemInEntity
       } // for numEntities
 
-      feInfo("There are %d mesh edges", allEdges.size());
+      feInfo("There are %d mesh edges", _allEdges.size());
       feInfo("There are %d mesh triangles", _allTriangles.size());
       feInfo("There are %d mesh tetrahedra", _allTetrahedra.size());
+      if(_allTetrahedra.size() > 0)
+        _edges = _allEdges;
 
       _tetrahedra.assign(_allTetrahedra.begin(), _allTetrahedra.end());
 
@@ -1945,7 +1951,6 @@ feStatus feMesh2DP1::readGmsh(const std::string meshName, const bool curved, con
       toString(pE.interp).data());
   }
 
-  // CONTINUER ICI
   //
   // Finally, create geometric connectivities
   //
@@ -1956,7 +1961,7 @@ feStatus feMesh2DP1::readGmsh(const std::string meshName, const bool curved, con
     physicalEntity &pE = p.second;
 
     feCncGeo *cnc =
-      new feCncGeo(nCncGeo, pE.dim, maxDim, pE.nNodePerElem, pE.nElm, pE.nEdgePerElem, pE.name, pE.geometry,
+      new feCncGeo(nCncGeo, pE.dim, maxDim, pE.nNodePerElem, pE.nElm, pE.nEdgePerElem, pE.nTriPerElem, pE.name, pE.geometry,
                    pE.interp, pE.geoSpace, pE.connecNodes, pE.connecElem, pE.connecEdges, pE.connecTri);
 
     _cncGeo.push_back(cnc);
@@ -1972,6 +1977,8 @@ feStatus feMesh2DP1::readGmsh(const std::string meshName, const bool curved, con
   }
 
   _nEdges = _edges.size();
+  feInfo("There are %d edges in former set", _edges.size());
+  _nFaces = _allTriangles.size();
   _dim = maxDim;
 
   _nInteriorElm = 0;

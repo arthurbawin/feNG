@@ -1056,6 +1056,8 @@ public:
   std::vector<double> L(double *r);
   void L(double *r, double *L);
 
+  std::vector<double> shapeTetDerivatives(const double xsi[3], const int iDerivative);
+
   std::vector<double> dLdr(double *r);
   std::vector<double> dLds(double *r);
   std::vector<double> dLdt(double *r);
