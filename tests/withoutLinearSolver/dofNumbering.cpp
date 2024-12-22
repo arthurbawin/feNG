@@ -1,6 +1,6 @@
 
 #include "feAPI.h"
-#include "tests.h"
+#include "../tests.h"
 
 #include <gtest/gtest.h>
 
@@ -19,7 +19,7 @@ namespace {
   {
     setVerbose(3);
 
-    const char *meshFile = "../../data/square1.msh";
+    const char *meshFile = "../../../data/square1.msh";
     feMesh2DP1 mesh(meshFile);
 
     // Define a finite element space on each subdomain of the computational domain.
@@ -53,7 +53,7 @@ namespace {
 
 TEST(DOF_Numbering, LagrangeP4Square) {
 
-  std::string testRoot = "../../tests/dofNumbering";
+  std::string testRoot = "../../../tests/withoutLinearSolver/dofNumbering";
 
   std::stringstream resultBuffer;
 

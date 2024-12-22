@@ -1,6 +1,6 @@
 
 #include "feAPI.h"
-#include "tests.h"
+#include "../tests.h"
 
 #include <gtest/gtest.h>
 
@@ -15,7 +15,7 @@ int computeQuadrature(double &I1, double &I2, double &I3)
 {
   feFunction fun(fSol);
 
-  feMesh2DP1 mesh("../../data/square1.msh");
+  feMesh2DP1 mesh("../../../data/square1.msh");
 
   // Define a quadrature rule to integrate polynomials of order up to 2 on reference triangle
   feQuadrature rule(2, geometryType::TRI);
@@ -117,7 +117,7 @@ int computeQuadrature(double &I1, double &I2, double &I3)
 
 TEST(Quadrature, QuadratureSquare) {
 
-  std::string testRoot = "../../tests/quadratureSquare";
+  std::string testRoot = "../../../tests/withoutLinearSolver/quadratureSquare";
 
   double I1, I2, I3;
   computeQuadrature(I1, I2, I3);

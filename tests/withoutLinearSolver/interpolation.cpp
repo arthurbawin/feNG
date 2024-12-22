@@ -1,6 +1,6 @@
 
 #include "feAPI.h"
-#include "tests.h"
+#include "../tests.h"
 
 #include <gtest/gtest.h>
 
@@ -43,9 +43,9 @@ namespace {
     for(int i = 0; i < numMeshes; ++i)
     {
       if(dim == 2) {
-        meshFile = "../../data/square" + std::to_string(i + 1) + ".msh";
+        meshFile = "../../../data/square" + std::to_string(i + 1) + ".msh";
       } else {
-        meshFile = "../../data/cube" + std::to_string(i + 1) + ".msh";
+        meshFile = "../../../data/cube" + std::to_string(i + 1) + ".msh";
       }
 
       feMesh2DP1 mesh(meshFile);
@@ -106,7 +106,7 @@ TEST(Interpolation, ConvergenceInterpolation)
 {
   initialize(my_argc, my_argv);
   
-  std::string testRoot = "../../tests/interpolation";
+  std::string testRoot = "../../../tests/withoutLinearSolver/interpolation";
 
   std::stringstream resultBuffer;
 

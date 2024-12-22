@@ -1,6 +1,6 @@
 
 #include "feAPI.h"
-#include "tests.h"
+#include "../tests.h"
 
 #include <gtest/gtest.h>
 
@@ -53,7 +53,7 @@ namespace {
     //
     for(int i = 0; i < numMeshes; ++i)
     {
-      std::string meshFile = "../../data/square" + std::to_string(i + 1) + ".msh";
+      std::string meshFile = "../../../data/square" + std::to_string(i + 1) + ".msh";
 
       feMesh2DP1 mesh(meshFile);
       nElm[i] = mesh.getNumInteriorElements();
@@ -134,6 +134,8 @@ namespace {
     }
     resultBuffer << std::endl;
 
+    system("pwd");
+
     return 0;
   }
 }
@@ -142,7 +144,7 @@ TEST(Convergence, LaplaceSquare)
 {
   initialize(my_argc, my_argv);
   
-  std::string testRoot = "../../tests/convergenceLaplace";
+  std::string testRoot = "../../../tests/withLinearSolver/convergenceLaplace";
 
   std::stringstream resultBuffer;
 
