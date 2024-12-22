@@ -28,6 +28,7 @@ set(feNG_SRC
     fePolynomial.cpp
     feRecovery.cpp
     feNewRecovery.cpp
+    feNumeric.cpp
     feQuadrature.cpp
     feQuadratureTet.cpp
     feQuadratureTri.cpp
@@ -75,6 +76,7 @@ set(feNG_API
     feNG.h
     feNorm.h
     feNumber.h
+    feNumeric.h
     feOptionsParser.h
     fePolynomial.h
     feQuadrature.h

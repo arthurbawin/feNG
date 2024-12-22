@@ -477,12 +477,16 @@ template <int dim> void feSysElm_NonlinearAdvection<dim>::computeBe(feBilinearFo
 template class feSysElm_Diffusion<0>;
 template class feSysElm_Diffusion<1>;
 template class feSysElm_Diffusion<2>;
+template class feSysElm_Diffusion<3>;
 template class feSysElm_NonlinearDiffusion<0>;
 template class feSysElm_NonlinearDiffusion<1>;
 template class feSysElm_NonlinearDiffusion<2>;
+template class feSysElm_NonlinearDiffusion<3>;
 template class feSysElm_Advection<0>;
 template class feSysElm_Advection<1>;
 template class feSysElm_Advection<2>;
+template class feSysElm_Advection<3>;
 template class feSysElm_NonlinearAdvection<0>;
 template class feSysElm_NonlinearAdvection<1>;
 template class feSysElm_NonlinearAdvection<2>;
+template class feSysElm_NonlinearAdvection<3>;

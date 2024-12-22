@@ -334,7 +334,6 @@ void feSpaceTetPn::initializeAddressingVector(int numElem, std::vector<feInt> &a
           adr[start + (iF+1) * (nDOFPerFace) - j - 1] = _numbering->getFaceDOF(_mesh, _cncGeoID, numElem, iF, j);
         }
       }
-
     }
   }
   if(_n >= 4) {

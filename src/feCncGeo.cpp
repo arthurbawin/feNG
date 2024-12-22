@@ -2,7 +2,9 @@
 #include "feCncGeo.h"
 #include "feSpace.h"
 #include "feMesh.h"
+#include "feNumeric.h"
 #include "feQuadrature.h"
+
 #include "SPoint2.h"
 
 extern int FE_VERBOSE;
@@ -270,13 +272,6 @@ feStatus feCncGeo::setQuadratureRule(feQuadrature *rule)
   return _geometricInterpolant->setQuadratureRule(rule);
 }
 
-static double det3x3(double mat[3][3])
-{
-  return (mat[0][0] * (mat[1][1] * mat[2][2] - mat[1][2] * mat[2][1]) -
-          mat[0][1] * (mat[1][0] * mat[2][2] - mat[1][2] * mat[2][0]) +
-          mat[0][2] * (mat[1][0] * mat[2][1] - mat[1][1] * mat[2][0]));
-}
-
 feStatus feCncGeo::computeJacobians(const bool ignoreNegativeJacobianWarning)
 {
   int nQuad = _geometricInterpolant->getNumQuadPoints();
@@ -353,7 +348,6 @@ feStatus feCncGeo::computeJacobians(const bool ignoreNegativeJacobianWarning)
               printf("Info : %+-1.4e - %+-1.4e - %+-1.4e \n", geoCoord[3*i+0], geoCoord[3*i+1], geoCoord[3*i+2]);
             }
           }
-          feWarning("jacobian = %+-12.12e", _J[nQuad * iElm + k]);
         }
 
         // Plot jacobian
@@ -644,10 +638,10 @@ void feCncGeo::computeElementTransformation(std::vector<double> &elementCoord, c
                                                                         T.dxdr);
     _geometricInterpolant->interpolateVectorFieldAtQuadNode_sDerivative(elementCoord, iQuadNode,
                                                                         T.dxds);
-    T.drdx[0] = T.dxds[1] / jac;
+    T.drdx[0] =  T.dxds[1] / jac;
     T.drdx[1] = -T.dxdr[1] / jac;
     T.drdy[0] = -T.dxds[0] / jac;
-    T.drdy[1] = T.dxdr[0] / jac;
+    T.drdy[1] =  T.dxdr[0] / jac;
   } else if(_dim == 3) {
     _geometricInterpolant->interpolateVectorFieldAtQuadNode_rDerivative(elementCoord, iQuadNode,
                                                                         T.dxdr);
@@ -656,8 +650,20 @@ void feCncGeo::computeElementTransformation(std::vector<double> &elementCoord, c
     _geometricInterpolant->interpolateVectorFieldAtQuadNode_tDerivative(elementCoord, iQuadNode,
                                                                         T.dxdt);
     /* Write inverse of 3x3 matrix (-: */
-    feErrorMsg(FE_STATUS_ERROR, "Inverse of element transformation not implemented in 3D");
-    exit(-1);
+    double mat[3][3] = {{T.dxdr[0], T.dxds[0], T.dxdt[0]},
+                        {T.dxdr[1], T.dxds[1], T.dxdt[1]},
+                        {T.dxdr[2], T.dxds[2], T.dxdt[2]}};
+    double inv[3][3];
+    inv3x3(mat, inv);
+    T.drdx[0] = inv[0][0];
+    T.drdx[1] = inv[1][0];
+    T.drdx[2] = inv[2][0];
+    T.drdy[0] = inv[0][1];
+    T.drdy[1] = inv[1][1];
+    T.drdy[2] = inv[2][1];
+    T.drdz[0] = inv[0][2];
+    T.drdz[1] = inv[1][2];
+    T.drdz[2] = inv[2][2]; 
   }
 }
 
