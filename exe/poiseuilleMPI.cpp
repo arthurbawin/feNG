@@ -3,6 +3,7 @@
 #if defined(HAVE_PETSC)
   #include "petscsys.h"
 #endif
+#include "mpi.h"
 
 double solP(const double t, const std::vector<double> &pos, const std::vector<double> &par)
 {
@@ -26,11 +27,11 @@ int main(int argc, char **argv)
 {
   initialize(argc, argv);
 
-  const char* meshFile = "../data/poiseuille1.msh";
+  const char* meshFile = "../data/poiseuille0.msh";
   int orderVelocity = 2;
   int orderPressure = 1;
   int degreeQuadrature = 8;
-  const char *solverType = "PETSc";
+  const char *solverType = "PETSc_MUMPS";
   bool divergenceFormulation = false;
 
 #if defined(HAVE_PETSC)
@@ -62,7 +63,7 @@ int main(int argc, char **argv)
 
   orderPressure = fmin(1, orderVelocity-1);
 
-  setVerbose(2);
+  setVerbose(1);
 
   feConstantFunction zero(0.);
   feConstantFunction one(1.);
@@ -127,7 +128,9 @@ int main(int argc, char **argv)
 
   feLinearSystem *system;
   if(std::string(solverType).compare("PETSc") == 0) {
-    feCheck(createLinearSystem(system, PETSC, forms, numbering.getNbUnknowns(), argc, argv));
+    feCheck(createLinearSystem(system, PETSC, forms, numbering.getNbUnknowns()));
+  } else if(std::string(solverType).compare("PETSc_MUMPS") == 0) {
+    feCheck(createLinearSystem(system, PETSC_MUMPS, forms, numbering.getNbUnknowns()));
   } else if(std::string(solverType).compare("Pardiso") == 0) {
     feCheck(createLinearSystem(system, MKLPARDISO, forms, numbering.getNbUnknowns()));
   } else {
@@ -146,9 +149,9 @@ int main(int argc, char **argv)
   feExporter *exporter;
   feCheck(createVisualizationExporter(exporter, VTK, &numbering, &sol, &mesh, spaces));
   // int exportEveryNSteps = 1;
-  // std::string vtkFileRoot = "vec";
-  // feExportData exportData = {exporter, 1, vtkFileRoot};
-  feExportData exportData = {nullptr, 1, ""};
+  std::string vtkFileRoot = "vec";
+  feExportData exportData = {exporter, 1, vtkFileRoot};
+  // feExportData exportData = {nullptr, 1, ""};
 
   std::vector<feNorm*> norms = {};
 
@@ -157,17 +160,30 @@ int main(int argc, char **argv)
   feCheck(createTimeIntegrator(solver, STATIONARY, tol, system, &numbering, &sol, &mesh, norms, exportData));
   feCheck(solver->makeStep());
 
+  // int rank;
+  // MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  // if(rank == 0) {
+  //   const std::vector<double> &mysol = sol.getSolutionReference();
+  //   for(auto val : mysol) {
+  //     feInfo("Sol = %f", val);
+  //   }
+  // }
+
   feNorm norm(VECTOR_L2_ERROR, {uDomaine}, &sol, nullptr, &uExact);
   feInfo("Error is %1.14e", norm.compute());
 
-  delete uDomaine;
+  // delete solver;
+  delete system;
+  delete exporter;
   delete diffU;
   delete divU;
   delete gradP;
   delete divSigma;
-  delete system;
-  delete exporter;
-  delete solver;
+  delete uDomaine;
+  delete pDomaine;
+  delete uInlet;
+  delete uOutlet;
+  delete uNoSlip;
 
   finalize();
   return 0;

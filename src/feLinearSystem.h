@@ -14,7 +14,7 @@
 #endif
 
 /* Supported linear solvers */
-typedef enum { MKLPARDISO, PETSC } linearSolverType;
+typedef enum { MKLPARDISO, PETSC, PETSC_MUMPS } linearSolverType;
 
 // Create a linear system and perform safety checks.
 // This is the recommended way of creating a linear system.
@@ -25,10 +25,8 @@ typedef enum { MKLPARDISO, PETSC } linearSolverType;
 // bilinearForms: vector of (bi-)linear forms to assemble
 //   numUnknowns: total number of unknowns (dimension of the system)
 
-// argc and argv are provided for PETSc command line options
 feStatus createLinearSystem(feLinearSystem *&system, linearSolverType type,
                             std::vector<feBilinearForm *> bilinearForms, int numUnknowns,
-                            int argc = 0, char **argv = nullptr,
                             int ownershipSplit = -1);
 
 //
@@ -139,14 +137,11 @@ public:
 };
 
 //
-// PETSc iterative solvers
+// PETSc solvers
 //
 class feLinearSystemPETSc : public feLinearSystem
 {
 protected:
-  int _argc;
-  char **_argv;
-
 #if defined(HAVE_PETSC)
   // Number of unknown DOFs (size of the system)
   PetscInt _nInc;
@@ -177,11 +172,21 @@ protected:
   // Currently each process knows the whole solution vector,
   // but only updates its owned portion, then the vector is Allgatherv'ed
   double *_ownedSolution;
+
+  // To solve with MUMPS without runtime options:
+  bool _solveWithMUMPS = false;
+  Mat _factoredMatrix;
+  // Selected MUMPS options, see MUMPS user guide
+  int _icntl7  = 2; // Sequential ordering (if icntl28 = 1 or only 1 MPI proc)
+  int _icntl28 = 2; // Sequential (1) or parallel (2) ordering
+  int _icntl29 = 1; // Parallel ordering (if icntl28 = 2)
+
 #endif
 
 public:
-  feLinearSystemPETSc(int argc, char **argv, std::vector<feBilinearForm *> bilinearForms,
-                      int numUnknowns);
+  feLinearSystemPETSc(std::vector<feBilinearForm *> bilinearForms,
+                      int numUnknowns,
+                      linearSolverType type);
   ~feLinearSystemPETSc();
 
   feInt getSystemSize() {

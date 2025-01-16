@@ -24,10 +24,6 @@
 #include "feNorm.h"
 #include "feGraphics.h"
 
-#if defined(HAVE_OMP)
-#include "omp.h"
-#endif
-
 #if defined(HAVE_GMSH)
 #include "gmsh.h"
 #endif

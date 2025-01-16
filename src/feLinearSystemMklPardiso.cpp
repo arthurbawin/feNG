@@ -314,7 +314,7 @@ feLinearSystemMklPardiso::feLinearSystemMklPardiso(std::vector<feBilinearForm *>
 #endif
   
   feInfoCond(FE_VERBOSE > 0, "\t\tCreated a MKL Pardiso linear system of size %d x %d", _nInc, _nInc);
-  feInfoCond(FE_VERBOSE > 0, "\t\tNumber of nonzero elements: %d", _nnz);
+  feInfoCond(FE_VERBOSE > 0, "\t\tNumber of nonzero entries: %d", _nnz);
 #if defined(HAVE_MPI)
   feInfoCond(FE_VERBOSE > 0, "\t\tSolving with cluster version of MKL Pardiso because MPI is enabled");
   if(_ownershipSplit < 0) {
@@ -681,7 +681,6 @@ void feLinearSystemMklPardiso::correctSolution(feSolution *sol)
     // Synchronize the solution vector on all processes
     MPI_Allgatherv(_ownedSolution, high-low+1, MPI_DOUBLE, solArray.data(),
       _numOwnedRowsOnAllProc, _ownedLowerBounds, MPI_DOUBLE, MPI_COMM_WORLD);
-
   }
   // OR
   // Correct solution on master proc only if system is sequential

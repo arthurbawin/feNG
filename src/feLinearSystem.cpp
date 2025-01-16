@@ -7,13 +7,8 @@ extern bool wasInitialized;
 feStatus createLinearSystem(feLinearSystem *&system, linearSolverType type,
                             std::vector<feBilinearForm *> bilinearForms,
                             int numUnknowns,
-                            int argc, char **argv,
                             int ownershipSplit)
 {
-#if !defined(HAVE_PETSC)
-  UNUSED(argc, argv);
-#endif
-
 #if !defined(HAVE_MKL)
   UNUSED(ownershipSplit);
 #endif
@@ -37,8 +32,7 @@ feStatus createLinearSystem(feLinearSystem *&system, linearSolverType type,
     return feErrorMsg(FE_STATUS_ERROR,
                       "0 unknowns : attempting to create a linear system of size 0.");
 
-  switch(type) {
-    case MKLPARDISO:
+  if(type == MKLPARDISO) {
 #if defined(HAVE_MKL)
       system = new feLinearSystemMklPardiso(bilinearForms, numUnknowns, ownershipSplit);
       break;
@@ -46,30 +40,29 @@ feStatus createLinearSystem(feLinearSystem *&system, linearSolverType type,
       return feErrorMsg(FE_STATUS_ERROR,
                         "feNG must be compiled with Intel MKL to solve with MKL Pardiso.");
 #endif
-
-    case PETSC:
+  } else if(type == PETSC || type == PETSC_MUMPS) {
 #if defined(HAVE_PETSC)
-    {
-      if(argc == 0 || argv == nullptr) {
-        return feErrorMsg(FE_STATUS_ERROR,
-                          "Please provide argc and argv to create a PETSc linear system.");
-      }
-      if(!wasInitialized) {
-        return feErrorMsg(FE_STATUS_ERROR,
-                          "PETSc was not initialized : please initialize PETSc first by calling "
-                          "initialize(argc, argv) as the very first line of your program.");
-      }
-      system = new feLinearSystemPETSc(argc, argv, bilinearForms, numUnknowns);
-      break;
-    }
-#else
+    if(!wasInitialized) {
       return feErrorMsg(FE_STATUS_ERROR,
+                        "PETSc was not initialized : please initialize PETSc first by calling "
+                        "initialize(argc, argv) as the very first line of your program.");
+    }
+    if(type == PETSC_MUMPS) {
+      #if !defined(PETSC_HAVE_MUMPS)
+        return feErrorMsg(FE_STATUS_ERROR, "Cannot solve with MUMPS through PETSc"
+          " because PETSc was not configured with MUMPS.\n"
+          " Add the option --with-mumps=1 or --download-mumps=1 when configuring PETSc.");
+      #endif
+    }
+    system = new feLinearSystemPETSc(bilinearForms, numUnknowns, type);
+#else
+    return feErrorMsg(FE_STATUS_ERROR,
                         "feNG must be compiled with MPI and PETSc to solve with PETSc.");
 #endif
-    default:
-      return feErrorMsg(FE_STATUS_ERROR, "Unsupported linear solver type.");
+  } else {
+    return feErrorMsg(FE_STATUS_ERROR, "Unsupported choice of linear solver.");
   }
-
+  
   return FE_STATUS_OK;
 }
 

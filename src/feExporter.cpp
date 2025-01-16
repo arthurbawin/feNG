@@ -6,6 +6,10 @@
 #include <fstream>
 #include <map>
 
+#if defined(HAVE_MPI)
+  #include "mpi.h"
+#endif
+
 #define TOL_ZERO_VTK 1e-20
 
 extern bool FE_VERBOSE;
@@ -334,7 +338,7 @@ feStatus feExporterVTK::createVTKNodes(std::vector<feSpace *> &spacesToExport,
     int nComponents = space->getNumComponents();
     feNumber *numbering = _metaNumber->getNumbering(field);
 
-    feInfoCond(FE_VERBOSE >= VERBOSE_MODERATE, 
+    feInfoCond(FE_VERBOSE > VERBOSE_MODERATE, 
       "Exporting field %s on connectivity %s", field.data(), space->getCncGeoID().data());
 
     const feCncGeo *cnc = space->getCncGeo();
@@ -562,6 +566,12 @@ void feExporterVTK::writeVTKNodes(std::ostream &output,
 //
 feStatus feExporterVTK::writeStep(std::string fileName)
 {
+#if defined(HAVE_MPI)
+  // Write VTK file from master rank only for now
+  int rank;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  if(rank == 0) {
+#endif
   tic();
   std::filebuf fb;
   if(fb.open(fileName, std::ios::out)) {
@@ -653,8 +663,11 @@ feStatus feExporterVTK::writeStep(std::string fileName)
     return feErrorMsg(FE_STATUS_FILE_CANNOT_BE_OPENED, "Could not open output file.");
   }
 
-  feInfoCond(FE_VERBOSE > 1, "\t\tWrote VTK file in %f s", toc());
   feInfo("\t\tWrote VTK file in %f s", toc());
+
+  #if defined(HAVE_MPI)
+  }
+  #endif
 
   return FE_STATUS_OK;
 }

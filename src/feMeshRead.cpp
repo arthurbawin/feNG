@@ -1354,6 +1354,8 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, const bool curved, const bool
                 _entities[p].connecTrianglesDebug[iElm] = tagTrianglesDebug;
                 tagTrianglesDebug++;
 
+                delete tri;
+
                 // Do not break while debugging (-:
                 // feWarning("Creating both data structures for 3-node triangles for debug");
                 // break;
@@ -1931,7 +1933,6 @@ feStatus feMesh2DP1::readGmsh(const std::string meshName, const bool curved, con
       pE.geoSpace = new feSpaceTriP3("xyz");
     } else if(pE.interp == geometricInterpolant::TETP1) {
       pE.geometry = geometryType::TET;
-      // pE.geoSpace = new feSpaceTetP1("xyz");
       pE.geoSpace = new feSpaceTetPn(1, "xyz");
     } else {
       return feErrorMsg(FE_STATUS_ERROR,

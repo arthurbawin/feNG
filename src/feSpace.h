@@ -1073,37 +1073,4 @@ public:
   void initializeAddressingVector(int numElem, std::vector<feInt> &adr);
 };
 
-// -----------------------------------------------------------------------------
-// Lagrange element of degree 1 on reference tetrahedron
-// -----------------------------------------------------------------------------
-class feSpaceTetP1 : public feScalarSpace
-{
-protected:
-public:
-  feSpaceTetP1(std::string cncGeoID);
-  feSpaceTetP1(feMesh *mesh, const std::string fieldID, const std::string cncGeoID, feFunction *fct,
-               const bool useGlobalShapeFunctions = false);
-  ~feSpaceTetP1() {}
-
-  int getNumFunctions() const { return 4; }
-  int getPolynomialDegree() { return 1; }
-
-  std::vector<double> L(double *r);
-  void L(double *r, double *L);
-
-  std::vector<double> dLdr(double *r);
-  std::vector<double> dLds(double *r);
-  std::vector<double> dLdt(double *r);
-  std::vector<double> d2Ldr2(double *r);
-  std::vector<double> d2Ldrs(double *r);
-  std::vector<double> d2Lds2(double *r);
-  // std::vector<double> d2Ldt2(double *r);
-  // std::vector<double> d2Ldrt(double *r);
-  // std::vector<double> d2Ldst(double *r);
-
-  void initializeNumberingUnknowns();
-  void initializeNumberingEssential();
-  void initializeAddressingVector(int numElem, std::vector<feInt> &adr);
-};
-
 #endif

@@ -77,7 +77,7 @@
 # Théodore PAPADOPOULO (papadop.AT.inria.fr)
 
 
-set(CMAKE_FIND_DEBUG_MODE 1)
+# set(CMAKE_FIND_DEBUG_MODE 1)
 
 # unset this variable defined in matio
 unset(MSVC)
@@ -213,7 +213,7 @@ else()
         list(APPEND MKL_LINK_TOOL_COMMAND "--openmp=iomp5")
     endif()
 
-    message(STATUS "Commande exécutée : ${MKL_LINK_TOOL_COMMAND}")
+    message(STATUS "Executed linktool command in FindMKL.cmake: ${MKL_LINK_TOOL_COMMAND}")
     execute_process(COMMAND ${MKL_LINK_TOOL_COMMAND}
                     OUTPUT_VARIABLE MKL_LIBS
                     RESULT_VARIABLE COMMAND_WORKED

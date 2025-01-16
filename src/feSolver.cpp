@@ -72,16 +72,19 @@ feStatus solveQNBDF(feSolutionContainer *solDot, feTolerances tol, feMetaNumber 
     // Reset, assemble and solve the linear system J(u) * du = -NL(u)
     linearSystem->setToZero();
     solDot->computeSolTimeDerivative(sol, linearSystem);
-    linearSystem->assemble(sol);
+    // linearSystem->assemble(sol);
 
-    // // Check residual norm and exit if tolerance is reached
-    // linearSystem->getResidualMaxNorm(&normResidual);
-    // if(iter > 0 && normResidual <= tol.tolResidual) {
-    //   feInfoCond(FE_VERBOSE > 0,
-    //            "\t\t\t\tNonlinear solver has stopped because residual norm ||NL(u)|| = %10.10e is"
-    //            " below tolerance (%10.4e)", normResidual, tol.tolResidual);
-    //   break;
-    // }
+    // Check residual norm and exit if tolerance is reached
+    linearSystem->assembleResiduals(sol);
+    linearSystem->getRHSMaxNorm(&normResidual);
+    if(iter > 0 && normResidual <= tol.tolResidual) {
+      feInfoCond(FE_VERBOSE > 0,
+               "\t\t\t\tStopping because residual norm ||NL(u)|| = %10.10e is"
+               " below tolerance (%10.4e)", normResidual, tol.tolResidual);
+      break;
+    }
+
+    linearSystem->assembleMatrices(sol);
 
     linearSystem->constrainEssentialComponents(sol);
 
@@ -123,42 +126,29 @@ feStatus solveQNBDF(feSolutionContainer *solDot, feTolerances tol, feMetaNumber 
     stop = (normResidual <= tol.tolResidual) || (normDx <= tol.tolDx) || (iter > tol.maxIter);
   }
 
-  if(normResidual <= tol.tolResidual) {
+  if(normResidual <= tol.tolResidual)
+  {
     // Solver converged as expected
     feInfoCond(
       FE_VERBOSE > 0,
-      "\t\t\t\tConverged in %2d Newton iterations (Residual converged): ||du|| = %10.10e \t ||NL(u)|| = %10.10e", iter,
+      "\t\t\t\tConverged in %2d Newton iteration(s) (Residual converged): ||du|| = %10.10e \t ||NL(u)|| = %10.10e", iter,
       normDx, normResidual);
-
-    /////////////////////////////
-    // Print residual
-    // feInfo("Residu de NR (rhs)");
-    // linearSystem->setDisplayRHSInConsole(true);
-    // linearSystem->viewRHS();
-    // linearSystem->setDisplayRHSInConsole(false);
-    // feInfo("Solution");
-    // linearSystem->viewResidual();
-    // double resnorm;
-    // linearSystem->getResidualMaxNorm(&resnorm);
-    // linearSystem->getRHSMaxNorm(&resnorm);
-    // feInfo("Residual max norm = %+-1.4e", resnorm);
-    // linearSystem->viewMatrix();
-    /////////////////////////////
-
     return FE_STATUS_OK;
-  } else if(normDx <= tol.tolDx) {
-    // Increment is low enough but residual not
+  } else if(normDx <= tol.tolDx)
+  {
+    // Increment du is low enough but residual NL(u) is not
     feInfoCond(
       FE_VERBOSE > 0,
-      "\t\t\t\tConverged in %2d Newton iterations (Increment converged): ||du|| = %10.10e \t ||NL(u)|| = %10.10e", iter,
+      "\t\t\t\tConverged in %2d Newton iteration(s) (Increment converged): ||du|| = %10.10e \t ||NL(u)|| = %10.10e", iter,
       normDx, normResidual);
     printf("\n");
     feWarning("Nonlinear solver converged because increment du = %10.4e is below prescribed tolerance (%1.4e),\n"
       "but the equation residual NL(u) = %10.4e is not (tol = %1.4e). Consider decreasing the tolerance for du.\n",
       normDx, tol.tolDx, normResidual, tol.tolResidual);
     return FE_STATUS_OK;
-  } else {
-    // Did not converge
+  } else
+  {
+    // Solver did not converge
     return feErrorMsg(FE_STATUS_ERROR,
                       "Nonlinear solver did not converge at iter %2d : ||J*du - NL(u)|| = %10.10e  "
                       "(%4d iter.) \t ||du|| = "
@@ -192,8 +182,8 @@ feStatus StationarySolver::makeSteps(int /* nSteps */)
   feInfoCond(FE_VERBOSE > 0, "");
   feInfoCond(FE_VERBOSE > 0, "STATIONARY SOLVER:");
   feInfoCond(FE_VERBOSE > 0, "\t\tSolving for steady state solution");
-  feInfoCond(FE_VERBOSE > 0, "\t\tRecompute jacobian matrix at each Newton iteration: %s",
-             _linearSystem->getRecomputeStatus() ? "true" : "false");
+  // feInfoCond(FE_VERBOSE > 0, "\t\tRecompute jacobian matrix at each Newton iteration: %s",
+  //            _linearSystem->getRecomputeStatus() ? "true" : "false");
 
   // Solve
   feStatus s = solveQNBDF(_solutionContainer, _tol, _metaNumber, _linearSystem, _sol, _mesh);

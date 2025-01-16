@@ -93,4 +93,4 @@ set(feNG_API
     geodesic.h
     glfem.h)
 
-feng_add_library(feNG "${feNG_SRC}" "${feNG_API}")
+addLibraryMacro(feNG "${feNG_SRC}" "${feNG_API}")

@@ -31,12 +31,8 @@ namespace {
     return - k * 30. * (pow(x, 4) + pow(y, 4));
   }
 
-  int meshConvergence(std::stringstream &resultBuffer, int argc, char** argv, int order, int numMeshes, int degreeQuadrature)
-  {
-    #if !defined(HAVE_MKL) && !defined(HAVE_PETSC)
-      UNUSED(argc, argv);
-    #endif
-      
+  int meshConvergence(std::stringstream &resultBuffer, int order, int numMeshes, int degreeQuadrature)
+  {    
     setVerbose(2);  
 
     double k = 1.0;
@@ -80,9 +76,9 @@ namespace {
       // Decide if the Pardiso linear system is stored on a single process (-1)
       // or distributed on the processes (>= 0)
       int ownershipSplit = -1;
-      feCheck(createLinearSystem(system, MKLPARDISO, {diff, source}, numbering.getNbUnknowns(), argc, argv, ownershipSplit));
+      feCheck(createLinearSystem(system, MKLPARDISO, {diff, source}, numbering.getNbUnknowns(), ownershipSplit));
       #elif defined(HAVE_PETSC)
-      feCheck(createLinearSystem(system, PETSC, {diff, source}, numbering.getNbUnknowns(), argc, argv));
+      feCheck(createLinearSystem(system, PETSC, {diff, source}, numbering.getNbUnknowns()));
       system->setRelativeTol(1e-10);
       system->setAbsoluteTol(1e-20);
       #endif
@@ -134,8 +130,6 @@ namespace {
     }
     resultBuffer << std::endl;
 
-    system("pwd");
-
     return 0;
   }
 }
@@ -149,10 +143,10 @@ TEST(Convergence, LaplaceSquare)
   std::stringstream resultBuffer;
 
   int degreeQuadrature = 12;
-  meshConvergence(resultBuffer, my_argc, my_argv, 1, 4, degreeQuadrature);
-  meshConvergence(resultBuffer, my_argc, my_argv, 2, 4, degreeQuadrature);
-  meshConvergence(resultBuffer, my_argc, my_argv, 3, 4, degreeQuadrature);
-  meshConvergence(resultBuffer, my_argc, my_argv, 4, 4, degreeQuadrature);
+  meshConvergence(resultBuffer, 1, 4, degreeQuadrature);
+  meshConvergence(resultBuffer, 2, 4, degreeQuadrature);
+  meshConvergence(resultBuffer, 3, 4, degreeQuadrature);
+  meshConvergence(resultBuffer, 4, 4, degreeQuadrature);
 
   // Compare the resultBuffer with the file testRoot.output
   // If output file does not exist, a temporary file .tmp_output

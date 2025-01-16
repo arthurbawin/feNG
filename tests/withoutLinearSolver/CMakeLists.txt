@@ -12,7 +12,7 @@ if(BUILD_TESTING)
 		get_filename_component(barename ${file} NAME)
 	    string( REPLACE ".cpp" "" name ${barename})
 	    message(STATUS "Adding test file ${name}")
-	    feNG_add_executable( ${name} ${barename} GTest::gtest_main)
+	    addExecutableMacro( ${name} ${barename} GTest::gtest_main)
 	    gtest_discover_tests(${name})
 	endforeach( file ${EXECUTABLES} )
 
