@@ -141,6 +141,8 @@ protected:
   dofInitialization _DOFinitialization = dofInitialization::NODEWISE;
   std::vector<dofLocation> _dofLocations;
 
+  // Were the DOF related to this space numbered yet?
+  bool _dofWereNumbered = false;
   // Ptr to the numbering of the field associated to this space
   feNumber *_numbering;
   // Ptr to the connectivity on which the space is defined
@@ -171,6 +173,8 @@ public:
   feMesh *getMeshPtr() { return _mesh; }
   // Assign the pointer to the field numbering after the numbering has been created
   void setNumberingPtr(feNumber *numbering) { _numbering = numbering; }
+  void setAsNumbered() { _dofWereNumbered = true; }
+  bool wasNumbered() { return _dofWereNumbered; }
 
   // Return the number of field components (1 for scalar finite element, 1/2/3 for vector element)
   int getNumComponents() const { return _nComponents; };

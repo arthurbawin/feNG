@@ -13,6 +13,7 @@
 typedef struct feTol {
   double tolDx;
   double tolResidual;
+  double tolDivergence;
   double maxIter;
   // int maxIterWithoutRecompute = 5;
   // double ratioUntilRecomputing= 1e-2;

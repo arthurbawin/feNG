@@ -59,15 +59,16 @@ feStatus solveQNBDF(feSolutionContainer *solDot, feTolerances tol, feMetaNumber 
   // Newton-Rapshon iteration
   while(!stop) {
 
-    // // If computing unsteady solution (with more than 1 solution vector),
-    // // recompute the jacobian only at first iteration and every N Newton steps
-    // int recomputeJacobianEveryNsteps = 4;
-    // if(solDot->getNbSol() > 1) {
-    //   if(iter % recomputeJacobianEveryNsteps == 0)
-    //     linearSystem->setRecomputeStatus(true);
-    //   else 
-    //     linearSystem->setRecomputeStatus(false);
-    // }
+    // If computing unsteady solution (with more than 1 solution vector),
+    // recompute the jacobian only at first iteration and every N Newton steps
+    int recomputeJacobianEveryNsteps = 2;
+    if(solDot->getNbSol() > 1) {
+      if(iter % recomputeJacobianEveryNsteps == 0)
+        linearSystem->setRecomputeStatus(true);
+      else 
+        linearSystem->setRecomputeStatus(false);
+    }
+    // linearSystem->setRecomputeStatus(true);
 
     // Reset, assemble and solve the linear system J(u) * du = -NL(u)
     linearSystem->setToZero();
@@ -84,9 +85,10 @@ feStatus solveQNBDF(feSolutionContainer *solDot, feTolerances tol, feMetaNumber 
       break;
     }
 
-    linearSystem->assembleMatrices(sol);
-
-    linearSystem->constrainEssentialComponents(sol);
+    if(linearSystem->getRecomputeStatus()) {
+      linearSystem->assembleMatrices(sol);
+      linearSystem->constrainEssentialComponents(sol);
+    }
 
     if(linearSystem->getReorderingStatus()) {
       linearSystem->permute();
@@ -100,6 +102,13 @@ feStatus solveQNBDF(feSolutionContainer *solDot, feTolerances tol, feMetaNumber 
                 ++iter, normAxb, linearSystemIter, normDx, normResidual,
                 linearSystem->getRecomputeStatus() ? "true" : "false");
       return feErrorMsg(FE_STATUS_ERROR, "Could not solve linear system at iter %2d )-:", iter);
+    }
+
+    // Abort if nonlinear term NL(u) is beyond divergence tolerance
+    if(normResidual > tol.tolDivergence) {
+      return feErrorMsg(FE_STATUS_ERROR,
+                      "Residual norm is greater than divergence tolerance: ||NL(u)|| = %10.4e > %10.4e",
+                      normResidual, tol.tolDivergence);
     }
 
     linearSystem->correctSolution(sol);
@@ -325,8 +334,14 @@ feStatus BDF2Solver::makeStep()
 
 feStatus BDF2Solver::makeSteps(int nSteps)
 {
-  printf("BDF2 : Advancing %d steps from t = %f to t = %f\n", nSteps, _tCurrent,
+  feInfo("BDF2 : Advancing %d steps from t = %f to t = %f", nSteps, _tCurrent,
          _tCurrent + nSteps * _dt);
+
+  // Write initial condition
+  if(_exportData.exporter != nullptr) {
+    std::string fileName = _exportData.fileNameRoot + std::to_string(_currentStep) + ".vtk";
+    feCheck(_exportData.exporter->writeStep(fileName));
+  }
 
   if(_currentStep == 0 || _shouldInitialize) {
 
@@ -401,10 +416,14 @@ feStatus BDF2Solver::makeSteps(int nSteps)
     }
     _solutionContainer->rotate(_dt);
     initializeBDF2(_sol, _metaNumber, _mesh, dynamic_cast<feSolutionBDF2 *>(_solutionContainer));
-    printf("\n");
-    printf("Étape 1 - recomputeMatrix = %s : Solution BDF2 - t = %6.6e\n",
+    feInfo("Étape 1 - recomputeMatrix = %s : Solution BDF2 - t = %6.6e",
            _linearSystem->getRecomputeStatus() ? "true" : "false", _sol->getCurrentTime());
-    solveQNBDF(_solutionContainer, _tol, _metaNumber, _linearSystem, _sol, _mesh);
+    
+    feStatus s = solveQNBDF(_solutionContainer, _tol, _metaNumber, _linearSystem, _sol, _mesh);
+
+    // Continue integration if s is a warning
+    if(s == FE_STATUS_ERROR) { return s; }
+    
     fePstClc(_sol, _linearSystem, _solutionContainer);
 
     // Calcul of norms

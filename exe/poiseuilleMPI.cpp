@@ -31,7 +31,7 @@ int main(int argc, char **argv)
   int orderVelocity = 2;
   int orderPressure = 1;
   int degreeQuadrature = 8;
-  const char *solverType = "PETSc_MUMPS";
+  const char *solverType = "Pardiso";
   bool divergenceFormulation = false;
 
 #if defined(HAVE_PETSC)
@@ -87,6 +87,7 @@ int main(int argc, char **argv)
 
   feSpace *uDomaine = nullptr, *pDomaine = nullptr;
   feSpace *uInlet = nullptr, *uOutlet = nullptr, *uNoSlip = nullptr; //, *pPoint = nullptr;
+  feSpace *phi = nullptr, *mu = nullptr;
 
   // Poiseuille
   feCheck(createFiniteElementSpace(uInlet, &mesh, elementType::VECTOR_LAGRANGE, orderVelocity, "U", "Entree", degreeQuadrature, &uExact));
@@ -95,9 +96,11 @@ int main(int argc, char **argv)
   feCheck(createFiniteElementSpace(uNoSlip, &mesh, elementType::VECTOR_LAGRANGE, orderVelocity, "U", "NoSlip", degreeQuadrature, &zeroVector));
   feCheck(createFiniteElementSpace(uDomaine, &mesh, elementType::VECTOR_LAGRANGE, orderVelocity, "U", "Domaine", degreeQuadrature, &zeroVector));
   feCheck(createFiniteElementSpace(pDomaine, &mesh, elementType::LAGRANGE, orderPressure, "P", "Domaine", degreeQuadrature, &zero));
+  feCheck(createFiniteElementSpace(     phi, &mesh, elementType::LAGRANGE, orderPressure, "Phi", "Domaine", degreeQuadrature, &zero));
+  feCheck(createFiniteElementSpace(      mu, &mesh, elementType::LAGRANGE, orderPressure,  "Mu", "Domaine", degreeQuadrature, &zero));
 
-  std::vector<feSpace*> spaces = {uInlet, uNoSlip, uDomaine, pDomaine};
-  std::vector<feSpace*> essentialSpaces = {uNoSlip, uInlet};
+  std::vector<feSpace*> spaces = {uInlet, uNoSlip, uDomaine, pDomaine, phi, mu};
+  std::vector<feSpace*> essentialSpaces = {uNoSlip, uInlet, phi, mu};
 
   if(divergenceFormulation) {
     // Solve for u-velocity on outlet but set v-velocity to zero
@@ -107,15 +110,16 @@ int main(int argc, char **argv)
     // Free BC on the outlet
   }
 
-
   feMetaNumber numbering(&mesh, spaces, essentialSpaces);
   feSolution sol(numbering.getNbDOFs(), spaces, essentialSpaces);
 
-  feBilinearForm *diffU = nullptr, *gradP = nullptr, *divU = nullptr, *divSigma = nullptr;
-  
-  feCheck(createBilinearForm( divU, {pDomaine, uDomaine}, new feSysElm_MixedDivergence(&one)                  ));
+  // Continuity
+  feBilinearForm *divU = nullptr;
+  feCheck(createBilinearForm( divU, {pDomaine, uDomaine}, new feSysElm_MixedDivergence(&one)));
   std::vector<feBilinearForm*> forms = {divU};
 
+  // Momentum
+  feBilinearForm *diffU = nullptr, *gradP = nullptr, *divSigma = nullptr;
   if(divergenceFormulation) {
     feCheck(createBilinearForm( divSigma, {uDomaine, pDomaine}, new feSysElm_DivergenceNewtonianStress(&one, &viscosity) ));
     forms.push_back(divSigma);
@@ -125,6 +129,11 @@ int main(int argc, char **argv)
     forms.push_back(gradP);
     forms.push_back(diffU);
   }
+
+  // Nonlinear term (optional)
+  feBilinearForm *convU = nullptr;
+  feCheck(createBilinearForm( convU, {uDomaine}, new feSysElm_VectorConvectiveAcceleration(&one) ));
+  forms.push_back(convU);
 
   feLinearSystem *system;
   if(std::string(solverType).compare("PETSc") == 0) {
@@ -156,7 +165,7 @@ int main(int argc, char **argv)
   std::vector<feNorm*> norms = {};
 
   TimeIntegrator *solver;
-  feTolerances tol{1e-10, 1e-10, 20};
+  feTolerances tol{1e-14, 1e-14, 1e4, 20};
   feCheck(createTimeIntegrator(solver, STATIONARY, tol, system, &numbering, &sol, &mesh, norms, exportData));
   feCheck(solver->makeStep());
 
@@ -175,10 +184,10 @@ int main(int argc, char **argv)
   // delete solver;
   delete system;
   delete exporter;
-  delete diffU;
-  delete divU;
-  delete gradP;
-  delete divSigma;
+  // delete diffU;
+  // delete divU;
+  // delete gradP;
+  // delete divSigma;
   delete uDomaine;
   delete pDomaine;
   delete uInlet;

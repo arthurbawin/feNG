@@ -13,24 +13,39 @@ typedef enum {
   VECTOR_SOURCE,
   MIXED_SCALAR_VECTOR_SOURCE,
   GRAD_SOURCE,
+
   MASS,
+  MASS_POWER,
   MIXED_MASS,
+  MIXED_MASS_POWER,
   VECTOR_MASS,
   MIXED_VECTOR_MASS,
   MIXED_SCALAR_VECTOR_MASS,
   TRANSIENT_MASS,
+  MIXED_TRANSIENT_MASS,
   TRANSIENT_VECTOR_MASS,
+
   DIFFUSION,
   VECTOR_DIFFUSION,
   NONLINEAR_DIFFUSION,
+
   ADVECTION,
   NONLINEAR_ADVECTION,
   VECTOR_CONVECTIVE_ACCELERATION,
   VECTOR_ADJOINT_CONVECTIVE_ACCELERATION,
+  TRACER_CONVECTION,
+
   DIV_NEWTONIAN_STRESS,
+
   MIXED_GRADIENT,
+  MIXED_GRADGRAD,
   MIXED_DIVERGENCE,
   MIXED_CURL,
+
+  TRIPLE_MIXED_GRADIENT,
+
+  CHNS_MOMENTUM,
+
   ZERO_BLOCK,
 
   SUPG_PSPG_STOKES,
@@ -63,8 +78,12 @@ inline const std::string toString(elementSystemType t)
       return "GRAD_SOURCE";
     case MASS:
       return "MASS";
+    case MASS_POWER:
+      return "MASS_POWER";
     case MIXED_MASS:
       return "MIXED_MASS";
+    case MIXED_MASS_POWER:
+      return "MIXED_MASS_POWER";
     case VECTOR_MASS:
       return "VECTOR_MASS";
     case MIXED_VECTOR_MASS:
@@ -73,6 +92,8 @@ inline const std::string toString(elementSystemType t)
       return "MIXED_SCALAR_VECTOR_MASS";
     case TRANSIENT_MASS:
       return "TRANSIENT_MASS";
+    case MIXED_TRANSIENT_MASS:
+      return "MIXED_TRANSIENT_MASS";
     case TRANSIENT_VECTOR_MASS:
       return "TRANSIENT_VECTOR_MASS";
     case DIFFUSION:
@@ -89,14 +110,22 @@ inline const std::string toString(elementSystemType t)
       return "VECTOR_CONVECTIVE_ACCELERATION";
     case VECTOR_ADJOINT_CONVECTIVE_ACCELERATION:
       return "VECTOR_ADJOINT_CONVECTIVE_ACCELERATION";
+    case TRACER_CONVECTION:
+      return "TRACER_CONVECTION";
     case DIV_NEWTONIAN_STRESS:
       return "DIV_NEWTONIAN_STRESS";
     case MIXED_GRADIENT:
       return "MIXED_GRADIENT";
+    case MIXED_GRADGRAD:
+      return "MIXED_GRADGRAD";
     case MIXED_DIVERGENCE:
       return "MIXED_DIVERGENCE";
     case MIXED_CURL:
       return "MIXED_CURL";
+    case TRIPLE_MIXED_GRADIENT:
+      return "TRIPLE_MIXED_GRADIENT";
+    case CHNS_MOMENTUM:
+      return "CHNS_MOMENTUM";
     case ZERO_BLOCK:
       return "ZERO_BLOCK";
     case NEUMANN_1D:
@@ -135,8 +164,7 @@ protected:
   // Fields layout, see feBilinearForm.h for details
   std::vector<int> _fieldsLayoutI;
   std::vector<int> _fieldsLayoutJ;
-  // Number of shape functions on the element
-  int _nFunctions;
+  
   // Number of vector components on the FE space
   int _nComponents;
 
@@ -201,7 +229,7 @@ class feSysElm_Source : public feSysElm
 {
 protected:
   feFunction *_source;
-  int _idU;
+  int _idU, _nFunctions;
   std::vector<double> _phiU;
 
 public:
@@ -223,7 +251,7 @@ class feSysElm_SourceDirac : public feSysElm
 {
 protected:
   std::vector<double> &_x0;
-  int _idU;
+  int _idU, _nFunctions;
   std::vector<double> _phiAtX0;
 
 public:
@@ -240,7 +268,7 @@ class feSysElm_VectorSource : public feSysElm
 protected:
   feVectorFunction *_source;
   std::vector<double> _S;
-  int _idU;
+  int _idU, _nFunctions;
   std::vector<double> _phiU;
 
 public:
@@ -271,7 +299,7 @@ class feSysElm_Mass : public feSysElm
 {
 protected:
   feFunction *_coeff;
-  int _idU;
+  int _idU, _nFunctions;
   std::vector<double> _phiU;
 
 public:
@@ -281,6 +309,40 @@ public:
   void computeAe(feBilinearForm *form);
   void computeBe(feBilinearForm *form);
   CLONEABLE(feSysElm_Mass)
+};
+
+//
+// Mass matrix with field to a given power p.
+// Matrix and residual
+//
+//  /          p
+//  | coeff * u * v dx
+//  /
+//
+// where v is the test function of u.
+//
+// # fields: 1 (FE solution and test functions)
+//                        U
+// Fields layout: phi_U [   ]
+//
+class feSysElm_MassPower : public feSysElm
+{
+protected:
+  feFunction *_coeff;
+  double _p;
+  int _idU, _nFunctions;
+  std::vector<double> _phiU;
+
+public:
+  feSysElm_MassPower(feFunction *coeff, double exponent) : feSysElm(-1, 1, MASS, true), _coeff(coeff), _p(exponent)
+  {
+    _computeMatrixWithFD = true;
+  };
+  ~feSysElm_MassPower(){};
+  void createElementarySystem(std::vector<feSpace *> &space);
+  void computeAe(feBilinearForm *form);
+  void computeBe(feBilinearForm *form);
+  CLONEABLE(feSysElm_MassPower)
 };
 
 //
@@ -313,12 +375,40 @@ public:
   CLONEABLE(feSysElm_MixedMass)
 };
 
+//
+// Same as MIXED_MASS, but instead computes the integral
+//
+//  /          p
+//  | coeff * u * v dx, with p a real number exponent.
+//  /
+//
+class feSysElm_MixedMassPower : public feSysElm
+{
+protected:
+  feFunction *_coeff;
+  double _p;
+  int _idU, _idV, _nFunctionsU, _nFunctionsV;
+  std::vector<double> _phiU, _phiV;
+
+public:
+  feSysElm_MixedMassPower(feFunction *coeff, int exponent)
+   : feSysElm(-1, 2, MIXED_MASS_POWER, true), _coeff(coeff), _p(exponent)
+  {
+    _computeMatrixWithFD = true;
+  };
+  ~feSysElm_MixedMassPower(){};
+  void createElementarySystem(std::vector<feSpace *> &space);
+  void computeAe(feBilinearForm *form);
+  void computeBe(feBilinearForm *form);
+  CLONEABLE(feSysElm_MixedMassPower)
+};
+
 class feSysElm_VectorMass : public feSysElm
 {
 protected:
   feFunction *_coeff;
   std::vector<double> _u;
-  int _idU;
+  int _idU, _nFunctions;
   std::vector<double> _phiU;
 
 public:
@@ -411,12 +501,12 @@ public:
 class feSysElm_TransientMass : public feSysElm
 {
 protected:
-  double _coeff;
-  int _idU;
+  feFunction *_coeff;
+  int _idU, _nFunctions;
   std::vector<double> _feU;
 
 public:
-  feSysElm_TransientMass(double coeff) : feSysElm(-1, 1, TRANSIENT_MASS, true), _coeff(coeff){
+  feSysElm_TransientMass(feFunction *coeff) : feSysElm(-1, 1, TRANSIENT_MASS, true), _coeff(coeff){
     _computeMatrixWithFD = true;
   };
   ~feSysElm_TransientMass(){};
@@ -424,6 +514,37 @@ public:
   void computeAe(feBilinearForm *form);
   void computeBe(feBilinearForm *form);
   CLONEABLE(feSysElm_TransientMass)
+};
+
+//
+// Transient term weak form (transient mass matrix) tested with the test functions of another scalar variable.
+// Matrix and residual
+//
+//  /
+//  | coeff * dudt * phi_v dx
+//  /
+//
+// # fields: 2 (test functions and field whose time derivative is computed)
+//                        U
+// Fields layout: phi_V [   ]
+//
+class feSysElm_MixedTransientMass : public feSysElm
+{
+protected:
+  feFunction *_coeff;
+  int _idU, _idV, _nFunctionsU, _nFunctionsV;
+  std::vector<double> _phiU, _phiV;
+
+public:
+  feSysElm_MixedTransientMass(feFunction *coeff) : feSysElm(-1, 2, MIXED_TRANSIENT_MASS, true), _coeff(coeff)
+  {
+    _computeMatrixWithFD = true;
+  };
+  ~feSysElm_MixedTransientMass(){};
+  void createElementarySystem(std::vector<feSpace *> &space);
+  void computeAe(feBilinearForm *form);
+  void computeBe(feBilinearForm *form);
+  CLONEABLE(feSysElm_MixedTransientMass)
 };
 
 //
@@ -441,12 +562,12 @@ public:
 class feSysElm_TransientVectorMass : public feSysElm
 {
 protected:
-  double _coeff;
-  int _idU;
+  feFunction *_coeff;
+  int _idU, _nFunctions;
   std::vector<double> _dudt, _phiU;
 
 public:
-  feSysElm_TransientVectorMass(double coeff) : feSysElm(-1, 1, TRANSIENT_VECTOR_MASS, true), _coeff(coeff)
+  feSysElm_TransientVectorMass(feFunction *coeff) : feSysElm(-1, 1, TRANSIENT_VECTOR_MASS, true), _coeff(coeff)
   {
     _computeMatrixWithFD = true;
   };
@@ -461,6 +582,8 @@ public:
 //
 // Diffusion term weak form (stiffness matrix).
 // Matrix and residual
+//
+// Strong form: -div(coeff * grad(u))
 //
 //  /
 //  | k * grad(u) dot grad(v) dx
@@ -478,7 +601,7 @@ template <int dim> class feSysElm_Diffusion : public feSysElm
 {
 protected:
   feFunction *_coeff;
-  int _idU;
+  int _idU, _nFunctions;
   std::vector<double> _gradPhi;
 
 public:
@@ -495,7 +618,7 @@ class feSysElm_VectorDiffusion : public feSysElm
 protected:
   feFunction *_coeff;
   feFunction *_diffusivity;
-  int _idU;
+  int _idU, _nFunctions;
   std::vector<double> _gradu;
   std::vector<double> _gradPhi;
 
@@ -517,7 +640,7 @@ template <int dim> class feSysElm_NonlinearDiffusion : public feSysElm
 protected:
   feFunction *_diffusivity;
   feFunction *_ddiffdu;
-  int _idU;
+  int _idU, _nFunctions;
   std::vector<double> _phiU;
   std::vector<double> _gradPhi;
 
@@ -553,7 +676,7 @@ template <int dim> class feSysElm_Advection : public feSysElm
 protected:
   // Imposed velocity field
   feVectorFunction *_velocity;
-  int _idU;
+  int _idU, _nFunctions;
   std::vector<double> _phiU;
   std::vector<double> _gradPhi;
 
@@ -592,7 +715,7 @@ template <int dim> class feSysElm_NonlinearAdvection : public feSysElm
 protected:
   // Nonlinear flux
   feVectorFunction *_flux;
-  int _idU;
+  int _idU, _nFunctions;
   std::vector<double> _phiU;
   std::vector<double> _gradPhi;
 
@@ -616,7 +739,7 @@ class feSysElm_VectorConvectiveAcceleration : public feSysElm
 {
 protected:
   feFunction *_coeff;
-  int _idU;
+  int _idU, _nFunctions;
   std::vector<double> _u;
   std::vector<double> _gradu;
   std::vector<double> _uDotGradu;
@@ -634,6 +757,36 @@ public:
   void computeAe(feBilinearForm *form);
   void computeBe(feBilinearForm *form);
   CLONEABLE(feSysElm_VectorConvectiveAcceleration)
+};
+
+//
+// Mixed weak form for: u dot grad c (c scalar).
+//
+// Integral of coeff * (u dot grad c) dot phi_c,
+// where:
+//  - u is the solved vector-valued velocity field,
+//  - c is a different solved scalar field (active or passive tracer),
+//  - phi_c are the test functions of c.
+//
+class feSysElm_TracerConvection : public feSysElm
+{
+protected:
+  feFunction *_coeff;
+  int _idU, _idC;
+  int _nFunctionsC;
+  std::vector<double> _u, _gradC, _phiC;
+
+public:
+  feSysElm_TracerConvection(feFunction *coeff)
+    : feSysElm(-1, 2, TRACER_CONVECTION, true), _coeff(coeff)
+  {
+    _computeMatrixWithFD = true;
+  };
+  ~feSysElm_TracerConvection(){};
+  void createElementarySystem(std::vector<feSpace *> &space);
+  void computeAe(feBilinearForm *form);
+  void computeBe(feBilinearForm *form);
+  CLONEABLE(feSysElm_TracerConvection)
 };
 
 //
@@ -681,8 +834,7 @@ class feSysElm_DivergenceNewtonianStress : public feSysElm
 protected:
   feFunction *_coeff;
   feFunction *_viscosity;
-  int _idU;
-  int _idP;
+  int _idU, _idP, _nFunctionsU;
   std::vector<double> _gradu;
   std::vector<double> _symmetricGradu;
   std::vector<double> _gradPhiU;
@@ -708,7 +860,7 @@ class feSysElm_GradSource : public feSysElm
 {
 protected:
   feFunction *_source;
-  int _idU;
+  int _idU, _nFunctions;
   std::vector<double> _gradPhi;
 
 public:
@@ -720,18 +872,15 @@ public:
 };
 
 //
-// Mixed gradient : (coeff * grad(u)) cdot v, with v vector-valued test functions
-//                                                 coeff a scalar coefficient
+// Mixed gradient : (coeff * grad(u)) cdot v, with v: vector-valued test functions
+//                                                 coeff: a scalar coefficient
 // Integral of - coeff * u * div(v)
 //
 class feSysElm_MixedGradient : public feSysElm
 {
 protected:
   feFunction *_coeff;
-  int _idU;
-  int _idV;
-  int _nFunctionsU;
-  int _nFunctionsV;
+  int _idU, _idV, _nFunctionsU, _nFunctionsV;
   std::vector<double> _phiU;
   std::vector<double> _gradPhiV;
 
@@ -745,6 +894,36 @@ public:
   void computeAe(feBilinearForm *form);
   void computeBe(feBilinearForm *form);
   CLONEABLE(feSysElm_MixedGradient)
+};
+
+//
+// Mixed gradient with test functions of a different variable.
+//
+// Strong form:       - div (coeff * grad(u))
+//   Weak form: integral of (coeff * grad(u)) dot grad(phi_v)
+//
+// with:
+//  - coeff: a scalar coefficient
+//  -     u: a resolved SCALAR field
+//  - phi_v: the test functions of another resolved SCALAR field
+//
+template <int dim> class feSysElm_MixedGradGrad : public feSysElm
+{
+protected:
+  feFunction *_coeff;
+  int _idU, _idV, _nFunctionsU, _nFunctionsV;
+  std::vector<double> _gradPhiV;
+
+public:
+  feSysElm_MixedGradGrad(feFunction *coeff) : feSysElm(dim, 2, MIXED_GRADGRAD, true), _coeff(coeff)
+  {
+    _computeMatrixWithFD = true;
+  };
+  ~feSysElm_MixedGradGrad(){};
+  void createElementarySystem(std::vector<feSpace *> &space);
+  void computeAe(feBilinearForm *form);
+  void computeBe(feBilinearForm *form);
+  CLONEABLE(feSysElm_MixedGradGrad)
 };
 
 //
@@ -801,18 +980,86 @@ public:
   CLONEABLE(feSysElm_MixedCurl)
 };
 
-class feSysElm_ZeroBlock : public feSysElm
+//
+// Mixed gradient with 3 fields.
+//
+// Strong form:              coeff * u * grad(v)
+//   Weak form: integral of (coeff * u * grad(v)) cdot phi_w
+//
+// with:
+//  - coeff: a scalar coefficient
+//  -     u: a resolved SCALAR field
+//  -     v: another resolved SCALAR field
+//  - phi_w: the test functions of yet another resolved VECTOR field
+//
+class feSysElm_TripleMixedGradient : public feSysElm
 {
 protected:
-  int _idU;
-  int _idV;
+  feFunction *_coeff;
+  int _idU, _idV, _idW;
+  int _nFunctionsU, _nFunctionsV, _nFunctionsW;
+  std::vector<double> _gradV;
+  std::vector<double> _phiW;
 
 public:
-  feSysElm_ZeroBlock() : feSysElm(-1, 2, ZERO_BLOCK, true) { _computeMatrixWithFD = false; };
-  ~feSysElm_ZeroBlock(){};
+  feSysElm_TripleMixedGradient(feFunction *coeff) : feSysElm(-1, 3, TRIPLE_MIXED_GRADIENT, true), _coeff(coeff)
+  {
+    _computeMatrixWithFD = true;
+  };
+  ~feSysElm_TripleMixedGradient(){};
   void createElementarySystem(std::vector<feSpace *> &space);
-  void computeBe(feBilinearForm *form){ UNUSED(form); };
-  CLONEABLE(feSysElm_ZeroBlock)
+  void computeAe(feBilinearForm *form);
+  void computeBe(feBilinearForm *form);
+  CLONEABLE(feSysElm_TripleMixedGradient)
+};
+
+//
+// Momentum equation (without volume force) for the Cahn-Hilliard Navier-Stokes model:
+//
+// Strong form:
+//  rho(phi) * (du/dt + (u dot grad) u) - coeff * mu * grad(phi) - div(sigma) - f
+//
+// Weak form:
+//  integral of rho(phi) * (du/dt + (u dot grad) u) dot phi_u + sigma : grad(phi_u)
+//
+// with:
+//  -   rho: the density which depends on phi (ScalarSolField)
+//  -   phi: the phase marker
+//  -     u: the velocity field
+//  - coeff: a coefficient, e.g. gamma/eps (surface tension/interface thickness)
+//  -    mu: the chemical potential
+//  - sigma: the Newtonian stress tensor whose viscosity also depends on phi (ScalarSolField)
+//  -     f: volume source term which depends on phi (VectorSolField)
+//  - phi_u: the velocity test functions
+//
+// Requires 4 fields: u, p (through sigma), phi, mu.
+// The density is a function depending on the solution, not on time and space (ScalarSolField).
+//
+class feSysElm_CHNS_Momentum : public feSysElm
+{
+protected:
+  feFunction *_density;
+  feFunction *_drhodphi;
+  feFunction *_coeff;
+  feFunction *_viscosity;
+  feVectorFunction *_volumeForce;
+  int _idU, _idP, _idPhi, _idMu;
+  int _nFunctionsU;
+  std::vector<double> _f, _u, _dudt, _gradu, _uDotGradu, _gradphi, _gradmu, _gradmuDotGradu, _symmetricGradu, _phiU, _gradPhiU;
+
+public:
+  feSysElm_CHNS_Momentum(feFunction *density, feFunction *drhodphi,
+    feFunction *coeff, feFunction *viscosity, feVectorFunction *volumeForce)
+   : feSysElm(-1, 4, CHNS_MOMENTUM, true),
+   _density(density), _drhodphi(drhodphi), _coeff(coeff), _viscosity(viscosity), _volumeForce(volumeForce)
+  {
+    _computeMatrixWithFD = true;
+  };
+  ~feSysElm_CHNS_Momentum(){};
+  void createElementarySystem(std::vector<feSpace *> &space);
+  void computeAe(feBilinearForm *form);
+  void computeBe(feBilinearForm *form);
+  CLONEABLE(feSysElm_CHNS_Momentum)
 };
 
 //
@@ -833,7 +1080,7 @@ class feSysElm_1D_NeumannBC : public feSysElm
 {
 protected:
   feFunction *_neumannBC;
-  int _idU;
+  int _idU, _nFunctions;
   std::vector<double> _feU;
 
 public:
@@ -874,7 +1121,7 @@ protected:
   double _diffusivity;
   feFunction *_source;
 
-  int _idU;
+  int _idU, _nFunctions;
   std::vector<double> _feU;
   std::vector<double> _feUdx;
 
@@ -900,8 +1147,7 @@ protected:
   feFunction *_diffusivity;
   feFunction *_reactionCoeff;
   feFunction *_source;
-
-  int _idU;
+  int _idU, _nFunctions;
   std::vector<double> _phiU;
   std::vector<double> _gradPhiU;
 

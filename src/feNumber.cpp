@@ -602,6 +602,10 @@ feMetaNumber::feMetaNumber(feMesh *mesh, const std::vector<feSpace *> &spaces,
     _numberings[_fieldIDs[i]]->compactFieldDOF();
   }
 
+  for(feSpace *fS : spaces) {
+    fS->setAsNumbered();
+  }
+
   feInfoCond(FE_VERBOSE > 0, "");
   feInfoCond(FE_VERBOSE > 0, "DEGREES OF FREEDOM:");
   for(int i = 0; i < _nFields; ++i) {

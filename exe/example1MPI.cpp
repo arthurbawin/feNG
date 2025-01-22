@@ -15,18 +15,18 @@
   #include "petscsys.h"
 #endif
 
-// double fSol(const double /* t */, const std::vector<double> &pos, const std::vector<double>& /* par */)
-// {
-//   double x = pos[0];
-//   return pow(x, 6);
-// }
+double fSol(const double /* t */, const std::vector<double> &pos, const std::vector<double>& /* par */)
+{
+  double x = pos[0];
+  return pow(x, 6);
+}
 
-// double fSource(const double /* t */, const std::vector<double> &pos, const std::vector<double>& par)
-// {
-//   double x = pos[0];
-//   double k = par[0];
-//   return -k * 30. * x * x * x * x;
-// }
+double fSource(const double /* t */, const std::vector<double> &pos, const std::vector<double>& par)
+{
+  double x = pos[0];
+  double k = par[0];
+  return -k * 30. * x * x * x * x;
+}
 
 int main(int argc, char **argv)
 {
@@ -96,8 +96,8 @@ int main(int argc, char **argv)
   // These functions are used to initialize the degrees of freedom (unknown and
   // boundary conditions).
   double k = 1.0;
-  // feFunction funSol(fSol, {});
-  // feFunction funSource(fSource, {k});
+  feFunction funSol(fSol);
+  feFunction funSource(fSource, {k});
   feConstantFunction funZero(0.);
   feConstantFunction funOne(1.);
   feConstantFunction diffusivity(k);
@@ -111,7 +111,7 @@ int main(int argc, char **argv)
   // The feFunction provided is used to initialize the degrees of freedom on the feSpace.
   feSpace *uBord, *uDomaine;
   feCheck(createFiniteElementSpace(uBord, &mesh, elementType::LAGRANGE, order, "U", "Bord",
-                                   degreeQuadrature, &funZero));
+                                   degreeQuadrature, &funSol));
   feCheck(createFiniteElementSpace(uDomaine, &mesh, elementType::LAGRANGE, order, "U", "Domaine",
                                    degreeQuadrature, &funZero));
 
@@ -161,7 +161,7 @@ int main(int argc, char **argv)
   // There is no form to define on the boundary.
   feBilinearForm *diff, *source;
   feCheck(createBilinearForm(diff, {uDomaine}, new feSysElm_Diffusion<2>(&diffusivity)));
-  feCheck(createBilinearForm(source, {uDomaine}, new feSysElm_Source(&funOne)));
+  feCheck(createBilinearForm(source, {uDomaine}, new feSysElm_Source(&funSource)));
 
   // Create the linear system. Assembly of the elementary matrices and RHS is
   // performed in the solve step below ("makeSteps"). Two linear solvers are available:
@@ -205,15 +205,15 @@ int main(int argc, char **argv)
   // exported for visualization according to the exportData structure. The linear system is
   // assembled and solved in the "makeSteps()" call.
   TimeIntegrator *solver;
-  feTolerances tol{1e-9, 1e-8, 4};
+  feTolerances tol{1e-9, 1e-8, 1e4, 4};
   feCheck(createTimeIntegrator(solver, STATIONARY, tol, system, &numbering, &sol, &mesh, norms,
                                exportData));
   feCheck(solver->makeStep());
 
-  // // Compute L2 norm of the error u-uh
-  // feNorm *norm;
-  // feCheck(createNorm(norm, L2_ERROR, {uDomaine}, &sol, &funSol));
-  // feInfo("L2 error = %10.10f", norm->compute(L2_ERROR));
+  // Compute L2 norm of the error u-uh
+  feNorm *norm;
+  feCheck(createNorm(norm, L2_ERROR, {uDomaine}, &sol, &funSol));
+  feInfo("L2 error = %10.10f", norm->compute(L2_ERROR));
 
   // Free the used memory
   delete diff;

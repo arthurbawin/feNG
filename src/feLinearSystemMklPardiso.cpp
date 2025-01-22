@@ -14,7 +14,7 @@ extern int FE_VERBOSE;
 // Determine the matrix, unknown vector and RHS distribution
 // across MPI processes once the sparsity pattern is known
 //
-void feLinearSystemMklPardiso::setOwnershipAndAllocate(void)
+void feLinearSystemMklPardiso::initialize(void)
 {
 #if defined(HAVE_MPI)
 
@@ -129,7 +129,7 @@ void feLinearSystemMklPardiso::setOwnershipAndAllocate(void)
 
           // Create the vector solution and RHS arrays
           du = new double[_numOwnedRows];
-          residu = new double[_numOwnedRows];
+          _rhs = new double[_numOwnedRows];
 
           break;
         }
@@ -167,7 +167,7 @@ void feLinearSystemMklPardiso::setOwnershipAndAllocate(void)
   // Leave the matrix arrays as-is (ia, ja, values),
   // and allocate solution vector (du) and RHS (residu)
   du = new double[_nInc];
-  residu = new double[_nInc];
+  _rhs = new double[_nInc];
 
 #if defined(HAVE_MPI)
   }
@@ -179,9 +179,6 @@ feLinearSystemMklPardiso::feLinearSystemMklPardiso(std::vector<feBilinearForm *>
                                                    int ownershipSplit)
   : feLinearSystem(bilinearForms), _nInc(numUnknowns), _ownershipSplit(ownershipSplit)
 {
-  recomputeMatrix = true;
-  symbolicFactorization = true;
-
   //
   // Determine sparsity pattern, allocate MKL Pardiso arrays
   // for sequential or distributed matrix.
@@ -199,15 +196,13 @@ feLinearSystemMklPardiso::feLinearSystemMklPardiso(std::vector<feBilinearForm *>
 
   for(feInt i = 0; i < _nnz; i++) _mat_values[i] = 0.;
 
-  this->setOwnershipAndAllocate();
+  this->initialize();
 
   //
   // Initialize MKL Pardiso parameters
   //
-  // Matrix type: 11 = real nonsymmetric
-  MTYPE = 11;
-  // Zero pivots are perturbed to 10^(-IPIVOT) 
-  IPIVOT = 13;
+  MTYPE = 11;  // Matrix type: 11 = real nonsymmetric
+  IPIVOT = 13; // Zero pivots are perturbed to 10^(-IPIVOT) 
 
   for(feInt i = 0; i < 64; i++) {
     IPARM[i] = 0;
@@ -346,6 +341,16 @@ double vectorMaxNorm(int numOwnedRows, double *vec)
 #endif
 }
 
+void feLinearSystemMklPardiso::getRHSMaxNorm(double *norm)
+{
+  *norm = vectorMaxNorm(_numOwnedRows, _rhs);
+}
+
+void feLinearSystemMklPardiso::getResidualMaxNorm(double *norm)
+{
+  *norm = vectorMaxNorm(_numOwnedRows, du);
+}
+
 //
 // Print the matrix on each process with a layout similar to PETSc's
 //
@@ -402,7 +407,7 @@ void feLinearSystemMklPardiso::viewRHS()
         feInfo("RHS:");
 #endif
         for(int i = 0; i < _numOwnedRows; ++i) {
-          feInfo("RHS[%d] = %+-1.16e", i, residu[i]);
+          feInfo("RHS[%d] = %+-1.16e", i, _rhs[i]);
         }
 #if defined(HAVE_MPI)
       }
@@ -453,7 +458,7 @@ void feLinearSystemMklPardiso::assembleMatrices(feSolution *sol)
   // OR
   // Assemble on master proc only if system is sequential
   if(_ownershipSplit >= 0 || (_ownershipSplit < 0 && rank == 0)) {
-    feInfo("Assembling mat with %d and proc %d", _ownershipSplit, rank);
+    // feInfo("Assembling mat with %d and proc %d", _ownershipSplit, rank);
 #else
   int rank = 0;
 #endif
@@ -587,7 +592,7 @@ void feLinearSystemMklPardiso::assembleResiduals(feSolution *sol)
   // OR
   // Assemble on master proc only if system is sequential
   if(_ownershipSplit >= 0 || (_ownershipSplit < 0 && rank == 0)) {
-    feInfo("Assembling RHS with %d and proc %d", _ownershipSplit, rank);
+    // feInfo("Assembling RHS with %d and proc %d", _ownershipSplit, rank);
 #else
   int rank = 0;
 #endif
@@ -634,7 +639,7 @@ void feLinearSystemMklPardiso::assembleResiduals(feSolution *sol)
           if(adrI[i] < _nInc) {
             // Remove indices in adrI that are not owned by this proc
             if(low <= adrI[i] && adrI[i] <= high) {
-              residu[adrI[i] - low] += Be[i];
+              _rhs[adrI[i] - low] += Be[i];
             }
           }
         }
@@ -652,12 +657,12 @@ void feLinearSystemMklPardiso::assembleResiduals(feSolution *sol)
 
 void feLinearSystemMklPardiso::assignResidualToDCResidual(feSolutionContainer *solContainer)
 {
-  for(feInt i = 0; i < _nInc; ++i) solContainer->_fResidual[0][i] = residu[i];
+  for(feInt i = 0; i < _nInc; ++i) solContainer->_fResidual[0][i] = _rhs[i];
 }
 
 void feLinearSystemMklPardiso::applyCorrectionToResidual(double coeff, std::vector<double> &d)
 {
-  for(int i = 0; i < _nInc; ++i) residu[i] += coeff * d[i];
+  for(int i = 0; i < _nInc; ++i) _rhs[i] += coeff * d[i];
 }
 
 void feLinearSystemMklPardiso::correctSolution(feSolution *sol)
@@ -829,7 +834,7 @@ bool feLinearSystemMklPardiso::solve(double *normDx, double *normResidual, doubl
   symbolicFactorization = false;
 
   *normDx = vectorMaxNorm(_numOwnedRows, du);
-  *normResidual = vectorMaxNorm(_numOwnedRows, residu);
+  *normResidual = vectorMaxNorm(_numOwnedRows, _rhs);
 
   return true;
 }
@@ -849,7 +854,7 @@ void feLinearSystemMklPardiso::setMatrixToZero()
 void feLinearSystemMklPardiso::setResidualToZero()
 {
   // for(feInt i = 0; i < _nInc; i++) residu[i] = 0;
-  for(feInt i = 0; i < _numOwnedRows; i++) residu[i] = 0;
+  for(feInt i = 0; i < _numOwnedRows; i++) _rhs[i] = 0;
 }
 
 void feLinearSystemMklPardiso::assemble(feSolution *sol)
@@ -946,7 +951,7 @@ void feLinearSystemMklPardiso::constrainEssentialComponents(feSolution *sol)
     }
 
     // Constrain RHS
-    residu[row] = 0.;
+    _rhs[row] = 0.;
   }
 
   feInfoCond(FE_VERBOSE > 1, "\t\t\t\tConstrained essential DOFs in %f s", toc());
@@ -999,10 +1004,10 @@ void feLinearSystemMklPardiso::mklSolve(void)
 #if defined(HAVE_MPI)
   int comm =  MPI_Comm_c2f( MPI_COMM_WORLD );
     cluster_sparse_solver(PT, &MAXFCT, &MNUM, &MTYPE, &PHASE, &_nInc, _mat_values, _mat_ia, _mat_ja, &IDUM, &NRHS, IPARM, &MSGLVL,
-               residu, du, &comm, &ERROR);
+               _rhs, du, &comm, &ERROR);
 #else
     pardiso(PT, &MAXFCT, &MNUM, &MTYPE, &PHASE, &_nInc, _mat_values, _mat_ia, _mat_ja, &IDUM, &NRHS, IPARM, &MSGLVL,
-               residu, du, &ERROR);
+               _rhs, du, &ERROR);
 #endif
 }
 
@@ -1036,7 +1041,7 @@ feLinearSystemMklPardiso::~feLinearSystemMklPardiso(void)
   free(_mat_ja);
   free(_mat_values);
   delete[] du;
-  delete[] residu;
+  delete[] _rhs;
 }
 
 void feLinearSystemMklPardiso::setPivot(int pivot) { IPARM[9] = (feInt) pivot; }

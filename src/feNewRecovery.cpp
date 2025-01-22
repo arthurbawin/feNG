@@ -2337,7 +2337,7 @@ feNewRecovery::feNewRecovery(feSpace *space, int indexComponent, feMesh *mesh, f
       nRecoveredFields += numRecoveries;
     }
 
-    // Condense the independant terms in a vector
+    // Condense the independent terms in a vector
 
     // Allocate a big vector with zeros at edge vertices where
     // we did not reconstruct the fields.

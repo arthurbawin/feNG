@@ -71,21 +71,18 @@ void feSolution::initializeTemporalSolution(double t0, double t1, int nTimeSteps
 
 void feSolution::initializeUnknowns(feMesh *mesh)
 {
-  std::vector<double> x(3);
-  std::vector<double> vecVal(3);
-  double val;
-
   for(feSpace *fS : _spaces) {
     if(fS->getDOFInitialization() == dofInitialization::PREVIOUS_SOL) {
       continue;
     }
 
-
     #if defined(HAVE_OMP)
     #pragma omp parallel
     #endif
     {
-
+      std::vector<double> x(3);
+      std::vector<double> vecVal(3);
+      double val;
       int nElm = fS->getNumElements();
       std::vector<feInt> adr(fS->getNumFunctions());
       std::vector<double> coor = fS->getLcoor();

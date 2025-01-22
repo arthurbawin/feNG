@@ -1,14 +1,6 @@
 #include "feSysElm.h"
 #include "feBilinearForm.h"
-
-void feSysElm_ZeroBlock::createElementarySystem(std::vector<feSpace *> &space)
-{
-  _idV = 0;
-  _idU = 1;
-  _fieldsLayoutI = {_idV};
-  _fieldsLayoutJ = {_idU};
-  _nFunctions = space[_idU]->getNumFunctions();
-}
+#include "feNumeric.h"
 
 // -----------------------------------------------------------------------------
 // Linear form: vector-valued source term
@@ -259,9 +251,12 @@ void feSysElm_TransientVectorMass::createElementarySystem(std::vector<feSpace *>
 
 void feSysElm_TransientVectorMass::computeAe(feBilinearForm *form)
 {
-  double jac;
+  double jac, coeff;
   for(int k = 0; k < _nQuad; ++k) {
     jac = form->_J[_nQuad * form->_numElem + k];
+
+    form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, _pos);
+    coeff = (*_coeff)(form->_tn, _pos);
 
     for(int i = 0; i < _nFunctions; ++i)
       _phiU[i] = form->_intSpaces[_idU]->getFunctionAtQuadNode(i, k);
@@ -270,7 +265,7 @@ void feSysElm_TransientVectorMass::computeAe(feBilinearForm *form)
       for(int j = 0; j < _nFunctions; ++j) {
         // The dot product dudt * v is nonzero only when the components match
         if(i % _nComponents != j % _nComponents) continue;
-        form->_Ae[i][j] += _phiU[i] * _coeff * form->_c0 * _phiU[j] * jac * _wQuad[k];
+        form->_Ae[i][j] += _phiU[i] * coeff * form->_c0 * _phiU[j] * jac * _wQuad[k];
       }
     }
   }
@@ -278,16 +273,19 @@ void feSysElm_TransientVectorMass::computeAe(feBilinearForm *form)
 
 void feSysElm_TransientVectorMass::computeBe(feBilinearForm *form)
 {
-  double jac;
+  double jac, coeff;
   for(int k = 0; k < _nQuad; ++k) {
     jac = form->_J[_nQuad * form->_numElem + k];
+
+    form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, _pos);
+    coeff = (*_coeff)(form->_tn, _pos);
 
     form->_intSpaces[_idU]->interpolateVectorFieldAtQuadNode(form->_solDot[_idU], k, _dudt,
                                                              _nComponents);
 
     for(int i = 0; i < _nFunctions; ++i) {
       _phiU[i] = form->_intSpaces[_idU]->getFunctionAtQuadNode(i, k);
-      form->_Be[i] -= _coeff * _dudt[i % _nComponents] * _phiU[i] * jac * _wQuad[k];
+      form->_Be[i] -= coeff * _dudt[i % _nComponents] * _phiU[i] * jac * _wQuad[k];
     }
   }
 }
@@ -568,6 +566,217 @@ void feSysElm_MixedCurl::computeBe(feBilinearForm *form)
 }
 
 // -----------------------------------------------------------------------------
+// Bilinear form: mixed weak gradient involving 2 scalar fields and the test
+//                functions of a 3rd vector field
+// -----------------------------------------------------------------------------
+void feSysElm_TripleMixedGradient::createElementarySystem(std::vector<feSpace *> &space)
+{
+  _idW = 0; // Vector-valued test functions
+  _idU = 1; // Scalar unknown field
+  _idV = 2; // Scalar unknown field
+  _fieldsLayoutI = {_idW}; // Rectangular local matrix
+  _fieldsLayoutJ = {_idU, _idV};
+  _nFunctionsU = space[_idU]->getNumFunctions();
+  _nFunctionsV = space[_idV]->getNumFunctions();
+  _nFunctionsW = space[_idW]->getNumFunctions();
+  _nComponents = space[_idW]->getNumComponents();
+  _gradV.resize(_nComponents); // Space dimension = nComponents of vector field
+  _phiW.resize(_nFunctionsW);
+}
+
+void feSysElm_TripleMixedGradient::computeAe(feBilinearForm *form)
+{
+  UNUSED(form);
+  feErrorMsg(FE_STATUS_ERROR, "Implement matrix for TripleMixedGradient");
+  // double jac, coeff, div_v;
+  // for(int k = 0; k < _nQuad; ++k) {
+  //   jac = form->_J[_nQuad * form->_numElem + k];
+  //   form->_cnc->computeElementTransformation(form->_geoCoord, k, jac, form->_transformation);
+
+  //   // Evaluate scalar coefficient
+  //   form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, _pos);
+  //   coeff = (*_coeff)(form->_tn, _pos);
+
+  //   // Get phiU
+  //   form->_intSpaces[_idU]->getFunctionsAtQuadNode(k, _phiU);
+
+  //   // Compute compacted grad(phiV) without the trivial zeros
+  //   form->_intSpaces[_idV]->getFunctionsPhysicalGradientAtQuadNode(k, form->_transformation,
+  //                                                                  _gradPhiV.data());
+
+  //   for(int i = 0; i < _nFunctionsV; ++i) {
+  //     for(int j = 0; j < _nFunctionsU; ++j) {
+  //       div_v = _gradPhiV[i * _nComponents + (i % _nComponents)];
+  //       form->_Ae[i][j] -= coeff * _phiU[j] * div_v * jac * _wQuad[k];
+  //     }
+  //   }
+  // }
+}
+
+void feSysElm_TripleMixedGradient::computeBe(feBilinearForm *form)
+{
+  double jac, coeff, u, gradVDotPhiW;
+  for(int k = 0; k < _nQuad; ++k) {
+    jac = form->_J[_nQuad * form->_numElem + k];
+    form->_cnc->computeElementTransformation(form->_geoCoord, k, jac, form->_transformation);
+
+    // Evaluate scalar coefficient
+    form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, _pos);
+    coeff = (*_coeff)(form->_tn, _pos);
+
+    // Get u, gradV and phiW
+    u = form->_intSpaces[_idU]->interpolateFieldAtQuadNode(form->_sol[_idU], k);
+    form->_intSpaces[_idV]->interpolateFieldAtQuadNode_physicalGradient(form->_sol[_idV], k, form->_transformation, _gradV.data());
+    form->_intSpaces[_idW]->getFunctionsAtQuadNode(k, _phiW);
+
+    for(int i = 0; i < _nFunctionsW; ++i)
+    {
+      // _phiW contains the basis functions for each component of the vector field.
+      // Take the i-th vector of _phiW = [phiW_x,1 phiW_y,1 phiW_z,1 ... phiW_x,N phiW_y,N phiW_z,N]
+      gradVDotPhiW = dotProdN(_nComponents, _gradV.data(), _phiW.data() + i*_nComponents);
+      form->_Be[i] -= coeff * u * gradVDotPhiW * jac * _wQuad[k];
+    }
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Bilinear form: CHNS Momentum equation
+// -----------------------------------------------------------------------------
+void feSysElm_CHNS_Momentum::createElementarySystem(std::vector<feSpace *> &space)
+{
+  _idU   = 0;
+  _idP   = 1;
+  _idPhi = 2;
+  _idMu  = 3;
+  _fieldsLayoutI = {_idU};
+  _fieldsLayoutJ = {_idU, _idP, _idPhi, _idMu};
+  _nFunctionsU = space[_idU]->getNumFunctions();
+  _nComponents = space[_idU]->getNumComponents();
+  _f.resize(_nComponents);
+  _u.resize(_nComponents);
+  _dudt.resize(_nComponents);
+  _gradu.resize(_nComponents * _nComponents);
+  _uDotGradu.resize(_nComponents);
+  _gradphi.resize(_nComponents);
+  _gradmu.resize(_nComponents);
+  _gradmuDotGradu.resize(_nComponents);
+  _symmetricGradu.resize(_nComponents * _nComponents);
+  // phiU is the test function of U, unrelated to the phase marker Phi
+  _phiU.resize(_nFunctionsU);
+  _gradPhiU.resize(_nComponents * _nFunctionsU);
+}
+
+void feSysElm_CHNS_Momentum::computeAe(feBilinearForm *form)
+{
+  UNUSED(form);
+  feErrorMsg(FE_STATUS_ERROR, "Implement FE matrix for feSysElm_CHNS_Momentum weak form.");
+  // Computed with finite differences for now
+}
+
+void feSysElm_CHNS_Momentum::computeBe(feBilinearForm *form)
+{
+  double jac, rho, drhodphi, coeff, nu, p, phi, mu, div_v, doubleContraction;
+  double dudtDotphiU, uDotGraduDotphiU, gradPhiDotphiU, fDotphiU, gradMuDotgradUdotphiU;
+  for(int k = 0; k < _nQuad; ++k) {
+    jac = form->_J[_nQuad * form->_numElem + k];
+    form->_cnc->computeElementTransformation(form->_geoCoord, k, jac, form->_transformation);
+
+    // Evaluate scalar coefficients
+    form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, _pos);
+    phi = form->_intSpaces[_idPhi]->interpolateFieldAtQuadNode(form->_sol[_idPhi], k);
+    rho = (*_density)(phi); 
+    drhodphi = (*_drhodphi)(phi);
+    nu = (*_viscosity)(phi);
+    coeff = (*_coeff)(form->_tn, _pos);
+    (*_volumeForce)(phi, _f);
+
+    // Get all relevant values and gradients
+    // dudt
+    form->_intSpaces[_idU]->interpolateVectorFieldAtQuadNode(form->_solDot[_idU], k, _dudt, _nComponents);
+    // u
+    form->_intSpaces[_idU]->interpolateVectorFieldAtQuadNode(form->_sol[_idU], k, _u, _nComponents);
+    // grad_u
+    form->_intSpaces[_idU]->interpolateVectorFieldAtQuadNode_physicalGradient(
+      form->_sol[_idU], _nComponents, k, form->_transformation, _gradu.data());
+    // p
+    p = form->_intSpaces[_idP]->interpolateFieldAtQuadNode(form->_sol[_idP], k);
+    // grad_phi
+    form->_intSpaces[_idPhi]->interpolateFieldAtQuadNode_physicalGradient(
+      form->_sol[_idPhi], k, form->_transformation, _gradphi.data());
+    // mu
+    mu = form->_intSpaces[_idMu]->interpolateFieldAtQuadNode(form->_sol[_idMu], k);
+    // grad_mu
+    form->_intSpaces[_idMu]->interpolateFieldAtQuadNode_physicalGradient(
+      form->_sol[_idMu], k, form->_transformation, _gradmu.data());
+
+    // phiU
+    form->_intSpaces[_idU]->getFunctionsAtQuadNode(k, _phiU);
+    // grad_phiU
+    form->_intSpaces[_idU]->getFunctionsPhysicalGradientAtQuadNode(k, form->_transformation,
+                                                                   _gradPhiU.data());
+
+    // Compute u dot gradu
+    std::fill(_uDotGradu.begin(), _uDotGradu.end(), 0.);
+    for(int m = 0; m < _nComponents; ++m) {
+      for(int n = 0; n < _nComponents; ++n) {
+        _uDotGradu[m] += _u[n] * _gradu[m * _nComponents + n];
+      }
+    }
+
+    // Compute gradmu dot gradu
+    std::fill(_gradmuDotGradu.begin(), _gradmuDotGradu.end(), 0.);
+    for(int m = 0; m < _nComponents; ++m) {
+      for(int n = 0; n < _nComponents; ++n) {
+        _gradmuDotGradu[m] += _gradmu[n] * _gradu[m * _nComponents + n];
+      }
+    }
+
+    // Compute symmetric gradient (2*d(u))
+    for(int m = 0; m < _nComponents; ++m) {
+      for(int n = 0; n < _nComponents; ++n) {
+        _symmetricGradu[m * _nComponents + n] =
+          _gradu[m * _nComponents + n] + _gradu[n * _nComponents + m];
+      }
+    }
+
+    for(int i = 0; i < _nFunctionsU; ++i)
+    {
+      // dudt dot phiU (always only 1 component to the dot product as vector test functions have 1 nonzero component)
+      dudtDotphiU = _dudt[i % _nComponents] * _phiU[i];
+
+      // (u dot gradu) dot phiU
+      uDotGraduDotphiU = _uDotGradu[i % _nComponents] * _phiU[i];
+
+      // grad_phi dot phiU
+      gradPhiDotphiU = _gradphi[i % _nComponents] * _phiU[i];
+
+      // (grad_mu dot grad_u) dot phiU
+      gradMuDotgradUdotphiU = _gradmuDotGradu[i % _nComponents] * _phiU[i];
+
+      // Divergence of test function
+      div_v = _gradPhiU[i * _nComponents + (i % _nComponents)];
+
+      // Double contraction 2*d(u) : grad(phiU)
+      doubleContraction = 0.;
+      for(int m = 0; m < _nComponents; ++m) {
+        doubleContraction +=
+          _symmetricGradu[(i % _nComponents) * _nComponents + m] * _gradPhiU[i * _nComponents + m];
+      }
+
+      // Source term
+      fDotphiU = _f[i % _nComponents] * _phiU[i];
+
+      // Increment RHS
+      form->_Be[i] -= (rho * (dudtDotphiU + uDotGraduDotphiU)
+                     + coeff * mu * gradPhiDotphiU
+                     + drhodphi * gradMuDotgradUdotphiU
+                     - p * div_v + nu * doubleContraction
+                     - fDotphiU) * jac * _wQuad[k];
+    }
+  }
+}
+
+// -----------------------------------------------------------------------------
 // Bilinear form: convective acceleration of vector-valued field
 // -----------------------------------------------------------------------------
 void feSysElm_VectorConvectiveAcceleration::createElementarySystem(std::vector<feSpace *> &space)
@@ -670,6 +879,107 @@ void feSysElm_VectorConvectiveAcceleration::computeBe(feBilinearForm *form)
   }
 }
 
+// -----------------------------------------------------------------------------------
+// Bilinear form: convection of a scalar tracer C in the resolved velocity field u
+// -----------------------------------------------------------------------------------
+void feSysElm_TracerConvection::createElementarySystem(std::vector<feSpace *> &space)
+{
+  _idC = 0;
+  _idU = 1;
+  _fieldsLayoutI = {_idC};
+  _fieldsLayoutJ = {_idU};
+  _nFunctionsC = space[_idC]->getNumFunctions();
+  _nComponents = space[_idU]->getNumComponents();
+  _u.resize(_nComponents);
+  _gradC.resize(_nComponents); // Dimension = number of velocity components
+  _phiC.resize(_nFunctionsC);
+}
+
+void feSysElm_TracerConvection::computeAe(feBilinearForm *form)
+{
+  UNUSED(form);
+  feErrorMsg(FE_STATUS_ERROR, "Implement FE matrix for TRACER_CONVECTION weak form.");
+  // double jac, coeff;
+  // for(int k = 0; k < _nQuad; ++k) {
+  //   jac = form->_J[_nQuad * form->_numElem + k];
+  //   form->_cnc->computeElementTransformation(form->_geoCoord, k, jac, form->_transformation);
+
+  //   // Evaluate scalar coefficient
+  //   form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, _pos);
+  //   coeff = (*_coeff)(form->_tn, _pos);
+
+  //   // Get u, grad_u, phiU and gradPhiU
+  //   form->_intSpaces[_idU]->interpolateVectorFieldAtQuadNode(form->_sol[_idU], k, _u, _nComponents);
+  //   form->_intSpaces[_idU]->interpolateVectorFieldAtQuadNode_physicalGradient(
+  //     form->_sol[_idU], _nComponents, k, form->_transformation, _gradu.data());
+  //   form->_intSpaces[_idU]->getFunctionsAtQuadNode(k, _phiU);
+  //   form->_intSpaces[_idU]->getFunctionsPhysicalGradientAtQuadNode(k, form->_transformation,
+  //                                                                  _gradPhiU.data());
+
+  //   for(int i = 0; i < _nFunctions; ++i) {
+  //     for(int j = 0; j < _nFunctions; ++j) {
+  //       // Compute (u0 dot gradu) + (u dot gradu0)
+
+  //       // Generic but slow
+  //       // std::fill(_uDotGradu.begin(), _uDotGradu.end(), 0.);
+
+  //       // for(int n = 0; n < _nComponents; ++n) {
+  //       //   _uDotGradu[j % _nComponents] += _u[n] * _gradPhiU[j * _nComponents + n];
+  //       // }
+  //       // for(int n = 0; n < _nComponents; ++n) {
+  //       //   _uDotGradu[n] += _phiU[j] * _gradu[n * _nComponents + (j % _nComponents)];
+  //       // }
+
+  //       // Explicit and faster computation for 2D velocity field
+  //       if(j % _nComponents == 0) {
+  //         _uDotGradu[0] = _u[0] * _gradPhiU[j * _nComponents] +
+  //                         _u[1] * _gradPhiU[j * _nComponents + 1] +
+  //                         _phiU[j] * _gradu[0 * _nComponents + (j % _nComponents)];
+  //         _uDotGradu[1] = _phiU[j] * _gradu[1 * _nComponents + (j % _nComponents)];
+  //       } else {
+  //         _uDotGradu[0] = _phiU[j] * _gradu[0 * _nComponents + (j % _nComponents)];
+  //         _uDotGradu[1] = _u[0] * _gradPhiU[j * _nComponents] +
+  //                         _u[1] * _gradPhiU[j * _nComponents + 1] +
+  //                         _phiU[j] * _gradu[1 * _nComponents + (j % _nComponents)];
+  //       }
+
+  //       // Only one nonzero component to both v_i and udotgradu, hence dot product
+  //       // ((u0 dot gradu) + (u dot gradu0)) dot v is only one term
+  //       form->_Ae[i][j] += coeff * _phiU[i] * _uDotGradu[i % _nComponents] * jac * _wQuad[k];
+  //     }
+  //   }
+  // }
+}
+
+void feSysElm_TracerConvection::computeBe(feBilinearForm *form)
+{
+  double jac, coeff;
+  for(int k = 0; k < _nQuad; ++k) {
+    jac = form->_J[_nQuad * form->_numElem + k];
+    form->_cnc->computeElementTransformation(form->_geoCoord, k, jac, form->_transformation);
+
+    // Evaluate scalar coefficient
+    form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, _pos);
+    coeff = (*_coeff)(form->_tn, _pos);
+
+    // Get u, gradC and phiC
+    form->_intSpaces[_idU]->interpolateVectorFieldAtQuadNode(form->_sol[_idU], k, _u, _nComponents);
+    form->_intSpaces[_idC]->interpolateFieldAtQuadNode_physicalGradient(form->_sol[_idC], k, form->_transformation, _gradC.data());
+    form->_intSpaces[_idC]->getFunctionsAtQuadNode(k, _phiC);
+
+    // Compute u dot gradC
+    double uDotGradC = 0.;
+    for(int m = 0; m < _nComponents; ++m) {
+      uDotGradC += _u[m] * _gradC[m];
+    }
+
+    // Increment elementwise residual with (u dot gradC) * phiC
+    for(int i = 0; i < _nFunctionsC; ++i) {
+      form->_Be[i] -= coeff * uDotGradC * _phiC[i] * jac * _wQuad[k];
+    }
+  }
+}
+
 // ------------------------------------------------------------------------------------------------------
 // Bilinear form: convective acceleration of vector-valued field for the adjoint Navier-Stokes equations
 // ------------------------------------------------------------------------------------------------------
@@ -692,6 +1002,7 @@ void feSysElm_VectorAdjointConvectiveAcceleration::createElementarySystem(std::v
 void feSysElm_VectorAdjointConvectiveAcceleration::computeAe(feBilinearForm *form)
 {
   UNUSED(form);
+  feErrorMsg(FE_STATUS_ERROR, "Implement FE matrix for VectorAdjointConvectiveAcceleration weak form.");
   // double jac, coeff;
   // for(int k = 0; k < _nQuad; ++k) {
   //   jac = form->_J[_nQuad * form->_numElem + k];
@@ -787,16 +1098,17 @@ void feSysElm_DivergenceNewtonianStress::createElementarySystem(std::vector<feSp
   _idP = 1;
   _fieldsLayoutI = {_idU};
   _fieldsLayoutJ = {_idU, _idP};
-  _nFunctions = space[_idU]->getNumFunctions();
+  _nFunctionsU = space[_idU]->getNumFunctions();
   _nComponents = space[_idU]->getNumComponents();
   _gradu.resize(_nComponents * _nComponents);
   _symmetricGradu.resize(_nComponents * _nComponents);
-  _gradPhiU.resize(_nComponents * _nFunctions);
+  _gradPhiU.resize(_nComponents * _nFunctionsU);
 }
 
 void feSysElm_DivergenceNewtonianStress::computeAe(feBilinearForm *form)
 {
   UNUSED(form);
+  feErrorMsg(FE_STATUS_ERROR, "Implement FE matrix for feSysElm_DivergenceNewtonianStress weak form.");
   // Computed with finite differences for now
 }
 
@@ -826,7 +1138,7 @@ void feSysElm_DivergenceNewtonianStress::computeBe(feBilinearForm *form)
       }
     }
 
-    for(int i = 0; i < _nFunctions; ++i) {
+    for(int i = 0; i < _nFunctionsU; ++i) {
       // Divergence of test function
       div_v = _gradPhiU[i * _nComponents + (i % _nComponents)];
       // Double contraction d(u) : grad(v)
@@ -955,6 +1267,7 @@ void feSysElm_Stokes_SUPG_PSPG::createElementarySystem(std::vector<feSpace *> &s
 void feSysElm_Stokes_SUPG_PSPG::computeAe(feBilinearForm *form)
 {
   UNUSED(form);
+  feErrorMsg(FE_STATUS_ERROR, "Implement FE matrix for feSysElm_Stokes_SUPG_PSPG weak form.");
   // Computed with finite differences
 }
 

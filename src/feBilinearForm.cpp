@@ -9,19 +9,34 @@ feStatus createBilinearForm(feBilinearForm *&form, const std::vector<feSpace *> 
   feInfoCond(FE_VERBOSE > 0, "");
   feInfoCond(FE_VERBOSE > 0, "(BI)LINEAR FORM:");
 
+  if(spaces.size() != (size_t) elementarySystem->getNumFields()) {
+    return feErrorMsg(FE_STATUS_ERROR, "(Bi-)linear form %s expects %d FE space(s) (given: %d)\n",
+                      elementarySystem->getWeakFormName().data(), elementarySystem->getNumFields(),
+                      spaces.size());
+  }
+
+  int cncGeoTag = spaces[0]->getCncGeoTag();
+
   // Perform some checks and exit on error:
-  for(auto *s : spaces) {
+  for(feSpace *s : spaces)
+  {
     if(s == nullptr) {
       return feErrorMsg(FE_STATUS_ERROR,
                         "Null pointer in vector of FE spaces for (bi)linear form \"%s\", maybe you forgot to initialize it.",
                         elementarySystem->getWeakFormName().data());
     }
-  }
 
-  // Check that all interpolation spaces are defined on the same connectivity
-  int cncGeoTag = spaces[0]->getCncGeoTag();
-  for(size_t i = 0; i < spaces.size(); ++i) {
-    if(spaces[i]->getCncGeoTag() != cncGeoTag) {
+    // Check that all spaces are defined (i.e. their DOF were numbered)
+    if(!s->wasNumbered()) {
+      return feErrorMsg(FE_STATUS_ERROR,
+        "(Bi-)linear form %s: FE space %s - %s was defined but its degrees of freedom were not numbered.\n"
+        " It was most likely not included in the vector of all FE spaces.\n",
+        elementarySystem->getWeakFormName().data(),
+        s->getFieldID().data(), s->getCncGeoID().data());
+    }
+
+    // Check that all interpolation spaces are defined on the same connectivity
+    if(s->getCncGeoTag() != cncGeoTag) {
       return feErrorMsg(
         FE_STATUS_ERROR,
         "(Bi-)linear form %s is defined on more than one geometric connectivity.\n"
@@ -29,28 +44,16 @@ feStatus createBilinearForm(feBilinearForm *&form, const std::vector<feSpace *> 
         "connectivity.\n",
         elementarySystem->getWeakFormName().data());
     }
-  }
 
-  // Check that the elementary system is defined on a connectivity of same space dimension
-  for(size_t i = 0; i < spaces.size(); ++i) {
+    // Check that the elementary system is defined on a connectivity of same space dimension
     // Weak forms that can be defined on any dimension have dim = -1
-    if(elementarySystem->getDim() != -1) {
-      if(spaces[i]->getDim() != elementarySystem->getDim()) {
-        return feErrorMsg(FE_STATUS_ERROR,
-                          "(Bi-)linear form %s should be defined on connectivity with dimension %d "
-                          "(given dimension is %d)\n",
-                          elementarySystem->getWeakFormName().data(), elementarySystem->getDim(),
-                          spaces[i]->getDim());
-      }
+    if(elementarySystem->getDim() != -1 && s->getDim() != elementarySystem->getDim()) {
+      return feErrorMsg(FE_STATUS_ERROR,
+                        "(Bi-)linear form %s should be defined on connectivity with dimension %d "
+                        "(given dimension is %d)\n",
+                        elementarySystem->getWeakFormName().data(), elementarySystem->getDim(),
+                        s->getDim());
     }
-  }
-
-  // Check that the number of FE spaces match the required
-  // number of spaces to compute the weak form
-  if(spaces.size() != (size_t) elementarySystem->getNumFields()) {
-    return feErrorMsg(FE_STATUS_ERROR, "(Bi-)linear form %s expects %d FE space(s) (given: %d)\n",
-                      elementarySystem->getWeakFormName().data(), elementarySystem->getNumFields(),
-                      spaces.size());
   }
 
   // TEMPORARY: Check that all FE spaces have the same number of quadrature nodes

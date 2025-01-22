@@ -35,7 +35,6 @@ feStatus createLinearSystem(feLinearSystem *&system, linearSolverType type,
   if(type == MKLPARDISO) {
 #if defined(HAVE_MKL)
       system = new feLinearSystemMklPardiso(bilinearForms, numUnknowns, ownershipSplit);
-      break;
 #else
       return feErrorMsg(FE_STATUS_ERROR,
                         "feNG must be compiled with Intel MKL to solve with MKL Pardiso.");

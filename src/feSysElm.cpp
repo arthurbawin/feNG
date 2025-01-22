@@ -111,6 +111,57 @@ void feSysElm_Mass::computeBe(feBilinearForm *form)
 }
 
 // -----------------------------------------------------------------------------
+// Bilinear form: mass matrix for scalar field to given power
+// -----------------------------------------------------------------------------
+void feSysElm_MassPower::createElementarySystem(std::vector<feSpace *> &space)
+{
+  _idU = 0;
+  _fieldsLayoutI[0] = _idU;
+  _fieldsLayoutJ[0] = _idU;
+  _nFunctions = space[_idU]->getNumFunctions();
+  _phiU.resize(_nFunctions);
+}
+
+void feSysElm_MassPower::computeAe(feBilinearForm *form)
+{
+  UNUSED(form);
+  feErrorMsg(FE_STATUS_ERROR, "Implement matrix for MASSPOWER");
+  // double jac, coeff;
+  // for(int k = 0; k < _nQuad; ++k) {
+  //   jac = form->_J[_nQuad * form->_numElem + k];
+
+  //   form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, _pos);
+  //   coeff = (*_coeff)(form->_tn, _pos);
+
+  //   for(int i = 0; i < _nFunctions; ++i)
+  //     _phiU[i] = form->_intSpaces[_idU]->getFunctionAtQuadNode(i, k);
+
+  //   for(int i = 0; i < _nFunctions; ++i)
+  //     for(int j = 0; j < _nFunctions; ++j)
+  //       form->_Ae[i][j] += coeff * _phiU[i] * _phiU[j] * jac * _wQuad[k];
+  // }
+}
+
+void feSysElm_MassPower::computeBe(feBilinearForm *form)
+{
+  double jac, u, uP, coeff;
+  for(int k = 0; k < _nQuad; ++k) {
+    jac = form->_J[_nQuad * form->_numElem + k];
+
+    form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, _pos);
+    coeff = (*_coeff)(form->_tn, _pos);
+
+    u = form->_intSpaces[_idU]->interpolateFieldAtQuadNode(form->_sol[_idU], k);
+    uP = pow(u, _p);
+
+    for(int i = 0; i < _nFunctions; ++i) {
+      _phiU[i] = form->_intSpaces[_idU]->getFunctionAtQuadNode(i, k);
+      form->_Be[i] -= coeff * uP * _phiU[i] * jac * _wQuad[k];
+    }
+  }
+}
+
+// -----------------------------------------------------------------------------
 // Bilinear form: mixed mass matrix for scalar field (unknown and tests functions
 //                from different variables)
 // -----------------------------------------------------------------------------
@@ -165,6 +216,63 @@ void feSysElm_MixedMass::computeBe(feBilinearForm *form)
 }
 
 // -----------------------------------------------------------------------------
+// Bilinear form: mixed mass power
+// -----------------------------------------------------------------------------
+void feSysElm_MixedMassPower::createElementarySystem(std::vector<feSpace *> &space)
+{
+  _idV = 0;
+  _idU = 1;
+  _fieldsLayoutI = {_idV}; // Rectangular local matrix
+  _fieldsLayoutJ = {_idU};
+  _nFunctionsU = space[_idU]->getNumFunctions();
+  _nFunctionsV = space[_idV]->getNumFunctions();
+  _phiU.resize(_nFunctionsU);
+  _phiV.resize(_nFunctionsV);
+}
+
+void feSysElm_MixedMassPower::computeAe(feBilinearForm *form)
+{
+  // Attention à la dérivation avec la puissance
+  UNUSED(form);
+  feErrorMsg(FE_STATUS_ERROR, "Implement matrix for MIXEDMASSPOWER");
+  // double jac, coeff;
+  // for(int k = 0; k < _nQuad; ++k) {
+  //   jac = form->_J[_nQuad * form->_numElem + k];
+
+  //   form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, _pos);
+  //   coeff = (*_coeff)(form->_tn, _pos);
+
+  //   for(int i = 0; i < _nFunctionsU; ++i)
+  //     _phiU[i] = form->_intSpaces[_idU]->getFunctionAtQuadNode(i, k);
+  //   for(int i = 0; i < _nFunctionsV; ++i)
+  //     _phiV[i] = form->_intSpaces[_idV]->getFunctionAtQuadNode(i, k);
+
+  //   for(int i = 0; i < _nFunctionsV; ++i)
+  //     for(int j = 0; j < _nFunctionsU; ++j)
+  //       form->_Ae[i][j] += coeff * _phiV[i] * _phiU[j] * jac * _wQuad[k];
+  // }
+}
+
+void feSysElm_MixedMassPower::computeBe(feBilinearForm *form)
+{
+  double jac, u, up, coeff;
+  for(int k = 0; k < _nQuad; ++k) {
+    jac = form->_J[_nQuad * form->_numElem + k];
+
+    form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, _pos);
+    coeff = (*_coeff)(form->_tn, _pos);
+
+    u = form->_intSpaces[_idU]->interpolateFieldAtQuadNode(form->_sol[_idU], k);
+    up = pow(u, _p);
+    form->_intSpaces[_idV]->getFunctionsAtQuadNode(k, _phiV);
+
+    for(int i = 0; i < _nFunctionsV; ++i) {
+      form->_Be[i] -= coeff * up * _phiV[i] * jac * _wQuad[k];
+    }
+  }
+}
+
+// -----------------------------------------------------------------------------
 // Bilinear form: transient mass matrix
 // -----------------------------------------------------------------------------
 void feSysElm_TransientMass::createElementarySystem(std::vector<feSpace *> &space)
@@ -178,30 +286,90 @@ void feSysElm_TransientMass::createElementarySystem(std::vector<feSpace *> &spac
 
 void feSysElm_TransientMass::computeAe(feBilinearForm *form)
 {
-  double jac;
+  double jac, coeff;
   for(int k = 0; k < _nQuad; ++k) {
     jac = form->_J[_nQuad * form->_numElem + k];
+
+    form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, _pos);
+    coeff = (*_coeff)(form->_tn, _pos);
 
     for(int i = 0; i < _nFunctions; ++i)
       _feU[i] = form->_intSpaces[_idU]->getFunctionAtQuadNode(i, k);
 
     for(int i = 0; i < _nFunctions; ++i)
       for(int j = 0; j < _nFunctions; ++j)
-        form->_Ae[i][j] += _feU[i] * _coeff * form->_c0 * _feU[j] * jac * _wQuad[k];
+        form->_Ae[i][j] += _feU[i] * coeff * form->_c0 * _feU[j] * jac * _wQuad[k];
   }
 }
 
 void feSysElm_TransientMass::computeBe(feBilinearForm *form)
 {
-  double jac, uDot;
+  double jac, uDot, coeff;
   for(int k = 0; k < _nQuad; ++k) {
     jac = form->_J[_nQuad * form->_numElem + k];
+
+    form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, _pos);
+    coeff = (*_coeff)(form->_tn, _pos);
 
     uDot = form->_intSpaces[_idU]->interpolateFieldAtQuadNode(form->_solDot[_idU], k);
 
     for(int i = 0; i < _nFunctions; ++i) {
       _feU[i] = form->_intSpaces[_idU]->getFunctionAtQuadNode(i, k);
-      form->_Be[i] -= _feU[i] * _coeff * uDot * jac * _wQuad[k];
+      form->_Be[i] -= _feU[i] * coeff * uDot * jac * _wQuad[k];
+    }
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Bilinear form: mixed transient mass matrix
+// -----------------------------------------------------------------------------
+void feSysElm_MixedTransientMass::createElementarySystem(std::vector<feSpace *> &space)
+{
+  _idV = 0;
+  _idU = 1;
+  _fieldsLayoutI = {_idV}; // Rectangular local matrix
+  _fieldsLayoutJ = {_idU};
+  _nFunctionsU = space[_idU]->getNumFunctions();
+  _nFunctionsV = space[_idV]->getNumFunctions();
+  _phiU.resize(_nFunctionsU);
+  _phiV.resize(_nFunctionsV);
+}
+
+void feSysElm_MixedTransientMass::computeAe(feBilinearForm *form)
+{
+  UNUSED(form);
+  feErrorMsg(FE_STATUS_ERROR, "Implement matrix for MixedTransientMass");
+  // double jac, coeff;
+  // for(int k = 0; k < _nQuad; ++k) {
+  //   jac = form->_J[_nQuad * form->_numElem + k];
+
+  //   form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, _pos);
+  //   coeff = (*_coeff)(form->_tn, _pos);
+
+  //   for(int i = 0; i < _nFunctions; ++i)
+  //     _feU[i] = form->_intSpaces[_idU]->getFunctionAtQuadNode(i, k);
+
+  //   for(int i = 0; i < _nFunctions; ++i)
+  //     for(int j = 0; j < _nFunctions; ++j)
+  //       form->_Ae[i][j] += _feU[i] * coeff * form->_c0 * _feU[j] * jac * _wQuad[k];
+  // }
+}
+
+void feSysElm_MixedTransientMass::computeBe(feBilinearForm *form)
+{
+  double jac, uDot, coeff;
+  for(int k = 0; k < _nQuad; ++k) {
+    jac = form->_J[_nQuad * form->_numElem + k];
+
+    form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, _pos);
+    coeff = (*_coeff)(form->_tn, _pos);
+
+    // Compute uDot and get phiV
+    uDot = form->_intSpaces[_idU]->interpolateFieldAtQuadNode(form->_solDot[_idU], k);
+    form->_intSpaces[_idV]->getFunctionsAtQuadNode(k, _phiV);
+
+    for(int i = 0; i < _nFunctionsV; ++i) {
+      form->_Be[i] -= coeff * uDot * _phiV[i] * jac * _wQuad[k];
     }
   }
 }
@@ -237,7 +405,7 @@ template <int dim> void feSysElm_Diffusion<dim>::computeAe(feBilinearForm *form)
     for(int i = 0; i < _nFunctions; ++i) {
       for(int j = 0; j < _nFunctions; ++j) {
         for(int iDim = 0; iDim < dim; ++iDim) {
-          form->_Ae[i][j] -=
+          form->_Ae[i][j] +=
             coeff * _gradPhi[i * dim + iDim] * _gradPhi[j * dim + iDim] * jac * _wQuad[k];
         }
       }
@@ -266,11 +434,17 @@ template <int dim> void feSysElm_Diffusion<dim>::computeBe(feBilinearForm *form)
 
     for(int i = 0; i < _nFunctions; ++i) {
       for(int iDim = 0; iDim < dim; ++iDim) {
-        form->_Be[i] += coeff * _gradPhi[i * dim + iDim] * grad_u[iDim] * jac * _wQuad[k];
+        form->_Be[i] -= coeff * _gradPhi[i * dim + iDim] * grad_u[iDim] * jac * _wQuad[k];
       }
     }
   }
 }
+
+// Explicit instantiation
+template class feSysElm_Diffusion<0>;
+template class feSysElm_Diffusion<1>;
+template class feSysElm_Diffusion<2>;
+template class feSysElm_Diffusion<3>;
 
 // -----------------------------------------------------------------------------
 // Bilinear form: diffusion of scalar field with nonlinear diffusivity
@@ -313,10 +487,10 @@ template <int dim> void feSysElm_NonlinearDiffusion<dim>::computeAe(feBilinearFo
       for(int j = 0; j < _nFunctions; ++j) {
         for(int iDim = 0; iDim < dim; ++iDim) {
           // Linear part
-          form->_Ae[i][j] -=
+          form->_Ae[i][j] +=
             ku * _gradPhi[i * dim + iDim] * _gradPhi[j * dim + iDim] * jac * _wQuad[k];
           // Nonlinear part
-          form->_Ae[i][j] -=
+          form->_Ae[i][j] +=
             dkdu * _phiU[j] * grad_u[iDim] * _gradPhi[i * dim + iDim] * jac * _wQuad[k];
         }
       }
@@ -345,11 +519,15 @@ template <int dim> void feSysElm_NonlinearDiffusion<dim>::computeBe(feBilinearFo
 
     for(int i = 0; i < _nFunctions; ++i) {
       for(int iDim = 0; iDim < dim; ++iDim) {
-        form->_Be[i] += _gradPhi[i * dim + iDim] * grad_u[iDim] * kD * jac * _wQuad[k];
+        form->_Be[i] -= _gradPhi[i * dim + iDim] * grad_u[iDim] * kD * jac * _wQuad[k];
       }
     }
   }
 }
+
+template class feSysElm_NonlinearDiffusion<1>;
+template class feSysElm_NonlinearDiffusion<2>;
+template class feSysElm_NonlinearDiffusion<3>;
 
 // -----------------------------------------------------------------------------
 // Bilinear form: advection of scalar field
@@ -429,6 +607,10 @@ template <int dim> void feSysElm_Advection<dim>::computeBe(feBilinearForm *form)
   }
 }
 
+template class feSysElm_Advection<1>;
+template class feSysElm_Advection<2>;
+template class feSysElm_Advection<3>;
+
 // -----------------------------------------------------------------------------
 // Bilinear form: nonlinear advection of scalar field
 // -----------------------------------------------------------------------------
@@ -473,20 +655,79 @@ template <int dim> void feSysElm_NonlinearAdvection<dim>::computeBe(feBilinearFo
   }
 }
 
-// Explicit instantiation of templated forms
-template class feSysElm_Diffusion<0>;
-template class feSysElm_Diffusion<1>;
-template class feSysElm_Diffusion<2>;
-template class feSysElm_Diffusion<3>;
-template class feSysElm_NonlinearDiffusion<0>;
-template class feSysElm_NonlinearDiffusion<1>;
-template class feSysElm_NonlinearDiffusion<2>;
-template class feSysElm_NonlinearDiffusion<3>;
-template class feSysElm_Advection<0>;
-template class feSysElm_Advection<1>;
-template class feSysElm_Advection<2>;
-template class feSysElm_Advection<3>;
-template class feSysElm_NonlinearAdvection<0>;
 template class feSysElm_NonlinearAdvection<1>;
 template class feSysElm_NonlinearAdvection<2>;
 template class feSysElm_NonlinearAdvection<3>;
+
+// -----------------------------------------------------------------------------
+// Bilinear form: mixed gradient-gradient
+// -----------------------------------------------------------------------------
+template <int dim>
+void feSysElm_MixedGradGrad<dim>::createElementarySystem(std::vector<feSpace *> &space)
+{
+  _idV = 0; // Scalar test functions
+  _idU = 1; // Scalar unknown field
+  _fieldsLayoutI = {_idV}; // Rectangular local matrix
+  _fieldsLayoutJ = {_idU};
+  _nFunctionsU = space[_idU]->getNumFunctions();
+  _nFunctionsV = space[_idV]->getNumFunctions();
+  _gradPhiV.resize(dim * _nFunctionsV);
+}
+
+template <int dim>
+void feSysElm_MixedGradGrad<dim>::computeAe(feBilinearForm *form)
+{
+  UNUSED(form);
+  feErrorMsg(FE_STATUS_ERROR, "Implement matrix for MixedGradGrad");
+  // double jac, coeff, div_v;
+  // for(int k = 0; k < _nQuad; ++k) {
+  //   jac = form->_J[_nQuad * form->_numElem + k];
+  //   form->_cnc->computeElementTransformation(form->_geoCoord, k, jac, form->_transformation);
+
+  //   // Evaluate scalar coefficient
+  //   form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, _pos);
+  //   coeff = (*_coeff)(form->_tn, _pos);
+
+  //   // Get phiU
+  //   form->_intSpaces[_idU]->getFunctionsAtQuadNode(k, _phiU);
+
+  //   // Compute compacted grad(phiV) without the trivial zeros
+  //   form->_intSpaces[_idV]->getFunctionsPhysicalGradientAtQuadNode(k, form->_transformation,
+  //                                                                  _gradPhiV.data());
+
+  //   for(int i = 0; i < _nFunctionsV; ++i) {
+  //     for(int j = 0; j < _nFunctionsU; ++j) {
+  //       div_v = _gradPhiV[i * _nComponents + (i % _nComponents)];
+  //       form->_Ae[i][j] -= coeff * _phiU[j] * div_v * jac * _wQuad[k];
+  //     }
+  //   }
+  // }
+}
+
+template <int dim>
+void feSysElm_MixedGradGrad<dim>::computeBe(feBilinearForm *form)
+{
+  double jac, coeff, grad_u[3] = {0., 0., 0.};
+  for(int k = 0; k < _nQuad; ++k) {
+    jac = form->_J[_nQuad * form->_numElem + k];
+    form->_cnc->computeElementTransformation(form->_geoCoord, k, jac, form->_transformation);
+
+    // Evaluate scalar coefficient
+    form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, _pos);
+    coeff = (*_coeff)(form->_tn, _pos);
+
+    // Get gradU and gradPhiV
+    form->_intSpaces[_idU]->interpolateFieldAtQuadNode_physicalGradient(form->_sol[_idU], k, form->_transformation, grad_u);
+    form->_intSpaces[_idV]->getFunctionsPhysicalGradientAtQuadNode(k, form->_transformation, _gradPhiV.data());
+
+    for(int i = 0; i < _nFunctionsV; ++i) {
+      for(int iDim = 0; iDim < dim; ++iDim) {
+        form->_Be[i] -= coeff * _gradPhiV[i * dim + iDim] * grad_u[iDim] * jac * _wQuad[k];
+      }
+    }
+  }
+}
+
+template class feSysElm_MixedGradGrad<1>;
+template class feSysElm_MixedGradGrad<2>;
+template class feSysElm_MixedGradGrad<3>;

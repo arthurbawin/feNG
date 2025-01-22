@@ -403,11 +403,13 @@ feLinearSystemPETSc::feLinearSystemPETSc(std::vector<feBilinearForm *> bilinearF
 #endif
 {
 #if !defined(HAVE_PETSC)
-  UNUSED(numUnknowns);
+  UNUSED(numUnknowns, type);
 #endif
 
+#if defined(HAVE_PETSC)
   // Check if using an interfaced solver (only MUMPS for now)
   if(type == PETSC_MUMPS) _solveWithMUMPS = true;
+#endif
 
   // Create and allocate the structures, ksp and pc
   this->initialize();

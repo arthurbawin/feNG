@@ -47,7 +47,7 @@ protected:
   std::vector<feBilinearForm *> _formResiduals;
 
   // Recompute the jacobian matrix at current Newton-Raphson step?
-  bool recomputeMatrix;
+  bool recomputeMatrix = true;
 
   // Reorder the matrix?
   bool _permute = false;
@@ -180,7 +180,6 @@ protected:
   int _icntl7  = 2; // Sequential ordering (if icntl28 = 1 or only 1 MPI proc)
   int _icntl28 = 2; // Sequential (1) or parallel (2) ordering
   int _icntl29 = 1; // Parallel ordering (if icntl28 = 2)
-
 #endif
 
 public:
@@ -230,18 +229,22 @@ private:
 class feLinearSystemMklPardiso : public feLinearSystem
 {
 protected:
-  
+  // Number of unknown DOFs (size of the system)
   PardisoInt _nInc;
 
-  double *du;
-  double *residu;
-  bool symbolicFactorization = true;
-
-  // CRS (compressed row storage) data for Pardiso
+  // FE matrix stored in CRS (compressed row storage) format
   PardisoInt _nnz;
   PardisoInt *_mat_ia; // dimension _nInc+1, IA
   PardisoInt *_mat_ja; // dimension _nnz, JA
   double *_mat_values; // dimension _nnz
+
+  // Global finite element RHS
+  double *_rhs;
+  // Solution vector du
+  double *du;
+
+  // Compute symbolic factorization (matrix reordering)
+  bool symbolicFactorization = true;
 
   // Row ownership arrays (bounds and number of rows owned by each MPI process)
   // For single process run, these are the data for the whole matrix
@@ -312,8 +315,8 @@ public:
 
   feInt getSystemSize() { return  _nInc; };
 
-  void getRHSMaxNorm(double *norm){ *norm = 0.; };
-  void getResidualMaxNorm(double *norm){ *norm = 0.; };
+  void getRHSMaxNorm(double *norm);
+  void getResidualMaxNorm(double *norm);
 
   void setToZero();
   void setMatrixToZero();
@@ -332,7 +335,7 @@ public:
   void viewResidual();
 
 private:
-  void setOwnershipAndAllocate(void);
+  void initialize(void);
   void mklSymbolicFactorization(void);
   void mklFactorization(void);
   void mklSolve(void);

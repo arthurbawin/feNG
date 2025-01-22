@@ -28,12 +28,17 @@ namespace {
     double x = pos[0];
     double y = pos[1];
     double k = par[0];
-    return - k * 30. * (pow(x, 4) + pow(y, 4));
+    return + k * 30. * (pow(x, 4) + pow(y, 4));
+  }
+
+  double round_to(double value, double precision)
+  {
+    return std::round(value / precision) * precision;
   }
 
   int meshConvergence(std::stringstream &resultBuffer, int order, int numMeshes, int degreeQuadrature)
   {    
-    setVerbose(2);  
+    setVerbose(1);  
 
     double k = 1.0;
     feFunction funSol(fSol);
@@ -54,19 +59,19 @@ namespace {
       feMesh2DP1 mesh(meshFile);
       nElm[i] = mesh.getNumInteriorElements();
 
-      feSpace *uBord, *uDomaine;
+      feSpace *uBord, *u;
       feCheck(createFiniteElementSpace(uBord, &mesh, elementType::LAGRANGE, order, "U", "Bord", degreeQuadrature, &funSol));
-      feCheck(createFiniteElementSpace(uDomaine, &mesh, elementType::LAGRANGE, order, "U", "Domaine", degreeQuadrature, &funZero));
+      feCheck(createFiniteElementSpace(    u, &mesh, elementType::LAGRANGE, order, "U", "Domaine", degreeQuadrature, &funZero));
 
-      std::vector<feSpace *> spaces = {uBord, uDomaine};
+      std::vector<feSpace *> spaces = {u, uBord};
       std::vector<feSpace *> essentialSpaces = {uBord};
 
       feMetaNumber numbering(&mesh, spaces, essentialSpaces);
       feSolution sol(numbering.getNbDOFs(), spaces, essentialSpaces);
 
       feBilinearForm *diff = nullptr, *source = nullptr;
-      feCheck(createBilinearForm(diff, {uDomaine}, new feSysElm_Diffusion<2>(&diffusivity)));
-      feCheck(createBilinearForm(source, {uDomaine}, new feSysElm_Source(&funSource)));
+      feCheck(createBilinearForm(diff, {u}, new feSysElm_Diffusion<2>(&diffusivity)));
+      feCheck(createBilinearForm(source, {u}, new feSysElm_Source(&funSource)));
 
       std::vector<feBilinearForm*> forms = {diff, source};
 
@@ -77,24 +82,30 @@ namespace {
       // or distributed on the processes (>= 0)
       int ownershipSplit = -1;
       feCheck(createLinearSystem(system, MKLPARDISO, {diff, source}, numbering.getNbUnknowns(), ownershipSplit));
-      #elif defined(HAVE_PETSC)
+      #elif defined(HAVE_PETSC) && defined(PETSC_HAVE_MUMPS)
+      feCheck(createLinearSystem(system, PETSC_MUMPS, {diff, source}, numbering.getNbUnknowns()));
+      #else
       feCheck(createLinearSystem(system, PETSC, {diff, source}, numbering.getNbUnknowns()));
       system->setRelativeTol(1e-10);
       system->setAbsoluteTol(1e-20);
       #endif
 
-      feNorm normU(L2_ERROR, {uDomaine}, &sol, &funSol);
+      feNorm normU(L2_ERROR, {u}, &sol, &funSol);
       std::vector<feNorm*> norms = {&normU};
 
       TimeIntegrator *solver;
-      feTolerances tol{1e-13, 1e-13, 4};
+      feTolerances tol{1e-13, 1e-13, 1e4, 4};
       feExportData exportData = {nullptr, 1, ""};
       feCheck(createTimeIntegrator(solver, STATIONARY, tol, system, &numbering, &sol, &mesh, norms, exportData));
       feCheck(solver->makeSteps(0));
 
+      // feExporter *exporter;
+      // feCheck(createVisualizationExporter(exporter, VTK, &numbering, &sol, &mesh, spaces));
+      // feCheck(exporter->writeStep("foo.vtk"));
+
       // Compute L2 error
-      feNorm norm(L2_ERROR, {uDomaine}, &sol, &funSol);
-      L2errorU[2 * i] = norm.compute();
+      feNorm norm(L2_ERROR, {u}, &sol, &funSol);
+      L2errorU[2 * i] = round_to(norm.compute(), 1e-14);
 
       delete solver;
       delete system;
@@ -103,7 +114,7 @@ namespace {
       delete diff;
       delete source;
       delete uBord;
-      delete uDomaine;
+      delete u;
     }
 
     // Compute the convergence rate
