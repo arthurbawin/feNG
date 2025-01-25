@@ -335,7 +335,7 @@ void feSysElm_VectorDiffusion::computeAe(feBilinearForm *form)
           for(int m = 0; m < _nComponents; ++m) {
             doubleContraction += _gradPhi[iOffset + m] * _gradPhi[jOffset + m];
           }
-          form->_Ae[i][j] -= coeff * diffusivity * doubleContraction * jac * _wQuad[k];
+          form->_Ae[i][j] += coeff * diffusivity * doubleContraction * jac * _wQuad[k];
         }
       }
     }
@@ -371,7 +371,7 @@ void feSysElm_VectorDiffusion::computeBe(feBilinearForm *form)
       for(int m = 0; m < _nComponents; ++m) {
         doubleContraction += _gradu[(i % _nComponents) * _nComponents + m] * _gradPhi[offset + m];
       }
-      form->_Be[i] += coeff * diffusivity * doubleContraction * jac * _wQuad[k];
+      form->_Be[i] -= coeff * diffusivity * doubleContraction * jac * _wQuad[k];
     }
   }
 }
@@ -675,7 +675,7 @@ void feSysElm_CHNS_Momentum::computeAe(feBilinearForm *form)
 
 void feSysElm_CHNS_Momentum::computeBe(feBilinearForm *form)
 {
-  double jac, rho, drhodphi, coeff, nu, p, phi, mu, div_v, doubleContraction;
+  double jac, rho, M, drhodphi, coeffKorteweg, eta, p, phi, mu, div_v, doubleContraction;
   double dudtDotphiU, uDotGraduDotphiU, gradPhiDotphiU, fDotphiU, gradMuDotgradUdotphiU;
   for(int k = 0; k < _nQuad; ++k) {
     jac = form->_J[_nQuad * form->_numElem + k];
@@ -684,10 +684,11 @@ void feSysElm_CHNS_Momentum::computeBe(feBilinearForm *form)
     // Evaluate scalar coefficients
     form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, _pos);
     phi = form->_intSpaces[_idPhi]->interpolateFieldAtQuadNode(form->_sol[_idPhi], k);
-    rho = (*_density)(phi); 
+    rho = (*_density)(phi);
+    M = (*_mobility)(phi);
     drhodphi = (*_drhodphi)(phi);
-    nu = (*_viscosity)(phi);
-    coeff = (*_coeff)(form->_tn, _pos);
+    eta = (*_viscosity)(phi);
+    coeffKorteweg = (*_coeffKorteweg)(form->_tn, _pos);
     (*_volumeForce)(phi, _f);
 
     // Get all relevant values and gradients
@@ -714,7 +715,6 @@ void feSysElm_CHNS_Momentum::computeBe(feBilinearForm *form)
     // grad_phiU
     form->_intSpaces[_idU]->getFunctionsPhysicalGradientAtQuadNode(k, form->_transformation,
                                                                    _gradPhiU.data());
-
     // Compute u dot gradu
     std::fill(_uDotGradu.begin(), _uDotGradu.end(), 0.);
     for(int m = 0; m < _nComponents; ++m) {
@@ -756,7 +756,7 @@ void feSysElm_CHNS_Momentum::computeBe(feBilinearForm *form)
       // Divergence of test function
       div_v = _gradPhiU[i * _nComponents + (i % _nComponents)];
 
-      // Double contraction 2*d(u) : grad(phiU)
+      // Double contraction 2*d(u) : grad(phiU) = (gradu + gradu^T) : grad(phiU)
       doubleContraction = 0.;
       for(int m = 0; m < _nComponents; ++m) {
         doubleContraction +=
@@ -767,11 +767,11 @@ void feSysElm_CHNS_Momentum::computeBe(feBilinearForm *form)
       fDotphiU = _f[i % _nComponents] * _phiU[i];
 
       // Increment RHS
-      form->_Be[i] -= (rho * (dudtDotphiU + uDotGraduDotphiU)
-                     + coeff * mu * gradPhiDotphiU
-                     + drhodphi * gradMuDotgradUdotphiU
-                     - p * div_v + nu * doubleContraction
-                     - fDotphiU) * jac * _wQuad[k];
+      form->_Be[i] -= (rho * (dudtDotphiU + uDotGraduDotphiU - fDotphiU)
+                     + M * drhodphi * gradMuDotgradUdotphiU
+                     + coeffKorteweg * mu * gradPhiDotphiU
+                     - p * div_v
+                     + eta * doubleContraction) * jac * _wQuad[k];
     }
   }
 }

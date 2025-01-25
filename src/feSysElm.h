@@ -583,16 +583,16 @@ public:
 // Diffusion term weak form (stiffness matrix).
 // Matrix and residual
 //
-// Strong form: -div(coeff * grad(u))
+// Strong form: - div(coeff * grad(u))
 //
-//  /
-//  | k * grad(u) dot grad(v) dx
-//  /
+//            /
+// Weak form: | coeff * grad(u) dot grad(v) dx
+//            /
 //
 // # fields: 1 (FE solution and test functions)
 //
 // Parameters:
-//  diffusivity: scalar field returning the diffusivity k(x)
+//  coeff: scalar field returning the diffusivity k(x)
 //
 //                        U
 // Fields layout: phi_U [   ]
@@ -613,6 +613,16 @@ public:
   CLONEABLE(feSysElm_Diffusion)
 };
 
+//
+// Diffusion of vector-valued field
+// Matrix and residual
+//
+// Strong form: - div(coeff * grad(u)), u vector
+//
+//             /
+// Weak form:  | coeff * grad(u) : grad(v) dx
+//             /
+//
 class feSysElm_VectorDiffusion : public feSysElm
 {
 protected:
@@ -734,6 +744,20 @@ public:
 
 //
 // Integral of coeff * (u dot grad) u dot v
+//
+// This is the directional derivative along u:
+//
+//     coeff * (u_i * d/dx_i)u_j * v_j
+//   = coeff *  u_i *  du_j/dx_i * v_j
+//
+// Note that if the velocity gradient is defined as (grad u)_ij = du_i/dx_j,
+// then what is computed is (in cartesian coordinates):
+//
+//             coeff * (u dot (grad u)^T) dot v
+// instead of
+//             coeff * (u dot (grad u)  ) dot v,
+//
+// which is associated to (grad u)_ij = du_j/dx_i
 //
 class feSysElm_VectorConvectiveAcceleration : public feSysElm
 {
@@ -912,12 +936,12 @@ template <int dim> class feSysElm_MixedGradGrad : public feSysElm
 protected:
   feFunction *_coeff;
   int _idU, _idV, _nFunctionsU, _nFunctionsV;
-  std::vector<double> _gradPhiV;
+  std::vector<double> _gradPhiU, _gradPhiV;
 
 public:
   feSysElm_MixedGradGrad(feFunction *coeff) : feSysElm(dim, 2, MIXED_GRADGRAD, true), _coeff(coeff)
   {
-    _computeMatrixWithFD = true;
+    _computeMatrixWithFD = false;
   };
   ~feSysElm_MixedGradGrad(){};
   void createElementarySystem(std::vector<feSpace *> &space);
@@ -1029,7 +1053,7 @@ public:
 //  - coeff: a coefficient, e.g. gamma/eps (surface tension/interface thickness)
 //  -    mu: the chemical potential
 //  - sigma: the Newtonian stress tensor whose viscosity also depends on phi (ScalarSolField)
-//  -     f: volume source term which depends on phi (VectorSolField)
+//  -     f: volume source term
 //  - phi_u: the velocity test functions
 //
 // Requires 4 fields: u, p (through sigma), phi, mu.
@@ -1039,8 +1063,9 @@ class feSysElm_CHNS_Momentum : public feSysElm
 {
 protected:
   feFunction *_density;
+  feFunction *_mobility;
   feFunction *_drhodphi;
-  feFunction *_coeff;
+  feFunction *_coeffKorteweg;
   feFunction *_viscosity;
   feVectorFunction *_volumeForce;
   int _idU, _idP, _idPhi, _idMu;
@@ -1048,10 +1073,11 @@ protected:
   std::vector<double> _f, _u, _dudt, _gradu, _uDotGradu, _gradphi, _gradmu, _gradmuDotGradu, _symmetricGradu, _phiU, _gradPhiU;
 
 public:
-  feSysElm_CHNS_Momentum(feFunction *density, feFunction *drhodphi,
-    feFunction *coeff, feFunction *viscosity, feVectorFunction *volumeForce)
+  feSysElm_CHNS_Momentum(feFunction *density, feFunction *mobility, feFunction *drhodphi,
+    feFunction *coeffKorteweg, feFunction *viscosity, feVectorFunction *volumeForce)
    : feSysElm(-1, 4, CHNS_MOMENTUM, true),
-   _density(density), _drhodphi(drhodphi), _coeff(coeff), _viscosity(viscosity), _volumeForce(volumeForce)
+   _density(density), _mobility(mobility), _drhodphi(drhodphi),
+   _coeffKorteweg(coeffKorteweg), _viscosity(viscosity), _volumeForce(volumeForce)
   {
     _computeMatrixWithFD = true;
   };

@@ -169,6 +169,22 @@ void feLinearSystemMklPardiso::initialize(void)
   du = new double[_nInc];
   _rhs = new double[_nInc];
 
+  // printf("ia = ");
+  // for(int i = 0; i < _numOwnedRows; ++i) {
+  //   printf("%d ", _mat_ia[i]);
+  // }
+  // printf("\n");
+  // printf("ja = ");
+  // for(int i = 0; i < _numOwnedNNZ; ++i) {
+  //   printf("%d ", _mat_ja[i]);
+  // }
+  // printf("\n");
+  // printf("a = ");
+  // for(int i = 0; i < _numOwnedNNZ; ++i) {
+  //   printf("%f ", _mat_values[i]);
+  // }
+  // printf("\n");
+
 #if defined(HAVE_MPI)
   }
 #endif
@@ -280,15 +296,15 @@ feLinearSystemMklPardiso::feLinearSystemMklPardiso(std::vector<feBilinearForm *>
   IPARM[3] = 0; /* No iterative-direct algorithm */
   IPARM[4] = 0; /* No user fill-in reducing permutation */
   IPARM[5] = 0; /* Write solution into (0)x, (1)b */
-  IPARM[6] = 0; /* Not in use - Number of iterative refinement steps performed */
+  IPARM[6] = 0; /* Output - Number of iterative refinement steps performed */
   IPARM[7] = 1; /* Max numbers of iterative refinement steps. (2)=2 iterations */
   IPARM[8] = 0; /* Reserved */
   IPARM[9] = IPIVOT; /* Perturb the pivot elements with 1E-13 */ //-AG
   IPARM[10] = 0; /* (0)Disable scaling, (1) Use nonsymmetric permutation and scaling MPS */ //--AG
-  IPARM[11] = 0; /* Not in use - Solve AX=B */
+  IPARM[11] = 0; /* Solve Ax = b instead of e.g. A^Tx = b */
 
   // !!! Turning IPARM[12] to 0 causes crashes with more than 1 OMP thread :/ !!!
-  IPARM[12] = 1; /* Maximum weighted matching algorithm is switched-on (default for non-symmetric) */
+  IPARM[12] = 0; /* Maximum weighted matching algorithm is switched-on (default for non-symmetric) */
 
   IPARM[13] = 0; /* Output: Number of perturbed pivots */
   IPARM[14] = 0; /* Not in use - Peak memory on symbolic factorization*/
