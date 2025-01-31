@@ -5,10 +5,19 @@ feSolutionContainer::feSolutionContainer(int nSol, double tn, int nDOF)
   : _nDofs(nDOF), _nSol(nSol)
 {
   _t.resize(_nSol);
+  _deltaT.resize(_nSol);
   _t[0] = tn;
   _sol.resize(_nSol);
+  _solDot.resize(_nSol);
   _fResidual.resize(_nSol);
-  _cn.resize(3);
+
+  for(int i = 0; i < _nSol; ++i) {
+    _sol[i].resize(_nDofs, 0.);
+    _solDot[i].resize(_nDofs, 0.);
+    _fResidual[i].resize(_nDofs, 0.);
+  }
+
+  _cn.resize(3, 0.);
   _d.resize(_nDofs);
 }
 
@@ -16,78 +25,122 @@ feSolutionContainer::feSolutionContainer(int nSol, double tn, feMetaNumber *meta
   : _nDofs(metaNumber->getNbDOFs()), _nSol(nSol)
 {
   _t.resize(_nSol);
+  _deltaT.resize(_nSol);
   _t[0] = tn;
   _sol.resize(_nSol);
+  _solDot.resize(_nSol);
   _fResidual.resize(_nSol);
-  _cn.resize(3);
+
+  for(int i = 0; i < _nSol; ++i) {
+    _sol[i].resize(_nDofs, 0.);
+    _solDot[i].resize(_nDofs, 0.);
+    _fResidual[i].resize(_nDofs, 0.);
+  }
+
+  _cn.resize(3, 0.);
   _d.resize(_nDofs);
 }
 
-void feSolutionContainer::copy(const feSolutionContainer &other) 
+void feSolutionContainer::setCurrentSolution(const feSolution *other)
 {
-  // std::copy(other._t.begin(), other._t.end(), std::back_inserter(this->_t));
-  // std::copy(other._sol.begin(), other._sol.end(), std::back_inserter(this->_sol));
-  // _sol.resize(other._sol.size());
-  // for(size_t i = 0; i < other._sol.size(); ++i) {
-  //   this->_sol[i].resize(other._sol[i].size());
-  //   feInfo("Copying solution with %d dofs", other._sol[i].size());
-  //   for(size_t j = 0; j < other._sol[i].size(); ++j) {
-  //     this->_sol[i][j] = other._sol[i][j];
-  //   }
-  // }
-  // std::copy(other._fResidual.begin(), other._fResidual.end(), std::back_inserter(this->_fResidual));
-  // std::copy(other._cn.begin(), other._cn.end(), std::back_inserter(this->_cn));
-  // std::copy(other._d.begin(), other._d.end(), std::back_inserter(this->_d));
-
-  _nDofs = other._nDofs;
-  _nSol = other._nSol;
-
-  this->_t.assign(other._t.begin(), other._t.end());
-  this->_cn.assign(other._cn.begin(), other._cn.end());
-  this->_d.assign(other._d.begin(), other._d.end());
-
-  // this->sol.assign(std::copy(other._sol.begin(), other._sol.end());
-  _sol.resize(other._sol.size());
-  for(size_t i = 0; i < other._sol.size(); ++i) {
-    // this->_sol[i].resize(other._sol[i].size());
-    feInfo("Copying solution with %d dofs", other._sol[i].size());
-    // for(size_t j = 0; j < other._sol[i].size(); ++j) {
-    //   this->_sol[i][j] = other._sol[i][j];
-    // }
-    this->_sol[i].assign(other._sol[i].begin(), other._sol[i].end());
-  }
-  this->_fResidual.assign(other._fResidual.begin(), other._fResidual.end());
+  _sol[0] = other->getSolutionCopy();
 }
 
-void feSolutionContainer::initialize(feSolution *sol, feMesh *mesh, feMetaNumber *metaNumber)
+void feSolutionContainer::setCurrentSolutionDot(const feSolution *other)
 {
-  UNUSED(metaNumber);
+  _solDot[0] = other->getSolutionDotCopy();
+}
+
+void feSolutionContainer::computeBDFCoefficients(const int order, const std::vector<double> &deltaT)
+{
+  if(order == 0)
+  {
+    _cn[0] = 0.0;
+  }
+  else if(order == 1)
+  {
+    _cn[0] =  1.0/deltaT[0];
+    _cn[1] = -1.0/deltaT[0];
+  }
+  else if(order == 2)
+  {
+    _cn[0] =  1.0/deltaT[0] + 1.0/(deltaT[0]+deltaT[1]);
+    _cn[1] = -1.0/deltaT[0] - 1.0/(deltaT[1]);
+    _cn[2] =  deltaT[0]/deltaT[1]* 1.0/(deltaT[0]+deltaT[1]);
+  }
+}
+
+void feSolutionContainer::computeCurrentSolDot(feLinearSystem* /* linearSystem */)
+{
+  // Estimate time derivative with BDF coefficients
+  for(int i = 0; i < _nDofs; ++i) {
+    _solDot[0][i] = 0.;
+    for(size_t j = 0; j <  _cn.size(); j++) {
+      _solDot[0][i] += _cn[j]*_sol[j][i];
+    }
+  }
+
+  // Uncomment this when DC methods are reimplemented
+  // if(_correctionType == "SOLDOT") {
+  //   for(int i = 0; i < _nDofs; ++i) {
+  //     _solDot[0][i] += _d[i];
+  //   }
+  // } else if (_correctionType == "RESIDUAL") {
+  //   linearSystem->applyCorrectionToResidual(-1.0, _d);
+  // } 
+}
+
+//////////////////////////////////////////////////////////////////////////
+// Everything below should be reworked
+
+void feSolutionContainer::initialize(feSolution *sol, feMesh *mesh)
+{
   sol->setCurrentTime(_t[0]);
   sol->initializeUnknowns(mesh);
   sol->initializeEssentialBC(mesh);
   _sol[0] = sol->getSolutionCopy();
   _fResidual[0].resize(_nDofs);
-  // if(_nSol>1){
-  //   for(int i = 1; i < _nSol - 1; ++i) {
-  //     _sol[i].resize(_nDofs, 0.0);
-  //   }
-  // }
 }
 
 void feSolutionContainer::rotate(double dt)
 {
   for(int i = _nSol - 1; i > 0; --i) {
-    _t[i] = _t[i - 1];
-    _sol[i] = _sol[i - 1];
+    _t[i]         = _t[i - 1];
+    _deltaT[i]    = _deltaT[i - 1];
+    _sol[i]       = _sol[i - 1];
+    _solDot[i]    = _solDot[i - 1];
     _fResidual[i] = _fResidual[i - 1];
   }
   _t[0] += dt;
+  _deltaT[0] = _t[0] - _t[1];
+}
+
+void feSolutionContainer::rotateWithoutTime()
+{
+  for(int i = _nSol - 1; i > 0; --i) {
+    _t[i]         = _t[i - 1];
+    _sol[i]       = _sol[i-1];
+    _solDot[i]    = _solDot[i-1];
+    _fResidual[i] = _fResidual[i-1];
+  }
 }
 
 void feSolutionContainer::computeSolTimeDerivative(feSolution *sol, feLinearSystem *linearSystem)
 {
   UNUSED(linearSystem);
   for(int i = 0; i < _nDofs; ++i) sol->setSolDotAtDOF(i, 0.0);
+}
+
+void BDFContainer::computeSolTimeDerivative(feSolution *sol, feLinearSystem *linearSystem)
+{
+  UNUSED(linearSystem);
+  for(int i = 0; i < _nDofs; ++i) {
+    _solDot[0][i] = 0.;
+    for(size_t j = 0; j <  _sol.size(); j++) {
+      _solDot[0][i] += _cn[j] * _sol[j][i];
+    }
+    sol->setSolDotAtDOF(i, _solDot[0][i]);
+  }
 }
 
 void feStationarySolution::computeSolTimeDerivative(feSolution *sol, feLinearSystem *linearSystem)

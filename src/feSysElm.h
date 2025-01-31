@@ -394,7 +394,7 @@ public:
   feSysElm_MixedMassPower(feFunction *coeff, int exponent)
    : feSysElm(-1, 2, MIXED_MASS_POWER, true), _coeff(coeff), _p(exponent)
   {
-    _computeMatrixWithFD = true;
+    _computeMatrixWithFD = false;
   };
   ~feSysElm_MixedMassPower(){};
   void createElementarySystem(std::vector<feSpace *> &space);
@@ -412,7 +412,10 @@ protected:
   std::vector<double> _phiU;
 
 public:
-  feSysElm_VectorMass(feFunction *coeff) : feSysElm(-1, 1, VECTOR_MASS, true), _coeff(coeff){};
+  feSysElm_VectorMass(feFunction *coeff) : feSysElm(-1, 1, VECTOR_MASS, true), _coeff(coeff)
+  {
+    _computeMatrixWithFD = false;
+  };
   ~feSysElm_VectorMass(){};
   void createElementarySystem(std::vector<feSpace *> &space);
   void computeAe(feBilinearForm *form);
@@ -797,8 +800,8 @@ class feSysElm_TracerConvection : public feSysElm
 protected:
   feFunction *_coeff;
   int _idU, _idC;
-  int _nFunctionsC;
-  std::vector<double> _u, _gradC, _phiC;
+  int _nFunctionsU, _nFunctionsC;
+  std::vector<double> _u, _gradC, _phiU, _phiC, _gradPhiC;
 
 public:
   feSysElm_TracerConvection(feFunction *coeff)
@@ -978,6 +981,36 @@ public:
   void computeAe(feBilinearForm *form);
   void computeBe(feBilinearForm *form);
   CLONEABLE(feSysElm_MixedDivergence)
+};
+
+//
+// Mixed divergence with density function of the phase marker phi:
+//
+//    coeff * (rho(phi) * div(u)) * q, with      q (= phiP) : pressure test functions
+
+// Integral of coeff * (div(rho(phi) * u)) * v
+//
+class feSysElm_MixedDivergenceCHNS : public feSysElm
+{
+protected:
+  feFunction *_coeff;
+  feFunction *_density;
+  feFunction *_drhodphi;
+  int _idP, _idU, _idPhi;
+  int _nFunctionsP, _nFunctionsU;
+  std::vector<double> _u, _gradu, _gradphi, _gradPhiU, _phiU, _phiP;
+
+public:
+  feSysElm_MixedDivergenceCHNS(feFunction *coeff, feFunction *density, feFunction *drhodphi)
+    : feSysElm(-1, 3, MIXED_DIVERGENCE, true), _coeff(coeff), _density(density), _drhodphi(drhodphi)
+  {
+    _computeMatrixWithFD = false;
+  };
+  ~feSysElm_MixedDivergenceCHNS(){};
+  void createElementarySystem(std::vector<feSpace *> &space);
+  void computeAe(feBilinearForm *form);
+  void computeBe(feBilinearForm *form);
+  CLONEABLE(feSysElm_MixedDivergenceCHNS)
 };
 
 class feSysElm_MixedCurl : public feSysElm

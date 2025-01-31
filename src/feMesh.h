@@ -13,7 +13,7 @@
 
 #include "rtree.h"
 
-#if defined(HAVE_GMSH)
+#if defined(HAVE_GMSH) && defined(GMSH_WITH_CURVED_MESHING)
 #include "curvedMesh_structs.h"
 #endif
 //

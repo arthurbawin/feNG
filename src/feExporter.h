@@ -95,9 +95,10 @@ private:
                         bool loopOverCnc = false);
 };
 
-typedef struct feExportData {
-  feExporter *exporter;
-  int exportEveryNSteps;
+typedef struct feExportData
+{
+  feExporter *exporter = nullptr;
+  int exportEveryNSteps = 1;
   std::string fileNameRoot;
 } feExportData;
 

@@ -3,6 +3,7 @@
 #include "feExporter.h"
 #include "feExporter.h"
 #include "feNG.h"
+#include "feNonLinearSolver.h"
 
 double _normR0, _normFirstR0;
 
@@ -81,7 +82,7 @@ feStatus solveQNBDF(feSolutionContainer *solDot, feTolerances tol, feMetaNumber 
     if(iter > 0 && normResidual <= tol.tolResidual) {
       feInfoCond(FE_VERBOSE > 0,
                "\t\t\t\tStopping because residual norm ||NL(u)|| = %10.10e is"
-               " below tolerance (%10.4e)", normResidual, tol.tolResidual);
+               " below prescribed tolerance (%10.4e)", normResidual, tol.tolResidual);
       break;
     }
 
@@ -140,7 +141,7 @@ feStatus solveQNBDF(feSolutionContainer *solDot, feTolerances tol, feMetaNumber 
     // Solver converged as expected
     feInfoCond(
       FE_VERBOSE > 0,
-      "\t\t\t\tConverged in %2d Newton iteration(s) (Residual converged): ||du|| = %10.10e \t ||NL(u)|| = %10.10e", iter,
+      "\t\t\t\tConverged in %2d Newton iteration(s) (Residual converged):        ||du|| = %10.10e \t ||NL(u)|| = %10.10e", iter,
       normDx, normResidual);
     return FE_STATUS_OK;
   } else if(normDx <= tol.tolDx)
@@ -148,7 +149,7 @@ feStatus solveQNBDF(feSolutionContainer *solDot, feTolerances tol, feMetaNumber 
     // Increment du is low enough but residual NL(u) is not
     feInfoCond(
       FE_VERBOSE > 0,
-      "\t\t\t\tConverged in %2d Newton iteration(s) (Increment converged): ||du|| = %10.10e \t ||NL(u)|| = %10.10e", iter,
+      "\t\t\t\tConverged in %2d Newton iteration(s) (Increment converged):       ||du|| = %10.10e \t ||NL(u)|| = %10.10e", iter,
       normDx, normResidual);
     printf("\n");
     feWarning("Nonlinear solver converged because increment du = %10.4e is below prescribed tolerance (%1.4e),\n"
@@ -175,7 +176,7 @@ StationarySolver::StationarySolver(feTolerances tol, feMetaNumber *metaNumber,
   // Initialize the solution container with a single solution
   int nSol = 1;
   _solutionContainer = new feStationarySolution(nSol, _sol->getCurrentTime(), _metaNumber);
-  _solutionContainer->initialize(_sol, _mesh, _metaNumber);
+  _solutionContainer->initialize(_sol, _mesh);
 
   _normL2.resize(norms.size());
   for(auto &n : _normL2) n.resize(1, 0.);
@@ -195,7 +196,9 @@ feStatus StationarySolver::makeSteps(int /* nSteps */)
   //            _linearSystem->getRecomputeStatus() ? "true" : "false");
 
   // Solve
-  feStatus s = solveQNBDF(_solutionContainer, _tol, _metaNumber, _linearSystem, _sol, _mesh);
+  // feStatus s = solveQNBDF(_solutionContainer, _tol, _metaNumber, _linearSystem, _sol, _mesh);
+  feNLSolverOptions NLtol;
+  feStatus s = solveNewtonRaphson(_linearSystem, _sol, _solutionContainer, NLtol);
 
   if(s != FE_STATUS_OK) {
     return s;
@@ -268,7 +271,7 @@ BDF2Solver::BDF2Solver(feTolerances tol, feMetaNumber *metaNumber, feLinearSyste
   // Initialize the solution container with 3 solutions
   int nSol = 3;
   _solutionContainer = new feSolutionBDF2(nSol, _sol->getCurrentTime(), _metaNumber);
-  _solutionContainer->initialize(_sol, _mesh, _metaNumber);
+  _solutionContainer->initialize(_sol, _mesh);
 
   _normL2.resize(norms.size());
   for(auto &n : _normL2) n.resize(_nTimeSteps, 0.);
@@ -304,7 +307,7 @@ feStatus BDF2Solver::makeStep()
     } else {
       _solutionContainer->rotate(_dt);
       _sol->setSolFromContainer(_solutionContainer);
-      _solutionContainer->initialize(_sol, _mesh, _metaNumber);
+      _solutionContainer->initialize(_sol, _mesh);
     }
 
     _linearSystem->setRecomputeStatus(true);
@@ -365,15 +368,15 @@ feStatus BDF2Solver::makeSteps(int nSteps)
       _solutionContainer->rotate(_dt);
       _solutionContainer->setSol(0, _solutionContainerDC2F->getSolution(0));
       _solutionContainer->setSol(1, _solutionContainerDC2F->getSolution(1));
-      delete _solutionContainerDC2F;
+      // delete _solutionContainerDC2F;
     } else {
       _solutionContainer->rotate(_dt);
-      _sol->setSolFromContainer(_solutionContainer);
-      _solutionContainer->initialize(_sol, _mesh, _metaNumber);
+      // _sol->setSolFromContainer(_solutionContainer);
+      _solutionContainer->initialize(_sol, _mesh);
     }
 
     _linearSystem->setRecomputeStatus(true);
-    _sol->setSolFromContainer(_solutionContainer);
+    // _sol->setSolFromContainer(_solutionContainer);
     _tCurrent += _dt;
     ++_currentStep;
 
@@ -416,8 +419,10 @@ feStatus BDF2Solver::makeSteps(int nSteps)
     }
     _solutionContainer->rotate(_dt);
     initializeBDF2(_sol, _metaNumber, _mesh, dynamic_cast<feSolutionBDF2 *>(_solutionContainer));
-    feInfo("Étape 1 - recomputeMatrix = %s : Solution BDF2 - t = %6.6e",
-           _linearSystem->getRecomputeStatus() ? "true" : "false", _sol->getCurrentTime());
+    // feInfo("Étape 1 - recomputeMatrix = %s : Solution BDF2 - t = %6.6e",
+    //        _linearSystem->getRecomputeStatus() ? "true" : "false", _sol->getCurrentTime());
+    feInfoCond(FE_VERBOSE > 0, "\t\tBDF2 - Step %d/%d from t = %1.4e to t = %1.4e", 
+      i+1, nSteps, _tCurrent, _tCurrent + _dt);
     
     feStatus s = solveQNBDF(_solutionContainer, _tol, _metaNumber, _linearSystem, _sol, _mesh);
 
@@ -463,8 +468,7 @@ feStatus BDF2Solver::makeSteps(int nSteps)
     _tCurrent += _dt;
     ++_currentStep;
     if(K1K2) _dt = tK1K2[i + 1] - tK1K2[i];
-    printf("\n");
-    printf("Current step = %d : t = %f\n", _currentStep, _tCurrent);
+    // feInfo("Current step = %d : t = %f\n", _currentStep, _tCurrent);
 
     if(_exportData.exporter != nullptr && (_currentStep % _exportData.exportEveryNSteps) == 0) {
       std::string fileName = _exportData.fileNameRoot + std::to_string(_currentStep) + ".vtk";
@@ -484,7 +488,7 @@ BDF1Solver::BDF1Solver(feTolerances tol, feMetaNumber *metaNumber, feLinearSyste
   // Initialize the solution container with 2 solutions
   int nSol = 2;
   _solutionContainer = new feSolutionBDF1(nSol, _sol->getCurrentTime(), _metaNumber);
-  _solutionContainer->initialize(_sol, _mesh, _metaNumber);
+  _solutionContainer->initialize(_sol, _mesh);
 
   _normL2.resize(norms.size());
   for(auto &n : _normL2) n.resize(_nTimeSteps, 0.);
@@ -508,7 +512,7 @@ feStatus BDF1Solver::makeStep()
     _shouldInitialize = false;
     
     // Initialization and first step
-    _solutionContainer->initialize(_sol, _mesh, _metaNumber);
+    _solutionContainer->initialize(_sol, _mesh);
     _sol->setSolFromContainer(_solutionContainer);
   }
 
@@ -542,7 +546,7 @@ feStatus BDF1Solver::makeSteps(int nSteps)
     
     // Initialization and first step
     _linearSystem->setRecomputeStatus(true);
-    _solutionContainer->initialize(_sol, _mesh, _metaNumber);
+    _solutionContainer->initialize(_sol, _mesh);
     _sol->setSolFromContainer(_solutionContainer);
 
     // for(size_t i = 0; i < _norms.size(); ++i) {
@@ -637,8 +641,8 @@ DC2FSolver::DC2FSolver(feTolerances tol, feMetaNumber *metaNumber, feLinearSyste
   int nSol = 2;
   _solutionContainerBDF1 = new feSolutionBDF1(nSol, _sol->getCurrentTime(), _metaNumber);
   _solutionContainer = new feSolutionDC2F(nSol, _sol->getCurrentTime(), _metaNumber);
-  _solutionContainerBDF1->initialize(_sol, _mesh, _metaNumber);
-  _solutionContainer->initialize(_sol, _mesh, _metaNumber);
+  _solutionContainerBDF1->initialize(_sol, _mesh);
+  _solutionContainer->initialize(_sol, _mesh);
   fePstClc(_sol, _linearSystem, _solutionContainerBDF1);
 
   _normL2.resize(norms.size());
@@ -656,10 +660,10 @@ feStatus DC2FSolver::makeSteps(int nSteps)
   if(_currentStep == 0) {
     _linearSystem->setRecomputeStatus(true);
 
-    _solutionContainerBDF1->initialize(_sol, _mesh, _metaNumber);
+    _solutionContainerBDF1->initialize(_sol, _mesh);
     _sol->setSolFromContainer(_solutionContainerBDF1);
 
-    _solutionContainer->initialize(_sol, _mesh, _metaNumber);
+    _solutionContainer->initialize(_sol, _mesh);
     _sol->setSolFromContainer(_solutionContainer);
 
     // for(size_t i = 0; i < _norms.size(); ++i) {
@@ -732,9 +736,9 @@ DC3FSolver::DC3FSolver(feTolerances tol, feMetaNumber *metaNumber, feLinearSyste
   _solutionContainerBDF1 = new feSolutionBDF1(nSol, _sol->getCurrentTime(), _metaNumber);
   _solutionContainerDC2F = new feSolutionDC2F(nSol, _sol->getCurrentTime(), _metaNumber);
   _solutionContainer = new feSolutionDC2F(nSol, _sol->getCurrentTime(), _metaNumber);
-  _solutionContainerBDF1->initialize(_sol, _mesh, _metaNumber);
-  _solutionContainerDC2F->initialize(_sol, _mesh, _metaNumber);
-  _solutionContainer->initialize(_sol, _mesh, _metaNumber);
+  _solutionContainerBDF1->initialize(_sol, _mesh);
+  _solutionContainerDC2F->initialize(_sol, _mesh);
+  _solutionContainer->initialize(_sol, _mesh);
   fePstClc(_sol, _linearSystem, _solutionContainerBDF1);
   fePstClc(_sol, _linearSystem, _solutionContainerDC2F);
   _normL2.resize(norms.size());
@@ -752,13 +756,13 @@ feStatus DC3FSolver::makeSteps(int nSteps)
 
   if(_currentStep == 0) {
     _linearSystem->setRecomputeStatus(true);
-    _solutionContainerBDF1->initialize(_sol, _mesh, _metaNumber);
+    _solutionContainerBDF1->initialize(_sol, _mesh);
     _solutionContainerBDF1->rotate(_dt);
     _sol->setSolFromContainer(_solutionContainerBDF1);
-    _solutionContainerDC2F->initialize(_sol, _mesh, _metaNumber);
+    _solutionContainerDC2F->initialize(_sol, _mesh);
     _solutionContainerDC2F->rotate(_dt);
     _sol->setSolFromContainer(_solutionContainerDC2F);
-    _solutionContainer->initialize(_sol, _mesh, _metaNumber);
+    _solutionContainer->initialize(_sol, _mesh);
     _solutionContainer->rotate(_dt);
     _sol->setSolFromContainer(_solutionContainer);
 
@@ -1014,9 +1018,9 @@ DC3FSolver_centered::DC3FSolver_centered(feTolerances tol, feMetaNumber *metaNum
   _solutionContainerBDF1 = new feSolutionBDF1(nSol, _sol->getCurrentTime(), _metaNumber);
   _solutionContainerDC2F = new feSolutionDC2F(nSol, _sol->getCurrentTime(), _metaNumber);
   _solutionContainer = new feSolutionDC2F(nSol, _sol->getCurrentTime(), _metaNumber);
-  _solutionContainerBDF1->initialize(_sol, _mesh, _metaNumber);
-  _solutionContainerDC2F->initialize(_sol, _mesh, _metaNumber);
-  _solutionContainer->initialize(_sol, _mesh, _metaNumber);
+  _solutionContainerBDF1->initialize(_sol, _mesh);
+  _solutionContainerDC2F->initialize(_sol, _mesh);
+  _solutionContainer->initialize(_sol, _mesh);
   fePstClc(_sol, _linearSystem, _solutionContainerBDF1);
   fePstClc(_sol, _linearSystem, _solutionContainerDC2F);
 
@@ -1035,13 +1039,13 @@ feStatus DC3FSolver_centered::makeSteps(int nSteps)
 
   if(_currentStep == 0) {
     _linearSystem->setRecomputeStatus(true);
-    _solutionContainerBDF1->initialize(_sol, _mesh, _metaNumber);
+    _solutionContainerBDF1->initialize(_sol, _mesh);
     _solutionContainerBDF1->rotate(_dt);
     _sol->setSolFromContainer(_solutionContainerBDF1);
-    _solutionContainerDC2F->initialize(_sol, _mesh, _metaNumber);
+    _solutionContainerDC2F->initialize(_sol, _mesh);
     _solutionContainerDC2F->rotate(_dt);
     _sol->setSolFromContainer(_solutionContainerDC2F);
-    _solutionContainer->initialize(_sol, _mesh, _metaNumber);
+    _solutionContainer->initialize(_sol, _mesh);
     _solutionContainer->rotate(_dt);
     _sol->setSolFromContainer(_solutionContainer);
     // ++_currentStep;
@@ -1221,9 +1225,9 @@ DC3Solver::DC3Solver(feTolerances tol, feMetaNumber *metaNumber, feLinearSystem 
   _solutionContainerBDF2 = new feSolutionBDF2(nSol, _sol->getCurrentTime(), _metaNumber);
   _solutionContainerDC3F =
     new feSolutionDCF(Nb_pas_de_temps + 1, _sol->getCurrentTime(), _metaNumber);
-  _solutionContainerBDF2->initialize(_sol, _mesh, _metaNumber);
-  _solutionContainerDC3F->initialize(_sol, _mesh, _metaNumber);
-  _solutionContainer->initialize(_sol, _mesh, _metaNumber);
+  _solutionContainerBDF2->initialize(_sol, _mesh);
+  _solutionContainerDC3F->initialize(_sol, _mesh);
+  _solutionContainer->initialize(_sol, _mesh);
   if(_CodeIni != "BDF1/DCF") {
     fePstClc(_sol, _linearSystem, _solutionContainerBDF2); // To initialize residual if no BDF1/DCF
   }
@@ -1301,8 +1305,8 @@ feStatus DC3Solver::makeSteps(int nSteps)
       // _solutionContainer->rotate(_dt);
       _solutionContainerBDF2->rotate(_dt);
       _sol->setSolFromContainer(_solutionContainer);
-      _solutionContainerBDF2->initialize(_sol, _mesh, _metaNumber);
-      _solutionContainer->initialize(_sol, _mesh, _metaNumber);
+      _solutionContainerBDF2->initialize(_sol, _mesh);
+      _solutionContainer->initialize(_sol, _mesh);
       fePstClc(_sol, _linearSystem, _solutionContainerBDF2);
     }
 

@@ -72,10 +72,10 @@ public:
   // Bad: the solution container may be deleted
   feSolutionContainer *getSolutionContainer() { return _solutionContainer; }
   // Better?
-  void copySolutionContainerInto(feSolutionContainer &targetContainer)
-  {
-    targetContainer.copy(*(this->_solutionContainer));
-  }
+  // void copySolutionContainerInto(feSolutionContainer &targetContainer)
+  // {
+  //   targetContainer.copy(*(this->_solutionContainer));
+  // }
 
   void setMetaNumber(feMetaNumber *metaNumber) { _metaNumber = metaNumber; }
   void setLinearSystem(feLinearSystem *linearSystem) { _linearSystem = linearSystem; }

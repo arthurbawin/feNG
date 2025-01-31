@@ -34,11 +34,11 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/lib)
   #                     #"-Wall;-Wextra;-O3;-ansi;-m64"
   #                     )
 
-add_compile_options(-pedantic)
-add_compile_options(-pedantic-errors)
+# add_compile_options(-pedantic)
+# add_compile_options(-pedantic-errors)
 add_compile_options(-Wall)
 add_compile_options(-Wextra)
-add_compile_options(-Werror)
+# add_compile_options(-Werror)
 add_compile_options(-Werror=return-type)
 add_compile_options(-Wno-error=bool-compare)
 add_compile_options(-Wshadow)
@@ -49,7 +49,7 @@ add_compile_options(-Wdisabled-optimization)
 # Eigen and "unsupported" Eigen routines
 # It may be necessary to include Eigen as system headers (SYSTEM) to
 # silence Eigen's warnings such as -Wshadow
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/contrib/eigen)
+include_directories(SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}/contrib/eigen)
 add_definitions("-DHAVE_EIGEN")
 #  Root-finder (https://github.com/ZhepeiWang/Root-Finder)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/contrib/root-finder)
@@ -128,8 +128,10 @@ if(ENABLE_MKL)
   else()
     set(MKL_THREADING "sequential")
   endif()
-  # Only with OpenMPI for now. Not sure how to detect the MPI implementation.
-  set(MKL_MPI "openmpi")
+  if(ENABLE_MPI)
+    # Only with OpenMPI for now. Not sure how to detect the MPI implementation.
+    set(MKL_MPI "openmpi")
+  endif()
 
   # Try to locate MKLConfig.cmake first
   find_package(MKL CONFIG)
@@ -138,6 +140,9 @@ if(ENABLE_MKL)
     message(STATUS "MKL_INCLUDE: ${MKL_INCLUDE} ")
     add_compile_options($<TARGET_PROPERTY:MKL::MKL,INTERFACE_COMPILE_OPTIONS>)
     include_directories($<TARGET_PROPERTY:MKL::MKL,INTERFACE_INCLUDE_DIRECTORIES>)
+    foreach(MKL_TARGET IN LISTS MKL_IMPORTED_TARGETS)
+        list(APPEND feNG_EXTERNAL_LIBS ${MKL_TARGET})
+    endforeach()
   else()
     # Fallback to FindMKL.cmake
     message(STATUS "Could not find MKLConfig.cmake, using cmake/FindMKL.cmake instead")
@@ -147,7 +152,7 @@ if(ENABLE_MKL)
     message(STATUS "MKL_LIBRARIES  : ${MKL_LIBRARIES}   ")
     message(STATUS "MKL_LIBRARY_DIR: ${MKL_LIBRARY_DIR} ")
     include_directories(${MKL_INCLUDE_DIR})
-    list(APPEND feNG_EXTERNAL_LIBS ${feNG_EXTERNAL_LIBS} ${MKL_LIBRARIES})
+    list(APPEND feNG_EXTERNAL_LIBS ${feNG_EXTERNAL_LIBS} "-L${MKL_LIBRARY_DIR}" ${MKL_LIBRARIES})
     # Cluster Pardiso
     if(ENABLE_MPI)
       # Temporary fix to add the cluster options

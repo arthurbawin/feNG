@@ -7,36 +7,64 @@
 
 class feLinearSystem;
 
+//
+// A solution container is a collection of N solution arrays,
+// as well as their time derivatives, used to perform time integration.
+//
+// A stationary solver uses a trivial container with a single solution,
+// but more involved time integrators (such as "deferred correction" (DC) schemes)
+// require combining multiple solutions of different accuracy.
+//
 class feSolutionContainer
 {
 protected:
-  int _nDofs; // NDDL
+  int _nDofs;
   int _nSol;
-  std::vector<double> _t; // TEMPS
+  std::vector<double> _t;
+  std::vector<double> _deltaT;
+
+  // To change as protected
 public:
-  std::vector<double> _cn;
-  std::vector<double> _d;
-  std::vector<std::vector<double> > _sol; // U
-  std::vector<std::vector<double> > _fResidual; // F
+  std::vector<double> _cn; // BDF coefficients, to move to timeintegrator?
+  std::vector<double> _d;  // DC correction or residual, to keep
+
+  std::vector<std::vector<double>> _sol; // U
+  std::vector<std::vector<double>> _solDot; // Udot
+  std::vector<std::vector<double>> _fResidual; // F
+
 public:
   feSolutionContainer(){};
   feSolutionContainer(int nSol, double tn, int nDOF);
   feSolutionContainer(int nSol, double tn, feMetaNumber *metaNumber);
-  virtual ~feSolutionContainer() {}
+  virtual ~feSolutionContainer(){};
 
-  void copy(const feSolutionContainer &other);
-
-  int getNbDOFs() { return _nDofs; }
+  int getNbDOFs() const { return _nDofs; }
   void setNbDOFs(int nDofs) { _nDofs = nDofs; }
-
-  int getNbSol() { return _nSol; }
-  std::vector<double> &getTime() { return _t; }
+  int getNbSol() const { return _nSol; }
+  double getC0() const { return _cn[0]; }
+  const std::vector<double> &getTime() const { return _t; }
+  const std::vector<double> &getTimeDifferences() const { return _deltaT; }
   std::vector<double> &getSolution(int iSol) { return _sol[iSol]; }
 
-  void initialize(feSolution *sol, feMesh *mesh, feMetaNumber *metaNumber);
+  void setCurrentSolution(const feSolution *other);
+  void setCurrentSolutionDot(const feSolution *other);
+
+  // Compute coefficients for BDF methods of order 0, 1, 2 (0 is steady-state)
+  void computeBDFCoefficients(const int order, const std::vector<double> &deltaT);
+
+  // Compute time derivative of current solution using BDF coefficients
+  // and system residual if using DC scheme
+  void computeCurrentSolDot(feLinearSystem *linearSystem);
+
+///////////////////////////////////////////////////////////////////////////
+// Everything below should be reworked
+
+  void initialize(feSolution *sol, feMesh *mesh);
   void rotate(double dt);
+  void rotateWithoutTime();
   void setSol(int iSol, std::vector<double> sol) { _sol[iSol] = sol; }
   void setSolAtDOF(int iSol, int iDOF, double val) { _sol[iSol][iDOF] = val; }
+
   double getSol(int iSol, int iDOF) { return _sol[iSol][iDOF]; }
   double getRes(int iSol, int iDOF) { return _fResidual[iSol][iDOF]; }
   std::vector<double> &getResidual(int iSol) { return _fResidual[iSol]; }
@@ -44,12 +72,23 @@ public:
   virtual void computeSolTimeDerivative(feSolution *sol, feLinearSystem *linearSystem);
 };
 
+class BDFContainer : public feSolutionContainer
+{
+public:
+  BDFContainer(int nSol, double tn, int nDOF)
+    : feSolutionContainer(nSol, tn, nDOF){};
+  // ~BDFContainer() {}
+  void computeSolTimeDerivative(feSolution *sol, feLinearSystem *linearSystem);
+};
+
 class feStationarySolution : public feSolutionContainer
 {
 public:
+  feStationarySolution(int nSol, double tn, int nDOF)
+    : feSolutionContainer(nSol, tn, nDOF){};
   feStationarySolution(int nSol, double tn, feMetaNumber *metaNumber)
     : feSolutionContainer(nSol, tn, metaNumber){};
-  ~feStationarySolution() {}
+  // ~feStationarySolution() {}
   void computeSolTimeDerivative(feSolution *sol, feLinearSystem *linearSystem);
 };
 
@@ -58,7 +97,7 @@ class feSolutionBDF1 : public feSolutionContainer
 public:
   feSolutionBDF1(int nSol, double tn, feMetaNumber *metaNumber)
     : feSolutionContainer(nSol, tn, metaNumber){};
-  ~feSolutionBDF1() {}
+  // ~feSolutionBDF1() {}
   void computeSolTimeDerivative(feSolution *sol, feLinearSystem *linearSystem);
 };
 
@@ -67,7 +106,7 @@ class feSolutionBDF2 : public feSolutionContainer
 public:
   feSolutionBDF2(int nSol, double tn, feMetaNumber *metaNumber)
     : feSolutionContainer(nSol, tn, metaNumber){};
-  ~feSolutionBDF2() {}
+  // ~feSolutionBDF2() {}
   void computeSolTimeDerivative(feSolution *sol, feLinearSystem *linearSystem);
 };
 
@@ -76,7 +115,7 @@ class feSolutionDCF : public feSolutionContainer
 public:
   feSolutionDCF(int nSol, double tn, feMetaNumber *metaNumber)
     : feSolutionContainer(nSol, tn, metaNumber){};
-  ~feSolutionDCF() {}
+  // ~feSolutionDCF() {}
   void computeSolTimeDerivative(feSolution *sol, feLinearSystem *linearSystem);
 };
 
@@ -85,7 +124,7 @@ class feSolutionDC2F : public feSolutionContainer
 public:
   feSolutionDC2F(int nSol, double tn, feMetaNumber *metaNumber)
     : feSolutionContainer(nSol, tn, metaNumber){};
-  ~feSolutionDC2F() {}
+  // ~feSolutionDC2F() {}
   void computeSolTimeDerivative(feSolution *sol, feLinearSystem *linearSystem);
 };
 

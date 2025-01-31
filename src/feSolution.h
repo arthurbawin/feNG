@@ -63,7 +63,8 @@ public:
   double getFinalTime() const { return _t1; }
 
   // Return a copy of the solution vector
-  std::vector<double> getSolutionCopy() { return _sol; }
+  std::vector<double> getSolutionCopy() const { return _sol; }
+  std::vector<double> getSolutionDotCopy() const { return _dsoldt; }
   // Return a reference to the solution vector
   std::vector<double> &getSolutionReference() { return _sol; }
   // Return a reference to the time derivative of the solution

@@ -614,13 +614,13 @@ bool feMesh2DP1::locateVertexInElements(feCncGeo *cnc, const double *x, const st
 }
 
 // Transfer from the active feMesh (source) to the targetMesh (destination)
-feStatus feMesh2DP1::transfer(feMesh2DP1 *targetMesh, feMetaNumber *oldnumbering, feMetaNumber *targetNumbering,
-                          feSolutionContainer *oldSolutionContainer,
+feStatus feMesh2DP1::transfer(feMesh2DP1 *targetMesh, feMetaNumber *prevNumbering, feMetaNumber *targetNumbering,
+                          feSolutionContainer *prevSolutionContainer,
                           const std::vector<feSpace *> &mySpaces,
                           const std::vector<feSpace *> &mySpacesEssBC,
                           const std::vector<feSpace *> &targetSpaces)
 {
-  UNUSED(oldnumbering);
+  UNUSED(prevNumbering);
   
   feInfoCond(FE_VERBOSE > 0, "");
   feInfoCond(FE_VERBOSE > 0, "SOLUTION PROJECTION:");
@@ -631,12 +631,14 @@ feStatus feMesh2DP1::transfer(feMesh2DP1 *targetMesh, feMetaNumber *oldnumbering
   }
 
   // A temporary solutionContainer in which the interpolated values are stored
-  feSolutionContainer *scTmp = new feSolutionContainer(*oldSolutionContainer);
-  int nSol = scTmp->getNbSol();
+  feSolutionContainer scTmp(*prevSolutionContainer);
+
+  int nSol = scTmp.getNbSol();
   int nDOF = targetNumbering->getNbDOFs();
+
   // Resize to the new number of DOFs
   for(int iSol = 0; iSol < nSol; ++iSol) {
-    scTmp->_sol[iSol].resize(nDOF);
+    scTmp._sol[iSol].resize(nDOF);
   }
 
   double tol = 1e-12;
@@ -726,15 +728,15 @@ feStatus feMesh2DP1::transfer(feMesh2DP1 *targetMesh, feMetaNumber *oldnumbering
 
               // Interpolate each solution in the container (one solution for each BDF level)
               for(int iSol = 0; iSol < nSol; ++iSol) {
-                const std::vector<double> &solVec1 = oldSolutionContainer->getSolution(iSol);
+                const std::vector<double> &solCopy = prevSolutionContainer->getSolution(iSol);
                 for(size_t i = 0; i < adr1.size(); ++i) {
-                  sol1[i] = solVec1[adr1[i]];
+                  sol1[i] = solCopy[adr1[i]];
                 }
 
                 // Works for both scalar and vector fields
                 int iComponent = j % fS1->getNumComponents();
                 double solInt = fS1->interpolateVectorFieldComponent(sol1, iComponent, xsi);
-                scTmp->_sol[iSol][adr2[j]] = solInt;
+                scTmp._sol[iSol][adr2[j]] = solInt;
                 // TODO : Interpoler le _fresidual du solutionContainer
               }
             }
@@ -746,18 +748,19 @@ feStatus feMesh2DP1::transfer(feMesh2DP1 *targetMesh, feMetaNumber *oldnumbering
   }
 
   // Resize the solutionContainer
-  oldSolutionContainer->setNbDOFs(nDOF);
-  oldSolutionContainer->_d.resize(nDOF);
+  prevSolutionContainer->setNbDOFs(nDOF);
+  prevSolutionContainer->_d.resize(nDOF);
 
   // Replace solutionContainer by scTmp
   for(int iSol = 0; iSol < nSol; ++iSol) {
-    oldSolutionContainer->_sol[iSol].resize(nDOF);
-    oldSolutionContainer->_fResidual[iSol].resize(nDOF);
+    prevSolutionContainer->_sol[iSol].resize(nDOF);
+    prevSolutionContainer->_fResidual[iSol].resize(nDOF);
     for(int iDOF = 0; iDOF < nDOF; ++iDOF)
-      oldSolutionContainer->_sol[iSol][iDOF] = scTmp->_sol[iSol][iDOF];
+      prevSolutionContainer->_sol[iSol][iDOF] = scTmp._sol[iSol][iDOF];
   }
 
-  // delete scTmp;
+  const std::vector<double> &tC = prevSolutionContainer->getTime();
+  const std::vector<double> &deltaTC = prevSolutionContainer->getTimeDifferences();
 
   return FE_STATUS_OK;
 }

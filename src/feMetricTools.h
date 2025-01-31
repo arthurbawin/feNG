@@ -10,7 +10,9 @@
 
 #if defined(HAVE_GMSH)
 #include "gmsh.h"
+#if defined(GMSH_WITH_CURVED_MESHING)
 #include "curvedMesh_structs.h"
+#endif
 #endif
 
 #if defined(HAVE_SOPLEX)

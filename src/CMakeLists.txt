@@ -22,13 +22,14 @@ set(feNG_SRC
     feMetricTools.cpp
     feMinimizeInterpolationError.cpp
     feNG.cpp
+    feNonLinearSolver.cpp
     feNorm.cpp
     feNumber.cpp
+    feNumeric.cpp
     feOptionsParser.cpp
     fePolynomial.cpp
     feRecovery.cpp
     feNewRecovery.cpp
-    feNumeric.cpp
     feQuadrature.cpp
     feQuadratureTet.cpp
     feQuadratureTri.cpp
@@ -42,6 +43,7 @@ set(feNG_SRC
     feSysElm.cpp
     feSysElm_1D.cpp
     feSysElm_2D.cpp
+    feTimeIntegration.cpp
     feTriangle.cpp
     feTetrahedron.cpp
     feVectorSysElm.cpp
@@ -74,6 +76,7 @@ set(feNG_API
     feMetricTools.h
     feMinimizeInterpolationError.h
     feNG.h
+    feNonLinearSolver.cpp
     feNorm.h
     feNumber.h
     feNumeric.h
@@ -87,6 +90,7 @@ set(feNG_API
     feSolver.h
     feSpace.h
     feSysElm.h
+    feTimeIntegration.h
     feTriangle.h
     feTetrahedron.h
     feVertex.h

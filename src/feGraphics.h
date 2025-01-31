@@ -1,7 +1,11 @@
 #ifndef _FEGRAPHICS_
 #define _FEGRAPHICS_
 
-#include "feAPI.h"
+#include "feMesh.h"
+#include "feNumber.h"
+#include "feSolution.h"
+#include "feSpace.h"
+#include "feFunction.h"
 #include "glfem.h"
 
 class feBasicViewer

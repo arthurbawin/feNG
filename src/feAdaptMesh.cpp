@@ -6,7 +6,9 @@
 
 #if defined(HAVE_GMSH)
 #include "gmsh.h"
+#if defined(GMSH_WITH_CURVED_MESHING)
 #include "curvedMesh_structs.h"
+#endif
 #endif
 
 extern int FE_VERBOSE;
@@ -54,6 +56,8 @@ feStatus feMesh2DP1::adapt(std::vector<feNewRecovery*> recoveredFields, feMetric
 #endif
                  )
 {
+  UNUSED(spaces, essentialSpaces);
+  
   if(curve && !isBackmeshP2) {
     return feErrorMsg(FE_STATUS_ERROR, "Backmesh must be P2 when curving the mesh.");
   }

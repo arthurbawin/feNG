@@ -849,7 +849,8 @@ bool feLinearSystemPETSc::solve(double *normSolution, double *normRHS, double *n
 #if defined(HAVE_PETSC)
 
   if(_permute) {
-    // Use permuted matrix as operator
+    // Permute and use permuted matrix as operator
+    this->permute();
     PetscCallAbort(PETSC_COMM_WORLD, KSPSetOperators(ksp, _Ap, _Ap));
   } else {
     // Use original FE matrix as operator

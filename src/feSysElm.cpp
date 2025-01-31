@@ -232,25 +232,22 @@ void feSysElm_MixedMassPower::createElementarySystem(std::vector<feSpace *> &spa
 
 void feSysElm_MixedMassPower::computeAe(feBilinearForm *form)
 {
-  // Attention à la dérivation avec la puissance
-  UNUSED(form);
-  feErrorMsg(FE_STATUS_ERROR, "Implement matrix for MIXEDMASSPOWER");
-  // double jac, coeff;
-  // for(int k = 0; k < _nQuad; ++k) {
-  //   jac = form->_J[_nQuad * form->_numElem + k];
+  double jac, coeff, u, upm1;
+  for(int k = 0; k < _nQuad; ++k) {
+    jac = form->_J[_nQuad * form->_numElem + k];
 
-  //   form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, _pos);
-  //   coeff = (*_coeff)(form->_tn, _pos);
+    form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, _pos);
+    coeff = (*_coeff)(form->_tn, _pos);
 
-  //   for(int i = 0; i < _nFunctionsU; ++i)
-  //     _phiU[i] = form->_intSpaces[_idU]->getFunctionAtQuadNode(i, k);
-  //   for(int i = 0; i < _nFunctionsV; ++i)
-  //     _phiV[i] = form->_intSpaces[_idV]->getFunctionAtQuadNode(i, k);
+    u = form->_intSpaces[_idU]->interpolateFieldAtQuadNode(form->_sol[_idU], k);
+    upm1 = pow(u, _p - 1);
+    form->_intSpaces[_idU]->getFunctionsAtQuadNode(k, _phiU);
+    form->_intSpaces[_idV]->getFunctionsAtQuadNode(k, _phiV);
 
-  //   for(int i = 0; i < _nFunctionsV; ++i)
-  //     for(int j = 0; j < _nFunctionsU; ++j)
-  //       form->_Ae[i][j] += coeff * _phiV[i] * _phiU[j] * jac * _wQuad[k];
-  // }
+    for(int i = 0; i < _nFunctionsV; ++i)
+      for(int j = 0; j < _nFunctionsU; ++j)
+        form->_Ae[i][j] += coeff * _p * upm1 * _phiV[i] * _phiU[j] * jac * _wQuad[k];
+  }
 }
 
 void feSysElm_MixedMassPower::computeBe(feBilinearForm *form)
