@@ -385,7 +385,7 @@ feStatus feSolution::addSquaredNormOfVectorSpace(feMesh *mesh,
 
 void feSolution::setSolFromContainer(feSolutionContainer *solContainer, int iSol)
 {
-  std::vector<double> &solFromContainer = solContainer->getSolution(iSol);
+  const std::vector<double> &solFromContainer = solContainer->getSolution(iSol);
   if(_sol.size() != solFromContainer.size()) {
     _sol.resize(solFromContainer.size());
     _dsoldt.resize(solFromContainer.size());

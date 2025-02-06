@@ -156,6 +156,10 @@ public:
   // (false if there is only a residual).
   bool hasMatrix() { return _sysElm->hasMatrix(); }
 
+  // Sets the Jacobian matrix to be evaluated numerically
+  // using finite differences, allocates the necessary arrays.
+  void setComputeMatrixWithFD(bool flag);
+
   // Compute element-wise matrix and residual on element numElem
   void computeMatrix(feSolution *sol, int numElem);
   void computeResidual(feSolution *sol, int numElem);

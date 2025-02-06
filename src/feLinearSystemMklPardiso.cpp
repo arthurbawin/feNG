@@ -304,7 +304,7 @@ feLinearSystemMklPardiso::feLinearSystemMklPardiso(std::vector<feBilinearForm *>
   IPARM[11] = 0; /* Solve Ax = b instead of e.g. A^Tx = b */
 
   // !!! Turning IPARM[12] to 0 causes crashes with more than 1 OMP thread :/ !!!
-  IPARM[12] = 0; /* Maximum weighted matching algorithm is switched-on (default for non-symmetric) */
+  IPARM[12] = 1; /* Maximum weighted matching algorithm is switched-on (default for non-symmetric) */
 
   IPARM[13] = 0; /* Output: Number of perturbed pivots */
   IPARM[14] = 0; /* Not in use - Peak memory on symbolic factorization*/
@@ -1045,10 +1045,8 @@ feLinearSystemMklPardiso::~feLinearSystemMklPardiso(void)
 
   free(_ownedLowerBounds);
   free(_ownedUpperBounds);
-#if defined(HAVE_MPI)
-  free(_numOwnedRowsOnAllProc);
   free(_ownedSolution);
-#endif
+  free(_numOwnedRowsOnAllProc);
 
   // delete[] _mat_ia;
   // delete[] _mat_ja;

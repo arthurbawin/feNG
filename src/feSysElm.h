@@ -205,6 +205,7 @@ public:
   elementSystemType getID() { return _ID; }
   std::string getWeakFormName() { return toString(_ID); }
   bool computeMatrixWithFD() { return _computeMatrixWithFD; }
+  void setComputeMatrixWithFD(bool flag) { _computeMatrixWithFD = flag; }
   bool hasMatrix() { return _hasMatrix; }
   bool isThreadSafe() { return _isThreadSafe; }
 
@@ -303,7 +304,10 @@ protected:
   std::vector<double> _phiU;
 
 public:
-  feSysElm_Mass(feFunction *coeff) : feSysElm(-1, 1, MASS, true), _coeff(coeff){};
+  feSysElm_Mass(feFunction *coeff) : feSysElm(-1, 1, MASS, true), _coeff(coeff)
+  {
+    _computeMatrixWithFD = false;
+  };
   ~feSysElm_Mass(){};
   void createElementarySystem(std::vector<feSpace *> &space);
   void computeAe(feBilinearForm *form);
@@ -367,7 +371,10 @@ protected:
   std::vector<double> _phiU, _phiV;
 
 public:
-  feSysElm_MixedMass(feFunction *coeff) : feSysElm(-1, 2, MIXED_MASS, true), _coeff(coeff){};
+  feSysElm_MixedMass(feFunction *coeff) : feSysElm(-1, 2, MIXED_MASS, true), _coeff(coeff)
+  {
+    _computeMatrixWithFD = false;
+  };
   ~feSysElm_MixedMass(){};
   void createElementarySystem(std::vector<feSpace *> &space);
   void computeAe(feBilinearForm *form);
@@ -509,8 +516,9 @@ protected:
   std::vector<double> _feU;
 
 public:
-  feSysElm_TransientMass(feFunction *coeff) : feSysElm(-1, 1, TRANSIENT_MASS, true), _coeff(coeff){
-    _computeMatrixWithFD = true;
+  feSysElm_TransientMass(feFunction *coeff) : feSysElm(-1, 1, TRANSIENT_MASS, true), _coeff(coeff)
+  {
+    _computeMatrixWithFD = false;
   };
   ~feSysElm_TransientMass(){};
   void createElementarySystem(std::vector<feSpace *> &space);
@@ -807,7 +815,7 @@ public:
   feSysElm_TracerConvection(feFunction *coeff)
     : feSysElm(-1, 2, TRACER_CONVECTION, true), _coeff(coeff)
   {
-    _computeMatrixWithFD = true;
+    _computeMatrixWithFD = false;
   };
   ~feSysElm_TracerConvection(){};
   void createElementarySystem(std::vector<feSpace *> &space);

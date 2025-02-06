@@ -164,10 +164,10 @@ feBilinearForm::feBilinearForm(std::vector<feSpace *> spaces, feSysElm *elementa
   allocateResidual(_M, &_Be);
 
   // Set the computation method for the element matrix
+  _R0 = nullptr;
+  _Rh = nullptr;
   if(elementarySystem->computeMatrixWithFD()) {
     ptrComputeMatrix = &feBilinearForm::computeMatrixFiniteDifference;
-    _R0 = nullptr;
-    _Rh = nullptr;
     allocateResidual(_M, &_Rh);
     allocateResidual(_M, &_R0);
     _h0 = pow(DBL_EPSILON, 1.0 / 2.0);
@@ -227,6 +227,19 @@ feBilinearForm::~feBilinearForm()
     freeResidual(&_R0);
   }
   delete _sysElm;
+}
+
+void feBilinearForm::setComputeMatrixWithFD(bool flag)
+{
+  _sysElm->setComputeMatrixWithFD(flag);
+  if(flag) {
+    ptrComputeMatrix = &feBilinearForm::computeMatrixFiniteDifference;
+    free(_R0);
+    free(_Rh);
+    allocateResidual(_M, &_Rh);
+    allocateResidual(_M, &_R0);
+    _h0 = pow(DBL_EPSILON, 1.0 / 2.0);
+  }
 }
 
 void feBilinearForm::viewLocalMatrix() { printMatrix(_M, _N, &_Ae); }

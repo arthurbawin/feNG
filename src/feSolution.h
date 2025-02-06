@@ -62,12 +62,11 @@ public:
   double getInitialTime() const { return _t0; }
   double getFinalTime() const { return _t1; }
 
-  // Return a copy of the solution vector
+  const std::vector<double> &getSolution() const { return _sol; }
+  const std::vector<double> &getSolutionDot() const { return _dsoldt; }
   std::vector<double> getSolutionCopy() const { return _sol; }
   std::vector<double> getSolutionDotCopy() const { return _dsoldt; }
-  // Return a reference to the solution vector
   std::vector<double> &getSolutionReference() { return _sol; }
-  // Return a reference to the time derivative of the solution
   std::vector<double> &getSolutionReferenceDot() { return _dsoldt; }
 
   // Get the solution (or time derivative) at dof with number 'iDOF'

@@ -61,21 +61,35 @@ feStatus solveNewtonRaphson(feLinearSystem *linearSystem,
     // Check next residual norm and return if tolerance is reached
     linearSystem->assembleResiduals(sol);
     linearSystem->getRHSMaxNorm(&normResidual);
-    if(iter > 0 && normResidual <= tol.tolResidual) {
-      feInfoCond(FE_VERBOSE > 0,
-               "\t\t\t\tStopping because residual norm ||NL(u)|| = %10.10e is"
-               " below prescribed tolerance (%10.4e)", normResidual, tol.tolResidual);
-      break;
-    }
+    // if(iter > 0 && normResidual <= tol.tolResidual) {
+    //   feInfoCond(FE_VERBOSE > 0,
+    //            "\t\t\t\tStopping because residual norm ||NL(u)|| = %10.10e is"
+    //            " below prescribed tolerance (%10.4e)", normResidual, tol.tolResidual);
+    //   break;
+    // }
 
     // Assemble and constrain FE matrix
     if(linearSystem->getRecomputeStatus()) {
       linearSystem->assembleMatrices(sol);
-      linearSystem->constrainEssentialComponents(sol);
     }
+    
+    linearSystem->constrainEssentialComponents(sol);
 
     // Solve J(u) * du = -NL(u)
     bool successSolve = linearSystem->solve(&normCorrection, &normResidual, &normAxb, &linearSystemIter);
+
+    // const std::vector<double> &sol0 = container->getSolution(0);
+    // const std::vector<double> &sol1 = container->getSolution(1);
+    // const std::vector<double> &soll = sol->getSolution();
+    // const std::vector<double> &soldot = sol->getSolutionDot();
+    // const std::vector<double> &sol2 = container->getSolution(2);
+    // if(container->getNbSol() == 2) {
+    //   for(size_t i = 0; i < soll.size(); ++i)
+    //     feInfo("%f - %f == %f - %f", sol0[i], sol1[i], soll[i], soldot[i]);
+    // } else {
+    //   for(size_t i = 0; i < soll.size(); ++i)
+    //     feInfo("%f - %f - %f == %f - %f", sol0[i], sol1[i], sol2[i], soll[i], soldot[i]);
+    // }
 
     if(!successSolve) {
       feWarning("Iter %2d : ||J*du - NL(u)|| = %10.10e (%4d iter.) \t ||du|| = %10.10e \t "

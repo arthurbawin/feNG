@@ -991,8 +991,8 @@ void feSysElm_TracerConvection::createElementarySystem(std::vector<feSpace *> &s
   _idC = 0; // Test functions of the tracer
   _idU = 1;
   _fieldsLayoutI = {_idC};
-  // _fieldsLayoutJ = {_idU, _idC};
-  _fieldsLayoutJ = {_idC};
+  _fieldsLayoutJ = {_idU, _idC};
+  // _fieldsLayoutJ = {_idC};
   _nFunctionsU = space[_idU]->getNumFunctions();
   _nFunctionsC = space[_idC]->getNumFunctions();
   _nComponents = space[_idU]->getNumComponents();
@@ -1028,12 +1028,12 @@ void feSysElm_TracerConvection::computeAe(feBilinearForm *form)
     for(int i = 0; i < _nFunctionsC; ++i) {
 
       int cnt = 0;
-      // for(int j = 0; j < _nFunctionsU; ++j) {
-      //   // Compute u dot gradC0 = phiU_j dot gradC0
-      //   // Dot product with phiU is only one term
-      //   double uDotGradC0 = _phiU[j] * _gradC[j % _nComponents];
-      //   form->_Ae[i][cnt++] += coeff * _phiC[i] * uDotGradC0 * jac * _wQuad[k];
-      // }
+      for(int j = 0; j < _nFunctionsU; ++j) {
+        // Compute u dot gradC0 = phiU_j dot gradC0
+        // Dot product with phiU is only one term
+        double uDotGradC0 = _phiU[j] * _gradC[j % _nComponents];
+        form->_Ae[i][cnt++] += coeff * _phiC[i] * uDotGradC0 * jac * _wQuad[k];
+      }
 
       for(int j = 0; j < _nFunctionsC; ++j) {
         // Compute u0 dot gradC = u0 dot gradPhiC_j

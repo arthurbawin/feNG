@@ -499,8 +499,8 @@ feStatus feMetric::newGradation(const std::vector<std::size_t> &nodeTags, const 
 
   // feInfoCond(FE_VERBOSE > 0, "METRIC GRADATION: Elements classified on dim 2 are of type %d", elementTypes[0]);
 
-  FILE *myFile = fopen("edgesForGradation.pos", "w");
-  fprintf(myFile, "View \" edgesForGradation \"{\n");
+  // FILE *myFile = fopen("edgesForGradation.pos", "w");
+  // fprintf(myFile, "View \" edgesForGradation \"{\n");
 
   std::set<std::pair<size_t, size_t>, gmshEdgeLessThan> edges;
 
@@ -516,7 +516,7 @@ feStatus feMetric::newGradation(const std::vector<std::size_t> &nodeTags, const 
         size_t n0 = elemNodeTags[0][numNodesPerElem * i + j];
         size_t n1 = elemNodeTags[0][numNodesPerElem * i + (j+1) % numNodesPerElem];
         edges.insert(std::make_pair(n0, n1));
-        fprintf(myFile, "SL(%f,%f,0,%f,%f,0){1,1};", coord[3*(n0-1)], coord[3*(n0-1)+1], coord[3*(n1-1)], coord[3*(n1-1)+1]);
+        // fprintf(myFile, "SL(%f,%f,0,%f,%f,0){1,1};", coord[3*(n0-1)], coord[3*(n0-1)+1], coord[3*(n1-1)], coord[3*(n1-1)+1]);
       }
     } else {
       // P2 triangles - Add all possible P2 sub-edges
@@ -543,7 +543,7 @@ feStatus feMetric::newGradation(const std::vector<std::size_t> &nodeTags, const 
   // }
   ////////////////////////////////////////////////////
 
-  fprintf(myFile, "};"); fclose(myFile);
+  // fprintf(myFile, "};"); fclose(myFile);
 
   int iter = 0, numCorrected;
   bool correction = true;

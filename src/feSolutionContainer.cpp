@@ -70,6 +70,14 @@ void feSolutionContainer::computeBDFCoefficients(const int order, const std::vec
   }
 }
 
+void feSolutionContainer::setBDFCoefficients(const std::vector<double> &coeff)
+{
+  size_t size = fmin(_cn.size(), coeff.size());
+  for(size_t i = 0; i < size; ++i) {
+    _cn[i] = coeff[i];
+  } 
+}
+
 void feSolutionContainer::computeCurrentSolDot(feLinearSystem* /* linearSystem */)
 {
   // Estimate time derivative with BDF coefficients
@@ -108,6 +116,9 @@ void feSolutionContainer::rotate(double dt)
     _t[i]         = _t[i - 1];
     _deltaT[i]    = _deltaT[i - 1];
     _sol[i]       = _sol[i - 1];
+    for(int j = 0; j < _nDofs; ++j) {
+      _sol[i][j]       = _sol[i - 1][j];
+    }
     _solDot[i]    = _solDot[i - 1];
     _fResidual[i] = _fResidual[i - 1];
   }

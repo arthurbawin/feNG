@@ -61,7 +61,7 @@ TimeIntegrator2::TimeIntegrator2(feLinearSystem *linearSystem,
 };
 
 //
-// Initialize the solution array
+// Initialize the time and solution array
 //
 void TimeIntegrator2::initialize()
 {
@@ -69,27 +69,6 @@ void TimeIntegrator2::initialize()
   _currentSolution->setCurrentTime(_currentTime);
   _currentSolution->initializeUnknowns(_mesh);
   _currentSolution->initializeEssentialBC(_mesh);
-}
-
-feStatus TimeIntegrator2::restartFromContainer(const feSolutionContainer &container)
-{
-  if(_nSol != container.getNbSol()) {
-    return feErrorMsg(FE_STATUS_ERROR, "Could not restart %s time integrator from solution container: "
-      "integrator needs %d solution arrays but container stores %d",
-      _integratorName.data(),
-      _nSol,
-      container.getNbSol());
-  }
-
-  const std::vector<double> &tC = container.getTime();
-  const std::vector<double> &deltaTC = container.getTimeDifferences();
-
-  for(int i = 0; i < _nSol; ++i) {
-    _t[i] = tC[i];
-    _deltaT[i] = deltaTC[i];
-  }
-
-  return FE_STATUS_OK;
 }
 
 void TimeIntegrator2::updateTime(const int iStep, const double dt)
@@ -103,14 +82,9 @@ void TimeIntegrator2::updateTime(const int iStep, const double dt)
   _currentTime += dt;
   _t[0] =  _currentTime;
   _deltaT[0] = _t[0] - _t[1];
-  _timeHistory[iStep] = _currentTime; 
+  _timeHistory[iStep] = _currentTime;
 
   _currentSolution->setCurrentTime(_currentTime);
-
-  feInfo("t = [%f,%f,%f], deltaT = [%f,%f,%f], ct = %f",
-    _t[0], _t[1], _t[2],
-    _deltaT[0], _deltaT[1], _deltaT[2],
-    _currentTime);
 }
 
 feStatus TimeIntegrator2::writeVisualizationFile(const int iStep, const feExportData &data)
@@ -147,6 +121,12 @@ StationaryIntegrator::StationaryIntegrator(feLinearSystem *linearSystem,
   // Copy the initialized solution into the container
   _sC->setCurrentSolution(_currentSolution);
   _sC->setCurrentSolutionDot(_currentSolution);
+}
+
+feStatus StationaryIntegrator::restartFromContainer(const feSolutionContainer &/* container */)
+{
+  // Nothing to do for a stationary solver
+  return FE_STATUS_OK;
 }
 
 feStatus StationaryIntegrator::makeStep(double /* dt */)
@@ -205,6 +185,44 @@ BDF1Integrator::BDF1Integrator(feLinearSystem *linearSystem,
   _sC->setCurrentSolutionDot(_currentSolution);
 }
 
+feStatus BDF1Integrator::restartFromContainer(const feSolutionContainer &container)
+{
+  if(_nSol != container.getNbSol()) {
+    return feErrorMsg(FE_STATUS_ERROR, "Could not restart %s time integrator from solution container: "
+      "integrator needs %d solution arrays but container stores %d",
+      _integratorName.data(),
+      _nSol,
+      container.getNbSol());
+  }
+
+  int nDOF = _currentSolution->getNumDOFs();
+  if(nDOF != container.getNbDOFs()) {
+    return feErrorMsg(FE_STATUS_ERROR, "Could not restart %s time integrator from solution container: "
+      "current solution has %d DOF but container stores %d DOF per solution",
+      _integratorName.data(),
+      nDOF,
+      container.getNbDOFs());
+  }
+
+  // Can't use copy assignment because a BDFContainer is specialized,
+  // but only through the computeTimeDerivative function...
+  // This should be reworked entirely.
+  // In the meantime:
+  // Copy data from container : 
+  const std::vector<double> &tC = container.getTime();
+  const std::vector<double> &deltaTC = container.getTimeDifferences();
+
+  for(int i = 0; i < _nSol; ++i) {
+    _t[i] = tC[i];
+    _deltaT[i] = deltaTC[i];
+    _sC->setSolution(container.getSolution(i), i);
+    _sC->setSolutionDot(container.getSolutionDot(i), i);
+    _sC->setResidual(container.getFResidual(i), i);
+  }
+
+  return FE_STATUS_OK;
+}
+
 feStatus BDF1Integrator::makeStep(double /* dt */)
 {
   return feErrorMsg(FE_STATUS_ERROR, "Reimplement single makeStep");
@@ -214,27 +232,30 @@ feStatus BDF1Integrator::makeSteps(int nSteps)
 {
   feInfoCond(FE_VERBOSE > 0, "");
   feInfoCond(FE_VERBOSE > 0, "BDF1 SOLVER:");
-  feInfoCond(FE_VERBOSE > 0, "\t\tAdvancing %d steps from t = %f to t = %f", 
-    nSteps, _currentTime, _currentTime + nSteps * _dt);
+  feInfoCond(FE_VERBOSE > 0, "\t\tAdvancing from t = %f to t = %f in %d step(s)", 
+    _currentTime, _currentTime + nSteps * _dt, nSteps);
 
-  // Export initial solution
-  feStatus s = this->writeVisualizationFile(0, _exportData);
-  if(s != FE_STATUS_OK) return s;
-
-  for(int iStep = 0; iStep < nSteps; ++iStep)
+  if(_currentStep == 0)
   {
-    feInfoCond(FE_VERBOSE > 0, "\t\tBDF1 - Step %d/%d from t = %1.4e to t = %1.4e", 
-      iStep+1, nSteps, _currentTime, _currentTime + _dt);
+    // Export initial solution
+    feStatus s = this->writeVisualizationFile(0, _exportData);
+    if(s != FE_STATUS_OK) return s;
+    _currentStep++;
+  }
+
+  for(int iStep = 0; iStep < nSteps; ++iStep, ++_currentStep)
+  {
+    feInfoCond(FE_VERBOSE > 0, "\t\tBDF1 - Overall step = %d - Step %d/%d from t = %1.4e to t = %1.4e", 
+      _currentStep, iStep+1, nSteps, _currentTime, _currentTime + _dt);
 
     this->updateTime(iStep, _dt);
-
-    _sC->rotateWithoutTime();
+    _sC->rotate(_dt);
     _sC->computeBDFCoefficients(_order, _deltaT);
     _currentSolution->setC0(_sC->getC0());
     _currentSolution->initializeEssentialBC(_mesh, _sC);
 
     // Solve nonlinear problem
-    s = solveNewtonRaphson(_linearSystem, _currentSolution, _sC, _NLoptions);
+    feStatus s = solveNewtonRaphson(_linearSystem, _currentSolution, _sC, _NLoptions);
     if(s == FE_STATUS_ERROR) { return s; }
 
     // Compute post-processing indicators (L2 norms, etc.)
@@ -243,7 +264,7 @@ feStatus BDF1Integrator::makeSteps(int nSteps)
     }
 
     // Export solution for visualization
-    s = this->writeVisualizationFile(iStep + 1, _exportData);
+    s = this->writeVisualizationFile(_currentStep, _exportData);
     if(s != FE_STATUS_OK) return s;
   }
 
@@ -275,9 +296,92 @@ BDF2Integrator::BDF2Integrator(feLinearSystem *linearSystem,
   _sC->setCurrentSolutionDot(_currentSolution);
 }
 
+feStatus BDF2Integrator::restartFromContainer(const feSolutionContainer &container)
+{
+  if(_nSol != container.getNbSol()) {
+    return feErrorMsg(FE_STATUS_ERROR, "Could not restart %s time integrator from solution container: "
+      "integrator needs %d solution arrays but container stores %d",
+      _integratorName.data(),
+      _nSol,
+      container.getNbSol());
+  }
+
+  int nDOF = _currentSolution->getNumDOFs();
+  if(nDOF != container.getNbDOFs()) {
+    return feErrorMsg(FE_STATUS_ERROR, "Could not restart %s time integrator from solution container: "
+      "current solution has %d DOF but container stores %d DOF per solution",
+      _integratorName.data(),
+      nDOF,
+      container.getNbDOFs());
+  }
+
+  // Copy data from container :
+  const std::vector<double> &tC = container.getTime();
+  const std::vector<double> &deltaTC = container.getTimeDifferences();
+
+  for(int i = 0; i < _nSol; ++i) {
+    _t[i] = tC[i];
+    _deltaT[i] = deltaTC[i];
+    _sC->setSolution(container.getSolution(i), i);
+    _sC->setSolutionDot(container.getSolutionDot(i), i);
+    _sC->setResidual(container.getFResidual(i), i);
+  }
+
+  return FE_STATUS_OK;
+}
+
 feStatus BDF2Integrator::makeStep(double /* dt */)
 {
   return feErrorMsg(FE_STATUS_ERROR, "Reimplement single makeStep");
+}
+
+feStatus BDF2Integrator::startWithBDF1(const double timeStepRatio)
+{
+  double dtBDF1 = timeStepRatio * _dt;
+  double dt2 = _dt - dtBDF1;
+
+  // Assign initial condition to solution at position n-1
+  _sC->setSolution(_currentSolution->getSolution(), 2);
+  _sC->setSolutionDot(_currentSolution->getSolutionDot(), 2);
+
+  BDF1Integrator solver(_linearSystem, _currentSolution, 
+    _mesh, _NLoptions, _postProcessing, _exportData, 0, dtBDF1, 1);
+  feStatus s = solver.makeSteps(1);
+  if(s == FE_STATUS_ERROR) { return s; }
+
+  // Assign BDF1 solution at position n and n+1 ("current solution")
+  _sC->setSolution(_currentSolution->getSolution(), 1);
+  _sC->setSolutionDot(_currentSolution->getSolutionDot(), 1);
+  _sC->setSolution(_currentSolution->getSolution(), 0);
+  _sC->setSolutionDot(_currentSolution->getSolutionDot(), 0);
+
+  // Manually update time in BDF2 solver and container
+  // Time and deltaT at position 2 are already 0
+  _currentTime = _dt;
+  _t[0] = _currentTime;
+  _deltaT[0] = _currentTime - dtBDF1;
+  _sC->setTime(0, _dt);
+  _sC->setTimeDifference(1, _currentTime - dtBDF1);
+  _t[1] = dtBDF1;
+  _deltaT[1] = dtBDF1;
+  _sC->setTime(1, dtBDF1);
+  _sC->setTimeDifference(1, dtBDF1);
+
+  std::vector<double> bdfCoeff(3);
+  bdfCoeff[0] = (dtBDF1 + 2.*dt2)/(dtBDF1 + dt2) * 1. / dt2;
+  bdfCoeff[1] = - (1. / dt2 + 1. / dtBDF1);
+  bdfCoeff[2] = dt2/(dtBDF1 + dt2) * 1. / dtBDF1;
+  _sC->setBDFCoefficients(bdfCoeff);
+
+  _currentSolution->setC0(_sC->getC0());
+  _currentSolution->setCurrentTime(_currentTime);
+  _currentSolution->initializeEssentialBC(_mesh, _sC);
+
+  // Solve nonlinear problem
+  s = solveNewtonRaphson(_linearSystem, _currentSolution, _sC, _NLoptions);
+  if(s == FE_STATUS_ERROR) { return s; }
+
+  return FE_STATUS_OK;
 }
 
 //
@@ -294,26 +398,54 @@ feStatus BDF2Integrator::makeSteps(int nSteps)
 {
   feInfoCond(FE_VERBOSE > 0, "");
   feInfoCond(FE_VERBOSE > 0, "BDF2 SOLVER:");
-  feInfoCond(FE_VERBOSE > 0, "\t\tAdvancing %d steps from t = %f to t = %f", 
-    nSteps, _currentTime, _currentTime + nSteps * _dt);
+  feInfoCond(FE_VERBOSE > 0, "\t\tAdvancing from t = %f to t = %f in %d step(s)", 
+    _currentTime, _currentTime + nSteps * _dt, nSteps);
+
+  int start = 0;
 
   if(_currentStep == 0)
   {
+    start = 1;
+
     // Export initial solution
     feStatus s = this->writeVisualizationFile(0, _exportData);
     if(s != FE_STATUS_OK) return s;
 
-    // Start the BDF2 by computing initial conditions at time n-1 and n-2
-    this->updateTime(0, _dt);
-    _sC->rotate(_dt);
-    _currentSolution->initializeUnknowns(_mesh);
-    _currentSolution->initializeEssentialBC(_mesh);
-    _sC->setCurrentSolution(_currentSolution);
+    switch(_startMethod) {
+      case BDF2Starter::BDF1:
+      {
+        // Use BDF1 to get intermediary solution at time t0 + timeStepRatio * dt
+        // Then use variable time step BDF2 to get first solution at t0 + dt
+        double timeStepRatio = 0.1;
+        feInfoCond(FE_VERBOSE > 0, "\t\tBDF2 - Starting with BDF1 and intermediary step %f", timeStepRatio * _dt);
+        feInfoCond(FE_VERBOSE > 0, "\t\tBDF2 - Overall step = 1 - Step 1/%d from t = %1.4e to t = %1.4e", 
+          nSteps, _currentTime, _currentTime + _dt);
+
+        s = startWithBDF1(timeStepRatio);
+        if(s != FE_STATUS_OK) return s;
+        break;
+      }
+
+      case BDF2Starter::InitialCondition:
+        // Simply set the prescribed solution at the first time step
+        // Start the BDF2 by computing initial conditions at time n and n-1
+        // Only for verification purposes with exact solution, and
+        // not suitable for actual simulation where solution at first step is not known.
+        this->updateTime(0, _dt);
+        _sC->rotate(_dt);
+        _currentSolution->initializeUnknowns(_mesh);
+        _currentSolution->initializeEssentialBC(_mesh);
+        _sC->setCurrentSolution(_currentSolution);
+        break;
+    }
+
+    // Export solution for visualization
     _currentStep++;
-    nSteps--;
+    s = this->writeVisualizationFile(_currentStep, _exportData);
+    if(s != FE_STATUS_OK) return s;
   }
 
-  for(int iStep = 0; iStep < nSteps; ++iStep, ++_currentStep)
+  for(int iStep = start; iStep < nSteps; ++iStep, ++_currentStep)
   {
     feInfoCond(FE_VERBOSE > 0, "\t\tBDF2 - Overall step = %d - Step %d/%d from t = %1.4e to t = %1.4e", 
       _currentStep, iStep+1, nSteps, _currentTime, _currentTime + _dt);
@@ -322,7 +454,7 @@ feStatus BDF2Integrator::makeSteps(int nSteps)
     _sC->rotate(_dt);
     _sC->computeBDFCoefficients(_order, _deltaT);
     _currentSolution->setC0(_sC->getC0());
-    _currentSolution->setCurrentTime(_currentTime);
+    // _currentSolution->setCurrentTime(_currentTime); // Done in updateTime
     _currentSolution->initializeEssentialBC(_mesh, _sC);
 
     // Solve nonlinear problem
@@ -335,11 +467,8 @@ feStatus BDF2Integrator::makeSteps(int nSteps)
     }
 
     // Export solution for visualization
-    if(_exportData.exporter != nullptr && (_currentStep % _exportData.exportEveryNSteps) == 0) {
-      std::string fileName = _exportData.fileNameRoot + "_BDF2_" + std::to_string(_currentStep) + ".vtk";
-      s = _exportData.exporter->writeStep(fileName);
-      if(s != FE_STATUS_OK) return s;
-    }
+    s = this->writeVisualizationFile(_currentStep, _exportData);
+    if(s != FE_STATUS_OK) return s;
   }
 
   return FE_STATUS_OK;

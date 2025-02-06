@@ -21,6 +21,11 @@ enum class timeIntegratorScheme2 {
   EIGENSOLVER
 };
 
+enum class BDF2Starter {
+  BDF1,
+  InitialCondition
+};
+
 class TimeIntegrator2;
 
 feStatus createTimeIntegrator2(TimeIntegrator2 *&solver, timeIntegratorScheme2 scheme,
@@ -46,13 +51,13 @@ protected:
   // (= number of steps of the method)
   int _nSol;
   int _order;
-
   double _t0;
   double _tEnd;
   double _dt;
   int _nTimeSteps;
   double _currentTime;
   int _currentStep;
+
   // Time of the N last steps (for multistep methods)
   std::vector<double> _t;
   std::vector<double> _deltaT;
@@ -82,9 +87,11 @@ public:
   int getCurrentStep() { return _currentStep; };
   void setCurrentStep(int step) { _currentStep = step; };
 
+  const std::vector<double> &getTime() const { return _t; }
+
   // Set the previous times and time differences from existing container,
   // e.g. when continuing integration from a previous integrator
-  feStatus restartFromContainer(const feSolutionContainer &container);
+  virtual feStatus restartFromContainer(const feSolutionContainer &container) = 0;
 
   std::vector<std::vector<double>> getPostProcessingData(){ return _postProcessingData; };
   virtual feSolutionContainer getSolutionContainer() = 0;
@@ -127,6 +134,7 @@ public:
   feStatus makeStep(double dt = 0.);
   feStatus makeSteps(int nSteps);
   feSolutionContainer getSolutionContainer() { return *_sC; };
+  feStatus restartFromContainer(const feSolutionContainer &container);
 };
 
 class BDF1Integrator : public TimeIntegrator2
@@ -149,11 +157,13 @@ public:
   feStatus makeStep(double dt);
   feStatus makeSteps(int nSteps);
   feSolutionContainer getSolutionContainer() { return *_sC; };
+  feStatus restartFromContainer(const feSolutionContainer &container);
 };
 
 class BDF2Integrator : public TimeIntegrator2
 {
 protected:
+  BDF2Starter _startMethod = BDF2Starter::BDF1;
   BDFContainer *_sC;
 
 public:
@@ -171,115 +181,9 @@ public:
   feStatus makeStep(double dt);
   feStatus makeSteps(int nSteps);
   feSolutionContainer getSolutionContainer() { return *_sC; };
+  feStatus restartFromContainer(const feSolutionContainer &container);
+private:
+  feStatus startWithBDF1(const double timeStepRatio);
 };
-
-// class BDF2Solver : public TimeIntegrator
-// {
-// protected:
-// public:
-//   BDF2Solver(feTolerances tol, feMetaNumber *metaNumber, feLinearSystem *linearSystem,
-//              feSolution *sol, std::vector<feNorm *> &norms, feMesh *mesh, feExportData exportData,
-//              double t0, double tEnd, int nTimeSteps, std::string CodeIni);
-//   ~BDF2Solver() {}
-
-//   std::vector<double> &getNorm(int iNorm) { return _normL2[iNorm]; };
-
-//   feStatus makeStep();
-//   feStatus makeSteps(int nSteps);
-// };
-
-
-
-// class DC2FSolver : public TimeIntegrator
-// {
-// protected:
-//   feSolutionContainer *_solutionContainerBDF1;
-//   std::vector<std::vector<double> > _normL2BDF1;
-
-// public:
-//   DC2FSolver(feTolerances tol, feMetaNumber *metaNumber, feLinearSystem *linearSystem,
-//              feSolution *sol, std::vector<feNorm *> &norms, feMesh *mesh, feExportData exportData,
-//              double t0, double tEnd, int nTimeSteps);
-//   ~DC2FSolver() { delete _solutionContainerBDF1; }
-
-//   std::vector<double> &getNorm(int iNorm) { return _normL2[iNorm]; };
-
-//   feStatus makeStep() { return FE_STATUS_OK; };
-//   feStatus makeSteps(int nSteps);
-// };
-
-// class DC3FSolver : public TimeIntegrator
-// {
-// protected:
-//   feSolutionContainer *_solutionContainerBDF1;
-//   feSolutionContainer *_solutionContainerDC2F;
-
-// public:
-//   DC3FSolver(feTolerances tol, feMetaNumber *metaNumber, feLinearSystem *linearSystem,
-//              feSolution *sol, std::vector<feNorm *> &norms, feMesh *mesh, feExportData exportData,
-//              double t0, double tEnd, int nTimeSteps);
-//   ~DC3FSolver()
-//   {
-//     delete _solutionContainerBDF1;
-//     delete _solutionContainerDC2F;
-//   }
-
-//   std::vector<double> &getNorm(int iNorm) { return _normL2[iNorm]; };
-
-//   feStatus makeStep() { return FE_STATUS_OK; };
-//   feStatus makeSteps(int nSteps);
-// };
-
-// class DC3FSolver_centered : public TimeIntegrator
-// {
-// protected:
-//   feSolutionContainer *_solutionContainerBDF1;
-//   feSolutionContainer *_solutionContainerDC2F;
-
-// public:
-//   DC3FSolver_centered(feTolerances tol, feMetaNumber *metaNumber, feLinearSystem *linearSystem,
-//                       feSolution *sol, std::vector<feNorm *> &norms, feMesh *mesh,
-//                       feExportData exportData, double t0, double tEnd, int nTimeSteps);
-//   ~DC3FSolver_centered()
-//   {
-//     delete _solutionContainerBDF1;
-//     delete _solutionContainerDC2F;
-//   }
-
-//   std::vector<double> &getNorm(int iNorm) { return _normL2[iNorm]; };
-
-//   feStatus makeStep() { return FE_STATUS_OK; };
-//   feStatus makeSteps(int nSteps);
-// };
-
-// class DC3Solver : public TimeIntegrator
-// {
-// protected:
-//   feSolutionContainer *_solutionContainerBDF2;
-//   feSolutionContainer *_solutionContainerDC3F;
-
-// public:
-//   DC3Solver(feTolerances tol, feMetaNumber *metaNumber, feLinearSystem *linearSystem,
-//             feSolution *sol, std::vector<feNorm *> &norms, feMesh *mesh, feExportData exportData,
-//             double t0, double tEnd, int nTimeSteps, std::string CodeIni);
-//   ~DC3Solver()
-//   {
-//     delete _solutionContainerBDF2;
-//     delete _solutionContainerDC3F;
-//   }
-
-//   std::vector<double> &getNorm(int iNorm) { return _normL2[iNorm]; };
-//   std::vector<double> &getInt(int iNorm) { return _normL2[iNorm]; };
-
-//   feStatus makeStep() { return FE_STATUS_OK; };
-//   feStatus makeSteps(int nSteps);
-// };
-
-// feStatus createTimeIntegrator(TimeIntegrator *&solver, timeIntegratorScheme scheme,
-//                               feTolerances tolerances, feLinearSystem *system,
-//                               feMetaNumber *metaNumber, feSolution *solution, feMesh *mesh,
-//                               std::vector<feNorm *> &norms, feExportData exportData = {},
-//                               double tBegin = 0., double tEnd = 0., int nTimeSteps = 1,
-//                               std::string initializationCode = "");
 
 #endif

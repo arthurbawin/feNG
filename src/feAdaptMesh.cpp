@@ -49,7 +49,7 @@ feStatus feMesh2DP1::adapt(std::vector<feNewRecovery*> recoveredFields, feMetric
                            bool curve, bool isBackmeshP2, bool curveMMGmesh,
                            curveToMinimize target,
                            bool generateAnisoMeshBeforeCurving
-#if defined(HAVE_GMSH)
+#if defined(HAVE_GMSH) && defined(GMSH_WITH_CURVED_MESHING)
                            ,
                            directionField targetDirectionField,
                            vertexSpawning targetVertexSpawning
@@ -111,7 +111,8 @@ feStatus feMesh2DP1::adapt(std::vector<feNewRecovery*> recoveredFields, feMetric
   if(generateAnisoMeshBeforeCurving && !(curve && target == curveToMinimize::INTERPOLATION_ERROR))
   {
     // Save directly to .msh to preserve Physical Entities
-    std::string cmd1 = "mmg2d_O3 " + options.mmgInputMeshfile + " -v 10 -hgrad -1 -o " + options.mmgOutputMeshfile;
+    // std::string cmd1 = "mmg2d_O3 " + options.mmgInputMeshfile + " -v 10 -hgrad -1 -o " + options.mmgOutputMeshfile;
+    std::string cmd1 = "/home/monet/arbaw/Code/mmg/build/bin/mmg2d_O3 " + options.mmgInputMeshfile + " -v 10 -hgrad -1 -o " + options.mmgOutputMeshfile;
     if(FE_VERBOSE == VERBOSE_NONE) {
       // Write MMG console outputs to logMMG.txt
       cmd1 += " > logMMG.txt";
@@ -184,7 +185,7 @@ feStatus feMesh2DP1::adapt(std::vector<feNewRecovery*> recoveredFields, feMetric
     // Write P2 aniso mesh
     gmsh::option::setNumber("Mesh.MshFileVersion", 4.1);
     gmsh::model::mesh::setOrder(metricField._backmeshOrder);
-    gmsh::write("anisoadapted.msh");
+    // gmsh::write("anisoadapted.msh");
     gmsh::write(options.adaptedMeshName);
     gmsh::model::mesh::setOrder(1);
   }

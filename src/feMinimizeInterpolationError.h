@@ -22,7 +22,7 @@ extern feMesh *activeMesh;
 extern feCncGeo *activeConnectivity;
 extern feNorm *activeNorm;
 
-#if defined(HAVE_GMSH)
+#if defined(HAVE_GMSH) && defined(GMSH_WITH_CURVED_MESHING)
 void computeInterpolationErrorOnEachElement();
 double computeInterpolationError(const edgeAndVertexData &data, double *modifiedCoord);
 void computeInterpolationErrorGradient(const edgeAndVertexData &data,

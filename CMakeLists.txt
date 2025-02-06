@@ -34,11 +34,11 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/lib)
   #                     #"-Wall;-Wextra;-O3;-ansi;-m64"
   #                     )
 
-# add_compile_options(-pedantic)
-# add_compile_options(-pedantic-errors)
+add_compile_options(-pedantic)
+add_compile_options(-pedantic-errors)
 add_compile_options(-Wall)
 add_compile_options(-Wextra)
-# add_compile_options(-Werror)
+add_compile_options(-Werror)
 add_compile_options(-Werror=return-type)
 add_compile_options(-Wno-error=bool-compare)
 add_compile_options(-Wshadow)
@@ -152,7 +152,7 @@ if(ENABLE_MKL)
     message(STATUS "MKL_LIBRARIES  : ${MKL_LIBRARIES}   ")
     message(STATUS "MKL_LIBRARY_DIR: ${MKL_LIBRARY_DIR} ")
     include_directories(${MKL_INCLUDE_DIR})
-    list(APPEND feNG_EXTERNAL_LIBS ${feNG_EXTERNAL_LIBS} "-L${MKL_LIBRARY_DIR}" ${MKL_LIBRARIES})
+    list(APPEND feNG_EXTERNAL_LIBS ${feNG_EXTERNAL_LIBS} ${MKL_LIBRARIES})
     # Cluster Pardiso
     if(ENABLE_MPI)
       # Temporary fix to add the cluster options

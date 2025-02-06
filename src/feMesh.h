@@ -291,7 +291,7 @@ typedef struct rtreeSearchCtxStruct {
   int numFound;
 } rtreeSearchCtx;
 
-#if !defined(HAVE_GMSH)
+#if !defined(GMSH_WITH_CURVED_MESHING)
 enum class curveToMinimize
 { 
   LENGTH, INTERPOLATION_ERROR, DISTORTION
@@ -473,7 +473,7 @@ public:
                  bool curveMMGmesh,
                  curveToMinimize target,
                  bool generateAnisoMeshBeforeCurving
-#if defined(HAVE_GMSH)
+#if defined(HAVE_GMSH) && defined(GMSH_WITH_CURVED_MESHING)
                  ,
                  directionField targetDirectionField,
                  vertexSpawning targetVertexSpawning

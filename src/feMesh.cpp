@@ -517,7 +517,7 @@ bool feMesh2DP1::locateVertex(const double *x, int &iElm, double *u, double tol,
     SEARCH_CONTEXT.enforceConnectivity = true;
 
     bool OK = false;
-    for(auto p : _physicalEntities) {
+    for(auto &p : _physicalEntities) {
       if(p.first.first == 2) {
         if(p.second.name == targetConnectivity) {
           SEARCH_CONTEXT.targetPhysicalTag = p.first.second;
@@ -758,9 +758,6 @@ feStatus feMesh2DP1::transfer(feMesh2DP1 *targetMesh, feMetaNumber *prevNumberin
     for(int iDOF = 0; iDOF < nDOF; ++iDOF)
       prevSolutionContainer->_sol[iSol][iDOF] = scTmp._sol[iSol][iDOF];
   }
-
-  const std::vector<double> &tC = prevSolutionContainer->getTime();
-  const std::vector<double> &deltaTC = prevSolutionContainer->getTimeDifferences();
 
   return FE_STATUS_OK;
 }

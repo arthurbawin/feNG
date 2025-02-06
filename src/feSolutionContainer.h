@@ -23,7 +23,7 @@ protected:
   std::vector<double> _t;
   std::vector<double> _deltaT;
 
-  // To change as protected
+  // TODO: Set these to protected
 public:
   std::vector<double> _cn; // BDF coefficients, to move to timeintegrator?
   std::vector<double> _d;  // DC correction or residual, to keep
@@ -44,29 +44,43 @@ public:
   double getC0() const { return _cn[0]; }
   const std::vector<double> &getTime() const { return _t; }
   const std::vector<double> &getTimeDifferences() const { return _deltaT; }
-  std::vector<double> &getSolution(int iSol) { return _sol[iSol]; }
+  const std::vector<double> &getSolution(int i) { return _sol[i]; }
+  const std::vector<double> &getSolution(int i) const { return _sol[i]; }
+  const std::vector<double> &getSolutionDot(int i) const { return _solDot[i]; }
+  const std::vector<double> &getFResidual(int i) const { return _fResidual[i]; }
+
+  void setTime(const int i, const double time) { _t[i] = time; }
+  void setTimeDifference(const int i, const double dt) { _deltaT[i] = dt; }
 
   void setCurrentSolution(const feSolution *other);
   void setCurrentSolutionDot(const feSolution *other);
 
+  void setSolution(const std::vector<double> &other, const int i) { _sol[i] = other; }
+  void setSolutionDot(const std::vector<double> &other, const int i) { _solDot[i] = other; }
+  void setResidual(const std::vector<double> &other, const int i) { _fResidual[i] = other; }
+
   // Compute coefficients for BDF methods of order 0, 1, 2 (0 is steady-state)
   void computeBDFCoefficients(const int order, const std::vector<double> &deltaT);
+  const std::vector<double> &getBDFCoefficients() const { return _cn; }
+  void setBDFCoefficients(const std::vector<double> &coeff);
 
   // Compute time derivative of current solution using BDF coefficients
   // and system residual if using DC scheme
   void computeCurrentSolDot(feLinearSystem *linearSystem);
 
+  void rotate(double dt);
+  void rotateWithoutTime();
+
 ///////////////////////////////////////////////////////////////////////////
 // Everything below should be reworked
 
   void initialize(feSolution *sol, feMesh *mesh);
-  void rotate(double dt);
-  void rotateWithoutTime();
+  
   void setSol(int iSol, std::vector<double> sol) { _sol[iSol] = sol; }
   void setSolAtDOF(int iSol, int iDOF, double val) { _sol[iSol][iDOF] = val; }
 
-  double getSol(int iSol, int iDOF) { return _sol[iSol][iDOF]; }
-  double getRes(int iSol, int iDOF) { return _fResidual[iSol][iDOF]; }
+  double getSol(int iSol, int iDOF) const { return _sol[iSol][iDOF]; }
+  double getRes(int iSol, int iDOF) const { return _fResidual[iSol][iDOF]; }
   std::vector<double> &getResidual(int iSol) { return _fResidual[iSol]; }
   void setResidual(int iSol, std::vector<double> res) { _fResidual[iSol] = res; }
   virtual void computeSolTimeDerivative(feSolution *sol, feLinearSystem *linearSystem);

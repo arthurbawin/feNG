@@ -17,7 +17,7 @@ feNorm *activeNorm;
 
 #define USE_AVERAGED_EVALUATIONS false
 
-#if defined(HAVE_GMSH)
+#if defined(HAVE_GMSH) && defined(GMSH_WITH_CURVED_MESHING)
 
 static double INITIAL_COORD[3];
 static double LARGE_VALUE_WHEN_FAILED = std::numeric_limits<double>::infinity();;
