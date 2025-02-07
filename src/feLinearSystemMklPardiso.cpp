@@ -820,34 +820,41 @@ bool feLinearSystemMklPardiso::solve(double *normDx, double *normResidual, doubl
   *normAxb = 0.0;
   *nIter = 1;
 
-  tic();
-  // Symbolic factorization and allocation
-  // (only once or when the matrix sparsity changes)
-  if(symbolicFactorization) mklSymbolicFactorization();
-  pardisoStep = "symbolic factorization";
-  if(!checkPardisoErrorCode(ERROR, pardisoStep)) return false;
+  if(recomputeMatrix) {
+    // Symbolic factorization and allocation
+    // (only once or when the matrix sparsity changes)
 
-  // Actual matrix factorization
-  if(recomputeMatrix) mklFactorization();
-  pardisoStep = "factorization";
-  if(!checkPardisoErrorCode(ERROR, pardisoStep)) return false;
+    if(symbolicFactorization) {
+      // Keep the data structures from first symbolic factorization
+      // for subsequent solves
+      // Currently the flag is only set to true when creating a new system,
+      // for instance when a new mesh is read.
+      // This assumes that the sparsity pattern does not change for
+      // a given linear system once it's been created.
+      symbolicFactorization = false;
 
+      // tic();
+      mklSymbolicFactorization();
+      // feInfo("\t\t\t\tSymbolic factorization in %f s", toc());
+      pardisoStep = "symbolic factorization";
+      if(!checkPardisoErrorCode(ERROR, pardisoStep)) return false;
+    }
+
+    // Actual matrix factorization
+    // tic();
+    mklFactorization();
+    // feInfo("\t\t\t\tFactorization in %f s", toc());
+    pardisoStep = "factorization";
+    if(!checkPardisoErrorCode(ERROR, pardisoStep)) return false;
+  }
+  
+  // tic();
   mklSolve();
+  // feInfo("\t\t\t\tSolve in %f s", toc());
   pardisoStep = "solve";
   if(!checkPardisoErrorCode(ERROR, pardisoStep)) return false;
 
-#if defined(HAVE_MPI)
-  int rank;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  if(rank == 0)
-#endif
-  {
-    feInfoCond(FE_VERBOSE > 1, "\t\t\t\tSolved linear system with MKL Pardiso in %f s", toc());
-  }
-
-  // Keep the data structures from first symbolic factorization
-  // for subsequent solves
-  symbolicFactorization = false;
+  // feInfoCond(FE_VERBOSE > 1, "\t\t\t\tSolved linear system with MKL Pardiso in %f s", toc());
 
   *normDx = vectorMaxNorm(_numOwnedRows, du);
   *normResidual = vectorMaxNorm(_numOwnedRows, _rhs);

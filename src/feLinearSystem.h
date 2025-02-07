@@ -293,25 +293,9 @@ public:
   feLinearSystemMklPardiso(std::vector<feBilinearForm *> bilinearForms, int numUnknowns, int ownershipSplit);
   ~feLinearSystemMklPardiso();
 
-  // ====================================================================
-  // Pour modifier les paramètres de Pardiso
-  // pivot : valeur de l'exposant du nombre réel 10^(-pivot)
-  //         valeur par défaut pivot := 13
-  // ====================================================================
   void setPivot(int pivot);
   void setPardisoMsglvlHigh() { MSGLVL = 1; };
   void setPardisoMsglvlLow() { MSGLVL = 0; };
-  bool getSymbolicFactorizationStatus() { return symbolicFactorization; }
-  void setSymbolicFactorizationStatus(bool status)
-  {
-    symbolicFactorization = status;
-    if(symbolicFactorization) recomputeMatrix = true;
-  }
-  void toggleSymbolicFactorizationStatus()
-  {
-    symbolicFactorization = !symbolicFactorization;
-    if(symbolicFactorization) recomputeMatrix = true;
-  }
 
   feInt getSystemSize() { return  _nInc; };
 

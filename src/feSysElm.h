@@ -1104,21 +1104,34 @@ class feSysElm_CHNS_Momentum : public feSysElm
 {
 protected:
   feFunction *_density;
-  feFunction *_mobility;
   feFunction *_drhodphi;
-  feFunction *_coeffKorteweg;
   feFunction *_viscosity;
+  feFunction *_dviscdphi;
+  feFunction *_mobility;
+  feFunction *_coeffKorteweg;
   feVectorFunction *_volumeForce;
   int _idU, _idP, _idPhi, _idMu;
-  int _nFunctionsU;
-  std::vector<double> _f, _u, _dudt, _gradu, _uDotGradu, _gradphi, _gradmu, _gradmuDotGradu, _symmetricGradu, _phiU, _gradPhiU;
+  int _nFunctionsU, _nFunctionsP, _nFunctionsPhi, _nFunctionsMu;
+  std::vector<double> _f, _u, _dudt, _gradu, _uDotGradu, _gradphi,
+  _gradmu, _gradmuDotGradu, _symmetricGradu,
+  _phiU, _gradPhiU, _phiP, _phiPhi, _gradPhiPhi, _phiMu, _gradPhiMu;
 
 public:
-  feSysElm_CHNS_Momentum(feFunction *density, feFunction *mobility, feFunction *drhodphi,
-    feFunction *coeffKorteweg, feFunction *viscosity, feVectorFunction *volumeForce)
+  feSysElm_CHNS_Momentum(feFunction *density,
+    feFunction *drhodphi,
+    feFunction *viscosity,
+    feFunction *dviscdphi,
+    feFunction *mobility,
+    feFunction *coeffKorteweg,
+    feVectorFunction *volumeForce)
    : feSysElm(-1, 4, CHNS_MOMENTUM, true),
-   _density(density), _mobility(mobility), _drhodphi(drhodphi),
-   _coeffKorteweg(coeffKorteweg), _viscosity(viscosity), _volumeForce(volumeForce)
+   _density(density),
+   _drhodphi(drhodphi),
+   _viscosity(viscosity),
+   _dviscdphi(dviscdphi),
+   _mobility(mobility),
+   _coeffKorteweg(coeffKorteweg),
+   _volumeForce(volumeForce)
   {
     _computeMatrixWithFD = true;
   };

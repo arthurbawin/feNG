@@ -58,7 +58,7 @@ TimeIntegrator2::TimeIntegrator2(feLinearSystem *linearSystem,
   _postProcessingData.resize(postProcessing.size());
   for(auto &vec : _postProcessingData)
     vec.resize(nTimeSteps, 0.);
-};
+}
 
 //
 // Initialize the time and solution array
@@ -230,23 +230,31 @@ feStatus BDF1Integrator::makeStep(double /* dt */)
 
 feStatus BDF1Integrator::makeSteps(int nSteps)
 {
-  feInfoCond(FE_VERBOSE > 0, "");
-  feInfoCond(FE_VERBOSE > 0, "BDF1 SOLVER:");
-  feInfoCond(FE_VERBOSE > 0, "\t\tAdvancing from t = %f to t = %f in %d step(s)", 
-    _currentTime, _currentTime + nSteps * _dt, nSteps);
+  if(_quietStart) {
+    feInfoCond(FE_VERBOSE > 0, "\t\t\tBDF1 : Advancing from t = %1.4e to t = %1.4e in %d step(s)", 
+      _currentTime, _currentTime + nSteps * _dt, nSteps);
+  } else {
+    feInfoCond(FE_VERBOSE > 0, "");
+    feInfoCond(FE_VERBOSE > 0, "BDF1 SOLVER:");
+    feInfoCond(FE_VERBOSE > 0, "\t\tAdvancing from t = %1.4e to t = %1.4e in %d step(s)", 
+      _currentTime, _currentTime + nSteps * _dt, nSteps);
+  }
 
   if(_currentStep == 0)
   {
-    // Export initial solution
-    feStatus s = this->writeVisualizationFile(0, _exportData);
-    if(s != FE_STATUS_OK) return s;
-    _currentStep++;
+    if(_exportInitialCondition) {
+      // Export initial solution
+      feStatus s = this->writeVisualizationFile(0, _exportData);
+      if(s != FE_STATUS_OK) return s;
+    }
   }
 
   for(int iStep = 0; iStep < nSteps; ++iStep, ++_currentStep)
   {
-    feInfoCond(FE_VERBOSE > 0, "\t\tBDF1 - Overall step = %d - Step %d/%d from t = %1.4e to t = %1.4e", 
-      _currentStep, iStep+1, nSteps, _currentTime, _currentTime + _dt);
+    if(!_quietStart) {
+      feInfoCond(FE_VERBOSE > 0, "\t\tBDF1 - Overall step = %d - Step %d/%d from t = %1.4e to t = %1.4e", 
+        _currentStep+1, iStep+1, nSteps, _currentTime, _currentTime + _dt);
+    }
 
     this->updateTime(iStep, _dt);
     _sC->rotate(_dt);
@@ -264,7 +272,7 @@ feStatus BDF1Integrator::makeSteps(int nSteps)
     }
 
     // Export solution for visualization
-    s = this->writeVisualizationFile(_currentStep, _exportData);
+    s = this->writeVisualizationFile(_currentStep+1, _exportData);
     if(s != FE_STATUS_OK) return s;
   }
 
@@ -346,8 +354,13 @@ feStatus BDF2Integrator::startWithBDF1(const double timeStepRatio)
 
   BDF1Integrator solver(_linearSystem, _currentSolution, 
     _mesh, _NLoptions, _postProcessing, _exportData, 0, dtBDF1, 1);
+  solver.setQuietStart(true);
+  solver.setExportInitialCondition(false);
   feStatus s = solver.makeSteps(1);
   if(s == FE_STATUS_ERROR) { return s; }
+
+  feInfoCond(FE_VERBOSE > 0, "\t\t\tContinuing with BDF2 from t = %1.4e to t = %1.4e", 
+    _currentTime, _currentTime + _dt);
 
   // Assign BDF1 solution at position n and n+1 ("current solution")
   _sC->setSolution(_currentSolution->getSolution(), 1);
@@ -398,7 +411,7 @@ feStatus BDF2Integrator::makeSteps(int nSteps)
 {
   feInfoCond(FE_VERBOSE > 0, "");
   feInfoCond(FE_VERBOSE > 0, "BDF2 SOLVER:");
-  feInfoCond(FE_VERBOSE > 0, "\t\tAdvancing from t = %f to t = %f in %d step(s)", 
+  feInfoCond(FE_VERBOSE > 0, "\t\tAdvancing from t = %1.4e to t = %1.4e in %d step(s)", 
     _currentTime, _currentTime + nSteps * _dt, nSteps);
 
   int start = 0;
@@ -417,9 +430,9 @@ feStatus BDF2Integrator::makeSteps(int nSteps)
         // Use BDF1 to get intermediary solution at time t0 + timeStepRatio * dt
         // Then use variable time step BDF2 to get first solution at t0 + dt
         double timeStepRatio = 0.1;
-        feInfoCond(FE_VERBOSE > 0, "\t\tBDF2 - Starting with BDF1 and intermediary step %f", timeStepRatio * _dt);
         feInfoCond(FE_VERBOSE > 0, "\t\tBDF2 - Overall step = 1 - Step 1/%d from t = %1.4e to t = %1.4e", 
           nSteps, _currentTime, _currentTime + _dt);
+        feInfoCond(FE_VERBOSE > 0, "\t\t\tStarting with BDF1 and intermediary time step %1.4e", timeStepRatio * _dt);
 
         s = startWithBDF1(timeStepRatio);
         if(s != FE_STATUS_OK) return s;
@@ -448,7 +461,7 @@ feStatus BDF2Integrator::makeSteps(int nSteps)
   for(int iStep = start; iStep < nSteps; ++iStep, ++_currentStep)
   {
     feInfoCond(FE_VERBOSE > 0, "\t\tBDF2 - Overall step = %d - Step %d/%d from t = %1.4e to t = %1.4e", 
-      _currentStep, iStep+1, nSteps, _currentTime, _currentTime + _dt);
+      _currentStep+1, iStep+1, nSteps, _currentTime, _currentTime + _dt);
 
     this->updateTime(iStep, _dt);
     _sC->rotate(_dt);
@@ -467,7 +480,7 @@ feStatus BDF2Integrator::makeSteps(int nSteps)
     }
 
     // Export solution for visualization
-    s = this->writeVisualizationFile(_currentStep, _exportData);
+    s = this->writeVisualizationFile(_currentStep+1, _exportData);
     if(s != FE_STATUS_OK) return s;
   }
 

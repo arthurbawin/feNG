@@ -159,6 +159,7 @@ public:
   // Sets the Jacobian matrix to be evaluated numerically
   // using finite differences, allocates the necessary arrays.
   void setComputeMatrixWithFD(bool flag);
+  double compareAnalyticalAndFDMatrices(feSolution *sol, int numElem);
 
   // Compute element-wise matrix and residual on element numElem
   void computeMatrix(feSolution *sol, int numElem);

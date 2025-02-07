@@ -164,13 +164,13 @@ feBilinearForm::feBilinearForm(std::vector<feSpace *> spaces, feSysElm *elementa
   allocateResidual(_M, &_Be);
 
   // Set the computation method for the element matrix
-  _R0 = nullptr;
-  _Rh = nullptr;
+  // Auxiliary residuals for finite differences computation
+  // are allocated anyway, even if the exact Jacobian is computed.
+  _h0 = pow(DBL_EPSILON, 1.0 / 2.0);
+  allocateResidual(_M, &_R0);
+  allocateResidual(_M, &_Rh);
   if(elementarySystem->computeMatrixWithFD()) {
     ptrComputeMatrix = &feBilinearForm::computeMatrixFiniteDifference;
-    allocateResidual(_M, &_Rh);
-    allocateResidual(_M, &_R0);
-    _h0 = pow(DBL_EPSILON, 1.0 / 2.0);
   } else {
     ptrComputeMatrix = &feBilinearForm::computeMatrixAnalytical;
   }
@@ -200,14 +200,9 @@ feBilinearForm::feBilinearForm(const feBilinearForm &f)
 {
   _Ae = allocateMatrix(_M, _N);
   allocateResidual(_M, &_Be);
-
-  if(f._sysElm->computeMatrixWithFD()) {
-    _R0 = nullptr;
-    _Rh = nullptr;
-    allocateResidual(_M, &_Rh);
-    allocateResidual(_M, &_R0);
-    _h0 = pow(DBL_EPSILON, 1.0 / 2.0);
-  }
+  allocateResidual(_M, &_Rh);
+  allocateResidual(_M, &_R0);
+  _h0 = pow(DBL_EPSILON, 1.0 / 2.0);
 
   // Elementary system has to be cloned to be thread-safe
   _sysElm = f._sysElm->clone();
@@ -222,10 +217,8 @@ feBilinearForm::~feBilinearForm()
 {
   freeMatrix(_M, _Ae);
   freeResidual(&_Be);
-  if(_sysElm->computeMatrixWithFD()) {
-    freeResidual(&_Rh);
-    freeResidual(&_R0);
-  }
+  freeResidual(&_Rh);
+  freeResidual(&_R0);
   delete _sysElm;
 }
 
@@ -234,11 +227,8 @@ void feBilinearForm::setComputeMatrixWithFD(bool flag)
   _sysElm->setComputeMatrixWithFD(flag);
   if(flag) {
     ptrComputeMatrix = &feBilinearForm::computeMatrixFiniteDifference;
-    free(_R0);
-    free(_Rh);
-    allocateResidual(_M, &_Rh);
-    allocateResidual(_M, &_R0);
-    _h0 = pow(DBL_EPSILON, 1.0 / 2.0);
+  } else {
+    ptrComputeMatrix = &feBilinearForm::computeMatrixAnalytical;
   }
 }
 
@@ -357,7 +347,6 @@ void feBilinearForm::computeMatrixAnalytical(feSolution *sol, int numElem)
   _c0 = sol->getC0();
   _tn = sol->getCurrentTime();
   _dt = sol->getTimeStep();
-
   _sysElm->computeAe(this);
 }
 
@@ -411,6 +400,45 @@ void feBilinearForm::computeMatrixFiniteDifference(feSolution *sol, int numElem)
       _solDot[_fieldsLayoutJ[k]][j] = temp_soldot;
     }
   }
+}
+
+double feBilinearForm::compareAnalyticalAndFDMatrices(feSolution *sol, int numElem)
+{
+  double **Aexact = allocateMatrix(_M, _N);
+  double **Afd    = allocateMatrix(_M, _N);
+
+  computeMatrixAnalytical(sol, numElem);
+
+  for(feInt i = 0; i < _M; ++i) {
+    for(feInt j = 0; j < _N; ++j) {
+      Aexact[i][j] = _Ae[i][j];
+    }
+  }
+  // feInfo("Exact Jacobian matrix:");
+  // printMatrix(_M, _N, &_Ae);
+
+  computeMatrixFiniteDifference(sol, numElem);
+
+  double maxErrorRel = 0.;
+  for(feInt i = 0; i < _M; ++i) {
+    for(feInt j = 0; j < _N; ++j) {
+      Afd[i][j] = _Ae[i][j];
+      maxErrorRel = fmax(maxErrorRel, fabs(Aexact[i][j] - Afd[i][j]) / fmax(1e-16, fabs(Afd[i][j])));
+    }
+  }
+  // feInfo("FD Jacobian matrix:");
+  // printMatrix(_M, _N, &_Ae);
+
+  for(feInt i = 0; i < _M; ++i)
+    for(feInt j = 0; j < _N; ++j)
+      printf("Aex[%2ld][%2ld] = %+10.16e \t Afd[%2ld][%2ld] = %+10.16e \t err = %+-1.6e\n",
+        i, j, Aexact[i][j], i, j, Afd[i][j], fabs(Aexact[i][j] - Afd[i][j]) / fmax(1e-16, fabs(Afd[i][j])));
+
+  feInfo("max |Aexact - Afd|/|Afd| = %1.6e", maxErrorRel);
+
+  freeMatrix(_M, Afd);
+  freeMatrix(_M, Aexact);
+  return maxErrorRel;
 }
 
 double feBilinearForm::getMatrixNorm()

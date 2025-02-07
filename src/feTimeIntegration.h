@@ -66,6 +66,9 @@ protected:
   // Name of the time integration scheme to write visualization files
   std::string _integratorName;
 
+  bool _quietStart = false;
+  bool _exportInitialCondition = true;
+
   // Scalar-valued post-processing operators computed at each step
   std::vector<std::vector<double>> _postProcessingData;
 
@@ -97,6 +100,9 @@ public:
   virtual feSolutionContainer getSolutionContainer() = 0;
   // Bad: the solution container may be deleted
   // virtual feSolutionContainer *getSolutionContainer() = 0;
+
+  void setQuietStart(bool flag) { _quietStart = flag; }
+  void setExportInitialCondition(bool flag) { _exportInitialCondition = flag; }
 
 protected:
   void initialize();
