@@ -587,7 +587,7 @@ void feLinearSystemMklPardiso::assembleMatrices(feSolution *sol)
     }
   }
 
-  feInfoCond(FE_VERBOSE > 1, "\t\t\t\tAssembled jacobian matrix in %f s", toc());
+  feInfoCond(FE_VERBOSE > 0, "\t\t\t\tAssembled jacobian matrix in %f s", toc());
   
   viewMatrix();
 
@@ -662,7 +662,7 @@ void feLinearSystemMklPardiso::assembleResiduals(feSolution *sol)
       }
     }
   }
-  feInfoCond(FE_VERBOSE > 1, "\t\t\t\tAssembled global residual in %f s", toc());
+  feInfoCond(FE_VERBOSE > 0, "\t\t\t\tAssembled global residual in %f s", toc());
 
   viewRHS();
 
@@ -833,24 +833,24 @@ bool feLinearSystemMklPardiso::solve(double *normDx, double *normResidual, doubl
       // a given linear system once it's been created.
       symbolicFactorization = false;
 
-      // tic();
+      tic();
       mklSymbolicFactorization();
-      // feInfo("\t\t\t\tSymbolic factorization in %f s", toc());
+      feInfo("\t\t\t\tSymbolic factorization in %f s", toc());
       pardisoStep = "symbolic factorization";
       if(!checkPardisoErrorCode(ERROR, pardisoStep)) return false;
     }
 
     // Actual matrix factorization
-    // tic();
+    tic();
     mklFactorization();
-    // feInfo("\t\t\t\tFactorization in %f s", toc());
+    feInfo("\t\t\t\tFactorization in %f s", toc());
     pardisoStep = "factorization";
     if(!checkPardisoErrorCode(ERROR, pardisoStep)) return false;
   }
   
-  // tic();
+  tic();
   mklSolve();
-  // feInfo("\t\t\t\tSolve in %f s", toc());
+  feInfo("\t\t\t\tSolve in %f s", toc());
   pardisoStep = "solve";
   if(!checkPardisoErrorCode(ERROR, pardisoStep)) return false;
 
@@ -977,7 +977,7 @@ void feLinearSystemMklPardiso::constrainEssentialComponents(feSolution *sol)
     _rhs[row] = 0.;
   }
 
-  feInfoCond(FE_VERBOSE > 1, "\t\t\t\tConstrained essential DOFs in %f s", toc());
+  feInfoCond(FE_VERBOSE > 0, "\t\t\t\tConstrained essential DOFs in %f s", toc());
 }
 
 // ====================================================================

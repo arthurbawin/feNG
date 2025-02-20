@@ -41,10 +41,12 @@ typedef enum {
   MIXED_GRADGRAD,
   MIXED_DIVERGENCE,
   MIXED_CURL,
+  MIXED_DOTPRODUCT,
 
   TRIPLE_MIXED_GRADIENT,
 
   CHNS_MOMENTUM,
+  MIXED_DIVERGENCE_CHNS,
 
   ZERO_BLOCK,
 
@@ -122,10 +124,14 @@ inline const std::string toString(elementSystemType t)
       return "MIXED_DIVERGENCE";
     case MIXED_CURL:
       return "MIXED_CURL";
+    case MIXED_DOTPRODUCT:
+      return "MIXED_DOTPRODUCT";
     case TRIPLE_MIXED_GRADIENT:
       return "TRIPLE_MIXED_GRADIENT";
     case CHNS_MOMENTUM:
       return "CHNS_MOMENTUM";
+    case MIXED_DIVERGENCE_CHNS:
+      return "MIXED_DIVERGENCE_CHNS";
     case ZERO_BLOCK:
       return "ZERO_BLOCK";
     case NEUMANN_1D:
@@ -1010,7 +1016,7 @@ protected:
 
 public:
   feSysElm_MixedDivergenceCHNS(feFunction *coeff, feFunction *density, feFunction *drhodphi)
-    : feSysElm(-1, 3, MIXED_DIVERGENCE, true), _coeff(coeff), _density(density), _drhodphi(drhodphi)
+    : feSysElm(-1, 3, MIXED_DIVERGENCE_CHNS, true), _coeff(coeff), _density(density), _drhodphi(drhodphi)
   {
     _computeMatrixWithFD = false;
   };
@@ -1043,6 +1049,29 @@ public:
   void computeAe(feBilinearForm *form);
   void computeBe(feBilinearForm *form);
   CLONEABLE(feSysElm_MixedCurl)
+};
+
+// Mixed dot product : u cdot f, with u an unknown vector field and
+//                                    f a user-defined vector field.
+// Integral of (u cdot f) dot v, with v the test function of another scalar unknown field.
+class feSysElm_MixedDotProduct : public feSysElm
+{
+protected:
+  feVectorFunction *_f;
+  int _idU, _idV, _nFunctionsU, _nFunctionsV;
+  std::vector<double> _u, _fVal, _phiU, _phiV;
+
+public:
+  feSysElm_MixedDotProduct(feVectorFunction *f)
+    : feSysElm(2, 2, MIXED_DOTPRODUCT, true), _f(f)
+  {
+    _computeMatrixWithFD = false;
+  };
+  ~feSysElm_MixedDotProduct(){};
+  void createElementarySystem(std::vector<feSpace *> &space);
+  void computeAe(feBilinearForm *form);
+  void computeBe(feBilinearForm *form);
+  CLONEABLE(feSysElm_MixedDotProduct)
 };
 
 //
@@ -1133,7 +1162,7 @@ public:
    _coeffKorteweg(coeffKorteweg),
    _volumeForce(volumeForce)
   {
-    _computeMatrixWithFD = true;
+    _computeMatrixWithFD = false;
   };
   ~feSysElm_CHNS_Momentum(){};
   void createElementarySystem(std::vector<feSpace *> &space);

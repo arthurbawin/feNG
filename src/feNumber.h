@@ -66,7 +66,7 @@ public:
 
   // Initialize and allocate vectors. Should not be used directly, but called
   // through the feMetaNumber class.
-  feNumber(feMesh *mesh);
+  feNumber(feMesh *mesh, const std::string &fieldName);
   ~feNumber(){};
 
   // int getNbNodes() { return _nNod; }
@@ -115,11 +115,17 @@ public:
   {
     return _numberingVertices[_maxDOFperVertex * iVertex + numDOF];
   };
-  int getElementDOF(feMesh *mesh, std::string const &cncGeoID, int numElem, int numDOF);
+  int  getElementDOF(feMesh *mesh, std::string const &cncGeoID, int numElem, int numDOF);
+  void setElementDOF(feMesh *mesh, std::string const &cncGeoID, int numElem, int numDOF, int dofNumber);
   int getEdgeDOF(feMesh *mesh, std::string const &cncGeoID, int numElem, int numEdge, int numDOF);
   int getFaceDOF(feMesh *mesh, std::string const &cncGeoID, int numElem, int numFace, int numDOF);
 
   int getDOFCodeAtVertex(int iVertex) { return _codeDOFVertices[iVertex]; };
+
+  bool hasVertexDOFs() { return _maxDOFperVertex > 0; };
+  bool hasEdgeDOFs() { return _maxDOFperEdge > 0; };
+  bool hasFaceDOFs() { return _maxDOFperFace > 0; };
+  bool hasElementDOFs() { return _maxDOFperElem > 0; };
 
   // Export the vertex DOFs and their coordinates in file.
   // Use the same function in feMetaNumber instead.

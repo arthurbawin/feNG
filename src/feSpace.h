@@ -18,8 +18,10 @@ typedef Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> EigenMat;
 // Supported choices of degrees of freedom to define finite element spaces
 enum class elementType {
   LAGRANGE,
+  LAGRANGE_BUBBLE,
+  LAGRANGE_DISCONTINUOUS,
   VECTOR_LAGRANGE,
-  DG_LAGRANGE,
+  VECTOR_LAGRANGE_BUBBLE,
   LEGENDRE,
   HERMITE,
   CROUZEIX_RAVIART
@@ -127,6 +129,8 @@ protected:
   // Barycentric (linear) coordinates at quadrature nodes
   // std::vector<double> _barycentricCoordinates;
 
+  bool _isDiscontinuous = false;
+
   // Use global (physical) interpolation functions (experimental, do not use yet)
   bool _useGlobalShapeFunctions = false;
   // Global shape functions and derivatives evaluated at quadrature points on each element
@@ -197,6 +201,8 @@ public:
 
   const std::vector<dofLocation> &getDOFLocations() const { return _dofLocations; }
   dofLocation getDOFLocation(const int iDOF) const { return _dofLocations[iDOF]; }
+
+  bool isDiscontinuous() const { return _isDiscontinuous; };
 
   bool useGlobalFunctions() { return _useGlobalShapeFunctions; }
   void useGlobalFunctions(bool flag) { _useGlobalShapeFunctions = flag; }
@@ -308,6 +314,15 @@ public:
   virtual void initializeNumberingUnknowns() = 0;
   virtual void initializeNumberingEssential() = 0;
   virtual void initializeAddressingVector(int numElem, std::vector<feInt> &adr) = 0;
+  // For discontinuous spaces: ensure that element-based DOF are marked
+  // as essential after another feSpace has marked their corresponding vertex-based
+  // or edge-based DOF as essential.
+  // Only discontinuous spaces should override this function.
+  // For continuous spaces, this function does nothing, as the degrees of freedom
+  // are already coupled.
+  virtual void synchronizeCodeOfEssentialDOF() {};
+  // Similarly, synchronize the actual DOF number between coupled DOFs.
+  virtual void synchronizeNumberingOfEssentialDOF(int & /*numModifiedDOF*/) {};
 
   // Evaluate prescribed scalar field
   double evalFun(const double t, const std::vector<double> &x) { return _scalarFct->eval(t, x); }
@@ -774,6 +789,34 @@ public:
 };
 
 // -----------------------------------------------------------------------------
+// Discontinuous Lagrange element of degree 0 on reference triangle r = [0,1], s = [0,1-r]
+// -----------------------------------------------------------------------------
+class feSpaceTriP0 : public feScalarSpace
+{
+protected:
+public:
+  feSpaceTriP0(feMesh *mesh, const std::string fieldID, const std::string cncGeoID, feFunction *fct,
+               const bool useGlobalShapeFunctions = false);
+  ~feSpaceTriP0() {}
+
+  int getNumFunctions() const { return 1; }
+  int getPolynomialDegree() { return 0; }
+
+  std::vector<double> L(double *r);
+  void L(double *r, double *L);
+
+  std::vector<double> dLdr(double *r);
+  std::vector<double> dLds(double *r);
+  std::vector<double> d2Ldr2(double *r);
+  std::vector<double> d2Ldrs(double *r);
+  std::vector<double> d2Lds2(double *r);
+
+  void initializeNumberingUnknowns();
+  void initializeNumberingEssential();
+  void initializeAddressingVector(int numElem, std::vector<feInt> &adr);
+};
+
+// -----------------------------------------------------------------------------
 // Lagrange element of degree 1 on reference triangle r = [0,1], s = [0,1-r]
 // -----------------------------------------------------------------------------
 class feSpaceTriP1 : public feScalarSpace
@@ -800,6 +843,35 @@ public:
   void initializeNumberingUnknowns();
   void initializeNumberingEssential();
   void initializeAddressingVector(int numElem, std::vector<feInt> &adr);
+};
+
+// ----------------------------------------------------------------------------------------
+// Discontinuous Lagrange element of degree 1 on reference triangle r = [0,1], s = [0,1-r]
+// ----------------------------------------------------------------------------------------
+class feSpaceTriP1_Discontinuous : public feScalarSpace
+{
+protected:
+public:
+  feSpaceTriP1_Discontinuous(feMesh *mesh, const std::string fieldID, const std::string cncGeoID,
+                  feFunction *fct);
+  ~feSpaceTriP1_Discontinuous(){};
+
+  int getNumFunctions() const { return 3; }
+  int getPolynomialDegree() { return 1; }
+
+  std::vector<double> L(double *r);
+  void L(double *r, double *L);
+  std::vector<double> dLdr(double *r);
+  std::vector<double> dLds(double *r);
+  std::vector<double> d2Ldr2(double *r);
+  std::vector<double> d2Ldrs(double *r);
+  std::vector<double> d2Lds2(double *r);
+
+  void initializeNumberingUnknowns();
+  void initializeNumberingEssential();
+  void initializeAddressingVector(int numElem, std::vector<feInt> &adr);
+  void synchronizeCodeOfEssentialDOF();
+  void synchronizeNumberingOfEssentialDOF(int &numModifiedDOF);
 };
 
 // -----------------------------------------------------------------------------
@@ -880,8 +952,35 @@ public:
   std::vector<double> d2Ldrs(double *r);
   std::vector<double> d2Lds2(double *r);
 
-  virtual feStatus Lphys(int iElm, std::vector<double> &x, std::vector<double> &L,
-                         std::vector<double> &dLdx, std::vector<double> &dLdy);
+  feStatus Lphys(int iElm, std::vector<double> &x, std::vector<double> &L,
+                 std::vector<double> &dLdx, std::vector<double> &dLdy);
+
+  void initializeNumberingUnknowns();
+  void initializeNumberingEssential();
+  void initializeAddressingVector(int numElem, std::vector<feInt> &adr);
+};
+
+// -----------------------------------------------------------------------------
+// Lagrange element of degree 2 enriched with cubic bubble on reference triangle
+// -----------------------------------------------------------------------------
+class feSpaceTriP2Bubble : public feScalarSpace
+{
+protected:
+public:
+  feSpaceTriP2Bubble(feMesh *mesh, const std::string fieldID, const std::string cncGeoID, feFunction *fct,
+               const bool useGlobalShapeFunctions = false);
+  ~feSpaceTriP2Bubble() {}
+
+  int getNumFunctions() const { return 7; }
+  int getPolynomialDegree() { return 2; }
+
+  std::vector<double> L(double *r);
+  void L(double *r, double *L);
+  std::vector<double> dLdr(double *r);
+  std::vector<double> dLds(double *r);
+  std::vector<double> d2Ldr2(double *r);
+  std::vector<double> d2Ldrs(double *r);
+  std::vector<double> d2Lds2(double *r);
 
   void initializeNumberingUnknowns();
   void initializeNumberingEssential();
@@ -899,6 +998,33 @@ public:
   ~feSpaceVecTriP2() {}
 
   int getNumFunctions() const { return 6 * dim; }
+  int getPolynomialDegree() { return 2; }
+
+  std::vector<double> L(double *r);
+  void L(double *r, double *L);
+
+  std::vector<double> dLdr(double *r);
+  std::vector<double> dLds(double *r);
+  std::vector<double> d2Ldr2(double *r);
+  std::vector<double> d2Ldrs(double *r);
+  std::vector<double> d2Lds2(double *r);
+
+  void initializeNumberingUnknowns();
+  void initializeNumberingEssential();
+  void initializeAddressingVector(int numElem, std::vector<feInt> &adr);
+};
+
+// -----------------------------------------------------------------------------
+// Vector Lagrange element of degree 2 with cubic bubble on reference triangle
+// -----------------------------------------------------------------------------
+template <int dim> class feSpaceVecTriP2Bubble : public feVectorSpace
+{
+public:
+  feSpaceVecTriP2Bubble(feMesh *mesh, const std::string fieldID, const std::string cncGeoID,
+                  feVectorFunction *fct, const bool useGlobalShapeFunctions = false);
+  ~feSpaceVecTriP2Bubble() {}
+
+  int getNumFunctions() const { return 7 * dim; }
   int getPolynomialDegree() { return 2; }
 
   std::vector<double> L(double *r);

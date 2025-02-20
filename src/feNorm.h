@@ -26,6 +26,7 @@ typedef enum {
   LINF,
   // Compute ||u - uh||_Linf(cnc), with u a user-defined scalar field
   LINF_ERROR,
+  VECTOR_LINF_ERROR,
   // Compute |uh|_H1(cnc)
   SEMI_H1,
   // Compute |u - uh|_H1(cnc), with u a user-defined scalar field
@@ -201,6 +202,7 @@ private:
   double computeL1Norm(bool error = false);
   double computeL2Norm(bool error = false);
   double computeLInfNorm(bool error = false);
+  double computeVectorLInfNorm(bool error = false);
   double computeH1SemiNorm(bool error = false);
   double computeH1SemiNormErrorEstimator();
   double computeH1Norm(bool error = false);

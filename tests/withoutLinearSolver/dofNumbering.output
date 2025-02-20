@@ -1,846 +1,330 @@
 Field U - vertices :
--1
--1
--1
--1
--1
--1
--1
--1
--1
--1
--1
--1
--1
--1
--1
--1
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
+Field U - vertex 0: -1  
+Field U - vertex 1: -1  
+Field U - vertex 2: -1  
+Field U - vertex 3: -1  
+Field U - vertex 4: -1  
+Field U - vertex 5: -1  
+Field U - vertex 6: -1  
+Field U - vertex 7: -1  
+Field U - vertex 8: -1  
+Field U - vertex 9: -1  
+Field U - vertex 10: -1  
+Field U - vertex 11: -1  
+Field U - vertex 12: -1  
+Field U - vertex 13: -1  
+Field U - vertex 14: -1  
+Field U - vertex 15: -1  
+Field U - vertex 16: -2  
+Field U - vertex 17: -2  
+Field U - vertex 18: -2  
+Field U - vertex 19: -2  
+Field U - vertex 20: -2  
+Field U - vertex 21: -2  
+Field U - vertex 22: -2  
+Field U - vertex 23: -2  
+Field U - vertex 24: -2  
+Field U - vertex 25: -2  
+Field U - vertex 26: -2  
+Field U - vertex 27: -2  
+Field U - vertex 28: -2  
+Field U - vertex 29: -2  
 Field U - elements :
--1
--1
--1
--1
--1
--1
--1
--1
--1
--1
--1
--1
--1
--1
--1
--1
--1
--1
--1
--1
--1
--1
--1
--1
--1
--1
--1
--1
--1
--1
--1
--1
--1
--1
--1
--1
--1
--1
--1
--1
--1
--1
--1
--1
--1
--1
--1
--1
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
+Field U - element 0: -1  -1  -1  
+Field U - element 1: -1  -1  -1  
+Field U - element 2: -1  -1  -1  
+Field U - element 3: -1  -1  -1  
+Field U - element 4: -1  -1  -1  
+Field U - element 5: -1  -1  -1  
+Field U - element 6: -1  -1  -1  
+Field U - element 7: -1  -1  -1  
+Field U - element 8: -1  -1  -1  
+Field U - element 9: -1  -1  -1  
+Field U - element 10: -1  -1  -1  
+Field U - element 11: -1  -1  -1  
+Field U - element 12: -1  -1  -1  
+Field U - element 13: -1  -1  -1  
+Field U - element 14: -1  -1  -1  
+Field U - element 15: -1  -1  -1  
+Field U - element 16: -2  -2  -2  
+Field U - element 17: -2  -2  -2  
+Field U - element 18: -2  -2  -2  
+Field U - element 19: -2  -2  -2  
+Field U - element 20: -2  -2  -2  
+Field U - element 21: -2  -2  -2  
+Field U - element 22: -2  -2  -2  
+Field U - element 23: -2  -2  -2  
+Field U - element 24: -2  -2  -2  
+Field U - element 25: -2  -2  -2  
+Field U - element 26: -2  -2  -2  
+Field U - element 27: -2  -2  -2  
+Field U - element 28: -2  -2  -2  
+Field U - element 29: -2  -2  -2  
+Field U - element 30: -2  -2  -2  
+Field U - element 31: -2  -2  -2  
+Field U - element 32: -2  -2  -2  
+Field U - element 33: -2  -2  -2  
+Field U - element 34: -2  -2  -2  
+Field U - element 35: -2  -2  -2  
+Field U - element 36: -2  -2  -2  
+Field U - element 37: -2  -2  -2  
+Field U - element 38: -2  -2  -2  
+Field U - element 39: -2  -2  -2  
+Field U - element 40: -2  -2  -2  
+Field U - element 41: -2  -2  -2  
+Field U - element 42: -2  -2  -2  
+Field U - element 43: -2  -2  -2  
+Field U - element 44: -2  -2  -2  
+Field U - element 45: -2  -2  -2  
+Field U - element 46: -2  -2  -2  
+Field U - element 47: -2  -2  -2  
+Field U - element 48: -2  -2  -2  
+Field U - element 49: -2  -2  -2  
+Field U - element 50: -2  -2  -2  
+Field U - element 51: -2  -2  -2  
+Field U - element 52: -2  -2  -2  
+Field U - element 53: -2  -2  -2  
+Field U - element 54: -2  -2  -2  
+Field U - element 55: -2  -2  -2  
+Field U - element 56: -2  -2  -2  
+Field U - element 57: -2  -2  -2  
 Field U - edges :
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--1
--1
--1
--2
--2
--2
--2
--2
--2
--1
--1
--1
--2
--2
--2
--2
--2
--2
--1
--1
--1
--2
--2
--2
--2
--2
--2
--1
--1
--1
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--1
--1
--1
--2
--2
--2
--2
--2
--2
--1
--1
--1
--2
--2
--2
--2
--2
--2
--1
--1
--1
--2
--2
--2
--2
--2
--2
--1
--1
--1
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--1
--1
--1
--2
--2
--2
--2
--2
--2
--1
--1
--1
--2
--2
--2
--2
--2
--2
--1
--1
--1
--2
--2
--2
--1
--1
--1
--2
--2
--2
--2
--2
--2
--1
--1
--1
--2
--2
--2
--1
--1
--1
--2
--2
--2
--1
--1
--1
--2
--2
--2
--2
--2
--2
--1
--1
--1
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
--2
+Field U - edge 0: -2  -2  -2  
+Field U - edge 1: -2  -2  -2  
+Field U - edge 2: -2  -2  -2  
+Field U - edge 3: -2  -2  -2  
+Field U - edge 4: -2  -2  -2  
+Field U - edge 5: -2  -2  -2  
+Field U - edge 6: -2  -2  -2  
+Field U - edge 7: -2  -2  -2  
+Field U - edge 8: -2  -2  -2  
+Field U - edge 9: -2  -2  -2  
+Field U - edge 10: -2  -2  -2  
+Field U - edge 11: -2  -2  -2  
+Field U - edge 12: -2  -2  -2  
+Field U - edge 13: -2  -2  -2  
+Field U - edge 14: -2  -2  -2  
+Field U - edge 15: -1  -1  -1  
+Field U - edge 16: -2  -2  -2  
+Field U - edge 17: -2  -2  -2  
+Field U - edge 18: -1  -1  -1  
+Field U - edge 19: -2  -2  -2  
+Field U - edge 20: -2  -2  -2  
+Field U - edge 21: -1  -1  -1  
+Field U - edge 22: -2  -2  -2  
+Field U - edge 23: -2  -2  -2  
+Field U - edge 24: -1  -1  -1  
+Field U - edge 25: -2  -2  -2  
+Field U - edge 26: -2  -2  -2  
+Field U - edge 27: -2  -2  -2  
+Field U - edge 28: -2  -2  -2  
+Field U - edge 29: -1  -1  -1  
+Field U - edge 30: -2  -2  -2  
+Field U - edge 31: -2  -2  -2  
+Field U - edge 32: -1  -1  -1  
+Field U - edge 33: -2  -2  -2  
+Field U - edge 34: -2  -2  -2  
+Field U - edge 35: -1  -1  -1  
+Field U - edge 36: -2  -2  -2  
+Field U - edge 37: -2  -2  -2  
+Field U - edge 38: -1  -1  -1  
+Field U - edge 39: -2  -2  -2  
+Field U - edge 40: -2  -2  -2  
+Field U - edge 41: -2  -2  -2  
+Field U - edge 42: -2  -2  -2  
+Field U - edge 43: -1  -1  -1  
+Field U - edge 44: -2  -2  -2  
+Field U - edge 45: -2  -2  -2  
+Field U - edge 46: -1  -1  -1  
+Field U - edge 47: -2  -2  -2  
+Field U - edge 48: -2  -2  -2  
+Field U - edge 49: -1  -1  -1  
+Field U - edge 50: -2  -2  -2  
+Field U - edge 51: -1  -1  -1  
+Field U - edge 52: -2  -2  -2  
+Field U - edge 53: -2  -2  -2  
+Field U - edge 54: -1  -1  -1  
+Field U - edge 55: -2  -2  -2  
+Field U - edge 56: -1  -1  -1  
+Field U - edge 57: -2  -2  -2  
+Field U - edge 58: -1  -1  -1  
+Field U - edge 59: -2  -2  -2  
+Field U - edge 60: -2  -2  -2  
+Field U - edge 61: -1  -1  -1  
+Field U - edge 62: -2  -2  -2  
+Field U - edge 63: -2  -2  -2  
+Field U - edge 64: -2  -2  -2  
+Field U - edge 65: -2  -2  -2  
+Field U - edge 66: -2  -2  -2  
+Field U - edge 67: -2  -2  -2  
+Field U - edge 68: -2  -2  -2  
+Field U - edge 69: -2  -2  -2  
+Field U - edge 70: -2  -2  -2  
 Field U - Numbering of vertex degrees of freedom:
 Number of vertices = 30
 Max number of DOF per vertex = 1
-DOF: 305 - DOF_ESSENTIAL
-DOF: 306 - DOF_ESSENTIAL
-DOF: 307 - DOF_ESSENTIAL
-DOF: 308 - DOF_ESSENTIAL
-DOF: 309 - DOF_ESSENTIAL
-DOF: 310 - DOF_ESSENTIAL
-DOF: 311 - DOF_ESSENTIAL
-DOF: 312 - DOF_ESSENTIAL
-DOF: 313 - DOF_ESSENTIAL
-DOF: 314 - DOF_ESSENTIAL
-DOF: 315 - DOF_ESSENTIAL
-DOF: 316 - DOF_ESSENTIAL
-DOF: 317 - DOF_ESSENTIAL
-DOF: 318 - DOF_ESSENTIAL
-DOF: 319 - DOF_ESSENTIAL
-DOF: 320 - DOF_ESSENTIAL
-DOF: 0 - DOF_UNKNOWN
-DOF: 1 - DOF_UNKNOWN
-DOF: 2 - DOF_UNKNOWN
-DOF: 3 - DOF_UNKNOWN
-DOF: 4 - DOF_UNKNOWN
-DOF: 5 - DOF_UNKNOWN
-DOF: 6 - DOF_UNKNOWN
-DOF: 7 - DOF_UNKNOWN
-DOF: 8 - DOF_UNKNOWN
-DOF: 9 - DOF_UNKNOWN
-DOF: 10 - DOF_UNKNOWN
-DOF: 11 - DOF_UNKNOWN
-DOF: 12 - DOF_UNKNOWN
-DOF: 13 - DOF_UNKNOWN
+Field U - vertex 0: 305 - DOF_ESSENTIAL	
+Field U - vertex 1: 306 - DOF_ESSENTIAL	
+Field U - vertex 2: 307 - DOF_ESSENTIAL	
+Field U - vertex 3: 308 - DOF_ESSENTIAL	
+Field U - vertex 4: 309 - DOF_ESSENTIAL	
+Field U - vertex 5: 310 - DOF_ESSENTIAL	
+Field U - vertex 6: 311 - DOF_ESSENTIAL	
+Field U - vertex 7: 312 - DOF_ESSENTIAL	
+Field U - vertex 8: 313 - DOF_ESSENTIAL	
+Field U - vertex 9: 314 - DOF_ESSENTIAL	
+Field U - vertex 10: 315 - DOF_ESSENTIAL	
+Field U - vertex 11: 316 - DOF_ESSENTIAL	
+Field U - vertex 12: 317 - DOF_ESSENTIAL	
+Field U - vertex 13: 318 - DOF_ESSENTIAL	
+Field U - vertex 14: 319 - DOF_ESSENTIAL	
+Field U - vertex 15: 320 - DOF_ESSENTIAL	
+Field U - vertex 16: 0 - DOF_UNKNOWN	
+Field U - vertex 17: 1 - DOF_UNKNOWN	
+Field U - vertex 18: 2 - DOF_UNKNOWN	
+Field U - vertex 19: 3 - DOF_UNKNOWN	
+Field U - vertex 20: 4 - DOF_UNKNOWN	
+Field U - vertex 21: 5 - DOF_UNKNOWN	
+Field U - vertex 22: 6 - DOF_UNKNOWN	
+Field U - vertex 23: 7 - DOF_UNKNOWN	
+Field U - vertex 24: 8 - DOF_UNKNOWN	
+Field U - vertex 25: 9 - DOF_UNKNOWN	
+Field U - vertex 26: 10 - DOF_UNKNOWN	
+Field U - vertex 27: 11 - DOF_UNKNOWN	
+Field U - vertex 28: 12 - DOF_UNKNOWN	
+Field U - vertex 29: 13 - DOF_UNKNOWN	
 Field U - Numbering of element degrees of freedom:
 Number of elements = 58
 Max number of DOF per element = 3
-elm 0 - dof 0 : 321 - DOF_ESSENTIAL
-elm 0 - dof 1 : 322 - DOF_ESSENTIAL
-elm 0 - dof 2 : 323 - DOF_ESSENTIAL
-elm 1 - dof 0 : 324 - DOF_ESSENTIAL
-elm 1 - dof 1 : 325 - DOF_ESSENTIAL
-elm 1 - dof 2 : 326 - DOF_ESSENTIAL
-elm 2 - dof 0 : 327 - DOF_ESSENTIAL
-elm 2 - dof 1 : 328 - DOF_ESSENTIAL
-elm 2 - dof 2 : 329 - DOF_ESSENTIAL
-elm 3 - dof 0 : 330 - DOF_ESSENTIAL
-elm 3 - dof 1 : 331 - DOF_ESSENTIAL
-elm 3 - dof 2 : 332 - DOF_ESSENTIAL
-elm 4 - dof 0 : 333 - DOF_ESSENTIAL
-elm 4 - dof 1 : 334 - DOF_ESSENTIAL
-elm 4 - dof 2 : 335 - DOF_ESSENTIAL
-elm 5 - dof 0 : 336 - DOF_ESSENTIAL
-elm 5 - dof 1 : 337 - DOF_ESSENTIAL
-elm 5 - dof 2 : 338 - DOF_ESSENTIAL
-elm 6 - dof 0 : 339 - DOF_ESSENTIAL
-elm 6 - dof 1 : 340 - DOF_ESSENTIAL
-elm 6 - dof 2 : 341 - DOF_ESSENTIAL
-elm 7 - dof 0 : 342 - DOF_ESSENTIAL
-elm 7 - dof 1 : 343 - DOF_ESSENTIAL
-elm 7 - dof 2 : 344 - DOF_ESSENTIAL
-elm 8 - dof 0 : 345 - DOF_ESSENTIAL
-elm 8 - dof 1 : 346 - DOF_ESSENTIAL
-elm 8 - dof 2 : 347 - DOF_ESSENTIAL
-elm 9 - dof 0 : 348 - DOF_ESSENTIAL
-elm 9 - dof 1 : 349 - DOF_ESSENTIAL
-elm 9 - dof 2 : 350 - DOF_ESSENTIAL
-elm 10 - dof 0 : 351 - DOF_ESSENTIAL
-elm 10 - dof 1 : 352 - DOF_ESSENTIAL
-elm 10 - dof 2 : 353 - DOF_ESSENTIAL
-elm 11 - dof 0 : 354 - DOF_ESSENTIAL
-elm 11 - dof 1 : 355 - DOF_ESSENTIAL
-elm 11 - dof 2 : 356 - DOF_ESSENTIAL
-elm 12 - dof 0 : 357 - DOF_ESSENTIAL
-elm 12 - dof 1 : 358 - DOF_ESSENTIAL
-elm 12 - dof 2 : 359 - DOF_ESSENTIAL
-elm 13 - dof 0 : 360 - DOF_ESSENTIAL
-elm 13 - dof 1 : 361 - DOF_ESSENTIAL
-elm 13 - dof 2 : 362 - DOF_ESSENTIAL
-elm 14 - dof 0 : 363 - DOF_ESSENTIAL
-elm 14 - dof 1 : 364 - DOF_ESSENTIAL
-elm 14 - dof 2 : 365 - DOF_ESSENTIAL
-elm 15 - dof 0 : 366 - DOF_ESSENTIAL
-elm 15 - dof 1 : 367 - DOF_ESSENTIAL
-elm 15 - dof 2 : 368 - DOF_ESSENTIAL
-elm 16 - dof 0 : 14 - DOF_ESSENTIAL
-elm 16 - dof 1 : 15 - DOF_ESSENTIAL
-elm 16 - dof 2 : 16 - DOF_ESSENTIAL
-elm 17 - dof 0 : 17 - DOF_ESSENTIAL
-elm 17 - dof 1 : 18 - DOF_ESSENTIAL
-elm 17 - dof 2 : 19 - DOF_ESSENTIAL
-elm 18 - dof 0 : 20 - DOF_ESSENTIAL
-elm 18 - dof 1 : 21 - DOF_ESSENTIAL
-elm 18 - dof 2 : 22 - DOF_ESSENTIAL
-elm 19 - dof 0 : 23 - DOF_ESSENTIAL
-elm 19 - dof 1 : 24 - DOF_ESSENTIAL
-elm 19 - dof 2 : 25 - DOF_ESSENTIAL
-elm 20 - dof 0 : 26 - DOF_ESSENTIAL
-elm 20 - dof 1 : 27 - DOF_ESSENTIAL
-elm 20 - dof 2 : 28 - DOF_ESSENTIAL
-elm 21 - dof 0 : 29 - DOF_ESSENTIAL
-elm 21 - dof 1 : 30 - DOF_ESSENTIAL
-elm 21 - dof 2 : 31 - DOF_ESSENTIAL
-elm 22 - dof 0 : 32 - DOF_ESSENTIAL
-elm 22 - dof 1 : 33 - DOF_ESSENTIAL
-elm 22 - dof 2 : 34 - DOF_ESSENTIAL
-elm 23 - dof 0 : 35 - DOF_ESSENTIAL
-elm 23 - dof 1 : 36 - DOF_ESSENTIAL
-elm 23 - dof 2 : 37 - DOF_ESSENTIAL
-elm 24 - dof 0 : 38 - DOF_ESSENTIAL
-elm 24 - dof 1 : 39 - DOF_ESSENTIAL
-elm 24 - dof 2 : 40 - DOF_ESSENTIAL
-elm 25 - dof 0 : 41 - DOF_ESSENTIAL
-elm 25 - dof 1 : 42 - DOF_ESSENTIAL
-elm 25 - dof 2 : 43 - DOF_ESSENTIAL
-elm 26 - dof 0 : 44 - DOF_ESSENTIAL
-elm 26 - dof 1 : 45 - DOF_ESSENTIAL
-elm 26 - dof 2 : 46 - DOF_ESSENTIAL
-elm 27 - dof 0 : 47 - DOF_ESSENTIAL
-elm 27 - dof 1 : 48 - DOF_ESSENTIAL
-elm 27 - dof 2 : 49 - DOF_ESSENTIAL
-elm 28 - dof 0 : 50 - DOF_ESSENTIAL
-elm 28 - dof 1 : 51 - DOF_ESSENTIAL
-elm 28 - dof 2 : 52 - DOF_ESSENTIAL
-elm 29 - dof 0 : 53 - DOF_ESSENTIAL
-elm 29 - dof 1 : 54 - DOF_ESSENTIAL
-elm 29 - dof 2 : 55 - DOF_ESSENTIAL
-elm 30 - dof 0 : 56 - DOF_ESSENTIAL
-elm 30 - dof 1 : 57 - DOF_ESSENTIAL
-elm 30 - dof 2 : 58 - DOF_ESSENTIAL
-elm 31 - dof 0 : 59 - DOF_ESSENTIAL
-elm 31 - dof 1 : 60 - DOF_ESSENTIAL
-elm 31 - dof 2 : 61 - DOF_ESSENTIAL
-elm 32 - dof 0 : 62 - DOF_ESSENTIAL
-elm 32 - dof 1 : 63 - DOF_ESSENTIAL
-elm 32 - dof 2 : 64 - DOF_ESSENTIAL
-elm 33 - dof 0 : 65 - DOF_ESSENTIAL
-elm 33 - dof 1 : 66 - DOF_ESSENTIAL
-elm 33 - dof 2 : 67 - DOF_ESSENTIAL
-elm 34 - dof 0 : 68 - DOF_ESSENTIAL
-elm 34 - dof 1 : 69 - DOF_ESSENTIAL
-elm 34 - dof 2 : 70 - DOF_ESSENTIAL
-elm 35 - dof 0 : 71 - DOF_ESSENTIAL
-elm 35 - dof 1 : 72 - DOF_ESSENTIAL
-elm 35 - dof 2 : 73 - DOF_ESSENTIAL
-elm 36 - dof 0 : 74 - DOF_ESSENTIAL
-elm 36 - dof 1 : 75 - DOF_ESSENTIAL
-elm 36 - dof 2 : 76 - DOF_ESSENTIAL
-elm 37 - dof 0 : 77 - DOF_ESSENTIAL
-elm 37 - dof 1 : 78 - DOF_ESSENTIAL
-elm 37 - dof 2 : 79 - DOF_ESSENTIAL
-elm 38 - dof 0 : 80 - DOF_ESSENTIAL
-elm 38 - dof 1 : 81 - DOF_ESSENTIAL
-elm 38 - dof 2 : 82 - DOF_ESSENTIAL
-elm 39 - dof 0 : 83 - DOF_ESSENTIAL
-elm 39 - dof 1 : 84 - DOF_ESSENTIAL
-elm 39 - dof 2 : 85 - DOF_ESSENTIAL
-elm 40 - dof 0 : 86 - DOF_ESSENTIAL
-elm 40 - dof 1 : 87 - DOF_ESSENTIAL
-elm 40 - dof 2 : 88 - DOF_ESSENTIAL
-elm 41 - dof 0 : 89 - DOF_ESSENTIAL
-elm 41 - dof 1 : 90 - DOF_ESSENTIAL
-elm 41 - dof 2 : 91 - DOF_ESSENTIAL
-elm 42 - dof 0 : 92 - DOF_ESSENTIAL
-elm 42 - dof 1 : 93 - DOF_ESSENTIAL
-elm 42 - dof 2 : 94 - DOF_ESSENTIAL
-elm 43 - dof 0 : 95 - DOF_ESSENTIAL
-elm 43 - dof 1 : 96 - DOF_ESSENTIAL
-elm 43 - dof 2 : 97 - DOF_ESSENTIAL
-elm 44 - dof 0 : 98 - DOF_ESSENTIAL
-elm 44 - dof 1 : 99 - DOF_ESSENTIAL
-elm 44 - dof 2 : 100 - DOF_ESSENTIAL
-elm 45 - dof 0 : 101 - DOF_ESSENTIAL
-elm 45 - dof 1 : 102 - DOF_ESSENTIAL
-elm 45 - dof 2 : 103 - DOF_ESSENTIAL
-elm 46 - dof 0 : 104 - DOF_ESSENTIAL
-elm 46 - dof 1 : 105 - DOF_ESSENTIAL
-elm 46 - dof 2 : 106 - DOF_ESSENTIAL
-elm 47 - dof 0 : 107 - DOF_ESSENTIAL
-elm 47 - dof 1 : 108 - DOF_ESSENTIAL
-elm 47 - dof 2 : 109 - DOF_ESSENTIAL
-elm 48 - dof 0 : 110 - DOF_UNKNOWN
-elm 48 - dof 1 : 111 - DOF_UNKNOWN
-elm 48 - dof 2 : 112 - DOF_UNKNOWN
-elm 49 - dof 0 : 113 - DOF_UNKNOWN
-elm 49 - dof 1 : 114 - DOF_UNKNOWN
-elm 49 - dof 2 : 115 - DOF_UNKNOWN
-elm 50 - dof 0 : 116 - DOF_UNKNOWN
-elm 50 - dof 1 : 117 - DOF_UNKNOWN
-elm 50 - dof 2 : 118 - DOF_UNKNOWN
-elm 51 - dof 0 : 119 - DOF_UNKNOWN
-elm 51 - dof 1 : 120 - DOF_UNKNOWN
-elm 51 - dof 2 : 121 - DOF_UNKNOWN
-elm 52 - dof 0 : 122 - DOF_UNKNOWN
-elm 52 - dof 1 : 123 - DOF_UNKNOWN
-elm 52 - dof 2 : 124 - DOF_UNKNOWN
-elm 53 - dof 0 : 125 - DOF_UNKNOWN
-elm 53 - dof 1 : 126 - DOF_UNKNOWN
-elm 53 - dof 2 : 127 - DOF_UNKNOWN
-elm 54 - dof 0 : 128 - DOF_UNKNOWN
-elm 54 - dof 1 : 129 - DOF_UNKNOWN
-elm 54 - dof 2 : 130 - DOF_UNKNOWN
-elm 55 - dof 0 : 131 - DOF_UNKNOWN
-elm 55 - dof 1 : 132 - DOF_UNKNOWN
-elm 55 - dof 2 : 133 - DOF_UNKNOWN
-elm 56 - dof 0 : 134 - DOF_UNKNOWN
-elm 56 - dof 1 : 135 - DOF_UNKNOWN
-elm 56 - dof 2 : 136 - DOF_UNKNOWN
-elm 57 - dof 0 : 137 - DOF_UNKNOWN
-elm 57 - dof 1 : 138 - DOF_UNKNOWN
-elm 57 - dof 2 : 139 - DOF_UNKNOWN
+Field U - element 0: 321 - DOF_ESSENTIAL	322 - DOF_ESSENTIAL	323 - DOF_ESSENTIAL	
+Field U - element 1: 324 - DOF_ESSENTIAL	325 - DOF_ESSENTIAL	326 - DOF_ESSENTIAL	
+Field U - element 2: 327 - DOF_ESSENTIAL	328 - DOF_ESSENTIAL	329 - DOF_ESSENTIAL	
+Field U - element 3: 330 - DOF_ESSENTIAL	331 - DOF_ESSENTIAL	332 - DOF_ESSENTIAL	
+Field U - element 4: 333 - DOF_ESSENTIAL	334 - DOF_ESSENTIAL	335 - DOF_ESSENTIAL	
+Field U - element 5: 336 - DOF_ESSENTIAL	337 - DOF_ESSENTIAL	338 - DOF_ESSENTIAL	
+Field U - element 6: 339 - DOF_ESSENTIAL	340 - DOF_ESSENTIAL	341 - DOF_ESSENTIAL	
+Field U - element 7: 342 - DOF_ESSENTIAL	343 - DOF_ESSENTIAL	344 - DOF_ESSENTIAL	
+Field U - element 8: 345 - DOF_ESSENTIAL	346 - DOF_ESSENTIAL	347 - DOF_ESSENTIAL	
+Field U - element 9: 348 - DOF_ESSENTIAL	349 - DOF_ESSENTIAL	350 - DOF_ESSENTIAL	
+Field U - element 10: 351 - DOF_ESSENTIAL	352 - DOF_ESSENTIAL	353 - DOF_ESSENTIAL	
+Field U - element 11: 354 - DOF_ESSENTIAL	355 - DOF_ESSENTIAL	356 - DOF_ESSENTIAL	
+Field U - element 12: 357 - DOF_ESSENTIAL	358 - DOF_ESSENTIAL	359 - DOF_ESSENTIAL	
+Field U - element 13: 360 - DOF_ESSENTIAL	361 - DOF_ESSENTIAL	362 - DOF_ESSENTIAL	
+Field U - element 14: 363 - DOF_ESSENTIAL	364 - DOF_ESSENTIAL	365 - DOF_ESSENTIAL	
+Field U - element 15: 366 - DOF_ESSENTIAL	367 - DOF_ESSENTIAL	368 - DOF_ESSENTIAL	
+Field U - element 16: 14 - DOF_UNKNOWN	15 - DOF_UNKNOWN	16 - DOF_UNKNOWN	
+Field U - element 17: 17 - DOF_UNKNOWN	18 - DOF_UNKNOWN	19 - DOF_UNKNOWN	
+Field U - element 18: 20 - DOF_UNKNOWN	21 - DOF_UNKNOWN	22 - DOF_UNKNOWN	
+Field U - element 19: 23 - DOF_UNKNOWN	24 - DOF_UNKNOWN	25 - DOF_UNKNOWN	
+Field U - element 20: 26 - DOF_UNKNOWN	27 - DOF_UNKNOWN	28 - DOF_UNKNOWN	
+Field U - element 21: 29 - DOF_UNKNOWN	30 - DOF_UNKNOWN	31 - DOF_UNKNOWN	
+Field U - element 22: 32 - DOF_UNKNOWN	33 - DOF_UNKNOWN	34 - DOF_UNKNOWN	
+Field U - element 23: 35 - DOF_UNKNOWN	36 - DOF_UNKNOWN	37 - DOF_UNKNOWN	
+Field U - element 24: 38 - DOF_UNKNOWN	39 - DOF_UNKNOWN	40 - DOF_UNKNOWN	
+Field U - element 25: 41 - DOF_UNKNOWN	42 - DOF_UNKNOWN	43 - DOF_UNKNOWN	
+Field U - element 26: 44 - DOF_UNKNOWN	45 - DOF_UNKNOWN	46 - DOF_UNKNOWN	
+Field U - element 27: 47 - DOF_UNKNOWN	48 - DOF_UNKNOWN	49 - DOF_UNKNOWN	
+Field U - element 28: 50 - DOF_UNKNOWN	51 - DOF_UNKNOWN	52 - DOF_UNKNOWN	
+Field U - element 29: 53 - DOF_UNKNOWN	54 - DOF_UNKNOWN	55 - DOF_UNKNOWN	
+Field U - element 30: 56 - DOF_UNKNOWN	57 - DOF_UNKNOWN	58 - DOF_UNKNOWN	
+Field U - element 31: 59 - DOF_UNKNOWN	60 - DOF_UNKNOWN	61 - DOF_UNKNOWN	
+Field U - element 32: 62 - DOF_UNKNOWN	63 - DOF_UNKNOWN	64 - DOF_UNKNOWN	
+Field U - element 33: 65 - DOF_UNKNOWN	66 - DOF_UNKNOWN	67 - DOF_UNKNOWN	
+Field U - element 34: 68 - DOF_UNKNOWN	69 - DOF_UNKNOWN	70 - DOF_UNKNOWN	
+Field U - element 35: 71 - DOF_UNKNOWN	72 - DOF_UNKNOWN	73 - DOF_UNKNOWN	
+Field U - element 36: 74 - DOF_UNKNOWN	75 - DOF_UNKNOWN	76 - DOF_UNKNOWN	
+Field U - element 37: 77 - DOF_UNKNOWN	78 - DOF_UNKNOWN	79 - DOF_UNKNOWN	
+Field U - element 38: 80 - DOF_UNKNOWN	81 - DOF_UNKNOWN	82 - DOF_UNKNOWN	
+Field U - element 39: 83 - DOF_UNKNOWN	84 - DOF_UNKNOWN	85 - DOF_UNKNOWN	
+Field U - element 40: 86 - DOF_UNKNOWN	87 - DOF_UNKNOWN	88 - DOF_UNKNOWN	
+Field U - element 41: 89 - DOF_UNKNOWN	90 - DOF_UNKNOWN	91 - DOF_UNKNOWN	
+Field U - element 42: 92 - DOF_UNKNOWN	93 - DOF_UNKNOWN	94 - DOF_UNKNOWN	
+Field U - element 43: 95 - DOF_UNKNOWN	96 - DOF_UNKNOWN	97 - DOF_UNKNOWN	
+Field U - element 44: 98 - DOF_UNKNOWN	99 - DOF_UNKNOWN	100 - DOF_UNKNOWN	
+Field U - element 45: 101 - DOF_UNKNOWN	102 - DOF_UNKNOWN	103 - DOF_UNKNOWN	
+Field U - element 46: 104 - DOF_UNKNOWN	105 - DOF_UNKNOWN	106 - DOF_UNKNOWN	
+Field U - element 47: 107 - DOF_UNKNOWN	108 - DOF_UNKNOWN	109 - DOF_UNKNOWN	
+Field U - element 48: 110 - DOF_UNKNOWN	111 - DOF_UNKNOWN	112 - DOF_UNKNOWN	
+Field U - element 49: 113 - DOF_UNKNOWN	114 - DOF_UNKNOWN	115 - DOF_UNKNOWN	
+Field U - element 50: 116 - DOF_UNKNOWN	117 - DOF_UNKNOWN	118 - DOF_UNKNOWN	
+Field U - element 51: 119 - DOF_UNKNOWN	120 - DOF_UNKNOWN	121 - DOF_UNKNOWN	
+Field U - element 52: 122 - DOF_UNKNOWN	123 - DOF_UNKNOWN	124 - DOF_UNKNOWN	
+Field U - element 53: 125 - DOF_UNKNOWN	126 - DOF_UNKNOWN	127 - DOF_UNKNOWN	
+Field U - element 54: 128 - DOF_UNKNOWN	129 - DOF_UNKNOWN	130 - DOF_UNKNOWN	
+Field U - element 55: 131 - DOF_UNKNOWN	132 - DOF_UNKNOWN	133 - DOF_UNKNOWN	
+Field U - element 56: 134 - DOF_UNKNOWN	135 - DOF_UNKNOWN	136 - DOF_UNKNOWN	
+Field U - element 57: 137 - DOF_UNKNOWN	138 - DOF_UNKNOWN	139 - DOF_UNKNOWN	
 Field U - Numbering of edge degrees of freedom:
 Number of edges = 71
 Max number of DOF per edge = 3
-140 - DOF_UNKNOWN
-141 - DOF_UNKNOWN
-142 - DOF_UNKNOWN
-143 - DOF_UNKNOWN
-144 - DOF_UNKNOWN
-145 - DOF_UNKNOWN
-146 - DOF_UNKNOWN
-147 - DOF_UNKNOWN
-148 - DOF_UNKNOWN
-149 - DOF_UNKNOWN
-150 - DOF_UNKNOWN
-151 - DOF_UNKNOWN
-152 - DOF_UNKNOWN
-153 - DOF_UNKNOWN
-154 - DOF_UNKNOWN
-155 - DOF_UNKNOWN
-156 - DOF_UNKNOWN
-157 - DOF_UNKNOWN
-158 - DOF_UNKNOWN
-159 - DOF_UNKNOWN
-160 - DOF_UNKNOWN
-161 - DOF_UNKNOWN
-162 - DOF_UNKNOWN
-163 - DOF_UNKNOWN
-164 - DOF_UNKNOWN
-165 - DOF_UNKNOWN
-166 - DOF_UNKNOWN
-167 - DOF_UNKNOWN
-168 - DOF_UNKNOWN
-169 - DOF_UNKNOWN
-170 - DOF_UNKNOWN
-171 - DOF_UNKNOWN
-172 - DOF_UNKNOWN
-173 - DOF_UNKNOWN
-174 - DOF_UNKNOWN
-175 - DOF_UNKNOWN
-176 - DOF_UNKNOWN
-177 - DOF_UNKNOWN
-178 - DOF_UNKNOWN
-179 - DOF_UNKNOWN
-180 - DOF_UNKNOWN
-181 - DOF_UNKNOWN
-182 - DOF_UNKNOWN
-183 - DOF_UNKNOWN
-184 - DOF_UNKNOWN
-351 - DOF_UNKNOWN
-352 - DOF_UNKNOWN
-353 - DOF_UNKNOWN
-185 - DOF_UNKNOWN
-186 - DOF_UNKNOWN
-187 - DOF_UNKNOWN
-188 - DOF_UNKNOWN
-189 - DOF_UNKNOWN
-190 - DOF_UNKNOWN
-363 - DOF_UNKNOWN
-364 - DOF_UNKNOWN
-365 - DOF_UNKNOWN
-191 - DOF_UNKNOWN
-192 - DOF_UNKNOWN
-193 - DOF_UNKNOWN
-194 - DOF_UNKNOWN
-195 - DOF_UNKNOWN
-196 - DOF_UNKNOWN
-339 - DOF_UNKNOWN
-340 - DOF_UNKNOWN
-341 - DOF_UNKNOWN
-197 - DOF_UNKNOWN
-198 - DOF_UNKNOWN
-199 - DOF_UNKNOWN
-200 - DOF_UNKNOWN
-201 - DOF_UNKNOWN
-202 - DOF_UNKNOWN
-327 - DOF_UNKNOWN
-328 - DOF_UNKNOWN
-329 - DOF_UNKNOWN
-203 - DOF_UNKNOWN
-204 - DOF_UNKNOWN
-205 - DOF_UNKNOWN
-206 - DOF_UNKNOWN
-207 - DOF_UNKNOWN
-208 - DOF_UNKNOWN
-209 - DOF_UNKNOWN
-210 - DOF_UNKNOWN
-211 - DOF_UNKNOWN
-212 - DOF_UNKNOWN
-213 - DOF_UNKNOWN
-214 - DOF_UNKNOWN
-360 - DOF_UNKNOWN
-361 - DOF_UNKNOWN
-362 - DOF_UNKNOWN
-215 - DOF_UNKNOWN
-216 - DOF_UNKNOWN
-217 - DOF_UNKNOWN
-218 - DOF_UNKNOWN
-219 - DOF_UNKNOWN
-220 - DOF_UNKNOWN
-348 - DOF_UNKNOWN
-349 - DOF_UNKNOWN
-350 - DOF_UNKNOWN
-221 - DOF_UNKNOWN
-222 - DOF_UNKNOWN
-223 - DOF_UNKNOWN
-224 - DOF_UNKNOWN
-225 - DOF_UNKNOWN
-226 - DOF_UNKNOWN
-324 - DOF_UNKNOWN
-325 - DOF_UNKNOWN
-326 - DOF_UNKNOWN
-227 - DOF_UNKNOWN
-228 - DOF_UNKNOWN
-229 - DOF_UNKNOWN
-230 - DOF_UNKNOWN
-231 - DOF_UNKNOWN
-232 - DOF_UNKNOWN
-336 - DOF_UNKNOWN
-337 - DOF_UNKNOWN
-338 - DOF_UNKNOWN
-233 - DOF_UNKNOWN
-234 - DOF_UNKNOWN
-235 - DOF_UNKNOWN
-236 - DOF_UNKNOWN
-237 - DOF_UNKNOWN
-238 - DOF_UNKNOWN
-239 - DOF_UNKNOWN
-240 - DOF_UNKNOWN
-241 - DOF_UNKNOWN
-242 - DOF_UNKNOWN
-243 - DOF_UNKNOWN
-244 - DOF_UNKNOWN
-357 - DOF_UNKNOWN
-358 - DOF_UNKNOWN
-359 - DOF_UNKNOWN
-245 - DOF_UNKNOWN
-246 - DOF_UNKNOWN
-247 - DOF_UNKNOWN
-248 - DOF_ESSENTIAL
-249 - DOF_ESSENTIAL
-250 - DOF_ESSENTIAL
-345 - DOF_ESSENTIAL
-346 - DOF_ESSENTIAL
-347 - DOF_ESSENTIAL
-251 - DOF_ESSENTIAL
-252 - DOF_ESSENTIAL
-253 - DOF_ESSENTIAL
-254 - DOF_UNKNOWN
-255 - DOF_UNKNOWN
-256 - DOF_UNKNOWN
-354 - DOF_UNKNOWN
-355 - DOF_UNKNOWN
-356 - DOF_UNKNOWN
-257 - DOF_UNKNOWN
-258 - DOF_UNKNOWN
-259 - DOF_UNKNOWN
-366 - DOF_UNKNOWN
-367 - DOF_UNKNOWN
-368 - DOF_UNKNOWN
-260 - DOF_UNKNOWN
-261 - DOF_UNKNOWN
-262 - DOF_UNKNOWN
-263 - DOF_UNKNOWN
-264 - DOF_UNKNOWN
-265 - DOF_UNKNOWN
-321 - DOF_ESSENTIAL
-322 - DOF_ESSENTIAL
-323 - DOF_ESSENTIAL
-266 - DOF_ESSENTIAL
-267 - DOF_ESSENTIAL
-268 - DOF_ESSENTIAL
-342 - DOF_ESSENTIAL
-343 - DOF_ESSENTIAL
-344 - DOF_ESSENTIAL
-269 - DOF_UNKNOWN
-270 - DOF_UNKNOWN
-271 - DOF_UNKNOWN
-330 - DOF_UNKNOWN
-331 - DOF_UNKNOWN
-332 - DOF_UNKNOWN
-272 - DOF_UNKNOWN
-273 - DOF_UNKNOWN
-274 - DOF_UNKNOWN
-275 - DOF_UNKNOWN
-276 - DOF_UNKNOWN
-277 - DOF_UNKNOWN
-333 - DOF_UNKNOWN
-334 - DOF_UNKNOWN
-335 - DOF_UNKNOWN
-278 - DOF_UNKNOWN
-279 - DOF_UNKNOWN
-280 - DOF_UNKNOWN
-281 - DOF_ESSENTIAL
-282 - DOF_ESSENTIAL
-283 - DOF_ESSENTIAL
-284 - DOF_ESSENTIAL
-285 - DOF_ESSENTIAL
-286 - DOF_ESSENTIAL
-287 - DOF_ESSENTIAL
-288 - DOF_ESSENTIAL
-289 - DOF_ESSENTIAL
-290 - DOF_UNKNOWN
-291 - DOF_UNKNOWN
-292 - DOF_UNKNOWN
-293 - DOF_UNKNOWN
-294 - DOF_UNKNOWN
-295 - DOF_UNKNOWN
-296 - DOF_UNKNOWN
-297 - DOF_UNKNOWN
-298 - DOF_UNKNOWN
-299 - DOF_UNKNOWN
-300 - DOF_UNKNOWN
-301 - DOF_UNKNOWN
-302 - DOF_UNKNOWN
-303 - DOF_UNKNOWN
-304 - DOF_UNKNOWN
+Field U - edge 0: 140 - DOF_UNKNOWN	141 - DOF_UNKNOWN	142 - DOF_UNKNOWN	
+Field U - edge 1: 143 - DOF_UNKNOWN	144 - DOF_UNKNOWN	145 - DOF_UNKNOWN	
+Field U - edge 2: 146 - DOF_UNKNOWN	147 - DOF_UNKNOWN	148 - DOF_UNKNOWN	
+Field U - edge 3: 149 - DOF_UNKNOWN	150 - DOF_UNKNOWN	151 - DOF_UNKNOWN	
+Field U - edge 4: 152 - DOF_UNKNOWN	153 - DOF_UNKNOWN	154 - DOF_UNKNOWN	
+Field U - edge 5: 155 - DOF_UNKNOWN	156 - DOF_UNKNOWN	157 - DOF_UNKNOWN	
+Field U - edge 6: 158 - DOF_UNKNOWN	159 - DOF_UNKNOWN	160 - DOF_UNKNOWN	
+Field U - edge 7: 161 - DOF_UNKNOWN	162 - DOF_UNKNOWN	163 - DOF_UNKNOWN	
+Field U - edge 8: 164 - DOF_UNKNOWN	165 - DOF_UNKNOWN	166 - DOF_UNKNOWN	
+Field U - edge 9: 167 - DOF_UNKNOWN	168 - DOF_UNKNOWN	169 - DOF_UNKNOWN	
+Field U - edge 10: 170 - DOF_UNKNOWN	171 - DOF_UNKNOWN	172 - DOF_UNKNOWN	
+Field U - edge 11: 173 - DOF_UNKNOWN	174 - DOF_UNKNOWN	175 - DOF_UNKNOWN	
+Field U - edge 12: 176 - DOF_UNKNOWN	177 - DOF_UNKNOWN	178 - DOF_UNKNOWN	
+Field U - edge 13: 179 - DOF_UNKNOWN	180 - DOF_UNKNOWN	181 - DOF_UNKNOWN	
+Field U - edge 14: 182 - DOF_UNKNOWN	183 - DOF_UNKNOWN	184 - DOF_UNKNOWN	
+Field U - edge 15: 351 - DOF_UNKNOWN	352 - DOF_UNKNOWN	353 - DOF_UNKNOWN	
+Field U - edge 16: 185 - DOF_UNKNOWN	186 - DOF_UNKNOWN	187 - DOF_UNKNOWN	
+Field U - edge 17: 188 - DOF_UNKNOWN	189 - DOF_UNKNOWN	190 - DOF_UNKNOWN	
+Field U - edge 18: 363 - DOF_UNKNOWN	364 - DOF_UNKNOWN	365 - DOF_UNKNOWN	
+Field U - edge 19: 191 - DOF_UNKNOWN	192 - DOF_UNKNOWN	193 - DOF_UNKNOWN	
+Field U - edge 20: 194 - DOF_UNKNOWN	195 - DOF_UNKNOWN	196 - DOF_UNKNOWN	
+Field U - edge 21: 339 - DOF_UNKNOWN	340 - DOF_UNKNOWN	341 - DOF_UNKNOWN	
+Field U - edge 22: 197 - DOF_UNKNOWN	198 - DOF_UNKNOWN	199 - DOF_UNKNOWN	
+Field U - edge 23: 200 - DOF_UNKNOWN	201 - DOF_UNKNOWN	202 - DOF_UNKNOWN	
+Field U - edge 24: 327 - DOF_UNKNOWN	328 - DOF_UNKNOWN	329 - DOF_UNKNOWN	
+Field U - edge 25: 203 - DOF_UNKNOWN	204 - DOF_UNKNOWN	205 - DOF_UNKNOWN	
+Field U - edge 26: 206 - DOF_UNKNOWN	207 - DOF_UNKNOWN	208 - DOF_UNKNOWN	
+Field U - edge 27: 209 - DOF_UNKNOWN	210 - DOF_UNKNOWN	211 - DOF_UNKNOWN	
+Field U - edge 28: 212 - DOF_UNKNOWN	213 - DOF_UNKNOWN	214 - DOF_UNKNOWN	
+Field U - edge 29: 360 - DOF_UNKNOWN	361 - DOF_UNKNOWN	362 - DOF_UNKNOWN	
+Field U - edge 30: 215 - DOF_UNKNOWN	216 - DOF_UNKNOWN	217 - DOF_UNKNOWN	
+Field U - edge 31: 218 - DOF_UNKNOWN	219 - DOF_UNKNOWN	220 - DOF_UNKNOWN	
+Field U - edge 32: 348 - DOF_UNKNOWN	349 - DOF_UNKNOWN	350 - DOF_UNKNOWN	
+Field U - edge 33: 221 - DOF_UNKNOWN	222 - DOF_UNKNOWN	223 - DOF_UNKNOWN	
+Field U - edge 34: 224 - DOF_UNKNOWN	225 - DOF_UNKNOWN	226 - DOF_UNKNOWN	
+Field U - edge 35: 324 - DOF_UNKNOWN	325 - DOF_UNKNOWN	326 - DOF_UNKNOWN	
+Field U - edge 36: 227 - DOF_UNKNOWN	228 - DOF_UNKNOWN	229 - DOF_UNKNOWN	
+Field U - edge 37: 230 - DOF_UNKNOWN	231 - DOF_UNKNOWN	232 - DOF_UNKNOWN	
+Field U - edge 38: 336 - DOF_UNKNOWN	337 - DOF_UNKNOWN	338 - DOF_UNKNOWN	
+Field U - edge 39: 233 - DOF_UNKNOWN	234 - DOF_UNKNOWN	235 - DOF_UNKNOWN	
+Field U - edge 40: 236 - DOF_UNKNOWN	237 - DOF_UNKNOWN	238 - DOF_UNKNOWN	
+Field U - edge 41: 239 - DOF_UNKNOWN	240 - DOF_UNKNOWN	241 - DOF_UNKNOWN	
+Field U - edge 42: 242 - DOF_UNKNOWN	243 - DOF_UNKNOWN	244 - DOF_UNKNOWN	
+Field U - edge 43: 357 - DOF_UNKNOWN	358 - DOF_UNKNOWN	359 - DOF_UNKNOWN	
+Field U - edge 44: 245 - DOF_UNKNOWN	246 - DOF_UNKNOWN	247 - DOF_UNKNOWN	
+Field U - edge 45: 248 - DOF_ESSENTIAL	249 - DOF_ESSENTIAL	250 - DOF_ESSENTIAL	
+Field U - edge 46: 345 - DOF_ESSENTIAL	346 - DOF_ESSENTIAL	347 - DOF_ESSENTIAL	
+Field U - edge 47: 251 - DOF_ESSENTIAL	252 - DOF_ESSENTIAL	253 - DOF_ESSENTIAL	
+Field U - edge 48: 254 - DOF_UNKNOWN	255 - DOF_UNKNOWN	256 - DOF_UNKNOWN	
+Field U - edge 49: 354 - DOF_UNKNOWN	355 - DOF_UNKNOWN	356 - DOF_UNKNOWN	
+Field U - edge 50: 257 - DOF_UNKNOWN	258 - DOF_UNKNOWN	259 - DOF_UNKNOWN	
+Field U - edge 51: 366 - DOF_UNKNOWN	367 - DOF_UNKNOWN	368 - DOF_UNKNOWN	
+Field U - edge 52: 260 - DOF_UNKNOWN	261 - DOF_UNKNOWN	262 - DOF_UNKNOWN	
+Field U - edge 53: 263 - DOF_UNKNOWN	264 - DOF_UNKNOWN	265 - DOF_UNKNOWN	
+Field U - edge 54: 321 - DOF_ESSENTIAL	322 - DOF_ESSENTIAL	323 - DOF_ESSENTIAL	
+Field U - edge 55: 266 - DOF_ESSENTIAL	267 - DOF_ESSENTIAL	268 - DOF_ESSENTIAL	
+Field U - edge 56: 342 - DOF_ESSENTIAL	343 - DOF_ESSENTIAL	344 - DOF_ESSENTIAL	
+Field U - edge 57: 269 - DOF_UNKNOWN	270 - DOF_UNKNOWN	271 - DOF_UNKNOWN	
+Field U - edge 58: 330 - DOF_UNKNOWN	331 - DOF_UNKNOWN	332 - DOF_UNKNOWN	
+Field U - edge 59: 272 - DOF_UNKNOWN	273 - DOF_UNKNOWN	274 - DOF_UNKNOWN	
+Field U - edge 60: 275 - DOF_UNKNOWN	276 - DOF_UNKNOWN	277 - DOF_UNKNOWN	
+Field U - edge 61: 333 - DOF_UNKNOWN	334 - DOF_UNKNOWN	335 - DOF_UNKNOWN	
+Field U - edge 62: 278 - DOF_UNKNOWN	279 - DOF_UNKNOWN	280 - DOF_UNKNOWN	
+Field U - edge 63: 281 - DOF_ESSENTIAL	282 - DOF_ESSENTIAL	283 - DOF_ESSENTIAL	
+Field U - edge 64: 284 - DOF_ESSENTIAL	285 - DOF_ESSENTIAL	286 - DOF_ESSENTIAL	
+Field U - edge 65: 287 - DOF_ESSENTIAL	288 - DOF_ESSENTIAL	289 - DOF_ESSENTIAL	
+Field U - edge 66: 290 - DOF_UNKNOWN	291 - DOF_UNKNOWN	292 - DOF_UNKNOWN	
+Field U - edge 67: 293 - DOF_UNKNOWN	294 - DOF_UNKNOWN	295 - DOF_UNKNOWN	
+Field U - edge 68: 296 - DOF_UNKNOWN	297 - DOF_UNKNOWN	298 - DOF_UNKNOWN	
+Field U - edge 69: 299 - DOF_UNKNOWN	300 - DOF_UNKNOWN	301 - DOF_UNKNOWN	
+Field U - edge 70: 302 - DOF_UNKNOWN	303 - DOF_UNKNOWN	304 - DOF_UNKNOWN	

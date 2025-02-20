@@ -42,6 +42,8 @@ feStatus createFiniteElementSpace(feSpace *&space, feMesh *mesh, const elementTy
       } else if(element == elementType::HERMITE) {
         feInfoCond(FE_VERBOSE > 0, "\t\t\tFinite element: Hermite");
         space = new feSpace0D_Hermite(mesh, fieldName, cncGeoID, (feFunction *)fct);
+      } else {
+        return feErrorMsg(FE_STATUS_ERROR, "Unsupported finite element.");
       }
 
       break;
@@ -96,7 +98,7 @@ feStatus createFiniteElementSpace(feSpace *&space, feMesh *mesh, const elementTy
               FE_STATUS_ERROR,
               "No vector-valued Lagrange finite element space implemented for deg > 4 or = 0.");
         }
-      } else if(element == elementType::DG_LAGRANGE) {
+      } else if(element == elementType::LAGRANGE_DISCONTINUOUS) {
         feInfoCond(FE_VERBOSE > 0, "\t\t\tFinite element: Discontinuous Lagrange");
         space = new feSpace1D_DG_P1(mesh, fieldName, cncGeoID, (feFunction *)fct);
 
@@ -134,6 +136,9 @@ feStatus createFiniteElementSpace(feSpace *&space, feMesh *mesh, const elementTy
         feInfoCond(FE_VERBOSE > 0, "\t\t\tFinite element: Lagrange");
 
         switch(degree) {
+          case 0:
+            space = new feSpaceTriP0(mesh, fieldName, cncGeoID, (feFunction *)fct);
+            break;
           case 1:
             space = new feSpaceTriP1(mesh, fieldName, cncGeoID, (feFunction *)fct);
             break;
@@ -150,7 +155,24 @@ feStatus createFiniteElementSpace(feSpace *&space, feMesh *mesh, const elementTy
           default:
             return feErrorMsg(
               FE_STATUS_ERROR,
-              "No LAGRANGE 2D finite element space implemented on triangles for deg > 4 or = 0.");
+              "No LAGRANGE 2D finite element space implemented on triangles for deg > 4.");
+        }
+
+      } else if(element == elementType::LAGRANGE_BUBBLE)
+      {
+        feInfoCond(FE_VERBOSE > 0, "\t\t\tFinite element: Bubble-enriched Lagrange");
+        space = new feSpaceTriP2Bubble(mesh, fieldName, cncGeoID, (feFunction *)fct);
+
+        if(degree != 2) {
+          return feErrorMsg(FE_STATUS_ERROR, "Bubble-enriched Lagrange FE space only for quadratic (P2+) elements so far.");
+        }
+
+      } else if(element == elementType::LAGRANGE_DISCONTINUOUS) {
+        feInfoCond(FE_VERBOSE > 0, "\t\t\tFinite element: Discontinuous Lagrange");
+        space = new feSpaceTriP1_Discontinuous(mesh, fieldName, cncGeoID, (feFunction *)fct);
+
+        if(degree > 1) {
+          return feErrorMsg(FE_STATUS_ERROR, "Discontinuous Lagrange FE space only for linear elements so far.");
         }
 
       } else if(element == elementType::VECTOR_LAGRANGE) {
@@ -174,6 +196,15 @@ feStatus createFiniteElementSpace(feSpace *&space, feMesh *mesh, const elementTy
               FE_STATUS_ERROR,
               "No vector-valued finite element space implemented for deg > 4 or = 0.");
         }
+      } else if(element == elementType::VECTOR_LAGRANGE_BUBBLE) {
+        feInfoCond(FE_VERBOSE > 0, "\t\t\tFinite element: Bubble-enriched vector-valued Lagrange");
+
+        space = new feSpaceVecTriP2Bubble<2>(mesh, fieldName, cncGeoID, (feVectorFunction *)fct);
+
+        if(degree != 2) {
+          return feErrorMsg(FE_STATUS_ERROR, "Bubble-enriched vector Lagrange FE space only for quadratic (P2+) elements so far.");
+        }
+        
       } else if(element == elementType::CROUZEIX_RAVIART) {
         feInfoCond(FE_VERBOSE > 0, "\t\t\tFinite element: non-conforming Crouzeix-Raviart");
 

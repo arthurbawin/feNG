@@ -111,6 +111,9 @@ double feNorm::compute(normType type)
     case LINF_ERROR:
       res = this->computeLInfNorm(true);
       break;
+    case VECTOR_LINF_ERROR:
+      res = this->computeVectorLInfNorm(true);
+      break;
     case SEMI_H1:
       res = this->computeH1SemiNorm(false);
       break;
@@ -216,7 +219,6 @@ double feNorm::computeLpNorm(int p, bool error)
   // Negative quadrature weights can sum to a very small but negative integral
   if(res < 0 && fabs(res) < 1e-14) { res = fabs(res); }
 
-  feInfo("Summed feNorm on %d elements = %+-1.6e", _nElm, pow(res, 1. / (double)p));
   return pow(res, 1. / (double)p);
 }
 
@@ -1067,6 +1069,36 @@ double feNorm::computeVectorLpNorm(int p, bool error)
     }
   }
   return pow(res, 1. / (double)p);
+}
+
+double feNorm::computeVectorLInfNorm(bool error)
+{
+  double res = 0.0, t = _solution->getCurrentTime();
+  std::vector<double> u(3, 0.);
+  std::vector<double> uh(3, 0.);
+  int nComponents = _spaces[0]->getNumComponents();
+
+  if(error && _vectorSolution == nullptr) {
+    feErrorMsg(FE_STATUS_ERROR, "Cannot compute Linf norm of vector error function"
+                                " because exact solution is NULL");
+    exit(-1);
+  }
+
+  for(int iElm = 0; iElm < _nElm; ++iElm) {
+    this->initializeLocalSolutionOnSpace(0, iElm);
+    _spaces[0]->_mesh->getCoord(_cnc, iElm, _geoCoord);
+
+    for(int k = 0; k < _nQuad; ++k) {
+      _spaces[0]->interpolateVectorFieldAtQuadNode(_localSol[0], k, uh, nComponents);
+      _geoSpace->interpolateVectorFieldAtQuadNode(_geoCoord, k, _pos);
+      if(error) (*_vectorSolution)(t, _pos, u);
+
+      for(int i = 0; i < nComponents; ++i) {
+        res = fmax(res, fabs(u[i] - uh[i]));
+      }
+    }
+  }
+  return res;
 }
 
 double feNorm::computeL1Norm(bool error)

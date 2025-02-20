@@ -18,6 +18,8 @@ typedef std::function<void(const double, const std::vector<double> &, const std:
                            std::vector<double> &)> VectorField;
 
 // Convenience type for a vector function F(u)
+// FIXME: Not ideal because it is identical to ScalarField!
+// This allows the creation of feVectorFunctions with ScalarField callbacks
 typedef std::function<void(const double, const std::vector<double> &, std::vector<double> &)> VectorSolField;
 
 // Convenience type for a function M(t, [x y z]) that returns a 2x2 matrix

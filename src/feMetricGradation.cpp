@@ -543,6 +543,11 @@ feStatus feMetric::newGradation(const std::vector<std::size_t> &nodeTags, const 
   // }
   ////////////////////////////////////////////////////
 
+  // Optional, but helps avoid the "rays" artifacts:
+  // Shuffle the set of edges to apply gradation randomly
+  std::vector<std::pair<size_t,size_t>> edgesVec(edges.begin(), edges.end());
+  std::shuffle(edgesVec.begin(), edgesVec.end(), std::default_random_engine(std::random_device{}()));
+
   // fprintf(myFile, "};"); fclose(myFile);
 
   int iter = 0, numCorrected;
@@ -552,7 +557,7 @@ feStatus feMetric::newGradation(const std::vector<std::size_t> &nodeTags, const 
     while(correction && iter < _options.gradationMaxIter)
     {
     	numCorrected = 0; correction = false; iter++;
-      for(auto edge : edges) {
+      for(auto &edge : edgesVec) {
       	if(gradationOnEdge(_options.gradationSpace, gradation, edge, coord, metricsAtNodeTags)) {
           numCorrected++;
       	  correction = true;
@@ -575,7 +580,7 @@ feStatus feMetric::newGradation(const std::vector<std::size_t> &nodeTags, const 
         mNew[nodeTags[i]].assignMatrixFrom(metricsAtNodeTags.at(nodeTags[i]));
       }
 
-      for(auto edge : edges) {
+      for(auto &edge : edgesVec) {
         if(gradationOnEdgeExpMetric(_options.gradationSpace, beta, edge, coord, metricsAtNodeTags, mNew)){
           numCorrected++;
           correction = true;

@@ -38,6 +38,47 @@ static void duplicateScalarArray(const int scalarSize, const int chunkSize,
 }
 
 // -----------------------------------------------------------------------------
+// Discontinuous Lagrange element of degree 0 on reference triangle r = [0,1], s = [0,1-r]
+// -----------------------------------------------------------------------------
+feSpaceTriP0::feSpaceTriP0(feMesh *mesh, const std::string fieldID, const std::string cncGeoID,
+                           feFunction *fct, const bool useGlobalShapeFunctions)
+  : feScalarSpace(2, mesh, fieldID, cncGeoID, fct, useGlobalShapeFunctions)
+{
+  _isDiscontinuous = true;
+  _nFunctions = 1;
+  _Lcoor = {1./3., 1./3., 0.};
+  _dofLocations = {dofLocation::ELEMENT};
+}
+
+std::vector<double> feSpaceTriP0::L(double */*r*/) { return {1.0}; }
+void feSpaceTriP0::L(double */*r*/, double *L) { L[0] = 1.0; }
+std::vector<double> feSpaceTriP0::dLdr(double */*r*/) { return {0.}; }
+std::vector<double> feSpaceTriP0::dLds(double */*r*/) { return {0.}; }
+std::vector<double> feSpaceTriP0::d2Ldr2(double */*r*/) { return {0.}; }
+std::vector<double> feSpaceTriP0::d2Ldrs(double */*r*/) { return {0.}; }
+std::vector<double> feSpaceTriP0::d2Lds2(double */*r*/) { return {0.}; }
+
+void feSpaceTriP0::initializeNumberingUnknowns()
+{
+  int nDOFPerElem = 1;
+  for(int i = 0; i < _mesh->getNumElements(_cncGeoID); ++i) {
+    _numbering->setUnknownElementDOF(_mesh, _cncGeoID, i, nDOFPerElem);
+  }
+}
+
+void feSpaceTriP0::initializeNumberingEssential()
+{
+  for(int i = 0; i < _mesh->getNumElements(_cncGeoID); ++i) {
+    _numbering->setEssentialElementDOF(_mesh, _cncGeoID, i);
+  }
+}
+
+void feSpaceTriP0::initializeAddressingVector(int numElem, std::vector<feInt> &adr)
+{
+  adr[0] = _numbering->getElementDOF(_mesh, _cncGeoID, numElem, 0);
+}
+
+// -----------------------------------------------------------------------------
 // Lagrange element of degree 1 on reference triangle r = [0,1], s = [0,1-r]
 // -----------------------------------------------------------------------------
 feSpaceTriP1::feSpaceTriP1(std::string cncGeoID)
@@ -95,6 +136,94 @@ void feSpaceTriP1::initializeAddressingVector(int numElem, std::vector<feInt> &a
   adr[1] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 1);
   adr[2] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 2);
 }
+
+// -----------------------------------------------------------------------------
+// Discontinuous Lagrange element of degree 1 on reference triangle r = [0,1], s = [0,1-r]
+// -----------------------------------------------------------------------------
+feSpaceTriP1_Discontinuous::feSpaceTriP1_Discontinuous(feMesh *mesh, const std::string fieldID, const std::string cncGeoID,
+                           feFunction *fct)
+  : feScalarSpace(2, mesh, fieldID, cncGeoID, fct)
+{
+  _isDiscontinuous = true;
+  _nFunctions = 3;
+  _Lcoor = {0., 0., 0., 1., 0., 0., 0., 1., 0.};
+  _dofLocations = {dofLocation::VERTEX, dofLocation::VERTEX, dofLocation::VERTEX};
+}
+
+std::vector<double> feSpaceTriP1_Discontinuous::L(double *r) { return {1.0 - r[0] - r[1], r[0], r[1]}; }
+void feSpaceTriP1_Discontinuous::L(double *r, double *L)
+{
+  L[0] = 1.0 - r[0] - r[1];
+  L[1] = r[0];
+  L[2] = r[1];
+}
+std::vector<double> feSpaceTriP1_Discontinuous::dLdr(double *r) { UNUSED(r); return {-1.0, 1.0, 0.0}; }
+std::vector<double> feSpaceTriP1_Discontinuous::dLds(double *r) { UNUSED(r); return {-1.0, 0.0, 1.0}; }
+std::vector<double> feSpaceTriP1_Discontinuous::d2Ldr2(double *r) { UNUSED(r); return {0., 0., 0.}; }
+std::vector<double> feSpaceTriP1_Discontinuous::d2Ldrs(double *r) { UNUSED(r); return {0., 0., 0.}; }
+std::vector<double> feSpaceTriP1_Discontinuous::d2Lds2(double *r) { UNUSED(r); return {0., 0., 0.}; }
+
+void feSpaceTriP1_Discontinuous::initializeNumberingUnknowns()
+{
+  int nDOFPerElem = 3;
+  for(int i = 0; i < _mesh->getNumElements(_cncGeoID); ++i) {
+    _numbering->setUnknownElementDOF(_mesh, _cncGeoID, i, nDOFPerElem);
+  }
+}
+
+void feSpaceTriP1_Discontinuous::initializeNumberingEssential()
+{
+  for(int i = 0; i < _mesh->getNumElements(_cncGeoID); ++i) {
+    _numbering->setEssentialElementDOF(_mesh, _cncGeoID, i);
+  }
+}
+
+void feSpaceTriP1_Discontinuous::initializeAddressingVector(int numElem, std::vector<feInt> &adr)
+{
+  int nDOFPerElem = 3;
+  for(int i = 0; i < nDOFPerElem; ++i) {
+    adr[i] = _numbering->getElementDOF(_mesh, _cncGeoID, numElem, i);
+  }
+}
+
+void feSpaceTriP1_Discontinuous::synchronizeCodeOfEssentialDOF()
+{
+  if(_numbering->hasVertexDOFs()) {
+    int numDOFAssociatedToVertices = 3;
+    // For each element, request the DOF status (unknown or essential)
+    // at each vertex, then update the corresponding element DOF
+    // if this DOF has been marked as essential by another feSpace.
+    for(int iElm = 0; iElm < _mesh->getNumElements(_cncGeoID); ++iElm) {
+      for(int j = 0; j < numDOFAssociatedToVertices; ++j) {
+        int vert = _mesh->getVertex(_cncGeoID, iElm, j);
+        int vertexDOFtype = _numbering->getDOFCodeAtVertex(vert);
+        if(vertexDOFtype == dofType::DOF_ESSENTIAL) {
+          _numbering->setEssentialElementDOF(_mesh, _cncGeoID, iElm, j);
+        }
+      }
+    }
+  }
+};
+
+void feSpaceTriP1_Discontinuous::synchronizeNumberingOfEssentialDOF(int &numModifiedDOF)
+{
+  if(_numbering->hasVertexDOFs()) {
+    int numDOFAssociatedToVertices = 3;
+    // If vertex DOF is essential, assign its DOF number from the 
+    // list of vertex DOF numbers.
+    for(int iElm = 0; iElm < _mesh->getNumElements(_cncGeoID); ++iElm) {
+      for(int j = 0; j < numDOFAssociatedToVertices; ++j) {
+        int vert = _mesh->getVertex(_cncGeoID, iElm, j);
+        int vertexDOFtype = _numbering->getDOFCodeAtVertex(vert);
+        if(vertexDOFtype == dofType::DOF_ESSENTIAL) {
+          int dofNumber = _numbering->getDOFNumberAtVertex(vert, 0); // Is it always 0? Probably for scalar spaces
+          _numbering->setElementDOF(_mesh, _cncGeoID, iElm, j, dofNumber);
+          numModifiedDOF++;
+        }
+      }
+    }
+  }
+};
 
 // -----------------------------------------------------------------------------
 // Vector Lagrange element of degree 1 on reference triangle r = [0,1], s = [0,1-r]
@@ -539,6 +668,114 @@ void feSpaceTriP2::initializeAddressingVector(int numElem, std::vector<feInt> &a
 }
 
 // -----------------------------------------------------------------------------
+// Lagrange element of degree 2 enriched with cubic bubble on reference triangle
+// -----------------------------------------------------------------------------
+feSpaceTriP2Bubble::feSpaceTriP2Bubble(feMesh *mesh, const std::string fieldID, const std::string cncGeoID,
+                           feFunction *fct, const bool useGlobalShapeFunctions)
+  : feScalarSpace(2, mesh, fieldID, cncGeoID, fct, useGlobalShapeFunctions)
+{
+  _nFunctions = 7;
+  _Lcoor = {0.0, 0.0, 0.0,
+            1.0, 0.0, 0.0,
+            0.0, 1.0, 0.0,
+            0.5, 0.0, 0.0,
+            0.5, 0.5, 0.0,
+            0.0, 0.5, 0.0,
+            1./3., 1./3., 0.0};
+  _dofLocations = {dofLocation::VERTEX, dofLocation::VERTEX, dofLocation::VERTEX,
+                   dofLocation::EDGE,   dofLocation::EDGE,   dofLocation::EDGE,
+                   dofLocation::ELEMENT};
+}
+
+std::vector<double> feSpaceTriP2Bubble::L(double *r)
+{
+  return {(1. - r[0] - r[1]) * (1. - 2. * r[0] - 2. * r[1]),
+          r[0] * (2. * r[0] - 1.),
+          r[1] * (2. * r[1] - 1.),
+          4. * r[0] * (1. - r[0] - r[1]),
+          4. * r[0] * r[1],
+          4. * r[1] * (1. - r[0] - r[1]),
+          27. * r[0] * r[1] * (1. - r[0] - r[1])};
+}
+void feSpaceTriP2Bubble::L(double *r, double *L)
+{
+  L[0] = (1. - r[0] - r[1]) * (1. - 2. * r[0] - 2. * r[1]);
+  L[1] = r[0] * (2. * r[0] - 1.);
+  L[2] = r[1] * (2. * r[1] - 1.);
+  L[3] = 4. * r[0] * (1. - r[0] - r[1]);
+  L[4] = 4. * r[0] * r[1];
+  L[5] = 4. * r[1] * (1. - r[0] - r[1]);
+  L[6] = 27. * r[0] * r[1] * (1. - r[0] - r[1]);
+}
+
+std::vector<double> feSpaceTriP2Bubble::dLdr(double *r)
+{
+  return {4. * (r[0] + r[1]) - 3.,      4. * r[0] - 1., 0.,
+          4. * (1. - 2. * r[0] - r[1]), 4. * r[1], -4. * r[1],
+          27. * r[1] * (1. - r[1] - 2.*r[0])};
+}
+
+std::vector<double> feSpaceTriP2Bubble::dLds(double *r)
+{
+  return {4. * (r[0] + r[1]) - 3.,     0., 4. * r[1] - 1., -4. * r[0], 4. * r[0],
+          4. * (1. - r[0] - 2. * r[1]),
+          27. * r[0] * (1. - r[0] - 2.*r[1])};
+}
+
+std::vector<double> feSpaceTriP2Bubble::d2Ldr2(double *r) { return {4., 4., 0., -8., 0.,  0., -54.*r[1]}; }
+std::vector<double> feSpaceTriP2Bubble::d2Ldrs(double *r) { return {4., 0., 0., -4., 4., -4., 27. * (1. - 2.*(r[0]+r[1]))}; }
+std::vector<double> feSpaceTriP2Bubble::d2Lds2(double *r) { return {4., 0., 4.,  0., 0., -8., -54.*r[0]}; }
+
+void feSpaceTriP2Bubble::initializeNumberingUnknowns()
+{
+  int nDOFPerEdge = 1;
+  int nDOFPerElement = 1;
+  for(int i = 0; i < _mesh->getNumElements(_cncGeoID); ++i) {
+    for(int j = 0; j < this->getCncGeo()->getNumVerticesPerElem(); ++j) {
+      _numbering->setUnknownVertexDOF(_mesh, _cncGeoID, i, j);
+    }
+    if(this->getCncGeo()->getFeSpace()->getPolynomialDegree() != 2) {
+      _numbering->setUnknownEdgeDOF(_mesh, _cncGeoID, i, 0, nDOFPerEdge);
+      _numbering->setUnknownEdgeDOF(_mesh, _cncGeoID, i, 1, nDOFPerEdge);
+      _numbering->setUnknownEdgeDOF(_mesh, _cncGeoID, i, 2, nDOFPerEdge);
+    }
+    _numbering->setUnknownElementDOF(_mesh, _cncGeoID, i, nDOFPerElement);
+  }
+}
+
+void feSpaceTriP2Bubble::initializeNumberingEssential()
+{
+  for(int i = 0; i < _mesh->getNumElements(_cncGeoID); ++i) {
+    for(int j = 0; j < this->getCncGeo()->getNumVerticesPerElem(); ++j) {
+      _numbering->setEssentialVertexDOF(_mesh, _cncGeoID, i, j);
+    }
+    if(this->getCncGeo()->getFeSpace()->getPolynomialDegree() != 2) {
+      _numbering->setEssentialEdgeDOF(_mesh, _cncGeoID, i, 0);
+      _numbering->setEssentialEdgeDOF(_mesh, _cncGeoID, i, 1);
+      _numbering->setEssentialEdgeDOF(_mesh, _cncGeoID, i, 2);
+    }
+    _numbering->setEssentialElementDOF(_mesh, _cncGeoID, i);
+  }
+}
+
+void feSpaceTriP2Bubble::initializeAddressingVector(int numElem, std::vector<feInt> &adr)
+{
+  adr[0] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 0);
+  adr[1] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 1);
+  adr[2] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 2);
+  if(this->getCncGeo()->getFeSpace()->getPolynomialDegree() == 2) {
+    adr[3] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 3);
+    adr[4] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 4);
+    adr[5] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 5);
+  } else {
+    adr[3] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 0, 0);
+    adr[4] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 1, 0);
+    adr[5] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 2, 0);
+  }
+  adr[6] = _numbering->getElementDOF(_mesh, _cncGeoID, numElem, 0);
+}
+
+// -----------------------------------------------------------------------------
 // Vector Lagrange element of degree 2 on reference triangle r = [0,1], s = [0,1-r]
 // -----------------------------------------------------------------------------
 template <int dim>
@@ -687,6 +924,171 @@ void feSpaceVecTriP2<dim>::initializeAddressingVector(int numElem, std::vector<f
 
 template class feSpaceVecTriP2<1>;
 template class feSpaceVecTriP2<2>;
+
+// -----------------------------------------------------------------------------
+// Vector Lagrange element of degree 2 with cubic bubble on reference triangle
+// -----------------------------------------------------------------------------
+template <int dim>
+feSpaceVecTriP2Bubble<dim>::feSpaceVecTriP2Bubble(feMesh *mesh, const std::string fieldID,
+                                      const std::string cncGeoID, feVectorFunction *fct,
+                                      const bool useGlobalShapeFunctions)
+  : feVectorSpace(2, mesh, fieldID, cncGeoID, fct, useGlobalShapeFunctions)
+{
+  _nComponents = dim;
+  _nFunctions = 7 * dim;
+  double coor[7 * 3] = {0., 0., 0.,
+    1., 0., 0.,
+    0., 1., 0.,
+    0.5, 0., 0.,
+    0.5, 0.5, 0.,
+    0., 0.5, 0.,
+    1./3., 1./3., 0.};
+  _Lcoor.resize(7 * 3 * dim);
+  duplicateScalarArray(7 * 3, 3, coor, dim, _Lcoor);
+  _dofLocations.resize(_nFunctions);
+  for(int i = 0; i < _nFunctions; ++i) {
+    if     (i < 3 * dim) _dofLocations[i] = dofLocation::VERTEX;
+    else if(i < 6 * dim) _dofLocations[i] = dofLocation::EDGE;
+    else _dofLocations[i] = dofLocation::ELEMENT;
+  }
+}
+
+template <int dim> std::vector<double> feSpaceVecTriP2Bubble<dim>::L(double *r)
+{
+  double phi[7] = {(1. - r[0] - r[1]) * (1. - 2. * r[0] - 2. * r[1]),
+                   r[0] * (2. * r[0] - 1.),
+                   r[1] * (2. * r[1] - 1.),
+                   4. * r[0] * (1. - r[0] - r[1]),
+                   4. * r[0] * r[1],
+                   4. * r[1] * (1. - r[0] - r[1]),
+                   27. * r[0] * r[1] * (1. - r[0] - r[1])};
+  std::vector<double> res(_nFunctions);
+  duplicateScalarArray(7, 1, phi, dim, res);
+  return res;
+}
+
+template <int dim> void feSpaceVecTriP2Bubble<dim>::L(double *r, double *res)
+{
+  double phi[7] = {(1. - r[0] - r[1]) * (1. - 2. * r[0] - 2. * r[1]),
+                   r[0] * (2. * r[0] - 1.),
+                   r[1] * (2. * r[1] - 1.),
+                   4. * r[0] * (1. - r[0] - r[1]),
+                   4. * r[0] * r[1],
+                   4. * r[1] * (1. - r[0] - r[1]),
+                   27. * r[0] * r[1] * (1. - r[0] - r[1])};
+  duplicateScalarArray(7, 1, phi, dim, res);
+}
+
+template <int dim> std::vector<double> feSpaceVecTriP2Bubble<dim>::dLdr(double *r)
+{
+  double dldr[7] = {4. * (r[0] + r[1]) - 3.,      4. * r[0] - 1., 0.,
+                    4. * (1. - 2. * r[0] - r[1]), 4. * r[1],      -4. * r[1],
+                    27. * r[1] * (1. - r[1] - 2.*r[0])};
+  std::vector<double> res(_nFunctions);
+  duplicateScalarArray(7, 1, dldr, dim, res);
+  return res;
+}
+
+template <int dim> std::vector<double> feSpaceVecTriP2Bubble<dim>::dLds(double *r)
+{
+  double dlds[7] = {4. * (r[0] + r[1]) - 3.,     0., 4. * r[1] - 1., -4. * r[0], 4. * r[0],
+                    4. * (1. - r[0] - 2. * r[1]),
+                    27. * r[0] * (1. - r[0] - 2.*r[1])};
+  std::vector<double> res(_nFunctions);
+  duplicateScalarArray(7, 1, dlds, dim, res);
+  return res;
+}
+
+template <int dim> std::vector<double> feSpaceVecTriP2Bubble<dim>::d2Ldr2(double *r)
+{
+  UNUSED(r);
+  double d2ldr2[7] = {4., 4., 0., -8., 0., 0., -54.*r[1]};
+  std::vector<double> res(_nFunctions);
+  duplicateScalarArray(7, 1, d2ldr2, dim, res);
+  return res;
+}
+
+template <int dim> std::vector<double> feSpaceVecTriP2Bubble<dim>::d2Ldrs(double *r)
+{
+  UNUSED(r);
+  double d2ldrs[7] = {4., 0., 0., -4., 4., -4., 27. * (1. - 2.*(r[0]+r[1]))};
+  std::vector<double> res(_nFunctions);
+  duplicateScalarArray(7, 1, d2ldrs, dim, res);
+  return res;
+}
+
+template <int dim> std::vector<double> feSpaceVecTriP2Bubble<dim>::d2Lds2(double *r)
+{
+  UNUSED(r);
+  double d2lds2[7] = {4., 0., 4., 0., 0., -8., -54.*r[0]};
+  std::vector<double> res(_nFunctions);
+  duplicateScalarArray(7, 1, d2lds2, dim, res);
+  return res;
+}
+
+template <int dim> void feSpaceVecTriP2Bubble<dim>::initializeNumberingUnknowns()
+{
+  int nDOFPerVertex = dim;
+  int nDOFPerEdge = dim;
+  int nDOFPerElem = dim;
+  for(int i = 0; i < _mesh->getNumElements(_cncGeoID); ++i) {
+    for(int j = 0; j < this->getCncGeo()->getNumVerticesPerElem(); ++j) {
+      _numbering->setUnknownVertexDOF(_mesh, _cncGeoID, i, j, nDOFPerVertex);
+    }
+    if(this->getCncGeo()->getFeSpace()->getPolynomialDegree() != 2) {
+      _numbering->setUnknownEdgeDOF(_mesh, _cncGeoID, i, 0, nDOFPerEdge);
+      _numbering->setUnknownEdgeDOF(_mesh, _cncGeoID, i, 1, nDOFPerEdge);
+      _numbering->setUnknownEdgeDOF(_mesh, _cncGeoID, i, 2, nDOFPerEdge);
+    }
+    _numbering->setUnknownElementDOF(_mesh, _cncGeoID, i, nDOFPerElem);
+  }
+}
+
+template <int dim> void feSpaceVecTriP2Bubble<dim>::initializeNumberingEssential()
+{
+  for(int i = 0; i < _mesh->getNumElements(_cncGeoID); ++i) {
+    for(int j = 0; j < this->getCncGeo()->getNumVerticesPerElem(); ++j) {
+      _numbering->setEssentialVertexDOF(_mesh, _cncGeoID, i, j);
+    }
+    if(this->getCncGeo()->getFeSpace()->getPolynomialDegree() != 2) {
+      _numbering->setEssentialEdgeDOF(_mesh, _cncGeoID, i, 0);
+      _numbering->setEssentialEdgeDOF(_mesh, _cncGeoID, i, 1);
+      _numbering->setEssentialEdgeDOF(_mesh, _cncGeoID, i, 2);
+    }
+    _numbering->setEssentialElementDOF(_mesh, _cncGeoID, i);
+  }
+}
+
+template <int dim>
+void feSpaceVecTriP2Bubble<dim>::initializeAddressingVector(int numElem, std::vector<feInt> &adr)
+{
+  adr[0] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 0, 0);
+  adr[1] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 0, 1);
+  adr[2] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 1, 0);
+  adr[3] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 1, 1);
+  adr[4] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 2, 0);
+  adr[5] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 2, 1);
+  if(this->getCncGeo()->getFeSpace()->getPolynomialDegree() == 2) {
+    adr[6] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 3, 0);
+    adr[7] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 3, 1);
+    adr[8] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 4, 0);
+    adr[9] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 4, 1);
+    adr[10] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 5, 0);
+    adr[11] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 5, 1);
+  } else {
+    adr[6] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 0, 0);
+    adr[7] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 0, 1);
+    adr[8] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 1, 0);
+    adr[9] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 1, 1);
+    adr[10] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 2, 0);
+    adr[11] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 2, 1);
+  }
+  adr[12] = _numbering->getElementDOF(_mesh, _cncGeoID, numElem, 0);
+  adr[13] = _numbering->getElementDOF(_mesh, _cncGeoID, numElem, 1);
+}
+
+template class feSpaceVecTriP2Bubble<1>;
+template class feSpaceVecTriP2Bubble<2>;
 
 // -----------------------------------------------------------------------------
 // Non-conforming Crouzeix-Raviart element of degree 2 on reference triangle r = [0,1], s = [0,1-r]

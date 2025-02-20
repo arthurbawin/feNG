@@ -442,7 +442,7 @@ void feSysElm_VectorDiffusion::computeBe(feBilinearForm *form)
         }
       }
 
-      feInfo("%+-1.6e - %+-1.6e - %1.6e", doubleContraction, dC, fabs(doubleContraction-dC));
+      // feInfo("%+-1.6e - %+-1.6e - %1.6e", doubleContraction, dC, fabs(doubleContraction-dC));
       ///////////////////////////////////
 
 
@@ -737,6 +737,77 @@ void feSysElm_MixedCurl::computeBe(feBilinearForm *form)
 
     for(int i = 0; i < _nFunctionsV; ++i) {
       form->_Be[i] -= coeff * curl_u * _phiV[i] * jac * _wQuad[k];
+    }
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Bilinear form: mixed dot product
+// -----------------------------------------------------------------------------
+void feSysElm_MixedDotProduct::createElementarySystem(std::vector<feSpace *> &space)
+{
+  _idV = 0; // Scalar test functions
+  _idU = 1; // Vector-valued unknown field
+  _fieldsLayoutI = {_idV}; // Rectangular local matrix
+  _fieldsLayoutJ = {_idU};
+  _nFunctionsV = space[_idV]->getNumFunctions();
+  _nFunctionsU = space[_idU]->getNumFunctions();
+  _nComponents = 2;
+  _u.resize(_nComponents);
+  _fVal.resize(_nComponents);
+  _phiV.resize(_nFunctionsV);
+  _phiU.resize(_nFunctionsU);
+}
+
+void feSysElm_MixedDotProduct::computeAe(feBilinearForm *form)
+{
+  double jac, phiudotf;
+  for(int k = 0; k < _nQuad; ++k) {
+    jac = form->_J[_nQuad * form->_numElem + k];
+    form->_cnc->computeElementTransformation(form->_geoCoord, k, jac, form->_transformation);
+
+    // Evaluate user-defined vector field
+    form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, _pos);
+    (*_f)(form->_tn, _pos, _fVal);
+
+    // _phiV
+    form->_intSpaces[_idV]->getFunctionsAtQuadNode(k, _phiV);
+    // _phiU
+    form->_intSpaces[_idU]->getFunctionsAtQuadNode(k, _phiU);
+
+    for(int i = 0; i < _nFunctionsV; ++i) {
+      for(int j = 0; j < _nFunctionsU; ++j) {
+
+        phiudotf = _phiU[j] * _fVal[j % _nComponents];
+
+        form->_Ae[i][j] += _phiV[i] * phiudotf * jac * _wQuad[k];
+      }
+    }
+  }
+}
+
+void feSysElm_MixedDotProduct::computeBe(feBilinearForm *form)
+{
+  double jac, udotf;
+  for(int k = 0; k < _nQuad; ++k) {
+    jac = form->_J[_nQuad * form->_numElem + k];
+    form->_cnc->computeElementTransformation(form->_geoCoord, k, jac, form->_transformation);
+
+    // Evaluate user-defined vector field
+    form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, _pos);
+    (*_f)(form->_tn, _pos, _fVal);
+
+    // Get u and phiV
+    form->_intSpaces[_idU]->interpolateVectorFieldAtQuadNode(form->_sol[_idU], k, _u, _nComponents);
+    form->_intSpaces[_idV]->getFunctionsAtQuadNode(k, _phiV);
+
+    udotf = 0.;
+    for(int iComp = 0; iComp < _nComponents; ++iComp) {
+      udotf += _u[iComp] * _fVal[iComp];
+    }
+
+    for(int i = 0; i < _nFunctionsV; ++i) {
+      form->_Be[i] -= udotf * _phiV[i] * jac * _wQuad[k];
     }
   }
 }

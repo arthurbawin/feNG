@@ -45,6 +45,8 @@ public:
   bool _addP2Nodes;
   int _writtenNodes;
 
+  bool _discontinuousMesh = false;
+
   int _nNodePerElem;
   int _nEdgePerElem;
 
@@ -58,7 +60,8 @@ public:
     : _mesh(mesh), _sol(sol), _metaNumber(metaNumber), _spaces(feSpaces){};
   virtual ~feExporter() {}
 
-  virtual feStatus writeStep(std::string fileName) = 0;
+  virtual feStatus writeStep(std::string fileName,
+                             const std::vector<std::string> &requiredFields = std::vector<std::string>()) = 0;
   virtual feStatus writeEigenvectors(std::string fileName) = 0;
 };
 
@@ -76,14 +79,17 @@ public:
                 feMetaNumber *metaNumber, const std::vector<feSpace *> &feSpaces);
   ~feExporterVTK() {}
 
-  feStatus writeStep(std::string fileName);
+  feStatus writeStep(std::string fileName,
+                     const std::vector<std::string> &requiredFields = std::vector<std::string>());
   feStatus writeEigenvectors(std::string fileName);
 
 private:
   void writeHeader(std::ostream &output);
   
   feStatus createVTKNodes(std::vector<feSpace*> &spacesToExport, std::unordered_map<std::string, int> &fieldTags);
+  feStatus createDiscontinuousVTKNodes(std::vector<feSpace*> &spacesToExport, std::unordered_map<std::string, int> &fieldTags);
   void writeMesh(std::ostream &output);
+  void writeDiscontinuousMesh(std::ostream &output);
   void writeVTKNodes(std::ostream &output, std::unordered_map<std::string, std::pair<int, int>> &fields);
 
   void writeNodes(std::ostream &output);

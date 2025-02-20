@@ -54,6 +54,14 @@ static std::map<geometricInterpolant, int> edgePerElem = {
   {geometricInterpolant::TETP1,   6}
 };
 
+// Reference coordinates to evaluate the fields
+static double referenceCoordinatesTri[3][2] = {
+  {0.0, 0.0}, {1.0, 0.0}, {0.0, 1.0}};
+static double referenceCoordinatesQuadraticTri[6][2] = {
+  {0.0, 0.0}, {1.0, 0.0}, {0.0, 1.0},
+  {0.5, 0.0}, {0.5, 0.5}, {0.0, 0.5}
+};
+
 feStatus createVisualizationExporter(feExporter *&exporter, visualizationFormat format,
                                      feMetaNumber *metaNumber, feSolution *solution, feMesh *mesh,
                                      const std::vector<feSpace *> &feSpaces)
@@ -329,7 +337,7 @@ feStatus feExporterVTK::createVTKNodes(std::vector<feSpace *> &spacesToExport,
     }
   }
 
-  std::vector<double> &solVec = _sol->getSolutionReference();
+  const std::vector<double> &solVec = _sol->getSolution();
 
   // Set vtkNodes data
   for(auto *space : spacesToExport) {
@@ -478,6 +486,114 @@ feStatus feExporterVTK::createVTKNodes(std::vector<feSpace *> &spacesToExport,
   return FE_STATUS_OK;
 }
 
+feStatus feExporterVTK::createDiscontinuousVTKNodes(std::vector<feSpace*> &spacesToExport,
+                                                    std::unordered_map<std::string, int> &fieldTags)
+{
+  if(_recreateVTKNodes) {
+    _recreateVTKNodes = false;
+
+    const feCncGeo *cnc = spacesToExport[0]->getCncGeo();
+    const std::string &cncName = cnc->getID();
+
+    int numElem = _mesh->getNumInteriorElements();
+    int numVerticesPerElem = _mesh->getNumVerticesPerElem(cncName);
+
+    // _nNodePerElem already includes additional P2 nodes if needed
+    _vtkNodes.resize(numElem * _nNodePerElem);
+
+    // Loop over mesh elements and create duplicated nodes
+    #if defined(HAVE_OMP)
+    #pragma omp parallel for
+    #endif
+    for(int iElm = 0; iElm < cnc->getNumElements(); ++iElm)
+    {
+      for(int j = 0; j < numVerticesPerElem; ++j)
+      {
+        vtkNode node;
+        int iVertex = _mesh->getVertex(cncName, iElm, j);
+        Vertex *v = _mesh->getVertex(iVertex);
+        node.pos[0] = v->x();
+        node.pos[1] = v->y();
+        node.pos[2] = v->z();
+
+        // A unique tag for each duplicated VTK node
+        node.globalTag = iElm * _nNodePerElem + j;
+
+        _vtkNodes[node.globalTag] = node;
+      }
+
+      if(_addP2Nodes) {
+        for(int j = 0; j < numVerticesPerElem; ++j) {
+          vtkNode node;
+          int iv0 = _mesh->getVertex(cncName, iElm, j);
+          int iv1 = _mesh->getVertex(cncName, iElm, (j+1) % 3);
+          Vertex *v0 = _mesh->getVertex(iv0);
+          Vertex *v1 = _mesh->getVertex(iv1);
+          node.pos[0] = (v0->x() + v1->x())/2.;
+          node.pos[1] = (v0->y() + v1->y())/2.;
+          node.pos[2] = (v0->z() + v1->z())/2.;
+
+          // A unique tag for each duplicated VTK node
+          node.globalTag = iElm * _nNodePerElem + 3 + j;
+
+          _vtkNodes[node.globalTag] = node;
+        }
+      }
+    }
+
+    const std::vector<double> &solArray = _sol->getSolution();
+
+    // Set vtkNodes data
+    for(auto *space : spacesToExport)
+    {
+      std::string field = space->getFieldID();
+      int iField = fieldTags[field];
+      int nComponents = space->getNumComponents();
+
+      feInfoCond(FE_VERBOSE > VERBOSE_MODERATE, 
+        "Exporting field %s on connectivity %s", field.data(), space->getCncGeoID().data());
+
+      // Loop over mesh vertices on this connectivity and evaluate field
+      #if defined(HAVE_OMP)
+      #pragma omp parallel
+      #endif
+      {
+        std::vector<feInt> adr(space->getNumFunctions());
+        std::vector<double> solOnElem(space->getNumFunctions());
+        std::vector<double> res(nComponents);
+
+        #if defined(HAVE_OMP)
+        #pragma omp for
+        #endif
+        for(int iElm = 0; iElm < cnc->getNumElements(); ++iElm)
+        {
+          for(int j = 0; j < _nNodePerElem; ++j)
+          {
+            int globalTag = iElm * _nNodePerElem + j;
+            vtkNode &node = _vtkNodes[globalTag];
+
+            // Evaluate field at visualization node
+            space->initializeAddressingVector(iElm, adr);
+            for(size_t k = 0; k < adr.size(); ++k) { solOnElem[k] = solArray[adr[k]]; }
+
+            if(_addP2Nodes) {
+              space->interpolateVectorField(solOnElem, nComponents, referenceCoordinatesQuadraticTri[j], res);
+            } else {
+              space->interpolateVectorField(solOnElem, nComponents, referenceCoordinatesTri[j], res);
+            }
+
+            for(int iComp = 0; iComp < nComponents; ++iComp) {
+              node.data[iField][iComp] = res[iComp];
+            }
+          }
+        }
+      }
+    } // for spacesToExport
+  } // if _recreateVTKNodes
+
+  return FE_STATUS_OK;
+}
+
 // Write the mesh from VTK nodes
 void feExporterVTK::writeMesh(std::ostream &output)
 {
@@ -498,8 +614,12 @@ void feExporterVTK::writeMesh(std::ostream &output)
   //
   output << "CELLS " << nElm << " " << nElm * (_nNodePerElem + 1) << std::endl;
 
-  for(auto *cnc : _exportedConnectivities) {
-    for(int iElm = 0; iElm < cnc->getNumElements(); ++iElm) {
+  for(auto *cnc : _exportedConnectivities)
+  {
+    int numVerticesPerElem = cnc->getNumVerticesPerElem();
+
+    for(int iElm = 0; iElm < cnc->getNumElements(); ++iElm)
+    {
       output << _nNodePerElem << " ";
 
       if(_addP2Nodes) {
@@ -517,10 +637,67 @@ void feExporterVTK::writeMesh(std::ostream &output)
         }
       } else {
         // Regular case : all nodes exist in the mesh
-        for(int j = 0; j < cnc->getNumVerticesPerElem(); ++j) {
-          int node = cnc->getVertexConnectivity(iElm, j);
-          output << node << " ";
+        for(int j = 0; j < numVerticesPerElem; ++j) {
+          if(_discontinuousMesh) {
+            int node = iElm * numVerticesPerElem + j;
+            output << node << " ";
+          } else {
+            int node = cnc->getVertexConnectivity(iElm, j);
+            output << node << " ";
+          }
         }
+      }
+      output << std::endl;
+    }
+  }
+
+  // Write element types
+  output << "CELL_TYPES " << nElm << std::endl;
+
+  for(auto *cnc : _exportedConnectivities) {
+    int vtkElem = cncToVTKmap[cnc->getInterpolant()];
+    for(int iElm = 0; iElm < cnc->getNumElements(); ++iElm) {
+      if(_addP2Nodes)
+        output << VTK_QUADRATIC_TRIANGLE << std::endl;
+      else
+        output << vtkElem << std::endl;
+    }
+  }
+}
+
+//
+// Write discontinuous mesh.
+// The discontinuous VTK nodes were created element by element,
+// rather than all P1 vertices followed by additional P2 vertices,
+// so the mesh must be written accordingly.
+//
+void feExporterVTK::writeDiscontinuousMesh(std::ostream &output)
+{
+  output << "DATASET UNSTRUCTURED_GRID\n";
+  output << "POINTS " << _vtkNodes.size() << " double\n";
+
+  for(auto node : _vtkNodes) {
+    output << node.pos[0] << " " << node.pos[1] << " " << node.pos[2] << std::endl;
+  }
+
+  int nElm = 0;
+  for(auto *cnc : _exportedConnectivities) {
+    nElm += cnc->getNumElements();
+  }
+
+  //
+  // Write elements connectivities for each cnc of maximum dimension.
+  // The VTK nodes are created in order element by element,
+  // so the connectivity is trivially sequential
+  //
+  output << "CELLS " << nElm << " " << nElm * (_nNodePerElem + 1) << std::endl;
+
+  int cnt = 0;
+  for(auto *cnc : _exportedConnectivities) {
+    for(int iElm = 0; iElm < cnc->getNumElements(); ++iElm) {
+      output << _nNodePerElem << " ";
+      for(int j = 0; j < _nNodePerElem; ++j) {
+        output << cnt++ << " ";
       }
       output << std::endl;
     }
@@ -543,14 +720,14 @@ void feExporterVTK::writeMesh(std::ostream &output)
 void feExporterVTK::writeVTKNodes(std::ostream &output,
                                   std::unordered_map<std::string, std::pair<int, int> > &fields)
 {
-  for(auto pair : fields) {
+  for(const auto &pair : fields) {
     std::string name = pair.first;
     int tag = pair.second.first;
     int numComponents = pair.second.second;
 
     output << name << " " << numComponents << " " << _vtkNodes.size() << " double" << std::endl;
 
-    for(auto node : _vtkNodes) {
+    for(const auto &node : _vtkNodes) {
       for(int iComp = 0; iComp < numComponents; ++iComp) {
         output << node.data[tag][iComp] << std::endl;
       }
@@ -564,7 +741,8 @@ void feExporterVTK::writeVTKNodes(std::ostream &output,
 // For now, only a single highest dimensional connectivity is exported, i.e.,
 // it does not treat meshes with two domains.
 //
-feStatus feExporterVTK::writeStep(std::string fileName)
+feStatus feExporterVTK::writeStep(std::string fileName,
+                                  const std::vector<std::string> &requiredFields)
 {
 #if defined(HAVE_MPI)
   // Write VTK file from master rank only for now
@@ -587,6 +765,20 @@ feStatus feExporterVTK::writeStep(std::string fileName)
     std::unordered_map<std::string, std::pair<int, int> > fields;
 
     for(feSpace *fS : _spaces) {
+
+      // If prescribed fields are given, only print those fields
+      if(requiredFields.size() > 0) {
+        bool found = false;
+        for(auto name : requiredFields) {
+          if(name == fS->getFieldID()) {
+            found = true;
+            break;
+          }
+        }
+        // Skip this field if not required
+        if(!found) continue;
+      }
+
       if(fS->getDim() == _mesh->getDim()) {
         spacesToExport.push_back(fS);
         cncToExport.insert(fS->getCncGeoID());
@@ -598,6 +790,14 @@ feStatus feExporterVTK::writeStep(std::string fileName)
         // f.second.first = fS->getFieldTag(); // Not assigned in feSpace...
         f.second.second = fS->getNumComponents();
         fields.insert(f);
+      }
+    }
+
+    // Check if any field is discontinuous
+    for(feSpace *s : spacesToExport) {
+      if(s->isDiscontinuous()) {
+        _discontinuousMesh = true;
+        break;
       }
     }
 
@@ -649,11 +849,18 @@ feStatus feExporterVTK::writeStep(std::string fileName)
       _nNodePerElem += _nEdgePerElem;
     }
 
-    // Export vtkNodes
-    feStatus s = createVTKNodes(spacesToExport, fieldTags);
-    if(s != FE_STATUS_OK) { return s; }
+    // Create vtkNodes and write mesh
+    if(_discontinuousMesh) {
+      feStatus s = createDiscontinuousVTKNodes(spacesToExport, fieldTags);
+      if(s != FE_STATUS_OK) { return s; }
+      writeDiscontinuousMesh(output);
+    } else {
+      feStatus s = createVTKNodes(spacesToExport, fieldTags);
+      if(s != FE_STATUS_OK) { return s; }
+      writeMesh(output);
+    }
 
-    writeMesh(output);
+    // Write the fields
     output << "POINT_DATA " << _vtkNodes.size() << std::endl;
     output << "FIELD FieldData " << fieldsToExport.size() << std::endl;
     writeVTKNodes(output, fields);
