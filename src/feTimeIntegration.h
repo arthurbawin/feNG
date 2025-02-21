@@ -11,7 +11,7 @@
 //
 // Supported time integrators schemes
 //
-enum class timeIntegratorScheme2 {
+enum class timeIntegratorScheme {
   STATIONARY,
   BDF1,
   BDF2,
@@ -26,9 +26,9 @@ enum class BDF2Starter {
   InitialCondition
 };
 
-class TimeIntegrator2;
+class TimeIntegrator;
 
-feStatus createTimeIntegrator2(TimeIntegrator2 *&solver, timeIntegratorScheme2 scheme,
+feStatus createTimeIntegrator(TimeIntegrator *&solver, timeIntegratorScheme scheme,
                               feNLSolverOptions tolerances, feLinearSystem *system,
                               feSolution *solution, feMesh *mesh,
                               std::vector<feNorm *> &norms, feExportData exportData = {},
@@ -37,7 +37,7 @@ feStatus createTimeIntegrator2(TimeIntegrator2 *&solver, timeIntegratorScheme2 s
 //
 // Abstract class for a time integration scheme
 //
-class TimeIntegrator2
+class TimeIntegrator
 {
 protected:
   feLinearSystem       *_linearSystem;
@@ -73,7 +73,7 @@ protected:
   std::vector<std::vector<double>> _postProcessingData;
 
 protected:
-  TimeIntegrator2(feLinearSystem *linearSystem,
+  TimeIntegrator(feLinearSystem *linearSystem,
                  feSolution *sol,
                  feMesh *mesh,
                  feNLSolverOptions &NLoptions,
@@ -84,7 +84,7 @@ protected:
                  double tEnd = 0.,
                  int nTimeSteps = 1);
 public:
-  virtual ~TimeIntegrator2(){};
+  virtual ~TimeIntegrator(){};
   virtual feStatus makeStep(double dt) = 0;
   virtual feStatus makeSteps(int nSteps) = 0;
   int getCurrentStep() { return _currentStep; };
@@ -98,8 +98,6 @@ public:
 
   std::vector<std::vector<double>> getPostProcessingData(){ return _postProcessingData; };
   virtual feSolutionContainer getSolutionContainer() = 0;
-  // Bad: the solution container may be deleted
-  // virtual feSolutionContainer *getSolutionContainer() = 0;
 
   void setQuietStart(bool flag) { _quietStart = flag; }
   void setExportInitialCondition(bool flag) { _exportInitialCondition = flag; }
@@ -108,19 +106,9 @@ protected:
   void initialize();
   void updateTime(const int iStep, const double dt);
   feStatus writeVisualizationFile(const int iStep, const feExportData &data);
-
-  /////////////////////////////////////////////////////////////////
-  // // Better?
-  // void copySolutionContainerInto(feSolutionContainer &targetContainer)
-  // {
-  //   targetContainer.copy(*(this->_solutionContainer));
-  // }
-
-  // std::vector<double> &getNorm(int iNorm) { return _normL2[iNorm]; };
-  /////////////////////////////////////////////////////////////////
 };
 
-class StationaryIntegrator : public TimeIntegrator2
+class StationaryIntegrator : public TimeIntegrator
 {
 protected:
   // A specialized solutionContainer
@@ -143,7 +131,7 @@ public:
   feStatus restartFromContainer(const feSolutionContainer &container);
 };
 
-class BDF1Integrator : public TimeIntegrator2
+class BDF1Integrator : public TimeIntegrator
 {
 protected:
   BDFContainer *_sC;
@@ -166,7 +154,7 @@ public:
   feStatus restartFromContainer(const feSolutionContainer &container);
 };
 
-class BDF2Integrator : public TimeIntegrator2
+class BDF2Integrator : public TimeIntegrator
 {
 protected:
   BDF2Starter _startMethod = BDF2Starter::BDF1;

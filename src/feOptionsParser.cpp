@@ -93,9 +93,15 @@ void feOptionsParser::Parse()
     for(size_t j = 0; true; j++) {
       if(j >= options.size()) {
         // unrecognized option
+      #if defined(HAVE_PETSC)
+        // Keep parsing to accept unlisted PETSc options (e.g. -ksp_view)
+        i++;
+        break;
+      #else
         error_type = 2;
         error_idx = i;
         return;
+      #endif
       }
 
       if(strcmp(argv[i], options[j].short_name) == 0 ||
@@ -163,8 +169,87 @@ void feOptionsParser::Parse()
   error_type = 0;
 }
 
+#if defined(HAVE_PETSC)
+int feOptionsParser::ParsePetsc()
+{
+  // Actually parse the command line options
+  Parse();
+
+  // Continue parsing with PETSc if the parse went well,
+  // that is, if no error or if an unknown parameter was met
+  // (this is OK as we want to include all PETSc options
+  // which are not listed).
+  // In particular, this allows to exit if a recognized option
+  // was given an incompatible type.
+  if(error_type != 0 && error_type != 2)
+    return 1;
+
+  PetscOptionsBegin(PETSC_COMM_WORLD, NULL, "", "");
+  {
+    // Always add the help to the PETSc database
+    char dummyHelp[64];
+    PetscCall(PetscOptionsString("-h", "--help", "Display the available options", dummyHelp, dummyHelp, sizeof(dummyHelp), NULL));
+
+    // Store each option in a dummy variable, but signal to PETSc that the option exists
+    // and has been populated (in the Parse() call above)
+    for(auto &option : options) {
+      switch(option.type)
+      {
+        case INT:
+        {
+          int foo = 0;
+          PetscCall(PetscOptionsInt(option.short_name, option.long_name, option.description, foo, &foo, NULL));
+          break;
+        }
+        case DOUBLE:
+        {
+          double foo = 0.;
+          PetscCall(PetscOptionsReal(option.short_name, option.long_name, option.description, foo, &foo, NULL));
+          break;
+        }
+        case STRING:
+        {
+          char foo[64];
+          PetscCall(PetscOptionsString(option.short_name, option.long_name, option.description, foo, foo, sizeof(foo), NULL));
+          break;
+        }
+        case ENABLE:
+        {
+          PetscBool foo = PETSC_TRUE;
+          PetscBool flg;
+          PetscCall(PetscOptionsBool(option.short_name, option.long_name, option.description, foo, &flg, NULL));
+          break;
+        }
+        case DISABLE:
+        {
+          PetscBool foo = PETSC_FALSE;
+          PetscBool flg;
+          PetscCall(PetscOptionsBool(option.short_name, option.long_name, option.description, foo, &flg, NULL));
+          break;
+        }
+      }
+    }
+  }
+  PetscOptionsEnd();
+  return 0;
+}
+#endif
+
 feStatus feOptionsParser::parse()
 {
+#if defined(HAVE_PETSC)
+  ParsePetsc();
+  // error_type == 2 is OK to accept unlisted PETSc options (e.g. -ksp_view)
+  if(error_type == 0 || error_type == 2) {
+    return FE_STATUS_OK;
+  } else if(error_type == 1) {
+    PrintUsage(std::cout);
+    return FE_PRINT_HELP;
+  } else {
+    PrintUsage(std::cout);
+    return feErrorMsg(FE_STATUS_ERROR, "Parse error");
+  }
+#else
   Parse();
   if(error_type == 0) {
     return FE_STATUS_OK;
@@ -175,6 +260,7 @@ feStatus feOptionsParser::parse()
     PrintUsage(std::cout);
     return feErrorMsg(FE_STATUS_ERROR, "Parse error");
   }
+#endif
 }
 
 void feOptionsParser::WriteValue(const Option &opt, std::ostream &out)

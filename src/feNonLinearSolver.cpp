@@ -61,12 +61,12 @@ feStatus solveNewtonRaphson(feLinearSystem *linearSystem,
     // Check next residual norm and return if tolerance is reached
     linearSystem->assembleResiduals(sol);
     linearSystem->getRHSMaxNorm(&normResidual);
-    // if(iter > 0 && normResidual <= tol.tolResidual) {
-    //   feInfoCond(FE_VERBOSE > 0,
-    //            "\t\t\t\tStopping because residual norm ||NL(u)|| = %10.10e is"
-    //            " below prescribed tolerance (%10.4e)", normResidual, tol.tolResidual);
-    //   break;
-    // }
+    if(iter > 0 && normResidual <= tol.tolResidual) {
+      feInfoCond(FE_VERBOSE > 0,
+               "\t\t\t\tStopping because residual norm ||NL(u)|| = %10.10e is"
+               " below prescribed tolerance (%10.4e)", normResidual, tol.tolResidual);
+      break;
+    }
 
     // Assemble and constrain FE matrix
     if(linearSystem->getRecomputeStatus()) {

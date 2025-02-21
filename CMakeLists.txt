@@ -19,20 +19,10 @@ option(ENABLE_ALGLIB        "Enable AlgLib"                     OFF)
 option(ENABLE_PROFILER      "Compile with -lprofiler"           OFF)
 option(ENABLE_GLFW          "Enable basic GLFW graphics"        OFF)
 
-# include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
-include_directories(SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}/src)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/bin)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/lib)
-
-  # #### Options de compilation
-
-  # add_compile_options("$<$<CONFIG:RELEASE>:-ansi;-m64;-O3;-fast>"
-  #                     "$<$<CONFIG:RELWITHDEBINFO>:-Wall;-ansi;-m64;-O3;-fast;-g>"
-  #                     "$<$<CONFIG:DEBUG>:-ansi;-m64;-O0;-g;-ggdb3>"
-  #                     # "$<$<CONFIG:DEBUG>:-Wall;-Wextra;-ansi;-m64;-O0;-g;-ggdb3>"
-  #                     #"-Wall;-Wextra;-O3;-ansi;-m64"
-  #                     )
 
 add_compile_options(-pedantic)
 add_compile_options(-pedantic-errors)
@@ -152,7 +142,7 @@ if(ENABLE_MKL)
     message(STATUS "MKL_LIBRARIES  : ${MKL_LIBRARIES}   ")
     message(STATUS "MKL_LIBRARY_DIR: ${MKL_LIBRARY_DIR} ")
     include_directories(${MKL_INCLUDE_DIR})
-    list(APPEND feNG_EXTERNAL_LIBS ${feNG_EXTERNAL_LIBS} ${MKL_LIBRARIES})
+    list(APPEND feNG_EXTERNAL_LIBS ${feNG_EXTERNAL_LIBS} "-L${MKL_LIBRARY_DIR}" ${MKL_LIBRARIES})
     # Cluster Pardiso
     if(ENABLE_MPI)
       # Temporary fix to add the cluster options

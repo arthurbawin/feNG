@@ -4,7 +4,7 @@
 
 extern int FE_VERBOSE;
 
-feStatus createTimeIntegrator2(TimeIntegrator2 *&solver, timeIntegratorScheme2 scheme,
+feStatus createTimeIntegrator(TimeIntegrator *&solver, timeIntegratorScheme scheme,
                               feNLSolverOptions NLoptions, feLinearSystem *system,
                               feSolution *solution, feMesh *mesh,
                               std::vector<feNorm*> &norms, feExportData exportData, double tBegin,
@@ -12,13 +12,13 @@ feStatus createTimeIntegrator2(TimeIntegrator2 *&solver, timeIntegratorScheme2 s
 {
   UNUSED(mesh, tBegin, tEnd, nTimeSteps);
   switch(scheme) {
-    case timeIntegratorScheme2::STATIONARY:
+    case timeIntegratorScheme::STATIONARY:
       solver = new StationaryIntegrator(system, solution, mesh, NLoptions, norms, exportData);
       break;
-    case timeIntegratorScheme2::BDF1:
+    case timeIntegratorScheme::BDF1:
       solver = new BDF1Integrator(system, solution, mesh, NLoptions, norms, exportData, tBegin, tEnd, nTimeSteps);
       break;
-    case timeIntegratorScheme2::BDF2:
+    case timeIntegratorScheme::BDF2:
       solver = new BDF2Integrator(system, solution, mesh, NLoptions, norms, exportData, tBegin, tEnd, nTimeSteps);
       break;
     // case DC2F:
@@ -39,7 +39,7 @@ feStatus createTimeIntegrator2(TimeIntegrator2 *&solver, timeIntegratorScheme2 s
   return FE_STATUS_OK;
 }
 
-TimeIntegrator2::TimeIntegrator2(feLinearSystem *linearSystem,
+TimeIntegrator::TimeIntegrator(feLinearSystem *linearSystem,
                  feSolution *sol,
                  feMesh *mesh,
                  feNLSolverOptions &NLoptions,
@@ -63,7 +63,7 @@ TimeIntegrator2::TimeIntegrator2(feLinearSystem *linearSystem,
 //
 // Initialize the time and solution array
 //
-void TimeIntegrator2::initialize()
+void TimeIntegrator::initialize()
 {
   _t[0] = _currentTime;
   _currentSolution->setCurrentTime(_currentTime);
@@ -71,7 +71,7 @@ void TimeIntegrator2::initialize()
   _currentSolution->initializeEssentialBC(_mesh);
 }
 
-void TimeIntegrator2::updateTime(const int iStep, const double dt)
+void TimeIntegrator::updateTime(const int iStep, const double dt)
 {
   // Rotate time and time difference of previous steps
   for(int i = _nSol - 1; i > 0; i--) {
@@ -87,7 +87,7 @@ void TimeIntegrator2::updateTime(const int iStep, const double dt)
   _currentSolution->setCurrentTime(_currentTime);
 }
 
-feStatus TimeIntegrator2::writeVisualizationFile(const int iStep, const feExportData &data)
+feStatus TimeIntegrator::writeVisualizationFile(const int iStep, const feExportData &data)
 {
   if(data.exporter == nullptr)
     return FE_STATUS_OK;
@@ -110,7 +110,7 @@ StationaryIntegrator::StationaryIntegrator(feLinearSystem *linearSystem,
           					                       feNLSolverOptions &NLoptions,
           					                       std::vector<feNorm*> &postProcessing,
           					                       feExportData &exportData)
-  : TimeIntegrator2(linearSystem, sol, mesh, NLoptions, postProcessing, exportData, 0)
+  : TimeIntegrator(linearSystem, sol, mesh, NLoptions, postProcessing, exportData, 0)
 {
   _integratorName = "Stationary";
   _nSol = 1;
@@ -170,7 +170,7 @@ BDF1Integrator::BDF1Integrator(feLinearSystem *linearSystem,
                                std::vector<feNorm*> &postProcessing,
                                feExportData &exportData,
                                double t0, double tEnd, int nTimeSteps)
-  : TimeIntegrator2(linearSystem, sol, mesh, NLoptions,
+  : TimeIntegrator(linearSystem, sol, mesh, NLoptions,
     postProcessing, exportData, 1, t0, tEnd, nTimeSteps)
 {
   _integratorName = "BDF1";
@@ -289,7 +289,7 @@ BDF2Integrator::BDF2Integrator(feLinearSystem *linearSystem,
                                std::vector<feNorm*> &postProcessing,
                                feExportData &exportData,
                                double t0, double tEnd, int nTimeSteps)
-  : TimeIntegrator2(linearSystem, sol, mesh, NLoptions,
+  : TimeIntegrator(linearSystem, sol, mesh, NLoptions,
     postProcessing, exportData, 2, t0, tEnd, nTimeSteps)
 {
   _integratorName = "BDF2";

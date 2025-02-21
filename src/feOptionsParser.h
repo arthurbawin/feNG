@@ -6,6 +6,9 @@
 
 #include "feNG.h"
 #include "feMessage.h"
+#if defined(HAVE_PETSC)
+  #include "petscsys.h"
+#endif
 
 class feOptionsParser
 {
@@ -84,6 +87,9 @@ public:
 
 private:
   void Parse();
+#if defined(HAVE_PETSC)
+  int ParsePetsc();
+#endif
 
 public:
   // Parse the command line options and return a status.

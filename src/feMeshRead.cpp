@@ -1536,7 +1536,7 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, const bool curved, const bool
               // _entities[p].connecTet[iElm] = numTetrahedra;
               numTetrahedra++;
               
-              feWarning("Creating data structures for 4-node tetrahedron for debug");
+              // feWarning("Creating data structures for 4-node tetrahedron for debug");
               break;
             }
             case 11:
@@ -1606,9 +1606,10 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, const bool curved, const bool
         } // for numElemInEntity
       } // for numEntities
 
-      feInfo("There are %d mesh edges", _allEdges.size());
-      feInfo("There are %d mesh triangles", _allTriangles.size());
-      feInfo("There are %d mesh tetrahedra", _allTetrahedra.size());
+      // feInfo("There are %d mesh edges", _allEdges.size());
+      // feInfo("There are %d mesh triangles", _allTriangles.size());
+      // feInfo("There are %d mesh tetrahedra", _allTetrahedra.size());
+      
       if(_allTetrahedra.size() > 0)
         _edges = _allEdges;
 
@@ -1978,7 +1979,7 @@ feStatus feMesh2DP1::readGmsh(const std::string meshName, const bool curved, con
   }
 
   _nEdges = _edges.size();
-  feInfo("There are %d edges in former set", _edges.size());
+  // feInfo("There are %d edges in former set", _edges.size());
   _nFaces = _allTriangles.size();
   _dim = maxDim;
 

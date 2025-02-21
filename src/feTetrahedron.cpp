@@ -14,7 +14,7 @@ void Tetrahedron::createBoundary(std::set<Triangle, TriangleLessThan> &meshTrian
     Vertex *v1 = _vlin[faces_tetra(i,1)];
     Vertex *v2 = _vlin[faces_tetra(i,2)];
 
-    feInfo("Creating tri with tag %d", numTriangles);
+    // feInfo("Creating tri with tag %d", numTriangles);
 
     Triangle tri(v0, v1, v2, numTriangles);
     tri.createBoundary(meshEdges, numEdges);
@@ -24,11 +24,11 @@ void Tetrahedron::createBoundary(std::set<Triangle, TriangleLessThan> &meshTrian
     _facets[i] = &(*ret.first);
 
     if(ret.second) { // Facet was added to the set
-      feInfo("New  tri with tag %d", ret.first->getTag());
+      // feInfo("New  tri with tag %d", ret.first->getTag());
       _facetsOrientation[i] = 1;
       numTriangles++;
     } else { // Facet is already in the set : orientation is negative
-      feInfo("Existing tri with tag %d", ret.first->getTag());
+      // feInfo("Existing tri with tag %d", ret.first->getTag());
       _facetsOrientation[i] = -1;
     }
   }

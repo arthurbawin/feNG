@@ -177,9 +177,13 @@ protected:
   bool _solveWithMUMPS = false;
   Mat _factoredMatrix;
   // Selected MUMPS options, see MUMPS user guide
-  int _icntl7  = 2; // Sequential ordering (if icntl28 = 1 or only 1 MPI proc)
-  int _icntl28 = 2; // Sequential (1) or parallel (2) ordering
-  int _icntl29 = 1; // Parallel ordering (if icntl28 = 2)
+  int _mumps_icntl7  = 2; // Sequential ordering (if icntl28 = 1 or only 1 MPI proc)
+#if defined(PETSC_HAVE_PTSCOTCH) || defined(PETSC_HAVE_PARMETIS)
+  int _mumps_icntl28 = 2; // Sequential (1) or parallel (2) ordering
+#else
+  int _mumps_icntl28 = 1;
+#endif
+  int _mumps_icntl29 = 1; // Parallel ordering (if icntl28 = 2)
 #endif
 
 public:

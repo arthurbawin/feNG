@@ -77,13 +77,12 @@ void feLinearSystemPETSc::initializeSequential()
       nz_un = info.nz_unneeded;
       mem = info.memory;
 
-      feInfo("\t\tAdditional info from PETSc for matrix creation:");
-      feInfo("\t\tNumber of mallocs during MatSetValues() = %f", mal);
-      feInfo("\t\tMemory allocated                        = %f", mem );
-      feInfo("\t\tNumber of nonzero allocated             = %f", nz_a);
-      feInfo("\t\tNumber of nonzero used                  = %f", nz_u);
-      feInfo("\t\tNumber of nonzero unneeded              = %f", nz_un);
-      // feInfo("");
+      feInfoCond(FE_VERBOSE > 1, "\t\tAdditional info from PETSc for matrix creation:");
+      feInfoCond(FE_VERBOSE > 1, "\t\tNumber of mallocs during MatSetValues() = %f", mal);
+      feInfoCond(FE_VERBOSE > 1, "\t\tMemory allocated                        = %f", mem );
+      feInfoCond(FE_VERBOSE > 1, "\t\tNumber of nonzero allocated             = %f", nz_a);
+      feInfoCond(FE_VERBOSE > 1, "\t\tNumber of nonzero used                  = %f", nz_u);
+      feInfoCond(FE_VERBOSE > 1, "\t\tNumber of nonzero unneeded              = %f", nz_un);
     }
   } else {
     // Without allocation (bad) :
@@ -282,12 +281,12 @@ int feLinearSystemPETSc::initializeMPI()
 
         if(size == 1) {
           // To keep the same printing layout if there is only 1 proc
-          feInfo("\t\tAdditional info from PETSc for matrix creation:");
-          feInfo("\t\t\tNumber of mallocs during MatSetValues() on proc %d : %f", rank, mal);
-          feInfo("\t\t\tMemory allocated                        on proc %d : %f", rank, mem );
-          feInfo("\t\t\tNumber of nonzero allocated             on proc %d : %f", rank, nz_a);
-          feInfo("\t\t\tNumber of nonzero used                  on proc %d : %f", rank, nz_u);
-          feInfo("\t\t\tNumber of nonzero unneeded              on proc %d : %f", rank, nz_un);
+          feInfoCond(FE_VERBOSE > 1, "\t\tAdditional info from PETSc for matrix creation:");
+          feInfoCond(FE_VERBOSE > 1, "\t\t\tNumber of mallocs during MatSetValues() on proc %d : %f", rank, mal);
+          feInfoCond(FE_VERBOSE > 1, "\t\t\tMemory allocated                        on proc %d : %f", rank, mem );
+          feInfoCond(FE_VERBOSE > 1, "\t\t\tNumber of nonzero allocated             on proc %d : %f", rank, nz_a);
+          feInfoCond(FE_VERBOSE > 1, "\t\t\tNumber of nonzero used                  on proc %d : %f", rank, nz_u);
+          feInfoCond(FE_VERBOSE > 1, "\t\t\tNumber of nonzero unneeded              on proc %d : %f", rank, nz_un);
         } else {
           feInfoCollective("\t\tAdditional info from PETSc for matrix creation:");
           feInfoCollective("\t\t\tNumber of mallocs during MatSetValues() on proc %d : %f", rank, mal);
@@ -358,7 +357,6 @@ int feLinearSystemPETSc::initializeMPI()
   PetscCall(VecGetSize(_du, &Ndx));
   PetscCall(VecGetSize(_linSysRes, &NlinSysRes));
 
-  feInfoCond(FE_VERBOSE > 0, "");
   feInfoCond(FE_VERBOSE > 0, "\t\tCreated a PETSc linear system of size %d x %d", M, N);
   feInfoCond(FE_VERBOSE > 0, "\t\tNumber of nonzero entries: %d", num_nnz);
   MatType   matType;
@@ -874,9 +872,9 @@ bool feLinearSystemPETSc::solve(double *normSolution, double *normRHS, double *n
 
     // OPTIONS (set in feLinearSystem.h)
     // Sequential and parallel reordering strategy
-    PetscCallAbort(PETSC_COMM_WORLD, MatMumpsSetIcntl(_factoredMatrix,  7, _icntl7 ));
-    PetscCallAbort(PETSC_COMM_WORLD, MatMumpsSetIcntl(_factoredMatrix, 28, _icntl28));
-    PetscCallAbort(PETSC_COMM_WORLD, MatMumpsSetIcntl(_factoredMatrix, 29, _icntl29));
+    PetscCallAbort(PETSC_COMM_WORLD, MatMumpsSetIcntl(_factoredMatrix,  7, _mumps_icntl7 ));
+    PetscCallAbort(PETSC_COMM_WORLD, MatMumpsSetIcntl(_factoredMatrix, 28, _mumps_icntl28));
+    PetscCallAbort(PETSC_COMM_WORLD, MatMumpsSetIcntl(_factoredMatrix, 29, _mumps_icntl29));
 
     // /* threshold for row pivot detection */
     // PetscCall(MatMumpsGetIcntl(F, 24, &ival));

@@ -14,7 +14,7 @@
 #include "feSolution.h"
 #include "feSysElm.h"
 #include "feBilinearForm.h"
-#include "feSolver.h"
+// #include "feSolver.h"
 #include "feTimeIntegration.h"
 #include "feNonLinearSolver.h"
 #include "feLinearSystem.h"

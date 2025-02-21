@@ -35,7 +35,6 @@ set(feNG_SRC
     feQuadratureTri.cpp
     feSolution.cpp
     feSolutionContainer.cpp
-    feSolver.cpp
     feSpace.cpp
     feSpace_1D.cpp
     feSpace_2D.cpp
@@ -87,7 +86,6 @@ set(feNG_API
     feNewRecovery.h
     feSolution.h
     feSolutionContainer.h
-    feSolver.h
     feSpace.h
     feSysElm.h
     feTimeIntegration.h
