@@ -54,7 +54,7 @@ include_directories(SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}/contrib/eigen)
 # (otherwise some functions fall back to Gmsh's implementation)
 add_definitions("-DHAVE_EIGEN")
 #  Root-finder (https://github.com/ZhepeiWang/Root-Finder)
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/contrib/root-finder)
+include_directories(SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}/contrib/root-finder)
 # Gmsh classes for metric tensors and rtree 
 # See also src/CmakeLists.txt for the .cpp files
 include_directories(SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}/contrib/gmsh)
