@@ -144,7 +144,7 @@ public:
            const int nTrianglesPerElement,
            const std::string &ID, const geometryType geometry,
            const geometricInterpolant interpolant, feSpace *space,
-           std::vector<int> connecVertices,
+           std::vector<int> &connecVertices,
            std::vector<int> connecElem = std::vector<int>(),
            std::vector<int> connecEdges = std::vector<int>(),
            std::vector<int> connecTriangles = std::vector<int>());

@@ -134,7 +134,7 @@ int main(int argc, char **argv)
   // and we give the name "U" to the solution. Quadrature rules are defined on the finite
   // element space, with parameter "degreeQuadrature" governing the number of quadrature nodes.
   // The feFunction provided is used to initialize the degrees of freedom on the feSpace.
-  feSpace *uBord, *uDomaine;
+  feSpace *uBord = nullptr, *uDomaine = nullptr;
   feCheck(createFiniteElementSpace(   uBord, &mesh, elementType::LAGRANGE, order, "U",    "Bord", degreeQuadrature, &zero));
   feCheck(createFiniteElementSpace(uDomaine, &mesh, elementType::LAGRANGE, order, "U", "Domaine", degreeQuadrature, &zero));
 
@@ -164,7 +164,7 @@ int main(int argc, char **argv)
   //                      /
   //
   // There is no form to define on the boundary as all DOFs are essential.
-  feBilinearForm *diff, *source;
+  feBilinearForm *diff = nullptr, *source = nullptr;
   if(dim == 2)
     feCheck(createBilinearForm(diff, {uDomaine}, new feSysElm_Diffusion<2>(&diffusivity)));
   if(dim == 3)

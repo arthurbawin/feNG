@@ -94,9 +94,9 @@ namespace {
       std::vector<feNorm*> norms = {&normU};
 
       TimeIntegrator *solver;
-      feTolerances tol{1e-13, 1e-13, 1e4, 4};
+      feNLSolverOptions NLoptions{1e-13, 1e-13, 1e4, 10, 3, 1e-1};
       feExportData exportData = {nullptr, 1, ""};
-      feCheck(createTimeIntegrator(solver, STATIONARY, tol, system, &numbering, &sol, &mesh, norms, exportData));
+      feCheck(createTimeIntegrator(solver, timeIntegratorScheme::STATIONARY, NLoptions, system, &sol, &mesh, norms, exportData));
       feCheck(solver->makeSteps(0));
 
       // feExporter *exporter;

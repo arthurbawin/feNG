@@ -94,6 +94,8 @@ feStatus TimeIntegrator::writeVisualizationFile(const int iStep, const feExportD
 
   if((iStep % data.exportEveryNSteps) == 0) {
     std::string fileName = data.fileNameRoot + "_" + _integratorName + "_" + std::to_string(iStep) + ".vtk";
+    if(_integratorName == "Stationary")
+      fileName = data.fileNameRoot + "_" + _integratorName + ".vtk";
     feStatus s = data.exporter->writeStep(fileName);
     return s;
   }

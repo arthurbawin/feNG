@@ -149,7 +149,7 @@ public:
   }
   ~TriangleP2() {}
 
-  int getNumVertices(){ return 6; };
+  int getNumVertices() const { return 6; };
   Vertex *getVertex(int num) { return _v[num]; }
   bool isInsidePhysical(double xyz[3], double tol);
   bool xyz2uvw(double xyz[3], double uvw[3], double tol = 1e-5);

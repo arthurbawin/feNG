@@ -90,7 +90,7 @@ feCncGeo::feCncGeo(const int tag, const int dimension, const int ambientDimensio
                    const geometryType geometry,
                    const geometricInterpolant interpolant,
                    feSpace *space,
-                   std::vector<int> connecVertices,
+                   std::vector<int> &connecVertices,
                    std::vector<int> connecElem,
                    std::vector<int> connecEdges,
                    std::vector<int> connecTriangles)
@@ -115,18 +115,14 @@ feCncGeo::feCncGeo(const int tag, const int dimension, const int ambientDimensio
   _minimumScaledJacobianControlCoeffs.resize(nElements, 0.);
 
   // Create the connectivity of unique vertices
-  // (_connecVertices has size nElm * nVerticesperElm)
-
-  // _nVertices = std::unique(connecVertices.begin(), connecVertices.end()) - connecVertices.begin();
-  std::unique(connecVertices.begin(), connecVertices.end()) - connecVertices.begin();
-  std::sort(connecVertices.begin(), connecVertices.end());
+  // _connecVertices has size nElm * nVerticesperElm
+  // but
+  // _connecVerticesOnly has size nVertices
   _connecVerticesOnly = connecVertices;
-
   std::sort(_connecVerticesOnly.begin(), _connecVerticesOnly.end());
   auto last = std::unique(_connecVerticesOnly.begin(), _connecVerticesOnly.end());
   _connecVerticesOnly.erase(last, _connecVerticesOnly.end());
   _nVertices = (int) _connecVerticesOnly.size();
-
 
   // Create the connectivity of unique edges
   _connecEdgesOnly = connecEdges;
