@@ -33,7 +33,7 @@ add_compile_options(-Werror=return-type)
 add_compile_options(-Wshadow)
 add_compile_options(-Wdisabled-optimization)
 
-if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
   add_compile_options(-Wno-gnu-zero-variadic-macro-arguments)
 elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
   add_compile_options(-Wno-error=bool-compare)
