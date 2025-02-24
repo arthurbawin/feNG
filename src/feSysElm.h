@@ -868,23 +868,22 @@ public:
 // Integral of - sigma : grad(v), with sigma = -pI + 2*mu*d(u)
 //                                with d(u) = (grad(u) + grad(u)^T)/2
 //
-// Hence: integral of -p * div(v) + mu * d : grad(v) dx
+// Hence: integral of +p * div(v) - mu * d : grad(v) dx
+// Residual is the negative of this integral.
 //
 class feSysElm_DivergenceNewtonianStress : public feSysElm
 {
 protected:
   feFunction *_coeff;
   feFunction *_viscosity;
-  int _idU, _idP, _nFunctionsU;
-  std::vector<double> _gradu;
-  std::vector<double> _symmetricGradu;
-  std::vector<double> _gradPhiU;
+  int _idU, _idP, _nFunctionsU, _nFunctionsP;
+  std::vector<double> _gradu, _symmetricGradu, _gradPhiU, _phiP;
 
 public:
   feSysElm_DivergenceNewtonianStress(feFunction *coeff, feFunction *viscosity)
     : feSysElm(-1, 2, DIV_NEWTONIAN_STRESS, true), _coeff(coeff), _viscosity(viscosity)
   {
-    _computeMatrixWithFD = true;
+    _computeMatrixWithFD = false;
   };
   ~feSysElm_DivergenceNewtonianStress(){};
   void createElementarySystem(std::vector<feSpace *> &space);

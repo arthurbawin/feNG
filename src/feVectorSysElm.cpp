@@ -1589,17 +1589,102 @@ void feSysElm_DivergenceNewtonianStress::createElementarySystem(std::vector<feSp
   _fieldsLayoutI = {_idU};
   _fieldsLayoutJ = {_idU, _idP};
   _nFunctionsU = space[_idU]->getNumFunctions();
+  _nFunctionsP = space[_idP]->getNumFunctions();
   _nComponents = space[_idU]->getNumComponents();
   _gradu.resize(_nComponents * _nComponents);
   _symmetricGradu.resize(_nComponents * _nComponents);
   _gradPhiU.resize(_nComponents * _nFunctionsU);
+  _phiP.resize(_nFunctionsP);
 }
 
 void feSysElm_DivergenceNewtonianStress::computeAe(feBilinearForm *form)
 {
-  UNUSED(form);
-  feErrorMsg(FE_STATUS_ERROR, "Implement FE matrix for feSysElm_DivergenceNewtonianStress weak form.");
-  // Computed with finite differences for now
+  double jac, mu, coeff, doubleContraction_du, doubleContraction_duT,
+    gradphiu_imat[2][2], gradphiu_jmat[2][2],
+    div_phiU;
+
+  for(int k = 0; k < _nQuad; ++k) {
+    jac = form->_J[_nQuad * form->_numElem + k];
+    form->_cnc->computeElementTransformation(form->_geoCoord, k, jac, form->_transformation);
+
+    // Evaluate scalar coefficients
+    form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, _pos);
+    mu = (*_viscosity)(form->_tn, _pos);
+    coeff = (*_coeff)(form->_tn, _pos);
+
+    // Get relevant values and gradients
+    // grad_phiU
+    form->_intSpaces[_idU]->getFunctionsPhysicalGradientAtQuadNode(k, form->_transformation,
+                                                                   _gradPhiU.data());
+    // phiP
+    form->_intSpaces[_idP]->getFunctionsAtQuadNode(k, _phiP);
+
+    for(int i = 0; i < _nFunctionsU; ++i)
+    {
+      int J = 0;
+      ///////////////////////////////////////////
+      // phiU - u block
+      ///////////////////////////////////////////
+      for(int j = 0; j < _nFunctionsU; ++j)
+      {
+        // Viscous part
+        // Complete computation for now (2D only), can be optimized later
+        // Warning : optimization induces nose bleed (-:
+        if(i % _nComponents == 0)
+        {
+          gradphiu_imat[0][0] = _gradPhiU[i*_nComponents+0]; // dphi_i,x/dx
+          gradphiu_imat[0][1] = _gradPhiU[i*_nComponents+1]; // dphi_i,x/dy
+          gradphiu_imat[1][0] = 0.;
+          gradphiu_imat[1][1] = 0.;
+        }
+        else
+        {
+          gradphiu_imat[0][0] = 0.;
+          gradphiu_imat[0][1] = 0.;
+          gradphiu_imat[1][0] = _gradPhiU[i*_nComponents+0]; // dphi_i,y/dx
+          gradphiu_imat[1][1] = _gradPhiU[i*_nComponents+1]; // dphi_i,y/dy
+        }
+        if(j % _nComponents == 0)
+        {
+          gradphiu_jmat[0][0] = _gradPhiU[j*_nComponents+0]; // dphi_j,x/dx
+          gradphiu_jmat[0][1] = _gradPhiU[j*_nComponents+1]; // dphi_j,x/dy
+          gradphiu_jmat[1][0] = 0.;
+          gradphiu_jmat[1][1] = 0.;
+        }
+        else
+        {
+          gradphiu_jmat[0][0] = 0.;
+          gradphiu_jmat[0][1] = 0.;
+          gradphiu_jmat[1][0] = _gradPhiU[j*_nComponents+0]; // dphi_j,y/dx
+          gradphiu_jmat[1][1] = _gradPhiU[j*_nComponents+1]; // dphi_j,y/dy
+        }
+
+        // gradPhiU_j : gradPhiU_i
+        doubleContraction_du = 0.;
+        // (gradPhiU_j)^T : gradPhiU_i
+        doubleContraction_duT = 0.; 
+        for(int m = 0; m < _nComponents; ++m) {
+          for(int n = 0; n < _nComponents; ++n) {
+            doubleContraction_du  += gradphiu_jmat[m][n] * gradphiu_imat[m][n];
+            doubleContraction_duT += gradphiu_jmat[n][m] * gradphiu_imat[m][n];
+          }
+        }
+
+        // Increment matrix
+        form->_Ae[i][J++] += - coeff * mu * (doubleContraction_du + doubleContraction_duT) * jac * _wQuad[k];
+      }
+
+      ///////////////////////////////////////////
+      // phiU - p block
+      ///////////////////////////////////////////
+      for(int j = 0; j < _nFunctionsP; ++j)
+      {
+        // Pressure part
+        div_phiU = _gradPhiU[i * _nComponents + (i % _nComponents)];
+        form->_Ae[i][J++] += _phiP[j] * div_phiU * jac * _wQuad[k];
+      }
+    }
+  }
 }
 
 void feSysElm_DivergenceNewtonianStress::computeBe(feBilinearForm *form)
@@ -1638,7 +1723,7 @@ void feSysElm_DivergenceNewtonianStress::computeBe(feBilinearForm *form)
           _symmetricGradu[(i % _nComponents) * _nComponents + m] * _gradPhiU[i * _nComponents + m];
       }
 
-      form->_Be[i] -= coeff * (-p * div_v + mu * doubleContraction) * jac * _wQuad[k];
+      form->_Be[i] -= coeff * (p * div_v - mu * doubleContraction) * jac * _wQuad[k];
     }
   }
 }
