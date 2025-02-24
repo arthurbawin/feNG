@@ -103,7 +103,7 @@ public:
   friend class SquareMatrix;
 
   // "Real" constructor, for us mere mortals
-  Vector(const int size);
+  Vector(const int size = 1);
 
   // Default, copy/move constructors/assignments
   Vector();

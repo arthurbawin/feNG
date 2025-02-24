@@ -30,9 +30,19 @@ add_compile_options(-Wall)
 add_compile_options(-Wextra)
 add_compile_options(-Werror)
 add_compile_options(-Werror=return-type)
-add_compile_options(-Wno-error=bool-compare)
 add_compile_options(-Wshadow)
 add_compile_options(-Wdisabled-optimization)
+
+if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+  add_compile_options(-Wno-gnu-zero-variadic-macro-arguments)
+elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+  add_compile_options(-Wno-error=bool-compare)
+elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Intel")
+  # using Intel C++
+elseif (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+  # Not supported currently
+  message(FATAL_ERROR "MSVC is not supported at the moment")
+endif()
 
 # Files from contrib/:
 #
@@ -40,12 +50,14 @@ add_compile_options(-Wdisabled-optimization)
 # It may be necessary to include Eigen as system headers (SYSTEM) to
 # silence Eigen's warnings such as -Wshadow
 include_directories(SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}/contrib/eigen)
+# The HAVE_EIGEN is used by files in contrib/gmsh
+# (otherwise some functions fall back to Gmsh's implementation)
 add_definitions("-DHAVE_EIGEN")
 #  Root-finder (https://github.com/ZhepeiWang/Root-Finder)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/contrib/root-finder)
 # Gmsh classes for metric tensors and rtree 
 # See also src/CmakeLists.txt for the .cpp files
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/contrib/gmsh)
+include_directories(SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}/contrib/gmsh)
 
 # Macro to define a library
 # Adapted from the HXT project:

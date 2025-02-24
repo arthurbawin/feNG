@@ -9,7 +9,7 @@
 //
 // Options for the nonlinear solver
 //
-typedef struct
+typedef struct feNLSolverOptionsStruct
 {
   // Nonlinear solver stops if the norm of the residual NL(u) passes below this tolerance.
   // This is the expected outcome if the nonlinear solver has converged.

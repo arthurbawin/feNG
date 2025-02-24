@@ -34,14 +34,14 @@ static void boundaryConditionVec(feMesh *mesh, Edge edge, feVectorFunction *solR
   UNUSED(mesh, edge, solRefGrad, res);
 }
 
-static inline double matNorm2(const std::vector<double> &v1, const std::vector<double> &v2, int n)
-{
-  double sqr = 0;
-  for(int i = 0; i < n; i++) {
-    sqr += (v1[i] - v2[i]) * (v1[i] - v2[i]);
-  }
-  return sqrt(sqr);
-}
+// static inline double matNorm2(const std::vector<double> &v1, const std::vector<double> &v2, int n)
+// {
+//   double sqr = 0;
+//   for(int i = 0; i < n; i++) {
+//     sqr += (v1[i] - v2[i]) * (v1[i] - v2[i]);
+//   }
+//   return sqrt(sqr);
+// }
 
 static inline double myPow(double base, int exp)
 {

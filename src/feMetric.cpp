@@ -210,6 +210,8 @@ void feMetric::metricScalingFromGmshSubstitute(std::map<int, MetricType> &metric
     double factor = pow(N / I, 2.0 / dim) * pow(M.determinant(), exponentForDeterminant);
     M *= factor;
   }
+#else
+  UNUSED(metrics, nodeTags, coord, exponentInIntegral, exponentForDeterminant);
 #endif
 }
 

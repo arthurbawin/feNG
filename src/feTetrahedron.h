@@ -68,7 +68,7 @@ public:
       _vlin[2] = v2;
       _vlin[3] = v3;
     }
-  ~Tetrahedron() {}
+  virtual ~Tetrahedron() {};
 
   // Tag of the tetrahedron
   int getTag() const { return _tag; }

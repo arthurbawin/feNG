@@ -591,6 +591,7 @@ public:
             bool transposeB = false)
 #if defined(HAVE_EIGEN) || !defined(HAVE_BLAS)
   {
+    (void) transposeB; // Unused parameter
     const fullMatrix<scalar> &A = transposeA ? a.transpose() : a;
     const fullMatrix<scalar> &B = transposeA ? b.transpose() : b;
     fullMatrix<scalar> temp(A._r, B._c);
@@ -636,6 +637,7 @@ public:
   bool luFactor(fullVector<int> &ipiv)
 #if defined(HAVE_EIGEN) || !defined(HAVE_LAPACK)
   {
+    (void) ipiv; // Unused parameter
     // Msg::Error("LU factorization requires LAPACK");
     printf("LU factorization requires LAPACK\n");
     return false;
@@ -646,6 +648,9 @@ public:
                     fullVector<scalar> &result)
 #if defined(HAVE_EIGEN) || !defined(HAVE_LAPACK)
   {
+    (void) rhs; // Unused parameter
+    (void) ipiv; // Unused parameter
+    (void) result; // Unused parameter
     // Msg::Error("LU substitution requires LAPACK");
     printf("LU substitution requires LAPACK\n");
     return false;

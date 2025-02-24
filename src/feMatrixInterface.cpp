@@ -493,7 +493,7 @@ Vector::Vector(Vector &&) noexcept = default;
 Vector &Vector::operator=(Vector &&) noexcept = default;
 
 // "Real" constructor
-Vector::Vector(const int size = 1) : _impl(std::make_unique<VectorImpl>(size)) {}
+Vector::Vector(const int size) : _impl(std::make_unique<VectorImpl>(size)) {}
 
 // =============== Vector member functions ===============
 int Vector::getSize() const { return _impl->_size; }
