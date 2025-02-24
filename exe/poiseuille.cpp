@@ -69,17 +69,17 @@ int main(int argc, char **argv)
 
   feMesh2DP1 mesh(meshFile);
 
-  feSpace *uDomaine = nullptr, *pDomaine = nullptr;
+  feSpace *uDomain = nullptr, *pDomain = nullptr;
   feSpace *uInlet = nullptr, *uOutlet = nullptr, *uNoSlip = nullptr;
 
   // Poiseuille
-  feCheck(createFiniteElementSpace(  uInlet, &mesh, elementType::VECTOR_LAGRANGE, orderVelocity, "U",  "Entree", degreeQuadrature, &uExact));
-  feCheck(createFiniteElementSpace( uOutlet, &mesh, elementType::VECTOR_LAGRANGE, orderVelocity, "U",  "Sortie", degreeQuadrature, &zeroVector));
-  feCheck(createFiniteElementSpace( uNoSlip, &mesh, elementType::VECTOR_LAGRANGE, orderVelocity, "U",  "NoSlip", degreeQuadrature, &zeroVector));
-  feCheck(createFiniteElementSpace(uDomaine, &mesh, elementType::VECTOR_LAGRANGE, orderVelocity, "U", "Domaine", degreeQuadrature, &zeroVector));
-  feCheck(createFiniteElementSpace(pDomaine, &mesh, elementType::LAGRANGE,        orderPressure, "P", "Domaine", degreeQuadrature, &zero));
+  feCheck(createFiniteElementSpace( uInlet, &mesh, elementType::VECTOR_LAGRANGE, orderVelocity, "U",  "Inlet", degreeQuadrature, &uExact));
+  feCheck(createFiniteElementSpace(uOutlet, &mesh, elementType::VECTOR_LAGRANGE, orderVelocity, "U", "Outlet", degreeQuadrature, &zeroVector));
+  feCheck(createFiniteElementSpace(uNoSlip, &mesh, elementType::VECTOR_LAGRANGE, orderVelocity, "U", "NoSlip", degreeQuadrature, &zeroVector));
+  feCheck(createFiniteElementSpace(uDomain, &mesh, elementType::VECTOR_LAGRANGE, orderVelocity, "U", "Domain", degreeQuadrature, &zeroVector));
+  feCheck(createFiniteElementSpace(pDomain, &mesh, elementType::LAGRANGE,        orderPressure, "P", "Domain", degreeQuadrature, &zero));
 
-  std::vector<feSpace*> spaces = {uInlet, uNoSlip, uDomaine, pDomaine};
+  std::vector<feSpace*> spaces = {uInlet, uNoSlip, uDomain, pDomain};
   std::vector<feSpace*> essentialSpaces = {uNoSlip, uInlet};
 
   if(divergenceFormulation) {
@@ -97,24 +97,24 @@ int main(int argc, char **argv)
 
   // Continuity
   feBilinearForm *divU = nullptr;
-  feCheck(createBilinearForm(divU, {pDomaine, uDomaine}, new feSysElm_MixedDivergence(&one)));
+  feCheck(createBilinearForm(divU, {pDomain, uDomain}, new feSysElm_MixedDivergence(&one)));
   std::vector<feBilinearForm*> forms = {divU};
 
   // Momentum
   feBilinearForm *diffU = nullptr, *gradP = nullptr, *divSigma = nullptr;
   if(divergenceFormulation) {
-    feCheck(createBilinearForm(divSigma, {uDomaine, pDomaine}, new feSysElm_DivergenceNewtonianStress(&one, &viscosity)));
+    feCheck(createBilinearForm(divSigma, {uDomain, pDomain}, new feSysElm_DivergenceNewtonianStress(&one, &viscosity)));
     forms.push_back(divSigma);
    } else {
-    feCheck(createBilinearForm(gradP, {uDomaine, pDomaine}, new feSysElm_MixedGradient(&minusOne)));
-    feCheck(createBilinearForm(diffU,           {uDomaine}, new feSysElm_VectorDiffusion(&minusOne, &viscosity)));
+    feCheck(createBilinearForm(gradP, {uDomain, pDomain}, new feSysElm_MixedGradient(&minusOne)));
+    feCheck(createBilinearForm(diffU,           {uDomain}, new feSysElm_VectorDiffusion(&minusOne, &viscosity)));
     forms.push_back(gradP);
     forms.push_back(diffU);
   }
 
   // Nonlinear term (optional)
   feBilinearForm *convU = nullptr;
-  feCheck(createBilinearForm(convU, {uDomaine}, new feSysElm_VectorConvectiveAcceleration(&one)));
+  feCheck(createBilinearForm(convU, {uDomain}, new feSysElm_VectorConvectiveAcceleration(&one)));
   forms.push_back(convU);
 
   feLinearSystem *system;
@@ -145,8 +145,8 @@ int main(int argc, char **argv)
   feCheck(createTimeIntegrator(solver, timeIntegratorScheme::STATIONARY, tol, system, &sol, &mesh, norms, exportData));
   feCheck(solver->makeSteps(1));
 
-  feNorm normU(VECTOR_L2_ERROR, {uDomaine}, &sol, nullptr, &uExact);
-  feNorm normP(L2_ERROR, {pDomaine}, &sol, &pExact);
+  feNorm normU(VECTOR_L2_ERROR, {uDomain}, &sol, nullptr, &uExact);
+  feNorm normP(L2_ERROR, {pDomain}, &sol, &pExact);
   feInfo("Error on velocity is %1.14e", normU.compute());
   feInfo("Error on pressure is %1.14e", normP.compute());
 
