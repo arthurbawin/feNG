@@ -22,7 +22,7 @@ The easiest approach is to use CMake and specify the location of either PETSc or
 For instance, with PETSc and starting from the feNG/ directory :
 ```
 mkdir build && cd build
-cmake -DPETSC_DIR=/path/to/petsc -DPETSC_ARCH=architecture ..
+cmake -DENABLE_PETSC=1 -DPETSC_DIR=/path/to/petsc -DPETSC_ARCH=architecture ..
 make
 ```
 This will compile the library, the executables and the regression tests.
