@@ -1,6 +1,6 @@
 # feNG
 
-feNG (short for finite element NextGeneration) is a C++ finite element library for the resolution of heat transfer and incompressible flow application on simplicial meshes and in a continuous Galerkin setting. The library was loosely inspired by [MFEM](https://mfem.org/) and takes the form of a toolbox, where continuous operators are assembled to form a partial differential equation.
+feNG (short for finite element NextGeneration) is a C++ finite element library for the resolution of heat transfer and incompressible flow applications on simplicial meshes and in a continuous Galerkin setting. The library was loosely inspired by [MFEM](https://mfem.org/) and takes the form of a toolbox, where continuous operators are assembled to form a partial differential equation.
 
 The library features:
 - Lagrange finite elements of order 0 to 4 on triangles, and of arbitrary order on tets. Finite elements for the resolution of saddle-point problems (e.g. the Stokes equations) are also available, such as the mixed Crouzeix-Raviart $(\mathcal{P}^{2+},\mathcal{P}^{-1})$ element for velocity and pressure discretization (quadratic Lagrange enriched with cubic bubble combined with discontinuous linear Lagrange).
