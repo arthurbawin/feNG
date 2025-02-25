@@ -712,7 +712,7 @@ inline std::set<double> isolateRealRoots(const Eigen::VectorXd &coeffs, double l
     double sturmSeqs[(RootFinderParam::highestOrder + 1) * (RootFinderParam::highestOrder + 1)];
     int szSeq[RootFinderParam::highestOrder + 1] = {0}; // Explicit ini as zero (gcc may neglect this in -O3)
     double *offsetSeq[RootFinderParam::highestOrder + 1];
-    int num = 0;
+    // int num = 0;
 
     for (int i = 0; i < len; i++)
     {
@@ -724,7 +724,7 @@ inline std::set<double> isolateRealRoots(const Eigen::VectorXd &coeffs, double l
     offsetSeq[0] = sturmSeqs + len - szSeq[0];
     offsetSeq[1] = sturmSeqs + 2 * len - szSeq[1];
 
-    num += 2;
+    // num += 2;
 
     bool remainderConstant = false;
     int idx = 0;
@@ -742,7 +742,7 @@ inline std::set<double> isolateRealRoots(const Eigen::VectorXd &coeffs, double l
             offsetSeq[idx + 2][i] /= -fabs(offsetSeq[idx + 2][0]);
         }
         offsetSeq[idx + 2][0] = offsetSeq[idx + 2][0] > 0.0 ? -1.0 : 1.0;
-        num++;
+        // num++;
         idx++;
     }
 
