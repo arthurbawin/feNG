@@ -1,6 +1,6 @@
 # feNG
 
-[![Debug](https://github.com/arthurbawin/feNG/blob/master/.github/workflows/debug.yml/badge.svg)](https://github.com/arthurbawin/feNG/blob/master/.github/workflows/debug.yml)
+[![Debug](https://github.com/arthurbawin/feNG/actions/workflows/debug.yml/badge.svg)](https://github.com/arthurbawin/feNG/actions/workflows/debug.yml)
 
 feNG (short for finite element NextGeneration, a somewhat ironic name) is a C++ finite element library for the resolution of heat transfer and incompressible flow applications on simplicial meshes and in a continuous Galerkin setting. The library was loosely inspired by [MFEM](https://mfem.org/) and takes the form of a toolbox, where continuous operators are assembled to form a partial differential equation.
 
