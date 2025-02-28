@@ -801,10 +801,10 @@ feStatus feExporterVTK::writeStep(std::string fileName,
       }
     }
 
-    if(_exportedConnectivities.size() > 1) {
-      return feErrorMsg(FE_STATUS_ERROR,
-        "Currently only a single Physical Entity can be exported to a VTK file");
-    }
+    // if(_exportedConnectivities.size() > 1) {
+    //   return feErrorMsg(FE_STATUS_ERROR,
+    //     "Currently only a single Physical Entity can be exported to a VTK file");
+    // }
     feCncGeo *cnc = *(_exportedConnectivities.begin());
 
     int cnt = 0;

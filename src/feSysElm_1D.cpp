@@ -17,8 +17,8 @@ void feSysElm_1D_NeumannBC::computeBe(feBilinearForm *form)
 {
   for(int k = 0; k < _nQuad; ++k) {
     double jac = form->_J[_nQuad * form->_numElem + k];
-    form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, _pos);
-    double h = _neumannBC->eval(form->_tn, _pos);
+    form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, form->_args.pos);
+    double h = _neumannBC->eval(form->_args);
     for(int i = 0; i < _nFunctions; ++i) {
       _feU[i] = form->_intSpaces[_idU]->getFunctionAtQuadNode(i, k);
       form->_Be[i] -= _feU[i] * h * jac * _wQuad[k];

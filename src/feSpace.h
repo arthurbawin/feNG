@@ -324,11 +324,16 @@ public:
   // Similarly, synchronize the actual DOF number between coupled DOFs.
   virtual void synchronizeNumberingOfEssentialDOF(int & /*numModifiedDOF*/) {};
 
-  // Evaluate prescribed scalar field
-  double evalFun(const double t, const std::vector<double> &x) { return _scalarFct->eval(t, x); }
-  void evalFun(const double t, const std::vector<double> &x, std::vector<double> &res)
+  // Evaluate prescribed scalar or vector field
+  // double evalFun(const double t, const std::vector<double> &x) { return _scalarFct->eval(t, x); }
+  double evalFun(const feFunctionArguments &args) { return _scalarFct->eval(args); }
+  // void evalFun(const double t, const std::vector<double> &x, std::vector<double> &res)
+  // {
+  //   _vectorFct->eval(t, x, res);
+  // }
+  void evalFun(const feFunctionArguments &args, std::vector<double> &res)
   {
-    _vectorFct->eval(t, x, res);
+    _vectorFct->eval(args, res);
   }
 
   //

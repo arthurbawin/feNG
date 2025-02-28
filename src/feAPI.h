@@ -29,4 +29,21 @@
 #include "gmsh.h"
 #endif
 
+// Useful scalar and vector constants
+namespace scalarConstant {
+	feConstantFunction zero(0.);
+  feConstantFunction one(1.);
+  feConstantFunction minusOne(-1.);
+}
+
+namespace vectorConstant {
+  feConstantVectorFunction zero({0., 0., 0.});
+  feConstantVectorFunction one_x({1., 0., 0.});
+  feConstantVectorFunction one_y({0., 1., 0.});
+  feConstantVectorFunction one_z({0., 0., 1.});
+  feConstantVectorFunction minusOne_x({-1., 0., 0.});
+  feConstantVectorFunction minusOne_y({0., -1., 0.});
+  feConstantVectorFunction minusOne_z({0., 0., -1.});
+}
+
 #endif

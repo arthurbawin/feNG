@@ -8,18 +8,17 @@
   depending on if the convective term is added to the vector of weak forms.
 */
 
-double solP(const double /* t */, const std::vector<double> &pos, const std::vector<double> &par)
+double solP(const feFunctionArguments &args, const std::vector<double> &par)
 {
-  double x = pos[0];
+  double x = args.pos[0];
   double L = par[0];
   double dpdx = par[1];
   return -dpdx * (L-x);
 }
 
-void solU(const double t, const std::vector<double> &pos, const std::vector<double> &par, std::vector<double> &res)
+void solU(const feFunctionArguments &args, const std::vector<double> &par, std::vector<double> &res)
 {
-  UNUSED(t);
-  double y = pos[1];
+  double y = args.pos[1];
   double H = par[0];
   double dpdx = par[1];
   res[0] = -dpdx/2. * y * (H - y);

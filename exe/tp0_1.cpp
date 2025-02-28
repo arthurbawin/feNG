@@ -1,10 +1,10 @@
 
 #include "feAPI.h"
 
-double fSol(const double /* t */, const std::vector<double> &pos, const std::vector<double> & /* par */)
+double fSol(const feFunctionArguments &args, const std::vector<double> & /* par */)
 {
-  double x = pos[0];
-  double y = pos[1];
+  double x = args.pos[0];
+  double y = args.pos[1];
   return x*y;
 }
 
@@ -24,6 +24,7 @@ int main(int /* argc */, char ** /* argv */)
 
   double I = 0.;
   std::vector<double> xPhys(3, 0.);
+  feFunctionArguments args;
 
   // Loop over 2D connectivities (mesh entities)
   for(feCncGeo *cnc : mesh.getCncGeo())
@@ -75,7 +76,10 @@ int main(int /* argc */, char ** /* argv */)
           xPhys[0] = x0 * (1. - xsiQ[i] - etaQ[i]) + x1 * xsiQ[i] + x2 * etaQ[i];
           xPhys[1] = y0 * (1. - xsiQ[i] - etaQ[i]) + y1 * xsiQ[i] + y2 * etaQ[i];
 
-          Iloc += fun(0., xPhys) * jacobians[nQuad * iElm + i] * wQ[i];
+          args.pos[0] = xPhys[0];
+          args.pos[1] = xPhys[1];
+
+          Iloc += fun(args) * jacobians[nQuad * iElm + i] * wQ[i];
         }
         I += Iloc;
       }

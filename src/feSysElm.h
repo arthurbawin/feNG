@@ -182,7 +182,7 @@ protected:
   bool _isThreadSafe = true;
 
   // Physical coordinates of a node
-  std::vector<double> _pos;
+  // std::vector<double> _pos;
 
 public:
   // Quadrature rule
@@ -195,7 +195,8 @@ public:
 public:
   // Do not call directly, call derived classes instead
   feSysElm(int dim, int nFields, elementSystemType ID, bool hasMatrix)
-    : _ID(ID), _dim(dim), _nFields(nFields), _hasMatrix(hasMatrix), _pos(3, 0.)
+    : _ID(ID), _dim(dim), _nFields(nFields), _hasMatrix(hasMatrix)
+    // , _pos(3, 0.)
   {
     _fieldsLayoutI.resize(1);
     _fieldsLayoutJ.resize(1);

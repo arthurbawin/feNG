@@ -80,7 +80,8 @@ void feSolution::initializeUnknowns(feMesh *mesh)
     #pragma omp parallel
     #endif
     {
-      std::vector<double> x(3);
+      // std::vector<double> x(3);
+      feFunctionArguments args(_tn);
       std::vector<double> vecVal(3);
       double val;
       int nElm = fS->getNumElements();
@@ -103,16 +104,16 @@ void feSolution::initializeUnknowns(feMesh *mesh)
 
           for(int j = 0; j < fS->getNumFunctions(); ++j) {
             double r[3] = {coor[3 * j], coor[3 * j + 1], coor[3 * j + 2]};
-            geoSpace->interpolateVectorField(localCoord, r, x);
+            geoSpace->interpolateVectorField(localCoord, r, args.pos);
 
             if(fS->getNumComponents() > 1) {
               // Vector valued finite element space
-              fS->evalFun(_tn, x, vecVal);
+              fS->evalFun(args, vecVal);
               int indexComponent = j % fS->getNumComponents();
               val = vecVal[indexComponent];
             } else {
               // Scalar valued finite element space
-              val = fS->evalFun(_tn, x);
+              val = fS->evalFun(args);
             }
 
             _sol[adr[j]] = val;
@@ -152,8 +153,8 @@ void feSolution::initializeUnknowns(feMesh *mesh)
             for(int k = 0; k < nQuad; ++k) {
               // Evaluate analytic solution at quad points
               double r[3] = {xQuad[k], 0., 0.};
-              geoSpace->interpolateVectorField(localCoord, r, x);
-              uQuad = fS->evalFun(_tn, x);
+              geoSpace->interpolateVectorField(localCoord, r, args.pos);
+              uQuad = fS->evalFun(args);
               // Evaluate Legendre polynomials at quad points
               fS->L(r, phi.data());
               B[i] += wQuad[k] * phi[i] * uQuad;
@@ -172,7 +173,8 @@ void feSolution::initializeUnknowns(feMesh *mesh)
 
 void feSolution::initializeEssentialBC(feMesh *mesh, feSolutionContainer *solContainer)
 {
-  std::vector<double> x(3);
+  // std::vector<double> x(3);
+  feFunctionArguments args(_tn);
   std::vector<double> vecVal(3);
   double val;
 
@@ -221,11 +223,11 @@ void feSolution::initializeEssentialBC(feMesh *mesh, feSolutionContainer *solCon
 
         for(int j = 0; j < fS->getNumFunctions(); ++j) {
           double r[3] = {coor[3 * j], coor[3 * j + 1], coor[3 * j + 2]};
-          geoSpace->interpolateVectorField(localCoord, r, x);
+          geoSpace->interpolateVectorField(localCoord, r, args.pos);
 
           if(fS->getNumComponents() > 1) {
             // Vector valued finite element space
-            fS->evalFun(_tn, x, vecVal);
+            fS->evalFun(args, vecVal);
             int indexComponent = j % fS->getNumComponents();
             val = vecVal[indexComponent];
             if(fS->isEssentialComponent(indexComponent)) {
@@ -236,7 +238,7 @@ void feSolution::initializeEssentialBC(feMesh *mesh, feSolutionContainer *solCon
             }
           } else {
             // Scalar valued finite element space
-            val = fS->evalFun(_tn, x);
+            val = fS->evalFun(args);
             _sol[adr[j]] = val;
             if(solContainer != nullptr) {
               solContainer->_sol[0][adr[j]] = val;

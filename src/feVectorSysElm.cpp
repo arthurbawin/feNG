@@ -19,8 +19,8 @@ void feSysElm_VectorSource::computeBe(feBilinearForm *form)
 {
   for(int k = 0; k < _nQuad; ++k) {
     double jac = form->_J[_nQuad * form->_numElem + k];
-    form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, _pos);
-    (*_source)(form->_tn, _pos, _S);
+    form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, form->_args.pos);
+    (*_source)(form->_args, _S);
     for(int i = 0; i < _nFunctions; ++i) {
       _phiU[i] = form->_intSpaces[_idU]->getFunctionAtQuadNode(i, k);
       form->_Be[i] -= _phiU[i] * _S[i % _nComponents] * jac * _wQuad[k];
@@ -49,8 +49,8 @@ void feSysElm_GradSource::computeBe(feBilinearForm *form)
     jac = form->_J[_nQuad * form->_numElem + k];
     form->_cnc->computeElementTransformation(form->_geoCoord, k, jac, form->_transformation);
 
-    form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, _pos);
-    S = (*_source)(form->_tn, _pos);
+    form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, form->_args.pos);
+    S = (*_source)(form->_args);
 
     // Compute compacted grad(phi) without the trivial zeros
     form->_intSpaces[_idU]->getFunctionsPhysicalGradientAtQuadNode(k, form->_transformation,
@@ -84,8 +84,8 @@ void feSysElm_VectorMass::computeAe(feBilinearForm *form)
   for(int k = 0; k < _nQuad; ++k) {
     jac = form->_J[_nQuad * form->_numElem + k];
 
-    form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, _pos);
-    coeff = (*_coeff)(form->_tn, _pos);
+    form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, form->_args.pos);
+    coeff = (*_coeff)(form->_args);
 
     for(int i = 0; i < _nFunctions; ++i)
       _phiU[i] = form->_intSpaces[_idU]->getFunctionAtQuadNode(i, k);
@@ -107,8 +107,8 @@ void feSysElm_VectorMass::computeBe(feBilinearForm *form)
   for(int k = 0; k < _nQuad; ++k) {
     jac = form->_J[_nQuad * form->_numElem + k];
 
-    form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, _pos);
-    coeff = (*_coeff)(form->_tn, _pos);
+    form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, form->_args.pos);
+    coeff = (*_coeff)(form->_args);
 
     form->_intSpaces[_idU]->interpolateVectorFieldAtQuadNode(form->_sol[_idU], k, _u, _nComponents);
 
@@ -143,8 +143,8 @@ void feSysElm_MixedVectorMass::computeAe(feBilinearForm *form)
   for(int k = 0; k < _nQuad; ++k) {
     jac = form->_J[_nQuad * form->_numElem + k];
 
-    form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, _pos);
-    coeff = (*_coeff)(form->_tn, _pos);
+    form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, form->_args.pos);
+    coeff = (*_coeff)(form->_args);
 
     for(int i = 0; i < _nFunctionsU; ++i)
       _phiU[i] = form->_intSpaces[_idU]->getFunctionAtQuadNode(i, k);
@@ -168,8 +168,8 @@ void feSysElm_MixedVectorMass::computeBe(feBilinearForm *form)
   for(int k = 0; k < _nQuad; ++k) {
     jac = form->_J[_nQuad * form->_numElem + k];
 
-    form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, _pos);
-    coeff = (*_coeff)(form->_tn, _pos);
+    form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, form->_args.pos);
+    coeff = (*_coeff)(form->_args);
 
     form->_intSpaces[_idU]->interpolateVectorFieldAtQuadNode(form->_sol[_idU], k, _u,
                                                              _nComponentsU);
@@ -204,8 +204,8 @@ void feSysElm_MixedScalarVectorMass::computeAe(feBilinearForm *form)
   for(int k = 0; k < _nQuad; ++k) {
     jac = form->_J[_nQuad * form->_numElem + k];
 
-    form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, _pos);
-    coeff = (*_coeff)(form->_tn, _pos);
+    form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, form->_args.pos);
+    coeff = (*_coeff)(form->_args);
 
     for(int i = 0; i < _nFunctionsU; ++i)
       _phiU[i] = form->_intSpaces[_idU]->getFunctionAtQuadNode(i, k);
@@ -225,8 +225,8 @@ void feSysElm_MixedScalarVectorMass::computeBe(feBilinearForm *form)
   for(int k = 0; k < _nQuad; ++k) {
     jac = form->_J[_nQuad * form->_numElem + k];
 
-    form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, _pos);
-    coeff = (*_coeff)(form->_tn, _pos);
+    form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, form->_args.pos);
+    coeff = (*_coeff)(form->_args);
 
     form->_intSpaces[_idU]->interpolateVectorFieldAtQuadNode(form->_sol[_idU], k, _u,
                                                              _nComponentsU);
@@ -258,8 +258,8 @@ void feSysElm_TransientVectorMass::computeAe(feBilinearForm *form)
   for(int k = 0; k < _nQuad; ++k) {
     jac = form->_J[_nQuad * form->_numElem + k];
 
-    form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, _pos);
-    coeff = (*_coeff)(form->_tn, _pos);
+    form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, form->_args.pos);
+    coeff = (*_coeff)(form->_args);
 
     for(int i = 0; i < _nFunctions; ++i)
       _phiU[i] = form->_intSpaces[_idU]->getFunctionAtQuadNode(i, k);
@@ -280,8 +280,8 @@ void feSysElm_TransientVectorMass::computeBe(feBilinearForm *form)
   for(int k = 0; k < _nQuad; ++k) {
     jac = form->_J[_nQuad * form->_numElem + k];
 
-    form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, _pos);
-    coeff = (*_coeff)(form->_tn, _pos);
+    form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, form->_args.pos);
+    coeff = (*_coeff)(form->_args);
 
     form->_intSpaces[_idU]->interpolateVectorFieldAtQuadNode(form->_solDot[_idU], k, _dudt,
                                                              _nComponents);
@@ -315,9 +315,9 @@ void feSysElm_VectorDiffusion::computeAe(feBilinearForm *form)
     form->_cnc->computeElementTransformation(form->_geoCoord, k, jac, form->_transformation);
 
     // Evaluate scalar diffusivity k(t,x)
-    form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, _pos);
-    diffusivity = (*_diffusivity)(form->_tn, _pos);
-    coeff = (*_coeff)(form->_tn, _pos);
+    form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, form->_args.pos);
+    diffusivity = (*_diffusivity)(form->_args);
+    coeff = (*_coeff)(form->_args);
 
     // Compute compacted grad(phi) without the trivial zeros
     form->_intSpaces[_idU]->getFunctionsPhysicalGradientAtQuadNode(k, form->_transformation,
@@ -353,9 +353,9 @@ void feSysElm_VectorDiffusion::computeBe(feBilinearForm *form)
     form->_cnc->computeElementTransformation(form->_geoCoord, k, jac, form->_transformation);
 
     // Evaluate scalar diffusivity k(t,x)
-    form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, _pos);
-    double diffusivity = (*_diffusivity)(form->_tn, _pos);
-    double coeff = (*_coeff)(form->_tn, _pos);
+    form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, form->_args.pos);
+    double diffusivity = (*_diffusivity)(form->_args);
+    double coeff = (*_coeff)(form->_args);
 
     // Compute gradient of current solution:
     // gradu = [grad(u_1) ... grad(u_nComponents)]
@@ -475,8 +475,8 @@ void feSysElm_MixedGradient::computeAe(feBilinearForm *form)
     form->_cnc->computeElementTransformation(form->_geoCoord, k, jac, form->_transformation);
 
     // Evaluate scalar coefficient
-    form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, _pos);
-    coeff = (*_coeff)(form->_tn, _pos);
+    form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, form->_args.pos);
+    coeff = (*_coeff)(form->_args);
 
     // Get phiU
     form->_intSpaces[_idU]->getFunctionsAtQuadNode(k, _phiU);
@@ -502,8 +502,8 @@ void feSysElm_MixedGradient::computeBe(feBilinearForm *form)
     form->_cnc->computeElementTransformation(form->_geoCoord, k, jac, form->_transformation);
 
     // Evaluate scalar coefficient
-    form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, _pos);
-    coeff = (*_coeff)(form->_tn, _pos);
+    form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, form->_args.pos);
+    coeff = (*_coeff)(form->_args);
 
     // Get current scalar solution
     u = form->_intSpaces[_idU]->interpolateFieldAtQuadNode(form->_sol[_idU], k);
@@ -544,8 +544,8 @@ void feSysElm_MixedDivergence::computeAe(feBilinearForm *form)
     form->_cnc->computeElementTransformation(form->_geoCoord, k, jac, form->_transformation);
 
     // Evaluate scalar coefficient
-    form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, _pos);
-    coeff = (*_coeff)(form->_tn, _pos);
+    form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, form->_args.pos);
+    coeff = (*_coeff)(form->_args);
 
     // Get _phiV
     form->_intSpaces[_idV]->getFunctionsAtQuadNode(k, _phiV);
@@ -571,8 +571,8 @@ void feSysElm_MixedDivergence::computeBe(feBilinearForm *form)
     form->_cnc->computeElementTransformation(form->_geoCoord, k, jac, form->_transformation);
 
     // Evaluate scalar coefficient
-    form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, _pos);
-    coeff = (*_coeff)(form->_tn, _pos);
+    form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, form->_args.pos);
+    coeff = (*_coeff)(form->_args);
 
     // Compute gradient of current solution:
     // gradu = [grad(u_1) ... grad(u_nComponents)]
@@ -622,8 +622,8 @@ void feSysElm_MixedDivergenceCHNS::computeAe(feBilinearForm *form)
     form->_cnc->computeElementTransformation(form->_geoCoord, k, jac, form->_transformation);
 
     // Evaluate scalar coefficients
-    form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, _pos);
-    coeff = (*_coeff)(form->_tn, _pos);
+    form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, form->_args.pos);
+    coeff = (*_coeff)(form->_args);
     phi = form->_intSpaces[_idPhi]->interpolateFieldAtQuadNode(form->_sol[_idPhi], k);
     rho = (*_density)(phi);
     drhodphi = (*_drhodphi)(phi);
@@ -661,8 +661,8 @@ void feSysElm_MixedDivergenceCHNS::computeBe(feBilinearForm *form)
     form->_cnc->computeElementTransformation(form->_geoCoord, k, jac, form->_transformation);
 
     // Evaluate scalar coefficients
-    form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, _pos);
-    coeff = (*_coeff)(form->_tn, _pos);
+    form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, form->_args.pos);
+    coeff = (*_coeff)(form->_args);
     phi = form->_intSpaces[_idPhi]->interpolateFieldAtQuadNode(form->_sol[_idPhi], k);
     rho = (*_density)(phi);
     drhodphi = (*_drhodphi)(phi);
@@ -724,8 +724,8 @@ void feSysElm_MixedCurl::computeBe(feBilinearForm *form)
     form->_cnc->computeElementTransformation(form->_geoCoord, k, jac, form->_transformation);
 
     // Evaluate scalar coefficient
-    form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, _pos);
-    coeff = (*_coeff)(form->_tn, _pos);
+    form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, form->_args.pos);
+    coeff = (*_coeff)(form->_args);
 
     // Compute phi and gradu
     form->_intSpaces[_idV]->getFunctionsAtQuadNode(k, _phiV);
@@ -767,8 +767,8 @@ void feSysElm_MixedDotProduct::computeAe(feBilinearForm *form)
     form->_cnc->computeElementTransformation(form->_geoCoord, k, jac, form->_transformation);
 
     // Evaluate user-defined vector field
-    form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, _pos);
-    (*_f)(form->_tn, _pos, _fVal);
+    form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, form->_args.pos);
+    (*_f)(form->_args, _fVal);
 
     // _phiV
     form->_intSpaces[_idV]->getFunctionsAtQuadNode(k, _phiV);
@@ -794,8 +794,8 @@ void feSysElm_MixedDotProduct::computeBe(feBilinearForm *form)
     form->_cnc->computeElementTransformation(form->_geoCoord, k, jac, form->_transformation);
 
     // Evaluate user-defined vector field
-    form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, _pos);
-    (*_f)(form->_tn, _pos, _fVal);
+    form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, form->_args.pos);
+    (*_f)(form->_args, _fVal);
 
     // Get u and phiV
     form->_intSpaces[_idU]->interpolateVectorFieldAtQuadNode(form->_sol[_idU], k, _u, _nComponents);
@@ -841,8 +841,8 @@ void feSysElm_TripleMixedGradient::computeAe(feBilinearForm *form)
   //   form->_cnc->computeElementTransformation(form->_geoCoord, k, jac, form->_transformation);
 
   //   // Evaluate scalar coefficient
-  //   form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, _pos);
-  //   coeff = (*_coeff)(form->_tn, _pos);
+  //   form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, form->_args.pos);
+  //   coeff = (*_coeff)(form->_args);
 
   //   // Get phiU
   //   form->_intSpaces[_idU]->getFunctionsAtQuadNode(k, _phiU);
@@ -868,8 +868,8 @@ void feSysElm_TripleMixedGradient::computeBe(feBilinearForm *form)
     form->_cnc->computeElementTransformation(form->_geoCoord, k, jac, form->_transformation);
 
     // Evaluate scalar coefficient
-    form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, _pos);
-    coeff = (*_coeff)(form->_tn, _pos);
+    form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, form->_args.pos);
+    coeff = (*_coeff)(form->_args);
 
     // Get u, gradV and phiW
     u = form->_intSpaces[_idU]->interpolateFieldAtQuadNode(form->_sol[_idU], k);
@@ -938,15 +938,16 @@ void feSysElm_CHNS_Momentum::computeAe(feBilinearForm *form)
     form->_cnc->computeElementTransformation(form->_geoCoord, k, jac, form->_transformation);
 
     // Evaluate scalar coefficients
-    form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, _pos);
+    form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, form->_args.pos);
     phi0 = form->_intSpaces[_idPhi]->interpolateFieldAtQuadNode(form->_sol[_idPhi], k);
-    rho0 = (*_density)(phi0);
-    mobility = (*_mobility)(phi0);
-    drhodphi = (*_drhodphi)(phi0);
-    eta0 = (*_viscosity)(phi0);
-    detadphi = (*_dviscdphi)(phi0);
-    coeffKorteweg = (*_coeffKorteweg)(form->_tn, _pos);
-    (*_volumeForce)(form->_tn, _pos, _f);
+    form->_args.u = phi0;
+    rho0 = (*_density)(form->_args);
+    mobility = (*_mobility)(form->_args);
+    drhodphi = (*_drhodphi)(form->_args);
+    eta0 = (*_viscosity)(form->_args);
+    detadphi = (*_dviscdphi)(form->_args);
+    coeffKorteweg = (*_coeffKorteweg)(form->_args);
+    (*_volumeForce)(form->_args, _f);
 
     // Get all relevant values and gradients
     // u
@@ -1177,14 +1178,15 @@ void feSysElm_CHNS_Momentum::computeBe(feBilinearForm *form)
     form->_cnc->computeElementTransformation(form->_geoCoord, k, jac, form->_transformation);
 
     // Evaluate scalar coefficients
-    form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, _pos);
+    form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, form->_args.pos);
     phi = form->_intSpaces[_idPhi]->interpolateFieldAtQuadNode(form->_sol[_idPhi], k);
-    rho = (*_density)(phi);
-    mobility = (*_mobility)(phi);
-    drhodphi = (*_drhodphi)(phi);
-    eta = (*_viscosity)(phi);
-    coeffKorteweg = (*_coeffKorteweg)(form->_tn, _pos);
-    (*_volumeForce)(form->_tn, _pos, _f);
+    form->_args.u = phi;
+    rho = (*_density)(form->_args);
+    mobility = (*_mobility)(form->_args);
+    drhodphi = (*_drhodphi)(form->_args);
+    eta = (*_viscosity)(form->_args);
+    coeffKorteweg = (*_coeffKorteweg)(form->_args);
+    (*_volumeForce)(form->_args, _f);
 
     // feInfo("x = %+-1.4e y = %+-1.4e phi = %+-1.10e - eta = %+-1.10e", _pos[0], _pos[1], phi, eta);
 
@@ -1298,8 +1300,8 @@ void feSysElm_VectorConvectiveAcceleration::computeAe(feBilinearForm *form)
     form->_cnc->computeElementTransformation(form->_geoCoord, k, jac, form->_transformation);
 
     // Evaluate scalar coefficient
-    form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, _pos);
-    coeff = (*_coeff)(form->_tn, _pos);
+    form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, form->_args.pos);
+    coeff = (*_coeff)(form->_args);
 
     // Get u, grad_u, phiU and gradPhiU
     form->_intSpaces[_idU]->interpolateVectorFieldAtQuadNode(form->_sol[_idU], k, _u, _nComponents);
@@ -1352,8 +1354,8 @@ void feSysElm_VectorConvectiveAcceleration::computeBe(feBilinearForm *form)
     form->_cnc->computeElementTransformation(form->_geoCoord, k, jac, form->_transformation);
 
     // Evaluate scalar coefficient
-    form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, _pos);
-    coeff = (*_coeff)(form->_tn, _pos);
+    form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, form->_args.pos);
+    coeff = (*_coeff)(form->_args);
 
     // Get u, grad_u and phiU
     form->_intSpaces[_idU]->interpolateVectorFieldAtQuadNode(form->_sol[_idU], k, _u, _nComponents);
@@ -1404,8 +1406,8 @@ void feSysElm_TracerConvection::computeAe(feBilinearForm *form)
     form->_cnc->computeElementTransformation(form->_geoCoord, k, jac, form->_transformation);
 
     // Evaluate scalar coefficient
-    form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, _pos);
-    coeff = (*_coeff)(form->_tn, _pos);
+    form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, form->_args.pos);
+    coeff = (*_coeff)(form->_args);
 
     // u
     form->_intSpaces[_idU]->interpolateVectorFieldAtQuadNode(form->_sol[_idU], k, _u, _nComponents);
@@ -1449,8 +1451,8 @@ void feSysElm_TracerConvection::computeBe(feBilinearForm *form)
     form->_cnc->computeElementTransformation(form->_geoCoord, k, jac, form->_transformation);
 
     // Evaluate scalar coefficient
-    form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, _pos);
-    coeff = (*_coeff)(form->_tn, _pos);
+    form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, form->_args.pos);
+    coeff = (*_coeff)(form->_args);
 
     // Get u, gradC and phiC
     form->_intSpaces[_idU]->interpolateVectorFieldAtQuadNode(form->_sol[_idU], k, _u, _nComponents);
@@ -1499,8 +1501,8 @@ void feSysElm_VectorAdjointConvectiveAcceleration::computeAe(feBilinearForm *for
   //   form->_cnc->computeElementTransformation(form->_geoCoord, k, jac, form->_transformation);
 
   //   // Evaluate scalar coefficient
-  //   form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, _pos);
-  //   coeff = (*_coeff)(form->_tn, _pos);
+  //   form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, form->_args.pos);
+  //   coeff = (*_coeff)(form->_args);
 
   //   // Get u, grad_u, phiU and gradPhiU
   //   form->_intSpaces[_idU]->interpolateVectorFieldAtQuadNode(form->_sol[_idU], k, _u, _nComponents);
@@ -1553,8 +1555,8 @@ void feSysElm_VectorAdjointConvectiveAcceleration::computeBe(feBilinearForm *for
     form->_cnc->computeElementTransformation(form->_geoCoord, k, jac, form->_transformation);
 
     // Evaluate scalar coefficient
-    form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, _pos);
-    coeff = (*_coeff)(form->_tn, _pos);
+    form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, form->_args.pos);
+    coeff = (*_coeff)(form->_args);
 
     // Get u, grad_uAd and phi_uAd
     form->_intSpaces[_idU]->interpolateVectorFieldAtQuadNode(form->_sol[_idU], k, _u, _nComponents);
@@ -1608,9 +1610,9 @@ void feSysElm_DivergenceNewtonianStress::computeAe(feBilinearForm *form)
     form->_cnc->computeElementTransformation(form->_geoCoord, k, jac, form->_transformation);
 
     // Evaluate scalar coefficients
-    form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, _pos);
-    mu = (*_viscosity)(form->_tn, _pos);
-    coeff = (*_coeff)(form->_tn, _pos);
+    form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, form->_args.pos);
+    mu = (*_viscosity)(form->_args);
+    coeff = (*_coeff)(form->_args);
 
     // Get relevant values and gradients
     // grad_phiU
@@ -1695,9 +1697,9 @@ void feSysElm_DivergenceNewtonianStress::computeBe(feBilinearForm *form)
     form->_cnc->computeElementTransformation(form->_geoCoord, k, jac, form->_transformation);
 
     // Evaluate scalar coefficients
-    form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, _pos);
-    mu = (*_viscosity)(form->_tn, _pos);
-    coeff = (*_coeff)(form->_tn, _pos);
+    form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, form->_args.pos);
+    mu = (*_viscosity)(form->_args);
+    coeff = (*_coeff)(form->_args);
 
     // Get p, grad_u and gradphiU
     p = form->_intSpaces[_idP]->interpolateFieldAtQuadNode(form->_sol[_idP], k);
@@ -1855,11 +1857,11 @@ void feSysElm_Stokes_SUPG_PSPG::computeBe(feBilinearForm *form)
     form->_cnc->computeElementTransformation(form->_geoCoord, k, jac, form->_transformation);
 
     // Evaluate scalar coefficients
-    form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, _pos);
-    coeff = (*_coeff)(form->_tn, _pos);
-    rho = (*_density)(form->_tn, _pos);
-    mu = (*_viscosity)(form->_tn, _pos);
-    (*_volumeForce)(form->_tn, _pos, _f);
+    form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, form->_args.pos);
+    coeff = (*_coeff)(form->_args);
+    rho = (*_density)(form->_args);
+    mu = (*_viscosity)(form->_args);
+    (*_volumeForce)(form->_args, _f);
 
     // Get u, grad_u, grad_p, gradphiU, gradphiP and _hessu (2nd order derivatives)
     // u
@@ -1955,11 +1957,11 @@ void feSysElm_NS_SUPG_PSPG::computeBe(feBilinearForm *form)
     form->_cnc->computeElementTransformation(form->_geoCoord, k, jac, form->_transformation);
 
     // Evaluate scalar coefficients
-    form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, _pos);
-    coeff = (*_coeff)(form->_tn, _pos);
-    rho = (*_density)(form->_tn, _pos);
-    mu = (*_viscosity)(form->_tn, _pos);
-    (*_volumeForce)(form->_tn, _pos, _f);
+    form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, form->_args.pos);
+    coeff = (*_coeff)(form->_args);
+    rho = (*_density)(form->_args);
+    mu = (*_viscosity)(form->_args);
+    (*_volumeForce)(form->_args, _f);
 
     // Get u, grad_u, grad_p, gradphiU, gradphiP and _hessu (2nd order derivatives)
     // u

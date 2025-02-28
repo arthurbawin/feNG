@@ -1,6 +1,11 @@
 #ifndef _FERECOVERY_
 #define _FERECOVERY_
 
+// 
+// This file and feRecovery.cpp are essentially deprecated and should me removed
+// to have only the feNewRecovery files
+//
+
 #include "feMesh.h"
 #include "feCncGeo.h"
 #include "feSpace.h"

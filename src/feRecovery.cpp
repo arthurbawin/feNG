@@ -14,16 +14,15 @@ static bool isBoundary(feMesh *mesh, Edge edge) { UNUSED(mesh, edge); return fal
 
 static double boundaryCondition(feMesh *mesh, int vertex, feFunction *solRef)
 {
-  return solRef->eval(
-    0, {mesh->getVertex(vertex)->x(), mesh->getVertex(vertex)->y(), mesh->getVertex(vertex)->z()});
+  feFunctionArguments args(0., {mesh->getVertex(vertex)->x(), mesh->getVertex(vertex)->y(), mesh->getVertex(vertex)->z()});
+  return solRef->eval(args);
 }
 
 static void boundaryConditionVec(feMesh *mesh, int vertex, feVectorFunction *solRefGrad,
                                  std::vector<double> &res)
 {
-  solRefGrad->eval(
-    0, {mesh->getVertex(vertex)->x(), mesh->getVertex(vertex)->y(), mesh->getVertex(vertex)->z()},
-    res);
+  feFunctionArguments args(0., {mesh->getVertex(vertex)->x(), mesh->getVertex(vertex)->y(), mesh->getVertex(vertex)->z()});
+  solRefGrad->eval(args, res);
 }
 
 static double boundaryCondition(feMesh *mesh, Edge edge, feFunction *solRef) { UNUSED(mesh, edge, solRef); return 0.0; }
@@ -1979,7 +1978,7 @@ void feRecovery::estimateError(std::vector<double> &norm, feFunction *solRef)
   norm[0] = norm[1] = 0.0;
 
   std::vector<double> geoCoord(9, 0.);
-  std::vector<double> x(3, 0.);
+  feFunctionArguments args;
   std::vector<double> xLoc(3, 0.);
   std::vector<double> monomials(_dimRecovery, 0.);
 
@@ -2005,7 +2004,7 @@ void feRecovery::estimateError(std::vector<double> &norm, feFunction *solRef)
 
     for(int k = 0; k < nQuad; ++k) {
       // Coordonnées des points d'intégration
-      _geoSpace->interpolateVectorFieldAtQuadNode(geoCoord, k, x);
+      _geoSpace->interpolateVectorFieldAtQuadNode(geoCoord, k, args.pos);
 
       // u reconstruit au point d'intégration : interpolation des valeurs issues des sommets
       double uReconstruit = 0.0;
@@ -2107,10 +2106,10 @@ void feRecovery::estimateError(std::vector<double> &norm, feFunction *solRef)
 
       norm[0] += J[nQuad * iElm + k] * w[k] *
                  pow(uReconstruit - _intSpace->interpolateFieldAtQuadNode(_solution, k), 2);
-      if(solRef) norm[1] += J[nQuad * iElm + k] * w[k] * pow(uReconstruit - solRef->eval(0, x), 2);
+      if(solRef) norm[1] += J[nQuad * iElm + k] * w[k] * pow(uReconstruit - solRef->eval(args), 2);
 
-      fprintf(f, "%+-12.12e \t %+-12.12e \t %+-12.12e \t %+-12.12e \t %+-12.12e\n", x[0], x[1],
-              uReconstruit, solRef->eval(0, x),
+      fprintf(f, "%+-12.12e \t %+-12.12e \t %+-12.12e \t %+-12.12e \t %+-12.12e\n", args.pos[0], args.pos[1],
+              uReconstruit, solRef->eval(args),
               _intSpace->interpolateFieldAtQuadNode(_solution, k));
     }
   }
@@ -2125,7 +2124,7 @@ void feRecovery::estimateDudxError(std::vector<double> &norm, feVectorFunction *
   norm[14] = norm[15] = norm[16] = norm[17] = 0.0;
 
   std::vector<double> geoCoord(9, 0.);
-  std::vector<double> x(3, 0.);
+  feFunctionArguments args;
   std::vector<double> xLoc(3, 0.);
   std::vector<double> monomials(_dimRecovery, 0.);
 
@@ -2153,7 +2152,7 @@ void feRecovery::estimateDudxError(std::vector<double> &norm, feVectorFunction *
 
     for(int k = 0; k < nQuad; ++k) {
       // Coordonnées des points d'intégration
-      _geoSpace->interpolateVectorFieldAtQuadNode(geoCoord, k, x);
+      _geoSpace->interpolateVectorFieldAtQuadNode(geoCoord, k, args.pos);
 
       // u reconstruit au point d'intégration : interpolation des valeurs issues des sommets
       double dudxReconstruit = 0.0;
@@ -2235,7 +2234,7 @@ void feRecovery::estimateDudxError(std::vector<double> &norm, feVectorFunction *
       norm[15] += J[nQuad * iElm + k] * w[k] * pow(dudyReconstruit - duhdy, 2);
       if(solRefGrad) {
         std::vector<double> result(2, 0.);
-        solRefGrad->eval(0, x, result);
+        solRefGrad->eval(args, result);
         norm[16] += J[nQuad * iElm + k] * w[k] * pow(dudxReconstruit - result[0], 2);
         norm[17] += J[nQuad * iElm + k] * w[k] * pow(dudyReconstruit - result[1], 2);
       }
@@ -2253,7 +2252,7 @@ void feRecovery::estimateH1Error(std::vector<double> &norm, feVectorFunction *so
   norm[18] = norm[19] = norm[20] = 0.0;
 
   std::vector<double> geoCoord(9, 0.);
-  std::vector<double> x(3, 0.);
+  feFunctionArguments args;
   std::vector<double> xLoc(3, 0.);
   std::vector<double> monomials(_dimDerivation, 0.);
 
@@ -2281,7 +2280,7 @@ void feRecovery::estimateH1Error(std::vector<double> &norm, feVectorFunction *so
 
     for(int k = 0; k < nQuad; ++k) {
       // Coordonnées des points d'intégration
-      _geoSpace->interpolateVectorFieldAtQuadNode(geoCoord, k, x);
+      _geoSpace->interpolateVectorFieldAtQuadNode(geoCoord, k, args.pos);
 
       // derivee reconstruite au point d'intégration : interpolation des valeurs issues des sommets
       double dudxReconstruit = 0.0;
@@ -2306,9 +2305,9 @@ void feRecovery::estimateH1Error(std::vector<double> &norm, feVectorFunction *so
         int vNode = _cnc->getVertexConnectivity(iElm, iVert);
         // std::vector<double> &dux = derivativeCoeff[vNode][0];
         // std::vector<double> &duy = derivativeCoeff[vNode][1];
-        xLoc[0] = x[0] - _mesh->getVertex(vNode)->x();
-        xLoc[1] = x[1] - _mesh->getVertex(vNode)->y();
-        xLoc[2] = x[2] - _mesh->getVertex(vNode)->z();
+        xLoc[0] = args.pos[0] - _mesh->getVertex(vNode)->x();
+        xLoc[1] = args.pos[1] - _mesh->getVertex(vNode)->y();
+        xLoc[2] = args.pos[2] - _mesh->getVertex(vNode)->z();
         // for(int i = 0; i < _dimDerivation; ++i) {
         // monomials[i] = pow(xLoc[0], _expX[i]) * pow(xLoc[1], _expY[i]);
         // dudxReconstruit += _intSpace->getFunctionAtQuadNode(iVert, k) *
@@ -2336,9 +2335,9 @@ void feRecovery::estimateH1Error(std::vector<double> &norm, feVectorFunction *so
           v1 = _cnc->getVertexConnectivity(iElm, iEdge);
           v2 = _cnc->getVertexConnectivity(iElm, iEdge + 1);
         }
-        xLoc[0] = x[0] - (_mesh->getVertex(v1)->x() + _mesh->getVertex(v2)->x()) / 2.0;
-        xLoc[1] = x[1] - (_mesh->getVertex(v1)->y() + _mesh->getVertex(v2)->y()) / 2.0;
-        xLoc[2] = x[2] - (_mesh->getVertex(v1)->z() + _mesh->getVertex(v2)->z()) / 2.0;
+        xLoc[0] = args.pos[0] - (_mesh->getVertex(v1)->x() + _mesh->getVertex(v2)->x()) / 2.0;
+        xLoc[1] = args.pos[1] - (_mesh->getVertex(v1)->y() + _mesh->getVertex(v2)->y()) / 2.0;
+        xLoc[2] = args.pos[2] - (_mesh->getVertex(v1)->z() + _mesh->getVertex(v2)->z()) / 2.0;
         // for(int i = 0; i < _dimDerivation; ++i) {
         // Attention : iEdge+3 hardcoded for P2 interpolant
         // u[iDeriv] += _geoSpace->getFunctionAtQuadNode(iEdge+3, k) * du[i] * pow(xLoc[0],
@@ -2409,7 +2408,7 @@ void feRecovery::estimateH1Error(std::vector<double> &norm, feVectorFunction *so
                  (pow(dudxReconstruit - duhdx, 2) + pow(dudyReconstruit - duhdy, 2));
       if(solRefGrad) {
         std::vector<double> result(2, 0.);
-        solRefGrad->eval(0, x, result);
+        solRefGrad->eval(args, result);
         norm[5] += J[nQuad * iElm + k] * w[k] * pow(dudxReconstruit - result[0], 2);
         norm[6] += J[nQuad * iElm + k] * w[k] * pow(dudyReconstruit - result[1], 2);
         norm[7] += J[nQuad * iElm + k] * w[k] *
@@ -2417,7 +2416,7 @@ void feRecovery::estimateH1Error(std::vector<double> &norm, feVectorFunction *so
         norm[18] += J[nQuad * iElm + k] * w[k] * pow(duhdx - result[0], 2);
         norm[19] += J[nQuad * iElm + k] * w[k] * pow(duhdy - result[1], 2);
         norm[20] += J[nQuad * iElm + k] * w[k] * (pow(duhdx - result[0], 2) + pow(duhdy - result[1], 2));
-        fprintf(f, "%+-12.12e \t %+-12.12e \t %+-12.12e \t %+-12.12e\n", x[0], x[1],
+        fprintf(f, "%+-12.12e \t %+-12.12e \t %+-12.12e \t %+-12.12e\n", args.pos[0], args.pos[1],
                 dudxReconstruit, result[0]);
       }
     }
@@ -2439,7 +2438,7 @@ void feRecovery::estimateHessError(std::vector<double> &norm, feVectorFunction *
   norm[8] = norm[9] = norm[10] = norm[11] = norm[12] = norm[13] = 0.0;
 
   std::vector<double> geoCoord(9, 0.);
-  std::vector<double> x(3, 0.);
+  feFunctionArguments args;
   std::vector<double> xLoc(3, 0.);
   std::vector<double> monomials(_dimDerivation, 0.);
 
@@ -2468,7 +2467,7 @@ void feRecovery::estimateHessError(std::vector<double> &norm, feVectorFunction *
 
     for(int k = 0; k < nQuad; ++k) {
       // Coordonnées des points d'intégration
-      _geoSpace->interpolateVectorFieldAtQuadNode(geoCoord, k, x);
+      _geoSpace->interpolateVectorFieldAtQuadNode(geoCoord, k, args.pos);
 
       // derivee reconstruite au point d'intégration : interpolation des valeurs issues des sommets
       double d2udx2Reconstruit = 0.0;
@@ -2591,7 +2590,7 @@ void feRecovery::estimateHessError(std::vector<double> &norm, feVectorFunction *
 
       if(solRefHess) {
         std::vector<double> result(4, 0.);
-        solRefHess->eval(0, x, result);
+        solRefHess->eval(args, result);
         norm[8] += J[nQuad * iElm + k] * w[k] * pow(d2udx2Reconstruit - result[0], 2);
         norm[9] += J[nQuad * iElm + k] * w[k] * pow(d2udxyReconstruit - result[1], 2);
         norm[10] += J[nQuad * iElm + k] * w[k] *
@@ -2600,7 +2599,7 @@ void feRecovery::estimateHessError(std::vector<double> &norm, feVectorFunction *
         norm[12] += J[nQuad * iElm + k] * w[k] * pow(d2udy2Reconstruit - result[3], 2);
         norm[13] += J[nQuad * iElm + k] * w[k] *
                     (pow(d2udyxReconstruit - result[2], 2) + pow(d2udy2Reconstruit - result[3], 2));
-        fprintf(f, "%+-12.12e \t %+-12.12e \t %+-12.12e \t %+-12.12e\n", x[0], x[1],
+        fprintf(f, "%+-12.12e \t %+-12.12e \t %+-12.12e \t %+-12.12e\n", args.pos[0], args.pos[1],
                 d2udx2Reconstruit, result[0]);
       }
     }
@@ -2619,7 +2618,7 @@ void feRecovery::estimated3Error(std::vector<double> &norm, feFunction *fund3udx
   norm[21] = 0.0;
 
   std::vector<double> geoCoord(9, 0.);
-  std::vector<double> x(3, 0.);
+  feFunctionArguments args;
   std::vector<double> xLoc(3, 0.);
   std::vector<double> monomials(_dimDerivation, 0.);
 
@@ -2652,7 +2651,7 @@ void feRecovery::estimated3Error(std::vector<double> &norm, feFunction *fund3udx
 
     for(int k = 0; k < nQuad; ++k) {
       // Coordonnées des points d'intégration
-      _geoSpace->interpolateVectorFieldAtQuadNode(geoCoord, k, x);
+      _geoSpace->interpolateVectorFieldAtQuadNode(geoCoord, k, args.pos);
 
       // derivee reconstruite au point d'intégration : interpolation des valeurs issues des sommets
       double d3udx3Reconstruit = 0.0;
@@ -2672,11 +2671,11 @@ void feRecovery::estimated3Error(std::vector<double> &norm, feFunction *fund3udx
       }
 
       if(fund3udx) {
-        norm[21] += J[nQuad * iElm + k] * w[k] * pow(d3udx3Reconstruit - fund3udx->eval(0, x), 2);
+        norm[21] += J[nQuad * iElm + k] * w[k] * pow(d3udx3Reconstruit - fund3udx->eval(args), 2);
       }
 
-      fprintf(f, "%+-12.12e \t %+-12.12e \t %+-12.12e \t %+-12.12e\n", x[0], x[1],
-              d3udx3Reconstruit, fund3udx->eval(0, x));
+      fprintf(f, "%+-12.12e \t %+-12.12e \t %+-12.12e \t %+-12.12e\n", args.pos[0], args.pos[1],
+              d3udx3Reconstruit, fund3udx->eval(args));
     }
   }
 
@@ -2693,15 +2692,15 @@ void feRecovery::estimated3Error(std::vector<double> &norm, feFunction *fund3udx
 
     for(int k = 0; k < nQuad; ++k) {
       // Coordonnées des points d'intégration
-      _geoSpace->interpolateVectorFieldAtQuadNode(geoCoord, k, x);
+      _geoSpace->interpolateVectorFieldAtQuadNode(geoCoord, k, args.pos);
 
       double d3udx3Reconstruit = 0.0;
 
       int v = _cnc->getVertexConnectivity(elmRef, 1);
 
-      xLoc[0] = x[0] - _mesh->getVertex(v)->x();
-      xLoc[1] = x[1] - _mesh->getVertex(v)->y();
-      xLoc[2] = x[2] - _mesh->getVertex(v)->z();
+      xLoc[0] = args.pos[0] - _mesh->getVertex(v)->x();
+      xLoc[1] = args.pos[1] - _mesh->getVertex(v)->y();
+      xLoc[2] = args.pos[2] - _mesh->getVertex(v)->z();
 
       for(int i = 0; i < _dimDerivation; ++i) {
         monomials[i] = pow(xLoc[0], _expX[i]) * pow(xLoc[1], _expY[i]);
@@ -2722,11 +2721,11 @@ void feRecovery::estimated3Error(std::vector<double> &norm, feFunction *fund3udx
       // }
 
       if(fund3udx) {
-        norm[21] += J[nQuad * iElm + k] * w[k] * pow(d3udx3Reconstruit - fund3udx->eval(0, x), 2);
+        norm[21] += J[nQuad * iElm + k] * w[k] * pow(d3udx3Reconstruit - fund3udx->eval(args), 2);
       }
 
-      fprintf(f, "%+-12.12e \t %+-12.12e \t %+-12.12e \t %+-12.12e\n", x[0], x[1],
-              d3udx3Reconstruit, fund3udx->eval(0, x));
+      fprintf(f, "%+-12.12e \t %+-12.12e \t %+-12.12e \t %+-12.12e\n", args.pos[0], args.pos[1],
+              d3udx3Reconstruit, fund3udx->eval(args));
     }
   }
 

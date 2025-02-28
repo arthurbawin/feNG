@@ -236,6 +236,10 @@ void feBilinearForm::viewLocalMatrix() { printMatrix(_M, _N, &_Ae); }
 
 void feBilinearForm::viewLocalResidual() { printResidual(_M, &_Be); }
 
+//
+// Initialize the connectivity vector for element numElem
+// Used to determine the sparsity pattern (mask) of the global matrix
+//
 void feBilinearForm::initializeAddressingVectors(int numElem)
 {
   // feInfo("adr.size = %d on thread %d", _adr.size(), omp_get_thread_num());
@@ -262,49 +266,68 @@ void feBilinearForm::initializeAddressingVectors(int numElem)
   }
 }
 
+//
+// Initialize the form (feSysElm handler) on element numElem
+// Called before computing a local residual or local matrix
+//
 void feBilinearForm::initialize(feSolution *sol, int numElem)
 {
-  for(size_t i = 0; i < _intSpaces.size(); i++) {
+  _numElem = numElem;
+  _c0 = sol->getC0();
+  _tn = sol->getCurrentTime();
+  _dt = sol->getTimeStep();
+  _args.t = _tn;
+
+  std::vector<double> &solArray = sol->getSolutionReference();
+
+  for(size_t i = 0; i < _intSpaces.size(); i++)
+  {
     feSpace *fS = _intSpaces[i];
-    std::vector<double> &solRef = sol->getSolutionReference();
 
-    // ------------------------------------------------------------------
-    // Initialize solution on neighbouring elements (for e.g. DG fluxes)
-    if(numElem > 0) {
-      fS->initializeAddressingVector(numElem - 1, _adr[i]);
-    } else {
-      // Periodicity:
-      fS->initializeAddressingVector(_cnc->getNumElements() - 1, _adr[i]);
-      // 0 flux
-      // fS->initializeAddressingVector(numElem, _adr[i]);
-    }
-    for(size_t k = 0; k < _adr[i].size(); ++k) {
-      _solPrev[i][k] = solRef[_adr[i][k]];
-    }
+    // //
+    // // Initialize solution on neighbouring elements (for e.g. DG fluxes)
+    // // FIXME: Only relevant for 1D meshes
+    // //
+    // if(numElem > 0) {
+    //   fS->initializeAddressingVector(numElem - 1, _adr[i]);
+    // } else {
+    //   // Periodicity:
+    //   fS->initializeAddressingVector(_cnc->getNumElements() - 1, _adr[i]);
+    //   // 0 flux
+    //   // fS->initializeAddressingVector(numElem, _adr[i]);
+    // }
+    // for(size_t k = 0; k < _adr[i].size(); ++k) {
+    //   _solPrev[i][k] = solArray[_adr[i][k]];
+    // }
 
-    if(numElem < _cnc->getNumElements() - 1) {
-      fS->initializeAddressingVector(numElem + 1, _adr[i]);
-    } else {
-      // Periodicity:
-      fS->initializeAddressingVector(0, _adr[i]);
-      // 0 flux
-      // fS->initializeAddressingVector(numElem, _adr[i]);
-    }
-    for(size_t k = 0; k < _adr[i].size(); ++k) {
-      _solNext[i][k] = solRef[_adr[i][k]];
-    }
-
-    // Initialize solution and its time derivative on current element
+    // if(numElem < _cnc->getNumElements() - 1) {
+    //   fS->initializeAddressingVector(numElem + 1, _adr[i]);
+    // } else {
+    //   // Periodicity:
+    //   fS->initializeAddressingVector(0, _adr[i]);
+    //   // 0 flux
+    //   // fS->initializeAddressingVector(numElem, _adr[i]);
+    // }
+    // for(size_t k = 0; k < _adr[i].size(); ++k) {
+    //   _solNext[i][k] = solArray[_adr[i][k]];
+    // }
+    
+    //
+    // Initialize solution and its time derivative on given element
+    //
     fS->initializeAddressingVector(numElem, _adr[i]);
     for(size_t k = 0; k < _adr[i].size(); ++k) {
-      _sol[i][k] = solRef[_adr[i][k]];
+      _sol[i][k] = solArray[_adr[i][k]];
       _solDot[i][k] = sol->getSolDotAtDOF(_adr[i][k]);
     }
   }
 
+  // Get the coordinates of this element's vertices
   _intSpaces[0]->_mesh->getCoord(_cncGeoTag, numElem, _geoCoord);
 
-  // INITIALISERVADIJ
+  //
+  // Initialize the local connectivity ("address" vector)
+  //
   for(size_t i = 0, count = 0; i < _fieldsLayoutI.size(); ++i) {
     int nielm = _intSpaces[_fieldsLayoutI[i]]->getNumFunctions();
     for(int k = 0; k < nielm; ++k) {
@@ -322,20 +345,12 @@ void feBilinearForm::initialize(feSolution *sol, int numElem)
 void feBilinearForm::computeMatrix(feSolution *sol, int numElem)
 {
   (this->*feBilinearForm::ptrComputeMatrix)(sol, numElem);
-  // if(this->_sysElm->getID() == MIXED_DIVERGENCE){
-  //   printMatrix(_M, _N, &_Ae);
-  //   exit(-1);
-  // }
 }
 
 void feBilinearForm::computeResidual(feSolution *sol, int numElem)
 {
   this->initialize(sol, numElem);
   setResidualToZero(_M, &_Be);
-  _numElem = numElem;
-  _c0 = sol->getC0();
-  _tn = sol->getCurrentTime();
-  _dt = sol->getTimeStep();
   _sysElm->computeBe(this);
 }
 
@@ -343,10 +358,6 @@ void feBilinearForm::computeMatrixAnalytical(feSolution *sol, int numElem)
 {
   this->initialize(sol, numElem);
   setMatrixToZero(_M, _N, _Ae);
-  _numElem = numElem;
-  _c0 = sol->getC0();
-  _tn = sol->getCurrentTime();
-  _dt = sol->getTimeStep();
   _sysElm->computeAe(this);
 }
 
@@ -354,24 +365,14 @@ void feBilinearForm::computeMatrixFiniteDifference(feSolution *sol, int numElem)
 {
   this->initialize(sol, numElem);
   setMatrixToZero(_M, _N, _Ae);
-
-  _numElem = numElem;
-  _c0 = sol->getC0();
-  _tn = sol->getCurrentTime();
-  _dt = sol->getTimeStep();
-
-  // ==================================================================
-  // Le résidu non perturbé
-  // ==================================================================
   setResidualToZero(_M, &_Be);
 
+  // Reference residual (non-perturbated)
   // Compute _Be and copy it in _R0
   _sysElm->computeBe(this);
   for(feInt i = 0; i < _M; i++) _R0[i] = _Be[i];
 
-  // ==================================================================
-  // Calcul des résidus perturbés
-  // ==================================================================
+  // Apply perturbation to _sol and _solDot and recompute each residual
   feInt numColumn = 0;
   for(size_t k = 0; k < _fieldsLayoutJ.size(); k++) {
     feSpace *Unknowns = _intSpaces[_fieldsLayoutJ[k]];

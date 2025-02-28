@@ -26,23 +26,37 @@
 //                 k  i,j odd  pi^4 ij(i^2+j^2)
 //
 // which is evaluated up to nMax terms.
-double uSol_f(const double /* t */, const std::vector<double> &pos, const std::vector<double> &par)
+// double uSol_f(const double /* t */, const std::vector<double> &pos, const std::vector<double> &par)
+// {
+//   double x = pos[0];
+//   double y = pos[1];
+//   double k = par[0];
+//   // Max number of terms in the infinite sum
+//   int nMax = 40;
+//   double Si, Cij, res = 0., pi4 = M_PI*M_PI*M_PI*M_PI;
+//   for(int i = 1; i < nMax; i += 2) {
+//     Si = sin(i*M_PI*x);
+//     for(int j = 1; j < nMax; j += 2) {
+//       Cij =  16. / (pi4 * i*j * (i*i+j*j));
+//       res += Cij * Si * sin(j*M_PI*y);
+//     }
+//   }
+//   return 1./k * res;
+// }
+
+double uSol_f(const feFunctionArguments &args, const std::vector<double> &par)
 {
-  double x = pos[0];
-  double y = pos[1];
+  double x = args.pos[0];
+  double y = args.pos[1];
   double k = par[0];
   // Max number of terms in the infinite sum
   int nMax = 40;
   double Si, Cij, res = 0., pi4 = M_PI*M_PI*M_PI*M_PI;
-  for(int i = 0; i < nMax; ++i) {
-    if(i % 2 == 1) {
-      Si = sin(i*M_PI*x);
-      for(int j = 0; j < nMax; ++j) {
-        if(j % 2 == 1) {
-          Cij =  16. / (pi4 * i*j * (i*i+j*j));
-          res += Cij * Si * sin(j*M_PI*y);
-        }
-      }
+  for(int i = 1; i < nMax; i += 2) {
+    Si = sin(i*M_PI*x);
+    for(int j = 1; j < nMax; j += 2) {
+      Cij =  16. / (pi4 * i*j * (i*i+j*j));
+      res += Cij * Si * sin(j*M_PI*y);
     }
   }
   return 1./k * res;
@@ -50,7 +64,12 @@ double uSol_f(const double /* t */, const std::vector<double> &pos, const std::v
 
 // This callback is used to evaluate the source term f = u_source(t,x,y,z)
 // Here it is simply -1.;
-double uSource_f(const double /* t */, const std::vector<double> &/* pos */, const std::vector<double> &/* par */)
+// double uSource_f(const double /* t */, const std::vector<double> &/* pos */, const std::vector<double> &/* par */)
+// {
+//   return -1.;
+// }
+
+double uSource_f(const feFunctionArguments &/*args*/, const std::vector<double> &/* par */)
 {
   return -1.;
 }
@@ -122,9 +141,9 @@ int main(int argc, char **argv)
   // and compute e.g. error norms.
   feFunction uSol(uSol_f, {k});
   feFunction uSource(uSource_f, {k});
-  feConstantFunction zero(0.);
-  feConstantFunction one(1.);
-  feConstantFunction minusOne(-1.);
+  // Alternatively, here the source term is constant and equal to -1,
+  // so we could use the constant function defined in feAPI.h:
+  // feFunction uSource = scalarConstant::minusOne;
   feConstantFunction diffusivity(k);
 
   // Define a finite element space on each subdomain of the computational domain.
@@ -135,8 +154,8 @@ int main(int argc, char **argv)
   // element space, with parameter "degreeQuadrature" governing the number of quadrature nodes.
   // The feFunction provided is used to initialize the degrees of freedom on the feSpace.
   feSpace *uBord = nullptr, *uDomaine = nullptr;
-  feCheck(createFiniteElementSpace(   uBord, &mesh, elementType::LAGRANGE, order, "U",    "Bord", degreeQuadrature, &zero));
-  feCheck(createFiniteElementSpace(uDomaine, &mesh, elementType::LAGRANGE, order, "U", "Domaine", degreeQuadrature, &zero));
+  feCheck(createFiniteElementSpace(   uBord, &mesh, elementType::LAGRANGE, order, "U",    "Bord", degreeQuadrature, &scalarConstant::zero));
+  feCheck(createFiniteElementSpace(uDomaine, &mesh, elementType::LAGRANGE, order, "U", "Domaine", degreeQuadrature, &scalarConstant::zero));
 
   // Define the set of all finite elements spaces and the set of FE spaces
   // forming the essential (Dirichlet) boundary conditions. The second set must always be
@@ -169,7 +188,7 @@ int main(int argc, char **argv)
     feCheck(createBilinearForm(diff, {uDomaine}, new feSysElm_Diffusion<2>(&diffusivity)));
   if(dim == 3)
     feCheck(createBilinearForm(diff, {uDomaine}, new feSysElm_Diffusion<3>(&diffusivity)));
-  feCheck(createBilinearForm(source, {uDomaine}, new feSysElm_Source(&minusOne)));
+  feCheck(createBilinearForm(source, {uDomaine}, new feSysElm_Source(&scalarConstant::minusOne)));
   std::vector<feBilinearForm*> forms = {diff, source};
 
   // Create the linear system. Assembly of the elementary matrices and RHS is

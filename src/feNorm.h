@@ -117,6 +117,8 @@ protected:
   std::vector<double> _pos;
   std::vector<double> _geoCoord;
 
+  feFunctionArguments _args;
+
   feFunction *_scalarSolution;
   feVectorFunction *_vectorSolution = nullptr;
 
@@ -199,8 +201,8 @@ private:
   double computeLpNorm(int p, bool error = false);
   double computeVectorLpNorm(int p, bool error = false);
   double computeLpErrorEstimator(int p);
-  double computeL1Norm(bool error = false);
-  double computeL2Norm(bool error = false);
+  // double computeL1Norm(bool error = false);
+  // double computeL2Norm(bool error = false);
   double computeLInfNorm(bool error = false);
   double computeVectorLInfNorm(bool error = false);
   double computeH1SemiNorm(bool error = false);

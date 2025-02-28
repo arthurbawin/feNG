@@ -636,7 +636,7 @@ feStatus feMetric::setAnalyticMetric(const std::vector<std::size_t> &nodeTags, c
   #endif
   {
     MetricTensor res(1.0);
-    std::vector<double> pos(3, 0.);
+    feFunctionArguments args;
 
     #if defined(HAVE_OMP)
     #pragma omp for
@@ -645,11 +645,11 @@ feStatus feMetric::setAnalyticMetric(const std::vector<std::size_t> &nodeTags, c
     {
       if(!OK) continue;
 
-      pos[0] = coord[3 * i + 0];
-      pos[1] = coord[3 * i + 1];
-      pos[2] = 0.;
+      args.pos[0] = coord[3 * i + 0];
+      args.pos[1] = coord[3 * i + 1];
+      args.pos[2] = 0.;
 
-      _options.analyticMetric->eval(0, pos, res);
+      _options.analyticMetric->eval(args, res);
 
       if(res.determinant() <= 0.) {
         OK = false;
@@ -686,7 +686,8 @@ feStatus feMetric::computeMetricsP1(std::vector<std::size_t> &nodeTags, std::vec
   {
     double x[2], fxx, fxy, fyx, fyy;
     MetricTensor H, Q1, Q2, Q;
-    std::vector<double> D2U_EXACT(4, 0.), pos(3, 0.);
+    std::vector<double> D2U_EXACT(4, 0.);
+    feFunctionArguments args;
 
     // Compute bounded absolute value of hessian at vertices (at nodetags)
     #if defined(HAVE_OMP)
@@ -699,10 +700,10 @@ feStatus feMetric::computeMetricsP1(std::vector<std::size_t> &nodeTags, std::vec
      if(_options.useAnalyticDerivatives) {
 
         // Evaluate the analytic second derivatives instead
-        pos[0] = x[0];
-        pos[1] = x[1];
-        pos[2] = 0.;
-        _options.secondDerivatives->eval(0, pos, D2U_EXACT);
+        args.pos[0] = x[0];
+        args.pos[1] = x[1];
+        args.pos[2] = 0.;
+        _options.secondDerivatives->eval(args, D2U_EXACT);
 
         fxx = D2U_EXACT[0];
         fxy = D2U_EXACT[1];
@@ -846,7 +847,8 @@ feStatus feMetric::computeMetricsP2(std::vector<std::size_t> &nodeTags, std::vec
     size_t numCubicCoeff = 4;
     std::vector<double> errorCoeff(numCubicCoeff, 0.);
 
-    std::vector<double> D3U_EXACT(8, 0.), pos(3, 0.);
+    std::vector<double> D3U_EXACT(8, 0.);
+    feFunctionArguments args;
 
 // Compute bounded absolute value of upper bound Q at vertices (at nodetags)
 #if defined(HAVE_OMP)
@@ -859,10 +861,10 @@ feStatus feMetric::computeMetricsP2(std::vector<std::size_t> &nodeTags, std::vec
 
       if(_options.useAnalyticDerivatives) {
         // Evaluate the analytic high-order derivatives instead
-        pos[0] = x[0];
-        pos[1] = x[1];
-        pos[2] = 0.;
-        _options.thirdDerivatives->eval(0, pos, D3U_EXACT);
+        args.pos[0] = x[0];
+        args.pos[1] = x[1];
+        args.pos[2] = 0.;
+        _options.thirdDerivatives->eval(args, D3U_EXACT);
         double uxxx = D3U_EXACT[0];
         double uxxy = D3U_EXACT[1];
         double uxyy = D3U_EXACT[3];
@@ -963,7 +965,8 @@ feStatus feMetric::computeMetricsP1_referenceSpace(std::vector<std::size_t> &nod
   {
     double x[2];
     MetricTensor Qprev, Qtri, Mmud, Mud;
-    std::vector<double> D2U_EXACT(4, 0.), pos(3, 0.);
+    std::vector<double> D2U_EXACT(4, 0.);
+    feFunctionArguments args;
 
     // Initialize all metrics to identity for the first iteration
     if(setToIdentity) {
@@ -1026,10 +1029,10 @@ feStatus feMetric::computeMetricsP1_referenceSpace(std::vector<std::size_t> &nod
 
       if(_options.useAnalyticDerivatives) {
         // Evaluate the analytic high-order derivatives instead
-        pos[0] = x[0];
-        pos[1] = x[1];
-        pos[2] = 0.;
-        _options.secondDerivatives->eval(0, pos, D2U_EXACT);
+        args.pos[0] = x[0];
+        args.pos[1] = x[1];
+        args.pos[2] = 0.;
+        _options.secondDerivatives->eval(args, D2U_EXACT);
         uxx = D2U_EXACT[0];
         uxy = D2U_EXACT[1];
         uyy = D2U_EXACT[3];
@@ -1115,7 +1118,8 @@ feStatus feMetric::computeMetricsP2_referenceSpace(std::vector<std::size_t> &nod
   {
     double x[2];
     MetricTensor Qprev, Qtri, Mmud, Mud, foo;
-    std::vector<double> D3U_EXACT(8, 0.), pos(3, 0.);
+    std::vector<double> D3U_EXACT(8, 0.);
+    feFunctionArguments args;
 
     // Initialize all metrics to identity for the first iteration
     if(setToIdentity) {
@@ -1180,10 +1184,10 @@ feStatus feMetric::computeMetricsP2_referenceSpace(std::vector<std::size_t> &nod
 
       if(_options.useAnalyticDerivatives) {
         // Evaluate the analytic high-order derivatives instead
-        pos[0] = x[0];
-        pos[1] = x[1];
-        pos[2] = 0.;
-        _options.thirdDerivatives->eval(0, pos, D3U_EXACT);
+        args.pos[0] = x[0];
+        args.pos[1] = x[1];
+        args.pos[2] = 0.;
+        _options.thirdDerivatives->eval(args, D3U_EXACT);
         uxxx = D3U_EXACT[0];
         uxxy = D3U_EXACT[1];
         uxyy = D3U_EXACT[3];
@@ -1344,7 +1348,8 @@ feStatus feMetric::computeMetricsP2_forGraphSurface(std::vector<std::size_t> &no
   {
     double x[2];
     MetricTensor Q;
-    std::vector<double> DU_EXACT(2, 0.), D2U_EXACT(4, 0.), D3U_EXACT(8, 0.), pos(3, 0.);
+    std::vector<double> DU_EXACT(2, 0.), D2U_EXACT(4, 0.), D3U_EXACT(8, 0.);
+    feFunctionArguments args;
 
 // Compute bounded absolute value of upper bound Q at vertices (at nodetags)
 #if defined(HAVE_OMP)
@@ -1356,13 +1361,13 @@ feStatus feMetric::computeMetricsP2_forGraphSurface(std::vector<std::size_t> &no
       x[1] = coord[3 * i + 1];
 
       if(_options.useAnalyticDerivatives) {
-        pos[0] = x[0];
-        pos[1] = x[1];
-        pos[2] = 0.;
+        args.pos[0] = x[0];
+        args.pos[1] = x[1];
+        args.pos[2] = 0.;
 
-        _options.firstDerivatives->eval(0, pos, DU_EXACT);
-        _options.secondDerivatives->eval(0, pos, D2U_EXACT);
-        _options.thirdDerivatives->eval(0, pos, D3U_EXACT);
+        _options.firstDerivatives->eval(args, DU_EXACT);
+        _options.secondDerivatives->eval(args, D2U_EXACT);
+        _options.thirdDerivatives->eval(args, D3U_EXACT);
       } else {
         feInfo("Implement GRAPH_SURFACE metric for recovered derivatives.");
         exit(-1);
@@ -1448,7 +1453,8 @@ feStatus feMetric::computeMetricsPn(std::vector<std::size_t> &nodeTags, std::vec
     // Gradient of error polynomial SQUARED is homogeneous of degree 2*k, and has 2*k+1 coefficients
     std::vector<double> coeffGradErrorPolynomial(n * _options.polynomialDegree + 1, 0.);
 
-    std::vector<double> D2U_EXACT(4, 0.), D3U_EXACT(8, 0.), D4U_EXACT(16, 0.), D5U_EXACT(32, 0.), pos(3, 0.);
+    std::vector<double> D2U_EXACT(4, 0.), D3U_EXACT(8, 0.), D4U_EXACT(16, 0.), D5U_EXACT(32, 0.);
+    feFunctionArguments args;
 
     int numIter;
     int nTheta = _options.logSimplexOptions.nThetaPerQuadrant;
@@ -1469,13 +1475,13 @@ feStatus feMetric::computeMetricsPn(std::vector<std::size_t> &nodeTags, std::vec
       x[1] = coord[3 * i + 1];
 
       if(_options.useAnalyticDerivatives) {
-        pos[0] = x[0];
-        pos[1] = x[1];
-        pos[2] = 0.;
+        args.pos[0] = x[0];
+        args.pos[1] = x[1];
+        args.pos[2] = 0.;
         // Evaluate the analytic high-order derivatives instead
         if(_options.polynomialDegree == 1) {
           
-          _options.secondDerivatives->eval(0, pos, D2U_EXACT);
+          _options.secondDerivatives->eval(args, D2U_EXACT);
 
           double uxx = D2U_EXACT[0];
           double uxy = D2U_EXACT[1];
@@ -1487,7 +1493,7 @@ feStatus feMetric::computeMetricsPn(std::vector<std::size_t> &nodeTags, std::vec
 
         } else if(_options.polynomialDegree == 2) {
           
-          _options.thirdDerivatives->eval(0, pos, D3U_EXACT);
+          _options.thirdDerivatives->eval(args, D3U_EXACT);
 
           double uxxx = D3U_EXACT[0];
           double uxxy = D3U_EXACT[1];
@@ -1501,7 +1507,7 @@ feStatus feMetric::computeMetricsPn(std::vector<std::size_t> &nodeTags, std::vec
 
         } else if(_options.polynomialDegree == 3) {
 
-          _options.fourthDerivatives->eval(0, pos, D4U_EXACT);
+          _options.fourthDerivatives->eval(args, D4U_EXACT);
 
           errorCoeff[0] = D4U_EXACT[0];
           errorCoeff[1] = D4U_EXACT[1];
@@ -1511,7 +1517,7 @@ feStatus feMetric::computeMetricsPn(std::vector<std::size_t> &nodeTags, std::vec
 
         } else if(_options.polynomialDegree == 4) {
 
-          _options.fifthDerivatives->eval(0, pos, D5U_EXACT);
+          _options.fifthDerivatives->eval(args, D5U_EXACT);
 
           errorCoeff[0] = D5U_EXACT[0];
           errorCoeff[1] = D5U_EXACT[1];
@@ -1829,7 +1835,8 @@ feStatus feMetric::computeMetricsPn(std::vector<std::size_t> &nodeTags, std::vec
   }
 }
 
-thread_local std::vector<double> POS(3, 0.), DU(2, 0.), D2U(4, 0.), D3U(8, 0.), D4U(16, 0.), D5U(32, 0.);
+thread_local std::vector<double> DU(2, 0.), D2U(4, 0.), D3U(8, 0.), D4U(16, 0.), D5U(32, 0.);
+thread_local feFunctionArguments ARGS;;
 
 void feMetric::getDerivativesAtVertex(const int derivativesOrder, const double *x, const size_t vertex,
   feNewRecovery *recoveredField, double *du, double *d2u, double *d3u, double *d4u, double *d5u)
@@ -1837,36 +1844,36 @@ void feMetric::getDerivativesAtVertex(const int derivativesOrder, const double *
   if(_options.useAnalyticDerivatives) {
 
     // Evaluate the analytic gradient
-    POS[0] = x[0];
-    POS[1] = x[1];
-    POS[2] = 0.;
+    ARGS.pos[0] = x[0];
+    ARGS.pos[1] = x[1];
+    ARGS.pos[2] = 0.;
 
     if(derivativesOrder > 0) {
-      _options.firstDerivatives->eval(0, POS, DU);
+      _options.firstDerivatives->eval(ARGS, DU);
       du[0] = DU[0];
       du[1] = DU[1];
     }
 
     if(derivativesOrder > 1) {
-      _options.secondDerivatives->eval(0, POS, D2U);
+      _options.secondDerivatives->eval(ARGS, D2U);
       for(int i = 0; i < 4; ++i)
         d2u[i] = D2U[i];
     }
 
     if(derivativesOrder > 2) {
-      _options.thirdDerivatives->eval(0, POS, D3U);
+      _options.thirdDerivatives->eval(ARGS, D3U);
       for(int i = 0; i < 8; ++i)
         d3u[i] = D3U[i];
     }
 
     if(derivativesOrder > 3) {
-      _options.fourthDerivatives->eval(0, POS, D4U);
+      _options.fourthDerivatives->eval(ARGS, D4U);
       for(int i = 0; i < 16; ++i)
         d4u[i] = D4U[i];
     }
 
     if(derivativesOrder > 4) {
-      _options.fifthDerivatives->eval(0, POS, D5U);
+      _options.fifthDerivatives->eval(ARGS, D5U);
       for(int i = 0; i < 32; ++i)
         d5u[i] = D5U[i];
     }
@@ -3103,7 +3110,7 @@ void feMetric::computeErrorOnMetricDerivatives(double &errorOnMmud_dx, double &e
 #endif
   {
     double xsi[2];
-    std::vector<double> pos(3, 0.);
+    feFunctionArguments args;
     MetricTensor M, fooM, M_interp, Mmud_ref, dMdx_ref, dMdx, dMmud_dx, dMmud_dy, dMmud_dx_ref, dMmud_dy_ref;
     std::vector<MetricTensor> MX_interpolation(_nVerticesPerElmOnBackmesh);
     std::vector<MetricTensor> MY_interpolation(_nVerticesPerElmOnBackmesh);
@@ -3111,7 +3118,7 @@ void feMetric::computeErrorOnMetricDerivatives(double &errorOnMmud_dx, double &e
     std::vector<MetricTensor> M_at_nodes(_nVerticesPerElmOnBackmesh);
     std::vector<MetricTensor> logM_at_nodes(_nVerticesPerElmOnBackmesh);
 
-    std::vector<double> posFD(3, 0.);
+    feFunctionArguments argsFD;
     MetricTensor mfd, mmud_ref_FD, mx_ref_FD, my_ref_FD, mfdx, mfdy;
 
     /////////////////////////////////////////////////////////
@@ -3175,15 +3182,15 @@ void feMetric::computeErrorOnMetricDerivatives(double &errorOnMmud_dx, double &e
         xsi[1] = localCoord[3 * k + 1];
 
         // Coordonnees physiques
-        pos[0] = pts[iElm * 3 * nQuad + 3 * k + 0];
-        pos[1] = pts[iElm * 3 * nQuad + 3 * k + 1];
-        pos[2] = 0.;
+        args.pos[0] = pts[iElm * 3 * nQuad + 3 * k + 0];
+        args.pos[1] = pts[iElm * 3 * nQuad + 3 * k + 1];
+        args.pos[2] = 0.;
         
         // Evaluate analytic M^(-1/2) and derivatives
-        _options.analyticMetric->eval(0, pos, M);
+        _options.analyticMetric->eval(args, M);
         Mmud_ref.assignMatrixFrom(M.pow(-0.5));
-        _options.analytic_dMmud_dx->eval(0, pos, dMmud_dx_ref);
-        _options.analytic_dMmud_dy->eval(0, pos, dMmud_dy_ref);
+        _options.analytic_dMmud_dx->eval(args, dMmud_dx_ref);
+        _options.analytic_dMmud_dy->eval(args, dMmud_dy_ref);
 
         // // Interpolate derivatives of M^(-1/2) at quadrature node
         // // Derivatives are not SPD, so cant use log-euclidian interpolation
@@ -3326,10 +3333,10 @@ void feMetric::computeErrorOnMetricDerivatives(double &errorOnMmud_dx, double &e
         double diff_My = matNorm2(dMmud_dy_ref, dMmud_dy);
         feInfo("Mmudx        = %+-1.4e - %+-1.4e - %+-1.4e", dMmud_dx_ref(0,0), dMmud_dx_ref(0,1), dMmud_dx_ref(1,1));
         feInfo("Mmudx_interp = %+-1.4e - %+-1.4e - %+-1.4e - diff = %+-1.4e", dMmud_dx(0,0), dMmud_dx(0,1), dMmud_dx(1,1), diff_Mx);
-        posFD[0] = pos[0] + hFD;
-        posFD[1] = pos[1];
-        posFD[2] = pos[2];
-        _options.analyticMetric->eval(0, posFD, mfd);
+        argsFD.pos[0] = args.pos[0] + hFD;
+        argsFD.pos[1] = args.pos[1];
+        argsFD.pos[2] = args.pos[2];
+        _options.analyticMetric->eval(argsFD, mfd);
         mmud_ref_FD.assignMatrixFrom(mfd.pow(-0.5));
         mfdx.assignMatrixFrom((mmud_ref_FD - Mmud_ref) * (1./hFD));        
         double diff_FD = matNorm2(dMmud_dx_ref, mfdx);
@@ -3348,7 +3355,7 @@ void feMetric::computeErrorOnMetricDerivatives(double &errorOnMmud_dx, double &e
         // posFD[0] = pos[0] + hFD;
         // posFD[1] = pos[1];
         // posFD[2] = pos[2];
-        // _options.analyticMetric->eval(0, posFD, mfd);
+        // _options.analyticMetric->eval(argsFD, mfd);
         // mmud_ref_FD.assignMatrixFrom(mfd.pow(-0.5));
         // mfdx.assignMatrixFrom((mmud_ref_FD - Mmud_ref) * (1./hFD));
         // double diff_FD_x = (mfdx - dMmud_dx_ref).frobeniusNorm();
@@ -3536,7 +3543,8 @@ void feMetric::computeContinuousErrorModel(const bool withAnalyticMetric, bool c
     MetricTensor Qtri;
     double xsi[2];
     int tags[MAX_VERTICES_BACKMESH];
-    std::vector<double> DU_EXACT(2, 0.), D2U_EXACT(4, 0.), D3U_EXACT(8, 0.), pos(3, 0.);
+    std::vector<double> DU_EXACT(2, 0.), D2U_EXACT(4, 0.), D3U_EXACT(8, 0.);
+    feFunctionArguments args;
     std::vector<double> errorCoeff(4, 0.);
     std::vector<MetricTensor> MX_interpolation(_nVerticesPerElmOnBackmesh);
     std::vector<MetricTensor> MY_interpolation(_nVerticesPerElmOnBackmesh);
@@ -3566,13 +3574,13 @@ void feMetric::computeContinuousErrorModel(const bool withAnalyticMetric, bool c
         xsi[1] = localCoord[3 * i + 1];
 
         // Coordonnees physiques
-        pos[0] = pts[iElm * 3 * nQuad + 3 * i + 0];
-        pos[1] = pts[iElm * 3 * nQuad + 3 * i + 1];
-        pos[2] = 0.;
+        args.pos[0] = pts[iElm * 3 * nQuad + 3 * i + 0];
+        args.pos[1] = pts[iElm * 3 * nQuad + 3 * i + 1];
+        args.pos[2] = 0.;
 
-        _options.firstDerivatives->eval(0, pos, DU_EXACT);
-        _options.secondDerivatives->eval(0, pos, D2U_EXACT);
-        _options.thirdDerivatives->eval(0, pos, D3U_EXACT);
+        _options.firstDerivatives->eval(args, DU_EXACT);
+        _options.secondDerivatives->eval(args, D2U_EXACT);
+        _options.thirdDerivatives->eval(args, D3U_EXACT);
 
         G[0] = DU_EXACT[0];
         G[1] = DU_EXACT[1];
@@ -3585,9 +3593,9 @@ void feMetric::computeContinuousErrorModel(const bool withAnalyticMetric, bool c
         if(withAnalyticMetric) {
 
           // Evaluate analytic metric and derivatives of M^(-1/2)
-          _options.analyticMetric->eval(0, pos, M);
-          _options.analytic_dMmud_dx->eval(0, pos, dMmud_dx);
-          _options.analytic_dMmud_dy->eval(0, pos, dMmud_dy);
+          _options.analyticMetric->eval(args, M);
+          _options.analytic_dMmud_dx->eval(args, dMmud_dx);
+          _options.analytic_dMmud_dy->eval(args, dMmud_dy);
 
         } else {
 

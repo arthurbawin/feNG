@@ -1,7 +1,8 @@
 #include "feNorm.h"
 
-thread_local std::vector<double> MY_POS(3, 0.);
-thread_local std::vector<double> MY_GEOCOORD(18, 0.);
+thread_local feFunctionArguments THREAD_LOCAL_ARGS;
+thread_local std::vector<double> THREAD_LOCAL_POS(3, 0.);
+thread_local std::vector<double> THREAD_LOCAL_GEOCOORD(18, 0.);
 
 feStatus createNorm(feNorm *&norm, normType type, const std::vector<feSpace *> &spaces,
                     feSolution *sol, feFunction *scalarSolution, feVectorFunction *vectorSolution)
@@ -162,7 +163,8 @@ void feNorm::initializeLocalSolutionOnSpace(int iSpace, int iElm)
 
 double feNorm::computeLpNorm(int p, bool error)
 {
-  double res = 0.0, uh, u, t = _solution->getCurrentTime();
+  double res = 0.0, uh, u;
+  _args.t = _solution->getCurrentTime();
 
   if(error && _scalarSolution == nullptr) {
     feErrorMsg(FE_STATUS_ERROR, "Cannot compute Lp norm of error function"
@@ -185,8 +187,8 @@ double feNorm::computeLpNorm(int p, bool error)
     double eLocPowP = 0.;
     for(int k = 0; k < _nQuad; ++k) {
       uh = _spaces[0]->interpolateFieldAtQuadNode(_localSol[0], k);
-      _geoSpace->interpolateVectorFieldAtQuadNode(_geoCoord, k, _pos);
-      u = error ? _scalarSolution->eval(t, _pos) : 0.0;
+      _geoSpace->interpolateVectorFieldAtQuadNode(_geoCoord, k, _args.pos);
+      u = error ? _scalarSolution->eval(_args) : 0.0;
 
       eLocPowP += pow(fabs(u - uh), p) * _J[_nQuad * iElm + k] * _w[k];
     }
@@ -224,7 +226,8 @@ double feNorm::computeLpNorm(int p, bool error)
 
 double feNorm::computeLpNormOnElement(int p, bool error, int iElm)
 {
-  double uh, u, t = _solution->getCurrentTime();
+  double uh, u;
+  _args.t = _solution->getCurrentTime();
 
   if(error && _scalarSolution == nullptr) {
     feErrorMsg(FE_STATUS_ERROR, "Cannot compute Lp norm of error function"
@@ -241,8 +244,8 @@ double feNorm::computeLpNormOnElement(int p, bool error, int iElm)
   // #endif
   for(int k = 0; k < _nQuad; ++k) {
     uh = _spaces[0]->interpolateFieldAtQuadNode(_localSol[0], k);
-    _geoSpace->interpolateVectorFieldAtQuadNode(_geoCoord, k, _pos);
-    u = error ? _scalarSolution->eval(t, _pos) : 0.0;
+    _geoSpace->interpolateVectorFieldAtQuadNode(_geoCoord, k, _args.pos);
+    u = error ? _scalarSolution->eval(_args) : 0.0;
 
     eLocPowP += pow(fabs(u - uh), p) * _J[_nQuad * iElm + k] * _w[k];
   }
@@ -268,7 +271,7 @@ double area(const std::vector<double> &triCoord)
 
 double feNorm::computeSquaredErrorOnElement(int iElm)
 {
-  double t = _solution->getCurrentTime();
+  THREAD_LOCAL_ARGS.t = _solution->getCurrentTime();
 
   this->initializeLocalSolutionOnSpace(0, iElm);
   _spaces[0]->_mesh->getCoord(_cnc, iElm, _geoCoord);
@@ -285,8 +288,8 @@ double feNorm::computeSquaredErrorOnElement(int iElm)
 #endif
     for(int k = 0; k < _nQuad; ++k) {
       uh = _spaces[0]->interpolateFieldAtQuadNode(_localSol[0], k);
-      _geoSpace->interpolateVectorFieldAtQuadNode(_geoCoord, k, MY_POS);
-      u = _scalarSolution->eval(t, MY_POS);
+      _geoSpace->interpolateVectorFieldAtQuadNode(_geoCoord, k, THREAD_LOCAL_ARGS.pos);
+      u = _scalarSolution->eval(THREAD_LOCAL_ARGS);
       eLocPowP += (u - uh) * (u - uh) * _J[_nQuad * iElm + k] * _w[k];
     }
   }
@@ -319,11 +322,11 @@ double feNorm::computeSquaredErrorFromEstimatorOnElement(int iElm, bool useAvera
     // #endif
     for(int k = 0; k < _nQuad; ++k) {
       uh = _spaces[0]->interpolateFieldAtQuadNode(_localSol[0], k);
-      _geoSpace->interpolateVectorFieldAtQuadNode(_geoCoord, k, MY_POS);
+      _geoSpace->interpolateVectorFieldAtQuadNode(_geoCoord, k, THREAD_LOCAL_POS);
 
       // uRec = _rec->evaluateRecoveryAtQuadNode(PPR::RECOVERY, 0, iElm, k);
       // #pragma omp critical // Localization in the mesh is not yet thread safe :(
-      uRec = _rec->evaluateRecovery(PPR::RECOVERY, 0, MY_POS.data(), useAverageEvaluations);
+      uRec = _rec->evaluateRecovery(PPR::RECOVERY, 0, THREAD_LOCAL_POS.data(), useAverageEvaluations);
 
       eLocPowP += (uRec - uh) * (uRec - uh) * _J[_nQuad * iElm + k] * _w[k];
     }
@@ -360,7 +363,8 @@ double feNorm::computeLpErrorEstimator(int p)
 
 double feNorm::computeLpErrorExactVsEstimator(int p)
 {
-  double res = 0.0, uExact, uRec, t = _solution->getCurrentTime();
+  double res = 0.0, uExact, uRec;
+  _args.t = _solution->getCurrentTime();
 
   if(_rec == nullptr) {
     feErrorMsg(FE_STATUS_ERROR, "Cannot compute Lp error estimate "
@@ -372,8 +376,8 @@ double feNorm::computeLpErrorExactVsEstimator(int p)
     _spaces[0]->_mesh->getCoord(_cnc, iElm, _geoCoord);
 
     for(int k = 0; k < _nQuad; ++k) {
-      _geoSpace->interpolateVectorFieldAtQuadNode(_geoCoord, k, _pos);
-      uExact = _scalarSolution->eval(t, _pos);
+      _geoSpace->interpolateVectorFieldAtQuadNode(_geoCoord, k, _args.pos);
+      uExact = _scalarSolution->eval(_args);
       uRec = _rec->evaluateRecoveryAtQuadNode(PPR::RECOVERY, 0, iElm, k);
 
       res += pow(fabs(uRec - uExact), p) * _J[_nQuad * iElm + k] * _w[k];
@@ -384,7 +388,8 @@ double feNorm::computeLpErrorExactVsEstimator(int p)
 
 double feNorm::computeLInfErrorExactVsEstimator()
 {
-  double res = -1., uExact, uRec, t = _solution->getCurrentTime();
+  double res = -1., uExact, uRec;
+  _args.t = _solution->getCurrentTime();
 
   if(_rec == nullptr) {
     feErrorMsg(FE_STATUS_ERROR, "Cannot compute Lp error estimate "
@@ -396,8 +401,8 @@ double feNorm::computeLInfErrorExactVsEstimator()
     _spaces[0]->_mesh->getCoord(_cnc, iElm, _geoCoord);
 
     for(int k = 0; k < _nQuad; ++k) {
-      _geoSpace->interpolateVectorFieldAtQuadNode(_geoCoord, k, _pos);
-      uExact = _scalarSolution->eval(t, _pos);
+      _geoSpace->interpolateVectorFieldAtQuadNode(_geoCoord, k, _args.pos);
+      uExact = _scalarSolution->eval(_args);
       uRec = _rec->evaluateRecoveryAtQuadNode(PPR::RECOVERY, 0, iElm, k);
 
       res = fmax(res, fabs(uRec - uExact));
@@ -408,7 +413,8 @@ double feNorm::computeLInfErrorExactVsEstimator()
 
 double feNorm::computeLInfErrorExactVsEstimatorAtVertices()
 {
-  double normMax = 0.0, uRec, uExact, t = _solution->getCurrentTime();
+  double normMax = 0.0, uRec, uExact;
+  THREAD_LOCAL_ARGS.t = _solution->getCurrentTime();
 
   if(_rec == nullptr) {
     feErrorMsg(FE_STATUS_ERROR, "Cannot compute Lp error estimate "
@@ -423,15 +429,15 @@ double feNorm::computeLInfErrorExactVsEstimatorAtVertices()
   // Compute max norm at mesh vertices at some distance L from the boundary (Guo, Zhang, Zhao paper)
   int nVerticesPerElem = _cnc->getNumVerticesPerElem();
   for(int iElm = 0; iElm < _nElm; ++iElm) {
-    _spaces[0]->_mesh->getCoord(_cnc, iElm, MY_GEOCOORD);
+    _spaces[0]->_mesh->getCoord(_cnc, iElm, THREAD_LOCAL_GEOCOORD);
 
     for(int iVert = 0; iVert < nVerticesPerElem; ++iVert) {
-      MY_POS[0] = MY_GEOCOORD[3 * iVert + 0];
-      MY_POS[1] = MY_GEOCOORD[3 * iVert + 1];
-      MY_POS[2] = MY_GEOCOORD[3 * iVert + 2];
+      THREAD_LOCAL_ARGS.pos[0] = THREAD_LOCAL_GEOCOORD[3 * iVert + 0];
+      THREAD_LOCAL_ARGS.pos[1] = THREAD_LOCAL_GEOCOORD[3 * iVert + 1];
+      THREAD_LOCAL_ARGS.pos[2] = THREAD_LOCAL_GEOCOORD[3 * iVert + 2];
 
       // Check if vertex is at distance L from the boundary
-      uExact = _scalarSolution->eval(t, MY_POS);
+      uExact = _scalarSolution->eval(THREAD_LOCAL_ARGS);
       int vertex = verticesConnectivity[nVerticesPerElem * iElm + iVert];
       uRec = _rec->evaluateRecoveryAtVertex(PPR::RECOVERY, 0, vertex);
       normMax = fmax(normMax, fabs(uExact - uRec));
@@ -447,7 +453,8 @@ thread_local std::vector<double> GRAD_U_EXACT(2, 0.);
 
 double feNorm::computeSemiH1ErrorExactVsEstimator(bool excludeBoundary, double boundaryWidth, double boundingBox[4])
 {
-  double res = 0.0, t = _solution->getCurrentTime();
+  double res = 0.0;
+  THREAD_LOCAL_ARGS.t = _solution->getCurrentTime();
 
   if(_rec == nullptr) {
     feErrorMsg(FE_STATUS_ERROR, "Cannot compute Lp error estimate "
@@ -467,22 +474,22 @@ double feNorm::computeSemiH1ErrorExactVsEstimator(bool excludeBoundary, double b
 #pragma omp for reduction(+ : res)
 #endif
     for(int iElm = 0; iElm < _nElm; ++iElm) {
-      _spaces[0]->_mesh->getCoord(_cnc, iElm, MY_GEOCOORD);
+      _spaces[0]->_mesh->getCoord(_cnc, iElm, THREAD_LOCAL_GEOCOORD);
 
       for(int k = 0; k < _nQuad; ++k) {
-        _geoSpace->interpolateVectorFieldAtQuadNode(MY_GEOCOORD, k, MY_POS);
+        _geoSpace->interpolateVectorFieldAtQuadNode(THREAD_LOCAL_GEOCOORD, k, THREAD_LOCAL_ARGS.pos);
 
         // Check if vertex is at distance L from the boundary
         // Hard-coded for [0,1] x [0,1] box
-        double x = MY_POS[0];
-        double y = MY_POS[1];
+        double x = THREAD_LOCAL_ARGS.pos[0];
+        double y = THREAD_LOCAL_ARGS.pos[1];
         bool inBox = (x > boundingBox[0] + boundaryWidth && y > boundingBox[2] + boundaryWidth 
                  && x < boundingBox[1] - boundaryWidth && y < boundingBox[3] - boundaryWidth);
 
         if(!excludeBoundary) inBox = true;
 
         if(inBox) {
-          _vectorSolution->eval(t, MY_POS, GRAD_U_EXACT);
+          _vectorSolution->eval(THREAD_LOCAL_ARGS, GRAD_U_EXACT);
           gradRec[0] = _rec->evaluateRecoveryAtQuadNode(PPR::DERIVATIVE, 0, iElm, k);
           gradRec[1] = _rec->evaluateRecoveryAtQuadNode(PPR::DERIVATIVE, 1, iElm, k);
 
@@ -502,7 +509,8 @@ double feNorm::computeSemiH1ErrorExactVsEstimator(bool excludeBoundary, double b
 
 double feNorm::computeSemiH1ErrorExactVsEstimator_Linf(bool excludeBoundary, double boundaryWidth, double boundingBox[4])
 {
-  double normMax = 0.0, gradRec[2], t = _solution->getCurrentTime();
+  double normMax = 0.0, gradRec[2];
+  THREAD_LOCAL_ARGS.t = _solution->getCurrentTime();
 
   if(_rec == nullptr) {
     feErrorMsg(FE_STATUS_ERROR, "Cannot compute Lp error estimate "
@@ -517,24 +525,24 @@ double feNorm::computeSemiH1ErrorExactVsEstimator_Linf(bool excludeBoundary, dou
   // Compute max norm at mesh vertices at some distance L from the boundary (Guo, Zhang, Zhao paper)
   int nVerticesPerElem = _cnc->getNumVerticesPerElem();
   for(int iElm = 0; iElm < _nElm; ++iElm) {
-    _spaces[0]->_mesh->getCoord(_cnc, iElm, MY_GEOCOORD);
+    _spaces[0]->_mesh->getCoord(_cnc, iElm, THREAD_LOCAL_GEOCOORD);
 
     for(int iVert = 0; iVert < nVerticesPerElem; ++iVert) {
-      MY_POS[0] = MY_GEOCOORD[3 * iVert + 0];
-      MY_POS[1] = MY_GEOCOORD[3 * iVert + 1];
-      MY_POS[2] = MY_GEOCOORD[3 * iVert + 2];
+      THREAD_LOCAL_ARGS.pos[0] = THREAD_LOCAL_GEOCOORD[3 * iVert + 0];
+      THREAD_LOCAL_ARGS.pos[1] = THREAD_LOCAL_GEOCOORD[3 * iVert + 1];
+      THREAD_LOCAL_ARGS.pos[2] = THREAD_LOCAL_GEOCOORD[3 * iVert + 2];
 
       // Check if vertex is at distance L from the boundary
       // Hard-coded for [0,1] x [0,1] box
-      double x = MY_POS[0];
-      double y = MY_POS[1];
+      double x = THREAD_LOCAL_ARGS.pos[0];
+      double y = THREAD_LOCAL_ARGS.pos[1];
       bool inBox = (x > boundingBox[0] + boundaryWidth && y > boundingBox[2] + boundaryWidth 
                  && x < boundingBox[1] - boundaryWidth && y < boundingBox[3] - boundaryWidth);
 
       if(!excludeBoundary) inBox = true;
 
       if(inBox) {
-        _vectorSolution->eval(t, MY_POS, GRAD_U_EXACT);
+        _vectorSolution->eval(THREAD_LOCAL_ARGS, GRAD_U_EXACT);
 
         int vertex = verticesConnectivity[nVerticesPerElem * iElm + iVert];
 
@@ -557,7 +565,8 @@ thread_local std::vector<double> HESS_U_EXACT(4, 0.);
 
 double feNorm::computeErrorHessianExactVsEstimator(bool excludeBoundary, double boundaryWidth, double boundingBox[4])
 {
-  double res = 0.0, t = _solution->getCurrentTime();
+  double res = 0.;
+  THREAD_LOCAL_ARGS.t = _solution->getCurrentTime();
 
   if(_rec == nullptr) {
     feErrorMsg(FE_STATUS_ERROR, "Cannot compute Lp error estimate "
@@ -577,22 +586,22 @@ double feNorm::computeErrorHessianExactVsEstimator(bool excludeBoundary, double 
 #pragma omp for reduction(+ : res)
 #endif
     for(int iElm = 0; iElm < _nElm; ++iElm) {
-      _spaces[0]->_mesh->getCoord(_cnc, iElm, MY_GEOCOORD);
+      _spaces[0]->_mesh->getCoord(_cnc, iElm, THREAD_LOCAL_GEOCOORD);
 
       for(int k = 0; k < _nQuad; ++k) {
-        _geoSpace->interpolateVectorFieldAtQuadNode(MY_GEOCOORD, k, MY_POS);
+        _geoSpace->interpolateVectorFieldAtQuadNode(THREAD_LOCAL_GEOCOORD, k, THREAD_LOCAL_ARGS.pos);
 
         // Check if vertex is at distance L from the boundary
         // Hard-coded for [0,1] x [0,1] box
-        double x = MY_POS[0];
-        double y = MY_POS[1];
+        double x = THREAD_LOCAL_ARGS.pos[0];
+        double y = THREAD_LOCAL_ARGS.pos[1];
         bool inBox = (x > boundingBox[0] + boundaryWidth && y > boundingBox[2] + boundaryWidth 
                  && x < boundingBox[1] - boundaryWidth && y < boundingBox[3] - boundaryWidth);
 
         if(!excludeBoundary) inBox = true;
 
         if(inBox) {
-          _vectorSolution->eval(t, MY_POS, HESS_U_EXACT);
+          _vectorSolution->eval(THREAD_LOCAL_ARGS, HESS_U_EXACT);
 
           // Averaged derivatives-wise
           hessRec[0] = _rec->evaluateRecoveryAtQuadNode(PPR::DERIVATIVE, 2, iElm, k);
@@ -628,7 +637,7 @@ double feNorm::computeErrorHessianExactVsEstimator(bool excludeBoundary, double 
 
 double feNorm::computeErrorHessianExactVsEstimator_Linf(bool excludeBoundary, double boundaryWidth, double boundingBox[4])
 {
-  double t = _solution->getCurrentTime();
+  THREAD_LOCAL_ARGS.t = _solution->getCurrentTime();
 
   if(_rec == nullptr) {
     feErrorMsg(FE_STATUS_ERROR, "Cannot compute Lp error estimate "
@@ -642,11 +651,11 @@ double feNorm::computeErrorHessianExactVsEstimator_Linf(bool excludeBoundary, do
 
   // Compute max norm at quadrature nodes
   // for(int iElm = 0; iElm < _nElm; ++iElm) {
-  //   _spaces[0]->_mesh->getCoord(_cnc, iElm, MY_GEOCOORD);
+  //   _spaces[0]->_mesh->getCoord(_cnc, iElm, THREAD_LOCAL_GEOCOORD);
 
   //   for(int k = 0; k < _nQuad; ++k) {
-  //     _geoSpace->interpolateVectorFieldAtQuadNode(MY_GEOCOORD, k, MY_POS);
-  //     _vectorSolution->eval(t, MY_POS, HESS_U_EXACT);
+  //     _geoSpace->interpolateVectorFieldAtQuadNode(THREAD_LOCAL_GEOCOORD, k, THREAD_LOCAL_POS);
+  //     _vectorSolution->eval(t, THREAD_LOCAL_POS, HESS_U_EXACT);
 
   //     // Component-wise
   //     hessRec[0] = _rec->evaluateRecoveryAtQuadNode(PPR::DERIVATIVE, 2, iElm, k);
@@ -665,24 +674,24 @@ double feNorm::computeErrorHessianExactVsEstimator_Linf(bool excludeBoundary, do
   // Compute max norm at mesh vertices at some distance L from the boundary (Guo, Zhang, Zhao paper)
   int nVerticesPerElem = _cnc->getNumVerticesPerElem();
   for(int iElm = 0; iElm < _nElm; ++iElm) {
-    _spaces[0]->_mesh->getCoord(_cnc, iElm, MY_GEOCOORD);
+    _spaces[0]->_mesh->getCoord(_cnc, iElm, THREAD_LOCAL_GEOCOORD);
 
     for(int iVert = 0; iVert < nVerticesPerElem; ++iVert) {
-      MY_POS[0] = MY_GEOCOORD[3 * iVert + 0];
-      MY_POS[1] = MY_GEOCOORD[3 * iVert + 1];
-      MY_POS[2] = MY_GEOCOORD[3 * iVert + 2];
+      THREAD_LOCAL_ARGS.pos[0] = THREAD_LOCAL_GEOCOORD[3 * iVert + 0];
+      THREAD_LOCAL_ARGS.pos[1] = THREAD_LOCAL_GEOCOORD[3 * iVert + 1];
+      THREAD_LOCAL_ARGS.pos[2] = THREAD_LOCAL_GEOCOORD[3 * iVert + 2];
 
       // Check if vertex is at distance L from the boundary
       // Hard-coded for [0,1] x [0,1] box
-      double x = MY_POS[0];
-      double y = MY_POS[1];
+      double x = THREAD_LOCAL_ARGS.pos[0];
+      double y = THREAD_LOCAL_ARGS.pos[1];
       bool inBox = (x > boundingBox[0] + boundaryWidth && y > boundingBox[2] + boundaryWidth 
                  && x < boundingBox[1] - boundaryWidth && y < boundingBox[3] - boundaryWidth);
 
       if(!excludeBoundary) inBox = true;
 
       if(inBox) {
-        _vectorSolution->eval(t, MY_POS, HESS_U_EXACT);
+        _vectorSolution->eval(THREAD_LOCAL_ARGS, HESS_U_EXACT);
 
         int vertex = verticesConnectivity[nVerticesPerElem * iElm + iVert];
 
@@ -707,7 +716,8 @@ thread_local std::vector<double> D3U_EXACT(8, 0.);
 
 double feNorm::computeErrorThirdDerivativesExactVsEstimator(bool excludeBoundary, double boundaryWidth, double boundingBox[4])
 {
-  double res = 0.0, t = _solution->getCurrentTime();
+  double res = 0.0;
+  THREAD_LOCAL_ARGS.t = _solution->getCurrentTime();
 
   if(_rec == nullptr) {
     feErrorMsg(FE_STATUS_ERROR, "Cannot compute Lp error estimate "
@@ -727,22 +737,22 @@ double feNorm::computeErrorThirdDerivativesExactVsEstimator(bool excludeBoundary
 #pragma omp for reduction(+ : res)
 #endif
     for(int iElm = 0; iElm < _nElm; ++iElm) {
-      _spaces[0]->_mesh->getCoord(_cnc, iElm, MY_GEOCOORD);
+      _spaces[0]->_mesh->getCoord(_cnc, iElm, THREAD_LOCAL_GEOCOORD);
 
       for(int k = 0; k < _nQuad; ++k) {
-        _geoSpace->interpolateVectorFieldAtQuadNode(MY_GEOCOORD, k, MY_POS);
+        _geoSpace->interpolateVectorFieldAtQuadNode(THREAD_LOCAL_GEOCOORD, k, THREAD_LOCAL_ARGS.pos);
 
         // Check if vertex is at distance L from the boundary
         // Hard-coded for [0,1] x [0,1] box
-        double x = MY_POS[0];
-        double y = MY_POS[1];
+        double x = THREAD_LOCAL_ARGS.pos[0];
+        double y = THREAD_LOCAL_ARGS.pos[1];
         bool inBox = (x > boundingBox[0] + boundaryWidth && y > boundingBox[2] + boundaryWidth 
                  && x < boundingBox[1] - boundaryWidth && y < boundingBox[3] - boundaryWidth);
 
         if(!excludeBoundary) inBox = true;
 
         if(inBox) {
-          _vectorSolution->eval(t, MY_POS, D3U_EXACT);
+          _vectorSolution->eval(THREAD_LOCAL_ARGS, D3U_EXACT);
 
           // Averaged derivatives-wise
           // Be careful for the order of mixed derivatives:
@@ -784,7 +794,8 @@ double feNorm::computeErrorThirdDerivativesExactVsEstimator(bool excludeBoundary
 
 double feNorm::computeErrorThirdDerivativesExactVsEstimator_Linf(bool excludeBoundary, double boundaryWidth, double boundingBox[4])
 {
-  double normMax = 0.0, d3Rec[8], t = _solution->getCurrentTime();
+  double normMax = 0.0, d3Rec[8];
+  THREAD_LOCAL_ARGS.t = _solution->getCurrentTime();
 
   if(_rec == nullptr) {
     feErrorMsg(FE_STATUS_ERROR, "Cannot compute Lp error estimate "
@@ -799,24 +810,24 @@ double feNorm::computeErrorThirdDerivativesExactVsEstimator_Linf(bool excludeBou
   // Compute max norm at mesh vertices at some distance L from the boundary (Guo, Zhang, Zhao paper)
   int nVerticesPerElem = _cnc->getNumVerticesPerElem();
   for(int iElm = 0; iElm < _nElm; ++iElm) {
-    _spaces[0]->_mesh->getCoord(_cnc, iElm, MY_GEOCOORD);
+    _spaces[0]->_mesh->getCoord(_cnc, iElm, THREAD_LOCAL_GEOCOORD);
 
     for(int iVert = 0; iVert < nVerticesPerElem; ++iVert) {
-      MY_POS[0] = MY_GEOCOORD[3 * iVert + 0];
-      MY_POS[1] = MY_GEOCOORD[3 * iVert + 1];
-      MY_POS[2] = MY_GEOCOORD[3 * iVert + 2];
+      THREAD_LOCAL_ARGS.pos[0] = THREAD_LOCAL_GEOCOORD[3 * iVert + 0];
+      THREAD_LOCAL_ARGS.pos[1] = THREAD_LOCAL_GEOCOORD[3 * iVert + 1];
+      THREAD_LOCAL_ARGS.pos[2] = THREAD_LOCAL_GEOCOORD[3 * iVert + 2];
 
       // Check if vertex is at distance L from the boundary
       // Hard-coded for [0,1] x [0,1] box
-      double x = MY_POS[0];
-      double y = MY_POS[1];
+      double x = THREAD_LOCAL_ARGS.pos[0];
+      double y = THREAD_LOCAL_ARGS.pos[1];
       bool inBox = (x > boundingBox[0] + boundaryWidth && y > boundingBox[2] + boundaryWidth 
                  && x < boundingBox[1] - boundaryWidth && y < boundingBox[3] - boundaryWidth);
 
       if(!excludeBoundary) inBox = true;
 
       if(inBox) {
-        _vectorSolution->eval(t, MY_POS, D3U_EXACT);
+        _vectorSolution->eval(THREAD_LOCAL_ARGS, D3U_EXACT);
 
         int vertex = verticesConnectivity[nVerticesPerElem * iElm + iVert];
 
@@ -845,7 +856,8 @@ thread_local std::vector<double> D4U_EXACT(16, 0.);
 
 double feNorm::computeErrorFourthDerivativesExactVsEstimator(bool excludeBoundary, double boundaryWidth, double boundingBox[4])
 {
-  double res = 0.0, t = _solution->getCurrentTime();
+  double res = 0.0;
+  THREAD_LOCAL_ARGS.t = _solution->getCurrentTime();
 
   if(_rec == nullptr) {
     feErrorMsg(FE_STATUS_ERROR, "Cannot compute Lp error estimate "
@@ -865,22 +877,22 @@ double feNorm::computeErrorFourthDerivativesExactVsEstimator(bool excludeBoundar
 #pragma omp for reduction(+ : res)
 #endif
     for(int iElm = 0; iElm < _nElm; ++iElm) {
-      _spaces[0]->_mesh->getCoord(_cnc, iElm, MY_GEOCOORD);
+      _spaces[0]->_mesh->getCoord(_cnc, iElm, THREAD_LOCAL_GEOCOORD);
 
       for(int k = 0; k < _nQuad; ++k) {
-        _geoSpace->interpolateVectorFieldAtQuadNode(MY_GEOCOORD, k, MY_POS);
+        _geoSpace->interpolateVectorFieldAtQuadNode(THREAD_LOCAL_GEOCOORD, k, THREAD_LOCAL_ARGS.pos);
 
         // Check if vertex is at distance L from the boundary
         // Hard-coded for [0,1] x [0,1] box
-        double x = MY_POS[0];
-        double y = MY_POS[1];
+        double x = THREAD_LOCAL_ARGS.pos[0];
+        double y = THREAD_LOCAL_ARGS.pos[1];
         bool inBox = (x > boundingBox[0] + boundaryWidth && y > boundingBox[2] + boundaryWidth 
                  && x < boundingBox[1] - boundaryWidth && y < boundingBox[3] - boundaryWidth);
 
         if(!excludeBoundary) inBox = true;
 
         if(inBox) {
-          _vectorSolution->eval(t, MY_POS, D4U_EXACT);
+          _vectorSolution->eval(THREAD_LOCAL_ARGS, D4U_EXACT);
 
           // Averaged derivatives-wise
           d4Rec[0] =  _rec->evaluateRecoveryAtQuadNode(PPR::DERIVATIVE, 14, iElm, k);
@@ -929,7 +941,8 @@ double feNorm::computeErrorFourthDerivativesExactVsEstimator(bool excludeBoundar
 
 double feNorm::computeErrorFourthDerivativesExactVsEstimator_Linf(bool excludeBoundary, double boundaryWidth, double boundingBox[4])
 {
-  double normMax = 0.0, d4Rec[16], t = _solution->getCurrentTime();
+  double normMax = 0.0, d4Rec[16];
+  THREAD_LOCAL_ARGS.t = _solution->getCurrentTime();
 
   if(_rec == nullptr) {
     feErrorMsg(FE_STATUS_ERROR, "Cannot compute Lp error estimate "
@@ -952,17 +965,17 @@ double feNorm::computeErrorFourthDerivativesExactVsEstimator_Linf(bool excludeBo
   int nVerticesPerElem = _cnc->getNumVerticesPerElem();
   for(int iElm = 0; iElm < _nElm; ++iElm) {
     double maxErrorOnElement = 0.;
-    _spaces[0]->_mesh->getCoord(_cnc, iElm, MY_GEOCOORD);
+    _spaces[0]->_mesh->getCoord(_cnc, iElm, THREAD_LOCAL_GEOCOORD);
 
     for(int iVert = 0; iVert < nVerticesPerElem; ++iVert) {
-      MY_POS[0] = MY_GEOCOORD[3 * iVert + 0];
-      MY_POS[1] = MY_GEOCOORD[3 * iVert + 1];
-      MY_POS[2] = MY_GEOCOORD[3 * iVert + 2];
+      THREAD_LOCAL_ARGS.pos[0] = THREAD_LOCAL_GEOCOORD[3 * iVert + 0];
+      THREAD_LOCAL_ARGS.pos[1] = THREAD_LOCAL_GEOCOORD[3 * iVert + 1];
+      THREAD_LOCAL_ARGS.pos[2] = THREAD_LOCAL_GEOCOORD[3 * iVert + 2];
 
       // Check if vertex is at distance L from the boundary
       // Hard-coded for [0,1] x [0,1] box
-      double x = MY_POS[0];
-      double y = MY_POS[1];
+      double x = THREAD_LOCAL_ARGS.pos[0];
+      double y = THREAD_LOCAL_ARGS.pos[1];
       bool inBox = (x > boundingBox[0] + boundaryWidth && y > boundingBox[2] + boundaryWidth 
                  && x < boundingBox[1] - boundaryWidth && y < boundingBox[3] - boundaryWidth);
 
@@ -970,7 +983,7 @@ double feNorm::computeErrorFourthDerivativesExactVsEstimator_Linf(bool excludeBo
 
       if(inBox) {
         fprintf(file, "SP(%g,%g,0.){%g};\n",x, y, 1.);
-        _vectorSolution->eval(t, MY_POS, D4U_EXACT);
+        _vectorSolution->eval(THREAD_LOCAL_ARGS, D4U_EXACT);
 
         int vertex = verticesConnectivity[nVerticesPerElem * iElm + iVert];
 
@@ -997,7 +1010,7 @@ double feNorm::computeErrorFourthDerivativesExactVsEstimator_Linf(bool excludeBo
         }
 
         // Plot error
-        _cnc->writeElementToPOS(myfile, MY_GEOCOORD, maxErrorOnElement);
+        _cnc->writeElementToPOS(myfile, THREAD_LOCAL_GEOCOORD, maxErrorOnElement);
       }
     }
   }
@@ -1037,7 +1050,8 @@ double feNorm::computeLpErrorFromTransferredSolution(int p, feSolution *otherSol
 
 double feNorm::computeVectorLpNorm(int p, bool error)
 {
-  double res = 0.0, compNorm, t = _solution->getCurrentTime();
+  double res = 0.0, compNorm;
+  _args.t = _solution->getCurrentTime();
   std::vector<double> u(3, 0.);
   std::vector<double> uh(3, 0.);
   int nComponents = _spaces[0]->getNumComponents();
@@ -1057,8 +1071,8 @@ double feNorm::computeVectorLpNorm(int p, bool error)
 
     for(int k = 0; k < _nQuad; ++k) {
       _spaces[0]->interpolateVectorFieldAtQuadNode(_localSol[0], k, uh, nComponents);
-      _geoSpace->interpolateVectorFieldAtQuadNode(_geoCoord, k, _pos);
-      if(error) (*_vectorSolution)(t, _pos, u);
+      _geoSpace->interpolateVectorFieldAtQuadNode(_geoCoord, k, _args.pos);
+      if(error) (*_vectorSolution)(_args, u);
 
       compNorm = 0.;
       for(int i = 0; i < nComponents; ++i) {
@@ -1073,7 +1087,8 @@ double feNorm::computeVectorLpNorm(int p, bool error)
 
 double feNorm::computeVectorLInfNorm(bool error)
 {
-  double res = 0.0, t = _solution->getCurrentTime();
+  double res = 0.0;
+  _args.t = _solution->getCurrentTime();
   std::vector<double> u(3, 0.);
   std::vector<double> uh(3, 0.);
   int nComponents = _spaces[0]->getNumComponents();
@@ -1090,8 +1105,8 @@ double feNorm::computeVectorLInfNorm(bool error)
 
     for(int k = 0; k < _nQuad; ++k) {
       _spaces[0]->interpolateVectorFieldAtQuadNode(_localSol[0], k, uh, nComponents);
-      _geoSpace->interpolateVectorFieldAtQuadNode(_geoCoord, k, _pos);
-      if(error) (*_vectorSolution)(t, _pos, u);
+      _geoSpace->interpolateVectorFieldAtQuadNode(_geoCoord, k, _args.pos);
+      if(error) (*_vectorSolution)(_args, u);
 
       for(int i = 0; i < nComponents; ++i) {
         res = fmax(res, fabs(u[i] - uh[i]));
@@ -1101,53 +1116,56 @@ double feNorm::computeVectorLInfNorm(bool error)
   return res;
 }
 
-double feNorm::computeL1Norm(bool error)
-{
-  double res = 0.0, uh, u, t = _solution->getCurrentTime();
+// Deprecated by general Lp norm function
+// double feNorm::computeL1Norm(bool error)
+// {
+//   double res = 0.0, uh, u, t = _solution->getCurrentTime();
 
-  // #if defined(HAVE_OMP)
-  // #pragma omp parallel for private(_geoCoord, uh, u) reduction(+ : res) schedule(dynamic)
-  // #endif
-  for(int iElm = 0; iElm < _nElm; ++iElm) {
-    this->initializeLocalSolutionOnSpace(0, iElm);
+//   // #if defined(HAVE_OMP)
+//   // #pragma omp parallel for private(_geoCoord, uh, u) reduction(+ : res) schedule(dynamic)
+//   // #endif
+//   for(int iElm = 0; iElm < _nElm; ++iElm) {
+//     this->initializeLocalSolutionOnSpace(0, iElm);
 
-    _spaces[0]->_mesh->getCoord(_cnc, iElm, _geoCoord);
+//     _spaces[0]->_mesh->getCoord(_cnc, iElm, _geoCoord);
 
-    for(int k = 0; k < _nQuad; ++k) {
-      uh = _spaces[0]->interpolateFieldAtQuadNode(_localSol[0], k);
-      _geoSpace->interpolateVectorFieldAtQuadNode(_geoCoord, k, _pos);
-      u = error ? _scalarSolution->eval(t, _pos) : 0.0;
-      res += fabs(u - uh) * _J[_nQuad * iElm + k] * _w[k];
-    }
-  }
-  return res;
-}
+//     for(int k = 0; k < _nQuad; ++k) {
+//       uh = _spaces[0]->interpolateFieldAtQuadNode(_localSol[0], k);
+//       _geoSpace->interpolateVectorFieldAtQuadNode(_geoCoord, k, _pos);
+//       u = error ? _scalarSolution->eval(t, _pos) : 0.0;
+//       res += fabs(u - uh) * _J[_nQuad * iElm + k] * _w[k];
+//     }
+//   }
+//   return res;
+// }
 
-double feNorm::computeL2Norm(bool error)
-{
-  double res = 0.0, uh, u, t = _solution->getCurrentTime();
+// Deprecated by general Lp norm function
+// double feNorm::computeL2Norm(bool error)
+// {
+//   double res = 0.0, uh, u, t = _solution->getCurrentTime();
 
-  // #if defined(HAVE_OMP)
-  // #pragma omp parallel for private(_geoCoord, uh, u) reduction(+ : res) schedule(dynamic)
-  // #endif
-  for(int iElm = 0; iElm < _nElm; ++iElm) {
-    this->initializeLocalSolutionOnSpace(0, iElm);
+//   // #if defined(HAVE_OMP)
+//   // #pragma omp parallel for private(_geoCoord, uh, u) reduction(+ : res) schedule(dynamic)
+//   // #endif
+//   for(int iElm = 0; iElm < _nElm; ++iElm) {
+//     this->initializeLocalSolutionOnSpace(0, iElm);
 
-    _spaces[0]->_mesh->getCoord(_cnc, iElm, _geoCoord);
+//     _spaces[0]->_mesh->getCoord(_cnc, iElm, _geoCoord);
 
-    for(int k = 0; k < _nQuad; ++k) {
-      uh = _spaces[0]->interpolateFieldAtQuadNode(_localSol[0], k);
-      _geoSpace->interpolateVectorFieldAtQuadNode(_geoCoord, k, _pos);
-      u = error ? _scalarSolution->eval(t, _pos) : 0.0;
-      res += (u - uh) * (u - uh) * _J[_nQuad * iElm + k] * _w[k];
-    }
-  }
-  return sqrt(res);
-}
+//     for(int k = 0; k < _nQuad; ++k) {
+//       uh = _spaces[0]->interpolateFieldAtQuadNode(_localSol[0], k);
+//       _geoSpace->interpolateVectorFieldAtQuadNode(_geoCoord, k, _pos);
+//       u = error ? _scalarSolution->eval(t, _pos) : 0.0;
+//       res += (u - uh) * (u - uh) * _J[_nQuad * iElm + k] * _w[k];
+//     }
+//   }
+//   return sqrt(res);
+// }
 
 double feNorm::computeLInfNorm(bool error)
 {
-  double res = -DBL_MAX, uh, u, t = _solution->getCurrentTime();
+  double res = -DBL_MAX, uh, u;
+  _args.t = _solution->getCurrentTime();
 
   // #if defined(HAVE_OMP)
   // #pragma omp parallel for private(_geoCoord, uh, u) reduction(+ : res) schedule(dynamic)
@@ -1159,8 +1177,8 @@ double feNorm::computeLInfNorm(bool error)
 
     for(int k = 0; k < _nQuad; ++k) {
       uh = _spaces[0]->interpolateFieldAtQuadNode(_localSol[0], k);
-      _geoSpace->interpolateVectorFieldAtQuadNode(_geoCoord, k, _pos);
-      u = error ? _scalarSolution->eval(t, _pos) : 0.0;
+      _geoSpace->interpolateVectorFieldAtQuadNode(_geoCoord, k, _args.pos);
+      u = error ? _scalarSolution->eval(_args) : 0.0;
       res = fmax(res, fabs(u - uh));
     }
   }
@@ -1169,9 +1187,10 @@ double feNorm::computeLInfNorm(bool error)
 
 double feNorm::computeH1SemiNorm(bool error)
 {
-  double res = 0.0, jac, dotProd, t = _solution->getCurrentTime();
+  double res = 0.0, jac, dotProd;
   double graduh[3] = {0., 0., 0.};
   std::vector<double> gradu(3, 0.);
+  _args.t = _solution->getCurrentTime();
 
   if(error && _vectorSolution == nullptr) {
     feErrorMsg(FE_STATUS_ERROR, "Cannot compute H1 seminorm of error function"
@@ -1200,8 +1219,8 @@ double feNorm::computeH1SemiNorm(bool error)
       _cnc->computeElementTransformation(_geoCoord, k, jac, T);
 
       _spaces[0]->interpolateFieldAtQuadNode_physicalGradient(_localSol[0], k, T, graduh);
-      _geoSpace->interpolateVectorFieldAtQuadNode(_geoCoord, k, _pos);
-      if(error) _vectorSolution->eval(t, _pos, gradu);
+      _geoSpace->interpolateVectorFieldAtQuadNode(_geoCoord, k, _args.pos);
+      if(error) _vectorSolution->eval(_args, gradu);
 
       graduh[0] -= gradu[0];
       graduh[1] -= gradu[1];
@@ -1319,7 +1338,8 @@ double feNorm::computeIntegral()
 
 double feNorm::computeIntegralUserFunction()
 {
-  double res = 0.0, u, t = 0.;
+  double res = 0.0, u;
+  _args.t = 0.;
 
   // #if defined(HAVE_OMP)
   // #pragma omp parallel for private(_geoCoord, u) reduction(+ : res) schedule(dynamic)
@@ -1328,8 +1348,8 @@ double feNorm::computeIntegralUserFunction()
     _geoSpace->_mesh->getCoord(_cnc, iElm, _geoCoord);
 
     for(int k = 0; k < _nQuad; ++k) {
-      _geoSpace->interpolateVectorFieldAtQuadNode(_geoCoord, k, _pos);
-      u = (*_scalarSolution)(t, _pos);
+      _geoSpace->interpolateVectorFieldAtQuadNode(_geoCoord, k, _args.pos);
+      u = (*_scalarSolution)(_args);
       res += u * _J[_nQuad * iElm + k] * _w[k];
     }
   }

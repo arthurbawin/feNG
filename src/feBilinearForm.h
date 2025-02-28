@@ -40,7 +40,7 @@ protected:
 
 public:
   // These members are used to compute the elementary system.
-  // Since friendship is not inherited by feSysElm derived class,
+  // Since friendship is not inherited by feSysElm derived classes,
   // they are public for now, even if it's probably not optimal.
 
   // Finite element spaces used to discretize each field present
@@ -48,13 +48,12 @@ public:
   // For example, for a diffusion weak form, there is only a single
   // field e.g. U, hence _intSpaces[0] = U;
   // For the Navier-Stokes weak forms, we have
-  // _intSpaces[0] = U;
-  // _intSpaces[1] = V;
-  // _intSpaces[2] = P;
+  // _intSpaces[0] = U; (vector FE space)
+  // _intSpaces[1] = P; (scalar FE space)
   //
   // The fields order must match the one given in feSysElm.
   std::vector<feSpace *> _intSpaces;
-  // Ptr to the geometric connectivity to access jacobians
+  // Ptr to the geometric connectivity (can probably be removed)
   feCncGeo *_cnc;
   // Ptr to the FE space used to interpolate the geometry
   feSpace *_geoSpace;
@@ -81,6 +80,9 @@ public:
   // Jacobian matrix and inverse of reference-to-physical element transformation
   ElementTransformation _transformation;
 
+  // The arguments to give the various callbacks
+  feFunctionArguments _args;
+
 protected:
   // Tag and name of the geometric connectivity on which the form is defined
   int _cncGeoTag;
@@ -92,13 +94,14 @@ protected:
   //
   // Example for Navier-Stokes equation: local matrix has the form:
   //
-  //         U V P -> unknown fields
-  // phi_U [       ]
-  // phi_V [       ]    _fieldsLayoutI = {0 1 2}
-  // phi_P [       ]    _fieldsLayoutJ = {0 1 2}
+  //         U P -> unknown fields
+  // phi_U [       ] _fieldsLayoutI = {0 1}
+  // phi_P [       ] _fieldsLayoutJ = {0 1}
   //   |
   //   |------------> test functions
   //
+  // For mixed weak forms, however, the local matrix is rectangular
+  // and the layouts differ.
   std::vector<int> _fieldsLayoutI;
   std::vector<int> _fieldsLayoutJ;
 

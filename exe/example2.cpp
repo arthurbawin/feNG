@@ -10,17 +10,17 @@
 #include "feAPI.h"
 
 
-double uSol_f(const double /* t */, const std::vector<double> &pos, const std::vector<double> &/*par*/)
+double uSol_f(const feFunctionArguments &args, const std::vector<double> &/*par*/)
 {
-  double x = pos[0];
-  double y = pos[1];
+  double x = args.pos[0];
+  double y = args.pos[1];
   return sin(M_PI*x)*sin(M_PI*y);
 }
 
-double uSource_f(const double /* t */, const std::vector<double> &pos, const std::vector<double> &/*par*/)
+double uSource_f(const feFunctionArguments &args, const std::vector<double> &/*par*/)
 {
-  double x = pos[0];
-  double y = pos[1];
+  double x = args.pos[0];
+  double y = args.pos[1];
   return -2. * M_PI*M_PI * sin(M_PI*x)*sin(M_PI*y);
 }
 
