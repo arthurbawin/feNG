@@ -1,0 +1,90 @@
+Taylor-Hood elements P2-P1
+Stokes MMS - Divergence formulation - Error on u
+            nElm           error            rate
+              42    1.730482e-03    0.000000e+00
+             168    2.101765e-04    3.041500e+00
+             672    2.593560e-05    3.018596e+00
+            2688    3.221420e-06    3.009165e+00
+
+Stokes MMS - Divergence formulation - Error on p
+            nElm           error            rate
+              42    1.054679e-02    0.000000e+00
+             168    2.304575e-03    2.194231e+00
+             672    5.426010e-04    2.086537e+00
+            2688    1.313177e-04    2.046831e+00
+
+Taylor-Hood elements P2-P1
+Stokes MMS - Laplacian formulation - Error on u
+            nElm           error            rate
+              42    1.729104e-03    0.000000e+00
+             168    2.114311e-04    3.031765e+00
+             672    2.643873e-05    2.999463e+00
+            2688    3.316210e-06    2.995046e+00
+
+Stokes MMS - Laplacian formulation - Error on p
+            nElm           error            rate
+              42    1.055463e-02    0.000000e+00
+             168    2.266154e-03    2.219559e+00
+             672    5.362661e-04    2.079225e+00
+            2688    1.302836e-04    2.041293e+00
+
+Taylor-Hood elements P3-P2
+Stokes MMS - Divergence formulation - Error on u
+            nElm           error            rate
+              42    9.936429e-05    0.000000e+00
+             168    5.886616e-06    4.077217e+00
+             672    3.540305e-07    4.055493e+00
+            2688    2.163468e-08    4.032456e+00
+
+Stokes MMS - Divergence formulation - Error on p
+            nElm           error            rate
+              42    5.124169e-04    0.000000e+00
+             168    5.952888e-05    3.105656e+00
+             672    6.908226e-06    3.107203e+00
+            2688    8.321311e-07    3.053432e+00
+
+Taylor-Hood elements P3-P2
+Stokes MMS - Laplacian formulation - Error on u
+            nElm           error            rate
+              42    9.376081e-05    0.000000e+00
+             168    5.691495e-06    4.042105e+00
+             672    3.474739e-07    4.033831e+00
+            2688    2.141985e-08    4.019885e+00
+
+Stokes MMS - Laplacian formulation - Error on p
+            nElm           error            rate
+              42    4.576155e-04    0.000000e+00
+             168    4.827216e-05    3.244872e+00
+             672    5.458271e-06    3.144676e+00
+            2688    6.481760e-07    3.073987e+00
+
+Taylor-Hood elements P4-P3
+Stokes MMS - Divergence formulation - Error on u
+            nElm           error            rate
+              42    3.867931e-06    0.000000e+00
+             168    1.171192e-07    5.045513e+00
+             672    3.601521e-09    5.023227e+00
+            2688    1.116349e-10    5.011746e+00
+
+Stokes MMS - Divergence formulation - Error on p
+            nElm           error            rate
+              42    4.224335e-05    0.000000e+00
+             168    3.578884e-06    3.561143e+00
+             672    2.713972e-07    3.721032e+00
+            2688    1.868532e-08    3.860429e+00
+
+Taylor-Hood elements P4-P3
+Stokes MMS - Laplacian formulation - Error on u
+            nElm           error            rate
+              42    3.634857e-06    0.000000e+00
+             168    1.117073e-07    5.024103e+00
+             672    3.454176e-09    5.015239e+00
+            2688    1.072485e-10    5.009312e+00
+
+Stokes MMS - Laplacian formulation - Error on p
+            nElm           error            rate
+              42    3.918210e-05    0.000000e+00
+             168    3.250316e-06    3.591543e+00
+             672    2.465142e-07    3.720838e+00
+            2688    1.700726e-08    3.857448e+00
+

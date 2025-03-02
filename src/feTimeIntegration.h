@@ -70,6 +70,7 @@ protected:
   bool _exportInitialCondition = true;
 
   // Scalar-valued post-processing operators computed at each step
+  // First vector is the time
   std::vector<std::vector<double>> _postProcessingData;
 
 protected:
@@ -105,6 +106,7 @@ public:
 protected:
   void initialize();
   void updateTime(const int iStep, const double dt);
+  void computePostProcessing(const int iStep, const double t);
   feStatus writeVisualizationFile(const int iStep, const feExportData &data);
 };
 

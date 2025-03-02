@@ -520,6 +520,79 @@ void feSysElm_MixedGradient::computeBe(feBilinearForm *form)
 }
 
 // -----------------------------------------------------------------------------
+// Bilinear form: mixed weak gradient with coefficient depending on solution
+// -----------------------------------------------------------------------------
+void feSysElm_MixedGradientFieldDependentCoeff::createElementarySystem(std::vector<feSpace *> &space)
+{
+  _idV = 0; // Vector-valued test functions
+  _idP = 1; // Scalar unknown field
+  _idW = 1; // Scalar unknown field on which the coefficient depends
+  _fieldsLayoutI = {_idV}; // Rectangular local matrix
+  _fieldsLayoutJ = {_idV, _idP, _idW};
+  _nComponents = space[_idV]->getNumComponents();
+  _nFunctionsV = space[_idV]->getNumFunctions();
+  _nFunctionsP = space[_idP]->getNumFunctions();
+  // _phiU.resize(_nFunctionsU);
+  _gradPhiV.resize(_nComponents * _nFunctionsV);
+}
+
+void feSysElm_MixedGradientFieldDependentCoeff::computeAe(feBilinearForm *form)
+{
+  UNUSED(form);
+  feErrorMsg(FE_STATUS_ERROR, "feSysElm_MixedGradientFieldDependentCoeff : Solve with FD for now");
+  exit(-1);
+  // double jac, coeff, div_v;
+  // for(int k = 0; k < _nQuad; ++k) {
+  //   jac = form->_J[_nQuad * form->_numElem + k];
+  //   form->_cnc->computeElementTransformation(form->_geoCoord, k, jac, form->_transformation);
+
+  //   // Evaluate scalar coefficient
+  //   form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, form->_args.pos);
+  //   coeff = (*_coeff)(form->_args);
+
+  //   // Get phiU
+  //   form->_intSpaces[_idU]->getFunctionsAtQuadNode(k, _phiU);
+
+  //   // Compute compacted grad(phiV) without the trivial zeros
+  //   form->_intSpaces[_idV]->getFunctionsPhysicalGradientAtQuadNode(k, form->_transformation,
+  //                                                                  _gradPhiV.data());
+
+  //   for(int i = 0; i < _nFunctionsV; ++i) {
+  //     for(int j = 0; j < _nFunctionsU; ++j) {
+  //       div_v = _gradPhiV[i * _nComponents + (i % _nComponents)];
+  //       form->_Ae[i][j] -= coeff * _phiU[j] * div_v * jac * _wQuad[k];
+  //     }
+  //   }
+  // }
+}
+
+void feSysElm_MixedGradientFieldDependentCoeff::computeBe(feBilinearForm *form)
+{
+  double jac, coeff, p, w, div_v;
+  for(int k = 0; k < _nQuad; ++k) {
+    jac = form->_J[_nQuad * form->_numElem + k];
+    form->_cnc->computeElementTransformation(form->_geoCoord, k, jac, form->_transformation);
+
+    // Get current scalar solutions
+    p = form->_intSpaces[_idP]->interpolateFieldAtQuadNode(form->_sol[_idP], k);
+    w = form->_intSpaces[_idW]->interpolateFieldAtQuadNode(form->_sol[_idW], k);
+
+    // Evaluate scalar coefficient
+    form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, form->_args.pos);
+    form->_args.u = w;
+    coeff = (*_coeff)(form->_args);
+
+    // Compute compacted grad(phiV) without the trivial zeros
+    form->_intSpaces[_idV]->getFunctionsPhysicalGradientAtQuadNode(k, form->_transformation, _gradPhiV.data());
+
+    for(int i = 0; i < _nFunctionsV; ++i) {
+      div_v = _gradPhiV[i * _nComponents + (i % _nComponents)];
+      form->_Be[i] += coeff * p * div_v * jac * _wQuad[k];
+    }
+  }
+}
+
+// -----------------------------------------------------------------------------
 // Bilinear form: mixed divergence
 // -----------------------------------------------------------------------------
 void feSysElm_MixedDivergence::createElementarySystem(std::vector<feSpace *> &space)

@@ -392,6 +392,112 @@ void feSpaceTri_CR1::initializeAddressingVector(int numElem, std::vector<feInt> 
   adr[2] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 2, 0);
 }
 
+// // -----------------------------------------------------------------------------
+// // Raviart-Thomas (vector-valued) element of degree 1 on reference triangle r = [0,1], s = [0,1-r]
+// // -----------------------------------------------------------------------------
+// feSpaceTriRT1::feSpaceTriRT1(feMesh *mesh, const std::string fieldID,
+//                              const std::string cncGeoID, feVectorFunction *fct,
+//                              const bool useGlobalShapeFunctions)
+//   : feVectorSpace(2, mesh, fieldID, cncGeoID, fct, useGlobalShapeFunctions)
+// {
+//   _nComponents = 2;
+//   _nFunctions = 3;
+//   _Lcoor = {0.5, 0.5, 0., 0., 0.5, 0., 0., 0.5, 0.};
+//   _dofLocations.resize(_nFunctions);
+//   for(int i = 0; i < _nFunctions; ++i) _dofLocations[i] = dofLocation::EDGE;
+// }
+
+// std::vector<double> feSpaceTriRT1::L(double *r)
+// {
+//   double phi[3] = {1.0 - r[0] - r[1], r[0], r[1]};
+//   std::vector<double> res(_nFunctions);
+//   duplicateScalarArray(3, 1, phi, dim, res);
+//   return res;
+// }
+
+// void feSpaceTriRT1::L(double *r, double *res)
+// {
+//   double phi[3] = {1.0 - r[0] - r[1], r[0], r[1]};
+//   duplicateScalarArray(3, 1, phi, dim, res);
+// }
+
+// std::vector<double> feSpaceTriRT1::dLdr(double *r)
+// {
+//   UNUSED(r);
+//   double dldr[3] = {-1.0, 1.0, 0.0};
+//   std::vector<double> res(_nFunctions);
+//   duplicateScalarArray(3, 1, dldr, dim, res);
+//   return res;
+// }
+
+// std::vector<double> feSpaceTriRT1::dLds(double *r)
+// {
+//   UNUSED(r);
+//   double dlds[3] = {-1.0, 0.0, 1.0};
+//   std::vector<double> res(_nFunctions);
+//   duplicateScalarArray(3, 1, dlds, dim, res);
+//   return res;
+// }
+
+// std::vector<double> feSpaceTriRT1::d2Ldr2(double *r)
+// {
+//   UNUSED(r);
+//   double d2ldr2[3] = {0., 0., 0.};
+//   std::vector<double> res(_nFunctions);
+//   duplicateScalarArray(3, 1, d2ldr2, dim, res);
+//   return res;
+// }
+
+// std::vector<double> feSpaceTriRT1::d2Ldrs(double *r)
+// {
+//   UNUSED(r);
+//   double d2ldrs[3] = {0., 0., 0.};
+//   std::vector<double> res(_nFunctions);
+//   duplicateScalarArray(3, 1, d2ldrs, dim, res);
+//   return res;
+// }
+
+// std::vector<double> feSpaceTriRT1::d2Lds2(double *r)
+// {
+//   UNUSED(r);
+//   double d2lds2[3] = {0., 0., 0.};
+//   std::vector<double> res(_nFunctions);
+//   duplicateScalarArray(3, 1, d2lds2, dim, res);
+//   return res;
+// }
+
+// void feSpaceTriRT1::initializeNumberingUnknowns()
+// {
+//   for(int i = 0; i < _mesh->getNumElements(_cncGeoID); ++i) {
+//     _numbering->setUnknownVertexDOF(_mesh, _cncGeoID, i, 0, dim);
+//     _numbering->setUnknownVertexDOF(_mesh, _cncGeoID, i, 1, dim);
+//     _numbering->setUnknownVertexDOF(_mesh, _cncGeoID, i, 2, dim);
+//   }
+// }
+
+// void feSpaceTriRT1::initializeNumberingEssential()
+// {
+//   // for(int iComp = 0; iComp < _nComponents; ++iComp){
+//   //   if(_essentialComponents[iComp]){
+//   for(int i = 0; i < _mesh->getNumElements(_cncGeoID); ++i) {
+//     _numbering->setEssentialVertexDOF(_mesh, _cncGeoID, i, 0); //, iComp);
+//     _numbering->setEssentialVertexDOF(_mesh, _cncGeoID, i, 1); //, iComp);
+//     _numbering->setEssentialVertexDOF(_mesh, _cncGeoID, i, 2); //, iComp);
+//   }
+//   //   }
+//   // }
+// }
+
+// void feSpaceTriRT1::initializeAddressingVector(int numElem, std::vector<feInt> &adr)
+// {
+//   adr[0] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 0, 0);
+//   adr[1] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 0, 1);
+//   adr[2] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 1, 0);
+//   adr[3] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 1, 1);
+//   adr[4] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 2, 0);
+//   adr[5] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 2, 1);
+// }
+
 // -----------------------------------------------------------------------------
 // Lagrange element of degree 2 on reference triangle r = [0,1], s = [0,1-r]
 // -----------------------------------------------------------------------------

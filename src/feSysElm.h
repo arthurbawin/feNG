@@ -38,12 +38,13 @@ typedef enum {
   DIV_NEWTONIAN_STRESS,
 
   MIXED_GRADIENT,
+  MIXED_GRADIENT_FIELD_DEPENDENT_COEFF,
   MIXED_GRADGRAD,
+  TRIPLE_MIXED_GRADIENT,
+
   MIXED_DIVERGENCE,
   MIXED_CURL,
   MIXED_DOTPRODUCT,
-
-  TRIPLE_MIXED_GRADIENT,
 
   CHNS_MOMENTUM,
   MIXED_DIVERGENCE_CHNS,
@@ -118,6 +119,8 @@ inline const std::string toString(elementSystemType t)
       return "DIV_NEWTONIAN_STRESS";
     case MIXED_GRADIENT:
       return "MIXED_GRADIENT";
+    case MIXED_GRADIENT_FIELD_DEPENDENT_COEFF:
+      return "MIXED_GRADIENT_FIELD_DEPENDENT_COEFF";
     case MIXED_GRADGRAD:
       return "MIXED_GRADGRAD";
     case MIXED_DIVERGENCE:
@@ -426,7 +429,8 @@ protected:
   std::vector<double> _phiU;
 
 public:
-  feSysElm_VectorMass(feFunction *coeff) : feSysElm(-1, 1, VECTOR_MASS, true), _coeff(coeff)
+  feSysElm_VectorMass(feFunction *coeff)
+    : feSysElm(-1, 1, VECTOR_MASS, true), _coeff(coeff)
   {
     _computeMatrixWithFD = false;
   };
@@ -461,7 +465,8 @@ protected:
   std::vector<double> _phiU, _phiV;
 
 public:
-  feSysElm_MixedVectorMass(feFunction *coeff) : feSysElm(-1, 2, MIXED_VECTOR_MASS, true), _coeff(coeff){};
+  feSysElm_MixedVectorMass(feFunction *coeff)
+    : feSysElm(-1, 2, MIXED_VECTOR_MASS, true), _coeff(coeff){};
   ~feSysElm_MixedVectorMass(){};
   void createElementarySystem(std::vector<feSpace *> &space);
   void computeAe(feBilinearForm *form);
@@ -935,6 +940,39 @@ public:
   void computeAe(feBilinearForm *form);
   void computeBe(feBilinearForm *form);
   CLONEABLE(feSysElm_MixedGradient)
+};
+
+//
+// Mixed gradient with a coefficient depending on another field :
+//
+// Strong form : coeff(w) * grad(p) cdot v
+//
+// with : w a scalar-valued variable
+//        coeff a scalar coefficient depending on w
+//        p a scalar-valued variable
+//        v the test functions of a vector-valued variable
+//
+// Weak forn : integral of - coeff(w) * p * div(v)
+//
+class feSysElm_MixedGradientFieldDependentCoeff : public feSysElm
+{
+protected:
+  feFunction *_coeff;
+  int _idV, _idP, _idW, _nFunctionsV, _nFunctionsP, _nFunctionsW;
+  std::vector<double> _phiV, _phiP;
+  std::vector<double> _gradPhiV;
+
+public:
+  feSysElm_MixedGradientFieldDependentCoeff(feFunction *coeff)
+    : feSysElm(-1, 3, MIXED_GRADIENT_FIELD_DEPENDENT_COEFF, true), _coeff(coeff)
+  {
+    _computeMatrixWithFD = true;
+  };
+  ~feSysElm_MixedGradientFieldDependentCoeff(){};
+  void createElementarySystem(std::vector<feSpace *> &space);
+  void computeAe(feBilinearForm *form);
+  void computeBe(feBilinearForm *form);
+  CLONEABLE(feSysElm_MixedGradientFieldDependentCoeff)
 };
 
 //

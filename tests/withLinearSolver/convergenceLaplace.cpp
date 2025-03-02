@@ -37,7 +37,7 @@ namespace {
   }
 
   int meshConvergence(std::stringstream &resultBuffer, int order, int numMeshes, int degreeQuadrature)
-  {    
+  {
     setVerbose(1);  
 
     double k = 1.0;

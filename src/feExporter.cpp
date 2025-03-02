@@ -870,7 +870,7 @@ feStatus feExporterVTK::writeStep(std::string fileName,
     return feErrorMsg(FE_STATUS_FILE_CANNOT_BE_OPENED, "Could not open output file.");
   }
 
-  feInfo("\t\tWrote VTK file in %f s", toc());
+  feInfoCond(FE_VERBOSE > 0, "\t\tWrote VTK file in %f s", toc());
 
   #if defined(HAVE_MPI)
   }

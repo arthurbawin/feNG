@@ -54,10 +54,12 @@ TimeIntegrator::TimeIntegrator(feLinearSystem *linearSystem,
   _currentSolution->initializeTemporalSolution(_t0, _tEnd, _nTimeSteps);
   _timeHistory.resize(_nTimeSteps, 0.);
 
-  // Allocate vectors for post-processing operators
-  _postProcessingData.resize(postProcessing.size());
+  // Allocate vectors for post-processing operators.
+  // Norms are computed for the initial condition as well,
+  // thus nTimeSteps + 1 times.
+  _postProcessingData.resize(postProcessing.size() + 1);
   for(auto &vec : _postProcessingData)
-    vec.resize(nTimeSteps, 0.);
+    vec.resize(nTimeSteps+1, 0.);
 }
 
 //
@@ -85,6 +87,17 @@ void TimeIntegrator::updateTime(const int iStep, const double dt)
   _timeHistory[iStep] = _currentTime;
 
   _currentSolution->setCurrentTime(_currentTime);
+}
+
+void TimeIntegrator::computePostProcessing(const int iStep, const double t)
+{
+  // First vector is the time array
+  _postProcessingData[0][iStep] = t;
+
+  // Remaining are the results of the norms and indicators
+  for(size_t i = 0; i < _postProcessing.size(); ++i) {
+    _postProcessingData[i+1][iStep] = _postProcessing[i]->compute();
+  }
 }
 
 feStatus TimeIntegrator::writeVisualizationFile(const int iStep, const feExportData &data)
@@ -151,9 +164,7 @@ feStatus StationaryIntegrator::makeSteps(int /* nSteps */)
   feInfoCond(FE_VERBOSE > 0, "\t\tSteady-state solution found");
 
   // Compute post-processing indicators (L2 norms, etc.)
-  for(size_t i = 0; i < _postProcessing.size(); ++i) {
-    _postProcessingData[i][0] = _postProcessing[i]->compute();
-  }
+  computePostProcessing(0, 0.);
 
   // Export solution for visualization
   s = this->writeVisualizationFile(0, _exportData);
@@ -249,6 +260,10 @@ feStatus BDF1Integrator::makeSteps(int nSteps)
       feStatus s = this->writeVisualizationFile(0, _exportData);
       if(s != FE_STATUS_OK) return s;
     }
+
+    // Compute post-processing indicators (L2 norms, etc.)
+    // on initial condition
+    computePostProcessing(0, _t[0]);
   }
 
   for(int iStep = 0; iStep < nSteps; ++iStep, ++_currentStep)
@@ -269,9 +284,7 @@ feStatus BDF1Integrator::makeSteps(int nSteps)
     if(s == FE_STATUS_ERROR) { return s; }
 
     // Compute post-processing indicators (L2 norms, etc.)
-    for(size_t i = 0; i < _postProcessing.size(); ++i) {
-      _postProcessingData[i][0] = _postProcessing[i]->compute();
-    }
+    computePostProcessing(iStep+1, _t[0]);
 
     // Export solution for visualization
     s = this->writeVisualizationFile(_currentStep+1, _exportData);
@@ -422,6 +435,10 @@ feStatus BDF2Integrator::makeSteps(int nSteps)
   {
     start = 1;
 
+    // Compute post-processing indicators (L2 norms, etc.)
+    // on initial condition
+    computePostProcessing(0, _t[0]);
+
     // Export initial solution
     feStatus s = this->writeVisualizationFile(0, _exportData);
     if(s != FE_STATUS_OK) return s;
@@ -454,6 +471,8 @@ feStatus BDF2Integrator::makeSteps(int nSteps)
         break;
     }
 
+    computePostProcessing(1, _t[0]);
+
     // Export solution for visualization
     _currentStep++;
     s = this->writeVisualizationFile(_currentStep, _exportData);
@@ -477,9 +496,7 @@ feStatus BDF2Integrator::makeSteps(int nSteps)
     if(s == FE_STATUS_ERROR) { return s; }
 
     // Compute post-processing indicators (L2 norms, etc.)
-    for(size_t i = 0; i < _postProcessing.size(); ++i) {
-      _postProcessingData[i][0] = _postProcessing[i]->compute();
-    }
+    computePostProcessing(iStep+1, _t[0]);
 
     // Export solution for visualization
     s = this->writeVisualizationFile(_currentStep+1, _exportData);

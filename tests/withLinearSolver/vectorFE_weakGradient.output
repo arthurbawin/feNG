@@ -1,0 +1,28 @@
+Weak gradient - Error on u - Lagrange elements P1
+            nElm           error            rate
+              42    5.853315e-02    0.000000e+00
+             168    1.253074e-02    2.223783e+00
+             672    2.775536e-03    2.174633e+00
+            2688    6.412032e-04    2.113913e+00
+
+Weak gradient - Error on u - Lagrange elements P2
+            nElm           error            rate
+              42    3.578664e-03    0.000000e+00
+             168    4.543448e-04    2.977562e+00
+             672    5.759571e-05    2.979754e+00
+            2688    7.267833e-06    2.986364e+00
+
+Weak gradient - Error on u - Lagrange elements P3
+            nElm           error            rate
+              42    7.583500e-05    0.000000e+00
+             168    4.830036e-06    3.972758e+00
+             672    2.952453e-07    4.032048e+00
+            2688    1.801591e-08    4.034571e+00
+
+Weak gradient - Error on u - Lagrange elements P4
+            nElm           error            rate
+              42    6.362486e-06    0.000000e+00
+             168    2.191045e-07    4.859900e+00
+             672    7.102971e-09    4.947053e+00
+            2688    2.251733e-10    4.979315e+00
+

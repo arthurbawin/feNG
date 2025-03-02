@@ -24,7 +24,8 @@ enum class elementType {
   VECTOR_LAGRANGE_BUBBLE,
   LEGENDRE,
   HERMITE,
-  CROUZEIX_RAVIART
+  CROUZEIX_RAVIART,
+  RAVIART_THOMAS
 };
 
 enum class dofLocation {
@@ -325,12 +326,7 @@ public:
   virtual void synchronizeNumberingOfEssentialDOF(int & /*numModifiedDOF*/) {};
 
   // Evaluate prescribed scalar or vector field
-  // double evalFun(const double t, const std::vector<double> &x) { return _scalarFct->eval(t, x); }
   double evalFun(const feFunctionArguments &args) { return _scalarFct->eval(args); }
-  // void evalFun(const double t, const std::vector<double> &x, std::vector<double> &res)
-  // {
-  //   _vectorFct->eval(t, x, res);
-  // }
   void evalFun(const feFunctionArguments &args, std::vector<double> &res)
   {
     _vectorFct->eval(args, res);
@@ -445,10 +441,15 @@ class feVectorSpace : public feSpace
 {
 protected:
 public:
-  feVectorSpace(const int dimension, feMesh *mesh = nullptr, const std::string &fieldID = "",
-                const std::string &cncGeoID = "", feVectorFunction *vectorField = nullptr,
-                const bool useGlobalShapeFunctions = false);
-  ~feVectorSpace(){};
+  feVectorSpace(const int dimension,
+    feMesh *mesh = nullptr,
+    const std::string &fieldID = "",
+    const std::string &cncGeoID = "",
+    feVectorFunction *vectorField = nullptr,
+    const bool useGlobalShapeFunctions = false);
+
+  // double divergenceAtQuadratureNode();
+
 };
 
 // -----------------------------------------------------------------------------
@@ -933,6 +934,34 @@ public:
   void initializeNumberingEssential();
   void initializeAddressingVector(int numElem, std::vector<feInt> &adr);
 };
+
+// // -----------------------------------------------------------------------------
+// // Raviart-Thomas (vector-valued) element of degree 1 on reference triangle r = [0,1], s = [0,1-r]
+// // -----------------------------------------------------------------------------
+// class feSpaceTriRT1 : public feVectorSpace
+// {
+// protected:
+// public:
+//   feSpaceTriRT1(feMesh *mesh, const std::string fieldID, const std::string cncGeoID,
+//                   feVectorFunction *fct, const bool useGlobalShapeFunctions = false);
+//   ~feSpaceTriRT1() {}
+
+//   int getNumFunctions() const { return 3; }
+//   int getPolynomialDegree() { return 1; }
+
+//   std::vector<double> L(double *r);
+//   void L(double *r, double *L);
+
+//   std::vector<double> dLdr(double *r);
+//   std::vector<double> dLds(double *r);
+//   std::vector<double> d2Ldr2(double *r);
+//   std::vector<double> d2Ldrs(double *r);
+//   std::vector<double> d2Lds2(double *r);
+
+//   void initializeNumberingUnknowns();
+//   void initializeNumberingEssential();
+//   void initializeAddressingVector(int numElem, std::vector<feInt> &adr);
+// };
 
 // -----------------------------------------------------------------------------
 // Lagrange element of degree 2 on reference triangle r = [0,1], s = [0,1-r]
