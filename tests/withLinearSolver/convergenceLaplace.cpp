@@ -54,7 +54,7 @@ namespace {
     //
     for(int i = 0; i < numMeshes; ++i)
     {
-      std::string meshFile = "../../../data/square" + std::to_string(i + 1) + ".msh";
+      std::string meshFile = "../../../data/square" + std::to_string(i+1) + ".msh";
 
       feMesh2DP1 mesh(meshFile);
       nElm[i] = mesh.getNumInteriorElements();

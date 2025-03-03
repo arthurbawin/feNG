@@ -135,6 +135,13 @@ feCncGeo::feCncGeo(const int tag, const int dimension, const int ambientDimensio
 
   // Create connectivity of unique triangles
 
+  if(interpolant == geometricInterpolant::LINEP1 || 
+     interpolant == geometricInterpolant::TRIP1 ||
+     interpolant == geometricInterpolant::TETP1)
+  {
+    _hasConstantTransformation = true;
+  }
+
   // Color the elements for partitioning
   colorElements(1);
   // printColoringStatistics();
@@ -479,6 +486,28 @@ feStatus feCncGeo::recomputeElementJacobian(const int iElm)
   return FE_STATUS_OK;
 }
 
+void feCncGeo::computeConstantElementTransformations()
+{
+  if(_hasConstantTransformation)
+  {
+    _elementTransformations.resize(_nElements);
+    int nQuad = _geometricInterpolant->getNumQuadPoints();
+  #if defined(HAVE_OMP)
+    #pragma omp parallel
+  #endif
+    {
+      std::vector<double> geoCoord(3*_nVerticesPerElm);
+    #if defined(HAVE_OMP)
+      #pragma omp for
+    #endif
+      for(int iElm = 0; iElm < _nElements; ++iElm) {
+        _mesh->getCoord(_tag, iElm, geoCoord);
+        this->computeElementTransformation(geoCoord, 0, _J[nQuad * iElm + 0], _elementTransformations[iElm]);
+      }
+    }
+  }
+}
+
 feStatus feCncGeo::computeNormalVectors(std::vector<double> &normalVectors) const
 {
   int nQuad = _geometricInterpolant->getNumQuadPoints();
@@ -619,7 +648,7 @@ feStatus feCncGeo::computeMinimumScaledJacobianControlCoefficients()
   return FE_STATUS_OK;
 }
 
-void feCncGeo::computeElementTransformation(std::vector<double> &elementCoord, const int iQuadNode,
+void feCncGeo::computeElementTransformation(const std::vector<double> &elementCoord, const int iQuadNode,
                                             const double jac, ElementTransformation &T) const
 {
   T.jac = jac;
@@ -645,21 +674,33 @@ void feCncGeo::computeElementTransformation(std::vector<double> &elementCoord, c
                                                                         T.dxds);
     _geometricInterpolant->interpolateVectorFieldAtQuadNode_tDerivative(elementCoord, iQuadNode,
                                                                         T.dxdt);
-    /* Write inverse of 3x3 matrix (-: */
     double mat[3][3] = {{T.dxdr[0], T.dxds[0], T.dxdt[0]},
                         {T.dxdr[1], T.dxds[1], T.dxdt[1]},
                         {T.dxdr[2], T.dxds[2], T.dxdt[2]}};
     double inv[3][3];
     inv3x3(mat, inv);
     T.drdx[0] = inv[0][0];
-    T.drdx[1] = inv[1][0];
-    T.drdx[2] = inv[2][0];
     T.drdy[0] = inv[0][1];
-    T.drdy[1] = inv[1][1];
-    T.drdy[2] = inv[2][1];
     T.drdz[0] = inv[0][2];
+    T.drdx[1] = inv[1][0];
+    T.drdy[1] = inv[1][1];
     T.drdz[1] = inv[1][2];
+    T.drdx[2] = inv[2][0];
+    T.drdy[2] = inv[2][1];
     T.drdz[2] = inv[2][2]; 
+  }
+}
+
+void feCncGeo::getElementTransformation(const int iElm, ElementTransformation &T) const
+{
+  T = _elementTransformations[iElm];
+}
+
+void feCncGeo::getElementTransformation(const std::vector<double> &elementCoord,
+                                        const int iQuadNode, const double jac, ElementTransformation &T) const
+{
+  if(!_hasConstantTransformation) {
+    computeElementTransformation(elementCoord, iQuadNode, jac, T); 
   }
 }
 

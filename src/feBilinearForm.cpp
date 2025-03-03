@@ -278,6 +278,15 @@ void feBilinearForm::initialize(feSolution *sol, int numElem)
   _dt = sol->getTimeStep();
   _args.t = _tn;
 
+  // Get the coordinates of this element's vertices
+  _intSpaces[0]->_mesh->getCoord(_cncGeoTag, numElem, _geoCoord);
+
+  // Get the element transformation once for this element
+  // instead of on each quadrature node
+  if(_cnc->hasConstantTransformation()) {
+    _cnc->getElementTransformation(numElem, _transformation);
+  }
+
   std::vector<double> &solArray = sol->getSolutionReference();
 
   for(size_t i = 0; i < _intSpaces.size(); i++)
@@ -321,9 +330,6 @@ void feBilinearForm::initialize(feSolution *sol, int numElem)
       _solDot[i][k] = sol->getSolDotAtDOF(_adr[i][k]);
     }
   }
-
-  // Get the coordinates of this element's vertices
-  _intSpaces[0]->_mesh->getCoord(_cncGeoTag, numElem, _geoCoord);
 
   //
   // Initialize the local connectivity ("address" vector)

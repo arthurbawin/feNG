@@ -402,17 +402,17 @@ public:
   double interpolateVectorFieldComponentAtQuadNode(std::vector<double> &field, int iNode, int iComponent);
   double interpolateVectorFieldComponentAtQuadNode_fullField(std::vector<double> &field, int iNode, int iComponent);
 
-  void interpolateVectorFieldAtQuadNode_rDerivative(std::vector<double> &field, int iNode,
+  void interpolateVectorFieldAtQuadNode_rDerivative(const std::vector<double> &field, int iNode,
                                                     std::vector<double> &res);
-  void interpolateVectorFieldAtQuadNode_rDerivative(std::vector<double> &field, int iNode,
+  void interpolateVectorFieldAtQuadNode_rDerivative(const std::vector<double> &field, int iNode,
                                                     double res[3]);
-  void interpolateVectorFieldAtQuadNode_sDerivative(std::vector<double> &field, int iNode,
+  void interpolateVectorFieldAtQuadNode_sDerivative(const std::vector<double> &field, int iNode,
                                                     std::vector<double> &res);
-  void interpolateVectorFieldAtQuadNode_sDerivative(std::vector<double> &field, int iNode,
+  void interpolateVectorFieldAtQuadNode_sDerivative(const std::vector<double> &field, int iNode,
                                                     double res[3]);
-  void interpolateVectorFieldAtQuadNode_tDerivative(std::vector<double> &field, int iNode,
+  void interpolateVectorFieldAtQuadNode_tDerivative(const std::vector<double> &field, int iNode,
                                                     std::vector<double> &res);
-  void interpolateVectorFieldAtQuadNode_tDerivative(std::vector<double> &field, int iNode,
+  void interpolateVectorFieldAtQuadNode_tDerivative(const std::vector<double> &field, int iNode,
                                                     double res[3]);
 
   // FIXME: Add comments
@@ -446,9 +446,12 @@ public:
     const std::string &fieldID = "",
     const std::string &cncGeoID = "",
     feVectorFunction *vectorField = nullptr,
-    const bool useGlobalShapeFunctions = false);
+    const bool useGlobalShapeFunctions = false) 
+  : feSpace(dimension, mesh, fieldID, cncGeoID,
+    nullptr, vectorField, useGlobalShapeFunctions) {};
 
-  // double divergenceAtQuadratureNode();
+  // Divergence of all shape functions at quadrature node
+  void divergence(const std::vector<double> &gradPhi, std::vector<double> &res);
 
 };
 

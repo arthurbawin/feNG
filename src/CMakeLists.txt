@@ -45,6 +45,7 @@ set(feNG_SRC
     feTimeIntegration.cpp
     feTriangle.cpp
     feTetrahedron.cpp
+    feVectorSpace.cpp
     feVectorSysElm.cpp
     geodesic.cpp
     glfem.cpp)

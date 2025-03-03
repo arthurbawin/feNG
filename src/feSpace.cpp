@@ -286,13 +286,6 @@ feScalarSpace::feScalarSpace(const int dimension, feMesh *mesh, const std::strin
 {
 }
 
-feVectorSpace::feVectorSpace(const int dimension, feMesh *mesh, const std::string &fieldID,
-                             const std::string &cncGeoID, feVectorFunction *vectorField,
-                             bool useGlobalShapeFunctions)
-  : feSpace(dimension, mesh, fieldID, cncGeoID, nullptr, vectorField, useGlobalShapeFunctions)
-{
-}
-
 int feSpace::getNumElements() { return _mesh->getNumElements(_cncGeoTag); }
 int feSpace::getNumVerticesPerElem() { return _mesh->getNumVerticesPerElem(_cncGeoTag); }
 
@@ -383,13 +376,12 @@ feStatus feSpace::setQuadratureRule(feQuadrature *rule)
   }
 
   if(_isGeometricInterpolant) {
-    ////////////////////////////////////////////////////////////////////////
     _ignoreNegativeJacobianWarning = false;
-    ////////////////////////////////////////////////////////////////////////
     feStatus s = this->getCncGeo()->computeJacobians(_ignoreNegativeJacobianWarning);
     if(s != FE_STATUS_OK) {
       return s;
     }
+    this->getCncGeo()->computeConstantElementTransformations();
   }
 
   return FE_STATUS_OK;
@@ -462,7 +454,6 @@ void feSpace::getFunctionsPhysicalGradientAtQuadNode(const int iQuadNode,
   } else if(_dim == 1) {
     for(int i = 0; i < _nFunctions; ++i) {
       gradPhi[i] = _dLdr[_nFunctions * iQuadNode + i] * T.drdx[0];
-      // gradPhi[i] = _dLdr[_nFunctions * iQuadNode + i] / jac;
     }
   } else if(_dim == 2) {
     for(int i = 0; i < _nFunctions; ++i) {
@@ -1079,13 +1070,7 @@ void feSpace::interpolateVectorFieldAtQuadNode(std::vector<double> &field, int i
   // Field structure :
   // [fx0 fy0 fz0 fx1 fy1 fz1 ... fxn fyn fzn]
   res[0] = res[1] = res[2] = 0.0;
-#ifdef FENG_DEBUG
-  if(field.size() != 3 * (unsigned)_nFunctions) {
-    printf(" In feSpace::interpolateVectorFieldAtQuadNode : Erreur - Nombre de valeurs nodales non "
-           "compatible avec le nombre d'interpolants de l'espace.\n");
-    return;
-  }
-#endif
+  assert(field.size() != 3 * (unsigned)_nFunctions);
   for(int i = 0; i < 3; ++i) {
     for(int j = 0; j < _nFunctions; ++j) {
       // res[i] += field[3*i+j]*_L[_nFunctions*iNode+j];
@@ -1126,7 +1111,7 @@ double feSpace::interpolateVectorFieldComponentAtQuadNode_fullField(std::vector<
 }
 
 // Field structure : [fx0 fy0 fz0 fx1 fy1 fz1 ... fxn fyn fzn]
-void feSpace::interpolateVectorFieldAtQuadNode_rDerivative(std::vector<double> &field, int iNode,
+void feSpace::interpolateVectorFieldAtQuadNode_rDerivative(const std::vector<double> &field, int iNode,
                                                            std::vector<double> &res)
 {
   res[0] = res[1] = res[2] = 0.0;
@@ -1146,7 +1131,7 @@ void feSpace::interpolateVectorFieldAtQuadNode_rDerivative(std::vector<double> &
 }
 
 // Field structure : [fx0 fy0 fz0 fx1 fy1 fz1 ... fxn fyn fzn]
-void feSpace::interpolateVectorFieldAtQuadNode_sDerivative(std::vector<double> &field, int iNode,
+void feSpace::interpolateVectorFieldAtQuadNode_sDerivative(const std::vector<double> &field, int iNode,
                                                            std::vector<double> &res)
 {
   res[0] = res[1] = res[2] = 0.0;
@@ -1166,7 +1151,7 @@ void feSpace::interpolateVectorFieldAtQuadNode_sDerivative(std::vector<double> &
   }
 }
 
-void feSpace::interpolateVectorFieldAtQuadNode_tDerivative(std::vector<double> &field, int iNode,
+void feSpace::interpolateVectorFieldAtQuadNode_tDerivative(const std::vector<double> &field, int iNode,
                                                            std::vector<double> &res)
 {
   // Field structure :
@@ -1188,7 +1173,7 @@ void feSpace::interpolateVectorFieldAtQuadNode_tDerivative(std::vector<double> &
   }
 }
 
-void feSpace::interpolateVectorFieldAtQuadNode_rDerivative(std::vector<double> &field, int iNode,
+void feSpace::interpolateVectorFieldAtQuadNode_rDerivative(const std::vector<double> &field, int iNode,
                                                            double res[3])
 {
   res[0] = res[1] = res[2] = 0.0;
@@ -1199,7 +1184,7 @@ void feSpace::interpolateVectorFieldAtQuadNode_rDerivative(std::vector<double> &
   }
 }
 
-void feSpace::interpolateVectorFieldAtQuadNode_sDerivative(std::vector<double> &field, int iNode,
+void feSpace::interpolateVectorFieldAtQuadNode_sDerivative(const std::vector<double> &field, int iNode,
                                                            double res[3])
 {
   res[0] = res[1] = res[2] = 0.0;
@@ -1211,7 +1196,7 @@ void feSpace::interpolateVectorFieldAtQuadNode_sDerivative(std::vector<double> &
   }
 }
 
-void feSpace::interpolateVectorFieldAtQuadNode_tDerivative(std::vector<double> &field, int iNode,
+void feSpace::interpolateVectorFieldAtQuadNode_tDerivative(const std::vector<double> &field, int iNode,
                                                            double res[3])
 {
   res[0] = res[1] = res[2] = 0.0;

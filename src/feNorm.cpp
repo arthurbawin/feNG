@@ -1208,7 +1208,12 @@ double feNorm::computeH1SemiNorm(bool error)
 
   std::vector<double> errorSquaredOnElements(_nElm, 0.);
 
-  for(int iElm = 0; iElm < _nElm; ++iElm) {
+  for(int iElm = 0; iElm < _nElm; ++iElm)
+  {
+    if(_cnc->hasConstantTransformation()) {
+      _cnc->getElementTransformation(iElm, T);
+    }
+    
     _spaces[0]->_mesh->getCoord(_cnc, iElm, _geoCoord);
 
     this->initializeLocalSolutionOnSpace(0, iElm);
@@ -1216,7 +1221,7 @@ double feNorm::computeH1SemiNorm(bool error)
     double eLocSquared = 0.;
     for(int k = 0; k < _nQuad; ++k) {
       jac = _J[_nQuad * iElm + k];
-      _cnc->computeElementTransformation(_geoCoord, k, jac, T);
+      _cnc->getElementTransformation(_geoCoord, k, jac, T);
 
       _spaces[0]->interpolateFieldAtQuadNode_physicalGradient(_localSol[0], k, T, graduh);
       _geoSpace->interpolateVectorFieldAtQuadNode(_geoCoord, k, _args.pos);
@@ -1272,14 +1277,19 @@ double feNorm::computeH1SemiNormErrorEstimator()
 
   ElementTransformation T;
 
-  for(int iElm = 0; iElm < _nElm; ++iElm) {
+  for(int iElm = 0; iElm < _nElm; ++iElm)
+  {
+    if(_cnc->hasConstantTransformation()) {
+      _cnc->getElementTransformation(iElm, T);
+    }
+
     _spaces[0]->_mesh->getCoord(_cnc, iElm, _geoCoord);
 
     this->initializeLocalSolutionOnSpace(0, iElm);
 
     for(int k = 0; k < _nQuad; ++k) {
       jac = _J[_nQuad * iElm + k];
-      _cnc->computeElementTransformation(_geoCoord, k, jac, T);
+      _cnc->getElementTransformation(_geoCoord, k, jac, T);
 
       _spaces[0]->interpolateFieldAtQuadNode_physicalGradient(_localSol[0], k, T, graduh);
       // _geoSpace->interpolateVectorFieldAtQuadNode(_geoCoord, k, _pos);

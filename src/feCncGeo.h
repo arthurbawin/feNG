@@ -119,6 +119,14 @@ protected:
   std::vector<double> _elementsVolume;
   std::vector<double> _minimumScaledJacobianControlCoeffs;
 
+  // The reference-to-physical transformation on each element.
+  // Only for linear triangles and tetrahedra for which the
+  // transformation is constant.
+  // Otherwise must be stored for each quadrature nodes,
+  // which takes to make memory (nElm x nQuadNodes x 19 doubles)
+  bool _hasConstantTransformation = false;
+  std::vector<ElementTransformation> _elementTransformations;
+
   // ======= To be replaced by just a feColoring ==============
   // Mesh coloring
   std::vector<int> _nbElmPerNode;
@@ -165,6 +173,7 @@ public:
   feSpace *getFeSpace() const { return _geometricInterpolant; }
   feMesh *getMeshPtr() { return _mesh; }
   void setMeshPtr(feMesh *mesh) { _mesh = mesh; }
+  bool hasConstantTransformation() const { return _hasConstantTransformation; };
 
   const std::vector<int> &getVerticesConnectivity() const { return _connecVertices; }
   const std::vector<int> &getEdgeConnectivity() const { return _connecEdges; }
@@ -193,14 +202,25 @@ public:
   bool jacobiansWereComputed() const { return _jacobiansWereComputed; };
   feStatus computeJacobians(const bool ignoreNegativeJacobianWarning = false);
   feStatus recomputeElementJacobian(const int iElm);
+  void computeConstantElementTransformations();
 
   // Set quadrature rule for the interpolation space.
   // Triggers the computation of jacobian determinants.
   feStatus setQuadratureRule(feQuadrature *rule);
   feStatus computeMinimumScaledJacobianControlCoefficients();
 
-  void computeElementTransformation(std::vector<double> &elementCoord, const int iQuadNode,
-                                    const double jac, ElementTransformation &transformation) const;
+private:
+  void computeElementTransformation(const std::vector<double> &elementCoord, const int iQuadNode,
+    const double jac, ElementTransformation &transformation) const;
+
+public:
+  // Get the precomputed jacobian matrix of the reference-to-physical mapping
+  // of the iElm-th element.
+  // Only for elements with constant jacobian : LINEP1, TRIP1 and TETP1.
+  void getElementTransformation(const int iElm, ElementTransformation &T) const;
+  // Compute and return the jacobian matrix of the transformation on given element
+  void getElementTransformation(const std::vector<double> &elementCoord,
+    const int iQuadNode, const double jac, ElementTransformation &T) const;
 
   feStatus computeNormalVectors(std::vector<double> &normalVectors) const;
 

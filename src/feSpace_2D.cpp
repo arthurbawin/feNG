@@ -313,15 +313,11 @@ template <int dim> void feSpaceVecTriP1<dim>::initializeNumberingUnknowns()
 
 template <int dim> void feSpaceVecTriP1<dim>::initializeNumberingEssential()
 {
-  // for(int iComp = 0; iComp < _nComponents; ++iComp){
-  //   if(_essentialComponents[iComp]){
   for(int i = 0; i < _mesh->getNumElements(_cncGeoID); ++i) {
-    _numbering->setEssentialVertexDOF(_mesh, _cncGeoID, i, 0); //, iComp);
-    _numbering->setEssentialVertexDOF(_mesh, _cncGeoID, i, 1); //, iComp);
-    _numbering->setEssentialVertexDOF(_mesh, _cncGeoID, i, 2); //, iComp);
+    _numbering->setEssentialVertexDOF(_mesh, _cncGeoID, i, 0);
+    _numbering->setEssentialVertexDOF(_mesh, _cncGeoID, i, 1);
+    _numbering->setEssentialVertexDOF(_mesh, _cncGeoID, i, 2);
   }
-  //   }
-  // }
 }
 
 template <int dim>
