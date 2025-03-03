@@ -1,0 +1,46 @@
+Dimension 2 - Lagrange elements P1
+            nElm        L2 error            rate
+              42    5.981947e-02    0.000000e+00
+             168    1.538087e-02    1.959478e+00
+             672    3.872752e-03    1.989706e+00
+            2688    9.699236e-04    1.997416e+00
+
+Dimension 2 - Lagrange elements P2
+            nElm        L2 error            rate
+              42    3.187652e-03    0.000000e+00
+             168    4.081676e-04    2.965261e+00
+             672    5.133152e-05    2.991245e+00
+            2688    6.426200e-06    2.997807e+00
+
+Dimension 2 - Lagrange elements P3
+            nElm        L2 error            rate
+              42    1.567946e-04    0.000000e+00
+             168    9.953278e-06    3.977560e+00
+             672    6.244800e-07    3.994444e+00
+            2688    3.906751e-08    3.998614e+00
+
+Dimension 2 - Lagrange elements P4
+            nElm        L2 error            rate
+              42    4.536094e-06    0.000000e+00
+             168    1.425343e-07    4.992070e+00
+             672    4.460280e-09    4.998031e+00
+            2688    1.394312e-10    4.999509e+00
+
+Dimension 3 - Lagrange elements P1
+            nElm        L2 error            rate
+              24    3.473274e-01    0.000000e+00
+             192    1.067904e-01    1.701515e+00
+            1536    2.881678e-02    1.889800e+00
+
+Dimension 3 - Lagrange elements P2
+            nElm        L2 error            rate
+              24    4.847841e-02    0.000000e+00
+             192    7.732515e-03    2.648333e+00
+            1536    1.086960e-03    2.830639e+00
+
+Dimension 3 - Lagrange elements P3
+            nElm        L2 error            rate
+              24    8.702714e-03    0.000000e+00
+             192    7.425820e-04    3.550843e+00
+            1536    5.195152e-05    3.837312e+00
+

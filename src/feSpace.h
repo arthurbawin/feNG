@@ -223,13 +223,13 @@ public:
   // Evaluate the local shape functions and derivatives at quadrature nodes
   virtual std::vector<double> L(double *r) = 0;
   virtual void L(double *r, double *L) = 0;
-  virtual std::vector<double> dLdr(double *r) { UNUSED(r); return std::vector<double>(_nFunctions, 0.); };
-  virtual std::vector<double> dLds(double *r) { UNUSED(r); return std::vector<double>(_nFunctions, 0.); };
-  virtual std::vector<double> dLdt(double *r) { UNUSED(r); return std::vector<double>(_nFunctions, 0.); };
-  virtual std::vector<double> d2Ldr2(double *r) { UNUSED(r); return std::vector<double>(_nFunctions, 0.); };
-  virtual std::vector<double> d2Ldrs(double *r) { UNUSED(r); return std::vector<double>(_nFunctions, 0.); };
-  virtual std::vector<double> d2Lds2(double *r) { UNUSED(r); return std::vector<double>(_nFunctions, 0.); };
-  virtual std::vector<double> d2Ldt2(double *r) { UNUSED(r); return std::vector<double>(_nFunctions, 0.); };
+  virtual std::vector<double> dLdr(double *) { return std::vector<double>(_nFunctions*_nComponents, 0.); };
+  virtual std::vector<double> dLds(double *) { return std::vector<double>(_nFunctions*_nComponents, 0.); };
+  virtual std::vector<double> dLdt(double *) { return std::vector<double>(_nFunctions*_nComponents, 0.); };
+  virtual std::vector<double> d2Ldr2(double *) { return std::vector<double>(_nFunctions*_nComponents, 0.); };
+  virtual std::vector<double> d2Ldrs(double *) { return std::vector<double>(_nFunctions*_nComponents, 0.); };
+  virtual std::vector<double> d2Lds2(double *) { return std::vector<double>(_nFunctions*_nComponents, 0.); };
+  virtual std::vector<double> d2Ldt2(double *) { return std::vector<double>(_nFunctions*_nComponents, 0.); };
 
   // These should eventually replace the ones above
   // virtual void shape(const double *r, std::vector<double> &res) = 0;
@@ -241,6 +241,9 @@ public:
   // virtual void d2Ldrs(const double *r, std::vector<double> &res) { UNUSED(r, res); };
   // virtual void d2Lds2(const double *r, std::vector<double> &res) { UNUSED(r, res); };
   // virtual void d2Ldt2(const double *r, std::vector<double> &res) { UNUSED(r, res); };
+
+  // Read-only shape functions
+  const std::vector<double> &shape() const { return _L; };
 
   // Evaluate the global shape functions at quadrature nodes
   virtual feStatus Lphys(int iElm, std::vector<double> &x, std::vector<double> &L,
@@ -287,6 +290,8 @@ public:
   // Size of gradPhi = dim x nFunctions
   void getFunctionsPhysicalGradientAtQuadNode(const int iQuadNode, const ElementTransformation &T,
                                               double *gradPhi);
+  void getVectorFunctionsPhysicalGradientAtQuadNode(const int iQuadNode, const ElementTransformation &T,
+                                              std::vector<double> &gradPhi);
 
   void getFunctionsPhysicalHessianAtQuadNode(const int iQuadNode, const ElementTransformation &T,
                                               double *hessPhi);
@@ -416,15 +421,30 @@ public:
                                                     double res[3]);
 
   // FIXME: Add comments
-  void interpolateVectorFieldAtQuadNode_physicalGradient(std::vector<double> &field,
+  void interpolateVectorFieldAtQuadNode_physicalGradient(const std::vector<double> &field,
                                                          const int nComponents, const int iQuadNode,
                                                          const ElementTransformation &T,
                                                          double *grad);
 
-  void interpolateVectorFieldAtQuadNode_physicalHessian(std::vector<double> &field,
-                                                         const int nComponents, const int iQuadNode,
-                                                         const ElementTransformation &T,
-                                                         double *hessian);
+  void interpolateVectorFieldAtQuadNode_physicalHessian(const std::vector<double> &field,
+                                                        const int nComponents, const int iQuadNode,
+                                                        const ElementTransformation &T,
+                                                        double *hessian);
+
+  // Routines for vector-valued shape functions
+  virtual void dotProductShapeShape(const int, std::vector<double> &){};
+  virtual void dotProductShapeShapeOtherSpace(const int, const feSpace*, std::vector<double> &){};
+  virtual void dotProductShapeOther(const int, const std::vector<double> &, std::vector<double> &){};
+  virtual void dotProductOtherGradShape(const int, const std::vector<double> &, std::vector<double> &){};
+
+  virtual void vectorDotGradShapeDotShape(const int, const std::vector<double> &, const std::vector<double> &, std::vector<double> &){};
+  virtual void shapeDotTensorDotShape(const int, const std::vector<double> &, std::vector<double> &){};
+
+  virtual void doubleContractionGradShapeGradShape(const std::vector<double> &, std::vector<double> &){};
+  virtual void doubleContractionGradShapeGradShapeTransposed(const std::vector<double> &, std::vector<double> &){};
+  virtual void doubleContractionGradShapeOther(const std::vector<double> &, const std::vector<double> &, std::vector<double> &){};
+  
+  virtual void divergence(const std::vector<double> &, std::vector<double> &){};
 };
 
 class feScalarSpace : public feSpace
@@ -450,8 +470,32 @@ public:
   : feSpace(dimension, mesh, fieldID, cncGeoID,
     nullptr, vectorField, useGlobalShapeFunctions) {};
 
-  // Divergence of all shape functions at quadrature node
-  void divergence(const std::vector<double> &gradPhi, std::vector<double> &res);
+  // Dot product of each shape function with each shape function :
+  //      res[i][j] = phi_i cdot phi_j
+  void dotProductShapeShape(const int iNode, std::vector<double> &res) override;
+  // Dot product of each shape function with given vector :
+  //      res[i] = phi_i cdot other
+  void dotProductShapeOther(const int iNode, const std::vector<double> &other, std::vector<double> &res) override;
+  //      res[i][j] = phi_i cdot phi_j, phi_j are the test functions of another space
+  void dotProductShapeShapeOtherSpace(const int iNode, const feSpace *other, std::vector<double> &res) override;
+
+  void vectorDotGradShapeDotShape(const int iNode, const std::vector<double> &gradPhi, const std::vector<double> &other, std::vector<double> &res) override;
+  void shapeDotTensorDotShape(const int iNode, const std::vector<double> &other, std::vector<double> &res) override;
+
+  // Double contraction of the gradient of each shape function
+  // with the gradient of each shape function :
+  //       res[i][j] = grad(phi_i) : grad(phi_j)
+  void doubleContractionGradShapeGradShape(const std::vector<double> &gradPhi, std::vector<double> &res) override;
+  //       res[i][j] = grad(phi_i) : grad(phi_j)^T
+  void doubleContractionGradShapeGradShapeTransposed(const std::vector<double> &, std::vector<double> &) override;
+  // Double contraction of the gradient of each shape function
+  // with the gradient of each shape function :
+  //       res[i] = grad(phi_i) : other
+  void doubleContractionGradShapeOther(const std::vector<double> &gradPhi, const std::vector<double> &other, std::vector<double> &res) override;
+  
+  // Divergence of all shape functions :
+  //       res[i] = div(phi_i)
+  void divergence(const std::vector<double> &gradPhi, std::vector<double> &res) override;
 
 };
 

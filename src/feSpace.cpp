@@ -297,14 +297,16 @@ feStatus feSpace::setQuadratureRule(feQuadrature *rule)
   _yQuad = rule->getYPoints();
   _zQuad = rule->getZPoints();
 
-  _L.resize(_nFunctions * _nQuad, 0.0);
-  _dLdr.resize(_nFunctions * _nQuad, 0.0);
-  _dLds.resize(_nFunctions * _nQuad, 0.0);
-  _dLdt.resize(_nFunctions * _nQuad, 0.0);
-  _d2Ldr2.resize(_nFunctions * _nQuad, 0.0);
-  _d2Ldrs.resize(_nFunctions * _nQuad, 0.0);
-  _d2Lds2.resize(_nFunctions * _nQuad, 0.0);
-  _d2Ldt2.resize(_nFunctions * _nQuad, 0.0);
+  // int shapeSize = _nFunctions * _nQuad;
+  int shapeSize = _nFunctions * _nComponents * _nQuad;
+  _L.resize(shapeSize, 0.0);
+  _dLdr.resize(shapeSize, 0.0);
+  _dLds.resize(shapeSize, 0.0);
+  _dLdt.resize(shapeSize, 0.0);
+  _d2Ldr2.resize(shapeSize, 0.0);
+  _d2Ldrs.resize(shapeSize, 0.0);
+  _d2Lds2.resize(shapeSize, 0.0);
+  _d2Ldt2.resize(shapeSize, 0.0);
 
   // _barycentricCoordinates.resize(3 * _nQuad, 0.);
 
@@ -320,14 +322,19 @@ feStatus feSpace::setQuadratureRule(feQuadrature *rule)
     std::vector<double> d2ldrs = d2Ldrs(r);
     std::vector<double> d2lds2 = d2Lds2(r);
     std::vector<double> d2ldt2 = d2Ldt2(r);
-    for(int j = 0; j < _nFunctions; ++j) _L[_nFunctions * i + j] = l[j];
-    for(int j = 0; j < _nFunctions; ++j) _dLdr[_nFunctions * i + j] = dldr[j];
-    for(int j = 0; j < _nFunctions; ++j) _dLds[_nFunctions * i + j] = dlds[j];
-    for(int j = 0; j < _nFunctions; ++j) _dLdt[_nFunctions * i + j] = dldt[j];
-    for(int j = 0; j < _nFunctions; ++j) _d2Ldr2[_nFunctions * i + j] = d2ldr2[j];
-    for(int j = 0; j < _nFunctions; ++j) _d2Ldrs[_nFunctions * i + j] = d2ldrs[j];
-    for(int j = 0; j < _nFunctions; ++j) _d2Lds2[_nFunctions * i + j] = d2lds2[j];
-    for(int j = 0; j < _nFunctions; ++j) _d2Ldt2[_nFunctions * i + j] = d2ldt2[j];
+    int offset = _nFunctions * _nComponents;
+    // int offset = _nFunctions;
+    for(int j = 0; j < offset; ++j)
+    {
+           _L[offset * i + j] = l[j];
+        _dLdr[offset * i + j] = dldr[j];
+        _dLds[offset * i + j] = dlds[j];
+        _dLdt[offset * i + j] = dldt[j];
+      _d2Ldr2[offset * i + j] = d2ldr2[j];
+      _d2Ldrs[offset * i + j] = d2ldrs[j];
+      _d2Lds2[offset * i + j] = d2lds2[j];
+      _d2Ldt2[offset * i + j] = d2ldt2[j];
+    }
 
     // _barycentricCoordinates[3 * i + 0] = 1. - r[0] - r[1];
     // _barycentricCoordinates[3 * i + 1] = r[0];
@@ -474,6 +481,66 @@ void feSpace::getFunctionsPhysicalGradientAtQuadNode(const int iQuadNode,
                               _dLds[_nFunctions * iQuadNode + i] * T.drdz[1] +
                               _dLdt[_nFunctions * iQuadNode + i] * T.drdz[2];
     }
+  }
+}
+
+void feSpace::getVectorFunctionsPhysicalGradientAtQuadNode(const int iQuadNode,
+                                                           const ElementTransformation &T,
+                                                           std::vector<double> &gradPhi)
+{
+  assert(gradPhi.size() == (size_t)((unsigned) _dim * _nComponents * _nFunctions));
+
+  int offset = _nFunctions * _nComponents;
+  int offsetGrad = _dim * _nComponents;
+
+  if(_dim == 0) {
+    // gradPhi[0] = 0.;
+    feErrorMsg(FE_STATUS_ERROR, "Not implemented");
+    exit(-1);
+  } else if(_dim == 1) {
+    // for(int i = 0; i < _nFunctions; ++i) {
+    //   gradPhi[i] = _dLdr[_nFunctions * iQuadNode + i] * T.drdx[0];
+    // }
+    feErrorMsg(FE_STATUS_ERROR, "Not implemented");
+    exit(-1);
+  } else if(_dim == 2) {
+
+
+    for(int i = 0; i < _nFunctions; ++i) {
+
+      // Compute gradient tensor of vector-valued phi
+      // Tensor gradient is defined with the convention :
+      //      grad(phi)_{mn} = d/dx_m (phi_n)
+      double dphi_i_x_dx = _dLdr[offset * iQuadNode + i * _nComponents + 0] * T.drdx[0]
+                         + _dLds[offset * iQuadNode + i * _nComponents + 0] * T.drdx[1];
+      double dphi_i_y_dx = _dLdr[offset * iQuadNode + i * _nComponents + 1] * T.drdx[0]
+                         + _dLds[offset * iQuadNode + i * _nComponents + 1] * T.drdx[1];
+      double dphi_i_x_dy = _dLdr[offset * iQuadNode + i * _nComponents + 0] * T.drdy[0]
+                         + _dLds[offset * iQuadNode + i * _nComponents + 0] * T.drdy[1];
+      double dphi_i_y_dy = _dLdr[offset * iQuadNode + i * _nComponents + 1] * T.drdy[0]
+                         + _dLds[offset * iQuadNode + i * _nComponents + 1] * T.drdy[1];
+
+      gradPhi[offsetGrad * i + 0] = dphi_i_x_dx;
+      gradPhi[offsetGrad * i + 1] = dphi_i_y_dx;
+      gradPhi[offsetGrad * i + 2] = dphi_i_x_dy;
+      gradPhi[offsetGrad * i + 3] = dphi_i_y_dy;
+    }
+
+
+  } else if(_dim == 3) {
+    feErrorMsg(FE_STATUS_ERROR, "Not implemented : 3D gradient of vector shape functions");
+    exit(-1);
+    // for(int i = 0; i < _nFunctions; ++i) {
+    //   gradPhi[i * _dim + 0] = _dLdr[_nFunctions * iQuadNode + i] * T.drdx[0] +
+    //                           _dLds[_nFunctions * iQuadNode + i] * T.drdx[1] +
+    //                           _dLdt[_nFunctions * iQuadNode + i] * T.drdx[2];
+    //   gradPhi[i * _dim + 1] = _dLdr[_nFunctions * iQuadNode + i] * T.drdy[0] +
+    //                           _dLds[_nFunctions * iQuadNode + i] * T.drdy[1] +
+    //                           _dLdt[_nFunctions * iQuadNode + i] * T.drdy[2];
+    //   gradPhi[i * _dim + 2] = _dLdr[_nFunctions * iQuadNode + i] * T.drdz[0] +
+    //                           _dLds[_nFunctions * iQuadNode + i] * T.drdz[1] +
+    //                           _dLdt[_nFunctions * iQuadNode + i] * T.drdz[2];
+    // }
   }
 }
 
@@ -848,7 +915,7 @@ void feSpace::interpolateFieldAtQuadNode_physicalGradient(std::vector<double> &f
   }
 }
 
-void feSpace::interpolateVectorFieldAtQuadNode_physicalGradient(std::vector<double> &field,
+void feSpace::interpolateVectorFieldAtQuadNode_physicalGradient(const std::vector<double> &field,
                                                                 const int nComponents,
                                                                 const int iQuadNode,
                                                                 const ElementTransformation &T,
@@ -860,23 +927,42 @@ void feSpace::interpolateVectorFieldAtQuadNode_physicalGradient(std::vector<doub
   //  grad = [ grad(u1), ..., grad(u_nComponents) ]
   for(int i = 0; i < nComponents * nComponents; ++i) grad[i] = 0.;
 
+  int offset = _nFunctions * _nComponents;
+
   if(nComponents == 1) {
     for(int i = 0; i < _nFunctions; ++i) {
-      double dphi_i_dx = _dLdr[_nFunctions * iQuadNode + i] * T.drdx[0];
+      double dphi_i_dx = _dLdr[offset * iQuadNode + i] * T.drdx[0];
       grad[0] += field[i] * dphi_i_dx;
     }
   } else if(nComponents == 2) {
     for(int i = 0; i < _nFunctions; ++i) {
-      double dphi_i_dx = _dLdr[_nFunctions * iQuadNode + i] * T.drdx[0] +
-                         _dLds[_nFunctions * iQuadNode + i] * T.drdx[1];
-      double dphi_i_dy = _dLdr[_nFunctions * iQuadNode + i] * T.drdy[0] +
-                         _dLds[_nFunctions * iQuadNode + i] * T.drdy[1];
+      // double dphi_i_dx = _dLdr[offset * iQuadNode + i] * T.drdx[0] +
+      //                    _dLds[offset * iQuadNode + i] * T.drdx[1];
+      // double dphi_i_dy = _dLdr[offset * iQuadNode + i] * T.drdy[0] +
+      //                    _dLds[offset * iQuadNode + i] * T.drdy[1];
 
-      grad[(i % nComponents) * nComponents + 0] += field[i] * dphi_i_dx;
-      grad[(i % nComponents) * nComponents + 1] += field[i] * dphi_i_dy;
+      // grad[(i % nComponents) * nComponents + 0] += field[i] * dphi_i_dx;
+      // grad[(i % nComponents) * nComponents + 1] += field[i] * dphi_i_dy;
+
+      double dphi_i_x_dx = _dLdr[offset * iQuadNode + i * _nComponents + 0] * T.drdx[0]
+                         + _dLds[offset * iQuadNode + i * _nComponents + 0] * T.drdx[1];
+      double dphi_i_y_dx = _dLdr[offset * iQuadNode + i * _nComponents + 1] * T.drdx[0]
+                         + _dLds[offset * iQuadNode + i * _nComponents + 1] * T.drdx[1];
+      double dphi_i_x_dy = _dLdr[offset * iQuadNode + i * _nComponents + 0] * T.drdy[0]
+                         + _dLds[offset * iQuadNode + i * _nComponents + 0] * T.drdy[1];
+      double dphi_i_y_dy = _dLdr[offset * iQuadNode + i * _nComponents + 1] * T.drdy[0]
+                         + _dLds[offset * iQuadNode + i * _nComponents + 1] * T.drdy[1];
+
+      grad[0] += field[i] * dphi_i_x_dx;
+      grad[1] += field[i] * dphi_i_y_dx;
+      grad[2] += field[i] * dphi_i_x_dy;
+      grad[3] += field[i] * dphi_i_y_dy;
+
     }
   } else if(nComponents == 3) {
     for(int i = 0; i < _nFunctions; ++i) {
+      feErrorMsg(FE_STATUS_ERROR, "Not implemented");
+      exit(-1);
       // double dphi_i_dx = _dLdr[_nFunctions * iQuadNode + i] * T.drdx[0] +
       //                    _dLds[_nFunctions * iQuadNode + i] * T.drdx[1] +
       //                    _dLdt[_nFunctions * iQuadNode + i] * T.drdx[2];
@@ -897,7 +983,7 @@ void feSpace::interpolateVectorFieldAtQuadNode_physicalGradient(std::vector<doub
   }
 }
 
-void feSpace::interpolateVectorFieldAtQuadNode_physicalHessian(std::vector<double> &field,
+void feSpace::interpolateVectorFieldAtQuadNode_physicalHessian(const std::vector<double> &field,
                                                                const int nComponents,
                                                                const int iQuadNode,
                                                                const ElementTransformation &T,
@@ -1070,7 +1156,7 @@ void feSpace::interpolateVectorFieldAtQuadNode(std::vector<double> &field, int i
   // Field structure :
   // [fx0 fy0 fz0 fx1 fy1 fz1 ... fxn fyn fzn]
   res[0] = res[1] = res[2] = 0.0;
-  assert(field.size() != 3 * (unsigned)_nFunctions);
+  assert(field.size() == 3 * (unsigned)_nFunctions);
   for(int i = 0; i < 3; ++i) {
     for(int j = 0; j < _nFunctions; ++j) {
       // res[i] += field[3*i+j]*_L[_nFunctions*iNode+j];
@@ -1084,8 +1170,14 @@ void feSpace::interpolateVectorFieldAtQuadNode(std::vector<double> &field, int i
 {
   for(int i = 0; i < nComponents; ++i) res[i] = 0.0;
 
-  for(int i = 0; i < _nFunctions; ++i) {
-    res[i % nComponents] += field[i] * _L[_nFunctions * iNode + i];
+  // for(int i = 0; i < _nFunctions; ++i) {
+  //   res[i % nComponents] += field[i] * _L[_nFunctions * iNode + i];
+  // }
+
+  for(int j = 0; j < _nFunctions; ++j) {
+    for(int i = 0; i < nComponents; ++i) {
+      res[i] += field[j] * _L[_nFunctions * _nComponents * iNode + nComponents * j + i];
+    }
   }
 }
 

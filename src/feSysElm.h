@@ -278,9 +278,8 @@ class feSysElm_VectorSource : public feSysElm
 {
 protected:
   feVectorFunction *_source;
-  std::vector<double> _S;
   int _idU, _nFunctions;
-  std::vector<double> _phiU;
+  std::vector<double> _S, _SdotPhi;
 
 public:
   feSysElm_VectorSource(feVectorFunction *source)
@@ -424,9 +423,8 @@ class feSysElm_VectorMass : public feSysElm
 {
 protected:
   feFunction *_coeff;
-  std::vector<double> _u;
   int _idU, _nFunctions;
-  std::vector<double> _phiU;
+  std::vector<double> _u, _phiU, _phi_idotphi_j, _udotphi_i;
 
 public:
   feSysElm_VectorMass(feFunction *coeff)
@@ -461,8 +459,8 @@ class feSysElm_MixedVectorMass : public feSysElm
 protected:
   feFunction *_coeff;
   std::vector<double> _u;
-  int _idU, _idV, _nFunctionsU, _nFunctionsV, _nComponentsU, _nComponentsV;
-  std::vector<double> _phiU, _phiV;
+  int _idU, _idV, _nFunctionsU, _nFunctionsV, _nComponentsU;
+  std::vector<double> _udotphi_i, _phi_idotphi_j;
 
 public:
   feSysElm_MixedVectorMass(feFunction *coeff)
@@ -652,8 +650,7 @@ protected:
   feFunction *_coeff;
   feFunction *_diffusivity;
   int _idU, _nFunctions;
-  std::vector<double> _gradu;
-  std::vector<double> _gradPhi;
+  std::vector<double> _gradu, _gradPhi, _doubleContraction, _doubleContraction_u;
 
 public:
   feSysElm_VectorDiffusion(feFunction *coeff, feFunction *diffusivity)
@@ -787,11 +784,8 @@ class feSysElm_VectorConvectiveAcceleration : public feSysElm
 protected:
   feFunction *_coeff;
   int _idU, _nFunctions;
-  std::vector<double> _u;
-  std::vector<double> _gradu;
-  std::vector<double> _uDotGradu;
-  std::vector<double> _phiU;
-  std::vector<double> _gradPhiU;
+  std::vector<double> _u, _gradu, _uDotGradu, _phiU, _gradPhiU, 
+    _uDotGraduDotPhiU, _u0DotGradPhiUDotPhiU, _phiUDotGradu0DotPhiU;
 
 public:
   feSysElm_VectorConvectiveAcceleration(feFunction *coeff)
@@ -883,7 +877,8 @@ protected:
   feFunction *_coeff;
   feFunction *_viscosity;
   int _idU, _idP, _nFunctionsU, _nFunctionsP;
-  std::vector<double> _gradu, _symmetricGradu, _gradPhiU, _phiP;
+  std::vector<double> _gradu, _symmetricGradu, _gradPhiU, _phiP,
+   _divPhiU, _doubleContraction, _doubleContractionPhiPhi, _doubleContractionPhiPhiT;
 
 public:
   feSysElm_DivergenceNewtonianStress(feFunction *coeff, feFunction *viscosity)
@@ -907,7 +902,7 @@ class feSysElm_GradSource : public feSysElm
 protected:
   feFunction *_source;
   int _idU, _nFunctions;
-  std::vector<double> _gradPhi;
+  std::vector<double> _gradPhi, _divPhi;
 
 public:
   feSysElm_GradSource(feFunction *source) : feSysElm(-1, 1, GRAD_SOURCE, false), _source(source){};
@@ -927,8 +922,7 @@ class feSysElm_MixedGradient : public feSysElm
 protected:
   feFunction *_coeff;
   int _idU, _idV, _nFunctionsU, _nFunctionsV;
-  std::vector<double> _phiU;
-  std::vector<double> _gradPhiV;
+  std::vector<double> _phiU, _gradPhiV, _divPhiV;
 
 public:
   feSysElm_MixedGradient(feFunction *coeff) : feSysElm(-1, 2, MIXED_GRADIENT, true), _coeff(coeff)
@@ -1014,13 +1008,8 @@ class feSysElm_MixedDivergence : public feSysElm
 {
 protected:
   feFunction *_coeff;
-  int _idU;
-  int _idV;
-  int _nFunctionsU;
-  int _nFunctionsV;
-  std::vector<double> _gradu;
-  std::vector<double> _gradPhiU;
-  std::vector<double> _phiV;
+  int _idU, _idV, _nFunctionsU, _nFunctionsV;
+  std::vector<double> _gradu, _gradPhiU, _divPhiU, _phiV;
 
 public:
   feSysElm_MixedDivergence(feFunction *coeff)

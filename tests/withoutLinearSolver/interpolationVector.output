@@ -1,0 +1,28 @@
+Dimension 2 - Vector-valued Lagrange elements P1
+            nElm        L2 error            rate
+              42    4.649194e-03    0.000000e+00
+             168    1.151254e-03    2.013774e+00
+             672    2.871094e-04    2.003534e+00
+            2688    7.173313e-05    2.000889e+00
+
+Dimension 2 - Vector-valued Lagrange elements P2
+            nElm        L2 error            rate
+              42    1.478830e-04    0.000000e+00
+             168    1.848170e-05    3.000286e+00
+             672    2.310065e-06    3.000092e+00
+            2688    2.887533e-07    3.000024e+00
+
+Dimension 2 - Vector-valued Lagrange elements P3
+            nElm        L2 error            rate
+              42    4.466711e-06    0.000000e+00
+             168    2.797007e-07    3.997257e+00
+             672    1.748943e-08    3.999329e+00
+            2688    1.093216e-09    3.999833e+00
+
+Dimension 2 - Vector-valued Lagrange elements P4
+            nElm        L2 error            rate
+              42    1.235795e-07    0.000000e+00
+             168    3.877140e-09    4.994303e+00
+             672    1.212785e-10    4.998597e+00
+            2688    3.790868e-12    4.999652e+00
+

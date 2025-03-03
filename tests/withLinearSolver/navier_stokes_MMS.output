@@ -1,0 +1,30 @@
+Taylor-Hood elements P2-P1
+Navier-Stokes MMS - Divergence formulation - Error on u
+            nElm           error            rate
+              42    1.730601e-03    0.000000e+00
+             168    2.102148e-04    3.041336e+00
+             672    2.593958e-05    3.018637e+00
+            2688    3.221725e-06    3.009250e+00
+
+Navier-Stokes MMS - Divergence formulation - Error on p
+            nElm           error            rate
+              42    1.064397e-02    0.000000e+00
+             168    2.316230e-03    2.200186e+00
+             672    5.440602e-04    2.089940e+00
+            2688    1.315003e-04    2.048700e+00
+
+Taylor-Hood elements P2-P1
+Navier-Stokes MMS - Laplacian formulation - Error on u
+            nElm           error            rate
+              42    1.729202e-03    0.000000e+00
+             168    2.115442e-04    3.031075e+00
+             672    2.645172e-05    2.999526e+00
+            2688    3.317293e-06    2.995283e+00
+
+Navier-Stokes MMS - Laplacian formulation - Error on p
+            nElm           error            rate
+              42    1.064192e-02    0.000000e+00
+             168    2.276928e-03    2.224598e+00
+             672    5.376581e-04    2.082328e+00
+            2688    1.304588e-04    2.043095e+00
+

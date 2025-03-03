@@ -17,15 +17,17 @@ static void duplicateScalarArray(const int scalarSize, const int chunkSize,
   }
 }
 
-static void duplicateScalarArray(const int scalarSize, const int chunkSize,
-                                 const double *scalarArray, const int dim, double *vectorArray)
+static void vectorLagrangeLayout(const double *phi, const int nScalarFunctions,
+  const int nComponents, double *res)
 {
-  int nChunks = scalarSize / chunkSize;
   int cnt = 0;
-  for(int j = 0; j < nChunks; ++j) {
-    for(int iDim = 0; iDim < dim; ++iDim) {
-      for(int i = 0; i < chunkSize; ++i) {
-        vectorArray[cnt++] = scalarArray[chunkSize * j + i];
+  for(int i = 0; i < nScalarFunctions; ++i) {
+    for(int j = 0; j < nComponents; ++j) {
+      for(int k = 0; k < nComponents; ++k) {
+        if(j == k)
+          res[cnt++] = phi[i];
+        else
+          res[cnt++] = 0.;
       }
     }
   }
@@ -219,23 +221,25 @@ feSpaceVecP1<dim>::feSpaceVecP1(feMesh *mesh, const std::string fieldID, const s
 template <int dim> std::vector<double> feSpaceVecP1<dim>::L(double *r)
 {
   double phi[2] = {(1. - r[0]) / 2., (1. + r[0]) / 2.};
-  std::vector<double> res(_nFunctions);
-  duplicateScalarArray(2, 1, phi, dim, res);
+  std::vector<double> res(_nFunctions*_nComponents);
+  // duplicateScalarArray(2, 1, phi, dim, res);
+  vectorLagrangeLayout(phi, 2, _nComponents, res.data());
   return res;
 }
 
 template <int dim> void feSpaceVecP1<dim>::L(double *r, double *res)
 {
   double phi[2] = {(1. - r[0]) / 2., (1. + r[0]) / 2.};
-  duplicateScalarArray(2, 1, phi, dim, res);
+  // duplicateScalarArray(2, 1, phi, dim, res);
+  vectorLagrangeLayout(phi, 2, _nComponents, res);
 }
 
-template <int dim> std::vector<double> feSpaceVecP1<dim>::dLdr(double *r)
+template <int dim> std::vector<double> feSpaceVecP1<dim>::dLdr(double */*r*/)
 {
-  UNUSED(r);
   double dldr[2] = {-1. / 2., 1. / 2.};
-  std::vector<double> res(_nFunctions);
-  duplicateScalarArray(2, 1, dldr, dim, res);
+  std::vector<double> res(_nFunctions*_nComponents);
+  // duplicateScalarArray(2, 1, dldr, dim, res);
+  vectorLagrangeLayout(dldr, 2, _nComponents, res.data());
   return res;
 }
 
@@ -456,22 +460,25 @@ feSpaceVecP2<dim>::feSpaceVecP2(feMesh *mesh, const std::string fieldID, const s
 template <int dim> std::vector<double> feSpaceVecP2<dim>::L(double *r)
 {
   double phi[3] = {-r[0] * (1. - r[0]) / 2., r[0] * (1. + r[0]) / 2., -(r[0] + 1.) * (r[0] - 1.)};
-  std::vector<double> res(_nFunctions);
-  duplicateScalarArray(3, 1, phi, dim, res);
+  std::vector<double> res(_nFunctions*_nComponents);
+  // duplicateScalarArray(3, 1, phi, dim, res);
+  vectorLagrangeLayout(phi, 3, _nComponents, res.data());
   return res;
 }
 
 template <int dim> void feSpaceVecP2<dim>::L(double *r, double *res)
 {
   double phi[3] = {-r[0] * (1. - r[0]) / 2., r[0] * (1. + r[0]) / 2., -(r[0] + 1.) * (r[0] - 1.)};
-  duplicateScalarArray(3, 1, phi, dim, res);
+  // duplicateScalarArray(3, 1, phi, dim, res);
+  vectorLagrangeLayout(phi, 3, _nComponents, res);
 }
 
 template <int dim> std::vector<double> feSpaceVecP2<dim>::dLdr(double *r)
 {
   double dldr[3] = {(2. * r[0] - 1.) / 2., (2. * r[0] + 1.) / 2., -2. * r[0]};
-  std::vector<double> res(_nFunctions);
-  duplicateScalarArray(3, 1, dldr, dim, res);
+  std::vector<double> res(_nFunctions*_nComponents);
+  // duplicateScalarArray(3, 1, dldr, dim, res);
+  vectorLagrangeLayout(dldr, 3, _nComponents, res.data());
   return res;
 }
 
@@ -628,8 +635,9 @@ template <int dim> std::vector<double> feSpaceVecP3<dim>::L(double *r)
                    9. / 16. * (r[0] + 1. / 3.) * (r[0] - 1. / 3.) * (r[0] + 1.),
                    27. / 16. * (r[0] + 1.) * (r[0] - 1. / 3.) * (r[0] - 1.),
                    -27. / 16. * (r[0] + 1.) * (r[0] + 1. / 3.) * (r[0] - 1.)};
-  std::vector<double> res(_nFunctions);
-  duplicateScalarArray(4, 1, phi, dim, res);
+  std::vector<double> res(_nFunctions*_nComponents);
+  // duplicateScalarArray(4, 1, phi, dim, res);
+  vectorLagrangeLayout(phi, 4, _nComponents, res.data());
   return res;
 }
 
@@ -639,7 +647,8 @@ template <int dim> void feSpaceVecP3<dim>::L(double *r, double *res)
                    9. / 16. * (r[0] + 1. / 3.) * (r[0] - 1. / 3.) * (r[0] + 1.),
                    27. / 16. * (r[0] + 1.) * (r[0] - 1. / 3.) * (r[0] - 1.),
                    -27. / 16. * (r[0] + 1.) * (r[0] + 1. / 3.) * (r[0] - 1.)};
-  duplicateScalarArray(4, 1, phi, dim, res);
+  // duplicateScalarArray(4, 1, phi, dim, res);
+  vectorLagrangeLayout(phi, 4, _nComponents, res);
 }
 
 template <int dim> std::vector<double> feSpaceVecP3<dim>::dLdr(double *r)
@@ -648,8 +657,9 @@ template <int dim> std::vector<double> feSpaceVecP3<dim>::dLdr(double *r)
                     r[0] * (9. / 8.) + r[0] * r[0] * (27. / 16.) - 1. / 16.,
                     r[0] * (-9. / 8.) + r[0] * r[0] * (81. / 16.) - 27. / 16.,
                     r[0] * (-9. / 8.) - r[0] * r[0] * (81. / 16.) + 27. / 16.};
-  std::vector<double> res(_nFunctions);
-  duplicateScalarArray(4, 1, dldr, dim, res);
+  std::vector<double> res(_nFunctions*_nComponents);
+  // duplicateScalarArray(4, 1, dldr, dim, res);
+  vectorLagrangeLayout(dldr, 4, _nComponents, res.data());
   return res;
 }
 
@@ -891,18 +901,21 @@ template <int dim> std::vector<double> feSpaceVecP4<dim>::L(double *r)
                   r[0] * (r[0] - 1.0) * (r[0] + 1.0) * (r[0] - 1.0 / 2.0) * (-8.0 / 3.0),
                   (r[0] - 1.0) * (r[0] + 1.0) * (r[0] - 1.0 / 2.0) * (r[0] + 1.0 / 2.0) * 4.0,
                   r[0] * (r[0] - 1.0) * (r[0] + 1.0) * (r[0] + 1.0 / 2.0) * (-8.0 / 3.0)};
-  std::vector<double> res(_nFunctions);
-  duplicateScalarArray(5, 1, phi, dim, res);
+  std::vector<double> res(_nFunctions*_nComponents);
+  // duplicateScalarArray(5, 1, phi, dim, res);
+  vectorLagrangeLayout(phi, 5, _nComponents, res.data());
   return res;
 }
 
 template <int dim> void feSpaceVecP4<dim>::L(double *r, double *res)
 {
-  double phi[4] = {-9. / 16. * (r[0] + 1. / 3.) * (r[0] - 1. / 3.) * (r[0] - 1.),
-                   9. / 16. * (r[0] + 1. / 3.) * (r[0] - 1. / 3.) * (r[0] + 1.),
-                   27. / 16. * (r[0] + 1.) * (r[0] - 1. / 3.) * (r[0] - 1.),
-                   -27. / 16. * (r[0] + 1.) * (r[0] + 1. / 3.) * (r[0] - 1.)};
-  duplicateScalarArray(4, 1, phi, dim, res);
+  double phi[5] = {r[0] * (r[0] - 1.0) * (r[0] - 1.0 / 2.0) * (r[0] + 1.0 / 2.0) * (2.0 / 3.0),
+                  r[0] * (r[0] + 1.0) * (r[0] - 1.0 / 2.0) * (r[0] + 1.0 / 2.0) * (2.0 / 3.0),
+                  r[0] * (r[0] - 1.0) * (r[0] + 1.0) * (r[0] - 1.0 / 2.0) * (-8.0 / 3.0),
+                  (r[0] - 1.0) * (r[0] + 1.0) * (r[0] - 1.0 / 2.0) * (r[0] + 1.0 / 2.0) * 4.0,
+                  r[0] * (r[0] - 1.0) * (r[0] + 1.0) * (r[0] + 1.0 / 2.0) * (-8.0 / 3.0)};
+  // duplicateScalarArray(4, 1, phi, dim, res);
+  vectorLagrangeLayout(phi, 5, _nComponents, res);
 }
 
 template <int dim> std::vector<double> feSpaceVecP4<dim>::dLdr(double *r)
@@ -927,8 +940,9 @@ template <int dim> std::vector<double> feSpaceVecP4<dim>::dLdr(double *r)
             r[0] * (r[0] - 1.0) * (r[0] + 1.0 / 2.0) * (8.0 / 3.0) -
             r[0] * (r[0] + 1.0) * (r[0] + 1.0 / 2.0) * (8.0 / 3.0) -
             (r[0] - 1.0) * (r[0] + 1.0) * (r[0] + 1.0 / 2.0) * (8.0 / 3.0)};
-  std::vector<double> res(_nFunctions);
-  duplicateScalarArray(5, 1, dldr, dim, res);
+  std::vector<double> res(_nFunctions*_nComponents);
+  // duplicateScalarArray(5, 1, dldr, dim, res);
+  vectorLagrangeLayout(dldr, 5, _nComponents, res.data());
   return res;
 }
 
