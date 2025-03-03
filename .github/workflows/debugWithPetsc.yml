@@ -1,6 +1,6 @@
 # This is a basic workflow to help you get started with Actions
 
-name: CI
+name: debugWithPetsc
 
 # Controls when the action will run. 
 on:
@@ -34,7 +34,14 @@ jobs:
           sudo apt-get -y install petsc-dev
 
       # Runs a set of commands using the runners shell
-      - name: cmake and compile
+      - name: Run CMake, build and test
         run: |
-          cmake -DPETSC_DIR=/usr/lib/petscdir/petsc3.22/ -DPETSC_ARCH=x86_64-linux-gnu-real $GITHUB_WORKSPACE
+          mkdir build && cd build
+          cmake -DCMAKE_BUILD_TYPE=Debug \
+            -DENABLE_TESTING=1 -DUPDATE_SUBMODULES=1 \
+            -DENABLE_PETSC=1 \
+            -DPETSC_DIR=/usr/lib/petscdir/petsc3.22/ -DPETSC_ARCH=x86_64-linux-gnu-real \
+            ..
           make feNG -j$COMPILE_JOBS
+          
+      
