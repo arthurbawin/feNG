@@ -42,12 +42,12 @@ public:
   ~feQuadrature(){};
 
 private:
-  void computeWeightAndRoot(int nQuadLocal);
+  void getGaussPoints(int nQuadLocal);
   void computePolynomialValueAndDerivative(double x, double *result);
-  void computeWeightAndRootTri(int degree, int method);
-  void computeWeightAndRootSquare();
-  void computeWeightAndRootCube();
-  void computeWeightAndRootTetra(int degree);
+  void getGaussPointsTri(int degree, int method);
+  void getGaussPointsSquare();
+  void getGaussPointsCube();
+  void getGaussPointsTetra(int degree);
 
 public:
   std::vector<double> getXPoints() { return _xr; }

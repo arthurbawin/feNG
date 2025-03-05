@@ -23,19 +23,19 @@ feQuadrature::feQuadrature(int degree, geometryType geometry) : _degQuad(degree)
     _yr.resize(1);
     _zr.resize(1);
   } else if(geometry == geometryType::LINE) {
-    computeWeightAndRoot(_nQuad1D);
+    getGaussPoints(_nQuad1D);
     _w = _w1D;
     _xr = _x1D;
     _yr.resize(_nQuad1D);
     _zr.resize(_nQuad1D);
   } else if(geometry == geometryType::TRI) {
-    computeWeightAndRootTri(degree, 1);
+    getGaussPointsTri(degree, 1);
   } else if(geometry == geometryType::QUAD) {
-    computeWeightAndRootSquare();
+    getGaussPointsSquare();
   } else if(geometry == geometryType::HEX) {
-    computeWeightAndRootCube();
+    getGaussPointsCube();
   } else if(geometry == geometryType::TET) {
-    computeWeightAndRootTetra(degree);
+    getGaussPointsTetra(degree);
   } else {
     feErrorMsg(FE_STATUS_ERROR, "Could not create a quadrature rule for geometry \"%s\".",
                toString(geometry).data());
@@ -45,7 +45,7 @@ feQuadrature::feQuadrature(int degree, geometryType geometry) : _degQuad(degree)
   _nQuad = _w.size();
 }
 
-void feQuadrature::computeWeightAndRoot(int nQuadLocal)
+void feQuadrature::getGaussPoints(int nQuadLocal)
 {
   _w1D.resize(nQuadLocal);
   _x1D.resize(nQuadLocal);
@@ -84,11 +84,10 @@ void feQuadrature::computePolynomialValueAndDerivative(double x, double *res)
   }
 }
 
-void feQuadrature::computeWeightAndRootTri(int degree, int method)
+void feQuadrature::getGaussPointsTri(int degree, int method)
 {
-  if(degree <= 20) {
-    // Get hardcoded quadrature points from Gmsh
-    // Rule with negative weights only for order 20
+  if(degree <= 25) {
+    // Get hardcoded quadrature points
     IntPt *rule = getGQTPts(degree);
     int nQuad = getNGQTPts(degree);
 
@@ -113,7 +112,7 @@ void feQuadrature::computeWeightAndRootTri(int degree, int method)
       _zr.resize(pow(_nQuad1D, _dim));
 
       _nQuad1D = (_degQuad + 2) / 2;
-      computeWeightAndRoot(_nQuad1D);
+      getGaussPoints(_nQuad1D);
       int l = 0;
       for(int i = 0; i < _nQuad1D; ++i) {
         for(int j = 0; j < _nQuad1D; ++j) {
@@ -130,12 +129,12 @@ void feQuadrature::computeWeightAndRootTri(int degree, int method)
       _yr.resize(_degQuad * (_degQuad + 1) / 2 - 1);
       _zr.resize(_degQuad * (_degQuad + 1) / 2 - 1);
 
-      computeWeightAndRoot(_degQuad - 1);
+      getGaussPoints(_degQuad - 1);
       std::vector<double> _xi = _x1D;
       std::vector<double> _wi = _w1D;
       int l = 0;
       for(int i = 0; i < _degQuad - 1; ++i) {
-        computeWeightAndRoot(_degQuad - i);
+        getGaussPoints(_degQuad - i);
         std::vector<double> _eta = _x1D;
         std::vector<double> _wj = _w1D;
         for(int j = 0; j < _degQuad - i; ++j) {
@@ -149,7 +148,7 @@ void feQuadrature::computeWeightAndRootTri(int degree, int method)
   }
 }
 
-void feQuadrature::computeWeightAndRootTetra(int degree)
+void feQuadrature::getGaussPointsTetra(int degree)
 {
   if(degree <= 21) {
     // Get hardcoded quadrature points from Gmsh
@@ -174,7 +173,7 @@ void feQuadrature::computeWeightAndRootTetra(int degree)
     _xr.resize(pow(_nQuad1D, _dim));
     _yr.resize(pow(_nQuad1D, _dim));
     _zr.resize(pow(_nQuad1D, _dim));
-    computeWeightAndRoot(_nQuad1D);
+    getGaussPoints(_nQuad1D);
     int l = 0;
     for(int i = 0; i < _nQuad1D; ++i) {
       for(int j = 0; j < _nQuad1D; ++j) {
@@ -190,13 +189,13 @@ void feQuadrature::computeWeightAndRootTetra(int degree)
   }
 }
 
-void feQuadrature::computeWeightAndRootSquare()
+void feQuadrature::getGaussPointsSquare()
 {
   _w.resize(pow(_nQuad1D, _dim));
   _xr.resize(pow(_nQuad1D, _dim));
   _yr.resize(pow(_nQuad1D, _dim));
   _zr.resize(pow(_nQuad1D, _dim));
-  computeWeightAndRoot(_nQuad1D);
+  getGaussPoints(_nQuad1D);
   int l = 0;
   for(int i = 0; i < _nQuad1D; ++i) {
     for(int j = 0; j < _nQuad1D; ++j) {
@@ -208,13 +207,13 @@ void feQuadrature::computeWeightAndRootSquare()
   }
 }
 
-void feQuadrature::computeWeightAndRootCube()
+void feQuadrature::getGaussPointsCube()
 {
   _w.resize(pow(_nQuad1D, _dim));
   _xr.resize(pow(_nQuad1D, _dim));
   _yr.resize(pow(_nQuad1D, _dim));
   _zr.resize(pow(_nQuad1D, _dim));
-  computeWeightAndRoot(_nQuad1D);
+  getGaussPoints(_nQuad1D);
   int l = 0;
   for(int i = 0; i < _nQuad1D; ++i) {
     for(int j = 0; j < _nQuad1D; ++j) {
