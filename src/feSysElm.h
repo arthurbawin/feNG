@@ -424,7 +424,7 @@ class feSysElm_VectorMass : public feSysElm
 protected:
   feFunction *_coeff;
   int _idU, _nFunctions;
-  std::vector<double> _u, _phiU, _phi_idotphi_j, _udotphi_i;
+  std::vector<double> _u, _phi_idotphi_j, _udotphi_i;
 
 public:
   feSysElm_VectorMass(feFunction *coeff)
@@ -585,7 +585,7 @@ class feSysElm_TransientVectorMass : public feSysElm
 protected:
   feFunction *_coeff;
   int _idU, _nFunctions;
-  std::vector<double> _dudt, _phiU;
+  std::vector<double> _dudt, _dudtdotphi_i, _phi_idotphi_j;
 
 public:
   feSysElm_TransientVectorMass(feFunction *coeff) : feSysElm(-1, 1, TRANSIENT_VECTOR_MASS, true), _coeff(coeff)

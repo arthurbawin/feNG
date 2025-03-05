@@ -76,7 +76,6 @@ void feSysElm_VectorMass::createElementarySystem(std::vector<feSpace *> &space)
   _nFunctions = space[_idU]->getNumFunctions();
   _nComponents = space[_idU]->getNumComponents();
   _u.resize(_nComponents);
-  _phiU.resize(_nFunctions);
   _udotphi_i.resize(_nFunctions);
   _phi_idotphi_j.resize(_nFunctions*_nFunctions);
 }
@@ -89,9 +88,6 @@ void feSysElm_VectorMass::computeAe(feBilinearForm *form)
 
     form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, form->_args.pos);
     coeff = (*_coeff)(form->_args);
-
-    for(int i = 0; i < _nFunctions; ++i)
-      _phiU[i] = form->_intSpaces[_idU]->getFunctionAtQuadNode(i, k);
 
     form->_intSpaces[_idU]->dotProductShapeShape(k, _phi_idotphi_j);
 
@@ -242,8 +238,9 @@ void feSysElm_TransientVectorMass::createElementarySystem(std::vector<feSpace *>
   _fieldsLayoutJ[0] = _idU;
   _nFunctions = space[_idU]->getNumFunctions();
   _nComponents = space[_idU]->getNumComponents();
-  _phiU.resize(_nFunctions);
   _dudt.resize(_nComponents);
+  _dudtdotphi_i.resize(_nFunctions);
+  _phi_idotphi_j.resize(_nFunctions*_nFunctions);
 }
 
 void feSysElm_TransientVectorMass::computeAe(feBilinearForm *form)
@@ -251,18 +248,12 @@ void feSysElm_TransientVectorMass::computeAe(feBilinearForm *form)
   double jac, coeff;
   for(int k = 0; k < _nQuad; ++k) {
     jac = form->_J[_nQuad * form->_numElem + k];
-
     form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, form->_args.pos);
     coeff = (*_coeff)(form->_args);
-
-    for(int i = 0; i < _nFunctions; ++i)
-      _phiU[i] = form->_intSpaces[_idU]->getFunctionAtQuadNode(i, k);
-
+    form->_intSpaces[_idU]->dotProductShapeShape(k, _phi_idotphi_j);
     for(int i = 0; i < _nFunctions; ++i) {
       for(int j = 0; j < _nFunctions; ++j) {
-        // The dot product dudt * v is nonzero only when the components match
-        if(i % _nComponents != j % _nComponents) continue;
-        form->_Ae[i][j] += _phiU[i] * coeff * form->_c0 * _phiU[j] * jac * _wQuad[k];
+        form->_Ae[i][j] += coeff * form->_c0 * _phi_idotphi_j[i*_nFunctions+j] * jac * _wQuad[k];
       }
     }
   }
@@ -273,16 +264,12 @@ void feSysElm_TransientVectorMass::computeBe(feBilinearForm *form)
   double jac, coeff;
   for(int k = 0; k < _nQuad; ++k) {
     jac = form->_J[_nQuad * form->_numElem + k];
-
     form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, form->_args.pos);
     coeff = (*_coeff)(form->_args);
-
-    form->_intSpaces[_idU]->interpolateVectorFieldAtQuadNode(form->_solDot[_idU], k, _dudt,
-                                                             _nComponents);
-
+    form->_intSpaces[_idU]->interpolateVectorFieldAtQuadNode(form->_solDot[_idU], k, _dudt, _nComponents);
+    form->_intSpaces[_idU]->dotProductShapeOther(k, _dudt, _dudtdotphi_i);
     for(int i = 0; i < _nFunctions; ++i) {
-      _phiU[i] = form->_intSpaces[_idU]->getFunctionAtQuadNode(i, k);
-      form->_Be[i] -= coeff * _dudt[i % _nComponents] * _phiU[i] * jac * _wQuad[k];
+      form->_Be[i] -= coeff * _dudtdotphi_i[i] * jac * _wQuad[k];
     }
   }
 }

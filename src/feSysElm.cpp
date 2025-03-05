@@ -564,8 +564,7 @@ template <int dim> void feSysElm_Advection<dim>::computeAe(feBilinearForm *form)
         for(int iDim = 0; iDim < dim; ++iDim) {
           form->_Ae[i][j] -=
             c[iDim] * _gradPhi[i * dim + iDim] * _phiU[j] * jac * _wQuad[k]; // int c*u*dvdx
-          // form->_Ae[i][j] += c[iDim] * _gradPhi[j*dim + iDim] * _phiU[i] * jac * _wQuad[k]; //
-          // int c*dudx*v
+          // form->_Ae[i][j] += c[iDim] * _gradPhi[j*dim + iDim] * _phiU[i] * jac * _wQuad[k]; // int c*dudx*v
         }
       }
     }
@@ -598,6 +597,7 @@ template <int dim> void feSysElm_Advection<dim>::computeBe(feBilinearForm *form)
 
       for(int iDim = 0; iDim < dim; ++iDim) {
         form->_Be[i] += c[iDim] * u * _gradPhi[i * dim + iDim] * jac * _wQuad[k]; // int c*u*dvdx
+        // UNUSED(u);
         // form->_Be[i] -= c[iDim] * grad_u[iDim] * _phiU[i] * jac * _wQuad[k]; // int c*dudx*v
       }
     }
