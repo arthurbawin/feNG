@@ -52,7 +52,7 @@ Vector Laplacian - Strong Dirichlet BC - Error on primary variable - Lagrange el
               42    1.651591e-06    0.000000e+00
              168    5.132295e-08    5.008109e+00
              672    1.607020e-09    4.997144e+00
-            2688    5.033473e-11    4.996690e+00
+            2688    5.033474e-11    4.996690e+00
 
 Vector Laplacian - Weak Dirichlet BC - Error on primary variable - Lagrange elements P4
             nElm           error            rate

@@ -1,0 +1,28 @@
+Diffusion - Error on u - Lagrange elements P1
+            nElm           error            rate
+              42    3.844837e-02    0.000000e+00
+             168    9.931676e-03    1.952813e+00
+             672    2.513178e-03    1.982524e+00
+            2688    6.306608e-04    1.994577e+00
+
+Diffusion - Error on u - Lagrange elements P2
+            nElm           error            rate
+              42    2.483719e-03    0.000000e+00
+             168    3.169373e-04    2.970233e+00
+             672    3.982857e-05    2.992322e+00
+            2688    4.989309e-06    2.996892e+00
+
+Diffusion - Error on u - Lagrange elements P3
+            nElm           error            rate
+              42    1.221898e-04    0.000000e+00
+             168    7.548374e-06    4.016815e+00
+             672    4.691751e-07    4.007968e+00
+            2688    2.922623e-08    4.004791e+00
+
+Diffusion - Error on u - Lagrange elements P4
+            nElm           error            rate
+              42    6.523996e-06    0.000000e+00
+             168    2.096741e-07    4.959535e+00
+             672    6.608520e-09    4.987678e+00
+            2688    2.072751e-10    4.994709e+00
+

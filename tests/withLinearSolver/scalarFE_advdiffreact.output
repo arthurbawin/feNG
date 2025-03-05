@@ -1,0 +1,28 @@
+Advection-diffusion-reaction - Error on u - Lagrange elements P1
+            nElm           error            rate
+              42    3.006409e-03    0.000000e+00
+             168    7.473772e-04    2.008133e+00
+             672    1.864813e-04    2.002806e+00
+            2688    4.659401e-05    2.000814e+00
+
+Advection-diffusion-reaction - Error on u - Lagrange elements P2
+            nElm           error            rate
+              42    9.534311e-05    0.000000e+00
+             168    1.190311e-05    3.001791e+00
+             672    1.488164e-06    2.999733e+00
+            2688    1.861173e-07    2.999249e+00
+
+Advection-diffusion-reaction - Error on u - Lagrange elements P3
+            nElm           error            rate
+              42    3.168204e-06    0.000000e+00
+             168    1.947370e-07    4.024066e+00
+             672    1.203315e-08    4.016441e+00
+            2688    7.472017e-10    4.009372e+00
+
+Advection-diffusion-reaction - Error on u - Lagrange elements P4
+            nElm           error            rate
+              42    7.391238e-08    0.000000e+00
+             168    2.298545e-09    5.007023e+00
+             672    7.174050e-11    5.001790e+00
+            2688    2.241429e-12    5.000297e+00
+

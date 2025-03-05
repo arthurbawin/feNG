@@ -1,0 +1,7 @@
+Unsteady diffusion - Error on u - Lagrange elements P1
+            nElm           error            rate
+              42    1.469661e-02    0.000000e+00
+             168    3.811623e-03    1.947006e+00
+             672    9.653656e-04    1.981258e+00
+            2688    2.423010e-04    1.994275e+00
+
