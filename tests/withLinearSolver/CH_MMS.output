@@ -1,0 +1,15 @@
+(phi,mu) : Equal order elements P1-P1
+Cahn-Hilliard MMS - Error on phase marker phi
+            nElm           error            rate
+              42    3.579480e-02    0.000000e+00
+             168    9.243993e-03    1.953162e+00
+             672    2.338629e-03    1.982853e+00
+            2688    5.868184e-04    1.994677e+00
+
+Cahn-Hilliard MMS - Error on chemical potential mu
+            nElm           error            rate
+              42    3.966156e-02    0.000000e+00
+             168    1.026281e-02    1.950316e+00
+             672    2.598109e-03    1.981891e+00
+            2688    6.521602e-04    1.994164e+00
+
