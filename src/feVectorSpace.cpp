@@ -46,6 +46,22 @@ void feVectorSpace::dotProductShapeShapeOtherSpace(const int iNode, const feSpac
   }
 }
 
+void feVectorSpace::dotProductShapeGradShapeOtherSpace(const int iNode,
+  const int nFunctionsOther, const std::vector<double> &gradOtherScalarShape,
+  std::vector<double> &res)
+{
+  int offset = iNode * _nFunctions * _nComponents;
+  for(int i = 0; i < _nFunctions; ++i) {
+    for(int j = 0; j < nFunctionsOther; ++j) {
+      res[i * nFunctionsOther + j] = 0.;
+      for(int m = 0; m < _nComponents; ++m) {
+        res[i * nFunctionsOther + j] +=
+          gradOtherScalarShape[j * _nComponents + m] * _L[offset + i * _nComponents + m];
+      }
+    }
+  }
+}
+
 void feVectorSpace::vectorDotGradShapeDotShape(const int iNode, const std::vector<double> &gradPhi,
                                                const std::vector<double> &other,
                                                std::vector<double> &res)
@@ -81,6 +97,26 @@ void feVectorSpace::shapeDotTensorDotShape(const int iNode, const std::vector<do
     }
   } 
 }
+
+void feVectorSpace::gradOtherScalarShapeDotTensorDotShape(const int iNode,
+  const int nFunctionsOther,
+  const std::vector<double> &gradOtherScalarShape,
+  const std::vector<double> &other, std::vector<double> &res)
+{
+  int offset = iNode * _nFunctions * _nComponents;
+  for(int i = 0; i < _nFunctions; ++i) {
+    for(int j = 0; j < nFunctionsOther; ++j) {
+      res[i * nFunctionsOther + j] = 0.;
+      for(int m = 0; m < _nComponents; ++m) {
+        for(int n = 0; n < _nComponents; ++n) {
+          res[i * nFunctionsOther + j] +=
+            gradOtherScalarShape[j * _nComponents + m] * other[m * _dim + n] * _L[offset + i * _nComponents + n];
+        }
+      }
+    }
+  }
+}
+
 
 void feVectorSpace::doubleContractionGradShapeGradShape(const std::vector<double> &gradPhi,
                                                         std::vector<double> &res)

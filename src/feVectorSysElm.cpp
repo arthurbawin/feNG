@@ -508,8 +508,7 @@ void feSysElm_MixedDivergence::computeAe(feBilinearForm *form)
     // Get _phiV
     form->_intSpaces[_idV]->getFunctionsAtQuadNode(k, _phiV);
     // Get _gradPhiU
-    form->_intSpaces[_idU]->getVectorFunctionsPhysicalGradientAtQuadNode(k, form->_transformation,
-                                                                   _gradPhiU);
+    form->_intSpaces[_idU]->getVectorFunctionsPhysicalGradientAtQuadNode(k, form->_transformation, _gradPhiU);
     form->_intSpaces[_idU]->divergence(_gradPhiU, _divPhiU);
 
     for(int i = 0; i < _nFunctionsV; ++i) {
@@ -868,28 +867,39 @@ void feSysElm_CHNS_Momentum::createElementarySystem(std::vector<feSpace *> &spac
   _gradmu.resize(_nComponents);
   _gradmuDotGradu.resize(_nComponents);
   _symmetricGradu.resize(_nComponents * _nComponents);
+
   // phiU is the test function of U, unrelated to the phase marker Phi
   _phiU.resize(_nFunctionsU);
-  _gradPhiU.resize(_nComponents * _nFunctionsU);
+  _gradPhiU.resize(_nComponents * _nComponents * _nFunctionsU);
   _phiP.resize(_nFunctionsP);
   _phiPhi.resize(_nFunctionsPhi);
   _gradPhiPhi.resize(_nComponents * _nFunctionsPhi);
   _phiMu.resize(_nFunctionsMu);
   _gradPhiMu.resize(_nComponents * _nFunctionsMu);
+
+  _dudtDotPhiU.resize(_nFunctionsU);
+  _uDotGraduDotPhiU.resize(_nFunctionsU);
+  _fDotPhiU.resize(_nFunctionsU);
+  _gradPhiDotphiU.resize(_nFunctionsU);
+  _gradMuDotgradUdotphiU.resize(_nFunctionsU);
+  _divPhiU.resize(_nFunctionsU);
+  _doubleContraction.resize(_nFunctionsU);
+
+  _phi_idotphi_j.resize(_nFunctionsU*_nFunctionsU);
+  _u0DotGradPhiUDotPhiU.resize(_nFunctionsU*_nFunctionsU);
+  _phiUDotGradu0DotPhiU.resize(_nFunctionsU*_nFunctionsU);
+  _doubleContractionPhiPhi.resize(_nFunctionsU*_nFunctionsU);
+  _doubleContractionPhiPhiT.resize(_nFunctionsU*_nFunctionsU);
+  _gradMu0DotgradUdotphiU.resize(_nFunctionsU*_nFunctionsU);
+  _gradMuDotgradU0DotphiU.resize(_nFunctionsU*_nFunctionsMu);
+  _gradPhi0dotPhiU.resize(_nFunctionsU);
+  _gradPhiPhiDotPhiU.resize(_nFunctionsU*_nFunctionsPhi);
+  _symGraduDDotGradPhiU.resize(_nFunctionsU);
 }
 
 void feSysElm_CHNS_Momentum::computeAe(feBilinearForm *form)
 {
   double jac, rho0, mobility, drhodphi, coeffKorteweg, eta0, detadphi, phi0, mu;
-  double dudtDotphiU, uDotGraduDotphiU, gradMuDotgradU[2], gradMuDotgradUdotphiU,
-    doubleContraction_u, doubleContraction_uT,
-    doubleContraction_du, doubleContraction_duT,
-    gradu0mat[2][2], gradphiu_imat[2][2], gradphiu_jmat[2][2],
-    du0dtDotphiU, u0DotGradu0DotphiU, fDotphiU,
-    gradMuDotgradU0[2], gradMuDotgradU0DotphiU,
-    mu0GradPhiDotphiU, muGradPhi0DotphiU,
-    div_phiU;
-
   for(int k = 0; k < _nQuad; ++k) {
     jac = form->_J[_nQuad * form->_numElem + k];
     form->_cnc->getElementTransformation(form->_geoCoord, k, jac, form->_transformation);
@@ -914,222 +924,124 @@ void feSysElm_CHNS_Momentum::computeAe(feBilinearForm *form)
     // grad_u
     form->_intSpaces[_idU]->interpolateVectorFieldAtQuadNode_physicalGradient(
       form->_sol[_idU], _nComponents, k, form->_transformation, _gradu.data());
+    // // phiU
+    // form->_intSpaces[_idU]->getFunctionsAtQuadNode(k, _phiU);
+    // grad_phiU
+    form->_intSpaces[_idU]->getVectorFunctionsPhysicalGradientAtQuadNode(k, form->_transformation, _gradPhiU);
+
+    // phiP
+    form->_intSpaces[_idP]->getFunctionsAtQuadNode(k, _phiP);
+
     // grad_phi
     form->_intSpaces[_idPhi]->interpolateFieldAtQuadNode_physicalGradient(
       form->_sol[_idPhi], k, form->_transformation, _gradphi.data());
-    // mu
-    mu = form->_intSpaces[_idMu]->interpolateFieldAtQuadNode(form->_sol[_idMu], k);
-    // grad_mu
-    form->_intSpaces[_idMu]->interpolateFieldAtQuadNode_physicalGradient(
-      form->_sol[_idMu], k, form->_transformation, _gradmu.data());
-
-    gradu0mat[0][0] = _gradu[0];
-    gradu0mat[0][1] = _gradu[1];
-    gradu0mat[1][0] = _gradu[2];
-    gradu0mat[1][1] = _gradu[3];
-
-    // phiU
-    form->_intSpaces[_idU]->getFunctionsAtQuadNode(k, _phiU);
-    // grad_phiU
-    form->_intSpaces[_idU]->getFunctionsPhysicalGradientAtQuadNode(k, form->_transformation,
-                                                                   _gradPhiU.data());
-    // phiP
-    form->_intSpaces[_idP]->getFunctionsAtQuadNode(k, _phiP);
     // phiPhi
     form->_intSpaces[_idPhi]->getFunctionsAtQuadNode(k, _phiPhi);
     // grad_phiPhi
     form->_intSpaces[_idPhi]->getFunctionsPhysicalGradientAtQuadNode(k, form->_transformation,
                                                                    _gradPhiPhi.data());
+
+    // mu
+    mu = form->_intSpaces[_idMu]->interpolateFieldAtQuadNode(form->_sol[_idMu], k);
+    // grad_mu
+    form->_intSpaces[_idMu]->interpolateFieldAtQuadNode_physicalGradient(
+      form->_sol[_idMu], k, form->_transformation, _gradmu.data());
     // phiMu
     form->_intSpaces[_idMu]->getFunctionsAtQuadNode(k, _phiMu);
     // grad_phiMu
     form->_intSpaces[_idMu]->getFunctionsPhysicalGradientAtQuadNode(k, form->_transformation,
                                                                    _gradPhiMu.data());
 
+    // Compute u0 dot gradu0
+    std::fill(_uDotGradu.begin(), _uDotGradu.end(), 0.);
+    for(int m = 0; m < _nComponents; ++m) {
+      for(int n = 0; n < _nComponents; ++n) {
+        // Contract _u and _gradmu with the lines of _gradu
+        _uDotGradu[m] += _u[n] * _gradu[n * _nComponents + m];
+        _symmetricGradu[m * _nComponents + n] =
+          _gradu[m * _nComponents + n] + _gradu[n * _nComponents + m];
+      }
+    }
+
+    // Compute all the required dot products and contractions:
+
+    // Acceleration, convective acceleration and source term
+    form->_intSpaces[_idU]->dotProductShapeShape(k, _phi_idotphi_j);
+    form->_intSpaces[_idU]->dotProductShapeOther(k, _dudt, _dudtDotPhiU);
+    form->_intSpaces[_idU]->dotProductShapeOther(k, _uDotGradu, _uDotGraduDotPhiU);
+    form->_intSpaces[_idU]->dotProductShapeOther(k, _f, _fDotPhiU);
+    // [(u0 dot gradu) + (u dot gradu0)] cdot phiU
+    form->_intSpaces[_idU]->vectorDotGradShapeDotShape(k, _gradPhiU, _u, _u0DotGradPhiUDotPhiU);
+    form->_intSpaces[_idU]->shapeDotTensorDotShape(k, _gradu, _phiUDotGradu0DotPhiU);
+    // Diffusive flux
+    // [(gradmu0 dot gradu) + (gradmu dot gradu0)] cdot phiU
+    form->_intSpaces[_idU]->vectorDotGradShapeDotShape(k, _gradPhiU, _gradmu, _gradMu0DotgradUdotphiU);
+    form->_intSpaces[_idU]->gradOtherScalarShapeDotTensorDotShape(k, _nFunctionsMu, _gradPhiMu, _gradu, _gradMuDotgradU0DotphiU);
+    // Korteweg force
+    form->_intSpaces[_idU]->dotProductShapeOther(k, _gradphi, _gradPhi0dotPhiU);
+    form->_intSpaces[_idU]->dotProductShapeGradShapeOtherSpace(k, _nFunctionsPhi, _gradPhiPhi, _gradPhiPhiDotPhiU);
+    // Viscous term
+    form->_intSpaces[_idU]->doubleContractionGradShapeGradShape(_gradPhiU, _doubleContractionPhiPhi);
+    form->_intSpaces[_idU]->doubleContractionGradShapeGradShapeTransposed(_gradPhiU, _doubleContractionPhiPhiT);
+    form->_intSpaces[_idU]->doubleContractionGradShapeOther(_gradPhiU, _symmetricGradu, _symGraduDDotGradPhiU);
+    // Pressure gradient
+    form->_intSpaces[_idU]->divergence(_gradPhiU, _divPhiU);
+    
+    // Increment local matrix
     for(int i = 0; i < _nFunctionsU; ++i)
     {
       int J = 0;
-
-      ///////////////////////////////////////////
       // phiU - u block
-      ///////////////////////////////////////////
-      for(int j = 0; j < _nFunctionsU; ++j)
+      for(int j = 0; j < _nFunctionsU; ++j, ++J)
       {
-        // Transient term
-        // dudt : dot product dudt * phiU is nonzero only when the components match
-        dudtDotphiU = (i % _nComponents == j % _nComponents) ? _phiU[i] * form->_c0 * _phiU[j] : 0.;
+        form->_Ae[i][J] += (
+          // Acceleration
+          rho0 * (form->_c0 * _phi_idotphi_j[i*_nFunctionsU+j]
+                     + _u0DotGradPhiUDotPhiU[i*_nFunctionsU+j]
+                     + _phiUDotGradu0DotPhiU[i*_nFunctionsU+j])
+          // Diffusive flux
+          + mobility * drhodphi * _gradMu0DotgradUdotphiU[i*_nFunctionsU+j]
+          // Viscous term
+          + eta0 * (_doubleContractionPhiPhi [i*_nFunctionsU+j]
+                  + _doubleContractionPhiPhiT[i*_nFunctionsU+j])) * jac * _wQuad[k];
+      }
 
-        // Convective acceleration
-        // Only for 2D velocity field, see also VectorConvectiveAcceleration
-        if(j % _nComponents == 0) {
-          _uDotGradu[0] = _u[0] * _gradPhiU[j * _nComponents] +
-                          _u[1] * _gradPhiU[j * _nComponents + 1] +
-                          _phiU[j] * _gradu[0 * _nComponents + (j % _nComponents)];
-          _uDotGradu[1] = _phiU[j] * _gradu[1 * _nComponents + (j % _nComponents)];
-        } else {
-          _uDotGradu[0] = _phiU[j] * _gradu[0 * _nComponents + (j % _nComponents)];
-          _uDotGradu[1] = _u[0] * _gradPhiU[j * _nComponents] +
-                          _u[1] * _gradPhiU[j * _nComponents + 1] +
-                          _phiU[j] * _gradu[1 * _nComponents + (j % _nComponents)];
-        }
-        uDotGraduDotphiU = _phiU[i] * _uDotGradu[i % _nComponents];
+      // phiU - p block
+      for(int j = 0; j < _nFunctionsP; ++j, ++J)
+      {
+        // Pressure gradient
+        form->_Ae[i][J] += (- _phiP[j]) * _divPhiU[i] * jac * _wQuad[k];
+      }
 
-        // Diffusive flux J(mu) dot gradU
-        if(j % _nComponents == 0) {
-          gradMuDotgradU[0] = _gradmu[0] * _gradPhiU[j * _nComponents] +
-                              _gradmu[1] * _gradPhiU[j * _nComponents + 1];
-          gradMuDotgradU[1] = 0.;
-        } else {
-          gradMuDotgradU[0] = 0.;
-          gradMuDotgradU[1] = _gradmu[0] * _gradPhiU[j * _nComponents] +
-                              _gradmu[1] * _gradPhiU[j * _nComponents + 1];;
-        }
-        gradMuDotgradUdotphiU = _phiU[i] * gradMuDotgradU[i % _nComponents];
-
-        // Divergence of Newtonian stress tensor - Viscous part
-        // Complete computation for now, can be optimized later
-        // Warning : induces nose bleed (-:
-        if(i % _nComponents == 0)
-        {
-          gradphiu_imat[0][0] = _gradPhiU[i*_nComponents+0]; // dphi_i,x/dx
-          gradphiu_imat[0][1] = _gradPhiU[i*_nComponents+1]; // dphi_i,x/dy
-          gradphiu_imat[1][0] = 0.;
-          gradphiu_imat[1][1] = 0.;
-        }
-        else
-        {
-          gradphiu_imat[0][0] = 0.;
-          gradphiu_imat[0][1] = 0.;
-          gradphiu_imat[1][0] = _gradPhiU[i*_nComponents+0]; // dphi_i,y/dx
-          gradphiu_imat[1][1] = _gradPhiU[i*_nComponents+1]; // dphi_i,y/dy
-        }
-        if(j % _nComponents == 0)
-        {
-          gradphiu_jmat[0][0] = _gradPhiU[j*_nComponents+0]; // dphi_j,x/dx
-          gradphiu_jmat[0][1] = _gradPhiU[j*_nComponents+1]; // dphi_j,x/dy
-          gradphiu_jmat[1][0] = 0.;
-          gradphiu_jmat[1][1] = 0.;
-        }
-        else
-        {
-          gradphiu_jmat[0][0] = 0.;
-          gradphiu_jmat[0][1] = 0.;
-          gradphiu_jmat[1][0] = _gradPhiU[j*_nComponents+0]; // dphi_j,y/dx
-          gradphiu_jmat[1][1] = _gradPhiU[j*_nComponents+1]; // dphi_j,y/dy
-        }
-
-        // gradPhiU_j : gradPhiU_i
-        doubleContraction_du = 0.;
-        // (gradPhiU_j)^T : gradPhiU_i
-        doubleContraction_duT = 0.; 
-        for(int m = 0; m < _nComponents; ++m) {
-          for(int n = 0; n < _nComponents; ++n) {
-            doubleContraction_du  += gradphiu_jmat[m][n] * gradphiu_imat[m][n];
-            doubleContraction_duT += gradphiu_jmat[n][m] * gradphiu_imat[m][n];;
-          }
-        }
-
-        // Increment matrix
-        form->_Ae[i][J++] += (rho0 *(dudtDotphiU + uDotGraduDotphiU)
-          + mobility * drhodphi * gradMuDotgradUdotphiU
-          + eta0 * (doubleContraction_du + doubleContraction_duT)
+      // phiU - phi block
+      for(int j = 0; j < _nFunctionsPhi; ++j, ++J)
+      {
+        form->_Ae[i][J] += (
+          // Acceleration and source term
+          drhodphi * _phiPhi[j] * (_dudtDotPhiU[i] + _uDotGraduDotPhiU[i] - _fDotPhiU[i])
+          // Korteweg force
+          + coeffKorteweg * mu * _gradPhiPhiDotPhiU[i*_nFunctionsPhi+j]
+          // Viscous term
+          + detadphi * _phiPhi[j] * _symGraduDDotGradPhiU[i]
           ) * jac * _wQuad[k];
       }
 
-      ///////////////////////////////////////////
-      // phiU - p block
-      ///////////////////////////////////////////
-      for(int j = 0; j < _nFunctionsP; ++j)
-      {
-        // Increment matrix
-        div_phiU = _gradPhiU[i * _nComponents + (i % _nComponents)];
-        form->_Ae[i][J++] += (- _phiP[j]) * div_phiU * jac * _wQuad[k];
-      }
-
-      ///////////////////////////////////////////
-      // phiU - phi block
-      ///////////////////////////////////////////
-      for(int j = 0; j < _nFunctionsPhi; ++j)
-      {
-        // Acceleration
-        du0dtDotphiU = _dudt[i % _nComponents] * _phiU[i];
-
-        // Compute u dot gradu
-        std::fill(_uDotGradu.begin(), _uDotGradu.end(), 0.);
-        for(int m = 0; m < _nComponents; ++m) {
-          for(int n = 0; n < _nComponents; ++n) {
-            _uDotGradu[m] += _u[n] * _gradu[m * _nComponents + n];
-          }
-        }
-        u0DotGradu0DotphiU = _uDotGradu[i % _nComponents] * _phiU[i];
-
-        // Source term
-        fDotphiU = _f[i % _nComponents] * _phiU[i];
-
-        // Divergence of Newtonian stress tensor - Viscous part
-        if(i % _nComponents == 0) {
-          gradphiu_imat[0][0] = _gradPhiU[i*_nComponents+0]; // dphi_i,x/dx
-          gradphiu_imat[0][1] = _gradPhiU[i*_nComponents+1]; // dphi_i,x/dy
-          gradphiu_imat[1][0] = 0.;
-          gradphiu_imat[1][1] = 0.;
-        } else {
-          gradphiu_imat[0][0] = 0.;
-          gradphiu_imat[0][1] = 0.;
-          gradphiu_imat[1][0] = _gradPhiU[i*_nComponents+0]; // dphi_i,y/dx
-          gradphiu_imat[1][1] = _gradPhiU[i*_nComponents+1]; // dphi_i,y/dy
-        }
-
-        // gradU : gradPhiU_i
-        doubleContraction_u = 0.;
-        // (gradU)^T : gradPhiU_i
-        doubleContraction_uT = 0.; 
-        for(int m = 0; m < _nComponents; ++m) {
-          for(int n = 0; n < _nComponents; ++n) {
-            doubleContraction_u  += gradu0mat[m][n] * gradphiu_imat[m][n];
-            doubleContraction_uT += gradu0mat[n][m] * gradphiu_imat[m][n];;
-          }
-        }
-
-        // Korteweg force
-        mu0GradPhiDotphiU = mu * _gradPhiPhi[j * _nComponents + (i % _nComponents)] * _phiU[i];
-
-        // Increment matrix
-        UNUSED(du0dtDotphiU, u0DotGradu0DotphiU);
-        form->_Ae[i][J++] += (drhodphi * _phiPhi[j] * (du0dtDotphiU + u0DotGradu0DotphiU - fDotphiU)
-          + coeffKorteweg * mu0GradPhiDotphiU
-          + detadphi * _phiPhi[j] * (doubleContraction_u + doubleContraction_uT)) * jac * _wQuad[k];
-      }
-
-      ///////////////////////////////////////////
       // phiU - mu block
-      ///////////////////////////////////////////
-      for(int j = 0; j < _nFunctionsMu; ++j)
+      for(int j = 0; j < _nFunctionsMu; ++j, ++J)
       {
-        // Diffusive flux
-        for(int m = 0; m < _nComponents; ++m) {
-          gradMuDotgradU0[m] = 0.;
-          for(int n = 0; n < _nComponents; ++n) {
-            gradMuDotgradU0[m] += _gradPhiMu[j * _nComponents + n] * _gradu[m * _nComponents + n];
-          }
-        }
-        gradMuDotgradU0DotphiU = gradMuDotgradU0[i % _nComponents] * _phiU[i];
-
-        // Korteweg force
-        muGradPhi0DotphiU = _phiMu[j] * _gradphi[i % _nComponents] * _phiU[i];
-
-        // Increment matrix
-        form->_Ae[i][J++] += (mobility * drhodphi * gradMuDotgradU0DotphiU + coeffKorteweg * muGradPhi0DotphiU) * jac * _wQuad[k];
+        form->_Ae[i][J] += (
+          // Diffusive flux
+          mobility * drhodphi * _gradMuDotgradU0DotphiU[i*_nFunctionsMu+j]
+          // Korteweg force
+          + coeffKorteweg * _phiMu[j] * _gradPhi0dotPhiU[i]) * jac * _wQuad[k];
       }
     }
   }
 }
 
-extern bool OKGO;
-
 void feSysElm_CHNS_Momentum::computeBe(feBilinearForm *form)
 {
-  double jac, rho, mobility, drhodphi, coeffKorteweg, eta, p, phi, mu, div_phiU, doubleContraction;
-  double dudtDotphiU, uDotGraduDotphiU, gradPhiDotphiU, fDotphiU, gradMuDotgradUdotphiU;
+  double jac, rho, mobility, drhodphi, coeffKorteweg, eta, p, phi, mu;
   for(int k = 0; k < _nQuad; ++k) {
     jac = form->_J[_nQuad * form->_numElem + k];
     form->_cnc->getElementTransformation(form->_geoCoord, k, jac, form->_transformation);
@@ -1137,97 +1049,78 @@ void feSysElm_CHNS_Momentum::computeBe(feBilinearForm *form)
     // Evaluate scalar coefficients
     form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, form->_args.pos);
     phi = form->_intSpaces[_idPhi]->interpolateFieldAtQuadNode(form->_sol[_idPhi], k);
+    
+    // Set phi as current solution value in function arguments
     form->_args.u = phi;
+
     rho = (*_density)(form->_args);
     mobility = (*_mobility)(form->_args);
     drhodphi = (*_drhodphi)(form->_args);
     eta = (*_viscosity)(form->_args);
     coeffKorteweg = (*_coeffKorteweg)(form->_args);
     (*_volumeForce)(form->_args, _f);
-
-    // feInfo("x = %+-1.4e y = %+-1.4e phi = %+-1.10e - eta = %+-1.10e", _pos[0], _pos[1], phi, eta);
-
+    
     // Get all relevant values and gradients
-    // dudt
-    form->_intSpaces[_idU]->interpolateVectorFieldAtQuadNode(form->_solDot[_idU], k, _dudt, _nComponents);
     // u
     form->_intSpaces[_idU]->interpolateVectorFieldAtQuadNode(form->_sol[_idU], k, _u, _nComponents);
+    // dudt
+    form->_intSpaces[_idU]->interpolateVectorFieldAtQuadNode(form->_solDot[_idU], k, _dudt, _nComponents);
     // grad_u
     form->_intSpaces[_idU]->interpolateVectorFieldAtQuadNode_physicalGradient(
       form->_sol[_idU], _nComponents, k, form->_transformation, _gradu.data());
+    // grad_phiU
+    form->_intSpaces[_idU]->getVectorFunctionsPhysicalGradientAtQuadNode(k, form->_transformation, _gradPhiU);
+
     // p
     p = form->_intSpaces[_idP]->interpolateFieldAtQuadNode(form->_sol[_idP], k);
+
     // grad_phi
     form->_intSpaces[_idPhi]->interpolateFieldAtQuadNode_physicalGradient(
       form->_sol[_idPhi], k, form->_transformation, _gradphi.data());
+
     // mu
     mu = form->_intSpaces[_idMu]->interpolateFieldAtQuadNode(form->_sol[_idMu], k);
     // grad_mu
     form->_intSpaces[_idMu]->interpolateFieldAtQuadNode_physicalGradient(
       form->_sol[_idMu], k, form->_transformation, _gradmu.data());
 
-    // phiU
-    form->_intSpaces[_idU]->getFunctionsAtQuadNode(k, _phiU);
-    // grad_phiU
-    form->_intSpaces[_idU]->getFunctionsPhysicalGradientAtQuadNode(k, form->_transformation,
-                                                                   _gradPhiU.data());
     // Compute u dot gradu
-    std::fill(_uDotGradu.begin(), _uDotGradu.end(), 0.);
-    for(int m = 0; m < _nComponents; ++m) {
-      for(int n = 0; n < _nComponents; ++n) {
-        _uDotGradu[m] += _u[n] * _gradu[m * _nComponents + n];
-      }
-    }
-
     // Compute gradmu dot gradu
+    // Compute symmetric gradient (2*d(u))
+    std::fill(_uDotGradu.begin(), _uDotGradu.end(), 0.);
     std::fill(_gradmuDotGradu.begin(), _gradmuDotGradu.end(), 0.);
     for(int m = 0; m < _nComponents; ++m) {
       for(int n = 0; n < _nComponents; ++n) {
-        _gradmuDotGradu[m] += _gradmu[n] * _gradu[m * _nComponents + n];
-      }
-    }
-
-    // Compute symmetric gradient (2*d(u))
-    for(int m = 0; m < _nComponents; ++m) {
-      for(int n = 0; n < _nComponents; ++n) {
+        // Contract _u and _gradmu with the lines of _gradu
+        _uDotGradu[m] += _u[n] * _gradu[n * _nComponents + m];
+        _gradmuDotGradu[m] += _gradmu[n] * _gradu[n * _nComponents + m];
         _symmetricGradu[m * _nComponents + n] =
           _gradu[m * _nComponents + n] + _gradu[n * _nComponents + m];
       }
     }
 
+    form->_intSpaces[_idU]->dotProductShapeOther(k, _dudt, _dudtDotPhiU);
+    form->_intSpaces[_idU]->dotProductShapeOther(k, _uDotGradu, _uDotGraduDotPhiU);
+    form->_intSpaces[_idU]->dotProductShapeOther(k, _f, _fDotPhiU);
+    form->_intSpaces[_idU]->dotProductShapeOther(k, _gradmuDotGradu, _gradMuDotgradUdotphiU);
+    form->_intSpaces[_idU]->dotProductShapeOther(k, _gradphi, _gradPhiDotphiU);
+    form->_intSpaces[_idU]->divergence(_gradPhiU, _divPhiU);
+    form->_intSpaces[_idU]->doubleContractionGradShapeOther(_gradPhiU, _symmetricGradu, _doubleContraction);
+
+    // Increment RHS
     for(int i = 0; i < _nFunctionsU; ++i)
     {
-      // dudt dot phiU (always only 1 component to the dot product as vector test functions have 1 nonzero component)
-      dudtDotphiU = _dudt[i % _nComponents] * _phiU[i];
-
-      // (u dot gradu) dot phiU
-      uDotGraduDotphiU = _uDotGradu[i % _nComponents] * _phiU[i];
-
-      // grad_phi dot phiU
-      gradPhiDotphiU = _gradphi[i % _nComponents] * _phiU[i];
-
-      // (grad_mu dot grad_u) dot phiU
-      gradMuDotgradUdotphiU = _gradmuDotGradu[i % _nComponents] * _phiU[i];
-
-      // Divergence of test function
-      div_phiU = _gradPhiU[i * _nComponents + (i % _nComponents)];
-
-      // Double contraction 2*d(u) : grad(phiU) = (gradu + gradu^T) : grad(phiU)
-      doubleContraction = 0.;
-      for(int m = 0; m < _nComponents; ++m) {
-        doubleContraction +=
-          _symmetricGradu[(i % _nComponents) * _nComponents + m] * _gradPhiU[i * _nComponents + m];
-      }
-
-      // Source term
-      fDotphiU = _f[i % _nComponents] * _phiU[i];
-
-      // Increment RHS
-      form->_Be[i] -= (rho * (dudtDotphiU + uDotGraduDotphiU - fDotphiU)
-                     + mobility * drhodphi * gradMuDotgradUdotphiU
-                     + coeffKorteweg * mu * gradPhiDotphiU
-                     - p * div_phiU
-                     + eta * doubleContraction) * jac * _wQuad[k];    
+      form->_Be[i] -= jac * _wQuad[k] * (
+        // Acceleration
+        rho * (_dudtDotPhiU[i] + _uDotGraduDotPhiU[i] - _fDotPhiU[i])
+        // Diffusive flux
+        + mobility * drhodphi * _gradMuDotgradUdotphiU[i]
+        // Korteweg force
+        + coeffKorteweg * mu * _gradPhiDotphiU[i]
+        // Pressure gradient
+        - p * _divPhiU[i]
+        // Viscous term
+        + eta * _doubleContraction[i]);
     }
   }
 }
@@ -1328,15 +1221,14 @@ void feSysElm_TracerConvection::createElementarySystem(std::vector<feSpace *> &s
   _idU = 1;
   _fieldsLayoutI = {_idC};
   _fieldsLayoutJ = {_idU, _idC};
-  // _fieldsLayoutJ = {_idC};
   _nFunctionsU = space[_idU]->getNumFunctions();
   _nFunctionsC = space[_idC]->getNumFunctions();
   _nComponents = space[_idU]->getNumComponents();
   _u.resize(_nComponents);
-  _phiU.resize(_nFunctionsU);
   _gradC.resize(_nComponents); // Dimension = number of velocity components
   _phiC.resize(_nFunctionsC);
   _gradPhiC.resize(_nComponents * _nFunctionsC);
+  _phiUdotGradc0.resize(_nFunctionsU);
 }
 
 void feSysElm_TracerConvection::computeAe(feBilinearForm *form)
@@ -1352,8 +1244,6 @@ void feSysElm_TracerConvection::computeAe(feBilinearForm *form)
 
     // u
     form->_intSpaces[_idU]->interpolateVectorFieldAtQuadNode(form->_sol[_idU], k, _u, _nComponents);
-    // phiU
-    form->_intSpaces[_idU]->getFunctionsAtQuadNode(k, _phiU);
     // gradC
     form->_intSpaces[_idC]->interpolateFieldAtQuadNode_physicalGradient(form->_sol[_idC], k, form->_transformation, _gradC.data());
     // phiC
@@ -1361,23 +1251,23 @@ void feSysElm_TracerConvection::computeAe(feBilinearForm *form)
     //gradPhiC
     form->_intSpaces[_idC]->getFunctionsPhysicalGradientAtQuadNode(k, form->_transformation, _gradPhiC.data());
 
-    for(int i = 0; i < _nFunctionsC; ++i) {
+    form->_intSpaces[_idU]->dotProductShapeOther(k, _gradC, _phiUdotGradc0);
 
-      int cnt = 0;
-      for(int j = 0; j < _nFunctionsU; ++j) {
-        // Compute u dot gradC0 = phiU_j dot gradC0
-        // Dot product with phiU is only one term
-        double uDotGradC0 = _phiU[j] * _gradC[j % _nComponents];
-        form->_Ae[i][cnt++] += coeff * _phiC[i] * uDotGradC0 * jac * _wQuad[k];
+    for(int i = 0; i < _nFunctionsC; ++i)
+    {
+      int J = 0;
+      for(int j = 0; j < _nFunctionsU; ++j, ++J) {
+        // u dot gradC0 = phiU_j dot gradC0
+        form->_Ae[i][J] += coeff * _phiC[i] * _phiUdotGradc0[j] * jac * _wQuad[k];
       }
 
-      for(int j = 0; j < _nFunctionsC; ++j) {
+      for(int j = 0; j < _nFunctionsC; ++j, ++J) {
         // Compute u0 dot gradC = u0 dot gradPhiC_j
         double u0DotGradC = 0.;
         for(int m = 0; m < _nComponents; ++m) {
           u0DotGradC += _u[m] * _gradPhiC[j * _nComponents + m];
         }
-        form->_Ae[i][cnt++] += coeff * _phiC[i] * u0DotGradC * jac * _wQuad[k];
+        form->_Ae[i][J] += coeff * _phiC[i] * u0DotGradC * jac * _wQuad[k];
       }
 
     }

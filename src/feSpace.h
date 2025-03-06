@@ -433,12 +433,13 @@ public:
 
   // Routines for vector-valued shape functions
   virtual void dotProductShapeShape(const int, std::vector<double> &){};
-  virtual void dotProductShapeShapeOtherSpace(const int, const feSpace*, std::vector<double> &){};
   virtual void dotProductShapeOther(const int, const std::vector<double> &, std::vector<double> &){};
-  virtual void dotProductOtherGradShape(const int, const std::vector<double> &, std::vector<double> &){};
+  virtual void dotProductShapeShapeOtherSpace(const int, const feSpace*, std::vector<double> &){};
+  virtual void dotProductShapeGradShapeOtherSpace(const int, const int, const std::vector<double> &, std::vector<double> &){};
 
   virtual void vectorDotGradShapeDotShape(const int, const std::vector<double> &, const std::vector<double> &, std::vector<double> &){};
   virtual void shapeDotTensorDotShape(const int, const std::vector<double> &, std::vector<double> &){};
+  virtual void gradOtherScalarShapeDotTensorDotShape(const int, const int, const std::vector<double> &, const std::vector<double> &, std::vector<double> &){};
 
   virtual void doubleContractionGradShapeGradShape(const std::vector<double> &, std::vector<double> &){};
   virtual void doubleContractionGradShapeGradShapeTransposed(const std::vector<double> &, std::vector<double> &){};
@@ -478,9 +479,14 @@ public:
   void dotProductShapeOther(const int iNode, const std::vector<double> &other, std::vector<double> &res) override;
   //      res[i][j] = phi_i cdot phi_j, phi_j are the test functions of another space
   void dotProductShapeShapeOtherSpace(const int iNode, const feSpace *other, std::vector<double> &res) override;
+  //      res[i][j] = phi_i cdot grad(phi_j), phi_j are scalar-valued test functions of another space
+  void dotProductShapeGradShapeOtherSpace(const int iNode, const int nFunctionsOther,
+    const std::vector<double> &gradOtherScalarShape, std::vector<double> &res) override;
 
   void vectorDotGradShapeDotShape(const int iNode, const std::vector<double> &gradPhi, const std::vector<double> &other, std::vector<double> &res) override;
   void shapeDotTensorDotShape(const int iNode, const std::vector<double> &other, std::vector<double> &res) override;
+  void gradOtherScalarShapeDotTensorDotShape(const int iNode, const int nFunctionsOther, 
+    const std::vector<double> &gradOtherScalarShape, const std::vector<double> &other, std::vector<double> &res) override;
 
   // Double contraction of the gradient of each shape function
   // with the gradient of each shape function :

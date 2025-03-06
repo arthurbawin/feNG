@@ -173,7 +173,7 @@ protected:
   // Fields layout, see feBilinearForm.h for details
   std::vector<int> _fieldsLayoutI;
   std::vector<int> _fieldsLayoutJ;
-  
+
   // Number of vector components on the FE space
   int _nComponents;
 
@@ -199,7 +199,7 @@ public:
   // Do not call directly, call derived classes instead
   feSysElm(int dim, int nFields, elementSystemType ID, bool hasMatrix)
     : _ID(ID), _dim(dim), _nFields(nFields), _hasMatrix(hasMatrix)
-    // , _pos(3, 0.)
+  // , _pos(3, 0.)
   {
     _fieldsLayoutI.resize(1);
     _fieldsLayoutJ.resize(1);
@@ -219,8 +219,8 @@ public:
   bool hasMatrix() { return _hasMatrix; }
   bool isThreadSafe() { return _isThreadSafe; }
 
-  virtual void createElementarySystem(std::vector<feSpace *> &spaces){ UNUSED(spaces); };
-  virtual void computeAe(feBilinearForm *form){ UNUSED(form); };
+  virtual void createElementarySystem(std::vector<feSpace *> &spaces) { UNUSED(spaces); };
+  virtual void computeAe(feBilinearForm *form) { UNUSED(form); };
   virtual void computeBe(feBilinearForm *form) = 0;
 };
 
@@ -267,7 +267,9 @@ protected:
 
 public:
   feSysElm_SourceDirac(std::vector<double> &x0) : feSysElm(-1, 1, SOURCE, false), _x0(x0)
-  { _isThreadSafe = false; };
+  {
+    _isThreadSafe = false;
+  };
   ~feSysElm_SourceDirac(){};
   void createElementarySystem(std::vector<feSpace *> &space);
   void computeBe(feBilinearForm *form);
@@ -286,7 +288,6 @@ public:
     : feSysElm(-1, 1, VECTOR_SOURCE, false), _source(source), _S(3, 0.){};
   ~feSysElm_VectorSource(){};
   void createElementarySystem(std::vector<feSpace *> &spaces);
-  // void createElementarySystem(std::vector<feVectorSpace *> &vectorSpaces){};
   void computeBe(feBilinearForm *form);
   CLONEABLE(feSysElm_VectorSource)
 };
@@ -347,7 +348,8 @@ protected:
   std::vector<double> _phiU;
 
 public:
-  feSysElm_MassPower(feFunction *coeff, double exponent) : feSysElm(-1, 1, MASS, true), _coeff(coeff), _p(exponent)
+  feSysElm_MassPower(feFunction *coeff, double exponent)
+    : feSysElm(-1, 1, MASS, true), _coeff(coeff), _p(exponent)
   {
     _computeMatrixWithFD = true;
   };
@@ -408,7 +410,7 @@ protected:
 
 public:
   feSysElm_MixedMassPower(feFunction *coeff, int exponent)
-   : feSysElm(-1, 2, MIXED_MASS_POWER, true), _coeff(coeff), _p(exponent)
+    : feSysElm(-1, 2, MIXED_MASS_POWER, true), _coeff(coeff), _p(exponent)
   {
     _computeMatrixWithFD = false;
   };
@@ -427,8 +429,7 @@ protected:
   std::vector<double> _u, _phi_idotphi_j, _udotphi_i;
 
 public:
-  feSysElm_VectorMass(feFunction *coeff)
-    : feSysElm(-1, 1, VECTOR_MASS, true), _coeff(coeff)
+  feSysElm_VectorMass(feFunction *coeff) : feSysElm(-1, 1, VECTOR_MASS, true), _coeff(coeff)
   {
     _computeMatrixWithFD = false;
   };
@@ -440,7 +441,7 @@ public:
 };
 
 //
-// Mass matrix for one vector-valued variable tested with the test functions 
+// Mass matrix for one vector-valued variable tested with the test functions
 // of another vector-valued variable"
 // Matrix and residual
 //
@@ -473,13 +474,13 @@ public:
 };
 
 //
-// Mass matrix for one vector-valued variable tested with the test functions of 
+// Mass matrix for one vector-valued variable tested with the test functions of
 // a scalar-valued variable.
 //
 // Matrix and residual
 //
 //  /
-//  | coeff * u * v dx with u vector-valued, v scalar 
+//  | coeff * u * v dx with u vector-valued, v scalar
 //  /
 //
 // # fields: 2 (FE solution and distinct test functions)
@@ -495,7 +496,8 @@ protected:
   std::vector<double> _phiU, _phiV;
 
 public:
-  feSysElm_MixedScalarVectorMass(feFunction *coeff) : feSysElm(-1, 2, MIXED_SCALAR_VECTOR_MASS, true), _coeff(coeff)
+  feSysElm_MixedScalarVectorMass(feFunction *coeff)
+    : feSysElm(-1, 2, MIXED_SCALAR_VECTOR_MASS, true), _coeff(coeff)
   {
     _computeMatrixWithFD = true;
   };
@@ -538,8 +540,8 @@ public:
 };
 
 //
-// Transient term weak form (transient mass matrix) tested with the test functions of another scalar variable.
-// Matrix and residual
+// Transient term weak form (transient mass matrix) tested with the test functions of another scalar
+// variable. Matrix and residual
 //
 //  /
 //  | coeff * dudt * phi_v dx
@@ -557,7 +559,8 @@ protected:
   std::vector<double> _phiU, _phiV;
 
 public:
-  feSysElm_MixedTransientMass(feFunction *coeff) : feSysElm(-1, 2, MIXED_TRANSIENT_MASS, true), _coeff(coeff)
+  feSysElm_MixedTransientMass(feFunction *coeff)
+    : feSysElm(-1, 2, MIXED_TRANSIENT_MASS, true), _coeff(coeff)
   {
     _computeMatrixWithFD = true;
   };
@@ -588,7 +591,8 @@ protected:
   std::vector<double> _dudt, _dudtdotphi_i, _phi_idotphi_j;
 
 public:
-  feSysElm_TransientVectorMass(feFunction *coeff) : feSysElm(-1, 1, TRANSIENT_VECTOR_MASS, true), _coeff(coeff)
+  feSysElm_TransientVectorMass(feFunction *coeff)
+    : feSysElm(-1, 1, TRANSIENT_VECTOR_MASS, true), _coeff(coeff)
   {
     _computeMatrixWithFD = true;
   };
@@ -598,7 +602,6 @@ public:
   void computeBe(feBilinearForm *form);
   CLONEABLE(feSysElm_TransientVectorMass)
 };
-
 
 //
 // Diffusion term weak form (stiffness matrix).
@@ -784,8 +787,8 @@ class feSysElm_VectorConvectiveAcceleration : public feSysElm
 protected:
   feFunction *_coeff;
   int _idU, _nFunctions;
-  std::vector<double> _u, _gradu, _uDotGradu, _phiU, _gradPhiU, 
-    _uDotGraduDotPhiU, _u0DotGradPhiUDotPhiU, _phiUDotGradu0DotPhiU;
+  std::vector<double> _u, _gradu, _uDotGradu, _phiU, _gradPhiU, _uDotGraduDotPhiU,
+    _u0DotGradPhiUDotPhiU, _phiUDotGradu0DotPhiU;
 
 public:
   feSysElm_VectorConvectiveAcceleration(feFunction *coeff)
@@ -815,7 +818,7 @@ protected:
   feFunction *_coeff;
   int _idU, _idC;
   int _nFunctionsU, _nFunctionsC;
-  std::vector<double> _u, _gradC, _phiU, _phiC, _gradPhiC;
+  std::vector<double> _u, _gradC, _phiC, _gradPhiC, _phiUdotGradc0;
 
 public:
   feSysElm_TracerConvection(feFunction *coeff)
@@ -877,8 +880,8 @@ protected:
   feFunction *_coeff;
   feFunction *_viscosity;
   int _idU, _idP, _nFunctionsU, _nFunctionsP;
-  std::vector<double> _gradu, _symmetricGradu, _gradPhiU, _phiP,
-   _divPhiU, _doubleContraction, _doubleContractionPhiPhi, _doubleContractionPhiPhiT;
+  std::vector<double> _gradu, _symmetricGradu, _gradPhiU, _phiP, _divPhiU, _doubleContraction,
+    _doubleContractionPhiPhi, _doubleContractionPhiPhiT;
 
 public:
   feSysElm_DivergenceNewtonianStress(feFunction *coeff, feFunction *viscosity)
@@ -1043,7 +1046,8 @@ protected:
 
 public:
   feSysElm_MixedDivergenceCHNS(feFunction *coeff, feFunction *density, feFunction *drhodphi)
-    : feSysElm(-1, 3, MIXED_DIVERGENCE_CHNS, true), _coeff(coeff), _density(density), _drhodphi(drhodphi)
+    : feSysElm(-1, 3, MIXED_DIVERGENCE_CHNS, true), _coeff(coeff), _density(density),
+      _drhodphi(drhodphi)
   {
     _computeMatrixWithFD = false;
   };
@@ -1058,13 +1062,8 @@ class feSysElm_MixedCurl : public feSysElm
 {
 protected:
   feFunction *_coeff;
-  int _idU;
-  int _idV;
-  int _nFunctionsU;
-  int _nFunctionsV;
-  std::vector<double> _gradu;
-  std::vector<double> _gradPhiU;
-  std::vector<double> _phiV;
+  int _idU, _idV, _nFunctionsU, _nFunctionsV;
+  std::vector<double> _gradu, _gradPhiU, _phiV;
 
 public:
   feSysElm_MixedCurl(feFunction *coeff) : feSysElm(2, 2, MIXED_CURL, true), _coeff(coeff)
@@ -1089,8 +1088,7 @@ protected:
   std::vector<double> _u, _fVal, _phiU, _phiV;
 
 public:
-  feSysElm_MixedDotProduct(feVectorFunction *f)
-    : feSysElm(2, 2, MIXED_DOTPRODUCT, true), _f(f)
+  feSysElm_MixedDotProduct(feVectorFunction *f) : feSysElm(2, 2, MIXED_DOTPRODUCT, true), _f(f)
   {
     _computeMatrixWithFD = false;
   };
@@ -1123,7 +1121,8 @@ protected:
   std::vector<double> _phiW;
 
 public:
-  feSysElm_TripleMixedGradient(feFunction *coeff) : feSysElm(-1, 3, TRIPLE_MIXED_GRADIENT, true), _coeff(coeff)
+  feSysElm_TripleMixedGradient(feFunction *coeff)
+    : feSysElm(-1, 3, TRIPLE_MIXED_GRADIENT, true), _coeff(coeff)
   {
     _computeMatrixWithFD = true;
   };
@@ -1135,26 +1134,26 @@ public:
 };
 
 //
-// Momentum equation (without volume force) for the Cahn-Hilliard Navier-Stokes model:
+// Momentum equation for the Cahn-Hilliard Navier-Stokes model:
 //
 // Strong form:
-//  rho(phi) * (du/dt + (u dot grad) u) - coeff * mu * grad(phi) - div(sigma) - f
+//  rho(phi) * (du/dt + (u dot grad) u - f) - coeff * mu * grad(phi) - div(sigma)
 //
 // Weak form:
-//  integral of rho(phi) * (du/dt + (u dot grad) u) dot phi_u + sigma : grad(phi_u)
+//  integral of rho(phi) * (du/dt + (u dot grad) u - f) dot phi_u + sigma : grad(phi_u)
 //
 // with:
-//  -   rho: the density which depends on phi (ScalarSolField)
+//  -   rho: the density which depends on phi
 //  -   phi: the phase marker
 //  -     u: the velocity field
 //  - coeff: a coefficient, e.g. gamma/eps (surface tension/interface thickness)
 //  -    mu: the chemical potential
-//  - sigma: the Newtonian stress tensor whose viscosity also depends on phi (ScalarSolField)
+//  - sigma: the Newtonian stress tensor whose viscosity also depends on phi
 //  -     f: volume source term
 //  - phi_u: the velocity test functions
 //
 // Requires 4 fields: u, p (through sigma), phi, mu.
-// The density is a function depending on the solution, not on time and space (ScalarSolField).
+// The density is a function depending on the solution.
 //
 class feSysElm_CHNS_Momentum : public feSysElm
 {
@@ -1168,26 +1167,21 @@ protected:
   feVectorFunction *_volumeForce;
   int _idU, _idP, _idPhi, _idMu;
   int _nFunctionsU, _nFunctionsP, _nFunctionsPhi, _nFunctionsMu;
-  std::vector<double> _f, _u, _dudt, _gradu, _uDotGradu, _gradphi,
-  _gradmu, _gradmuDotGradu, _symmetricGradu,
-  _phiU, _gradPhiU, _phiP, _phiPhi, _gradPhiPhi, _phiMu, _gradPhiMu;
+  // A lot of vectors for the dot products and contractions
+  std::vector<double> _f, _u, _dudt, _gradu, _uDotGradu, _gradphi, _gradmu, _gradmuDotGradu,
+    _symmetricGradu, _phiU, _gradPhiU, _phiP, _phiPhi, _gradPhiPhi, _phiMu, _gradPhiMu,
+    _dudtDotPhiU, _uDotGraduDotPhiU, _fDotPhiU, _gradPhiDotphiU, _gradMuDotgradUdotphiU, _divPhiU,
+    _doubleContraction, _phi_idotphi_j, _u0DotGradPhiUDotPhiU, _phiUDotGradu0DotPhiU,
+    _doubleContractionPhiPhi, _doubleContractionPhiPhiT, _gradMu0DotgradUdotphiU,
+    _gradMuDotgradU0DotphiU, _gradPhi0dotPhiU, _gradPhiPhiDotPhiU, _symGraduDDotGradPhiU;
 
 public:
-  feSysElm_CHNS_Momentum(feFunction *density,
-    feFunction *drhodphi,
-    feFunction *viscosity,
-    feFunction *dviscdphi,
-    feFunction *mobility,
-    feFunction *coeffKorteweg,
-    feVectorFunction *volumeForce)
-   : feSysElm(-1, 4, CHNS_MOMENTUM, true),
-   _density(density),
-   _drhodphi(drhodphi),
-   _viscosity(viscosity),
-   _dviscdphi(dviscdphi),
-   _mobility(mobility),
-   _coeffKorteweg(coeffKorteweg),
-   _volumeForce(volumeForce)
+  feSysElm_CHNS_Momentum(feFunction *density, feFunction *drhodphi, feFunction *viscosity,
+                         feFunction *dviscdphi, feFunction *mobility, feFunction *coeffKorteweg,
+                         feVectorFunction *volumeForce)
+    : feSysElm(-1, 4, CHNS_MOMENTUM, true), _density(density), _drhodphi(drhodphi),
+      _viscosity(viscosity), _dviscdphi(dviscdphi), _mobility(mobility),
+      _coeffKorteweg(coeffKorteweg), _volumeForce(volumeForce)
   {
     _computeMatrixWithFD = false;
   };
@@ -1290,8 +1284,8 @@ protected:
 public:
   feSysElm_2D_SUPGStab(feFunction *reactionCoeff, feFunction *diffusivity,
                        feVectorFunction *velocity, feFunction *source)
-    : feSysElm(2, 1, SUPG_STABILIZATION_2D, true), _velocity(velocity),
-    _diffusivity(diffusivity), _reactionCoeff(reactionCoeff), _source(source)
+    : feSysElm(2, 1, SUPG_STABILIZATION_2D, true), _velocity(velocity), _diffusivity(diffusivity),
+      _reactionCoeff(reactionCoeff), _source(source)
   {
     _computeMatrixWithFD = true;
   };
@@ -1329,7 +1323,7 @@ protected:
 
 public:
   feSysElm_Stokes_SUPG_PSPG(feFunction *coeff, feFunction *density, feFunction *viscosity,
-                           feVectorFunction *volumeForce)
+                            feVectorFunction *volumeForce)
     : feSysElm(-1, 2, SUPG_PSPG_STOKES, true), _coeff(coeff), _density(density),
       _viscosity(viscosity), _volumeForce(volumeForce)
   {
@@ -1349,25 +1343,13 @@ protected:
   feFunction *_density;
   feFunction *_viscosity;
   feVectorFunction *_volumeForce;
-  int _idU;
-  int _idP;
-  int _nFunctionsU;
-  int _nFunctionsP;
-  std::vector<double> _f;
-  std::vector<double> _residual;
-  std::vector<double> _u;
-  std::vector<double> _gradu;
-  std::vector<double> _hessu;
-  std::vector<double> _gradp;
-  std::vector<double> _gradPhiU;
-  std::vector<double> _gradPhiP;
-  std::vector<double> _hessPhiU;
-  std::vector<double> _uDotGradu;
-  std::vector<double> _uDotGradPhiu;
+  int _idU, _idP, _nFunctionsU, _nFunctionsP;
+  std::vector<double> _f, _residual, _u, _gradu, _hessu, _gradp, _gradPhiU, _gradPhiP, _hessPhiU,
+    _uDotGradu, _uDotGradPhiu;
 
 public:
   feSysElm_NS_SUPG_PSPG(feFunction *coeff, feFunction *density, feFunction *viscosity,
-                           feVectorFunction *volumeForce)
+                        feVectorFunction *volumeForce)
     : feSysElm(-1, 2, SUPG_PSPG_NAVIERSTOKES, true), _coeff(coeff), _density(density),
       _viscosity(viscosity), _volumeForce(volumeForce)
   {
@@ -1390,25 +1372,14 @@ protected:
   feFunction *_density;
   feFunction *_viscosity;
   feVectorFunction *_volumeForce;
-  int _idU;
-  int _idP;
-  int _nFunctionsU;
-  int _nFunctionsP;
-  std::vector<double> _f;
-  std::vector<double> _residual;
-  std::vector<double> _u;
-  std::vector<double> _gradu;
-  std::vector<double> _hessu;
-  std::vector<double> _gradp;
-  std::vector<double> _gradPhiU;
-  std::vector<double> _hessPhiU;
-  std::vector<double> _gradPhiP;
+  int _idU, _idP, _nFunctionsU, _nFunctionsP;
+  std::vector<double> _f, _residual, _u, _gradu, _hessu, _gradp, _gradPhiU, _hessPhiU, _gradPhiP;
 
 public:
   feSysElm_GLS_Stokes(feFunction *coeff, feFunction *density, feFunction *viscosity,
-                           feVectorFunction *volumeForce)
-    : feSysElm(-1, 2, GLS_STOKES, true), _coeff(coeff), _density(density),
-      _viscosity(viscosity), _volumeForce(volumeForce)
+                      feVectorFunction *volumeForce)
+    : feSysElm(-1, 2, GLS_STOKES, true), _coeff(coeff), _density(density), _viscosity(viscosity),
+      _volumeForce(volumeForce)
   {
     _computeMatrixWithFD = true;
   };
@@ -1426,25 +1397,13 @@ protected:
   feFunction *_density;
   feFunction *_viscosity;
   feVectorFunction *_volumeForce;
-  int _idU;
-  int _idP;
-  int _nFunctionsU;
-  int _nFunctionsP;
-  std::vector<double> _f;
-  std::vector<double> _residual;
-  std::vector<double> _u;
-  std::vector<double> _gradu;
-  std::vector<double> _hessu;
-  std::vector<double> _gradp;
-  std::vector<double> _gradPhiU;
-  std::vector<double> _hessPhiU;
-  std::vector<double> _gradPhiP;
-  std::vector<double> _uDotGradu;
-  std::vector<double> _uDotGradPhiu;
+  int _idU, _idP, _nFunctionsU, _nFunctionsP;
+  std::vector<double> _f, _residual, _u, _gradu, _hessu, _gradp, _gradPhiU, _hessPhiU, _gradPhiP,
+    _uDotGradu, _uDotGradPhiu;
 
 public:
   feSysElm_GLS_NavierStokes(feFunction *coeff, feFunction *density, feFunction *viscosity,
-                           feVectorFunction *volumeForce)
+                            feVectorFunction *volumeForce)
     : feSysElm(-1, 2, GLS_NAVIERSTOKES, true), _coeff(coeff), _density(density),
       _viscosity(viscosity), _volumeForce(volumeForce)
   {

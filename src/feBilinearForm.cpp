@@ -438,12 +438,14 @@ double feBilinearForm::compareAnalyticalAndFDMatrices(feSolution *sol, int numEl
 
   for(feInt i = 0; i < _M; ++i) {
     for(feInt j = 0; j < _N; ++j) {
+      double abs_error = fabs(Aexact[i][j] - Afd[i][j]);
+      double rel_error = fabs(Aexact[i][j] - Afd[i][j]) / fmax(1e-16, fabs(Afd[i][j]));
 #if defined(HAVE_PETSC)
-      printf("Aex[%2d][%2d] = %+10.16e \t Afd[%2d][%2d] = %+10.16e \t err = %+-1.6e\n",
+      printf("Aex[%2d][%2d] = %+10.16e \t Afd[%2d][%2d] = %+10.16e \t abs error = %+-1.6e \t rel error = %+-1.6e\n",
 #else
-      printf("Aex[%2ld][%2ld] = %+10.16e \t Afd[%2ld][%2ld] = %+10.16e \t err = %+-1.6e\n",
+      printf("Aex[%2ld][%2ld] = %+10.16e \t Afd[%2ld][%2ld] = %+10.16e \t abs error = %+-1.6e \t rel error = %+-1.6e\n",
 #endif
-        i, j, Aexact[i][j], i, j, Afd[i][j], fabs(Aexact[i][j] - Afd[i][j]) / fmax(1e-16, fabs(Afd[i][j])));
+        i, j, Aexact[i][j], i, j, Afd[i][j], abs_error, rel_error);
     }
   }
 
