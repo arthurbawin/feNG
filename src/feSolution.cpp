@@ -69,6 +69,12 @@ void feSolution::initializeTemporalSolution(double t0, double t1, int nTimeSteps
   _tn = t0;
 }
 
+void feSolution::initialize(feMesh *mesh)
+{
+  this->initializeUnknowns(mesh);
+  this->initializeEssentialBC(mesh);
+}
+
 void feSolution::initializeUnknowns(feMesh *mesh)
 {
   for(feSpace *fS : _spaces) {
@@ -102,7 +108,8 @@ void feSolution::initializeUnknowns(feMesh *mesh)
           fS->initializeAddressingVector(iElm, adr);
           mesh->getCoord(fS->getCncGeoID(), iElm, localCoord);
 
-          for(int j = 0; j < fS->getNumFunctions(); ++j) {
+          for(int j = 0; j < fS->getNumFunctions(); ++j)
+          {
             double r[3] = {coor[3 * j], coor[3 * j + 1], coor[3 * j + 2]};
             geoSpace->interpolateVectorField(localCoord, r, args.pos);
 
@@ -215,7 +222,8 @@ void feSolution::initializeEssentialBC(feMesh *mesh, feSolutionContainer *solCon
     feSpace *geoSpace = mesh->getGeometricSpace(fS->getCncGeoID());
 
     if(fS->getDOFInitialization() == dofInitialization::NODEWISE ||
-       fS->getDOFInitialization() == dofInitialization::EXTRAPOLATED_EULER_0D) {
+       fS->getDOFInitialization() == dofInitialization::EXTRAPOLATED_EULER_0D)
+    {
       // Node based: the initial condition is imposed at the vertices DOF
       for(int iElm = 0; iElm < nElm; ++iElm) {
         fS->initializeAddressingVector(iElm, adr);

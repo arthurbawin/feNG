@@ -88,6 +88,7 @@ public:
 
   // Initialize the unknown and essential DOFs using each FE space's feFunction
   // and dof initialization mode.
+  void initialize(feMesh *mesh);
   void initializeUnknowns(feMesh *mesh);
   void initializeEssentialBC(feMesh *mesh, feSolutionContainer *solContainer = nullptr);
 

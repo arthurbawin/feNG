@@ -118,6 +118,18 @@ feStatus createFiniteElementSpace(feSpace *&space, feMesh *mesh, const elementTy
               "No CROUZEIX_RAVIART 1D finite element space implemented for deg > 1.");
         }
 
+      } else if(element == elementType::RAVIART_THOMAS) {
+        switch(degree) {
+          case 1:
+            feInfoCond(FE_VERBOSE > 0, "\t\t\tFinite element: Raviart-Thomas");
+            space = new feSpaceTriRT1(mesh, fieldName, cncGeoID, (feVectorFunction *)fct);
+            break;
+          default:
+            return feErrorMsg(
+              FE_STATUS_ERROR,
+              "No RAVIART_THOMAS finite element space implemented for deg > 1.");
+        }
+
       } else if(element == elementType::HERMITE) {
         feInfoCond(FE_VERBOSE > 0, "\t\t\tFinite element: Hermite");
         space = new feSpace1D_H3(mesh, fieldName, cncGeoID, (feFunction *)fct);
@@ -220,6 +232,18 @@ feStatus createFiniteElementSpace(feSpace *&space, feMesh *mesh, const elementTy
               FE_STATUS_ERROR,
               "No Crouzeix-Raviart finite element space implemented for deg > 2 or = 0.");
         }
+      } else if(element == elementType::RAVIART_THOMAS) {
+        switch(degree) {
+          case 1:
+            feInfoCond(FE_VERBOSE > 0, "\t\t\tFinite element: Raviart-Thomas");
+            space = new feSpaceTriRT1(mesh, fieldName, cncGeoID, (feVectorFunction *)fct);
+            break;
+          default:
+            return feErrorMsg(
+              FE_STATUS_ERROR,
+              "No RAVIART_THOMAS finite element space implemented for deg > 1.");
+        }
+
       } else {
         return feErrorMsg(FE_STATUS_ERROR, "Unsupported finite element.");
       }
@@ -1086,10 +1110,54 @@ void feSpace::interpolateVectorField(std::vector<double> &field, double *r,
 void feSpace::interpolateVectorField(std::vector<double> &field, int nComponents, double *r,
                                      std::vector<double> &res)
 {
-  for(int i = 0; i < nComponents; ++i) res[i] = 0.0;
+  // FIXME: rework this, remove nComponents
+  // Make this a virtual function of feVectorSpace
+  UNUSED(nComponents);
+  for(int j = 0; j < _nComponents; ++j) res[j] = 0.0;
   std::vector<double> l = L(r);
   for(int i = 0; i < _nFunctions; ++i) {
-    res[i % nComponents] += field[i] * l[i];
+    for(int j = 0; j < _nComponents; ++j) {
+      res[j] += field[i] * l[i*_nComponents+j];
+    }
+  }
+}
+
+void feSpace::interpolateVectorFieldFOO(ElementTransformation &T,
+  const int sign,
+  const int whichDOF,
+  std::vector<double> &field,
+  double *r,
+  std::vector<double> &res)
+{
+  UNUSED(whichDOF);
+  // for(auto val : field)
+  //   feInfo("field = %f", val);
+  feInfo("r = [%+-f, %+-f, %+-f]", r[0], r[1], r[2]);
+  std::fill(res.begin(), res.end(), 0.);
+  std::vector<double> l = L(r);
+  // l = {1., 0., 1., 0., 1., 0.};
+
+  double transformed_phi[3] = {0., 0., 0.}, phi[3] = {0., 0., 0.};
+
+  for(int i = 0; i < _nFunctions; ++i) {
+
+    if(i == whichDOF) {
+
+      // Apply contravariant Piola transformation
+      for(int j = 0; j < _nComponents; ++j) {
+        phi[j] = l[i*_nComponents+j];
+      }
+
+      transformed_phi[0] = (T.dxdr[0]*phi[0] + T.dxds[0]*phi[1]) / T.jac;
+      transformed_phi[1] = (T.dxdr[1]*phi[0] + T.dxds[1]*phi[1]) / T.jac;
+
+      feInfo("phi  = %+-f - %+-f", phi[0], phi[1]);
+      feInfo("tphi = %+-f - %+-f", transformed_phi[0], transformed_phi[1]);
+
+      for(int j = 0; j < _nComponents; ++j) {
+        res[j] += sign * field[i] * transformed_phi[j];
+      }
+    }
   }
 }
 
