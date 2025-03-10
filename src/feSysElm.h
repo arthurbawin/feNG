@@ -49,8 +49,6 @@ typedef enum {
   CHNS_MOMENTUM,
   MIXED_DIVERGENCE_CHNS,
 
-  ZERO_BLOCK,
-
   SUPG_PSPG_STOKES,
   SUPG_PSPG_NAVIERSTOKES,
 
@@ -135,8 +133,6 @@ inline const std::string toString(elementSystemType t)
       return "CHNS_MOMENTUM";
     case MIXED_DIVERGENCE_CHNS:
       return "MIXED_DIVERGENCE_CHNS";
-    case ZERO_BLOCK:
-      return "ZERO_BLOCK";
     case NEUMANN_1D:
       return "NEUMANN_1D";
     case SUPG_STABILIZATION_1D:
