@@ -55,11 +55,11 @@ static std::map<geometricInterpolant, int> edgePerElem = {
 };
 
 // Reference coordinates to evaluate the fields
-static double referenceCoordinatesTri[3][2] = {
-  {0.0, 0.0}, {1.0, 0.0}, {0.0, 1.0}};
-static double referenceCoordinatesQuadraticTri[6][2] = {
-  {0.0, 0.0}, {1.0, 0.0}, {0.0, 1.0},
-  {0.5, 0.0}, {0.5, 0.5}, {0.0, 0.5}
+static double referenceCoordinatesTri[3][3] = {
+  {0.0, 0.0, 0.0}, {1.0, 0.0, 0.0}, {0.0, 1.0, 0.0}};
+static double referenceCoordinatesQuadraticTri[6][3] = {
+  {0.0, 0.0, 0.0}, {1.0, 0.0, 0.0}, {0.0, 1.0, 0.0},
+  {0.5, 0.0, 0.0}, {0.5, 0.5, 0.0}, {0.0, 0.5, 0.0}
 };
 
 feStatus createVisualizationExporter(feExporter *&exporter, visualizationFormat format,
@@ -344,6 +344,9 @@ feStatus feExporterVTK::createVTKNodes(std::vector<feSpace *> &spacesToExport,
     std::string field = space->getFieldID();
     int iField = fieldTags[field];
     int nComponents = space->getNumComponents();
+    // Write 3 components even for 2D vector fields
+    // int nComponentsToWrite = (nComponents > 1) ? 3 : 1;
+    int nComponentsToWrite = (nComponents > 1) ? nComponents : 1;
     feNumber *numbering = _metaNumber->getNumbering(field);
 
     feInfoCond(FE_VERBOSE > VERBOSE_MODERATE, 
@@ -464,7 +467,7 @@ feStatus feExporterVTK::createVTKNodes(std::vector<feSpace *> &spacesToExport,
           } else {
             if(nComponents > 1) {
               space->interpolateVectorField(sol, nComponents, r, res);
-              for(int i = 0; i < nComponents; ++i) {
+              for(int i = 0; i < nComponentsToWrite; ++i) {
                 _vtkNodes[globalTag].data[iField][i] = res[i];
               }
             } else {
@@ -549,6 +552,8 @@ feStatus feExporterVTK::createDiscontinuousVTKNodes(std::vector<feSpace*> &space
       std::string field = space->getFieldID();
       int iField = fieldTags[field];
       int nComponents = space->getNumComponents();
+      // Write 3 components even for 2D vector fields
+      int nComponentsToWrite = (nComponents > 1) ? 3 : 1;
 
       feInfoCond(FE_VERBOSE > VERBOSE_MODERATE, 
         "Exporting field %s on connectivity %s", field.data(), space->getCncGeoID().data());
@@ -560,13 +565,98 @@ feStatus feExporterVTK::createDiscontinuousVTKNodes(std::vector<feSpace*> &space
       {
         std::vector<feInt> adr(space->getNumFunctions());
         std::vector<double> solOnElem(space->getNumFunctions());
-        std::vector<double> res(nComponents);
+        std::vector<double> res(3, 0.);
+
+        ///////////////////////////
+        // ElementTransformation T;
+        // // const std::vector<int> &edgeconnec = cnc->getEdgeConnectivity();
+        // // int sign[4][2] = {{1., -1.},{1., -1.},{1., -1.},{1., -1.}};
+        // bool firstForEdge[4] = {false, false, false, false};
+        // ///////////////////////////
+        // FILE *myFile = fopen("normals.pos", "w");
+        // fprintf(myFile, "View \"%s\"{\n", "normals");
+        // bool plot = true;
+        // ///////////////////////////
 
         #if defined(HAVE_OMP)
         #pragma omp for
         #endif
         for(int iElm = 0; iElm < cnc->getNumElements(); ++iElm)
         {
+          // if(plot) {
+          //   if(iElm > 20) plot = false;
+          //   // Plot edge normal
+          //   for(int j = 0; j < _nNodePerElem; ++j)
+          //   {
+          //     vtkNode &n0 = _vtkNodes[iElm * 3 + j];
+          //     vtkNode &n1 = _vtkNodes[iElm * 3 + ((j + 1) % 3)];
+          //     double mid[2] = {(n0.pos[0]+n1.pos[0])/2., (n0.pos[1]+n1.pos[1])/2.};
+          //     double t[2] = {n1.pos[0] - n0.pos[0],
+          //                    n1.pos[1] - n0.pos[1]};
+          //     fprintf(myFile, "VP(%g,%g,%g){%g,%g,%g};\n", n0.pos[0], n0.pos[1], 0.,
+          //       t[0], t[1], 0.);
+          //     double normal[2] = {t[1], -t[0]};
+          //     double norm = sqrt(normal[0]*normal[0]+normal[1]*normal[1]);
+          //     double fac = 0.25;
+          //     fprintf(myFile, "VP(%g,%g,%g){%g,%g,%g};\n", mid[0], mid[1], 0.,
+          //       fac*normal[0]/norm, fac*normal[1]/norm, 0.);
+          //   }
+          // }
+
+          // cnc->getElementTransformation(iElm, T);
+          // #define ntarget 4
+          // // int targetEdge[ntarget] = {66, 88, 248, 300};
+          // int targetEdge[ntarget] = {248, 300, 315, 330};
+          // int sign = 1;
+          // int whichEdge, whichDof;
+          // bool found = false;
+          // for(int it = 0; it < ntarget; ++it) {
+
+          //   for(int iedge = 0; iedge < 3; ++iedge) {
+          //     int edge = fabs(cnc->getEdgeConnectivity(iElm, iedge)) - 1;
+          //     if(edge == targetEdge[it]) {
+          //       // whichEdge = ((iedge+2)%3)+1;
+          //       // whichEdge = (iedge+2)%3;
+          //       whichEdge = iedge;
+          //       whichDof = (iedge+2)%3;
+          //       found = true;
+          //       if(!firstForEdge[it]){
+          //         sign = -1;
+          //         firstForEdge[it] = true;
+          //       }
+          //       break;
+          //     }
+          //   }
+          // }
+          // if(!found) {
+          //   for(int j = 0; j < _nNodePerElem; ++j)
+          //   {
+          //     int globalTag = iElm * _nNodePerElem + j;
+          //     vtkNode &node = _vtkNodes[globalTag];
+          //     for(int iComp = 0; iComp < nComponentsToWrite; ++iComp) {
+          //       node.data[iField][iComp] = 0.;
+          //     }
+          //   }
+          //   continue;
+          // }
+
+          // {
+          //   vtkNode &n0 = _vtkNodes[iElm * 3 + 0];
+          //   vtkNode &n1 = _vtkNodes[iElm * 3 + 1];
+          //   vtkNode &n2 = _vtkNodes[iElm * 3 + 2];
+          //   feInfo("Elm %d : (%f,%f) - (%f,%f) - (%f,%f)", iElm,
+          //     n0.pos[0], n0.pos[1],
+          //     n1.pos[0], n1.pos[1],
+          //     n2.pos[0], n2.pos[1]);
+          // }
+
+          // feInfo("sign = %d", sign);
+          // feInfo("whichEdge = %d", whichEdge);
+          // feInfo("whichDof  = %d", whichDof);
+          // feInfo("%+-f,  %+-f", T.dxdr[0], T.dxds[0]);
+          // feInfo("%+-f,  %+-f", T.dxdr[1], T.dxds[1]);
+          ///////////////////////////
+
           for(int j = 0; j < _nNodePerElem; ++j)
           {
             int globalTag = iElm * _nNodePerElem + j;
@@ -578,15 +668,25 @@ feStatus feExporterVTK::createDiscontinuousVTKNodes(std::vector<feSpace*> &space
 
             if(_addP2Nodes) {
               space->interpolateVectorField(solOnElem, nComponents, referenceCoordinatesQuadraticTri[j], res);
-            } else {
-              space->interpolateVectorField(solOnElem, nComponents, referenceCoordinatesTri[j], res);
+            } else
+            {
+              // if(space->getElementType() == elementType::RAVIART_THOMAS)
+              // {
+              //   space->interpolateVectorFieldRT(T, sign, whichDof, solOnElem, referenceCoordinatesTri[j], res);
+              // } else {
+                space->interpolateVectorField(solOnElem, nComponents, referenceCoordinatesTri[j], res);
+              // }
             }
 
-            for(int iComp = 0; iComp < nComponents; ++iComp) {
+            for(int iComp = 0; iComp < nComponentsToWrite; ++iComp) {
               node.data[iField][iComp] = res[iComp];
             }
           }
         }
+        ///////////////////////////
+        // fprintf(myFile, "};\n");
+        // fclose(myFile);
+        ///////////////////////////
       }
     } // for spacesToExport
   } // if _recreateVTKNodes
@@ -724,6 +824,11 @@ void feExporterVTK::writeVTKNodes(std::ostream &output,
     std::string name = pair.first;
     int tag = pair.second.first;
     int numComponents = pair.second.second;
+
+    if(_discontinuousMesh) {
+      // Force vectors to have 3 components to use Paraview vector features
+      if(numComponents > 1) numComponents = 3;
+    }
 
     output << name << " " << numComponents << " " << _vtkNodes.size() << " double" << std::endl;
 

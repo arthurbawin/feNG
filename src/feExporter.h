@@ -12,6 +12,7 @@
 typedef enum { VTK } visualizationFormat;
 
 // A hardcoded size for now to avoid mallocs
+// FIXME: Quite ugly.
 #define MAX_EXPORTED_FIELDS 8
 
 // A visualization node containing its coordinates
@@ -21,14 +22,14 @@ typedef struct vtkNodeStruct {
   int globalTag;
   double data[MAX_EXPORTED_FIELDS][3] = 
     {
-      {-99., -99., -99.},
-      {-99., -99., -99.},
-      {-99., -99., -99.},
-      {-99., -99., -99.},
-      {-99., -99., -99.},
-      {-99., -99., -99.},
-      {-99., -99., -99.},
-      {-99., -99., -99.}
+      { nan(""), nan(""), nan("") },
+      { nan(""), nan(""), nan("") },
+      { nan(""), nan(""), nan("") },
+      { nan(""), nan(""), nan("") },
+      { nan(""), nan(""), nan("") },
+      { nan(""), nan(""), nan("") },
+      { nan(""), nan(""), nan("") },
+      { nan(""), nan(""), nan("") }
     };
 } vtkNode;
 

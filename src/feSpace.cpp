@@ -1122,7 +1122,7 @@ void feSpace::interpolateVectorField(std::vector<double> &field, int nComponents
   }
 }
 
-void feSpace::interpolateVectorFieldFOO(ElementTransformation &T,
+void feSpace::interpolateVectorFieldRT(ElementTransformation &T,
   const int sign,
   const int whichDOF,
   std::vector<double> &field,

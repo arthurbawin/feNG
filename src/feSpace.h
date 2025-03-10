@@ -44,7 +44,12 @@ enum class dofLocation {
 //                                               /           /
 // LEAST_SQUARES: dofs are initialized such that | uh v dx = | f v dx for all v
 //                                               /           /
-enum class dofInitialization { PREVIOUS_SOL, NODEWISE, LEAST_SQUARES, EXTRAPOLATED_EULER_0D };
+enum class dofInitialization {
+  PREVIOUS_SOL,
+  NODEWISE,
+  LEAST_SQUARES,
+  EXTRAPOLATED_EULER_0D
+};
 
 class feMesh;
 class feNumber;
@@ -367,6 +372,9 @@ public:
   void interpolateVectorField(std::vector<double> &field, double *r, std::vector<double> &res);
   void interpolateVectorField(std::vector<double> &field, int nComponents, double *r,
                               std::vector<double> &res);
+  void interpolateVectorFieldRT(ElementTransformation &T,
+    const int sign, const int whichEdge, std::vector<double> &field, double *r,
+                                     std::vector<double> &res);
   double interpolateVectorFieldComponent(std::vector<double> &field, int iComponent, double *r);
   void interpolateVectorField_rDerivative(std::vector<double> &field, double *r,
                                           std::vector<double> &res);
@@ -988,33 +996,33 @@ public:
   void initializeAddressingVector(int numElem, std::vector<feInt> &adr);
 };
 
-// // -----------------------------------------------------------------------------
-// // Raviart-Thomas (vector-valued) element of degree 1 on reference triangle r = [0,1], s = [0,1-r]
-// // -----------------------------------------------------------------------------
-// class feSpaceTriRT1 : public feVectorSpace
-// {
-// protected:
-// public:
-//   feSpaceTriRT1(feMesh *mesh, const std::string fieldID, const std::string cncGeoID,
-//                   feVectorFunction *fct, const bool useGlobalShapeFunctions = false);
-//   ~feSpaceTriRT1() {}
+// -----------------------------------------------------------------------------
+// Raviart-Thomas (vector-valued) element of degree 1 on reference triangle r = [0,1], s = [0,1-r]
+// -----------------------------------------------------------------------------
+class feSpaceTriRT1 : public feVectorSpace
+{
+protected:
+public:
+  feSpaceTriRT1(feMesh *mesh, const std::string fieldID, const std::string cncGeoID,
+                  feVectorFunction *fct, const bool useGlobalShapeFunctions = false);
+  ~feSpaceTriRT1() {}
 
-//   int getNumFunctions() const { return 3; }
-//   int getPolynomialDegree() { return 1; }
+  int getNumFunctions() const { return 3; }
+  int getPolynomialDegree() { return 1; }
 
-//   std::vector<double> L(double *r);
-//   void L(double *r, double *L);
+  std::vector<double> L(double *r);
+  void L(double *r, double *L);
 
-//   std::vector<double> dLdr(double *r);
-//   std::vector<double> dLds(double *r);
-//   std::vector<double> d2Ldr2(double *r);
-//   std::vector<double> d2Ldrs(double *r);
-//   std::vector<double> d2Lds2(double *r);
+  std::vector<double> dLdr(double *r);
+  std::vector<double> dLds(double *r);
+  std::vector<double> d2Ldr2(double *r);
+  std::vector<double> d2Ldrs(double *r);
+  std::vector<double> d2Lds2(double *r);
 
-//   void initializeNumberingUnknowns();
-//   void initializeNumberingEssential();
-//   void initializeAddressingVector(int numElem, std::vector<feInt> &adr);
-// };
+  void initializeNumberingUnknowns();
+  void initializeNumberingEssential();
+  void initializeAddressingVector(int numElem, std::vector<feInt> &adr);
+};
 
 // -----------------------------------------------------------------------------
 // Lagrange element of degree 2 on reference triangle r = [0,1], s = [0,1-r]

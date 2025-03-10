@@ -178,6 +178,8 @@ public:
   feSpace *getGeometricSpace(std::string const &cncGeoID);
   feSpace *getGeometricSpace(int cncGeoTag);
 
+  const std::vector<Triangle*> &getTriangles() { return _elements; };
+
   // Locate the physical node x in the mesh. Return true if the
   // node was found, false otherwise. If the node was found,
   // the parameters are modified as follow:
