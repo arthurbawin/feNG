@@ -182,9 +182,9 @@ namespace cahnHilliard {
       }
       resultBuffer << "(phi,mu) : Equal order elements P" << order << "-P" << order << std::endl; 
       resultBuffer << "Cahn-Hilliard MMS - Error on phase marker phi" << std::endl;
-      computeAndPrintConvergence(2, numMeshes, errPhi, nElm, resultBuffer);
+      computeAndPrintConvergence(2, numMeshes, errPhi, nElm, DEFAULT_SIGNIFICANT_DIGITS, resultBuffer);
       resultBuffer << "Cahn-Hilliard MMS - Error on chemical potential mu" << std::endl;
-      computeAndPrintConvergence(2, numMeshes, errMu, nElm, resultBuffer);
+      computeAndPrintConvergence(2, numMeshes, errMu, nElm, DEFAULT_SIGNIFICANT_DIGITS, resultBuffer);
 
       return 0;
     }
@@ -575,13 +575,13 @@ namespace cahnHilliardNavierStokes {
       resultBuffer << "   (u,p) : Taylor-Hood elements P" << orderU << "-P" << orderU-1 << std::endl; 
       resultBuffer << "(phi,mu) : Equal order elements P" << orderPhiMu << "-P" << orderPhiMu << std::endl; 
       resultBuffer << "Cahn-Hilliard Navier-Stokes MMS - Error on velocity" << std::endl;
-      computeAndPrintConvergence(2, numMeshes, errU, nElm, resultBuffer);
+      computeAndPrintConvergence(2, numMeshes, errU, nElm, DEFAULT_SIGNIFICANT_DIGITS, resultBuffer);
       resultBuffer << "Cahn-Hilliard Navier-Stokes MMS - Error on pressure" << std::endl;
-      computeAndPrintConvergence(2, numMeshes, errP, nElm, resultBuffer);
+      computeAndPrintConvergence(2, numMeshes, errP, nElm, DEFAULT_SIGNIFICANT_DIGITS, resultBuffer);
       resultBuffer << "Cahn-Hilliard Navier-Stokes MMS - Error on phase marker phi" << std::endl;
-      computeAndPrintConvergence(2, numMeshes, errPhi, nElm, resultBuffer);
+      computeAndPrintConvergence(2, numMeshes, errPhi, nElm, DEFAULT_SIGNIFICANT_DIGITS, resultBuffer);
       resultBuffer << "Cahn-Hilliard Navier-Stokes MMS - Error on chemical potential mu" << std::endl;
-      computeAndPrintConvergence(2, numMeshes, errMu, nElm, resultBuffer);
+      computeAndPrintConvergence(2, numMeshes, errMu, nElm, DEFAULT_SIGNIFICANT_DIGITS, resultBuffer);
 
       return 0;
     }

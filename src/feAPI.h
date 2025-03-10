@@ -24,6 +24,7 @@
 #include "feNewRecovery.h"
 #include "feNorm.h"
 #include "feGraphics.h"
+#include "feNumeric.h"
 
 #if defined(HAVE_GMSH)
 #include "gmsh.h"
@@ -38,6 +39,7 @@ namespace scalarConstant {
 
 namespace vectorConstant {
   feConstantVectorFunction zero({0., 0., 0.});
+  feConstantVectorFunction one({1., 1., 1.});
   feConstantVectorFunction one_x({1., 0., 0.});
   feConstantVectorFunction one_y({0., 1., 0.});
   feConstantVectorFunction one_z({0., 0., 1.});

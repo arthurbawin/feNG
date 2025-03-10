@@ -2,6 +2,7 @@
 // Adapted from Gmsh's Numeric.cpp
 //
 
+#include "feNG.h"
 #include "feMessage.h"
 #include "feNumeric.h"
 
@@ -56,4 +57,34 @@ double inv3x3(double mat[3][3], double inv[3][3])
       for(int j = 0; j < 3; j++) inv[i][j] = 0.;
   }
   return det;
+}
+
+void computeAndPrintConvergence(const int dim,
+                                const int nMesh,
+                                const std::vector<double> &error,
+                                const std::vector<int> &nElm,
+                                const int nSignificantDigits,
+                                std::ostream &os)
+{
+  std::vector<double> rate(nMesh, 0.);
+  for(int i = 1; i < nMesh; ++i)
+  {
+    rate[i] = -log(error[i] / error[i-1]) / log( pow((double) nElm[i] / (double) nElm[i-1], 1./(double) dim) );
+  }
+  // printf("%12s \t %12s \t %12s \n", "nElm", "||E||", "rate");
+  os
+    << std::setw(nSignificantDigits+10) << std::right << "nElm"
+    << std::setw(nSignificantDigits+10) << std::right << "error"
+    << std::setw(nSignificantDigits+10) << std::right << "rate" << std::endl;
+  for(int i = 0; i < nMesh; ++i) {
+    // printf("%12d \t %12.6e \t %12.6e\n", nElm[i], error[i], rate[i]);
+    os
+      << std::scientific
+      << std::setw(nSignificantDigits+10) << std::right
+      << std::setprecision(nSignificantDigits) << nElm[i] << std::setw(nSignificantDigits+10) << std::right
+      << std::setprecision(nSignificantDigits) << error[i] << std::setw(nSignificantDigits+10) << std::right
+      << std::setprecision(nSignificantDigits) << rate[i]
+      << std::endl;
+  }
+  os << std::endl;
 }

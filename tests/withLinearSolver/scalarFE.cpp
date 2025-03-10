@@ -101,7 +101,7 @@ namespace diffusion {
         if(s != FE_STATUS_OK) return s;
       }
       resultBuffer << "Diffusion - Error on u - Lagrange elements P" << order << std::endl;
-      computeAndPrintConvergence(2, numMeshes, err, nElm, resultBuffer);
+      computeAndPrintConvergence(2, numMeshes, err, nElm, DEFAULT_SIGNIFICANT_DIGITS, resultBuffer);
     }
     return FE_STATUS_OK;
   }
@@ -220,7 +220,7 @@ namespace advectionDiffusion {
         if(s != FE_STATUS_OK) return s;
       }
       resultBuffer << "Advection-diffusion - Error on u - Lagrange elements P" << order << std::endl;
-      computeAndPrintConvergence(2, numMeshes, err, nElm, resultBuffer);
+      computeAndPrintConvergence(2, numMeshes, err, nElm, DEFAULT_SIGNIFICANT_DIGITS, resultBuffer);
     }
     return FE_STATUS_OK;
   }
@@ -342,7 +342,7 @@ namespace advectionDiffusionReaction {
         if(s != FE_STATUS_OK) return s;
       }
       resultBuffer << "Advection-diffusion-reaction - Error on u - Lagrange elements P" << order << std::endl;
-      computeAndPrintConvergence(2, numMeshes, err, nElm, resultBuffer);
+      computeAndPrintConvergence(2, numMeshes, err, nElm, DEFAULT_SIGNIFICANT_DIGITS, resultBuffer);
     }
     return FE_STATUS_OK;
   }

@@ -127,7 +127,7 @@ namespace diffusion {
         if(s != FE_STATUS_OK) return s;
       }
       resultBuffer << "Unsteady vector diffusion - Error on u - Lagrange elements P" << order << std::endl;
-      computeAndPrintConvergence(2, numMeshes, err, nElm, resultBuffer);
+      computeAndPrintConvergence(2, numMeshes, err, nElm, DEFAULT_SIGNIFICANT_DIGITS, resultBuffer);
     }
     return FE_STATUS_OK;
   }

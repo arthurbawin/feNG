@@ -20,4 +20,15 @@ double det3x3(double mat[3][3]);
 double inv3x3(double mat[3][3], double inv[3][3]);
 double inv2x2(double mat[2][2], double inv[2][2]);
 
+//
+// Compute the convergence rate for the given error values
+// assuming isotropic meshes, i.e., involving log((nElm_i/nElm_i-1)^(1/dim))
+//
+void computeAndPrintConvergence(const int dim,
+                                const int nMesh,
+                                const std::vector<double> &error,
+                                const std::vector<int> &nElm,
+                                const int nSignificantDigits = 8,
+                                std::ostream &os = std::cout);
+
 #endif

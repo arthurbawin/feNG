@@ -146,9 +146,9 @@ namespace navier_stokes {
       }
       resultBuffer << "Taylor-Hood elements P" << order << "-P" << order-1 << std::endl; 
       resultBuffer << "Navier-Stokes MMS - Divergence formulation - Error on u" << std::endl;
-      computeAndPrintConvergence(2, numMeshes, errU, nElm, resultBuffer);
+      computeAndPrintConvergence(2, numMeshes, errU, nElm, DEFAULT_SIGNIFICANT_DIGITS, resultBuffer);
       resultBuffer << "Navier-Stokes MMS - Divergence formulation - Error on p" << std::endl;
-      computeAndPrintConvergence(2, numMeshes, errP, nElm, resultBuffer);
+      computeAndPrintConvergence(2, numMeshes, errP, nElm, DEFAULT_SIGNIFICANT_DIGITS, resultBuffer);
 
       divergenceFormulation = false;
       for(int i = 0; i < numMeshes; ++i)
@@ -158,9 +158,9 @@ namespace navier_stokes {
       }
       resultBuffer << "Taylor-Hood elements P" << order << "-P" << order-1 << std::endl; 
       resultBuffer << "Navier-Stokes MMS - Laplacian formulation - Error on u" << std::endl;
-      computeAndPrintConvergence(2, numMeshes, errU, nElm, resultBuffer);
+      computeAndPrintConvergence(2, numMeshes, errU, nElm, DEFAULT_SIGNIFICANT_DIGITS, resultBuffer);
       resultBuffer << "Navier-Stokes MMS - Laplacian formulation - Error on p" << std::endl;
-      computeAndPrintConvergence(2, numMeshes, errP, nElm, resultBuffer);
+      computeAndPrintConvergence(2, numMeshes, errP, nElm, DEFAULT_SIGNIFICANT_DIGITS, resultBuffer);
 
       return 0;
     }

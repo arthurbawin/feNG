@@ -118,7 +118,7 @@ namespace weakGradient {
         solve(meshFile, order, degreeQuadrature, NLoptions, nElm[i], err[i]);
       }
       resultBuffer << "Weak gradient - Error on u - Lagrange elements P" << order << std::endl;
-      computeAndPrintConvergence(2, numMeshes, err, nElm, resultBuffer);
+      computeAndPrintConvergence(2, numMeshes, err, nElm, DEFAULT_SIGNIFICANT_DIGITS, resultBuffer);
     }
     return 0;
   }
@@ -296,7 +296,7 @@ namespace vectorLaplacian {
       solve(meshFile, order, degreeQuadrature, NLoptions, nElm[i], err[i], errSecondary[i], imposeDirichletBCWeakly);
     }
     resultBuffer << "Vector Laplacian - Strong Dirichlet BC - Error on primary variable - Lagrange elements P" << order << std::endl;
-    computeAndPrintConvergence(2, numMeshes, err, nElm, resultBuffer);
+    computeAndPrintConvergence(2, numMeshes, err, nElm, DEFAULT_SIGNIFICANT_DIGITS, resultBuffer);
 
     // Weakly enforced Dirichlet BC
     if(order > 1) {
@@ -307,9 +307,9 @@ namespace vectorLaplacian {
         solve(meshFile, order, degreeQuadrature, NLoptions, nElm[i], err[i], errSecondary[i], imposeDirichletBCWeakly);
       }
       resultBuffer << "Vector Laplacian - Weak Dirichlet BC - Error on primary variable - Lagrange elements P" << order << std::endl;
-      computeAndPrintConvergence(2, numMeshes, err, nElm, resultBuffer);
+      computeAndPrintConvergence(2, numMeshes, err, nElm, DEFAULT_SIGNIFICANT_DIGITS, resultBuffer);
       resultBuffer << "Vector Laplacian - Weak Dirichlet BC - Error on secondary variable - Lagrange elements P" << order << std::endl;
-      computeAndPrintConvergence(2, numMeshes, errSecondary, nElm, resultBuffer);
+      computeAndPrintConvergence(2, numMeshes, errSecondary, nElm, DEFAULT_SIGNIFICANT_DIGITS, resultBuffer);
     }
 
     return 0;
