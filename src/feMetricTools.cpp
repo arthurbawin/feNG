@@ -300,7 +300,7 @@ SMetric3 gradationAlauzet(double grad, const SMetric3 &m, double x1, double y1, 
   return tmp;
 }
 
-void gradationMetriques(double gradation, int nmax, std::vector<double> &coord1,
+void gradationMetriques(double gradation, int nmax, std::vector<double> &/*coord1*/,
                         std::map<int, SMetric3> &metricsOnGmshModel)
 {
 #if defined(HAVE_GMSH)

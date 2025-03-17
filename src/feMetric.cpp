@@ -97,7 +97,7 @@ feStatus feMetric::createVertex2NodeMap(std::vector<std::size_t> &nodeTags,
 template <class MetricType>
 void feMetric::metricScalingFromGmshSubstitute(std::map<int, MetricType> &metrics,
                                                const std::vector<size_t> &nodeTags,
-                                               const std::vector<double> &coord,
+                                               const std::vector<double> &/*coord*/,
                                                double exponentInIntegral,
                                                double exponentForDeterminant)
 {
@@ -161,7 +161,7 @@ void feMetric::metricScalingFromGmshSubstitute(std::map<int, MetricType> &metric
 #endif
     for(size_t iElm = 0; iElm < nElm; iElm++) {
 
-      for(size_t i = 0; i < _nVerticesPerElmOnBackmesh; ++i) {
+      for(int i = 0; i < _nVerticesPerElmOnBackmesh; ++i) {
         tags[i] = elemNodeTags[0][_nVerticesPerElmOnBackmesh * iElm + i];
       }
 
@@ -375,7 +375,7 @@ void feMetric::interpolationTest(const std::vector<size_t> &nodeTags, std::vecto
       drawSingleEllipse(myfile4, POS5, M5, scale, 100);
     }
 
-    for(size_t i = 0; i < nQuad; i++) {
+    for(int i = 0; i < nQuad; i++) {
       // Interpolate metric at quad node
       MetricTensor Mk(1.0);
       xsi[0] = localCoord[3 * i + 0];
@@ -407,7 +407,7 @@ void feMetric::interpolationTest(const std::vector<size_t> &nodeTags, std::vecto
         drawSingleEllipse(myfile3, POS_QUAD, Mk, scale, 100);
       }
 
-      double uexact = matfun(xphys, yphys);
+      // double uexact = matfun(xphys, yphys);
 
       double frobError = matNorm2(Mk, Mkexact);
 
@@ -527,7 +527,11 @@ void feMetric::writeMetricField(std::vector<std::size_t> &nodeTags, std::vector<
     // Write a P1 .msh file to give MMG for aniso straight adaptation
     // For now copy the mesh and read it again
     std::string cmd = "cp " + _options.backgroundMeshfile + " tmp_P1_bgm.msh";
-    system(cmd.data());
+    int retvalue = system(cmd.data());
+    if(retvalue != 0) {
+      feErrorMsg(FE_STATUS_WRITE_ERROR, "Could not copy background mesh file! (return value = %d)",
+        retvalue);
+    }
     gmsh::open("tmp_P1_bgm.msh");
 
     gmsh::model::mesh::setOrder(1);
@@ -2211,7 +2215,7 @@ void feMetric::averageMetricGradientAtVertices(const std::vector<std::size_t> &n
                                                std::map<int, MetricTensor> &dMdy)
 {
 #if defined(HAVE_GMSH)
-  size_t nElm = _recoveredFields[0]->_cnc->getNumElements();
+  // size_t nElm = _recoveredFields[0]->_cnc->getNumElements();
   int nVerticesPerElement = _recoveredFields[0]->_cnc->getNumVerticesPerElem();
   const std::vector<double> &elmArea = _recoveredFields[0]->_cnc->getElementsVolume();
 
@@ -3059,9 +3063,9 @@ void feMetric::computeErrorOnMetricDerivatives(double &errorOnMmud_dx, double &e
   gmsh::model::mesh::getJacobians(elementType, localCoord, jac, detJac, pts);
 
   double I = 0.0;
-  double E_DROIT = 0.0;
-  double E_CURVE = 0.0;
-  double COMP = 0.0;
+  // double E_DROIT = 0.0;
+  // double E_CURVE = 0.0;
+  // double COMP = 0.0;
 
   double hFD = 1e-6;
 
@@ -3164,13 +3168,16 @@ void feMetric::computeErrorOnMetricDerivatives(double &errorOnMmud_dx, double &e
       /////////////////////////////////////////////////////////
 
 
-      for(size_t i = 0; i < _nVerticesPerElmOnBackmesh; ++i) {
+      for(int i = 0; i < _nVerticesPerElmOnBackmesh; ++i) {
         int tag = elemNodeTags[0][_nVerticesPerElmOnBackmesh * iElm + i];
         MX_interpolation[i].assignMatrixFrom(_dmmud_dx.at(tag));
         MY_interpolation[i].assignMatrixFrom(_dmmud_dy.at(tag));
 
         std::vector<double> pos{coord[3 * (tag-1) + 0], coord[3 * (tag-1) + 1], 0.};
-        _options.analyticMetric->eval(0, pos, fooM);  
+        args.pos[0] = pos[0];
+        args.pos[1] = pos[1];
+        args.pos[2] = pos[2];
+        _options.analyticMetric->eval(args, fooM);  
         Mmud_at_nodes[i].assignMatrixFrom(fooM.pow(-0.5));
         M_at_nodes[i].assignMatrixFrom(fooM);
         logM_at_nodes[i].assignMatrixFrom(fooM.log());
@@ -3239,9 +3246,9 @@ void feMetric::computeErrorOnMetricDerivatives(double &errorOnMmud_dx, double &e
           double drdx[2][2] = { { dxdr[1][1] / det, -dxdr[0][1] / det}, 
                                 {-dxdr[1][0] / det,  dxdr[0][0] / det} };
 
-          double phi0 = basisFunctions[_nVerticesPerElmOnBackmesh * k + 0];
-          double phi1 = basisFunctions[_nVerticesPerElmOnBackmesh * k + 1];
-          double phi2 = basisFunctions[_nVerticesPerElmOnBackmesh * k + 2];
+          // double phi0 = basisFunctions[_nVerticesPerElmOnBackmesh * k + 0];
+          // double phi1 = basisFunctions[_nVerticesPerElmOnBackmesh * k + 1];
+          // double phi2 = basisFunctions[_nVerticesPerElmOnBackmesh * k + 2];
 
           double dphi0_jdr = gradBasisFunctions[3 * _nVerticesPerElmOnBackmesh * k + 3 * 0 + 0];
           double dphi1_jdr = gradBasisFunctions[3 * _nVerticesPerElmOnBackmesh * k + 3 * 1 + 0];
@@ -3509,7 +3516,7 @@ void feMetric::computeContinuousErrorModel(const bool withAnalyticMetric, bool c
     averageMetricGradientAtVertices(nodeTags, coord, _mmud, _dmmud_dx, _dmmud_dy); // Averaging
   }
 
-  double I = 0.0;
+  double Area = 0.0;
   double E_DROIT = 0.0;
   double E_CURVE = 0.0;
   double COMP = 0.0;
@@ -3520,7 +3527,7 @@ void feMetric::computeContinuousErrorModel(const bool withAnalyticMetric, bool c
   std::string linearErrorFile = errorFileName + "_linear.pos";
   std::string curvedErrorFile = errorFileName + "_curved.pos";
 
-  FILE *fileLinear, *fileCurved;
+  FILE *fileLinear = nullptr, *fileCurved = nullptr;
   if(plotError) {
     fileLinear = fopen(linearErrorFile.data(), "w");
     fileCurved = fopen(curvedErrorFile.data(), "w");
@@ -3537,7 +3544,7 @@ void feMetric::computeContinuousErrorModel(const bool withAnalyticMetric, bool c
 #pragma omp parallel
 #endif
   {
-    double x[2], G[2];
+    double G[2];
     MetricTensor absH, H, Eloc, Eloc_curved, M, dMmud_dx, dMmud_dy, Mmud;
     MetricTensor logM0, logM1, logM2, logM3, logM4, logM5;
     MetricTensor Qtri;
@@ -3550,7 +3557,7 @@ void feMetric::computeContinuousErrorModel(const bool withAnalyticMetric, bool c
     std::vector<MetricTensor> MY_interpolation(_nVerticesPerElmOnBackmesh);
 
 #if defined(HAVE_OMP)
-#pragma omp for reduction(+ : I, E_DROIT, E_CURVE, COMP)
+#pragma omp for reduction(+ : Area, E_DROIT, E_CURVE, COMP)
 #endif
     for(size_t iElm = 0; iElm < nElm; iElm++) {
 
@@ -3558,7 +3565,7 @@ void feMetric::computeContinuousErrorModel(const bool withAnalyticMetric, bool c
       double errorCurvedOnElm = 0.;
 
       if(!withAnalyticMetric) {
-        for(size_t i = 0; i < _nVerticesPerElmOnBackmesh; ++i) {
+        for(int i = 0; i < _nVerticesPerElmOnBackmesh; ++i) {
           tags[i] = elemNodeTags[0][_nVerticesPerElmOnBackmesh * iElm + i];
           MX_interpolation[i].assignMatrixFrom(_dmmud_dx.at(tags[i]));
           MY_interpolation[i].assignMatrixFrom(_dmmud_dy.at(tags[i]));
@@ -3672,7 +3679,7 @@ void feMetric::computeContinuousErrorModel(const bool withAnalyticMetric, bool c
             // Error term in the reference space for quadratic interpolation on quadratic element
             double resLinear[2][2][2] = {{{0., 0.}, {0., 0.}}, {{0., 0.}, {0., 0.}}};
             double resCurved[2][2][2] = {{{0., 0.}, {0., 0.}}, {{0., 0.}, {0., 0.}}};
-            double H[2][2] = {{D2U_EXACT[0], D2U_EXACT[1]},
+            double Harray[2][2] = {{D2U_EXACT[0], D2U_EXACT[1]},
                               {D2U_EXACT[2], D2U_EXACT[3]}};
             double C[2][2][2] = {{{D3U_EXACT[0], D3U_EXACT[1]}, {D3U_EXACT[2], D3U_EXACT[3]}},
                                  {{D3U_EXACT[4], D3U_EXACT[5]}, {D3U_EXACT[6], D3U_EXACT[7]}}};
@@ -3692,13 +3699,13 @@ void feMetric::computeContinuousErrorModel(const bool withAnalyticMetric, bool c
                         if(_options.curvedMetricReferenceSpaceOptions.enableCurvature) {
 
                           if(o == 0) {
-                            resCurved[I][J][K] += (H[m][n] * dMmud_dx(m,I) * Mmud(o,J) * Mmud(n,K)
-                                                 + H[m][n] * dMmud_dx(m,K) * Mmud(o,I) * Mmud(n,J)
-                                                 + H[m][n] * dMmud_dx(m,J) * Mmud(o,K) * Mmud(n,I));
+                            resCurved[I][J][K] += (Harray[m][n] * dMmud_dx(m,I) * Mmud(o,J) * Mmud(n,K)
+                                                 + Harray[m][n] * dMmud_dx(m,K) * Mmud(o,I) * Mmud(n,J)
+                                                 + Harray[m][n] * dMmud_dx(m,J) * Mmud(o,K) * Mmud(n,I));
                           } else {
-                            resCurved[I][J][K] += (H[m][n] * dMmud_dy(m,I) * Mmud(o,J) * Mmud(n,K)
-                                                 + H[m][n] * dMmud_dy(m,K) * Mmud(o,I) * Mmud(n,J)
-                                                 + H[m][n] * dMmud_dy(m,J) * Mmud(o,K) * Mmud(n,I));
+                            resCurved[I][J][K] += (Harray[m][n] * dMmud_dy(m,I) * Mmud(o,J) * Mmud(n,K)
+                                                 + Harray[m][n] * dMmud_dy(m,K) * Mmud(o,I) * Mmud(n,J)
+                                                 + Harray[m][n] * dMmud_dy(m,J) * Mmud(o,K) * Mmud(n,I));
                           }
                         }
 
@@ -3743,7 +3750,7 @@ void feMetric::computeContinuousErrorModel(const bool withAnalyticMetric, bool c
           }
         }
 
-        I += weights[i] * detJac[iElm * nQuad + i];
+        Area += weights[i] * detJac[iElm * nQuad + i];
         E_DROIT += weights[i] * detJac[iElm * nQuad + i] * eloc;
         E_CURVE += weights[i] * detJac[iElm * nQuad + i] * eloc_curved;
         COMP += weights[i] * detJac[iElm * nQuad + i] * sqrt(M.determinant());
@@ -3798,7 +3805,7 @@ void feMetric::computeContinuousErrorModel(const bool withAnalyticMetric, bool c
     errorCurvedTrimmed += errorCurvedOnElements[i];
   // errorCurvedTrimmed = sqrt(errorCurvedTrimmed);
 
-  feInfoCond(FE_VERBOSE > 0, "Integral = %+-1.16e", I);
+  feInfoCond(FE_VERBOSE > 0, "Integral = %+-1.16e", Area);
   feInfoCond(FE_VERBOSE > 0, "E_DROIT = %+-1.16e - Without top 5pc = %+-1.16e", E_DROIT, errorLinearTrimmed);
   feInfoCond(FE_VERBOSE > 0, "E_CURVE = %+-1.16e - Without top 5pc = %+-1.16e --- E_DROIT/E_CURVE = %f - Without top 5pc = %f", 
     E_CURVE, errorCurvedTrimmed, E_DROIT/E_CURVE, errorLinearTrimmed/errorCurvedTrimmed);

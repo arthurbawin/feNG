@@ -111,8 +111,8 @@ feStatus feMesh2DP1::adapt(std::vector<feNewRecovery*> recoveredFields, feMetric
   if(generateAnisoMeshBeforeCurving && !(curve && target == curveToMinimize::INTERPOLATION_ERROR))
   {
     // Save directly to .msh to preserve Physical Entities
-    // std::string cmd1 = "mmg2d_O3 " + options.mmgInputMeshfile + " -v 10 -hgrad -1 -o " + options.mmgOutputMeshfile;
-    std::string cmd1 = "/home/monet/arbaw/Code/mmg/build/bin/mmg2d_O3 " + options.mmgInputMeshfile + " -v 10 -hgrad -1 -o " + options.mmgOutputMeshfile;
+    std::string cmd1 = "mmg2d_O3 " + options.mmgInputMeshfile + " -v 10 -hgrad -1 -o " + options.mmgOutputMeshfile;
+    // std::string cmd1 = "/home/monet/arbaw/Code/mmg/build/bin/mmg2d_O3 " + options.mmgInputMeshfile + " -v 10 -hgrad -1 -o " + options.mmgOutputMeshfile;
     if(FE_VERBOSE == VERBOSE_NONE) {
       // Write MMG console outputs to logMMG.txt
       cmd1 += " > logMMG.txt";
@@ -288,6 +288,7 @@ feStatus feMesh2DP1::adapt(std::vector<feNewRecovery*> recoveredFields, feMetric
     gmsh::write(options.adaptedMeshName);
     // system("gmsh adapted.msh");
     #else
+    UNUSED(spaceForAdaptation, discreteSolution, exactSolution, exactGradient, curveMMGmesh);
       return feErrorMsg(FE_STATUS_ERROR,
                           "Cannot generate curved mesh with this version of Gmsh."
                           "Merge branch first.");
