@@ -211,7 +211,7 @@ void feMetric::metricScalingFromGmshSubstitute(std::map<int, MetricType> &metric
     M *= factor;
   }
 #else
-  UNUSED(metrics, nodeTags, coord, exponentInIntegral, exponentForDeterminant);
+  UNUSED(metrics, nodeTags, exponentInIntegral, exponentForDeterminant);
 #endif
 }
 

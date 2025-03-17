@@ -466,7 +466,7 @@ void gradationMetriques(double gradation, int nmax, std::vector<double> &/*coord
   // feInfo("%d coord size", coord.size());
   // feInfo("%d edges size", edges.size());
 #else
-  UNUSED(gradation, nmax, coord1, metricsOnGmshModel);
+  UNUSED(gradation, nmax, metricsOnGmshModel);
 #endif
 }
 
