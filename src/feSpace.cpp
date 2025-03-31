@@ -1272,8 +1272,14 @@ double feSpace::interpolateVectorFieldComponentAtQuadNode(std::vector<double> &f
 double feSpace::interpolateVectorFieldComponentAtQuadNode_fullField(std::vector<double> &field, int iNode, int iComponent)
 {
   double res = 0.;
-  for(int i = 0; i < _nFunctions / _nComponents; ++i) {
-    res += field[i * _nComponents + iComponent] * _L[_nFunctions * iNode + _nComponents * i];
+  // for(int i = 0; i < _nFunctions / _nComponents; ++i) {
+  //   res += field[i * _nComponents + iComponent] * _L[_nFunctions * iNode + _nComponents * i];
+  // }
+  // return res;
+
+  for(int i = 0; i < _nFunctions; ++i)
+  {
+    res += field[i] * _L[iNode * _nFunctions * _nComponents +  i * _nComponents + iComponent];
   }
   return res;
 }

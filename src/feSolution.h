@@ -79,6 +79,8 @@ public:
   // Fill 'sol' with the solution at dofs with numbers stored in 'addressing'.
   // Sizes of the vector arguments must match.
   void getSolAtDOF(const std::vector<feInt> &addressing, std::vector<double> &sol) const;
+  void getSolDotAtDOF(const std::vector<feInt> &addressing, std::vector<double> &solDot) const;
+
   void setSolAtDOF(int iDOF, double val) { _sol[iDOF] = val; }
   void setSolDotAtDOF(int iDOF, double val) { _dsoldt[iDOF] = val; }
 

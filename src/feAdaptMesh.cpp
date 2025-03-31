@@ -43,9 +43,6 @@ feStatus feMesh2DP1::adapt(feMetric *metricField)
   initializeGmsh();
   feMetricOptions options = metricField->_options;
 
-  gmsh::open(options.backgroundMeshfile);
-  gmsh::model::getCurrent(options.modelForMetric);
-
   // Create aniso mesh
   // Save directly to .msh to preserve Physical Entities
   std::string cmd1 = "mmg2d_O3 " + options.mmgInputMeshfile + " -v 10 -hgrad -1 -o " + options.mmgOutputMeshfile;
@@ -62,12 +59,8 @@ feStatus feMesh2DP1::adapt(feMetric *metricField)
     return s;
   }
 
-  // Open adapted mesh (DEPRECATED: compute the next metric field on this mesh)
+  // Open adapted mesh and check physical entities
   gmsh::open(options.mmgOutputMeshfile);
-  gmsh::model::getCurrent(options.modelForMetric);
-  metricField->setGmshMetricModel(options.modelForMetric);
-
-  // Check physical entities
   gmsh::vectorpair physicalGroups;
   gmsh::vectorpair allGeometricEntities;
   gmsh::model::getPhysicalGroups(physicalGroups);
@@ -76,23 +69,23 @@ feStatus feMesh2DP1::adapt(feMetric *metricField)
   std::map<std::pair<int, int>, std::vector<int>> entitiesForPhysical;
 
   // Get the entities for existing physical groups
-  for(auto pair : physicalGroups) {
+  for(const auto &p : physicalGroups) {
     std::vector<int> entities;
-    gmsh::model::getEntitiesForPhysicalGroup(pair.first, pair.second, entities);
-    entitiesForPhysical[pair] = entities;
+    gmsh::model::getEntitiesForPhysicalGroup(p.first, p.second, entities);
+    entitiesForPhysical[p] = entities;
   }
 
   // Remove all the physical groups
   gmsh::model::removePhysicalGroups();
 
   // Re-add stored physical groups
-  for(auto pair : _physicalEntitiesDescription) {
+  for(const auto &pair : _physicalEntitiesDescription) {
     int dim = pair.first.first;
     int tag = pair.first.second;
     std::string name = pair.second;
 
     bool OK = false;
-    for(auto p : physicalGroups) {
+    for(const auto &p : physicalGroups) {
       if(p.first == dim && p.second == tag) {
         gmsh::model::addPhysicalGroup(dim, entitiesForPhysical[p], tag);
         gmsh::model::setPhysicalName(dim, tag, name);
@@ -116,9 +109,7 @@ feStatus feMesh2DP1::adapt(feMetric *metricField)
   // Write P2 aniso mesh
   gmsh::option::setNumber("Mesh.MshFileVersion", 4.1);
   gmsh::model::mesh::setOrder(metricField->_backmeshOrder);
-  // gmsh::write("anisoadapted.msh");
   gmsh::write(options.adaptedMeshName);
-  gmsh::model::mesh::setOrder(1);
 
   finalizeGmsh();
 

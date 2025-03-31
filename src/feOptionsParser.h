@@ -47,6 +47,7 @@ private:
   //  5 - invalid argument in argv[error_idx] for option in argv[error_idx-1]
   //  6 - required option with index error_idx is missing
   int error_type, error_idx;
+  bool _ignoreUnrecognizedOptions;
 
   static void WriteValue(const Option &opt, std::ostream &out);
 
@@ -104,7 +105,8 @@ public:
   void PrintUsage(std::ostream &out) const;
 
   /// Construct a command line option parser with '_argc' and '_argv'.
-  feOptionsParser(int _argc, char *_argv[]) : argc(_argc), argv(_argv)
+  feOptionsParser(int _argc, char *_argv[], bool ignoreUnrecognizedOptions = false)
+   : argc(_argc), argv(_argv), _ignoreUnrecognizedOptions(ignoreUnrecognizedOptions)
   {
     error_type = error_idx = 0;
   }

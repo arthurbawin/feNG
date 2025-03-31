@@ -98,6 +98,13 @@ void feOptionsParser::Parse()
         i++;
         break;
       #else
+        if(_ignoreUnrecognizedOptions) {
+          // Keep parsing.
+          // This is used e.g. when parsing several times
+          // and selecting only a subset of the options each time.
+          i++;
+          break;
+        }
         error_type = 2;
         error_idx = i;
         return;

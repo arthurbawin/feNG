@@ -121,8 +121,8 @@ void feMetric::computeLogMetrics()
   }
 }
 
-// It's much faster to interpolate the determinant,
-// instead of interpolating the metric then taking the determinant.
+// It's much faster to interpolate the determinant
+// than interpolating the metric then taking the determinant.
 double feMetric::computeIntegralOfDeterminant(const double exponentInIntegral)
 {
   // tic();

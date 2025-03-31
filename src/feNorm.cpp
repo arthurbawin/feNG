@@ -42,9 +42,13 @@ feNorm::feNorm(normType type, const std::vector<feSpace *> &spaces, feSolution *
   _geoCoord.resize(3 * _cnc->getNumVerticesPerElem());
 
   _adr.resize(spaces.size());
-  for(size_t k = 0; k < spaces.size(); ++k) _adr[k].resize(spaces[k]->getNumFunctions());
   _localSol.resize(spaces.size());
-  for(size_t k = 0; k < spaces.size(); ++k) _localSol[k].resize(spaces[k]->getNumFunctions());
+  _localSolDot.resize(spaces.size());
+  for(size_t k = 0; k < spaces.size(); ++k) {
+    _adr[k].resize(spaces[k]->getNumFunctions());
+    _localSol[k].resize(spaces[k]->getNumFunctions());
+    _localSolDot[k].resize(spaces[k]->getNumFunctions());
+  }
 
   // Provide only a geometric connectivity, to compute integrals of source terms, etc.
   // but not of the finite element solution.
@@ -84,7 +88,11 @@ double feNorm::compute(normType type)
   }
 
   double res = 0.;
-  switch(type) {
+  switch(type)
+  {
+    case NONE:
+      feWarning("No compute() method available for feNorm with type ""NONE""");
+      return 0.;
     case L1:
       res = this->computeLpNorm(1, false);
       break;
@@ -135,6 +143,8 @@ double feNorm::compute(normType type)
       break;
     case INTEGRAL:
       return this->computeIntegral();
+    case INTEGRAL_DT:
+      return this->computeIntegralDt();
     case INTEGRAL_F:
       return this->computeIntegralUserFunction();
     case DOT_PRODUCT:
@@ -159,6 +169,12 @@ void feNorm::initializeLocalSolutionOnSpace(int iSpace, int iElm)
 {
   _spaces[iSpace]->initializeAddressingVector(iElm, _adr[iSpace]);
   _solution->getSolAtDOF(_adr[iSpace], _localSol[iSpace]);
+}
+
+void feNorm::initializeLocalSolutionTimeDerivativeOnSpace(int iSpace, int iElm)
+{
+  _spaces[iSpace]->initializeAddressingVector(iElm, _adr[iSpace]);
+  _solution->getSolDotAtDOF(_adr[iSpace], _localSolDot[iSpace]);
 }
 
 double feNorm::computeLpNorm(int p, bool error)
@@ -1346,6 +1362,19 @@ double feNorm::computeIntegral()
   return res;
 }
 
+double feNorm::computeIntegralDt()
+{
+  double res = 0.0, uhDot;
+  for(int iElm = 0; iElm < _nElm; ++iElm) {
+    this->initializeLocalSolutionTimeDerivativeOnSpace(0, iElm);
+    for(int k = 0; k < _nQuad; ++k) {
+      uhDot = _spaces[0]->interpolateFieldAtQuadNode(_localSolDot[0], k);
+      res += uhDot * _J[_nQuad * iElm + k] * _w[k];
+    }
+  }
+  return res;
+}
+
 double feNorm::computeIntegralUserFunction()
 {
   double res = 0.0, u;
@@ -1628,13 +1657,11 @@ double feNorm::computeForcesFromLagrangeMultiplier(int iComponent)
   }
 
   double lambda;
-
   for(int iElm = 0; iElm < _nElm; ++iElm) {
     this->initializeLocalSolutionOnSpace(0, iElm);
     _spaces[0]->_mesh->getCoord(_cnc, iElm, _geoCoord);
 
     for(int k = 0; k < _nQuad; ++k) {
-      // double jac = _J[_nQuad * iElm + k];
       lambda = _spaces[0]->interpolateVectorFieldComponentAtQuadNode_fullField(_localSol[0], k,
                                                                                iComponent);
       res += lambda * _J[_nQuad * iElm + k] * _w[k];

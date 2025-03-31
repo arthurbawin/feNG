@@ -10,7 +10,7 @@
 typedef enum {
   // In the following, cnc refers to the geometric connectivity
   // over which the norm or integral is computed.
-
+  NONE,
   // Compute ||uh||_L1(cnc)
   L1,
   // Compute ||u - uh||_L1(cnc), with u a user-defined scalar field
@@ -44,6 +44,10 @@ typedef enum {
   // Compute |    uh dx
   //         / cnc
   INTEGRAL,
+  //         /
+  // Compute |    duh/dt dx from the stored temporal derivative
+  //         / cnc
+  INTEGRAL_DT,
   //         /
   // Compute |    uh dot F dx, with F a user-defined scalar or vector field
   //         / cnc
@@ -109,9 +113,10 @@ protected:
   // A reconstruction of the solution (and derivatives) used to estimate the error
   feNewRecovery *_rec = nullptr;
 
-  // Addressing vector and local solution for each FE space
+  // Addressing vector, local solution and local dsol/dt for each FE space
   std::vector<std::vector<feInt> > _adr;
   std::vector<std::vector<double> > _localSol;
+  std::vector<std::vector<double> > _localSolDot;
   // Convenience vectors to evaluate a field at position _pos
   // and physical coordinates of an element
   std::vector<double> _pos;
@@ -198,6 +203,7 @@ public:
 
 private:
   void initializeLocalSolutionOnSpace(int iSpace, int iElm);
+  void initializeLocalSolutionTimeDerivativeOnSpace(int iSpace, int iElm);
   double computeLpNorm(int p, bool error = false);
   double computeVectorLpNorm(int p, bool error = false);
   double computeLpErrorEstimator(int p);
@@ -210,6 +216,7 @@ private:
   double computeH1Norm(bool error = false);
   double computeArea();
   double computeIntegral();
+  double computeIntegralDt();
   double computeIntegralUserFunction();
   double computeIntegralDotProduct();
   double computePressureLift();

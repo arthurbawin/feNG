@@ -977,7 +977,7 @@ void feLinearSystemMklPardiso::constrainEssentialComponents(feSolution *sol)
     _rhs[row] = 0.;
   }
 
-  feInfoCond(FE_VERBOSE > 0, "\t\t\t\tConstrained essential DOFs in %f s", toc());
+  feInfoCond(FE_VERBOSE > 1, "\t\t\t\tConstrained essential DOFs in %f s", toc());
 }
 
 // ====================================================================

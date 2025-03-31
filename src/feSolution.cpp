@@ -73,6 +73,13 @@ void feSolution::getSolAtDOF(const std::vector<feInt> &addressing, std::vector<d
   }
 }
 
+void feSolution::getSolDotAtDOF(const std::vector<feInt> &addressing, std::vector<double> &solDot) const
+{
+  for(size_t i = 0; i < addressing.size(); ++i) {
+    solDot[i] = _dsoldt[addressing[i]];
+  }
+}
+
 void feSolution::initializeTemporalSolution(double t0, double t1, int nTimeSteps)
 {
   _t0 = t0;
