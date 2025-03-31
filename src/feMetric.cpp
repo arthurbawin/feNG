@@ -206,7 +206,9 @@ double feMetric::computeIntegralOfDeterminant(const double exponentInIntegral)
       const std::vector<double> &yQ = cnc->getFeSpace()->getSQuadraturePoints();
       const std::vector<double> &J = cnc->getJacobians();
 
+      #if defined(HAVE_OMP)
       #pragma omp for reduction(+ : I)
+      #endif
       for(int iElm = 0; iElm < nElm; ++iElm) {
 
         for(int i = 0; i < _nVerticesPerElmOnBackmesh; ++i) {
