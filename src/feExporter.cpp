@@ -345,8 +345,8 @@ feStatus feExporterVTK::createVTKNodes(std::vector<feSpace *> &spacesToExport,
     int iField = fieldTags[field];
     int nComponents = space->getNumComponents();
     // Write 3 components even for 2D vector fields
-    // int nComponentsToWrite = (nComponents > 1) ? 3 : 1;
-    int nComponentsToWrite = (nComponents > 1) ? nComponents : 1;
+    int nComponentsToWrite = (nComponents > 1) ? 3 : 1;
+    // int nComponentsToWrite = (nComponents > 1) ? nComponents : 1;
     feNumber *numbering = _metaNumber->getNumbering(field);
 
     feInfoCond(FE_VERBOSE > VERBOSE_MODERATE, 
@@ -376,45 +376,50 @@ feStatus feExporterVTK::createVTKNodes(std::vector<feSpace *> &spacesToExport,
         int globalTag = cnc->getUniqueVertexConnectivity(i);
 
         // Loop over components for vector-valued FE spaces
-        for(int iComp = 0; iComp < nComponents; ++iComp) {
-          iDOF = numbering->getDOFNumberAtVertex(globalTag, iComp);
+        for(int iComp = 0; iComp < nComponentsToWrite; ++iComp) {
 
-          if(iDOF >= 0) {
-            // There is a degree of freedom at this mesh vertex
+          if(iComp < nComponents) {
+            iDOF = numbering->getDOFNumberAtVertex(globalTag, iComp);
 
-            // FIXME: This is only valid for Lagrange type elements,
-            // where to DOF is the function evaluation. We should interpolate.
-            val = solVec[iDOF];
-            if(fabs(val) < TOL_ZERO_VTK) val = 0.;
-            _vtkNodes[globalTag].data[iField][iComp] = val;
+            if(iDOF >= 0) {
+              // There is a degree of freedom at this mesh vertex
 
-          } else {
-            /* No dof associated to the mesh vertex,
-            e.g. P1 pressure at P2 visualization node.
-            Interpolate solution at vertex. */
-            vtkNode node = _vtkNodes[globalTag];
-            x = {node.pos[0], node.pos[1], node.pos[2]};
-            bool wasFound = _mesh->locateVertex(x.data(), elm, r, 1e-6);
-            if(!wasFound) {
-              feInfo("Could not find point %f - %f - %f when exporting", x[0], x[1], x[2]);
-              exit(-1);
-            }
-            space->initializeAddressingVector(elm, adr);
+              // FIXME: This is only valid for Lagrange type elements,
+              // where to DOF is the function evaluation. We should interpolate.
+              val = solVec[iDOF];
+              if(fabs(val) < TOL_ZERO_VTK) val = 0.;
+              _vtkNodes[globalTag].data[iField][iComp] = val;
 
-            for(size_t j = 0; j < adr.size(); ++j) {
-              sol[j] = solVec[adr[j]];
-            }
-
-            if(space->useGlobalFunctions()) {
-              feInfo("FIXME: Choose interpolation function for vector field and global functions.");
-              exit(-1);
-              val = space->interpolateField(sol, elm, x);
             } else {
-              val = space->interpolateVectorFieldComponent(sol, iComp, r);
-            }
+              /* No dof associated to the mesh vertex,
+              e.g. P1 pressure at P2 visualization node.
+              Interpolate solution at vertex. */
+              vtkNode node = _vtkNodes[globalTag];
+              x = {node.pos[0], node.pos[1], node.pos[2]};
+              bool wasFound = _mesh->locateVertex(x.data(), elm, r, 1e-6);
+              if(!wasFound) {
+                feInfo("Could not find point %f - %f - %f when exporting", x[0], x[1], x[2]);
+                exit(-1);
+              }
+              space->initializeAddressingVector(elm, adr);
 
-            if(fabs(val) < TOL_ZERO_VTK) val = 0.;
-            _vtkNodes[globalTag].data[iField][iComp] = val;
+              for(size_t j = 0; j < adr.size(); ++j) {
+                sol[j] = solVec[adr[j]];
+              }
+
+              if(space->useGlobalFunctions()) {
+                feInfo("FIXME: Choose interpolation function for vector field and global functions.");
+                exit(-1);
+                val = space->interpolateField(sol, elm, x);
+              } else {
+                val = space->interpolateVectorFieldComponent(sol, iComp, r);
+              }
+
+              if(fabs(val) < TOL_ZERO_VTK) val = 0.;
+              _vtkNodes[globalTag].data[iField][iComp] = val;
+            }
+          } else {
+            _vtkNodes[globalTag].data[iField][iComp] = 0.;
           }
         }
       }
@@ -825,10 +830,10 @@ void feExporterVTK::writeVTKNodes(std::ostream &output,
     int tag = pair.second.first;
     int numComponents = pair.second.second;
 
-    if(_discontinuousMesh) {
+    // if(_discontinuousMesh) {
       // Force vectors to have 3 components to use Paraview vector features
       if(numComponents > 1) numComponents = 3;
-    }
+    // }
 
     output << name << " " << numComponents << " " << _vtkNodes.size() << " double" << std::endl;
 
