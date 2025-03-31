@@ -108,6 +108,30 @@ void MetricTensor::assignMatrixFrom(const double other[2][2])
   this->_impl->_m(1,1) = other[1][1];
 }
 
+void MetricTensor::setToZero()
+{
+  this->_impl->_m(0,0) = 0.;
+  this->_impl->_m(0,1) = 0.;
+  this->_impl->_m(1,0) = 0.;
+  this->_impl->_m(1,1) = 0.;
+}
+
+void MetricTensor::setToIdentity()
+{
+  this->_impl->_m(0,0) = 1.;
+  this->_impl->_m(0,1) = 0.;
+  this->_impl->_m(1,0) = 0.;
+  this->_impl->_m(1,1) = 1.;
+}
+
+void MetricTensor::incrementMatrix(const double alpha, const MetricTensor &other)
+{
+  this->_impl->_m(0,0) += alpha * other._impl->_m(0,0);
+  this->_impl->_m(0,1) += alpha * other._impl->_m(0,1);
+  this->_impl->_m(1,0) += alpha * other._impl->_m(1,0);
+  this->_impl->_m(1,1) += alpha * other._impl->_m(1,1);
+}
+
 double &MetricTensor::operator()(int i, int j) { return _impl->_m(i, j); }
 double MetricTensor::operator()(int i, int j) const { return _impl->_m(i, j); }
 MetricTensor &MetricTensor::operator*=(const double &val)

@@ -9,24 +9,25 @@
 
 #include "STensor3.h"
 
-enum class Norm
-{ 
+enum class Norm {
   // Target norm or seminorm to minimize with mesh adaptation
-  Lp, Wmp
+  Lp,
+  Wmp
 };
 
-enum class GradationSpace
-{ 
+enum class GradationSpace {
   // In which space the graded metric field will be homoegeneous
   // Metric space preserves anisotropy
   // Physical space leads to more isotropic metrics
-  Metric, Physical, Mixed, ExpMetric
+  Metric,
+  Physical,
+  Mixed,
+  ExpMetric
 };
 
-enum class adaptationMethod
-{ 
+enum class adaptationMethod {
   // Adapt with respect to an analytic Riemannian metric provided
-  // 
+  //
   ANALYTIC_METRIC,
   // Isotropic adaptation minimizing linear interpolation error
   // The metric is simply the most critical size from the ANISO_P1
@@ -75,7 +76,7 @@ public:
   // Min/max allowed mesh size
   double hMin = 1e-3;
   double hMax = 1.;
-  // 
+  //
   double maxAnalyticEllipseDiameter = 1e2;
   // Mesh adaptation method
   adaptationMethod method = adaptationMethod::ANISO_P1;
@@ -111,7 +112,7 @@ public:
 
   // Number of cycles to produce the final anisotropic mesh
   // One cycle = evaluate metric field, then remesh
-  
+
   // SHOULD NOT BE CHANGED CURRENTLY BECAUSE WE CANNOT LOOP
   // AND ADAPT SEVERAL TIMES WITH THE SAME METRIC FIELD
   // (en même temps est-ce que c'est utile de boucler pour un
@@ -155,7 +156,7 @@ public:
   int directionFieldFromDerivativesOfOrder = 1;
 
   // Options for the log-simplex method
-  struct { 
+  struct {
     // Number of points for the discretization of a quarter of the unit circle
     int nThetaPerQuadrant = 25;
     int maxIter = 50;
@@ -165,7 +166,7 @@ public:
     int numLoopsUniformErrorCurve = 1;
   } logSimplexOptions;
 
-  struct { 
+  struct {
     // Number of points for the discretization of a quarter of the unit circle
     bool enableCurvature = true;
 
@@ -206,7 +207,7 @@ public:
     bool dampDerivatives = true;
     double dampingCoefficient = 0.5;
   } curvedMetricReferenceSpaceOptions;
-  
+
   // Callback that returns true if a point is inside the
   // domain to be meshed
   bool (*insideCallback)(double *, bool) = nullptr;
@@ -226,29 +227,10 @@ public:
   feMetricOptions(const std::string &meshFile) : backgroundMeshfile(meshFile){};
 };
 
-// Compute matrix exponential of 2x2 symmetric matrix [a b; b c]
-template <class MetricType>
-void exponentialMatrix(const double a, const double b, const double c, MetricType &expm)
-{
-  // Check if a = c
-  if(fabs(a - c) < 1e-14) {
-    double expamb = exp(a-b), exp2b = exp(2.*b);
-    expm(0,0) = (expamb*(exp2b+1.0))/2.0;
-    expm(0,1) = (expamb*(exp2b-1.0))/2.0;
-    expm(1,0) = expm(0,1);
-    expm(1,1) = (expamb*(exp2b+1.0))/2.0;
-  } else {
-    double S = sqrt((a-c)*(a-c) + 4.*b*b);
-    double oneOverS = 1./S;
-    double expapcs2 = exp(0.5*(a+c));
-    double sinhss2 = sinh(0.5*S);
-    double coshss2 = cosh(0.5*S);
-    expm(0,0) = coshss2*expapcs2+a*sinhss2*expapcs2*oneOverS-c*sinhss2*expapcs2*oneOverS;
-    expm(0,1) = b*sinhss2*expapcs2*oneOverS*2.0;
-    expm(1,0) = expm(0,1);
-    expm(1,1) = coshss2*expapcs2-a*sinhss2*expapcs2*oneOverS+c*sinhss2*expapcs2*oneOverS;
-  }
-}
+feStatus createMetricField(feMetric *&metricField,
+                           feMetricOptions &options,
+                           feMesh2DP1 *mesh,
+                           std::vector<feNewRecovery*> recoveredFields = std::vector<feNewRecovery*>{});
 
 class feMetric
 {
@@ -258,17 +240,18 @@ public:
   int _backmeshOrder;
 
 protected:
-  feRecovery *_recovery;
-  std::vector<feNewRecovery*> _recoveredFields;
+  const feMesh2DP1 *_mesh;
+  std::vector<feNewRecovery *> _recoveredFields;
 
   double _lambdaMin = 1e-14;
   double _lambdaMax = 1e22;
 
-  std::map<int, SMetric3> _metrics;
-  std::map<int, SMetric3> _metricsOnGmshModel;
+  // Node tags and coordinates of the Gmsh model
+  // FIXME: Should eventually be removed to use only internal mesh structure
+  std::vector<std::size_t> _nodeTags;
+  std::vector<double> _coord;
 
-  std::map<int, SMetric3> _metricsP1;
-  std::map<int, Eigen::Matrix2d> _metricsP1AtNodeTags;
+  int _nVerticesPerElm;
 
   // =========================================================
   // New interface uses only those types:
@@ -278,19 +261,23 @@ protected:
   std::vector<Eigen::Matrix2d> _logMetricTensorAtNodetags_eigen;
   std::map<int, SMetric3> _smetric3AtNodetags;
 
+  // Stored in a vector, not in a map
+  // With the internal structure node order, not Gmsh
+  std::vector<MetricTensor> _metrics;
+  std::vector<MetricTensor> _logMetrics;
+
   // M^(-1/2) and its derivatives
   std::map<int, MetricTensor> _mmud;
   std::map<int, MetricTensor> _dmmud_dy;
   std::map<int, MetricTensor> _dmmud_dx;
   // =========================================================
 
-  std::map<const Vertex *, Eigen::Matrix2d> _metricsOnGmshModelP1;
-
-  std::map<int, Eigen::Matrix2d> _metricsOnGmshModel_eigen;
+  // std::map<const Vertex *, Eigen::Matrix2d> _metricsOnGmshModelP1;
+  // std::map<int, Eigen::Matrix2d> _metricsOnGmshModel_eigen;
 
   // Vertex to nodeTag map (and inverse)
   // nodeTag is the Gmsh node tag obtained from gmsh::model::mesh::getNodes
-  // _nodeTag2sequentialTag maps the nodeTags to the internal tag, which is higher 
+  // _nodeTag2sequentialTag maps the nodeTags to the internal tag, which is higher
   // than the total number of nodeTags when a P2 mesh is used.
   std::map<const Vertex *, int> _v2n;
   std::map<int, const Vertex *> _n2v;
@@ -301,16 +288,68 @@ protected:
   // The tag of the gmsh view in which the metric field is stored (if using Gmsh)
   int _metricViewTag = -1;
 
-public:
-  feMetric(feRecovery *recovery, feMetricOptions metricOptions);
-  feMetric(std::vector<feNewRecovery*> &recoveredFields, feMetricOptions metricOptions);
-  ~feMetric() {}
+  double _currentTime = 0.;
 
+  bool _scaleMetricField = true;
+
+  std::string _debugPrefix = "";
+
+public:
+  feMetric(const feMetricOptions &options,
+           feMesh2DP1 *mesh,
+           std::vector<feNewRecovery*> recoveredFields = std::vector<feNewRecovery*>{});
+
+  void setOptions(feMetricOptions &other) { _options = other; }
+  const feMetricOptions &getOptions() const { return _options; }
   void setGmshMetricModel(std::string metricModel) { _options.modelForMetric = metricModel; }
-  void setRecovery(feRecovery *recovery){ _recovery = recovery; }
+  // void setRecovery(feRecovery *other) { _recovery = other; }
+  void setRecoveredFields(std::vector<feNewRecovery*> other) { _recoveredFields = other; }
+  void setCurrentTime(const double time) { _currentTime = time; }
+  void setMetricScaling(const bool flag) { _scaleMetricField = flag; }
+  void setDebugPrefix(const std::string prefix) { _debugPrefix = prefix; }
+
+  const std::vector<std::size_t> &getGmshNodeTags() const { return _nodeTags; }
+  const std::vector<double> &getGmshNodeCoord() const { return _coord; }
+
+  const std::map<int, MetricTensor> &getMetrics() const { return _metricTensorAtNodetags; }
+  void getMetrics(std::map<int, MetricTensor> &other) const 
+  {
+    for(auto n : _nodeTags) {
+      other[n].assignMatrixFrom(_metricTensorAtNodetags.at(n));
+    }
+  }
+  void setMetrics(const std::map<int, MetricTensor> &other)
+  {
+    for(auto n : _nodeTags) {
+      _metricTensorAtNodetags.at(n).assignMatrixFrom(other.at(n));
+      _metrics[_nodeTag2sequentialTag[n]].assignMatrixFrom(other.at(n));
+    }
+  }
+  void setMetricsToZero()
+  {
+    for(auto n : _nodeTags) {
+      _metricTensorAtNodetags.at(n).setToZero();
+      _metrics[_nodeTag2sequentialTag[n]].setToZero();
+    }
+  }
+  void setMetricsToIdentity()
+  {
+    for(auto n : _nodeTags) {
+      _metricTensorAtNodetags.at(n).setToIdentity();
+      _metrics[_nodeTag2sequentialTag[n]].setToIdentity();
+    }
+  }
+
+  // Apply other += alpha * metrics
+  void addMetricsToOther(const double alpha, std::map<int, MetricTensor> &other)
+  {
+    for(const auto &tag : _nodeTags) {
+      other.at(tag).incrementMatrix(alpha, _metricTensorAtNodetags.at(tag));
+    }
+  }
 
   // If computing metrics on a P1 mesh with derivatives recovered on a P1 mesh,
-  // nodeTags is the sorted list of all vertices returned by gmsh (minus 1), 
+  // nodeTags is the sorted list of all vertices returned by gmsh (minus 1),
   // hence a trivial vector from 0 to nVertices-1.
   //
   // If computing metrics on a P1 mesh with derivatives recovered on a P2 mesh,
@@ -319,7 +358,9 @@ public:
   //
   // If computing metrics on a P2 mesh, nodeTags is also the trivial list of vertices
   // computed by gmsh (minus 1)
+  #if defined(HAVE_GMSH)
   feStatus computeMetrics();
+  #endif
 
   feStatus computeMetricsP1();
   feStatus computeMetricsHechtKuate();
@@ -328,273 +369,158 @@ public:
 
   // ====================
   // New interface
+  #if defined(HAVE_GMSH)
   feStatus createVertex2NodeMap(std::vector<std::size_t> &nodeTags, std::vector<double> &coord);
-  feStatus setAnalyticMetric(const std::vector<std::size_t> &nodeTags, const std::vector<double> &coord);
-  feStatus computeMetricsP1(std::vector<std::size_t> &nodeTags, std::vector<double> &coord, bool isotropic = false);
-  feStatus computeMetricsP2(std::vector<std::size_t> &nodeTags, std::vector<double> &coord);
-  feStatus computeMetricsP1_referenceSpace(std::vector<std::size_t> &nodeTags, std::vector<double> &coord, int setToIdentity = false);
-  feStatus computeMetricsP2_referenceSpace(std::vector<std::size_t> &nodeTags, std::vector<double> &coord, int setToIdentity = false);
-  feStatus computeMetricsP2_forGraphSurface(std::vector<std::size_t> &nodeTags, std::vector<double> &coord);
-  feStatus computeMetricsPn(std::vector<std::size_t> &nodeTags, std::vector<double> &coord, bool isotropic = false);
-  feStatus computeMetricsGoalOrientedP1(std::vector<std::size_t> &nodeTags, std::vector<double> &coord);
-  feStatus computeMetricsCurvedLogSimplex(std::vector<std::size_t> &nodeTags, std::vector<double> &coord, bool useInducedDirections = false);
+  void metricScalingFromGmshSubstitute(std::map<int, MetricTensor> &metrics,
+                                       double exponentInIntegral,
+                                       double exponentForDeterminant);
+  void writeMetricField();
+  #endif
 
+  void computeLogMetrics();
+  double computeIntegralOfDeterminant(const double exponentInIntegral);
+
+  // Simply scale the metric field according to :
+  //
+  // M = scaling * M,
+  //
+  void scaleMetricsByConstant(const double scaling)
+  {
+    for(auto &pair : _metricTensorAtNodetags) { pair.second *= scaling; }
+  }
+  // Scale the metric field according to :
+  //
+  // M = C * det(M)^a * M,
+  //
+  // with C = globalScalingFactor and a = exponentForDeterminant
+  void scaleMetricsByDeterminant(const double globalScalingFactor,
+                                 const double exponentForDeterminant);
+
+  feStatus setAnalyticMetric(const std::vector<std::size_t> &nodeTags,
+                             const std::vector<double> &coord);
+  feStatus computeMetricsP1(std::vector<std::size_t> &nodeTags, std::vector<double> &coord,
+                            bool isotropic = false);
+  feStatus computeMetricsP2(std::vector<std::size_t> &nodeTags, std::vector<double> &coord);
+  feStatus computeMetricsP1_referenceSpace(std::vector<std::size_t> &nodeTags,
+                                           std::vector<double> &coord, int setToIdentity = false);
+  feStatus computeMetricsP2_referenceSpace(std::vector<std::size_t> &nodeTags,
+                                           std::vector<double> &coord, int setToIdentity = false);
+  feStatus computeMetricsP2_forGraphSurface(std::vector<std::size_t> &nodeTags,
+                                            std::vector<double> &coord);
+  feStatus computeMetricsPn(std::vector<std::size_t> &nodeTags, std::vector<double> &coord,
+                            bool isotropic = false);
+  feStatus computeMetricsGoalOrientedP1(std::vector<std::size_t> &nodeTags,
+                                        std::vector<double> &coord);
+  feStatus computeMetricsCurvedLogSimplex(std::vector<std::size_t> &nodeTags,
+                                          std::vector<double> &coord,
+                                          bool useInducedDirections = false);
+
+  feStatus computeMetricsCurvedReferenceSpace(std::vector<std::size_t> &nodeTags,
+                                              std::vector<double> &coord);
+  feStatus computeMetricsCurvedReferenceSpace2(std::vector<std::size_t> &nodeTags,
+                                               std::vector<double> &coord);
+
+  void getDerivativesAtVertex(const int derivativesOrder, const double *x, const size_t vertex,
+                              feNewRecovery *recoveredField, double *du, double *d2u = nullptr,
+                              double *d3u = nullptr, double *d4u = nullptr, double *d5u = nullptr);
+
+  void computeSizeField(const double pos[2], const int vertex, const double directionV1[2],
+                        double &hGrad, double &hIso, const double *du, const double *d2u,
+                        const double *d3u);
+
+  feStatus computeMetricsCurvedIsolines(const std::vector<std::size_t> &nodeTags,
+                                        const std::vector<double> &coord);
+
+  void applyGradation();
+  feStatus newGradation(const std::vector<std::size_t> &nodeTags, const std::vector<double> &coord,
+                        const double gradation, std::map<int, MetricTensor> &metricsAtNodeTags);
+
+  MetricTensor &getMetricAtSequentialTag(int tag)
+  {
+    return _metricTensorAtNodetags[_sequentialTag2nodeTag[tag]];
+  };
+
+  #if defined(HAVE_GMSH)
   void averageMetricGradientAtVertices(const std::vector<std::size_t> &nodeTags,
                                        const std::vector<double> &coord,
                                        const std::map<int, MetricTensor> &inputMetrics,
                                        std::map<int, MetricTensor> &dMdx,
                                        std::map<int, MetricTensor> &dMdy);
   void computeErrorOnMetricDerivatives(double &errorOnMmud_dx, double &errorOnMmud_dy);
-  
-  feStatus computeMetricsCurvedReferenceSpace(std::vector<std::size_t> &nodeTags, std::vector<double> &coord);
-  feStatus computeMetricsCurvedReferenceSpace2(std::vector<std::size_t> &nodeTags, std::vector<double> &coord);
-
-  // void computeDirectionFieldFromGradient(const double pos[2], const int vertex, double directionV1[2], const double tol);
-  // double secondDerivativesAlongCurve(const double pos[2], const int vertex, const double directionV1[2], const int direction);
-  // double thirdDerivativesAlongCurve(const double pos[2], const int vertex, const double directionV1[2], const int direction);
-  // double solveSizePolynomialLinear(const double x[2], const int vertex, const double directionV1[2], const int direction, const double targetError);
-  // double solveSizePolynomialQuadratic(const double x[2], const int vertex, const double directionV1[2], const int direction, const double targetError);
-
-  void getDerivativesAtVertex(const int derivativesOrder, const double *x, const size_t vertex, feNewRecovery *recoveredField, 
-  double *du, double *d2u = nullptr, double *d3u = nullptr, double *d4u = nullptr, double *d5u = nullptr);
-
-  void computeSizeField(const double pos[2], const int vertex, const double directionV1[2],
-    double &hGrad, double &hIso, const double *du, const double *d2u, const double *d3u);
-
-  feStatus computeMetricsCurvedIsolines(const std::vector<std::size_t> &nodeTags, const std::vector<double> &coord);
-
-  void applyGradation(std::vector<std::size_t> &nodeTags, std::vector<double> &coord);
-  feStatus newGradation(const std::vector<std::size_t> &nodeTags, const std::vector<double> &coord,
-    const double gradation, std::map<int, MetricTensor> &metricsAtNodeTags);
-
-  void computeContinuousErrorModel(const bool withAnalyticMetric, bool computeError, bool plotError, const std::string &errorFileName, double &errorStraight, double &errorCurved, double &complexity);
-
-  void writeMetricField(std::vector<std::size_t> &nodeTags, std::vector<double> &coord);
-
-  MetricTensor &getMetricAtSequentialTag(int tag){ return _metricTensorAtNodetags[_sequentialTag2nodeTag[tag]]; };
+  void computeContinuousErrorModel(const bool withAnalyticMetric, bool computeError, bool plotError,
+                                   const std::string &errorFileName, double &errorStraight,
+                                   double &errorCurved, double &complexity);
+  #endif
   // ====================
 
   void setMetricViewTag(int tag) { _metricViewTag = tag; }
   int getMetricViewTag() { return _metricViewTag; }
-
-  void metricScaling();
-  void metricScalingFromGmshSubstitute();
-
-  template <class MetricType>
-  void metricScalingFromGmshSubstitute(std::map<int, MetricType> &metrics,
-                                       const std::vector<size_t> &nodeTags,
-                                       const std::vector<double> &coord,
-                                       double exponentInIntegral,
-                                       double exponentForDeterminant);
 
   // Intersecter avec un autre feMetric
   void writeSizeFieldSol2D(std::string solFileName);
   void writeSizeFieldSol3D(std::string solFileName);
   void writeSizeFieldGmsh(std::string meshName, std::string metricMeshName);
 
-  template <class MetricType>
-  void classicalP1Interpolation(const double *xsi,
-                                const MetricType &M0,
-                                const MetricType &M1,
-                                const MetricType &M2,
-                                MetricType &result)
-  {
-    // Hardcoded P1 Lagrange basis functions for simplicity
-    double phi[3] = {1. - xsi[0] - xsi[1], xsi[0], xsi[1]};
-    result = M0 * phi[0] + M1 * phi[1] + M2 * phi[2];
-  }
-
-  template <class MetricType>
-  void logEuclidianP1Interpolation(const double *xsi,
-                                   const MetricType &logM0,
-                                   const MetricType &logM1,
-                                   const MetricType &logM2,
-                                   MetricType &result)
-  {
-    // Hardcoded P1 Lagrange basis functions for simplicity
-    double phi[3] = {1. - xsi[0] - xsi[1], xsi[0], xsi[1]};
-    // Interpolate log(M) then take exponential
-    result = logM0 * phi[0] + logM1 * phi[1] + logM2 * phi[2];
-    result = result.exp();
-  }
-
-  // Hardcoded symbolic expression of the matrix exponential
-  template <class MetricType>
-  void logEuclidianP1InterpolationExplicit(const double *xsi,
-                                            const MetricType &logM0,
-                                            const MetricType &logM1,
-                                            const MetricType &logM2,
-                                            MetricType &result)
-  {
-    double phi[3] = {1. - xsi[0] - xsi[1], xsi[0], xsi[1]};
-    double L11[3] = {logM0(0,0), logM1(0,0), logM2(0,0)};      
-    double L12[3] = {logM0(0,1), logM1(0,1), logM2(0,1)};      
-    double L22[3] = {logM0(1,1), logM1(1,1), logM2(1,1)};      
-
-    double a = 0., b = 0., c = 0.;
-    for(size_t i = 0; i < 3; ++i) {
-      a += phi[i] * L11[i];
-      b += phi[i] * L12[i];
-      c += phi[i] * L22[i];
-    }
-
-    // Hardcoded exponential matrix
-    exponentialMatrix(a, b, c, result);
-
-    if(isnan(result(0,0)) || isnan(result(0,1)) || isnan(result(1,1))) {
-      feInfo("metric is nan :%+-1.10e - %+-1.10e - %+-1.10e", result(0,0), result(0,1), result(1,1));
-      exit(-1);
-    }
-  }
-
-  template <class MetricType>
-  void logEuclidianP2Interpolation(const double *xsi,
-                                   const MetricType &logM0,
-                                   const MetricType &logM1,
-                                   const MetricType &logM2,
-                                   const MetricType &logM3,
-                                   const MetricType &logM4,
-                                   const MetricType &logM5,
-                                   MetricType &result)
-  {
-    // Hardcoded P2 Lagrange basis functions for simplicity
-    double phi[6] = {(1. - xsi[0] - xsi[1]) * (1. - 2. * xsi[0] - 2. * xsi[1]),
-                      xsi[0] * (2. * xsi[0] - 1.),
-                      xsi[1] * (2. * xsi[1] - 1.),
-                      4. * xsi[0] * (1. - xsi[0] - xsi[1]),
-                      4. * xsi[0] * xsi[1],
-                      4. * xsi[1] * (1. - xsi[0] - xsi[1])};
-    // Interpolate log(M) then take exponential
-    result = (logM0 * phi[0] + logM1 * phi[1] + logM2 * phi[2] + 
-              logM3 * phi[3] + logM4 * phi[4] + logM5 * phi[5]).exp();
-  }
-
-  // Hardcoded symbolic expression of the matrix exponential
-  template <class MetricType>
-  void logEuclidianP2InterpolationExplicit(const double *xsi,
-                                           const MetricType &logM0,
-                                           const MetricType &logM1,
-                                           const MetricType &logM2,
-                                           const MetricType &logM3,
-                                           const MetricType &logM4,
-                                           const MetricType &logM5,
-                                           MetricType &result)
-  {
-    double phi[6] = {(1. - xsi[0] - xsi[1]) * (1. - 2. * xsi[0] - 2. * xsi[1]),
-                      xsi[0] * (2. * xsi[0] - 1.),
-                      xsi[1] * (2. * xsi[1] - 1.),
-                      4. * xsi[0] * (1. - xsi[0] - xsi[1]),
-                      4. * xsi[0] * xsi[1],
-                      4. * xsi[1] * (1. - xsi[0] - xsi[1])}; 
-    double L11[6] = {logM0(0,0), logM1(0,0), logM2(0,0), logM3(0,0), logM4(0,0), logM5(0,0)};      
-    double L12[6] = {logM0(0,1), logM1(0,1), logM2(0,1), logM3(0,1), logM4(0,1), logM5(0,1)};      
-    double L22[6] = {logM0(1,1), logM1(1,1), logM2(1,1), logM3(1,1), logM4(1,1), logM5(1,1)};      
-
-    double a = 0., b = 0., c = 0.;
-    for(size_t i = 0; i < 6; ++i) {
-      a += phi[i] * L11[i];
-      b += phi[i] * L12[i];
-      c += phi[i] * L22[i];
-    }
-
-    // Hardcoded exponential matrix
-    exponentialMatrix(a, b, c, result);
-
-    if(isnan(result(0,0)) || isnan(result(0,1)) || isnan(result(1,1))) {
-      feInfo("metric is nan :%+-1.10e - %+-1.10e - %+-1.10e", result(0,0), result(0,1), result(1,1));
-      exit(-1);
-    }
-  }
-
   void interpolationTest(const std::vector<size_t> &nodeTags, std::vector<double> &coord);
-
 
   ///////////////////////////////////////////////////////////
   // Metric interpolation on background mesh
-  void interpolateMetricP1(const double *x, Eigen::Matrix2d &M,
-                           Eigen::Matrix2d &dMdx, Eigen::Matrix2d &dMdy);
+  void interpolateMetricP1(const double *x, Eigen::Matrix2d &M, Eigen::Matrix2d &dMdx,
+                           Eigen::Matrix2d &dMdy);
   void interpolateMetricP2(const double *x, Eigen::Matrix2d &M);
   void interpolateMetricP2Explicit(const double *x, Eigen::Matrix2d &M);
-  void interpolateMetricP2(const double *x, Eigen::Matrix2d &M,
-                           Eigen::Matrix2d &dMdx, Eigen::Matrix2d &dMdy);
-  void interpolateMetricP2Log(const double *x, Eigen::Matrix2d &M,
-                                   Eigen::Matrix2d &dMdx, Eigen::Matrix2d &dMdy,
-                                   Eigen::Matrix2d &L,
-                                   Eigen::Matrix2d &dLdx, Eigen::Matrix2d &dLdy,
-                                   double &l1,
-                                   double &dl1dx,
-                                   double &dl1dy,
-                                   double &l2,
-                                   double &dl2dx,
-                                   double &dl2dy,
-                                   Eigen::Vector2d &u1,
-                                   Eigen::Vector2d &du1dx,
-                                   Eigen::Vector2d &du1dy,
-                                   Eigen::Vector2d &u2,
-                                   Eigen::Vector2d &du2dx,
-                                   Eigen::Vector2d &du2dy);
-  void gradLogEuclidianP1Interpolation(const double *xsi,
-                                       const int element,
-                                       const MetricTensor &logM0,
-                                       const MetricTensor &logM1,
-                                       const MetricTensor &logM2,
-                                       Eigen::Matrix2d &dMdx,
+  void interpolateMetricP2(const double *x, Eigen::Matrix2d &M, Eigen::Matrix2d &dMdx,
+                           Eigen::Matrix2d &dMdy);
+  void interpolateMetricP2Log(const double *x, Eigen::Matrix2d &M, Eigen::Matrix2d &dMdx,
+                              Eigen::Matrix2d &dMdy, Eigen::Matrix2d &L, Eigen::Matrix2d &dLdx,
+                              Eigen::Matrix2d &dLdy, double &l1, double &dl1dx, double &dl1dy,
+                              double &l2, double &dl2dx, double &dl2dy, Eigen::Vector2d &u1,
+                              Eigen::Vector2d &du1dx, Eigen::Vector2d &du1dy, Eigen::Vector2d &u2,
+                              Eigen::Vector2d &du2dx, Eigen::Vector2d &du2dy);
+  void gradLogEuclidianP1Interpolation(const double *xsi, const int element,
+                                       const MetricTensor &logM0, const MetricTensor &logM1,
+                                       const MetricTensor &logM2, Eigen::Matrix2d &dMdx,
                                        Eigen::Matrix2d &dMdy);
-  void gradLogEuclidianP2Interpolation(const double xsi[2],
-                                       const int element,
-                                       const Eigen::Matrix2d &logM0,
-                                       const Eigen::Matrix2d &logM1,
-                                       const Eigen::Matrix2d &logM2,
-                                       const Eigen::Matrix2d &logM3,
-                                       const Eigen::Matrix2d &logM4,
-                                       const Eigen::Matrix2d &logM5,
-                                       Eigen::Matrix2d &dMdx,
-                                       Eigen::Matrix2d &dMdy,
-                                       Eigen::Matrix2d &LRES,
-                                       Eigen::Matrix2d &DLDXRES,
-                                       Eigen::Matrix2d &DLDYRES,
-                                       double &l1res,
-                                       double &dl1dxres,
-                                       double &dl1dyres,
-                                       double &l2res,
-                                       double &dl2dxres,
-                                       double &dl2dyres,
-                                       Eigen::Vector2d &u1res,
-                                       Eigen::Vector2d &du1dxres,
-                                       Eigen::Vector2d &du1dyres,
-                                       Eigen::Vector2d &u2res,
-                                       Eigen::Vector2d &du2dxres,
-                                       Eigen::Vector2d &du2dyres);
+  void gradLogEuclidianP2Interpolation(
+    const double xsi[2], const int element, const Eigen::Matrix2d &logM0,
+    const Eigen::Matrix2d &logM1, const Eigen::Matrix2d &logM2, const Eigen::Matrix2d &logM3,
+    const Eigen::Matrix2d &logM4, const Eigen::Matrix2d &logM5, Eigen::Matrix2d &dMdx,
+    Eigen::Matrix2d &dMdy, Eigen::Matrix2d &LRES, Eigen::Matrix2d &DLDXRES,
+    Eigen::Matrix2d &DLDYRES, double &l1res, double &dl1dxres, double &dl1dyres, double &l2res,
+    double &dl2dxres, double &dl2dyres, Eigen::Vector2d &u1res, Eigen::Vector2d &du1dxres,
+    Eigen::Vector2d &du1dyres, Eigen::Vector2d &u2res, Eigen::Vector2d &du2dxres,
+    Eigen::Vector2d &du2dyres);
 
   // With gradient wrt to physical coordinates x,y
   // void interpolateMetricP1WithDerivatives(const double *x, Eigen::Matrix2d &M,
   //                                         Eigen::Matrix2d &dMdx, Eigen::Matrix2d &dMdy);
 
-//   // With gradient of M wrt 2d position alpha (a1,a2)
-//   void interpolateMetricP1(const double *x, Eigen::Matrix2d &M, Eigen::Matrix2d &sumduda1M,
-//                            Eigen::Matrix2d &sumduda2M);
-//   void interpolateMetricAndDerivativeOnP2Edge(const double t, const Eigen::Matrix2d &M11,
-//                                               const Eigen::Matrix2d &M20,
-//                                               const Eigen::Matrix2d &M02,
-//                                               const Eigen::Matrix2d &sumduda1M,
-//                                               const Eigen::Matrix2d &sumduda2M, Eigen::Matrix2d
-//                                               &M, Eigen::Matrix2d &dMda1, Eigen::Matrix2d
-//                                               &dMda2);
+  //   // With gradient of M wrt 2d position alpha (a1,a2)
+  //   void interpolateMetricP1(const double *x, Eigen::Matrix2d &M, Eigen::Matrix2d &sumduda1M,
+  //                            Eigen::Matrix2d &sumduda2M);
+  //   void interpolateMetricAndDerivativeOnP2Edge(const double t, const Eigen::Matrix2d &M11,
+  //                                               const Eigen::Matrix2d &M20,
+  //                                               const Eigen::Matrix2d &M02,
+  //                                               const Eigen::Matrix2d &sumduda1M,
+  //                                               const Eigen::Matrix2d &sumduda2M, Eigen::Matrix2d
+  //                                               &M, Eigen::Matrix2d &dMda1, Eigen::Matrix2d
+  //                                               &dMda2);
 
-//   // With derivative of M wrt 1D alpha (dMda)
-//   void interpolateMetricP1(const double *x, const double *gammaOrth, Eigen::Matrix2d &M,
-//                            Eigen::Matrix2d &sumdudaM);
-//   void interpolateMetricAndDerivativeOnP2Edge(double t, const Eigen::Matrix2d &M11,
-//                                               const Eigen::Matrix2d &M20,
-//                                               const Eigen::Matrix2d &M02,
-//                                               const Eigen::Matrix2d &sumdudaM, Eigen::Matrix2d
-//                                               &M, Eigen::Matrix2d &dMda);
+  //   // With derivative of M wrt 1D alpha (dMda)
+  //   void interpolateMetricP1(const double *x, const double *gammaOrth, Eigen::Matrix2d &M,
+  //                            Eigen::Matrix2d &sumdudaM);
+  //   void interpolateMetricAndDerivativeOnP2Edge(double t, const Eigen::Matrix2d &M11,
+  //                                               const Eigen::Matrix2d &M20,
+  //                                               const Eigen::Matrix2d &M02,
+  //                                               const Eigen::Matrix2d &sumdudaM, Eigen::Matrix2d
+  //                                               &M, Eigen::Matrix2d &dMda);
 };
 
 SMetric3 intersectionReductionSimultaneeExplicite(const SMetric3 &m1, const SMetric3 &m2);
 
 template <class MetricType>
-void drawSingleEllipse(FILE *file, const double *x, MetricType &M, double sizeFactor = 1., int nPoints = 30);
+void drawSingleEllipse(FILE *file, const double *x, MetricType &M, double sizeFactor = 1.,
+                       int nPoints = 30);
 template <class MetricType>
 void drawEllipsoids(const std::string &posFile, std::map<int, MetricType> &metrics,
                     const std::vector<std::size_t> &nodeTags, const std::vector<double> &coord,
@@ -602,26 +528,22 @@ void drawEllipsoids(const std::string &posFile, std::map<int, MetricType> &metri
 
 // Non-class wrapper
 void interpolateMetricP1Callback(void *metricPtr, const double *x, Eigen::Matrix2d &M,
-                           Eigen::Matrix2d &dMdx, Eigen::Matrix2d &dMdy);
-void interpolateMetricP2CallbackWithoutDerivatives(void *metricPtr, const double *x, Eigen::Matrix2d &M);
-void interpolateMetricP2CallbackWithoutDerivativesExplicit(void *metricPtr, const double *x, Eigen::Matrix2d &M);
-void interpolateMetricP2CallbackWithDerivatives(void *metricPtr, const double *x, Eigen::Matrix2d &M, Eigen::Matrix2d &dMdx, Eigen::Matrix2d &dMdy);
+                                 Eigen::Matrix2d &dMdx, Eigen::Matrix2d &dMdy);
+void interpolateMetricP2CallbackWithoutDerivatives(void *metricPtr, const double *x,
+                                                   Eigen::Matrix2d &M);
+void interpolateMetricP2CallbackWithoutDerivativesExplicit(void *metricPtr, const double *x,
+                                                           Eigen::Matrix2d &M);
+void interpolateMetricP2CallbackWithDerivatives(void *metricPtr, const double *x,
+                                                Eigen::Matrix2d &M, Eigen::Matrix2d &dMdx,
+                                                Eigen::Matrix2d &dMdy);
 void interpolateMetricP2CallbackLog(void *metricPtr, const double *x, Eigen::Matrix2d &M,
-                           Eigen::Matrix2d &dMdx, Eigen::Matrix2d &dMdy,
-                           Eigen::Matrix2d &L,
-                           Eigen::Matrix2d &dLdx, Eigen::Matrix2d &dLdy,
-                           double &l1,
-                           double &dl1dx,
-                           double &dl1dy,
-                           double &l2,
-                           double &dl2dx,
-                           double &dl2dy,
-                           Eigen::Vector2d &u1,
-                           Eigen::Vector2d &du1dx,
-                           Eigen::Vector2d &du1dy,
-                           Eigen::Vector2d &u2,
-                           Eigen::Vector2d &du2dx,
-                           Eigen::Vector2d &du2dy);
+                                    Eigen::Matrix2d &dMdx, Eigen::Matrix2d &dMdy,
+                                    Eigen::Matrix2d &L, Eigen::Matrix2d &dLdx,
+                                    Eigen::Matrix2d &dLdy, double &l1, double &dl1dx, double &dl1dy,
+                                    double &l2, double &dl2dx, double &dl2dy, Eigen::Vector2d &u1,
+                                    Eigen::Vector2d &du1dx, Eigen::Vector2d &du1dy,
+                                    Eigen::Vector2d &u2, Eigen::Vector2d &du2dx,
+                                    Eigen::Vector2d &du2dy);
 
 // void interpolateMetricP1WithDerivativesWrapper(void *metric, const double *x, Eigen::Matrix2d &M,
 //                                                Eigen::Matrix2d &dMdx, Eigen::Matrix2d &dMdy);

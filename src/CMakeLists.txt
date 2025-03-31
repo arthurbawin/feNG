@@ -17,6 +17,7 @@ set(feNG_SRC
     feMessage.cpp
     feMetric.cpp
     feMetricAnalyticP2.cpp
+    feMetricComputation.cpp
     feMetricInterpolation.cpp
     feMetricGradation.cpp
     feMetricTools.cpp

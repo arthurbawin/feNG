@@ -1161,7 +1161,7 @@ void feSpace::interpolateVectorFieldRT(ElementTransformation &T,
   }
 }
 
-// Same as interpolateVectorField if _nComponents = 1 and iComponent = 1
+// Same as interpolateVectorField if _nComponents = 1 and iComponent = 0
 // Here the field has the same size as the number of element DOFs, 
 // so it contains all the components and we select which one to interpolate.
 // This is not the case in interpolateVectorFieldComponentAtQuadnode for now, 
@@ -1170,8 +1170,16 @@ double feSpace::interpolateVectorFieldComponent(std::vector<double> &field, int 
 {
   double res = 0.;
   std::vector<double> l = L(r);
-  for(int i = 0; i < _nFunctions / _nComponents; ++i) {
-    res += field[i * _nComponents + iComponent] * l[i * _nComponents + iComponent];
+  // for(int i = 0; i < _nFunctions / _nComponents; ++i) {
+  //   res += field[i * _nComponents + iComponent] * l[i * _nComponents + iComponent];
+
+  //   // _nFunctions * _nComponents * iNode + nComponents * j + i
+  // }
+
+  size_t n = field.size();
+  for(size_t i = 0; i < n; ++i)
+  {
+    res += field[i] * l[i * _nComponents + iComponent];
   }
   return res;
 }
@@ -1260,7 +1268,7 @@ double feSpace::interpolateVectorFieldComponentAtQuadNode(std::vector<double> &f
   return res;
 }
 
-// Same as above but the "field" vector as the same size as the number of DOFs of the space
+// Same as above but the "field" vector has the same size as the number of DOFs of the space
 double feSpace::interpolateVectorFieldComponentAtQuadNode_fullField(std::vector<double> &field, int iNode, int iComponent)
 {
   double res = 0.;

@@ -136,7 +136,13 @@ namespace cahnHilliard {
       std::vector<feBilinearForm*> forms = {dphidt, convPhi, diffMu, phiS, muMass, phiCube, phiMass, diffPhi, muS};
 
       feLinearSystem *system;
-      feCheck(createLinearSystem(system, PETSC_MUMPS, forms, numbering.getNbUnknowns()));
+      #if defined(HAVE_MKL)
+        feCheck(createLinearSystem(system, MKLPARDISO, forms, numbering.getNbUnknowns()));
+      #elif defined(HAVE_PETSC) && defined(PETSC_HAVE_MUMPS)
+        feCheck(createLinearSystem(system, PETSC_MUMPS, forms, numbering.getNbUnknowns()));
+      #else
+        feCheck(createLinearSystem(system, PETSC, forms, numbering.getNbUnknowns()));
+      #endif
 
       std::vector<feNorm *> norms = {};
 
@@ -519,7 +525,13 @@ namespace cahnHilliardNavierStokes {
         convPhi, diffMu, phiS, muMass, phiCube, phiMass, diffPhi, muS};
 
       feLinearSystem *system;
-      feCheck(createLinearSystem(system, PETSC_MUMPS, forms, numbering.getNbUnknowns()));
+      #if defined(HAVE_MKL)
+        feCheck(createLinearSystem(system, MKLPARDISO, forms, numbering.getNbUnknowns()));
+      #elif defined(HAVE_PETSC) && defined(PETSC_HAVE_MUMPS)
+        feCheck(createLinearSystem(system, PETSC_MUMPS, forms, numbering.getNbUnknowns()));
+      #else
+        feCheck(createLinearSystem(system, PETSC, forms, numbering.getNbUnknowns()));
+      #endif
 
       std::vector<feNorm *> norms = {};
 

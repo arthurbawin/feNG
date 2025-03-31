@@ -79,7 +79,13 @@ namespace weakGradient {
     std::vector<feBilinearForm*> forms = {mass, gradsource};
 
     feLinearSystem *system;
-    feCheck(createLinearSystem(system, PETSC_MUMPS, forms, numbering.getNbUnknowns()));
+    #if defined(HAVE_MKL)
+        feCheck(createLinearSystem(system, MKLPARDISO, forms, numbering.getNbUnknowns()));
+      #elif defined(HAVE_PETSC) && defined(PETSC_HAVE_MUMPS)
+        feCheck(createLinearSystem(system, PETSC_MUMPS, forms, numbering.getNbUnknowns()));
+      #else
+        feCheck(createLinearSystem(system, PETSC, forms, numbering.getNbUnknowns()));
+      #endif
 
     feNorm *errorU_L2 = nullptr;
     feCheck(createNorm(errorU_L2, VECTOR_L2_ERROR, {u}, &sol, nullptr, &uSol));
@@ -245,7 +251,13 @@ namespace vectorLaplacian {
     }
 
     feLinearSystem *system;
-    feCheck(createLinearSystem(system, PETSC_MUMPS, forms, numbering.getNbUnknowns()));
+    #if defined(HAVE_MKL)
+        feCheck(createLinearSystem(system, MKLPARDISO, forms, numbering.getNbUnknowns()));
+      #elif defined(HAVE_PETSC) && defined(PETSC_HAVE_MUMPS)
+        feCheck(createLinearSystem(system, PETSC_MUMPS, forms, numbering.getNbUnknowns()));
+      #else
+        feCheck(createLinearSystem(system, PETSC, forms, numbering.getNbUnknowns()));
+      #endif
 
     feNorm *errorU_L2 = nullptr;
     feCheck(createNorm(errorU_L2, VECTOR_L2_ERROR, {u}, &sol, nullptr, &uSol));

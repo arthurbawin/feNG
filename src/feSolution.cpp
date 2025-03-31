@@ -3,9 +3,9 @@
 #include <iostream>
 #include <fstream>
 
-feSolution::feSolution(int numDOF, const std::vector<feSpace *> &space,
+feSolution::feSolution(int numDOF, const std::vector<feSpace *> &spaces,
                        const std::vector<feSpace *> &essentialSpaces)
-  : _nDOF(numDOF), _c0(0.), _tn(0.), _spaces(space), _essentialSpaces(essentialSpaces)
+  : _nDOF(numDOF), _c0(0.), _tn(0.), _spaces(spaces), _essentialSpaces(essentialSpaces)
 {
   _sol.resize(numDOF);
   _dsoldt.resize(numDOF);
@@ -13,6 +13,19 @@ feSolution::feSolution(int numDOF, const std::vector<feSpace *> &space,
     _sol[i] = 0.0;
     _dsoldt[i] = 0.0;
   }
+}
+
+feSolution::feSolution(const feSolutionContainer &container,
+                       const int solutionIndex,
+                       const std::vector<feSpace*> &spaces,
+                       const std::vector<feSpace*> &essentialSpaces)
+  : _nDOF(container.getNbDOFs()),
+  _sol(container.getSolution(solutionIndex)),
+  _dsoldt(container.getSolutionDot(solutionIndex)),
+  _c0(0.), _tn(0.),
+  _spaces(spaces), _essentialSpaces(essentialSpaces)
+{
+
 }
 
 /* Constructs an feSolution from a file created by feSolution::printSol. */

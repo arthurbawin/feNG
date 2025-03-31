@@ -93,6 +93,7 @@ typedef enum {
     }                                                                                              \
   } while(0)
 #define feCheck(status) FE_CHECK_MSG(status, NULL)
+#define feCheckReturn(status) if(status != FE_STATUS_OK) return status;
 
 void setVerbose(int level);
 

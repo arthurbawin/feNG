@@ -1,4 +1,6 @@
+
 #include "feMetric.h"
+#include "feNumeric.h"
 #include <Eigen/QR>
 
 // // Explicit instantiation
@@ -45,7 +47,7 @@ void feMetric::interpolateMetricP1(const double *x, Eigen::Matrix2d &M,
     }
 
     MetricTensor res;
-    this->logEuclidianP1Interpolation(xsi, _logMetricTensorAtNodetags.at(gmshNodeTags[0]),
+    logEuclidianP1Interpolation(xsi, _logMetricTensorAtNodetags.at(gmshNodeTags[0]),
                                            _logMetricTensorAtNodetags.at(gmshNodeTags[1]),
                                            _logMetricTensorAtNodetags.at(gmshNodeTags[2]), res);
     M(0,0) = res(0,0);
@@ -252,7 +254,7 @@ void feMetric::interpolateMetricP2(const double *x, Eigen::Matrix2d &M)
       GMSHNODETAGS_P2[i] = _sequentialTag2nodeTagVec[vertexTag];
     }
 
-    this->logEuclidianP2Interpolation(xsi, _logMetricTensorAtNodetags_eigen[GMSHNODETAGS_P2[0]-1],
+    logEuclidianP2Interpolation(xsi, _logMetricTensorAtNodetags_eigen[GMSHNODETAGS_P2[0]-1],
                                            _logMetricTensorAtNodetags_eigen[GMSHNODETAGS_P2[1]-1],
                                            _logMetricTensorAtNodetags_eigen[GMSHNODETAGS_P2[2]-1],
                                            _logMetricTensorAtNodetags_eigen[GMSHNODETAGS_P2[3]-1],
@@ -283,7 +285,7 @@ void feMetric::interpolateMetricP2Explicit(const double *x, Eigen::Matrix2d &M)
       GMSHNODETAGS_P2[i] = _sequentialTag2nodeTagVec[vertexTag];
     }
 
-    this->logEuclidianP2InterpolationExplicit(xsi, _logMetricTensorAtNodetags_eigen[GMSHNODETAGS_P2[0]-1],
+    logEuclidianP2InterpolationExplicit(xsi, _logMetricTensorAtNodetags_eigen[GMSHNODETAGS_P2[0]-1],
                                              _logMetricTensorAtNodetags_eigen[GMSHNODETAGS_P2[1]-1],
                                              _logMetricTensorAtNodetags_eigen[GMSHNODETAGS_P2[2]-1],
                                              _logMetricTensorAtNodetags_eigen[GMSHNODETAGS_P2[3]-1],
@@ -319,7 +321,7 @@ void feMetric::interpolateMetricP2(const double *x, Eigen::Matrix2d &M,
       GMSHNODETAGS_P2[i] = _sequentialTag2nodeTagVec[vertexTag];
     }
 
-    this->logEuclidianP2Interpolation(xsi, _logMetricTensorAtNodetags_eigen[GMSHNODETAGS_P2[0]-1],
+    logEuclidianP2Interpolation(xsi, _logMetricTensorAtNodetags_eigen[GMSHNODETAGS_P2[0]-1],
                                            _logMetricTensorAtNodetags_eigen[GMSHNODETAGS_P2[1]-1],
                                            _logMetricTensorAtNodetags_eigen[GMSHNODETAGS_P2[2]-1],
                                            _logMetricTensorAtNodetags_eigen[GMSHNODETAGS_P2[3]-1],
@@ -404,7 +406,7 @@ void feMetric::interpolateMetricP2Log(const double *x, Eigen::Matrix2d &M,
     }
 
     Eigen::Matrix2d res;
-    this->logEuclidianP2Interpolation(xsi, _logMetricTensorAtNodetags_eigen[gmshNodeTags[0]-1],
+    logEuclidianP2Interpolation(xsi, _logMetricTensorAtNodetags_eigen[gmshNodeTags[0]-1],
                                            _logMetricTensorAtNodetags_eigen[gmshNodeTags[1]-1],
                                            _logMetricTensorAtNodetags_eigen[gmshNodeTags[2]-1],
                                            _logMetricTensorAtNodetags_eigen[gmshNodeTags[3]-1],

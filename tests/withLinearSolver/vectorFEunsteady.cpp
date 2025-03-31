@@ -82,7 +82,13 @@ namespace diffusion {
     std::vector<feBilinearForm*> forms = {dudt, diff, src};
 
     feLinearSystem *system;
-    s = createLinearSystem(system, PETSC_MUMPS, forms, numbering.getNbUnknowns());
+    #if defined(HAVE_MKL)
+      s = createLinearSystem(system, MKLPARDISO, forms, numbering.getNbUnknowns());
+    #elif defined(HAVE_PETSC) && defined(PETSC_HAVE_MUMPS)
+      s = createLinearSystem(system, PETSC_MUMPS, forms, numbering.getNbUnknowns());
+    #else
+      s = createLinearSystem(system, PETSC, forms, numbering.getNbUnknowns());
+    #endif
     if(s != FE_STATUS_OK) return s;
 
     feNorm *errorU_L2 = nullptr;

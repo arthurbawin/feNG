@@ -46,6 +46,10 @@ public:
   // Create a solution wrapper holding numDOF degrees of freedom and their time derivative.
   feSolution(int numDOF, const std::vector<feSpace *> &spaces,
              const std::vector<feSpace *> &essentialSpaces);
+  feSolution(const feSolutionContainer &container,
+             const int solutionIndex,
+             const std::vector<feSpace*> &spaces,
+             const std::vector<feSpace*> &essentialSpaces);
   // Create a solution wrapper from a solution file. See printSol function for parsing.
   feSolution(){};
   feSolution(std::string solutionFile);

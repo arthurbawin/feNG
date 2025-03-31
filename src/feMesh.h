@@ -45,6 +45,9 @@ protected:
   // Number of boundary elements
   int _nBoundaryElm;
 
+  // Highest order of the mesh elements
+  int _order;
+
   // Mesh vertices (all)
   std::vector<Vertex> _vertices;
   // Mesh vertices for each Physical Entity (geometric connectivity)
@@ -54,6 +57,11 @@ protected:
   int _nCncGeo;
   std::vector<feCncGeo *> _cncGeo;
   std::map<std::string, int> _cncGeoMap;
+
+  std::vector<feCncGeo*> _0DConnectivities;
+  std::vector<feCncGeo*> _1DConnectivities;
+  std::vector<feCncGeo*> _2DConnectivities;
+  std::vector<feCncGeo*> _3DConnectivities;
 
 public:
   // Map from non-sequential Gmsh vertices tag to internal sequential tag
@@ -100,6 +108,7 @@ public:
   int getNumElements() { return _nTotalElm; }
   int getNumInteriorElements() { return _nInteriorElm; }
   int getNumBoundaryElements() { return _nBoundaryElm; }
+  int getOrder() const { return _order; }
   int getVertexSequentialTagFromGmshTag(int gmshNodeTag) { return _verticesMap[gmshNodeTag]; }
   int getNumCncGeo() { return _nCncGeo; }
   const std::vector<feCncGeo *> &getCncGeo() const { return _cncGeo; }
@@ -141,7 +150,30 @@ public:
   feCncGeo *getCncGeoByName(const std::string &cncGeoID) const;
   feCncGeo *getCncGeoByTag(const int cncGeoTag) const;
 
-  // Return the number of elements on the connectivity
+public:
+  // Gmsh inspired iterators
+  typedef std::vector<feCncGeo*>::iterator cncIter;
+  typedef std::vector<feCncGeo*>::const_iterator cncConstIter;
+
+public:
+  cncIter first0DCnc() { return _0DConnectivities.begin(); }
+  cncIter first1DCnc() { return _1DConnectivities.begin(); }
+  cncIter first2DCnc() { return _2DConnectivities.begin(); }
+  cncIter first3DCnc() { return _3DConnectivities.begin(); }
+  cncIter last0DCnc() { return _0DConnectivities.end(); }
+  cncIter last1DCnc() { return _1DConnectivities.end(); }
+  cncIter last2DCnc() { return _2DConnectivities.end(); }
+  cncIter last3DCnc() { return _3DConnectivities.end(); }
+  cncConstIter first0DCnc() const { return _0DConnectivities.begin(); }
+  cncConstIter first1DCnc() const { return _1DConnectivities.begin(); }
+  cncConstIter first2DCnc() const { return _2DConnectivities.begin(); }
+  cncConstIter first3DCnc() const { return _3DConnectivities.begin(); }
+  cncConstIter last0DCnc() const { return _0DConnectivities.end(); }
+  cncConstIter last1DCnc() const { return _1DConnectivities.end(); }
+  cncConstIter last2DCnc() const { return _2DConnectivities.end(); }
+  cncConstIter last3DCnc() const { return _3DConnectivities.end(); }
+
+  // Return the number of elements on the connectivity 
   int getNumElements(std::string const &cncGeoID);
   int getNumElements(const int cncGeoTag);
 
@@ -153,6 +185,7 @@ public:
   // are in the feSpace).
   int getNumVerticesPerElem(std::string const &cncGeoID);
   int getNumVerticesPerElem(const int cncGeoTag);
+  int getNumVerticesPerElemForDimension(const int dim) const;
 
   // Return the global (unique) tag of element with local
   // tag numElem in matching connectivity.
@@ -272,6 +305,7 @@ public:
 
 class feMetaNumber;
 class feSolutionContainer;
+class feMetric;
 class feMetricOptions;
 class feRecovery;
 class feNewRecovery;
@@ -461,6 +495,7 @@ public:
                     const std::vector<feSpace *> &mySpacesEssBC,
                     const std::vector<feSpace *> &otherSpaces);
 
+  feStatus adapt(feMetric *metricField);
   // Default argument is a feMetricOptions initialized by default, see feAdaptMesh.cpp
   feStatus adapt(std::vector<feNewRecovery*> recoveredFields,
                  feMetricOptions &options, 

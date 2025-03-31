@@ -39,6 +39,12 @@ public:
   void assignMatrixFrom(const MetricTensor &other);
   void assignMatrixFrom(const double other[2][2]);
 
+  void setToZero();
+  void setToIdentity();
+
+  // Increment this matrix by alpha * other
+  void incrementMatrix(const double alpha, const MetricTensor &other);
+
   double &operator()(int i, int j);
   double operator()(int i, int j) const;
   MetricTensor &operator*=(const double &val);

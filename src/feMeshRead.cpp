@@ -665,8 +665,8 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, const bool curved, const bool
       pE.nTetPerElem = -1;
       pE.interp = geometricInterpolant::NONE;
       _physicalEntities[pair.first] = pE;
-      feInfoCond(FE_VERBOSE > VERBOSE_THRESHOLD, "\t\tCreated Physical entity \"%s\"",
-                 pE.name.data());
+      // feInfoCond(FE_VERBOSE > VERBOSE_THRESHOLD, "\t\tCreated Physical entity \"%s\"",
+      //            pE.name.data());
     }
   }
 
@@ -700,9 +700,9 @@ feStatus feMesh2DP1::readMsh4(std::istream &input, const bool curved, const bool
         pE.nTetPerElem = -1;
         pE.interp = geometricInterpolant::NONE;
         _physicalEntities[{pE.dim, pE.tag}] = pE;
-        feInfoCond(FE_VERBOSE > VERBOSE_THRESHOLD,
-                   "\t\tCreated Physical entity \"%s\" with dimension %d and gmsh tag %d",
-                   pE.name.data(), pE.dim, pE.tag);
+        // feInfoCond(FE_VERBOSE > VERBOSE_THRESHOLD,
+        //            "\t\tCreated Physical entity \"%s\" with dimension %d and gmsh tag %d",
+        //            pE.name.data(), pE.dim, pE.tag);
       }
 
       // Save the description of the physical entities : this is used when looping and adapting the
@@ -1672,9 +1672,9 @@ feStatus feMesh2DP1::readGmsh(const std::string meshName, const bool curved, con
     // Read mesh file, create elements and connectivity tables of the geometric entities
     //
     if(_gmshVersion == 2.2) {
-      feCheck(readMsh2(input, curved, reversed, physicalEntitiesDescription));
+      feCheckReturn(readMsh2(input, curved, reversed, physicalEntitiesDescription));
     } else if(_gmshVersion >= 4) {
-      feCheck(readMsh4(input, curved, reversed, physicalEntitiesDescription));
+      feCheckReturn(readMsh4(input, curved, reversed, physicalEntitiesDescription));
     } else {
       return feErrorMsg(FE_STATUS_ERROR, "Mesh version should be 2.2 or 4.1 or higher.");
     }
@@ -1683,16 +1683,23 @@ feStatus feMesh2DP1::readGmsh(const std::string meshName, const bool curved, con
   } // if fb.open
 
   feInfoCond(FE_VERBOSE > VERBOSE_THRESHOLD,
-             "\t\tList of geometric entities (belonging to physical) with their attributes:");
+             "\t\tGeometric entities belonging to physical:");
+  feInfoCond(FE_VERBOSE > VERBOSE_THRESHOLD,
+             "\t\t%20s %5s %10s %10s %25s %15s %20s",
+             "Entity #", "dim", "Gmsh tag", "# elem", "Geometric interpolant", "# vertPerElem", "In physical");
   for(auto const &x : _entities) {
     entity e = x.second;
     if(e.numPhysicalTags > 0) {
+      // feInfoCond(FE_VERBOSE > VERBOSE_THRESHOLD,
+      //            "\t\t\tEntity #%2d : dim = %1d - gmshTag = %3d - nElm = %6d - nNodePerElem = %2d - "
+      //            "geometric interpolant : %10s "
+      //            "- part of physical groups : %2d",
+      //            e.tag, e.dim, e.tagGmsh, e.nElm, e.nNodePerElem, toString(e.interp).data(),
+      //            (e.numPhysicalTags > 0) ? e.physicalTags[0] : -1);
       feInfoCond(FE_VERBOSE > VERBOSE_THRESHOLD,
-                 "\t\t\tEntity #%2d : dim = %1d - gmshTag = %3d - nElm = %6d - nNodePerElem = %2d - "
-                 "geometric interpolant : %10s "
-                 "- part of physical groups : %2d",
-                 e.tag, e.dim, e.tagGmsh, e.nElm, e.nNodePerElem, toString(e.interp).data(),
-                 (e.numPhysicalTags > 0) ? e.physicalTags[0] : -1);
+                 "\t\t%20d %5d %10d %10d %25s %15d %20s",
+                 e.tag, e.dim, e.tagGmsh, e.nElm, toString(e.interp).data(), e.nNodePerElem,
+                 _physicalEntities.at({e.dim, e.physicalTags[0]}).name.data());
     }
   }
 
@@ -1845,7 +1852,7 @@ feStatus feMesh2DP1::readGmsh(const std::string meshName, const bool curved, con
               "Error when transferring connectivity tables to lower-dimensional physical entity:\n"
               "Boundary edge (%d,%d) on entity %s with dimension %d is negatively oriented.\n"
               "Check that the element ordering on the boundary is consistent with the higher-dimensional entity.",
-              pE.name.data(), pE.dim, v0->getTag(), v1->getTag());
+              v0->getTag(), v1->getTag(), pE.name.data(), pE.dim);
           }
         } else {
           // Edge is not in the set: this should not happen
@@ -1856,13 +1863,9 @@ feStatus feMesh2DP1::readGmsh(const std::string meshName, const bool curved, con
             "Boundary edge (%d,%d) on entity %s with dimension %d was not found in the set of mesh edges.\n"
             "Check that this entity is indeed the boundary of higher-dimensional physical entity.\n"
             "(i.e., check that the mesh is a manifold)",
-            pE.name.data(), pE.dim, v0->getTag(), v1->getTag());
+            v0->getTag(), v1->getTag(), pE.name.data(), pE.dim);
         }
       }
-
-      // for(auto val : pE.connecEdges) {
-      //   feInfo("V2: %s : connecEdges[] = %d", pE.name.data(), val);
-      // } 
     }
 
     //
@@ -1909,6 +1912,9 @@ feStatus feMesh2DP1::readGmsh(const std::string meshName, const bool curved, con
   }
 
   // Assign pointer to geometric interpolation space
+  // Also determine highest order of mesh elements
+  _order = 1;
+
   for(auto &p : _physicalEntities) {
     physicalEntity &pE = p.second;
     if(pE.interp == geometricInterpolant::POINTP0) {
@@ -1920,18 +1926,22 @@ feStatus feMesh2DP1::readGmsh(const std::string meshName, const bool curved, con
     } else if(pE.interp == geometricInterpolant::LINEP2) {
       pE.geometry = geometryType::LINE;
       pE.geoSpace = new feSpace1DP2("xyz");
+      _order = fmax(_order, 2);
     } else if(pE.interp == geometricInterpolant::LINEP3) {
       pE.geometry = geometryType::LINE;
       pE.geoSpace = new feSpace1DP3("xyz");
+      _order = fmax(_order, 3);
     } else if(pE.interp == geometricInterpolant::TRIP1) {
       pE.geometry = geometryType::TRI;
       pE.geoSpace = new feSpaceTriP1("xyz");
     } else if(pE.interp == geometricInterpolant::TRIP2) {
       pE.geometry = geometryType::TRI;
       pE.geoSpace = new feSpaceTriP2("xyz");
+      _order = fmax(_order, 2);
     } else if(pE.interp == geometricInterpolant::TRIP3) {
       pE.geometry = geometryType::TRI;
       pE.geoSpace = new feSpaceTriP3("xyz");
+      _order = fmax(_order, 3);
     } else if(pE.interp == geometricInterpolant::TETP1) {
       pE.geometry = geometryType::TET;
       pE.geoSpace = new feSpaceTetPn(1, "xyz");
@@ -1942,15 +1952,24 @@ feStatus feMesh2DP1::readGmsh(const std::string meshName, const bool curved, con
     }
   }
 
-  feInfoCond(FE_VERBOSE > VERBOSE_THRESHOLD, "\t\tList of physical groups with their attributes :");
+  // feInfoCond(FE_VERBOSE > VERBOSE_THRESHOLD, "\t\tList of physical groups with their attributes :");
+  feInfoCond(FE_VERBOSE > VERBOSE_THRESHOLD, "\t\tPhysical groups:");
+  feInfoCond(FE_VERBOSE > VERBOSE_THRESHOLD,
+             "\t\t%20s %5s %10s %10s %25s %15s %15s",
+             "Name", "dim", "# entities", "# elem", "Geometric interpolant", "# vertPerElem", "# edgePerElem");
   for(auto &p : _physicalEntities) {
     physicalEntity &pE = p.second;
+    // feInfoCond(
+    //   FE_VERBOSE > VERBOSE_THRESHOLD,
+    //   "\t\t\tPhysical %15s : dim = %1d - nEntities = %2d - nElm = %9d - nNodePerElem = %2d - "
+    //   "nEdgePerElem = %1d - geometric interpolant : %10s",
+    //   pE.name.data(), pE.dim, pE.listEntities.size(), pE.nElm, pE.nNodePerElem, pE.nEdgePerElem,
+    //   toString(pE.interp).data());
     feInfoCond(
       FE_VERBOSE > VERBOSE_THRESHOLD,
-      "\t\t\tPhysical %15s : dim = %1d - nEntities = %2d - nElm = %9d - nNodePerElem = %2d - "
-      "nEdgePerElem = %1d - geometric interpolant : %10s",
-      pE.name.data(), pE.dim, pE.listEntities.size(), pE.nElm, pE.nNodePerElem, pE.nEdgePerElem,
-      toString(pE.interp).data());
+      "\t\t%20s %5d %10d %10d %25s %15d %15d",
+      pE.name.data(), pE.dim, pE.listEntities.size(), pE.nElm,
+      toString(pE.interp).data(), pE.nNodePerElem, pE.nEdgePerElem);
   }
 
   //
@@ -1969,6 +1988,11 @@ feStatus feMesh2DP1::readGmsh(const std::string meshName, const bool curved, con
     _cncGeo.push_back(cnc);
     _cncGeoMap[pE.name] = nCncGeo;
     cnc->getFeSpace()->setCncGeoTag(nCncGeo++);
+
+    if(pE.dim == 0) _0DConnectivities.push_back(cnc);
+    if(pE.dim == 1) _1DConnectivities.push_back(cnc);
+    if(pE.dim == 2) _2DConnectivities.push_back(cnc);
+    if(pE.dim == 3) _3DConnectivities.push_back(cnc);
 
     // // Create a vector of vertices for each Physical Entity
     // std::vector<Vertex> entityVertices(pE.connecNodes.size());

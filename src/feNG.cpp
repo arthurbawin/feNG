@@ -6,7 +6,9 @@
 #if defined(HAVE_MPI)
   #include "mpi.h"
 #endif
-
+#if defined(HAVE_GMSH)
+ #include "gmsh.h"
+#endif
 
 using namespace std::chrono_literals;
 
@@ -29,6 +31,10 @@ double tic(int mode)
 double toc() { return tic(1); }
 
 bool wasInitialized = false;
+#if defined(HAVE_GMSH)
+bool gmshWasInitialized = false;
+extern int FE_VERBOSE;
+#endif
 
 void initialize(int argc, char **argv)
 {
@@ -65,3 +71,33 @@ void finalize()
   // Do nothing
 #endif
 }
+
+#if defined(HAVE_GMSH)
+void initializeGmsh()
+{
+  if(!gmshWasInitialized) {
+
+    // Get max threads *before* initializing gmsh
+    #if defined(HAVE_OMP)
+    int maxNumThreads = omp_get_max_threads();
+    #endif
+
+    gmsh::initialize();
+
+    #if defined(HAVE_OMP)
+    gmsh::option::setNumber("General.NumThreads", maxNumThreads);
+    #endif
+
+    gmshWasInitialized = true;
+  }
+
+  if(FE_VERBOSE == VERBOSE_NONE) gmsh::option::setNumber("General.Verbosity", 2);
+}
+
+void finalizeGmsh()
+{
+  gmsh::clear();
+  gmsh::finalize();
+  gmshWasInitialized = false;
+}
+#endif

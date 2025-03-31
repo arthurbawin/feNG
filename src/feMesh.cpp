@@ -163,6 +163,16 @@ int feMesh::getNumVerticesPerElem(const int cncGeoTag)
   return getCncGeoByTag(cncGeoTag)->getNumVerticesPerElem();
 }
 
+int feMesh::getNumVerticesPerElemForDimension(const int dim) const
+{
+  for(const feCncGeo *cnc : _cncGeo) {
+    if(cnc->getDim() == dim) {
+      return cnc->getNumVerticesPerElem();
+    }
+  }
+  return -1;
+}
+
 int feMesh::getVertex(std::string const &cncGeoID, const int numElem, const int numVertex)
 {
   return getCncGeoByName(cncGeoID)->getVertexConnectivity(numElem, numVertex);

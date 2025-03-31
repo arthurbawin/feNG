@@ -13,8 +13,6 @@
 
 extern int FE_VERBOSE;
 
-int gmshWasInitialized = false;
-
 inline feStatus checkMMGcall(std::string &command)
 {
   // From mmg/src/mmg2d/libmmgtypes.h
@@ -38,6 +36,95 @@ inline feStatus checkMMGcall(std::string &command)
       return feErrorMsg(FE_STATUS_ERROR, "System call to MMG2D failed");
   }
 }
+
+#if defined(HAVE_GMSH)
+feStatus feMesh2DP1::adapt(feMetric *metricField)
+{
+  initializeGmsh();
+  feMetricOptions options = metricField->_options;
+
+  gmsh::open(options.backgroundMeshfile);
+  gmsh::model::getCurrent(options.modelForMetric);
+
+  // Create aniso mesh
+  // Save directly to .msh to preserve Physical Entities
+  std::string cmd1 = "mmg2d_O3 " + options.mmgInputMeshfile + " -v 10 -hgrad -1 -o " + options.mmgOutputMeshfile;
+  // std::string cmd1 = "/home/monet/arbaw/Code/mmg/build/bin/mmg2d_O3 " + options.mmgInputMeshfile + " -v 10 -hgrad -1 -o " + options.mmgOutputMeshfile;
+  if(FE_VERBOSE == VERBOSE_NONE) {
+    // Write MMG console outputs to logMMG.txt
+    cmd1 += " > logMMG.txt";
+  }
+
+  // Create aniso mesh
+  feStatus s = checkMMGcall(cmd1);
+  if(s != FE_STATUS_OK) {
+    gmsh::finalize();
+    return s;
+  }
+
+  // Open adapted mesh (DEPRECATED: compute the next metric field on this mesh)
+  gmsh::open(options.mmgOutputMeshfile);
+  gmsh::model::getCurrent(options.modelForMetric);
+  metricField->setGmshMetricModel(options.modelForMetric);
+
+  // Check physical entities
+  gmsh::vectorpair physicalGroups;
+  gmsh::vectorpair allGeometricEntities;
+  gmsh::model::getPhysicalGroups(physicalGroups);
+  gmsh::model::getEntities(allGeometricEntities);
+
+  std::map<std::pair<int, int>, std::vector<int>> entitiesForPhysical;
+
+  // Get the entities for existing physical groups
+  for(auto pair : physicalGroups) {
+    std::vector<int> entities;
+    gmsh::model::getEntitiesForPhysicalGroup(pair.first, pair.second, entities);
+    entitiesForPhysical[pair] = entities;
+  }
+
+  // Remove all the physical groups
+  gmsh::model::removePhysicalGroups();
+
+  // Re-add stored physical groups
+  for(auto pair : _physicalEntitiesDescription) {
+    int dim = pair.first.first;
+    int tag = pair.first.second;
+    std::string name = pair.second;
+
+    bool OK = false;
+    for(auto p : physicalGroups) {
+      if(p.first == dim && p.second == tag) {
+        gmsh::model::addPhysicalGroup(dim, entitiesForPhysical[p], tag);
+        gmsh::model::setPhysicalName(dim, tag, name);
+        OK = true;
+      }
+    }
+    if(!OK) {
+      return feErrorMsg(FE_STATUS_ERROR,
+                        "Physical Entity \"%s\" with (dim,tag) = (%d,%d)"
+                        " could not be reassigned after mesh adaptation :/",
+                        name.data(), dim, tag);
+    }
+  }
+
+  // Petite astuce: écrire au format 2.2 pour éliminer des
+  // entités géométriques douteuses 0D de MMG...
+  gmsh::write(options.adaptedMeshName);
+  gmsh::clear();
+  gmsh::open(options.adaptedMeshName);
+
+  // Write P2 aniso mesh
+  gmsh::option::setNumber("Mesh.MshFileVersion", 4.1);
+  gmsh::model::mesh::setOrder(metricField->_backmeshOrder);
+  // gmsh::write("anisoadapted.msh");
+  gmsh::write(options.adaptedMeshName);
+  gmsh::model::mesh::setOrder(1);
+
+  finalizeGmsh();
+
+  return FE_STATUS_OK;
+}
+#endif
 
 feStatus feMesh2DP1::adapt(std::vector<feNewRecovery*> recoveredFields, feMetricOptions &options,
                            const std::vector<feSpace *> &spaces,
@@ -65,28 +152,12 @@ feStatus feMesh2DP1::adapt(std::vector<feNewRecovery*> recoveredFields, feMetric
 #if defined(HAVE_GMSH)
 
   // Step 1: Compute the metric tensor field and write metrics to options.mmgInputMeshfile
-  if(!gmshWasInitialized) {
-
-    // Get max threads *before* initializing gmsh
-    #if defined(HAVE_OMP)
-    int maxNumThreads = omp_get_max_threads();
-    #endif
-
-    gmsh::initialize();
-
-    #if defined(HAVE_OMP)
-    gmsh::option::setNumber("General.NumThreads", maxNumThreads);
-    #endif
-
-    gmshWasInitialized = true;
-  }
-
-  if(FE_VERBOSE == VERBOSE_NONE) gmsh::option::setNumber("General.Verbosity", 2);
+  initializeGmsh();
 
   gmsh::open(options.backgroundMeshfile);
   gmsh::model::getCurrent(options.modelForMetric);
 
-  feMetric metricField(recoveredFields, options);
+  feMetric metricField(options, this, recoveredFields);
   metricField._backmeshOrder = getGeometricInterpolantDegree(recoveredFields[0]->_cnc->getInterpolant());
   metricField._nVerticesPerElmOnBackmesh = recoveredFields[0]->_cnc->getFeSpace()->getNumFunctions();
 
@@ -95,8 +166,7 @@ feStatus feMesh2DP1::adapt(std::vector<feNewRecovery*> recoveredFields, feMetric
   options.userValue = metricField._options.userValue;
   feInfoCond(FE_VERBOSE > 0, "\t\tComputed metric tensors in %f s", toc());
   if(s != FE_STATUS_OK) {
-    gmsh::finalize();
-    gmshWasInitialized = false;
+    finalizeGmsh();
     return s;
   }
 
@@ -121,7 +191,7 @@ feStatus feMesh2DP1::adapt(std::vector<feNewRecovery*> recoveredFields, feMetric
     // Create aniso mesh
     s = checkMMGcall(cmd1);
     if(s != FE_STATUS_OK) {
-      gmsh::finalize();
+      finalizeGmsh();
       return s;
     }
 
@@ -295,10 +365,7 @@ feStatus feMesh2DP1::adapt(std::vector<feNewRecovery*> recoveredFields, feMetric
     #endif
   }
 
-  gmsh::clear();
-  gmsh::finalize();
-
-  gmshWasInitialized = false;
+  finalizeGmsh();
 #else
   UNUSED(recoveredFields, options, spaces, essentialSpaces, spaceForAdaptation,
     discreteSolution, exactSolution, exactGradient, curveMMGmesh, target, generateAnisoMeshBeforeCurving);

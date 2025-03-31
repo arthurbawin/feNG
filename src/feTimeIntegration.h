@@ -92,6 +92,7 @@ public:
   void setCurrentStep(int step) { _currentStep = step; };
 
   const std::vector<double> &getTime() const { return _t; }
+  double getCurrentTime() const { return _t[0]; }
 
   // Set the previous times and time differences from existing container,
   // e.g. when continuing integration from a previous integrator

@@ -71,4 +71,9 @@ double toc();
 void initialize(int argc, char **argv);
 void finalize();
 
+#if defined(HAVE_GMSH)
+void initializeGmsh();
+void finalizeGmsh();
+#endif
+
 #endif
