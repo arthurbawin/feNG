@@ -45,16 +45,9 @@ int main(int argc, char **argv)
                                           "-nodiv", "--disable_divergence_formulation","Divergence or Laplacian formulation");
   feCheck(options.parse());
 
-  orderPressure = fmin(1, orderVelocity-1);
+  orderPressure = fmax(1, orderVelocity-1);
 
   setVerbose(1);
-
-  feConstantFunction zero(0.);
-  feConstantFunction one(1.);
-  feConstantFunction minusOne(-1.);
-  feConstantVectorFunction zeroVector({0., 0.});
-  feConstantVectorFunction  oneVector({1., 1.});
-  feConstantVectorFunction  uniform({1., 0.});
 
   double Re = 1.;
   feConstantFunction viscosity(1./Re);
@@ -68,17 +61,17 @@ int main(int argc, char **argv)
 
   feMesh2DP1 mesh(meshFile);
 
-  feSpace *uDomain = nullptr, *pDomain = nullptr;
+  feSpace *u = nullptr, *p = nullptr;
   feSpace *uInlet = nullptr, *uOutlet = nullptr, *uNoSlip = nullptr;
 
   // Poiseuille
   feCheck(createFiniteElementSpace( uInlet, &mesh, elementType::VECTOR_LAGRANGE, orderVelocity, "U",  "Inlet", degreeQuadrature, &uExact));
-  feCheck(createFiniteElementSpace(uOutlet, &mesh, elementType::VECTOR_LAGRANGE, orderVelocity, "U", "Outlet", degreeQuadrature, &zeroVector));
-  feCheck(createFiniteElementSpace(uNoSlip, &mesh, elementType::VECTOR_LAGRANGE, orderVelocity, "U", "NoSlip", degreeQuadrature, &zeroVector));
-  feCheck(createFiniteElementSpace(uDomain, &mesh, elementType::VECTOR_LAGRANGE, orderVelocity, "U", "Domain", degreeQuadrature, &zeroVector));
-  feCheck(createFiniteElementSpace(pDomain, &mesh, elementType::LAGRANGE,        orderPressure, "P", "Domain", degreeQuadrature, &zero));
+  feCheck(createFiniteElementSpace(uOutlet, &mesh, elementType::VECTOR_LAGRANGE, orderVelocity, "U", "Outlet", degreeQuadrature, &vectorConstant::zero));
+  feCheck(createFiniteElementSpace(uNoSlip, &mesh, elementType::VECTOR_LAGRANGE, orderVelocity, "U", "NoSlip", degreeQuadrature, &vectorConstant::zero));
+  feCheck(createFiniteElementSpace(      u, &mesh, elementType::VECTOR_LAGRANGE, orderVelocity, "U", "Domain", degreeQuadrature, &vectorConstant::zero));
+  feCheck(createFiniteElementSpace(      p, &mesh, elementType::LAGRANGE,        orderPressure, "P", "Domain", degreeQuadrature, &scalarConstant::zero));
 
-  std::vector<feSpace*> spaces = {uInlet, uNoSlip, uDomain, pDomain};
+  std::vector<feSpace*> spaces = {uInlet, uNoSlip, u, p};
   std::vector<feSpace*> essentialSpaces = {uNoSlip, uInlet};
 
   if(divergenceFormulation) {
@@ -96,24 +89,24 @@ int main(int argc, char **argv)
 
   // Continuity
   feBilinearForm *divU = nullptr;
-  feCheck(createBilinearForm(divU, {pDomain, uDomain}, new feSysElm_MixedDivergence(&one)));
+  feCheck(createBilinearForm(divU, {p, u}, new feSysElm_MixedDivergence(&scalarConstant::one)));
   std::vector<feBilinearForm*> forms = {divU};
 
   // Momentum
   feBilinearForm *diffU = nullptr, *gradP = nullptr, *divSigma = nullptr;
   if(divergenceFormulation) {
-    feCheck(createBilinearForm(divSigma, {uDomain, pDomain}, new feSysElm_DivergenceNewtonianStress(&one, &viscosity)));
+    feCheck(createBilinearForm(divSigma, {u, p}, new feSysElm_DivergenceNewtonianStress(&scalarConstant::one, &viscosity)));
     forms.push_back(divSigma);
    } else {
-    feCheck(createBilinearForm(gradP, {uDomain, pDomain}, new feSysElm_MixedGradient(&minusOne)));
-    feCheck(createBilinearForm(diffU,           {uDomain}, new feSysElm_VectorDiffusion(&minusOne, &viscosity)));
+    feCheck(createBilinearForm(gradP, {u, p}, new feSysElm_MixedGradient(&scalarConstant::minusOne)));
+    feCheck(createBilinearForm(diffU,           {u}, new feSysElm_VectorDiffusion(&scalarConstant::minusOne, &viscosity)));
     forms.push_back(gradP);
     forms.push_back(diffU);
   }
 
   // Nonlinear term (optional)
   feBilinearForm *convU = nullptr;
-  feCheck(createBilinearForm(convU, {uDomain}, new feSysElm_VectorConvectiveAcceleration(&one)));
+  feCheck(createBilinearForm(convU, {u}, new feSysElm_VectorConvectiveAcceleration(&scalarConstant::one)));
   forms.push_back(convU);
 
   feLinearSystem *system;
@@ -128,9 +121,6 @@ int main(int argc, char **argv)
     return 1;
   }
 
-  // system->setDisplayMatrixInConsole(true);
-  // system->setDisplayRHSInConsole(true);
-
   feExporter *exporter;
   feCheck(createVisualizationExporter(exporter, VTK, &numbering, &sol, &mesh, spaces));
   // int exportEveryNSteps = 1;
@@ -144,8 +134,8 @@ int main(int argc, char **argv)
   feCheck(createTimeIntegrator(solver, timeIntegratorScheme::STATIONARY, tol, system, &sol, &mesh, norms, exportData));
   feCheck(solver->makeSteps(1));
 
-  feNorm normU(VECTOR_L2_ERROR, {uDomain}, &sol, nullptr, &uExact);
-  feNorm normP(L2_ERROR, {pDomain}, &sol, &pExact);
+  feNorm normU(VECTOR_L2_ERROR, {u}, &sol, nullptr, &uExact);
+  feNorm normP(L2_ERROR, {p}, &sol, &pExact);
   feInfo("Error on velocity is %1.14e", normU.compute());
   feInfo("Error on pressure is %1.14e", normP.compute());
 
