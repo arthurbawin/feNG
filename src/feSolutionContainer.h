@@ -71,8 +71,10 @@ public:
   void rotate(double dt);
   void rotateWithoutTime();
 
-///////////////////////////////////////////////////////////////////////////
-// Everything below should be reworked
+  virtual void computeSolTimeDerivative(feSolution *sol, feLinearSystem *linearSystem);
+
+  ///////////////////////////////////////////////////////////////////////////
+  // Everything below should be reworked
 
   void initialize(feSolution *sol, feMesh *mesh);
   
@@ -83,15 +85,25 @@ public:
   double getRes(int iSol, int iDOF) const { return _fResidual[iSol][iDOF]; }
   std::vector<double> &getResidual(int iSol) { return _fResidual[iSol]; }
   void setResidual(int iSol, std::vector<double> res) { _fResidual[iSol] = res; }
-  virtual void computeSolTimeDerivative(feSolution *sol, feLinearSystem *linearSystem);
 };
 
+// Currently, the only specialization of the derived class BDFContainer
+// is the computation of the time derivative with precomputed coefficients.
+// But the BDF coefficients are stored in the base class...
+// This should be reworked.
 class BDFContainer : public feSolutionContainer
 {
 public:
   BDFContainer(int nSol, double tn, int nDOF)
     : feSolutionContainer(nSol, tn, nDOF){};
-  // ~BDFContainer() {}
+
+  // Copy assignment from base class
+  BDFContainer& operator=(const feSolutionContainer &other)
+  {
+    feSolutionContainer::operator=(other);
+    return *this;
+  }
+  
   void computeSolTimeDerivative(feSolution *sol, feLinearSystem *linearSystem);
 };
 

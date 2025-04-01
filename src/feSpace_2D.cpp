@@ -219,7 +219,7 @@ void feSpaceTriP1_Discontinuous::synchronizeCodeOfEssentialDOF()
       }
     }
   }
-};
+}
 
 void feSpaceTriP1_Discontinuous::synchronizeNumberingOfEssentialDOF(int &numModifiedDOF)
 {
@@ -239,7 +239,7 @@ void feSpaceTriP1_Discontinuous::synchronizeNumberingOfEssentialDOF(int &numModi
       }
     }
   }
-};
+}
 
 // -----------------------------------------------------------------------------
 // Vector Lagrange element of degree 1 on reference triangle r = [0,1], s = [0,1-r]

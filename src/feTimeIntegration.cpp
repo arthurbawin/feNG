@@ -342,12 +342,12 @@ feStatus BDF2Integrator::restartFromContainer(const feSolutionContainer &contain
   const std::vector<double> &tC = container.getTime();
   const std::vector<double> &deltaTC = container.getTimeDifferences();
 
+  // Call custom copy constructor for the internal solution container
+  *_sC = container;
+
   for(int i = 0; i < _nSol; ++i) {
     _t[i] = tC[i];
     _deltaT[i] = deltaTC[i];
-    _sC->setSolution(container.getSolution(i), i);
-    _sC->setSolutionDot(container.getSolutionDot(i), i);
-    _sC->setResidual(container.getFResidual(i), i);
   }
 
   return FE_STATUS_OK;
