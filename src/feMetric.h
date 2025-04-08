@@ -298,6 +298,12 @@ public:
   feMetric(const feMetricOptions &options,
            feMesh2DP1 *mesh,
            std::vector<feNewRecovery*> recoveredFields = std::vector<feNewRecovery*>{});
+  ~feMetric()
+  {
+  #if defined(HAVE_GMSH)
+    finalizeGmsh();
+  #endif
+  };
 
   void setOptions(feMetricOptions &other) { _options = other; }
   const feMetricOptions &getOptions() const { return _options; }

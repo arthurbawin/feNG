@@ -25,9 +25,11 @@ typedef enum { MKLPARDISO, PETSC, PETSC_MUMPS } linearSolverType;
 // bilinearForms: vector of (bi-)linear forms to assemble
 //   numUnknowns: total number of unknowns (dimension of the system)
 
-feStatus createLinearSystem(feLinearSystem *&system, linearSolverType type,
-                            std::vector<feBilinearForm *> bilinearForms, int numUnknowns,
-                            int ownershipSplit = -1);
+feStatus createLinearSystem(feLinearSystem *&system,
+                            const linearSolverType type,
+                            const std::vector<feBilinearForm *> bilinearForms,
+                            const int numUnknowns,
+                            const int ownershipSplit = -1);
 
 //
 // Abstract class handling the linear system to be solved at each step
@@ -47,7 +49,7 @@ protected:
   std::vector<feBilinearForm *> _formResiduals;
 
   // Recompute the jacobian matrix at current Newton-Raphson step?
-  bool recomputeMatrix = true;
+  bool _recomputeMatrix = true;
 
   // Reorder the matrix?
   bool _permute = false;
@@ -68,11 +70,11 @@ protected:
 public:
   // Create an abstract linear system. Do not call directly,
   // call the derived constructors instead.
-  feLinearSystem(std::vector<feBilinearForm *> bilinearForms);
+  feLinearSystem(const std::vector<feBilinearForm*> bilinearForms);
   virtual ~feLinearSystem();
 
   // Return the size m of the linear system (dimension of the square matrix m x m)
-  virtual feInt getSystemSize() = 0;
+  virtual feInt getSystemSize() const = 0;
 
   void setAbsoluteTol(double absTol) { _abs_tol = absTol; };
   void setRelativeTol(double relTol) { _rel_tol = relTol; };
@@ -85,14 +87,14 @@ public:
   void setExportMatrixMatlab(bool flag) { _exportMatrixMatlab = flag; };
   void setExportRHSMatlab(bool flag) { _exportRHSMatlab = flag; };
 
-  bool getRecomputeStatus() { return recomputeMatrix; }
-  void setRecomputeStatus(bool status) { recomputeMatrix = status; }
+  bool getRecomputeStatus() const { return _recomputeMatrix; }
+  void setRecomputeStatus(bool status) { _recomputeMatrix = status; }
 
-  bool getReorderingStatus() { return _permute; }
+  bool getReorderingStatus() const { return _permute; }
   void setReorderingStatus(bool status) { _permute = status; }
 
-  virtual void getRHSMaxNorm(double *norm) = 0;
-  virtual void getResidualMaxNorm(double *norm) = 0;
+  virtual void getRHSMaxNorm(double *norm) const = 0;
+  virtual void getResidualMaxNorm(double *norm) const = 0;
 
   // Reset the matrix and/or the right-hand side
   virtual void setToZero() = 0;
@@ -129,11 +131,17 @@ public:
   virtual void applyCorrectionToResidual(double coeff, std::vector<double> &d) = 0;
 
   // Print the matrix to the console or PETSc viewer
-  virtual void viewMatrix() = 0;
+  virtual void viewMatrix() const = 0;
   // Print the RHS to the console
-  virtual void viewRHS() = 0;
+  virtual void viewRHS() const = 0;
   // Print the current solution vector (Newton residual)
-  virtual void viewResidual() = 0;
+  virtual void viewResidual() const = 0;
+  // Export raw matrix to file
+  virtual void writeMatrix(const std::string fileName, const double time = 0.) = 0;
+  // Export raw RHS to file
+  virtual void writeRHS(const std::string fileName, const double time = 0.) = 0;
+  // Export raw residual du to file
+  virtual void writeResidual(const std::string fileName, const double time = 0.) = 0;
 };
 
 //
@@ -187,12 +195,12 @@ protected:
 #endif
 
 public:
-  feLinearSystemPETSc(std::vector<feBilinearForm *> bilinearForms,
-                      int numUnknowns,
-                      linearSolverType type);
+  feLinearSystemPETSc(const std::vector<feBilinearForm*> bilinearForms,
+                      const int numUnknowns,
+                      const linearSolverType type);
   ~feLinearSystemPETSc();
 
-  feInt getSystemSize() {
+  feInt getSystemSize() const {
     #if defined(HAVE_PETSC)
     return (feInt)_nInc;
     #else 
@@ -200,8 +208,8 @@ public:
     #endif
   };
 
-  void getRHSMaxNorm(double *norm);
-  void getResidualMaxNorm(double *norm);
+  void getRHSMaxNorm(double *norm) const;
+  void getResidualMaxNorm(double *norm) const;
 
   // See doc in feLinearSystem.h
   void setToZero();
@@ -216,9 +224,12 @@ public:
   void correctSolution(feSolution *sol);
   void assignResidualToDCResidual(feSolutionContainer *solContainer);
   void applyCorrectionToResidual(double coeff, std::vector<double> &d);
-  void viewMatrix();
-  void viewRHS();
-  void viewResidual();
+  void viewMatrix() const;
+  void viewRHS() const;
+  void viewResidual() const;
+  void writeMatrix(const std::string /*fileName*/, const double /* time */);
+  void writeRHS(const std::string /*fileName*/, const double /* time */);
+  void writeResidual(const std::string /*fileName*/, const double /* time */);
 
 private:
   void initialize();
@@ -289,22 +300,24 @@ protected:
   PardisoInt NRHS;
   PardisoInt ERROR;
   PardisoInt MSGLVL;
-  PardisoInt IDUM;
+  PardisoInt *IDUM;
   double DDUM;
   PardisoInt IPIVOT;
 
 public:
-  feLinearSystemMklPardiso(std::vector<feBilinearForm *> bilinearForms, int numUnknowns, int ownershipSplit);
+  feLinearSystemMklPardiso(const std::vector<feBilinearForm *> bilinearForms,
+                           const int numUnknowns,
+                           const int ownershipSplit);
   ~feLinearSystemMklPardiso();
 
   void setPivot(int pivot);
   void setPardisoMsglvlHigh() { MSGLVL = 1; };
   void setPardisoMsglvlLow() { MSGLVL = 0; };
 
-  feInt getSystemSize() { return  _nInc; };
+  feInt getSystemSize() const { return  _nInc; };
 
-  void getRHSMaxNorm(double *norm);
-  void getResidualMaxNorm(double *norm);
+  void getRHSMaxNorm(double *norm) const;
+  void getResidualMaxNorm(double *norm) const;
 
   void setToZero();
   void setMatrixToZero();
@@ -318,15 +331,19 @@ public:
   void assignResidualToDCResidual(feSolutionContainer *solContainer);
   void applyCorrectionToResidual(double coeff, std::vector<double> &d);
   void correctSolution(feSolution *sol);
-  void viewMatrix();
-  void viewRHS();
-  void viewResidual();
+  void viewMatrix() const;
+  void viewRHS() const;
+  void viewResidual() const;
+  void writeMatrix(const std::string fileName, const double time = 0.);
+  void writeRHS(const std::string fileName, const double time = 0.);
+  void writeResidual(const std::string fileName, const double time = 0.);
 
 private:
   void initialize(void);
   void mklSymbolicFactorization(void);
   void mklFactorization(void);
   void mklSolve(void);
+  // void mklSolveWithPhase(const int phase);
 };
 #endif // HAVE_MKL
 

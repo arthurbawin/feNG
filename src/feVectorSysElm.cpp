@@ -272,6 +272,12 @@ void feSysElm_TransientVectorMass::computeBe(feBilinearForm *form)
       form->_Be[i] -= coeff * _dudtdotphi_i[i] * jac * _wQuad[k];
     }
   }
+
+  // if(form->_numElem == 10) {
+  //   feInfo("%s - Local RHS on elem 10 :", toString(_ID).data());
+  //   for(int i = 0; i < form->_M; ++i)
+  //     feInfo("B[%2d] = %+-1.10e", i, form->_Be[i]);
+  // }
 }
 
 // -----------------------------------------------------------------------------
@@ -518,6 +524,12 @@ void feSysElm_MixedDivergence::computeAe(feBilinearForm *form)
       }
     }
   }
+  // if(form->_numElem == 10) {
+  //   feInfo("%s - Local matrix on elem 10 :", toString(_ID).data());
+  //   for(int i = 0; i < form->_M; ++i)
+  //     for(int j = 0; j < form->_N; ++j)
+  //       feInfo("A[%2d][%2d] = %+-1.10e", i, j, form->_Ae[i][j]);
+  // }
 }
 
 void feSysElm_MixedDivergence::computeBe(feBilinearForm *form)
@@ -581,8 +593,9 @@ void feSysElm_MixedDivergenceCHNS::computeAe(feBilinearForm *form)
     form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, form->_args.pos);
     coeff = (*_coeff)(form->_args);
     phi = form->_intSpaces[_idPhi]->interpolateFieldAtQuadNode(form->_sol[_idPhi], k);
-    rho = (*_density)(phi);
-    drhodphi = (*_drhodphi)(phi);
+    form->_args.u = phi;
+    rho = (*_density)(form->_args);
+    drhodphi = (*_drhodphi)(form->_args);
 
     // _phiP
     form->_intSpaces[_idP]->getFunctionsAtQuadNode(k, _phiP);
@@ -620,8 +633,9 @@ void feSysElm_MixedDivergenceCHNS::computeBe(feBilinearForm *form)
     form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, form->_args.pos);
     coeff = (*_coeff)(form->_args);
     phi = form->_intSpaces[_idPhi]->interpolateFieldAtQuadNode(form->_sol[_idPhi], k);
-    rho = (*_density)(phi);
-    drhodphi = (*_drhodphi)(phi);
+    form->_args.u = phi;
+    rho = (*_density)(form->_args);
+    drhodphi = (*_drhodphi)(form->_args);
 
     // u
     form->_intSpaces[_idU]->interpolateVectorFieldAtQuadNode(form->_sol[_idU], k, _u, _nComponents);
@@ -1013,6 +1027,13 @@ void feSysElm_CHNS_Momentum::computeAe(feBilinearForm *form)
       }
     }
   }
+
+  // if(form->_numElem == 10) {
+  //   feInfo("%s - Local matrix on elem 10 :", toString(_ID).data());
+  //   for(int i = 0; i < form->_M; ++i)
+  //     for(int j = 0; j < form->_N; ++j)
+  //       feInfo("A[%2d][%2d] = %+-1.10e", i, j, form->_Ae[i][j]);
+  // }
 }
 
 void feSysElm_CHNS_Momentum::computeBe(feBilinearForm *form)
@@ -1099,6 +1120,14 @@ void feSysElm_CHNS_Momentum::computeBe(feBilinearForm *form)
         + eta * _doubleContraction[i]);
     }
   }
+
+  // if(form->_numElem == 10) {
+  //   feInfo("%s - Local RHS on elem 10 :", toString(_ID).data());
+  //   for(int i = 0; i < _nFunctionsU; ++i)
+  //   {
+  //     feInfo("B[%2d] = %+-1.10e", i, form->_Be[i]);
+  //   }
+  // }
 }
 
 // -----------------------------------------------------------------------------
@@ -1248,6 +1277,12 @@ void feSysElm_TracerConvection::computeAe(feBilinearForm *form)
 
     }
   }
+  // if(form->_numElem == 10) {
+  //   feInfo("%s - Local matrix on elem 10 :", toString(_ID).data());
+  //   for(int i = 0; i < form->_M; ++i)
+  //     for(int j = 0; j < form->_N; ++j)
+  //       feInfo("A[%2d][%2d] = %+-1.10e", i, j, form->_Ae[i][j]);
+  // }
 }
 
 void feSysElm_TracerConvection::computeBe(feBilinearForm *form)
@@ -1277,6 +1312,11 @@ void feSysElm_TracerConvection::computeBe(feBilinearForm *form)
       form->_Be[i] -= coeff * uDotGradC * _phiC[i] * jac * _wQuad[k];
     }
   }
+  // if(form->_numElem == 10) {
+  //   feInfo("%s - Local RHS on elem 10 :", toString(_ID).data());
+  //   for(int i = 0; i < form->_M; ++i)
+  //     feInfo("B[%2d] = %+-1.10e", i, form->_Be[i]);
+  // }
 }
 
 // ------------------------------------------------------------------------------------------------------

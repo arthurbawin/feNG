@@ -86,6 +86,12 @@ public:
   // Can use 'eval' or operator() overloading
   double eval(const feFunctionArguments &args) { return _fct(args, _param); };
   double operator()(const feFunctionArguments &args) { return _fct(args, _param); };
+
+  // Prevent implicit conversion when calling eval or operator()
+  template <class T>
+  void eval(const T&) = delete;
+  template <class T>
+  void operator()(const T&) = delete;
 };
 
 class feConstantFunction : public feFunction

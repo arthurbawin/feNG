@@ -4,10 +4,11 @@ extern int FE_VERBOSE;
 
 extern bool wasInitialized;
 
-feStatus createLinearSystem(feLinearSystem *&system, linearSolverType type,
-                            std::vector<feBilinearForm *> bilinearForms,
-                            int numUnknowns,
-                            int ownershipSplit)
+feStatus createLinearSystem(feLinearSystem *&system,
+                            const linearSolverType type,
+                            const std::vector<feBilinearForm*> bilinearForms,
+                            const int numUnknowns,
+                            const int ownershipSplit)
 {
 #if !defined(HAVE_MKL)
   UNUSED(ownershipSplit);
@@ -65,8 +66,9 @@ feStatus createLinearSystem(feLinearSystem *&system, linearSolverType type,
   return FE_STATUS_OK;
 }
 
-feLinearSystem::feLinearSystem(std::vector<feBilinearForm *> bilinearForms) : recomputeMatrix(false)
+feLinearSystem::feLinearSystem(const std::vector<feBilinearForm*> bilinearForms)
 {
+  _recomputeMatrix = false;
   _numMatrixForms = 0;
   _numResidualForms = bilinearForms.size();
 
@@ -77,7 +79,7 @@ feLinearSystem::feLinearSystem(std::vector<feBilinearForm *> bilinearForms) : re
 #endif
 
   for(int i = 0; i < nThreads; ++i) {
-    for(feBilinearForm *f : bilinearForms) {
+    for(const feBilinearForm *f : bilinearForms) {
 #if defined(HAVE_OMP)
       feBilinearForm *fCpy = new feBilinearForm(*f);
       _formResiduals.push_back(fCpy);

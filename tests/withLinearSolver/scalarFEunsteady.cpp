@@ -128,6 +128,131 @@ namespace diffusion {
   }
 }
 
+namespace nonLinearDiffusion {
+
+  double uSol_f(const feFunctionArguments &args, const std::vector<double> &/*par*/)
+  {
+    const double x = args.pos[0];
+    const double y = args.pos[1];
+    const double t = args.t;
+    return exp(-t) * sin(M_PI*x)*sin(M_PI*y);
+  }
+
+  double uSrc_f(const feFunctionArguments &args, const std::vector<double> &/*par*/)
+  {
+    const double x = args.pos[0];
+    const double y = args.pos[1];
+    const double t = args.t;
+    const double cpx = cos(M_PI*x);
+    const double cpy = cos(M_PI*y);
+    const double spx = sin(M_PI*x);
+    const double spy = sin(M_PI*y);
+    const double dudt = - exp(-t) * sin(M_PI*x)*sin(M_PI*y);
+    const double lapu = 2.*M_PI*M_PI* (exp(-3*t)*cpx*cpx*spx*spy*spy*spy - exp(-t)*spx*spy*(exp(-2*t)*spx*spx*spy*spy + 1) + exp(-3*t)*cpy*cpy*spx*spx*spx*spy);
+    return - (dudt - lapu);
+  }
+
+  double conductivity_f(const feFunctionArguments &args, const std::vector<double> &/*par*/)
+  {
+    const double u = args.u;
+    return 1. + u*u;
+  }
+
+  double ddu_conductivity_f(const feFunctionArguments &args, const std::vector<double> &/*par*/)
+  {
+    const double u = args.u;
+    return 2.*u;
+  }
+
+  feStatus solve(const std::string &meshFile,
+                 const timeIntegratorScheme scheme,
+                 const double t0,
+                 const double t1,
+                 const int nTimeSteps,
+                 const int order,
+                 const int degreeQuadrature,
+                 const feNLSolverOptions &NLoptions,
+                 int &numInteriorElements,
+                 double &L2Error)
+  {
+    feFunction uSol(uSol_f);
+    feFunction uSrc(uSrc_f);
+    feFunction conductivity(conductivity_f);
+    feFunction ddu_conductivity(ddu_conductivity_f);
+
+    feMesh2DP1 mesh(meshFile);
+    numInteriorElements = mesh.getNumInteriorElements();
+
+    feSpace *u = nullptr, *uBord = nullptr;
+    feCheckReturn(createFiniteElementSpace(uBord, &mesh, elementType::LAGRANGE, order, "U",    "Bord", degreeQuadrature, &uSol));
+    feCheckReturn(createFiniteElementSpace(    u, &mesh, elementType::LAGRANGE, order, "U", "Domaine", degreeQuadrature, &scalarConstant::zero));
+
+    std::vector<feSpace*> spaces = {uBord, u};
+    std::vector<feSpace*> essentialSpaces = {uBord};
+
+    feMetaNumber numbering(&mesh, spaces, essentialSpaces);
+    feSolution sol(numbering.getNbDOFs(), spaces, essentialSpaces);
+    
+    feBilinearForm *dudt = nullptr, *diff = nullptr, *src = nullptr;
+    feCheckReturn(createBilinearForm(dudt, {u}, new feSysElm_TransientMass(&scalarConstant::one)));
+    feCheckReturn(createBilinearForm(diff, {u}, new feSysElm_NonlinearDiffusion<2>(&conductivity, &ddu_conductivity)));
+    feCheckReturn(createBilinearForm( src, {u}, new feSysElm_Source(&uSrc)));
+    std::vector<feBilinearForm*> forms = {dudt, diff, src};
+
+    feLinearSystem *system;
+    #if defined(HAVE_MKL)
+      feCheckReturn(createLinearSystem(system, MKLPARDISO, forms, numbering.getNbUnknowns()));
+    #elif defined(HAVE_PETSC) && defined(PETSC_HAVE_MUMPS)
+      feCheckReturn(createLinearSystem(system, PETSC_MUMPS, forms, numbering.getNbUnknowns()));
+    #else
+      feCheckReturn(createLinearSystem(system, PETSC, forms, numbering.getNbUnknowns()));
+    #endif
+
+    feNorm *errorU_L2 = nullptr;
+    feCheckReturn(createNorm(errorU_L2, L2_ERROR, {u}, &sol, &uSol));
+    std::vector<feNorm *> norms = {};
+
+    TimeIntegrator *solver;
+    feCheckReturn(createTimeIntegrator(solver, scheme, NLoptions,
+      system, &sol, &mesh, norms, {nullptr, 1, ""}, t0, t1, nTimeSteps));
+    feCheckReturn(solver->makeSteps(nTimeSteps));
+
+    L2Error = errorU_L2->compute();
+
+    delete errorU_L2;
+    delete solver;
+    delete system;
+    for(feBilinearForm* f : forms)
+      delete f;
+    for(feSpace *space : spaces)
+      delete space;
+
+    return FE_STATUS_OK;
+  }
+
+  feStatus meshConvergence(std::stringstream &resultBuffer,
+    timeIntegratorScheme scheme, double t0, double t1, 
+    int initial_nTimeSteps, int order, int numMeshes, int degreeQuadrature)
+  {
+    feNLSolverOptions NLoptions{1e-10, 1e-10, 1e4, 10, 4, 1e-1};
+    {
+      std::vector<int> nElm(numMeshes);
+      std::vector<double> err(numMeshes, 0.);
+      int nTimeSteps = initial_nTimeSteps;
+
+      for(int i = 0; i < numMeshes; ++i, nTimeSteps *= 2)
+      {
+        std::string meshFile = "../../../data/square" + std::to_string(i+1) + ".msh";
+        feStatus s = solve(meshFile, scheme, t0, t1, nTimeSteps, order, degreeQuadrature, NLoptions, nElm[i], err[i]);
+        if(s != FE_STATUS_OK) return s;
+      }
+      resultBuffer << "Unsteady diffusion - Error on u - Lagrange elements P" << order << std::endl;
+      computeAndPrintConvergence(2, numMeshes, err, nElm, DEFAULT_SIGNIFICANT_DIGITS, resultBuffer);
+    }
+    return FE_STATUS_OK;
+  }
+}
+
 TEST(ScalarFEUnsteady, DiffusionBDF1)
 {
   initialize(my_argc, my_argv);
@@ -157,6 +282,25 @@ TEST(ScalarFEUnsteady, DiffusionBDF2)
   int initial_nTimeSteps = 10;
   timeIntegratorScheme scheme = timeIntegratorScheme::BDF2;
   ASSERT_TRUE(diffusion::meshConvergence(resultBuffer, scheme, t0, t1, initial_nTimeSteps, 1, 4, degreeQuadrature) == FE_STATUS_OK);
+  // initial_nTimeSteps = 20;
+  // ASSERT_TRUE(diffusion::meshConvergence(resultBuffer, scheme, t0, t1, initial_nTimeSteps, 2, 4, degreeQuadrature) == FE_STATUS_OK);
+
+  EXPECT_EQ(compareOutputFiles(testRoot, resultBuffer), 0);
+  finalize();
+}
+
+TEST(ScalarFEUnsteady, NonLinearDiffusionBDF2)
+{
+  initialize(my_argc, my_argv);
+  setVerbose(0);
+  std::string testRoot = "../../../tests/withLinearSolver/scalarFEunsteady_nonlinear_bdf2";
+  std::stringstream resultBuffer;
+  int degreeQuadrature = 8;
+  double t0 = 0.;
+  double t1 = 1.;
+  int initial_nTimeSteps = 10;
+  timeIntegratorScheme scheme = timeIntegratorScheme::BDF2;
+  ASSERT_TRUE(nonLinearDiffusion::meshConvergence(resultBuffer, scheme, t0, t1, initial_nTimeSteps, 1, 4, degreeQuadrature) == FE_STATUS_OK);
   // initial_nTimeSteps = 20;
   // ASSERT_TRUE(diffusion::meshConvergence(resultBuffer, scheme, t0, t1, initial_nTimeSteps, 2, 4, degreeQuadrature) == FE_STATUS_OK);
 

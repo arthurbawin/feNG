@@ -51,7 +51,7 @@ int main(int argc, char **argv)
 
   double Re = 1.;
   feConstantFunction viscosity(1./Re);
-  feConstantFunction density(1.);
+  // feConstantFunction density(1.);
 
   double H = 1.; // Height of the channel
   double L = 5.; // Length of the channel
@@ -99,7 +99,7 @@ int main(int argc, char **argv)
     forms.push_back(divSigma);
    } else {
     feCheck(createBilinearForm(gradP, {u, p}, new feSysElm_MixedGradient(&scalarConstant::minusOne)));
-    feCheck(createBilinearForm(diffU,           {u}, new feSysElm_VectorDiffusion(&scalarConstant::minusOne, &viscosity)));
+    feCheck(createBilinearForm(diffU,    {u}, new feSysElm_VectorDiffusion(&scalarConstant::minusOne, &viscosity)));
     forms.push_back(gradP);
     forms.push_back(diffU);
   }

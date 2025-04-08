@@ -17,9 +17,7 @@ protected:
   // The number of nonzero for each row (for PETSc)
   std::vector<feInt> nnz;
   // The nonzero entries for each row
-  // Using a vector and then sort/unique seems faster than a set
   std::vector<std::vector<feInt> > nnzPerRow;
-  // std::vector<std::set<feInt> > nnzPerRow;
 
   // For parallel PETSc preallocation:
   // The number of nonzero on the diagonal block for each MPI process,

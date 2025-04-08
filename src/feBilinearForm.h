@@ -105,10 +105,12 @@ protected:
   std::vector<int> _fieldsLayoutI;
   std::vector<int> _fieldsLayoutJ;
 
+public:
   // Dimensions of the element-wise linear system
   feInt _M;
   feInt _N;
 
+protected:
   // Addressing vector (local to global mapping) in I and J
   // Continuous vector that spans all FE spaces, such that
   // the local matrix is written at (_adrI[i], _adrJ[j]) in
@@ -128,36 +130,37 @@ public:
   std::vector<std::vector<feInt> > _adr;
 
   // Solution at DOFs on the current element for each FE space
-  std::vector<std::vector<double> > _sol;
-  std::vector<std::vector<double> > _solDot;
+  std::vector<std::vector<double>> _sol;
+  std::vector<std::vector<double>> _solDot;
 
   // Solution on the previous and next element (for e.g. DG fluxes)
-  std::vector<std::vector<double> > _solPrev;
-  std::vector<std::vector<double> > _solNext;
+  // Next and previous only make sense in 1D for now.
+  std::vector<std::vector<double>> _solPrev;
+  std::vector<std::vector<double>> _solNext;
 
 public:
   // Create a (bi-)linear form to compute the element-wise weak form
   // defined by elementarySystem with interpolation and test functions
   // defined in spaces/vectorSpaces.
-  feBilinearForm(std::vector<feSpace *> spaces, feSysElm *elementarySystem);
-
+  feBilinearForm(const std::vector<feSpace*> spaces,
+                 feSysElm *elementarySystem);
   feBilinearForm(const feBilinearForm &f);
   ~feBilinearForm();
 
   feCncGeo *getCncGeo() { return _cnc; }
-  int getCncGeoTag() { return _cncGeoTag; }
-  feInt getLocalMatrixM() { return _M; }
-  feInt getLocalMatrixN() { return _N; }
-  std::vector<feInt> &getAdrI() { return _adrI; }
-  std::vector<feInt> &getAdrJ() { return _adrJ; }
+  int getCncGeoTag() const { return _cncGeoTag; }
+  feInt getLocalMatrixM() const { return _M; }
+  feInt getLocalMatrixN() const { return _N; }
+  const std::vector<feInt> &getAdrI() const { return _adrI; }
+  const std::vector<feInt> &getAdrJ() const { return _adrJ; }
   double **getAe() { return _Ae; }
-  double *getBe() { return _Be; }
-  elementSystemType getID() { return _sysElm->getID(); }
-  std::string getWeakFormName() { return _sysElm->getWeakFormName(); }
+  const double *getBe() { return _Be; }
+  elementSystemType getID() const { return _sysElm->getID(); }
+  std::string getWeakFormName() const { return _sysElm->getWeakFormName(); }
 
   // Return true if there is a local matrix associated to the weak form
   // (false if there is only a residual).
-  bool hasMatrix() { return _sysElm->hasMatrix(); }
+  bool hasMatrix() const { return _sysElm->hasMatrix(); }
 
   // Sets the Jacobian matrix to be evaluated numerically
   // using finite differences, allocates the necessary arrays.
@@ -171,11 +174,11 @@ public:
   // Initialize the addressing vectors _adrI and _adrJ on element numElem
   void initializeAddressingVectors(int numElem);
 
-  double getMatrixNorm();
-  double getResidualNorm();
+  double getMatrixNorm() const;
+  double getResidualNorm() const;
 
-  void viewLocalMatrix();
-  void viewLocalResidual();
+  void viewLocalMatrix() const;
+  void viewLocalResidual() const;
 
 private:
   // Initialize the form on element numElem.

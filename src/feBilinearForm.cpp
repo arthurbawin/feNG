@@ -93,7 +93,7 @@ static inline void freeMatrix(feInt m, double **A)
   delete[] A;
 }
 
-static inline void printMatrix(feInt m, feInt n, double ***A)
+static inline void printMatrix(const feInt m, const feInt n, const double *const *const *const A)
 {
 #if defined(HAVE_PETSC)
   for(feInt i = 0; i < m; ++i)
@@ -117,7 +117,7 @@ static inline void setResidualToZero(feInt m, double **b)
   for(feInt i = 0; i < m; ++i) (*b)[i] = 0.0;
 }
 
-static inline void printResidual(feInt m, double **b)
+static inline void printResidual(const feInt m, const double *const *const b)
 {
 #if defined(HAVE_PETSC)
   for(feInt i = 0; i < m; ++i) printf("b[%d] = %+10.16e\n", i, (*b)[i]);
@@ -128,7 +128,8 @@ static inline void printResidual(feInt m, double **b)
 
 static inline void freeResidual(double **b) { free(*b); }
 
-feBilinearForm::feBilinearForm(std::vector<feSpace *> spaces, feSysElm *elementarySystem)
+feBilinearForm::feBilinearForm(const std::vector<feSpace*> spaces,
+                               feSysElm *elementarySystem)
   : _sysElm(elementarySystem), _intSpaces(spaces), _cnc(spaces[0]->getCncGeo()),
     _geoSpace(_cnc->getFeSpace()), _J(_cnc->getJacobians()),
     _cncGeoTag(spaces[0]->getCncGeoTag()), _cncGeoID(spaces[0]->getCncGeoID())
@@ -232,9 +233,9 @@ void feBilinearForm::setComputeMatrixWithFD(bool flag)
   }
 }
 
-void feBilinearForm::viewLocalMatrix() { printMatrix(_M, _N, &_Ae); }
+void feBilinearForm::viewLocalMatrix() const { printMatrix(_M, _N, &_Ae); }
 
-void feBilinearForm::viewLocalResidual() { printResidual(_M, &_Be); }
+void feBilinearForm::viewLocalResidual() const { printResidual(_M, &_Be); }
 
 //
 // Initialize the connectivity vector for element numElem
@@ -456,7 +457,7 @@ double feBilinearForm::compareAnalyticalAndFDMatrices(feSolution *sol, int numEl
   return maxErrorRel;
 }
 
-double feBilinearForm::getMatrixNorm()
+double feBilinearForm::getMatrixNorm() const
 {
   int res = 0.0;
   for(feInt i = 0; i < _M; ++i)
@@ -464,7 +465,7 @@ double feBilinearForm::getMatrixNorm()
   return sqrt(res);
 }
 
-double feBilinearForm::getResidualNorm()
+double feBilinearForm::getResidualNorm() const
 {
   int res = 0.0;
   for(feInt i = 0; i < _M; ++i) res += _Be[i] * _Be[i];

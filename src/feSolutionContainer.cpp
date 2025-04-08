@@ -1,6 +1,34 @@
 #include "feSolutionContainer.h"
 #include "feLinearSystem.h"
 
+void feSolutionContainer::NaNify()
+{
+  double myNan = nan("");
+
+  _nDofs = myNan;
+  _nSol = myNan;
+  for(auto &val : _t)
+    val = myNan;
+  for(auto &val : _deltaT)
+    val = myNan;
+  for(auto &val : _cn)
+    val = myNan;
+  for(auto &val : _d)
+    val = myNan;
+  for(auto &vec : _sol) {
+    for(auto &val : vec)
+      val = myNan;
+  }
+  for(auto &vec : _solDot) {
+    for(auto &val : vec)
+      val = myNan;
+  }
+  for(auto &vec : _fResidual) {
+    for(auto &val : vec)
+      val = myNan;
+  }
+}
+
 feSolutionContainer::feSolutionContainer(int nSol, double tn, int nDOF)
   : _nDofs(nDOF), _nSol(nSol)
 {

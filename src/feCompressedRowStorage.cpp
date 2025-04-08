@@ -70,8 +70,8 @@ feEZCompressedRowStorage::feEZCompressedRowStorage(int numUnknowns,
           f->initializeAddressingVectors(elm);
 
           // Determine global assignment indices
-          std::vector<feInt> &adrI = f->getAdrI();
-          std::vector<feInt> &adrJ = f->getAdrJ();
+          const std::vector<feInt> &adrI = f->getAdrI();
+          const std::vector<feInt> &adrJ = f->getAdrJ();
           nI = adrI.size();
           nJ = adrJ.size();
 

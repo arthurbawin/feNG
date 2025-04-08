@@ -10,7 +10,6 @@ feStatus createTimeIntegrator(TimeIntegrator *&solver, timeIntegratorScheme sche
                               std::vector<feNorm*> &norms, feExportData exportData, double tBegin,
                               double tEnd, int nTimeSteps)
 {
-  UNUSED(mesh, tBegin, tEnd, nTimeSteps);
   switch(scheme) {
     case timeIntegratorScheme::STATIONARY:
       solver = new StationaryIntegrator(system, solution, mesh, NLoptions, norms, exportData);
@@ -340,14 +339,16 @@ feStatus BDF2Integrator::restartFromContainer(const feSolutionContainer &contain
 
   // Copy data from container :
   const std::vector<double> &tC = container.getTime();
-  const std::vector<double> &deltaTC = container.getTimeDifferences();
+  // const std::vector<double> &deltaTC = container.getTimeDifferences();
 
   // Call custom copy constructor for the internal solution container
   *_sC = container;
 
   for(int i = 0; i < _nSol; ++i) {
     _t[i] = tC[i];
-    _deltaT[i] = deltaTC[i];
+  }
+  for(int i = 0; i < _nSol-1; ++i) {
+    _deltaT[i] = _t[i] - _t[i+1];
   }
 
   return FE_STATUS_OK;
@@ -411,6 +412,8 @@ feStatus BDF2Integrator::startWithBDF1(const double timeStepRatio)
 
   return FE_STATUS_OK;
 }
+
+int currentBDFStep;
 
 //
 // Integrate nSteps.
@@ -487,11 +490,38 @@ feStatus BDF2Integrator::makeSteps(int nSteps)
     this->updateTime(iStep, _dt);
     _sC->rotate(_dt);
     _sC->computeBDFCoefficients(_order, _deltaT);
+
+    // feInfo("Integrator info:");
+    // feInfo("_nSol            : %d", _nSol);
+    // feInfo("_order           : %d", _order);
+    // feInfo("_t0              : %+-1.20e", _t0);
+    // feInfo("_tEnd            : %+-1.20e", _tEnd);
+    // feInfo("_dt              : %+-1.20e", _dt);
+    // feInfo("_nTimeSteps :    : %d", _nTimeSteps);
+    // feInfo("_currentTime     : %+-1.20e", _currentTime);
+    // feInfo("_currentStep     : %d", _currentStep);
+    // feInfo("time             : %+-1.20e - %+-1.20e - %+-1.20e", _t[0], _t[1], _t[2]);
+    // feInfo("deltaT           : %+-1.20e - %+-1.20e - %+-1.20e", _deltaT[0], _deltaT[1], _deltaT[2]);
+    // feInfo("time history     : %+-1.20e - %+-1.20e - %+-1.20e", _timeHistory[0], _timeHistory[1], _timeHistory[2]);
+    // feInfo("BDF coefficients : %+-1.20e - %+-1.20e - %+-1.20e",
+    //   _sC->getBDFCoefficients()[0],
+    //   _sC->getBDFCoefficients()[1],
+    //   _sC->getBDFCoefficients()[2]);
+
     _currentSolution->setC0(_sC->getC0());
     // _currentSolution->setCurrentTime(_currentTime); // Done in updateTime
+
+    // for(const auto &val : _currentSolution->getSolution()) {
+    //   if(std::isnan(val)) {
+    //     feInfo("Nan alert before initialize BC");
+    //     exit(-1);
+    //   }
+    // }
+
     _currentSolution->initializeEssentialBC(_mesh, _sC);
 
     // Solve nonlinear problem
+    currentBDFStep = _currentStep+1;
     feStatus s = solveNewtonRaphson(_linearSystem, _currentSolution, _sC, _NLoptions);
     if(s == FE_STATUS_ERROR) { return s; }
 

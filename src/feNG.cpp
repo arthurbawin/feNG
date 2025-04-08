@@ -96,8 +96,10 @@ void initializeGmsh()
 
 void finalizeGmsh()
 {
-  gmsh::clear();
-  gmsh::finalize();
-  gmshWasInitialized = false;
+  if(gmshWasInitialized) {
+    gmsh::clear();
+    gmsh::finalize();
+    gmshWasInitialized = false;
+  }
 }
 #endif

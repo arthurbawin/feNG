@@ -764,9 +764,13 @@ feStatus feMesh2DP1::transfer(feMesh2DP1 *targetMesh, feMetaNumber *prevNumberin
   // Replace solutionContainer by scTmp
   for(int iSol = 0; iSol < nSol; ++iSol) {
     prevSolutionContainer->_sol[iSol].resize(nDOF);
+    prevSolutionContainer->_solDot[iSol].resize(nDOF);
     prevSolutionContainer->_fResidual[iSol].resize(nDOF);
-    for(int iDOF = 0; iDOF < nDOF; ++iDOF)
+    for(int iDOF = 0; iDOF < nDOF; ++iDOF) {
       prevSolutionContainer->_sol[iSol][iDOF] = scTmp._sol[iSol][iDOF];
+      // prevSolutionContainer->_solDot[iSol][iDOF] = scTmp._solDot[iSol][iDOF];
+      prevSolutionContainer->_solDot[iSol][iDOF] = nan("");
+    }
   }
 
   return FE_STATUS_OK;

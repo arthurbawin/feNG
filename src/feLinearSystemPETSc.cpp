@@ -392,9 +392,9 @@ void feLinearSystemPETSc::initialize()
   this->initializeMPI();
 }
 
-feLinearSystemPETSc::feLinearSystemPETSc(std::vector<feBilinearForm *> bilinearForms,
-                                         int numUnknowns,
-                                         linearSolverType type)
+feLinearSystemPETSc::feLinearSystemPETSc(const std::vector<feBilinearForm*> bilinearForms,
+                                         const int numUnknowns,
+                                         const linearSolverType type)
   : feLinearSystem(bilinearForms)
 #if defined(HAVE_PETSC)
     , _nInc(numUnknowns)
@@ -413,7 +413,7 @@ feLinearSystemPETSc::feLinearSystemPETSc(std::vector<feBilinearForm *> bilinearF
   this->initialize();
 }
 
-void feLinearSystemPETSc::viewMatrix()
+void feLinearSystemPETSc::viewMatrix() const
 {
 #if defined(HAVE_PETSC)
   if(_displayMatrixInConsole) {
@@ -438,7 +438,7 @@ void feLinearSystemPETSc::viewMatrix()
 #endif
 }
 
-void feLinearSystemPETSc::viewRHS()
+void feLinearSystemPETSc::viewRHS() const
 {
 #if defined(HAVE_PETSC)
   if(_displayRHSInConsole) {
@@ -447,14 +447,60 @@ void feLinearSystemPETSc::viewRHS()
 #endif
 }
 
-void feLinearSystemPETSc::viewResidual()
+void feLinearSystemPETSc::viewResidual() const
 {
 #if defined(HAVE_PETSC)
   VecView(_du, PETSC_VIEWER_STDOUT_WORLD);
 #endif
 }
 
-void feLinearSystemPETSc::getRHSMaxNorm(double *norm)
+void feLinearSystemPETSc::writeMatrix(const std::string fileName,
+                                      const double /*time*/)
+{
+#if defined(HAVE_PETSC)
+  FILE *myfile = fopen(fileName.data(), "w");
+  fprintf(myfile, "%+-10.20e\n", 0.);
+  fclose(myfile);
+#else
+  UNUSED(fileName);
+#endif 
+}
+
+void feLinearSystemPETSc::writeRHS(const std::string fileName,
+                                   const double /*time*/)
+{
+#if defined(HAVE_PETSC)
+  FILE *myfile = fopen(fileName.data(), "w");
+  PetscScalar *array;
+  PetscCallAbort(PETSC_COMM_WORLD, VecGetArray(_rhs, &array));
+  for(int i = 0; i < _nInc; ++i) {
+    fprintf(myfile, "%+-10.20e\n", array[i]);
+  }
+  PetscCallAbort(PETSC_COMM_WORLD, VecRestoreArray(_rhs, &array));
+  fclose(myfile);
+#else
+  UNUSED(fileName);
+#endif
+}
+
+void feLinearSystemPETSc::writeResidual(const std::string fileName,
+                                        const double /*time*/)
+{
+#if defined(HAVE_PETSC)
+  FILE *myfile = fopen(fileName.data(), "w");
+  PetscScalar *array;
+  PetscCallAbort(PETSC_COMM_WORLD, VecGetArray(_du, &array));
+  for(int i = 0; i < _nInc; ++i) {
+    fprintf(myfile, "%+-10.20e\n", array[i]);
+  }
+  PetscCallAbort(PETSC_COMM_WORLD, VecRestoreArray(_du, &array));
+  fclose(myfile);
+#else
+  UNUSED(fileName);
+#endif
+}
+
+void feLinearSystemPETSc::getRHSMaxNorm(double *norm) const
 {
 #if defined(HAVE_PETSC)
   PetscCallAbort(PETSC_COMM_WORLD, VecNorm(_rhs, NORM_MAX, norm));
@@ -463,7 +509,7 @@ void feLinearSystemPETSc::getRHSMaxNorm(double *norm)
 #endif
 }
 
-void feLinearSystemPETSc::getResidualMaxNorm(double *norm)
+void feLinearSystemPETSc::getResidualMaxNorm(double *norm) const
 {
 #if defined(HAVE_PETSC)
   PetscCallAbort(PETSC_COMM_WORLD, VecNorm(_du, NORM_MAX, norm));
@@ -474,7 +520,7 @@ void feLinearSystemPETSc::getResidualMaxNorm(double *norm)
 
 void feLinearSystemPETSc::setToZero()
 {
-  if(recomputeMatrix) {
+  if(_recomputeMatrix) {
     this->setMatrixToZero();
   }
   this->setResidualToZero();
@@ -676,14 +722,13 @@ void feLinearSystemPETSc::assembleResiduals(feSolution *sol)
       listElmC = listElmPerColor[iColor];
 
       int elm;
-      double *Be;
       feInt sizeI;
       std::vector<feInt> niElm;
       std::vector<feInt> adrI;
       std::vector<PetscScalar> values;
 
 #if defined(HAVE_OMP)
-#pragma omp parallel for private(elm, niElm, Be, f, adrI, values, sizeI)
+#pragma omp parallel for private(elm, niElm, f, adrI, values, sizeI)
 #endif
       for(int iElm = 0; iElm < numElementsInColor; ++iElm) {
 #if defined(HAVE_OMP)
@@ -695,7 +740,7 @@ void feLinearSystemPETSc::assembleResiduals(feSolution *sol)
 
         // Compute the element-wise residual
         f->computeResidual(sol, elm);
-        Be = f->getBe();
+        const double *Be = f->getBe();
 
         // Determine global assignment indices
         adrI = f->getAdrI();
@@ -756,7 +801,7 @@ void feLinearSystemPETSc::assembleResiduals(feSolution *sol)
 
 void feLinearSystemPETSc::assemble(feSolution *sol)
 {
-  if(recomputeMatrix) {
+  if(_recomputeMatrix) {
     this->assembleMatrices(sol);
   }
   this->assembleResiduals(sol);

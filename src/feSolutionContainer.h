@@ -73,6 +73,10 @@ public:
 
   virtual void computeSolTimeDerivative(feSolution *sol, feLinearSystem *linearSystem);
 
+  /////////////
+  void NaNify();
+  /////////////
+
   ///////////////////////////////////////////////////////////////////////////
   // Everything below should be reworked
 

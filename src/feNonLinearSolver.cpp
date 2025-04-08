@@ -3,6 +3,8 @@
 
 extern int FE_VERBOSE;
 
+// #define DEBUG_CHNS
+
 //
 // Decide if the Jacobian matrix should be recomputed
 // using various heuristics
@@ -29,6 +31,42 @@ bool recomputeMatrixHeuristic(feNLSolverOptions &tol,
   return false;
 }
 
+extern int currentBDFStep;
+
+//////////////////////////////////////////////////////
+void checkForNan(const std::vector<double> &vec)
+{
+  for(const auto &val : vec) {
+    if(std::isnan(val)) {
+      feInfo("Nan alert in NL solver");
+      exit(-1);
+    }
+  }
+}
+
+#if defined(DEBUG_CHNS)
+static void writeSolution(const feSolution *sol, const std::string &fileName)
+{
+  const std::vector<double> &solreg = sol->getSolution();
+  FILE *myfile = fopen(fileName.data(), "w");
+  for(size_t i = 0; i < solreg.size(); ++i) {
+    fprintf(myfile, "%+-10.20e\n", solreg[i]);
+  }
+  fclose(myfile);
+} 
+
+static void writeSolutionDot(const feSolution *sol, const std::string &fileName)
+{
+  const std::vector<double> &soldot = sol->getSolutionDot();
+  FILE *myfile = fopen(fileName.data(), "w");
+  for(size_t i = 0; i < soldot.size(); ++i) {
+    fprintf(myfile, "%+-10.20e\n", soldot[i]);
+  }
+  fclose(myfile);
+}
+#endif
+//////////////////////////////////////////////////////
+
 feStatus solveNewtonRaphson(feLinearSystem *linearSystem,
                             feSolution *sol,
                             feSolutionContainer *container,
@@ -48,6 +86,20 @@ feStatus solveNewtonRaphson(feLinearSystem *linearSystem,
   {
     // Update time derivative
     container->computeSolTimeDerivative(sol, linearSystem);
+
+    ////////////////////////////////////////////////////////
+    checkForNan(sol->getSolution());
+    checkForNan(sol->getSolutionDot());
+
+    #if defined(DEBUG_CHNS)
+    if(iter == 0) {
+      std::string solName = "ref/sol_beforeIter0_BDF_" + std::to_string(currentBDFStep) + ".txt";
+      writeSolution(sol, solName);
+      solName = "ref/soldot_beforeIter0_BDF_" + std::to_string(currentBDFStep) + ".txt";
+      writeSolutionDot(sol, solName);
+    }
+    #endif
+    ////////////////////////////////////////////////////////
 
     // For clarity should be replaced by:
     // container->computeCurrentSolDot(linearSystem);
@@ -75,21 +127,31 @@ feStatus solveNewtonRaphson(feLinearSystem *linearSystem,
     
     linearSystem->constrainEssentialComponents(sol);
 
+    ////////////////////////////////////////////////////
+    #if defined(DEBUG_CHNS)
+    if(iter == 0) {
+      // Write RHS
+      std::string rhsName = "ref/rhs_atIter0_BDF_" + std::to_string(currentBDFStep) + ".txt";
+      linearSystem->writeRHS(rhsName);
+      // Write matrix
+      std::string matName = "ref/mat_atIter0_BDF_" + std::to_string(currentBDFStep) + ".txt";
+      linearSystem->writeMatrix(matName);
+    }
+    #endif
+    ////////////////////////////////////////////////////////
+
     // Solve J(u) * du = -NL(u)
     bool successSolve = linearSystem->solve(&normCorrection, &normResidual, &normAxb, &linearSystemIter);
 
-    // const std::vector<double> &sol0 = container->getSolution(0);
-    // const std::vector<double> &sol1 = container->getSolution(1);
-    // const std::vector<double> &soll = sol->getSolution();
-    // const std::vector<double> &soldot = sol->getSolutionDot();
-    // const std::vector<double> &sol2 = container->getSolution(2);
-    // if(container->getNbSol() == 2) {
-    //   for(size_t i = 0; i < soll.size(); ++i)
-    //     feInfo("%f - %f == %f - %f", sol0[i], sol1[i], soll[i], soldot[i]);
-    // } else {
-    //   for(size_t i = 0; i < soll.size(); ++i)
-    //     feInfo("%f - %f - %f == %f - %f", sol0[i], sol1[i], sol2[i], soll[i], soldot[i]);
-    // }
+    ////////////////////////////////////////////////////////
+    #if defined(DEBUG_CHNS)
+    if(iter == 0) {
+      // Write correction (solution of linear system)
+      std::string corName = "ref/cor_atIter0_BDF_" + std::to_string(currentBDFStep) + ".txt";
+      linearSystem->writeResidual(corName);
+    }
+    #endif
+    ////////////////////////////////////////////////////////
 
     if(!successSolve) {
       feWarning("Iter %2d : ||J*du - NL(u)|| = %10.10e (%4d iter.) \t ||du|| = %10.10e \t "
@@ -101,6 +163,21 @@ feStatus solveNewtonRaphson(feLinearSystem *linearSystem,
 
     // Abort if nonlinear term NL(u) is greater than divergence tolerance
     if(normResidual > tol.tolDivergence) {
+
+      ///////////////////////////////////////////////////////
+      // std::string solName = "sol_beforeIter0_BDF_" + std::to_string(currentBDFStep) + ".txt";
+      // writeSolution(sol, solName);
+      // solName = "soldot_beforeIter0_BDF_" + std::to_string(currentBDFStep) + ".txt";
+      // writeSolutionDot(sol, solName);
+      // linearSystem->writeRHS("RHS.txt", container->getTime()[0]);
+      // linearSystem->writeMatrix("matrix.txt", container->getTime()[0]);
+      // linearSystem->writeResidual("cor.txt", container->getTime()[0]);
+      ///////////////////////////////////////////////////////
+
+      feErrorMsg(FE_STATUS_ERROR,
+                      "Residual norm is greater than divergence tolerance: ||NL(u)|| = %10.4e > %10.4e",
+                      normResidual, tol.tolDivergence);
+      exit(-1);
       return feErrorMsg(FE_STATUS_ERROR,
                       "Residual norm is greater than divergence tolerance: ||NL(u)|| = %10.4e > %10.4e",
                       normResidual, tol.tolDivergence);
@@ -109,11 +186,23 @@ feStatus solveNewtonRaphson(feLinearSystem *linearSystem,
     // Apply correction u += du and copy solution vector in container
     linearSystem->correctSolution(sol);
     container->setCurrentSolution(sol);
+    container->setCurrentSolutionDot(sol);
+
+    ////////////////////////////////////////////////////////
+    #if defined(DEBUG_CHNS)
+    if(iter == 0) {
+      std::string solName = "ref/sol_afterIter0_BDF_" + std::to_string(currentBDFStep) + ".txt";
+      writeSolution(sol, solName);
+      solName = "ref/soldot_afterIter0_BDF_" + std::to_string(currentBDFStep) + ".txt";
+      writeSolutionDot(sol, solName);
+    }
+    #endif
+    ////////////////////////////////////////////////////////
 
     // Status message for successful iteration
     feInfoCond(FE_VERBOSE > 0,
-               "\t\t\t\tIter %2d : ||J*du - NL(u)|| = %10.10e (%4d iter.) \t ||du|| = %10.10e \t "
-               "||NL(u)|| = %10.10e (%s)",
+               "\t\t\t\tIter %2d : ||J*du - NL(u)|| = %10.10e (%4d iter.) \t ||du|| = %10.20e \t "
+               "||NL(u)|| = %10.20e (%s)",
                ++iter, normAxb, linearSystemIter, normCorrection, normResidual,
                linearSystem->getRecomputeStatus() ? "true" : "false");
 
@@ -149,6 +238,12 @@ feStatus solveNewtonRaphson(feLinearSystem *linearSystem,
   } else
   {
     // Solver did not converge
+    feErrorMsg(FE_STATUS_ERROR,
+                      "Nonlinear solver did not converge at iter %2d : ||J*du - NL(u)|| = %10.10e  "
+                      "(%4d iter.) \t ||du|| = "
+                      "%10.10e \t ||NL(u)|| = %10.10e",
+                      iter, normAxb, linearSystemIter, normCorrection, normResidual);
+    exit(-1);
     return feErrorMsg(FE_STATUS_ERROR,
                       "Nonlinear solver did not converge at iter %2d : ||J*du - NL(u)|| = %10.10e  "
                       "(%4d iter.) \t ||du|| = "

@@ -204,16 +204,16 @@ public:
 
   virtual feSysElm *clone() const = 0;
 
-  int getDim() { return _dim; }
-  int getNumFields() { return _nFields; }
-  std::vector<int> &getFieldLayoutI() { return _fieldsLayoutI; }
-  std::vector<int> &getFieldLayoutJ() { return _fieldsLayoutJ; }
-  elementSystemType getID() { return _ID; }
-  std::string getWeakFormName() { return toString(_ID); }
-  bool computeMatrixWithFD() { return _computeMatrixWithFD; }
+  int getDim() const { return _dim; }
+  int getNumFields() const { return _nFields; }
+  const std::vector<int> &getFieldLayoutI() const { return _fieldsLayoutI; }
+  const std::vector<int> &getFieldLayoutJ() const { return _fieldsLayoutJ; }
+  elementSystemType getID() const { return _ID; }
+  std::string getWeakFormName() const { return toString(_ID); }
+  bool computeMatrixWithFD() const { return _computeMatrixWithFD; }
   void setComputeMatrixWithFD(bool flag) { _computeMatrixWithFD = flag; }
-  bool hasMatrix() { return _hasMatrix; }
-  bool isThreadSafe() { return _isThreadSafe; }
+  bool hasMatrix() const { return _hasMatrix; }
+  bool isThreadSafe() const { return _isThreadSafe; }
 
   virtual void createElementarySystem(std::vector<feSpace *> &spaces) { UNUSED(spaces); };
   virtual void computeAe(feBilinearForm *form) { UNUSED(form); };
@@ -667,11 +667,9 @@ public:
 template <int dim> class feSysElm_NonlinearDiffusion : public feSysElm
 {
 protected:
-  feFunction *_diffusivity;
-  feFunction *_ddiffdu;
+  feFunction *_diffusivity, *_ddiffdu;
   int _idU, _nFunctions;
-  std::vector<double> _phiU;
-  std::vector<double> _gradPhi;
+  std::vector<double> _phiU, _gradPhi;
 
 public:
   feSysElm_NonlinearDiffusion(feFunction *diffusivity, feFunction *ddiffdu)

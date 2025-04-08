@@ -552,7 +552,7 @@ void feRecovery::matrixInverseEigen1D()
   if(_geoSpace->getQuadratureWeights() != _intSpace->getQuadratureWeights()) {
     printf("Error : mismatch in number of quadrature points\n");
   }
-  std::vector<double> &w = _geoSpace->getQuadratureWeights();
+  const std::vector<double> &w = _geoSpace->getQuadratureWeights();
   const std::vector<double> &J = _cnc->getJacobians();
 
   std::vector<double> geoCoord(9, 0.), x(3, 0.0), monomials(_dimRecovery, 0.);
@@ -721,7 +721,7 @@ void feRecovery::matrixInverseEigen2D()
   if(_geoSpace->getQuadratureWeights() != _intSpace->getQuadratureWeights()) {
     printf("Error : mismatch in number of quadrature points\n");
   }
-  std::vector<double> &w = _geoSpace->getQuadratureWeights();
+  const std::vector<double> &w = _geoSpace->getQuadratureWeights();
   const std::vector<double> &J = _cnc->getJacobians();
 
   std::vector<double> geoCoord(9, 0.), x(3, 0.0), xLoc(3, 0.0), monomials(_dimRecovery, 0.);
@@ -879,7 +879,7 @@ void feRecovery::matrixInverseEigen2D()
 
 void feRecovery::solveLeastSquareEigen1D(int indRecovery, int iDerivative)
 {
-  std::vector<double> &w = _geoSpace->getQuadratureWeights();
+  const std::vector<double> &w = _geoSpace->getQuadratureWeights();
   const std::vector<double> &J = _cnc->getJacobians();
   std::vector<double> geoCoord(9, 0.);
   std::vector<double> x(3, 0.0);
@@ -1164,7 +1164,7 @@ void feRecovery::solveLeastSquareEigen2D(int indRecovery, int iDerivative)
   if(_geoSpace->getQuadratureWeights() != _intSpace->getQuadratureWeights()) {
     printf("Error : mismatch in number of quadrature points\n");
   }
-  std::vector<double> &w = _geoSpace->getQuadratureWeights();
+  const std::vector<double> &w = _geoSpace->getQuadratureWeights();
   const std::vector<double> &J = _cnc->getJacobians();
 
   std::vector<double> geoCoord(9, 0.);
@@ -1983,7 +1983,7 @@ void feRecovery::estimateError(std::vector<double> &norm, feFunction *solRef)
   std::vector<double> monomials(_dimRecovery, 0.);
 
   int nQuad = _geoSpace->getNumQuadPoints();
-  std::vector<double> &w = _geoSpace->getQuadratureWeights();
+  const std::vector<double> &w = _geoSpace->getQuadratureWeights();
   const std::vector<double> &J = _cnc->getJacobians();
 
   int _nVertPerElm = _nNodePerElm;
@@ -2129,7 +2129,7 @@ void feRecovery::estimateDudxError(std::vector<double> &norm, feVectorFunction *
   std::vector<double> monomials(_dimRecovery, 0.);
 
   int nQuad = _geoSpace->getNumQuadPoints();
-  std::vector<double> &w = _geoSpace->getQuadratureWeights();
+  const std::vector<double> &w = _geoSpace->getQuadratureWeights();
   const std::vector<double> &J = _cnc->getJacobians();
 
   int _nVertPerElm = _nNodePerElm;
@@ -2257,7 +2257,7 @@ void feRecovery::estimateH1Error(std::vector<double> &norm, feVectorFunction *so
   std::vector<double> monomials(_dimDerivation, 0.);
 
   int nQuad = _geoSpace->getNumQuadPoints();
-  std::vector<double> &w = _geoSpace->getQuadratureWeights();
+  const std::vector<double> &w = _geoSpace->getQuadratureWeights();
   const std::vector<double> &J = _cnc->getJacobians();
 
   int _nVertPerElm = _nNodePerElm;
@@ -2443,7 +2443,7 @@ void feRecovery::estimateHessError(std::vector<double> &norm, feVectorFunction *
   std::vector<double> monomials(_dimDerivation, 0.);
 
   int nQuad = _geoSpace->getNumQuadPoints();
-  std::vector<double> &w = _geoSpace->getQuadratureWeights();
+  const std::vector<double> &w = _geoSpace->getQuadratureWeights();
   const std::vector<double> &J = _cnc->getJacobians();
 
   int _nVertPerElm = _nNodePerElm;
@@ -2623,7 +2623,7 @@ void feRecovery::estimated3Error(std::vector<double> &norm, feFunction *fund3udx
   std::vector<double> monomials(_dimDerivation, 0.);
 
   int nQuad = _geoSpace->getNumQuadPoints();
-  std::vector<double> &w = _geoSpace->getQuadratureWeights();
+  const std::vector<double> &w = _geoSpace->getQuadratureWeights();
   const std::vector<double> &J = _cnc->getJacobians();
 
   int _nVertPerElm = _nNodePerElm;

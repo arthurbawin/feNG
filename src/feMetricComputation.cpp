@@ -3216,7 +3216,9 @@ void feMetric::computeContinuousErrorModel(const bool withAnalyticMetric, bool c
         errorCurvedOnElm += weights[i] * detJac[iElm * nQuad + i] * eloc_curved;
       }
 
+      #if defined(HAVE_OMP)
       #pragma omp critical
+      #endif
       {
         errorLinearOnElements[iElm] = errorLinearOnElm;
         errorCurvedOnElements[iElm] = errorCurvedOnElm;

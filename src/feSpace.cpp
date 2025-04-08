@@ -310,8 +310,8 @@ feScalarSpace::feScalarSpace(const int dimension, feMesh *mesh, const std::strin
 {
 }
 
-int feSpace::getNumElements() { return _mesh->getNumElements(_cncGeoTag); }
-int feSpace::getNumVerticesPerElem() { return _mesh->getNumVerticesPerElem(_cncGeoTag); }
+int feSpace::getNumElements() const { return _mesh->getNumElements(_cncGeoTag); }
+int feSpace::getNumVerticesPerElem() const { return _mesh->getNumVerticesPerElem(_cncGeoTag); }
 
 feStatus feSpace::setQuadratureRule(feQuadrature *rule)
 {
@@ -469,7 +469,7 @@ double feSpace::innerProductBasisFunctions(int iElm, int ex, int ey)
   return res;
 }
 
-void feSpace::getFunctionsAtQuadNode(const int iQuadNode, std::vector<double> &phi)
+void feSpace::getFunctionsAtQuadNode(const int iQuadNode, std::vector<double> &phi) const
 {
   for(int i = 0; i < _nFunctions; ++i) {
     phi[i] = _L[_nFunctions * iQuadNode + i];
@@ -478,7 +478,7 @@ void feSpace::getFunctionsAtQuadNode(const int iQuadNode, std::vector<double> &p
 
 void feSpace::getFunctionsPhysicalGradientAtQuadNode(const int iQuadNode,
                                                      const ElementTransformation &T,
-                                                     double *gradPhi)
+                                                     double *gradPhi) const
 {
   if(_dim == 0) {
     gradPhi[0] = 0.;
@@ -510,7 +510,7 @@ void feSpace::getFunctionsPhysicalGradientAtQuadNode(const int iQuadNode,
 
 void feSpace::getVectorFunctionsPhysicalGradientAtQuadNode(const int iQuadNode,
                                                            const ElementTransformation &T,
-                                                           std::vector<double> &gradPhi)
+                                                           std::vector<double> &gradPhi) const
 {
   assert(gradPhi.size() == (size_t)((unsigned) _dim * _nComponents * _nFunctions));
 
@@ -571,7 +571,7 @@ void feSpace::getVectorFunctionsPhysicalGradientAtQuadNode(const int iQuadNode,
 #include "feMatrixInterface.h"
 
 void feSpace::getFunctionsPhysicalHessianAtQuadNode(const int iQuadNode,
-                                                    const ElementTransformation &T, double *hessPhi)
+                                                    const ElementTransformation &T, double *hessPhi) const
 {
   // Size hessPhi = nFunctions * [1, 3 or 6]
   if(_dim == 0) {

@@ -278,7 +278,7 @@ feStatus feCncGeo::setQuadratureRule(feQuadrature *rule)
 feStatus feCncGeo::computeJacobians(const bool ignoreNegativeJacobianWarning)
 {
   int nQuad = _geometricInterpolant->getNumQuadPoints();
-  std::vector<double> &wQuad = _geometricInterpolant->getQuadratureWeights();
+  const std::vector<double> &wQuad = _geometricInterpolant->getQuadratureWeights();
   _J.resize(_nElements * nQuad);
 
   std::vector<double> geoCoord(3 * _nVerticesPerElm);
@@ -420,7 +420,7 @@ feStatus feCncGeo::computeJacobians(const bool ignoreNegativeJacobianWarning)
 feStatus feCncGeo::recomputeElementJacobian(const int iElm)
 {
   int nQuad = _geometricInterpolant->getNumQuadPoints();
-  std::vector<double> &wQuad = _geometricInterpolant->getQuadratureWeights();
+  const std::vector<double> &wQuad = _geometricInterpolant->getQuadratureWeights();
   std::vector<double> geoCoord(3 * _nVerticesPerElm);
 
   bool atLeastOneNegative = false;
@@ -511,7 +511,7 @@ void feCncGeo::computeConstantElementTransformations()
 feStatus feCncGeo::computeNormalVectors(std::vector<double> &normalVectors) const
 {
   int nQuad = _geometricInterpolant->getNumQuadPoints();
-  std::vector<double> &xQuad = _geometricInterpolant->getRQuadraturePoints();
+  const std::vector<double> &xQuad = _geometricInterpolant->getRQuadraturePoints();
   normalVectors.resize(3 * _nElements * nQuad);
 
   std::vector<double> geoCoord(3 * _nVerticesPerElm);

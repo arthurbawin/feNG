@@ -170,9 +170,9 @@ public:
   virtual ~feSpace();
 
   const std::string &getFieldID() const { return _fieldID; }
-  int getFieldTag() { return _fieldTag; }
+  int getFieldTag() const { return _fieldTag; }
   const std::string &getCncGeoID() const { return _cncGeoID; }
-  int getCncGeoTag() { return _cncGeoTag; }
+  int getCncGeoTag() const { return _cncGeoTag; }
 
   // Assign the tag of a geometric space after the mesh has been created
   void setCncGeoTag(int tag) { _cncGeoTag = tag; }
@@ -184,7 +184,7 @@ public:
   // Assign the pointer to the field numbering after the numbering has been created
   void setNumberingPtr(feNumber *numbering) { _numbering = numbering; }
   void setAsNumbered() { _dofWereNumbered = true; }
-  bool wasNumbered() { return _dofWereNumbered; }
+  bool wasNumbered() const { return _dofWereNumbered; }
 
   // Return the number of field components (1 for scalar finite element, 1/2/3 for vector element)
   int getNumComponents() const { return _nComponents; };
@@ -193,16 +193,16 @@ public:
   {
     _essentialComponents[iComponent] = flag;
   };
-  bool isEssentialComponent(int iComponent) { return _essentialComponents[iComponent]; };
+  bool isEssentialComponent(int iComponent) const { return _essentialComponents[iComponent]; };
 
   // Return the attributes of the geometric connectivity on which the space is defined
   feCncGeo *getCncGeo() { return _cnc; }
-  int getDim() { return _dim; };
-  int getNumElements();
-  int getNumVerticesPerElem();
+  int getDim() const { return _dim; };
+  int getNumElements() const;
+  int getNumVerticesPerElem() const;
 
-  elementType getElementType() { return _elementType; };
-  dofInitialization getDOFInitialization() { return _DOFinitialization; };
+  elementType getElementType() const { return _elementType; };
+  dofInitialization getDOFInitialization() const { return _DOFinitialization; };
   void setDOFInitialization(dofInitialization init) { _DOFinitialization = init; };
 
   const std::vector<dofLocation> &getDOFLocations() const { return _dofLocations; }
@@ -210,7 +210,7 @@ public:
 
   bool isDiscontinuous() const { return _isDiscontinuous; };
 
-  bool useGlobalFunctions() { return _useGlobalShapeFunctions; }
+  bool useGlobalFunctions() const { return _useGlobalShapeFunctions; }
   void useGlobalFunctions(bool flag) { _useGlobalShapeFunctions = flag; }
 
   // Return the number of shape functions (DOF) on an element
@@ -260,32 +260,32 @@ public:
   };
 
   // Return value of shape function (or derivatives) at quadrature node
-  void getFunctionsAtQuadNode(const int iQuadNode, std::vector<double> &phi);
-  double getFunctionAtQuadNode(const int iFun, const int iQuadNode)
+  void getFunctionsAtQuadNode(const int iQuadNode, std::vector<double> &phi) const;
+  double getFunctionAtQuadNode(const int iFun, const int iQuadNode) const
   {
     return _L[_nFunctions * iQuadNode + iFun];
   }
-  double getdFunctiondrAtQuadNode(const int iFun, const int iQuadNode)
+  double getdFunctiondrAtQuadNode(const int iFun, const int iQuadNode) const
   {
     return _dLdr[_nFunctions * iQuadNode + iFun];
   }
-  double getdFunctiondsAtQuadNode(const int iFun, const int iQuadNode)
+  double getdFunctiondsAtQuadNode(const int iFun, const int iQuadNode) const
   {
     return _dLds[_nFunctions * iQuadNode + iFun];
   }
-  double getdFunctiondtAtQuadNode(const int iFun, const int iQuadNode)
+  double getdFunctiondtAtQuadNode(const int iFun, const int iQuadNode) const
   {
     return _dLdt[_nFunctions * iQuadNode + iFun];
   }
-  double getd2Functiondr2AtQuadNode(const int iFun, const int iQuadNode)
+  double getd2Functiondr2AtQuadNode(const int iFun, const int iQuadNode) const
   {
     return _d2Ldr2[_nFunctions * iQuadNode + iFun];
   }
-  double getd2FunctiondrsAtQuadNode(const int iFun, const int iQuadNode)
+  double getd2FunctiondrsAtQuadNode(const int iFun, const int iQuadNode) const
   {
     return _d2Ldrs[_nFunctions * iQuadNode + iFun];
   }
-  double getd2Functionds2AtQuadNode(const int iFun, const int iQuadNode)
+  double getd2Functionds2AtQuadNode(const int iFun, const int iQuadNode) const
   {
     return _d2Lds2[_nFunctions * iQuadNode + iFun];
   }
@@ -294,33 +294,33 @@ public:
   // gradPhi = [dPhi1dx ... dPhindx, dPhi1dy ... dPhindy, dPhi1dz ... dPhindz]
   // Size of gradPhi = dim x nFunctions
   void getFunctionsPhysicalGradientAtQuadNode(const int iQuadNode, const ElementTransformation &T,
-                                              double *gradPhi);
+                                              double *gradPhi) const;
   void getVectorFunctionsPhysicalGradientAtQuadNode(const int iQuadNode, const ElementTransformation &T,
-                                              std::vector<double> &gradPhi);
+                                              std::vector<double> &gradPhi) const;
 
   void getFunctionsPhysicalHessianAtQuadNode(const int iQuadNode, const ElementTransformation &T,
-                                              double *hessPhi);
+                                              double *hessPhi) const;
 
-  double getGlobalFunctionAtQuadNode(const int iElm, const int iFun, const int iQuadNode)
+  double getGlobalFunctionAtQuadNode(const int iElm, const int iFun, const int iQuadNode) const
   {
     return _Lglob[iElm][_nFunctions * iQuadNode + iFun];
   }
-  double getdGlobalFunctiondxAtQuadNode(const int iElm, const int iFun, const int iQuadNode)
+  double getdGlobalFunctiondxAtQuadNode(const int iElm, const int iFun, const int iQuadNode) const
   {
     return _dLdxglob[iElm][_nFunctions * iQuadNode + iFun];
   }
-  double getdGlobalFunctiondyAtQuadNode(const int iElm, const int iFun, const int iQuadNode)
+  double getdGlobalFunctiondyAtQuadNode(const int iElm, const int iFun, const int iQuadNode) const
   {
     return _dLdyglob[iElm][_nFunctions * iQuadNode + iFun];
   }
 
   // Set and get quadrature rule
   feStatus setQuadratureRule(feQuadrature *quadratureRule);
-  int getNumQuadPoints() { return _nQuad; }
-  std::vector<double> &getQuadratureWeights() { return _wQuad; }
-  std::vector<double> &getRQuadraturePoints() { return _xQuad; }
-  std::vector<double> &getSQuadraturePoints() { return _yQuad; }
-  std::vector<double> &getTQuadraturePoints() { return _zQuad; }
+  int getNumQuadPoints() const { return _nQuad; }
+  const std::vector<double> &getQuadratureWeights() const { return _wQuad; }
+  const std::vector<double> &getRQuadraturePoints() const { return _xQuad; }
+  const std::vector<double> &getSQuadraturePoints() const { return _yQuad; }
+  const std::vector<double> &getTQuadraturePoints() const { return _zQuad; }
 
   virtual void initializeNumberingUnknowns() = 0;
   virtual void initializeNumberingEssential() = 0;
@@ -336,8 +336,8 @@ public:
   virtual void synchronizeNumberingOfEssentialDOF(int & /*numModifiedDOF*/) {};
 
   // Evaluate prescribed scalar or vector field
-  double evalFun(const feFunctionArguments &args) { return _scalarFct->eval(args); }
-  void evalFun(const feFunctionArguments &args, std::vector<double> &res)
+  double evalFun(const feFunctionArguments &args) const { return _scalarFct->eval(args); }
+  void evalFun(const feFunctionArguments &args, std::vector<double> &res) const
   {
     _vectorFct->eval(args, res);
   }

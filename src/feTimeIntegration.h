@@ -99,7 +99,7 @@ public:
   virtual feStatus restartFromContainer(const feSolutionContainer &container) = 0;
 
   std::vector<std::vector<double>> getPostProcessingData(){ return _postProcessingData; };
-  virtual feSolutionContainer getSolutionContainer() = 0;
+  virtual feSolutionContainer getSolutionContainer() const = 0;
 
   void setQuietStart(bool flag) { _quietStart = flag; }
   void setExportInitialCondition(bool flag) { _exportInitialCondition = flag; }
@@ -130,7 +130,7 @@ public:
   };
   feStatus makeStep(double dt = 0.);
   feStatus makeSteps(int nSteps);
-  feSolutionContainer getSolutionContainer() { return *_sC; };
+  feSolutionContainer getSolutionContainer() const { return *_sC; };
   feStatus restartFromContainer(const feSolutionContainer &container);
 };
 
@@ -153,13 +153,13 @@ public:
   };
   feStatus makeStep(double dt);
   feStatus makeSteps(int nSteps);
-  feSolutionContainer getSolutionContainer() { return *_sC; };
+  feSolutionContainer getSolutionContainer() const { return *_sC; };
   feStatus restartFromContainer(const feSolutionContainer &container);
 };
 
 class BDF2Integrator : public TimeIntegrator
 {
-protected:
+public:
   BDF2Starter _startMethod = BDF2Starter::BDF1;
   BDFContainer *_sC;
 
@@ -177,7 +177,7 @@ public:
   };
   feStatus makeStep(double dt);
   feStatus makeSteps(int nSteps);
-  feSolutionContainer getSolutionContainer() { return *_sC; };
+  feSolutionContainer getSolutionContainer() const { return *_sC; };
   feStatus restartFromContainer(const feSolutionContainer &container);
 private:
   feStatus startWithBDF1(const double timeStepRatio);
