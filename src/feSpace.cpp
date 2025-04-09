@@ -370,7 +370,7 @@ feStatus feSpace::setQuadratureRule(feQuadrature *rule)
     feInfo("USING GLOBAL FUNCTIONS on space %s - %s", this->_fieldID.c_str(),
            this->_cncGeoID.c_str());
     
-    feCncGeo *cnc = this->getCncGeo();
+    const feCncGeo *cnc = this->getCncGeo();
     int nElm = cnc->getNumElements();
     _Lglob.resize(nElm);
     _dLdxglob.resize(nElm);
@@ -408,11 +408,11 @@ feStatus feSpace::setQuadratureRule(feQuadrature *rule)
 
   if(_isGeometricInterpolant) {
     _ignoreNegativeJacobianWarning = false;
-    feStatus s = this->getCncGeo()->computeJacobians(_ignoreNegativeJacobianWarning);
+    feStatus s = _cnc->computeJacobians(_ignoreNegativeJacobianWarning);
     if(s != FE_STATUS_OK) {
       return s;
     }
-    this->getCncGeo()->computeConstantElementTransformations();
+    _cnc->computeConstantElementTransformations();
   }
 
   return FE_STATUS_OK;

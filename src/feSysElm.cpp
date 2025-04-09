@@ -47,7 +47,7 @@ void feSysElm_SourceDirac::computeBe(feBilinearForm *form)
     // Locate x0 in the element
     int elm;
     double xsi[3];
-    bool isFound = form->_cnc->getMeshPtr()->locateVertex(_x0.data(), elm, xsi, 1e-12);
+    bool isFound = form->_cnc->getMesh()->locateVertex(_x0.data(), elm, xsi, 1e-12);
 
     if(!isFound)
       feWarning("Could not locate Dirac vertex (%+-1.4e - %+-1.4e) in the mesh!", _x0[0], _x0[1]);

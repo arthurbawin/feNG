@@ -192,7 +192,7 @@ void feExporterVTK::writeElementsConnectivity(std::ostream &output)
   }
 }
 
-void feExporterVTK::writeField(std::ostream &output, feCncGeo *cnc, feSpace *intSpace,
+void feExporterVTK::writeField(std::ostream &output, const feCncGeo *cnc, feSpace *intSpace,
                                std::string fieldID, bool loopOverCnc)
 {
   UNUSED(cnc, loopOverCnc);
@@ -915,7 +915,7 @@ feStatus feExporterVTK::writeStep(std::string fileName,
     //   return feErrorMsg(FE_STATUS_ERROR,
     //     "Currently only a single Physical Entity can be exported to a VTK file");
     // }
-    feCncGeo *cnc = *(_exportedConnectivities.begin());
+    const feCncGeo *cnc = *(_exportedConnectivities.begin());
 
     int cnt = 0;
     for(auto field : fieldsToExport) {
@@ -996,7 +996,7 @@ feExporterVTK::feExporterVTK(feMesh *mesh, feSolution *sol, feEigenProblem *eige
   _eigenProblem = eigenProblem;
 }
 
-void feExporterVTK::writeEigenvector(std::ostream &output, feCncGeo *cnc, feSpace *intSpace,
+void feExporterVTK::writeEigenvector(std::ostream &output, const feCncGeo *cnc, feSpace *intSpace,
                                      std::string fieldID, int eigenPairIndex, size_t nEigenPairs,
                                      eigenPair &ep, bool loopOverCnc)
 {
@@ -1117,7 +1117,7 @@ feStatus feExporterVTK::writeEigenvectors(std::string fileName)
                 "exported.");
     }
 
-    feCncGeo *cnc = nullptr;
+    const feCncGeo *cnc = nullptr;
     for(feSpace *fS : spacesToExport) {
       if(fS->getCncGeoID() == *cncToExport.begin()) {
         cnc = fS->getCncGeo();

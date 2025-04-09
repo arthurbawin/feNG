@@ -41,7 +41,7 @@ protected:
 public:
   // These members are used to compute the elementary system.
   // Since friendship is not inherited by feSysElm derived classes,
-  // they are public for now, even if it's probably not optimal.
+  // they are public for now, even if it's probably not ideal.
 
   // Finite element spaces used to discretize each field present
   // in the weak form associated to the chosen feSysElm.
@@ -54,7 +54,7 @@ public:
   // The fields order must match the one given in feSysElm.
   std::vector<feSpace *> _intSpaces;
   // Ptr to the geometric connectivity (can probably be removed)
-  feCncGeo *_cnc;
+  const feCncGeo *_cnc;
   // Ptr to the FE space used to interpolate the geometry
   feSpace *_geoSpace;
   // Physical coordinates of a point in the reference space
@@ -147,14 +147,14 @@ public:
   feBilinearForm(const feBilinearForm &f);
   ~feBilinearForm();
 
-  feCncGeo *getCncGeo() { return _cnc; }
+  const feCncGeo *getCncGeo() const { return _cnc; }
   int getCncGeoTag() const { return _cncGeoTag; }
   feInt getLocalMatrixM() const { return _M; }
   feInt getLocalMatrixN() const { return _N; }
   const std::vector<feInt> &getAdrI() const { return _adrI; }
   const std::vector<feInt> &getAdrJ() const { return _adrJ; }
-  double **getAe() { return _Ae; }
-  const double *getBe() { return _Be; }
+  const double* const *getAe() const { return _Ae; }
+  const double* getBe() const { return _Be; }
   elementSystemType getID() const { return _sysElm->getID(); }
   std::string getWeakFormName() const { return _sysElm->getWeakFormName(); }
 

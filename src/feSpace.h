@@ -196,7 +196,7 @@ public:
   bool isEssentialComponent(int iComponent) const { return _essentialComponents[iComponent]; };
 
   // Return the attributes of the geometric connectivity on which the space is defined
-  feCncGeo *getCncGeo() { return _cnc; }
+  const feCncGeo *getCncGeo() { return _cnc; }
   int getDim() const { return _dim; };
   int getNumElements() const;
   int getNumVerticesPerElem() const;

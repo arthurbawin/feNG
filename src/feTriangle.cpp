@@ -24,7 +24,7 @@ void Triangle::createBoundary(std::set<Edge, EdgeLessThan> &meshEdges, int &numE
   }
 }
 
-bool Triangle::xyz2uvw(double xyz[3], double uvw[3], double tol)
+bool Triangle::xyz2uvw(const double xyz[3], double uvw[3], const double tol) const
 {
   UNUSED(tol);
   
@@ -63,7 +63,7 @@ bool Triangle::xyz2uvw(double xyz[3], double uvw[3], double tol)
   return true;
 }
 
-double Triangle::sliverness()
+double Triangle::sliverness() const
 {
   double a = sqrt( (_vlin[1]->x() - _vlin[0]->x())*(_vlin[1]->x() - _vlin[0]->x()) + (_vlin[1]->y() - _vlin[0]->y())*(_vlin[1]->y() - _vlin[0]->y()));
   double b = sqrt( (_vlin[2]->x() - _vlin[1]->x())*(_vlin[2]->x() - _vlin[1]->x()) + (_vlin[2]->y() - _vlin[1]->y())*(_vlin[2]->y() - _vlin[1]->y()));
@@ -104,7 +104,7 @@ void phiTriP2(const double r, const double s, double phi[6], double dphidr[6], d
 // Newton-Raphson to find (r,s) s.t. F(r,s) = (x,y) (2D version)
 // If triangle is actually linear, return P1 localization
 //
-bool TriangleP2::xyz2uvw(double xyz[3], double uvw[3], double tol)
+bool TriangleP2::xyz2uvw(const double xyz[3], double uvw[3], const double tol) const
 {
   // Use linear solution as initial Newton guess
   double r[2] = {0., 0.};

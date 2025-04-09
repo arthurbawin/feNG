@@ -27,7 +27,7 @@ typedef enum { MKLPARDISO, PETSC, PETSC_MUMPS } linearSolverType;
 
 feStatus createLinearSystem(feLinearSystem *&system,
                             const linearSolverType type,
-                            const std::vector<feBilinearForm *> bilinearForms,
+                            const std::vector<feBilinearForm*> bilinearForms,
                             const int numUnknowns,
                             const int ownershipSplit = -1);
 
@@ -44,9 +44,9 @@ protected:
   int _numResidualForms;
 
   // The linear forms with a residual and a matrix
-  std::vector<feBilinearForm *> _formMatrices;
+  std::vector<feBilinearForm*> _formMatrices;
   // The linear forms with only a residual
-  std::vector<feBilinearForm *> _formResiduals;
+  std::vector<feBilinearForm*> _formResiduals;
 
   // Recompute the jacobian matrix at current Newton-Raphson step?
   bool _recomputeMatrix = true;
@@ -305,7 +305,7 @@ protected:
   PardisoInt IPIVOT;
 
 public:
-  feLinearSystemMklPardiso(const std::vector<feBilinearForm *> bilinearForms,
+  feLinearSystemMklPardiso(const std::vector<feBilinearForm*> bilinearForms,
                            const int numUnknowns,
                            const int ownershipSplit);
   ~feLinearSystemMklPardiso();

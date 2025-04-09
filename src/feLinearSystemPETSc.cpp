@@ -553,7 +553,7 @@ void feLinearSystemPETSc::assembleMatrices(feSolution *sol)
   tic();
   for(feInt eq = 0; eq < _numMatrixForms; ++eq) {
     feBilinearForm *f = _formMatrices[eq];
-    feCncGeo *cnc = f->getCncGeo();
+    const feCncGeo *cnc = f->getCncGeo();
     int numColors = cnc->getNbColor();
     const std::vector<int> &numElemPerColor = cnc->getNbElmPerColor();
     const std::vector<std::vector<int> > &listElmPerColor = cnc->getListElmPerColor();
@@ -565,7 +565,6 @@ void feLinearSystemPETSc::assembleMatrices(feSolution *sol)
       listElmC = listElmPerColor[iColor];
 
       int elm;
-      double **Ae;
       feInt sizeI;
       feInt sizeJ;
       std::vector<feInt> niElm;
@@ -575,7 +574,7 @@ void feLinearSystemPETSc::assembleMatrices(feSolution *sol)
       std::vector<PetscScalar> values;
 
 #if defined(HAVE_OMP)
-#pragma omp parallel for private(elm, f, niElm, njElm, sizeI, sizeJ, adrI, adrJ, Ae, values)
+#pragma omp parallel for private(elm, f, niElm, njElm, sizeI, sizeJ, adrI, adrJ, values)
 #endif
       for(int iElm = 0; iElm < numElementsInColor; ++iElm) {
 #if defined(HAVE_OMP)
@@ -586,7 +585,7 @@ void feLinearSystemPETSc::assembleMatrices(feSolution *sol)
 
         // Compute element-wise matrix
         f->computeMatrix(sol, elm);
-        Ae = f->getAe();
+        const double* const * const &Ae = f->getAe();
 
         // Determine global assignment indices
         adrI = f->getAdrI();
@@ -711,7 +710,7 @@ void feLinearSystemPETSc::assembleResiduals(feSolution *sol)
   tic();
   for(feInt eq = 0; eq < _numResidualForms; ++eq) {
     feBilinearForm *f = _formResiduals[eq];
-    feCncGeo *cnc = f->getCncGeo();
+    const feCncGeo *cnc = f->getCncGeo();
     int numColors = cnc->getNbColor();
     const std::vector<int> &numElemPerColor = cnc->getNbElmPerColor();
     const std::vector<std::vector<int> > &listElmPerColor = cnc->getListElmPerColor();
@@ -740,7 +739,7 @@ void feLinearSystemPETSc::assembleResiduals(feSolution *sol)
 
         // Compute the element-wise residual
         f->computeResidual(sol, elm);
-        const double *Be = f->getBe();
+        const double* const &Be = f->getBe();
 
         // Determine global assignment indices
         adrI = f->getAdrI();

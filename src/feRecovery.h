@@ -105,7 +105,7 @@ public:
   feSpace *_geoSpace;
 
   fePatch *_patch;
-  feCncGeo *_cnc;
+  const feCncGeo *_cnc;
 
   feFunction *_solRef;
   feVectorFunction *_solRefGrad;

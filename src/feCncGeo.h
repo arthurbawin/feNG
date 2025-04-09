@@ -171,7 +171,7 @@ public:
   geometryType getGeometry() const { return _geometry; };
   geometricInterpolant getInterpolant() const { return _interpolant; };
   feSpace *getFeSpace() const { return _geometricInterpolant; }
-  feMesh *getMeshPtr() { return _mesh; }
+  const feMesh *getMesh() const { return _mesh; }
   void setMeshPtr(feMesh *mesh) { _mesh = mesh; }
   bool hasConstantTransformation() const { return _hasConstantTransformation; };
 

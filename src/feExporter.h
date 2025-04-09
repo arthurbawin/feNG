@@ -53,7 +53,7 @@ public:
 
   std::map<int, int> _edgeGlobalTag;
 
-  std::set<feCncGeo*> _exportedConnectivities;
+  std::set<const feCncGeo*> _exportedConnectivities;
 
 public:
   feExporter(feMesh *mesh, feSolution *sol, feMetaNumber *metaNumber,
@@ -95,9 +95,9 @@ private:
 
   void writeNodes(std::ostream &output);
   void writeElementsConnectivity(std::ostream &output);
-  void writeField(std::ostream &output, feCncGeo *cnc, feSpace *intSpace, std::string fieldID,
+  void writeField(std::ostream &output, const feCncGeo *cnc, feSpace *intSpace, std::string fieldID,
                   bool loopOverCnc = false);
-  void writeEigenvector(std::ostream &output, feCncGeo *cnc, feSpace *intSpace, std::string fieldID,
+  void writeEigenvector(std::ostream &output, const feCncGeo *cnc, feSpace *intSpace, std::string fieldID,
                         int eigenPairIndex, size_t nEigenPairs, eigenPair &ep,
                         bool loopOverCnc = false);
 };

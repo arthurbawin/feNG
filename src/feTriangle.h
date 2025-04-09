@@ -56,8 +56,8 @@ public:
   int getTag() const { return _tag; }
   // Tag of the linear vertices
   int getTag(int i) const { return _vlin[i]->getTag(); }
-  int getLocalTag() { return _localTag; }
-  int getPhysicalTag() { return _pTag; }
+  int getLocalTag() const { return _localTag; }
+  int getPhysicalTag() const { return _pTag; }
   const Edge *getEdge(int num) const { return _edges[num]; }
   int getEdgeOrientation(int num) const { return _edgesOrientation[num]; }
   virtual int getNumVertices() const { return 3; };
@@ -70,10 +70,10 @@ public:
   // success if converged to the prescribed tolerance.
   // The tolerance used here should probably be smaller than the tolerance used
   // to check if the (u,v) coordinates are inside the reference triangle (isInside)
-  virtual bool xyz2uvw(double xyz[3], double uvw[3], double tol = 1e-5);
+  virtual bool xyz2uvw(const double xyz[3], double uvw[3], const double tol = 1e-5) const;
 
   // Reference element is the same for linear and high-order triangles
-  bool isInsideReference(double u, double v, double w, double tol)
+  bool isInsideReference(double u, double v, double w, double tol) const
   {
     if(u < (-tol) || v < (-tol) || u > ((1. + tol) - v) || fabs(w) > tol) return false;
     return true;
@@ -88,7 +88,7 @@ public:
   // JUST CHECKING THE NEWTON RESULTS SEEMS ROBUST ENOUGH
   // virtual bool isInsidePhysical(double xyz[3], double tol);
 
-  virtual double sliverness();
+  virtual double sliverness() const;
 
   // Create the topological edges of the boundary of this triangle.
   // New edges (if any) are added to the set of edges.
@@ -151,9 +151,9 @@ public:
 
   int getNumVertices() const { return 6; };
   Vertex *getVertex(int num) { return _v[num]; }
-  bool isInsidePhysical(double xyz[3], double tol);
-  bool xyz2uvw(double xyz[3], double uvw[3], double tol = 1e-5);
-  double sliverness() { return -1.; };
+  bool isInsidePhysical(double xyz[3], double tol) const;
+  bool xyz2uvw(const double xyz[3], double uvw[3], const double tol = 1e-5) const;
+  double sliverness() const { return -1.; };
 };
 
 // bool isInConvexRegionOfImplicitParabola(const double implicitParameters[6], double xyz[3]);

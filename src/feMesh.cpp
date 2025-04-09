@@ -21,13 +21,26 @@ int feMesh::getCncGeoTag(const std::string &cncGeoID) const
   return (it == _cncGeoMap.end()) ? -1 : it->second;
 }
 
-feCncGeo *feMesh::getCncGeoByName(const std::string &cncGeoID) const
+feCncGeo *feMesh::getCncGeoByName(const std::string &cncGeoID)
 {
   auto it = _cncGeoMap.find(cncGeoID);
   return (it == _cncGeoMap.end()) ? nullptr : _cncGeo[it->second];
 }
 
-feCncGeo *feMesh::getCncGeoByTag(int cncGeoTag) const
+feCncGeo *feMesh::getCncGeoByTag(int cncGeoTag)
+{
+  if(cncGeoTag < 0)
+    if((unsigned)cncGeoTag > _cncGeo.size()) return nullptr;
+  return _cncGeo[cncGeoTag];
+}
+
+const feCncGeo *feMesh::getCncGeoByName(const std::string &cncGeoID) const
+{
+  auto it = _cncGeoMap.find(cncGeoID);
+  return (it == _cncGeoMap.end()) ? nullptr : _cncGeo[it->second];
+}
+
+const feCncGeo *feMesh::getCncGeoByTag(int cncGeoTag) const
 {
   if(cncGeoTag < 0)
     if((unsigned)cncGeoTag > _cncGeo.size()) return nullptr;
@@ -88,7 +101,7 @@ void feMesh::getCoord(const feCncGeo *cnc, const int numElem, std::vector<double
 
 void feMesh::getCoord(std::string const &cncGeoID, const int numElem, std::vector<double> &geoCoord)
 {
-  feCncGeo *cnc = getCncGeoByName(cncGeoID);
+  const feCncGeo *cnc = getCncGeoByName(cncGeoID);
   int nVerticesPerElem = cnc->getNumVerticesPerElem();
 #ifdef FENG_DEBUG
   if(geoCoord.size() != 3 * (size_t) nVerticesPerElem) {
@@ -105,7 +118,7 @@ void feMesh::getCoord(std::string const &cncGeoID, const int numElem, std::vecto
 
 void feMesh::getCoord(const int cncGeoTag, const int numElem, std::vector<double> &geoCoord)
 {
-  feCncGeo *cnc = getCncGeoByTag(cncGeoTag);
+  const feCncGeo *cnc = getCncGeoByTag(cncGeoTag);
   int nVerticesPerElem = cnc->getNumVerticesPerElem();
 #ifdef FENG_DEBUG
   if(geoCoord.size() != 3 * (size_t) nVerticesPerElem) {
@@ -344,7 +357,7 @@ feMesh1DP1::~feMesh1DP1()
 // u the vector (r, 0, 0) with r the coordinate of x in the reference
 // [-1,1] element.
 bool feMesh1DP1::locateVertex(const double *x, int &iElm, double *u, double tol,
-                              bool returnLocalElmTag, std::string targetConnectivity)
+                              bool returnLocalElmTag, std::string targetConnectivity) const
 {
   UNUSED(tol, returnLocalElmTag, targetConnectivity);
   for(int i = 0; i < _nInteriorElm; ++i) {
@@ -363,7 +376,7 @@ bool feMesh1DP1::locateVertex(const double *x, int &iElm, double *u, double tol,
   return false;
 }
 
-bool feMesh1DP1::locateVertexInElements(feCncGeo *cnc, const double *x, const std::vector<int> &elementsToSearch, int &iElm,
+bool feMesh1DP1::locateVertexInElements(const feCncGeo *cnc, const double *x, const std::vector<int> &elementsToSearch, int &iElm,
                                       double *u, double tol)
 {
   UNUSED(cnc, x, elementsToSearch, iElm, u, tol);
@@ -461,8 +474,8 @@ double feMesh2DP1::computeAverageSliverness(const double LpNorm)
 // Callback to give the RTree to locate a physical point in the mesh.
 bool rtreeCallback(int id, void *ctx)
 {
-  rtreeSearchCtx *searchCtx = reinterpret_cast<rtreeSearchCtx *>(ctx);
-  Triangle *t = (*(searchCtx->elements))[id];
+  rtreeSearchCtx *searchCtx = reinterpret_cast<rtreeSearchCtx*>(ctx);
+  const Triangle *t = (*(searchCtx->elements))[id];
 
   // Get the reference coordinates (u,v) such that F_K(u,v) = (x,y),
   // where F_K is the reference-to-physical transformation of element K.
@@ -503,7 +516,7 @@ thread_local rtreeSearchCtx SEARCH_CONTEXT;
    The element number is assigned to iElm and the reference coordinates
    are assigned in u. */
 bool feMesh2DP1::locateVertex(const double *x, int &iElm, double *u, double tol,
-                              bool returnLocalElmTag, std::string targetConnectivity)
+                              bool returnLocalElmTag, std::string targetConnectivity) const
 {
   SEARCH_CONTEXT.elements = &(this->_elements);
   SEARCH_CONTEXT.tolerance = tol;
@@ -603,7 +616,7 @@ bool isInsideTriangle(double u, double v, double w)
 
 thread_local std::vector<double> ELEM_COORD(18,0.);
 
-bool feMesh2DP1::locateVertexInElements(feCncGeo *cnc, const double *x, const std::vector<int> &elementsToSearch, int &iElm,
+bool feMesh2DP1::locateVertexInElements(const feCncGeo *cnc, const double *x, const std::vector<int> &elementsToSearch, int &iElm,
                                       double *u, double tol)
 {
   UNUSED(tol);
@@ -700,7 +713,7 @@ feStatus feMesh2DP1::transfer(feMesh2DP1 *targetMesh, feMetaNumber *prevNumberin
           fieldsToInterpolate.emplace_back(fS1->getFieldID(), fS1->getCncGeoID());
 
           // Get the target connectivity from the target mesh
-          feCncGeo *targetCnc = targetMesh->getCncGeoByName(fS2->getCncGeoID());
+          const feCncGeo *targetCnc = targetMesh->getCncGeoByName(fS2->getCncGeoID());
           if(targetCnc == nullptr) {
             return feErrorMsg(FE_STATUS_ERROR, "Target connectivity \"%s\" on target mesh is null :/", fS2->getCncGeoID().data());
           }

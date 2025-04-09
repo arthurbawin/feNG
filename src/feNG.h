@@ -55,8 +55,20 @@ typedef long int feInt;
 #endif
 
 #if defined(HAVE_MKL)
+#include "mkl_types.h"
+
 // typedef long long int PardisoInt;
-typedef int PardisoInt;
+// typedef int PardisoInt;
+typedef MKL_INT PardisoInt;
+
+// Define format specifier for printf
+#ifdef MKL_ILP64
+/* oneMKL ILP64 integer types */
+#define MKL_INT_FORMAT "%lld"
+#else
+/* oneMKL LP64 integer types */
+#define MKL_INT_FORMAT "%d"
+#endif
 #endif
 
 double tic(int mode = 0);

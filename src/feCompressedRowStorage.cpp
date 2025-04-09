@@ -12,10 +12,10 @@
 // and considerably speeds up the PETSc resolution by preallocating the matrix.
 // For a parallel (MPI) PETSc matrix, the number of nonzero
 // on the diagonal and off-diagonal blocks are also required.
-feEZCompressedRowStorage::feEZCompressedRowStorage(int numUnknowns,
-                                                   std::vector<feBilinearForm *> &formMatrices,
-                                                   int numMatrixForms,
-                                                   int *ownedUpperBounds)
+feEZCompressedRowStorage::feEZCompressedRowStorage(const int numUnknowns,
+                                                   const std::vector<feBilinearForm *> &formMatrices,
+                                                   const int numMatrixForms,
+                                                   const int *ownedUpperBounds)
 {
   nnz.resize(numUnknowns, 0.);
   nnzPerRow.resize(numUnknowns);
@@ -34,8 +34,7 @@ feEZCompressedRowStorage::feEZCompressedRowStorage(int numUnknowns,
 
   for(int iForm = 0; iForm < numMatrixForms; ++iForm)
   {
-    // feBilinearForm *f = formMatrices[iForm];
-    feCncGeo *cnc = formMatrices[iForm]->getCncGeo();
+    const feCncGeo *cnc = formMatrices[iForm]->getCncGeo();
     int numColors = cnc->getNbColor();
     const std::vector<int> &numElemPerColor = cnc->getNbElmPerColor();
     const std::vector<std::vector<int> > &listElmPerColor = cnc->getListElmPerColor();

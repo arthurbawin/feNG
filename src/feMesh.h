@@ -55,13 +55,13 @@ protected:
 
   // Number, vector and map of geometric connectivities (domains) in the mesh
   int _nCncGeo;
-  std::vector<feCncGeo *> _cncGeo;
+  std::vector<feCncGeo*> _cncGeo;
   std::map<std::string, int> _cncGeoMap;
 
-  std::vector<feCncGeo*> _0DConnectivities;
-  std::vector<feCncGeo*> _1DConnectivities;
-  std::vector<feCncGeo*> _2DConnectivities;
-  std::vector<feCncGeo*> _3DConnectivities;
+  std::vector<const feCncGeo*> _0DConnectivities;
+  std::vector<const feCncGeo*> _1DConnectivities;
+  std::vector<const feCncGeo*> _2DConnectivities;
+  std::vector<const feCncGeo*> _3DConnectivities;
 
 public:
   // Map from non-sequential Gmsh vertices tag to internal sequential tag
@@ -76,7 +76,7 @@ public:
   // The P2 displacement vector xMid - (x0+x1)/2 for each edge
   std::map<const Edge*, double[2]> _edge2alpha;
   // Mesh elements, hardcoded triangles for now
-  std::vector<Triangle *> _elements;
+  std::vector<Triangle*> _elements;
 
 ///////////////////////////////////////////////
 protected:
@@ -111,7 +111,21 @@ public:
   int getOrder() const { return _order; }
   int getVertexSequentialTagFromGmshTag(int gmshNodeTag) { return _verticesMap[gmshNodeTag]; }
   int getNumCncGeo() { return _nCncGeo; }
-  const std::vector<feCncGeo *> &getCncGeo() const { return _cncGeo; }
+
+  std::vector<feCncGeo*> getCncGeo()
+  { 
+    std::vector<feCncGeo*> connectivities;
+    for(auto const &cnc : _cncGeo)
+      connectivities.push_back(cnc);
+    return connectivities;
+  }
+  std::vector<const feCncGeo*> getCncGeo() const
+  { 
+    std::vector<const feCncGeo*> connectivities;
+    for(auto const &cnc : _cncGeo)
+      connectivities.push_back(cnc);
+    return connectivities;
+  }
 
   Vertex *getVertex(int iVertex) { return &_vertices[iVertex]; }
   Vertex *getVertexFromGmshNodeTag(int gmshNodeTag)
@@ -147,13 +161,15 @@ public:
   int getCncGeoTag(std::string const &cncGeoID) const;
 
   // Return the pointer to the connectivity
-  feCncGeo *getCncGeoByName(const std::string &cncGeoID) const;
-  feCncGeo *getCncGeoByTag(const int cncGeoTag) const;
+  feCncGeo *getCncGeoByName(const std::string &cncGeoID);
+  feCncGeo *getCncGeoByTag(const int cncGeoTag);
+  const feCncGeo *getCncGeoByName(const std::string &cncGeoID) const;
+  const feCncGeo *getCncGeoByTag(const int cncGeoTag) const;
 
 public:
   // Gmsh inspired iterators
-  typedef std::vector<feCncGeo*>::iterator cncIter;
-  typedef std::vector<feCncGeo*>::const_iterator cncConstIter;
+  typedef std::vector<const feCncGeo*>::iterator cncIter;
+  typedef std::vector<const feCncGeo*>::const_iterator cncConstIter;
 
 public:
   cncIter first0DCnc() { return _0DConnectivities.begin(); }
@@ -230,8 +246,8 @@ public:
   // return false if it was not found on this one (even if it can be found on
   // another connectivity).
   virtual bool locateVertex(const double *x, int &iElm, double *u, double tol = 1e-12,
-                            bool returnLocalElmTag = false, std::string targetConnectivity = "") = 0;
-  virtual bool locateVertexInElements(feCncGeo *cnc, const double *x, const std::vector<int> &elementsToSearch, int &iElm,
+                            bool returnLocalElmTag = false, std::string targetConnectivity = "") const = 0;
+  virtual bool locateVertexInElements(const feCncGeo *cnc, const double *x, const std::vector<int> &elementsToSearch, int &iElm,
                                       double *u, double tol = 1e-12) = 0;
 };
 
@@ -255,14 +271,14 @@ public:
   virtual ~feMesh0DP0();
 
   bool locateVertex(const double *x, int &iElm, double *u, double tol = 1e-12,
-                            bool returnLocalElmTag = false, std::string targetConnectivity = "")
+                            bool returnLocalElmTag = false, std::string targetConnectivity = "") const
   {
     UNUSED(x,tol,returnLocalElmTag,targetConnectivity);
     iElm = 0;
     u[0] = 1.;
     return true;
   };
-  bool locateVertexInElements(feCncGeo *cnc, const double *x, const std::vector<int> &elementsToSearch, int &iElm,
+  bool locateVertexInElements(const feCncGeo *cnc, const double *x, const std::vector<int> &elementsToSearch, int &iElm,
                                       double *u, double tol = 1e-12)
   {
     UNUSED(cnc,x,elementsToSearch,tol);
@@ -298,8 +314,8 @@ public:
   virtual ~feMesh1DP1();
 
   bool locateVertex(const double *x, int &iElm, double *u, double tol = 1e-12,
-                    bool returnLocalElmTag = false, std::string targetConnectivity = "");
-  bool locateVertexInElements(feCncGeo *cnc, const double *x, const std::vector<int> &elementsToSearch, int &iElm,
+                    bool returnLocalElmTag = false, std::string targetConnectivity = "") const;
+  bool locateVertexInElements(const feCncGeo *cnc, const double *x, const std::vector<int> &elementsToSearch, int &iElm,
                                       double *u, double tol = 1e-12);
 };
 
@@ -311,7 +327,7 @@ class feRecovery;
 class feNewRecovery;
 
 typedef struct rtreeSearchCtxStruct {
-  std::vector<Triangle *> *elements;
+  const std::vector<Triangle*> *elements;
   double uvw[3];
   double r[3];
   double x[3];
@@ -404,8 +420,8 @@ private:
   } physicalEntity;
 
   // RTrees and context to quickly search for nodes inside the mesh
-  RTree<int, double, 3> _rtree;
-  RTree<int, double, 2> _rtree2d;
+  mutable RTree<int, double, 3> _rtree;
+  mutable RTree<int, double, 2> _rtree2d;
 
 public:
   // FIXME : Choose more explicit name, for example "physicalEntitiesDescription"
@@ -484,8 +500,8 @@ public:
   double computeAverageSliverness(const double LpNorm);
 
   bool locateVertex(const double *x, int &iElm, double *u, double tol = 1e-12,
-                    bool returnLocalElmTag = false, std::string targetConnectivity = "");
-  bool locateVertexInElements(feCncGeo *cnc, const double *x, const std::vector<int> &elementsToSearch, int &iElm,
+                    bool returnLocalElmTag = false, std::string targetConnectivity = "") const;
+  bool locateVertexInElements(const feCncGeo *cnc, const double *x, const std::vector<int> &elementsToSearch, int &iElm,
                                       double *u, double tol = 1e-12);
 
   // Transfer whole FE solution(s) associated to the current mesh to another mesh.

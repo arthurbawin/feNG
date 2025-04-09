@@ -90,7 +90,7 @@ public:
 class feNewRecovery
 {
 public:
-  feCncGeo *_cnc;
+  const feCncGeo *_cnc;
 
   int _nElm;
   int _nNodePerElm;

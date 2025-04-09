@@ -376,7 +376,7 @@ void feLinearSystemMklPardiso::viewMatrix() const
       int debut = _mat_ia[i];
       int fin = _mat_ia[i + 1];
       for(feInt j = 0; j < fin - debut; ++j) {
-        printf("(%d, %g)  ", _mat_ja[debut + j], _mat_values[debut + j]);
+        printf("(" MKL_INT_FORMAT ", %g)  ", _mat_ja[debut + j], _mat_values[debut + j]);
       }
       printf("\n");
     }
@@ -520,7 +520,7 @@ void feLinearSystemMklPardiso::assembleMatrices(feSolution *sol)
 
   for(feInt eq = 0; eq < _numMatrixForms; ++eq) {
     feBilinearForm *f = _formMatrices[eq];
-    feCncGeo *cnc = f->getCncGeo();
+    const feCncGeo *cnc = f->getCncGeo();
     int numColors = cnc->getNbColor();
     const std::vector<int> &nbElmPerColor = cnc->getNbElmPerColor();
     const std::vector<std::vector<int> > &listElmPerColor = cnc->getListElmPerColor();
@@ -532,7 +532,6 @@ void feLinearSystemMklPardiso::assembleMatrices(feSolution *sol)
       listElmC = listElmPerColor[iColor];
 
       int elm;
-      double **Ae;
       feInt sizeI;
       feInt sizeJ;
       std::vector<feInt> niElm;
@@ -541,7 +540,7 @@ void feLinearSystemMklPardiso::assembleMatrices(feSolution *sol)
       std::vector<feInt> adrJ;
 
 #if defined(HAVE_OMP)
-#pragma omp parallel for private(elm, f, niElm, njElm, sizeI, sizeJ, adrI, adrJ, Ae)               \
+#pragma omp parallel for private(elm, f, niElm, njElm, sizeI, sizeJ, adrI, adrJ)               \
   schedule(dynamic)
 #endif
       for(int iElm = 0; iElm < numElementsInColor; ++iElm) {
@@ -553,7 +552,7 @@ void feLinearSystemMklPardiso::assembleMatrices(feSolution *sol)
 
         // Compute element-wise matrix
         f->computeMatrix(sol, elm);
-        Ae = f->getAe();
+        const double* const *Ae = f->getAe();
 
         // Determine global assignment indices
         adrI = f->getAdrI();
@@ -652,7 +651,7 @@ void feLinearSystemMklPardiso::assembleResiduals(feSolution *sol)
 
   for(feInt eq = 0; eq < _numResidualForms; eq++) {
     feBilinearForm *f = _formResiduals[eq];
-    feCncGeo *cnc = f->getCncGeo();
+    const feCncGeo *cnc = f->getCncGeo();
     int numColors = cnc->getNbColor();
     const std::vector<int> &numElemPerColor = cnc->getNbElmPerColor();
     const std::vector<std::vector<int> > &listElmPerColor = cnc->getListElmPerColor();
@@ -679,7 +678,7 @@ void feLinearSystemMklPardiso::assembleResiduals(feSolution *sol)
 
         // Compute the element-wise residual
         f->computeResidual(sol, elm);
-        const double *Be = f->getBe();
+        const double* Be = f->getBe();
 
         // Determine global assignment indices
         adrI = f->getAdrI();
@@ -1037,27 +1036,9 @@ void feLinearSystemMklPardiso::constrainEssentialComponents(feSolution *sol)
   feInfoCond(FE_VERBOSE > 1, "\t\t\t\tConstrained essential DOFs in %f s", toc());
 }
 
-// ====================================================================
-// Les méthodes privées
-// mklSymbolicFactorization : Factorisation de Pardiso (symbolique)
-//							  préparation des structures et réduire
-//                            le remplissage
-// mklFactorization         : Factorisation de Pardiso (réelle)
-// mklSolve 				: Descente et montée triangulaire
-// ====================================================================
-// void feLinearSystemMklPardiso::mklSolveWithPhase(const int phase)
-// {
-// #if defined(HAVE_MPI)
-//   int comm =  MPI_Comm_c2f( MPI_COMM_WORLD );
-//   // Cluster Pardiso automatically falls back to Pardiso if there is a single MPI process
-//     cluster_sparse_solver(PT, &MAXFCT, &MNUM, &MTYPE, &phase, &_nInc, _mat_values, _mat_ia, _mat_ja, IDUM, &NRHS, IPARM, &MSGLVL,
-//                _rhs, du, &comm, &ERROR);
-// #else
-//     pardiso(PT, &MAXFCT, &MNUM, &MTYPE, &phase, &_nInc, _mat_values, _mat_ia, _mat_ja, IDUM, &NRHS, IPARM, &MSGLVL,
-//                _rhs, du, &ERROR);
-// #endif
-// }
-
+//
+// Symbolic factorization - Matrix analysis for fill-in reduction
+//
 void feLinearSystemMklPardiso::mklSymbolicFactorization(void)
 {
   PHASE = 11;
@@ -1068,11 +1049,19 @@ void feLinearSystemMklPardiso::mklSymbolicFactorization(void)
     cluster_sparse_solver(PT, &MAXFCT, &MNUM, &MTYPE, &PHASE, &_nInc, _mat_values, _mat_ia, _mat_ja, IDUM, &NRHS, IPARM, &MSGLVL,
                &DDUM, &DDUM, &comm, &ERROR);
 #else
+  #ifdef MKL_ILP64
+    pardiso_64(PT, &MAXFCT, &MNUM, &MTYPE, &PHASE, &_nInc, _mat_values, _mat_ia, _mat_ja, IDUM, &NRHS, IPARM, &MSGLVL,
+               &DDUM, &DDUM, &ERROR);
+  #else
     pardiso(PT, &MAXFCT, &MNUM, &MTYPE, &PHASE, &_nInc, _mat_values, _mat_ia, _mat_ja, IDUM, &NRHS, IPARM, &MSGLVL,
                &DDUM, &DDUM, &ERROR);
+  #endif    
 #endif
 }
 
+//
+// LU Factorization
+//
 void feLinearSystemMklPardiso::mklFactorization(void)
 {
   PHASE = 22;
@@ -1083,11 +1072,19 @@ void feLinearSystemMklPardiso::mklFactorization(void)
                &DDUM, &DDUM, &comm, &ERROR);
 #else
     feInfo("Entering phase 22 with IPARM[17] = %d", IPARM[17]);
+  #ifdef MKL_ILP64
+    pardiso_64(PT, &MAXFCT, &MNUM, &MTYPE, &PHASE, &_nInc, _mat_values, _mat_ia, _mat_ja, IDUM, &NRHS, IPARM, &MSGLVL,
+               &DDUM, &DDUM, &ERROR);
+  #else
     pardiso(PT, &MAXFCT, &MNUM, &MTYPE, &PHASE, &_nInc, _mat_values, _mat_ia, _mat_ja, IDUM, &NRHS, IPARM, &MSGLVL,
                &DDUM, &DDUM, &ERROR);
+  #endif
 #endif
 }
 
+//
+// LU Solve
+//
 void feLinearSystemMklPardiso::mklSolve(void)
 {
   PHASE = 33;
@@ -1100,8 +1097,13 @@ void feLinearSystemMklPardiso::mklSolve(void)
     cluster_sparse_solver(PT, &MAXFCT, &MNUM, &MTYPE, &PHASE, &_nInc, _mat_values, _mat_ia, _mat_ja, IDUM, &NRHS, IPARM, &MSGLVL,
                _rhs, du, &comm, &ERROR);
 #else
+  #ifdef MKL_ILP64
+    pardiso_64(PT, &MAXFCT, &MNUM, &MTYPE, &PHASE, &_nInc, _mat_values, _mat_ia, _mat_ja, IDUM, &NRHS, IPARM, &MSGLVL,
+               _rhs, du, &ERROR);
+  #else
     pardiso(PT, &MAXFCT, &MNUM, &MTYPE, &PHASE, &_nInc, _mat_values, _mat_ia, _mat_ja, IDUM, &NRHS, IPARM, &MSGLVL,
                _rhs, du, &ERROR);
+  #endif
 #endif
 }
 
@@ -1116,9 +1118,15 @@ feLinearSystemMklPardiso::~feLinearSystemMklPardiso(void)
              &_nInc, &DDUM, _mat_ia, _mat_ja, IDUM, &NRHS,
              IPARM, &MSGLVL, &DDUM, &DDUM, &comm, &ERROR);
 #else
+  #ifdef MKL_ILP64
     pardiso(PT, &MAXFCT, &MNUM, &MTYPE, &PHASE,
              &_nInc, &DDUM, _mat_ia, _mat_ja, IDUM, &NRHS,
              IPARM, &MSGLVL, &DDUM, &DDUM, &ERROR);
+  #else
+    pardiso_64(PT, &MAXFCT, &MNUM, &MTYPE, &PHASE,
+             &_nInc, &DDUM, _mat_ia, _mat_ja, IDUM, &NRHS,
+             IPARM, &MSGLVL, &DDUM, &DDUM, &ERROR);
+  #endif
 #endif
 
   free(_ownedLowerBounds);

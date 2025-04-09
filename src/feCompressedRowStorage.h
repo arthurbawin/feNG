@@ -37,9 +37,10 @@ protected:
   std::vector<feInt> ja_Pardiso;
 
 public:
-  feEZCompressedRowStorage(int numUnknowns, std::vector<feBilinearForm *> &formMatrices,
-                           int numMatrixForms, int *ownedUpperBounds = nullptr);
-  // ~feEZCompressedRowStorage() = default;
+  feEZCompressedRowStorage(const int numUnknowns,
+                           const std::vector<feBilinearForm*> &formMatrices,
+                           const int numMatrixForms,
+                           const int *ownedUpperBounds = nullptr);
 
   feInt getNumNNZ() { return _num_nnz; };
   feInt *getNnz() { return nnz.data(); };
