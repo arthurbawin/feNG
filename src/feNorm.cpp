@@ -4,10 +4,10 @@ thread_local feFunctionArguments THREAD_LOCAL_ARGS;
 thread_local std::vector<double> THREAD_LOCAL_POS(3, 0.);
 thread_local std::vector<double> THREAD_LOCAL_GEOCOORD(18, 0.);
 
-feStatus createNorm(feNorm *&norm, normType type, const std::vector<feSpace *> &spaces,
+feStatus createNorm(feNorm *&norm, normType type, const std::vector<const feSpace*> &spaces,
                     feSolution *sol, feFunction *scalarSolution, feVectorFunction *vectorSolution)
 {
-  for(auto *fS : spaces) {
+  for(const feSpace *fS : spaces) {
     if(fS == nullptr) {
       return feErrorMsg(FE_STATUS_ERROR,
                         "Null pointer in vector of FE spaces, maybe you forgot to initialize it.");
@@ -16,7 +16,7 @@ feStatus createNorm(feNorm *&norm, normType type, const std::vector<feSpace *> &
 
   // Check that all interpolation spaces are defined on the same connectivity
   int cncGeoTag = spaces[0]->getCncGeoTag();
-  for(auto *fS : spaces) {
+  for(const feSpace *fS : spaces) {
     if(fS->getCncGeoTag() != cncGeoTag)
       return feErrorMsg(FE_STATUS_ERROR,
                         "Norm defined on more than one geometric connectivity (physical entity).\n"
@@ -29,7 +29,7 @@ feStatus createNorm(feNorm *&norm, normType type, const std::vector<feSpace *> &
   return FE_STATUS_OK;
 }
 
-feNorm::feNorm(normType type, const std::vector<feSpace *> &spaces, feSolution *sol,
+feNorm::feNorm(normType type, const std::vector<const feSpace*> &spaces, feSolution *sol,
                feFunction *scalarSolution, feVectorFunction *vectorSolution)
   : _type(type), _spaces(spaces), _solution(sol), _cnc(spaces[0]->getCncGeo()),
   _J(_cnc->getJacobians()), _scalarSolution(scalarSolution), _vectorSolution(vectorSolution)
@@ -175,6 +175,23 @@ void feNorm::initializeLocalSolutionTimeDerivativeOnSpace(int iSpace, int iElm)
 {
   _spaces[iSpace]->initializeAddressingVector(iElm, _adr[iSpace]);
   _solution->getSolDotAtDOF(_adr[iSpace], _localSolDot[iSpace]);
+}
+
+feStatus feNorm::probeScalarField(const std::vector<double> &pos, double &res)
+{
+  feMesh *mesh = _spaces[0]->getMeshPtr();
+  int elm = -1;
+  double r[3];
+  bool isFound = static_cast<feMesh2DP1*>(mesh)->locateVertex(pos.data(), elm, r);
+  if(!isFound)
+    return feErrorMsg(FE_STATUS_ERROR,
+      "Could not probe because point (%f,%f,%f) could not be found in the mesh",
+      pos[0], pos[1], pos[2]);
+
+  initializeLocalSolutionOnSpace(0, elm);
+  res = _spaces[0]->interpolateField(_localSol[0], r);
+
+  return FE_STATUS_OK;
 }
 
 double feNorm::computeLpNorm(int p, bool error)

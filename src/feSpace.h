@@ -180,7 +180,7 @@ public:
   void setCncPtr(feCncGeo *cnc) { _cnc = cnc; }
   // Assign the mesh pointer of a geometric space after the mesh has been created
   void setMeshPtr(feMesh *mesh) { _mesh = mesh; }
-  feMesh *getMeshPtr() { return _mesh; }
+  feMesh *getMeshPtr() const { return _mesh; }
   // Assign the pointer to the field numbering after the numbering has been created
   void setNumberingPtr(feNumber *numbering) { _numbering = numbering; }
   void setAsNumbered() { _dofWereNumbered = true; }
@@ -196,7 +196,7 @@ public:
   bool isEssentialComponent(int iComponent) const { return _essentialComponents[iComponent]; };
 
   // Return the attributes of the geometric connectivity on which the space is defined
-  const feCncGeo *getCncGeo() { return _cnc; }
+  const feCncGeo *getCncGeo() const { return _cnc; }
   int getDim() const { return _dim; };
   int getNumElements() const;
   int getNumVerticesPerElem() const;
@@ -216,7 +216,7 @@ public:
   // Return the number of shape functions (DOF) on an element
   virtual int getNumFunctions() const = 0;
   // Return highest degree of the polynomial basis
-  virtual int getPolynomialDegree() = 0;
+  virtual int getPolynomialDegree() const = 0;
 
   EigenMat innerProductBasisFunctions(int iElm);
   double innerProductBasisFunctions(int iElm, int ex, int ey);
@@ -226,15 +226,15 @@ public:
   // const std::vector<double> &getBarycentricCoordinatesAtQuadNode() { return _barycentricCoordinates; }
 
   // Evaluate the local shape functions and derivatives at quadrature nodes
-  virtual std::vector<double> L(double *r) = 0;
-  virtual void L(double *r, double *L) = 0;
-  virtual std::vector<double> dLdr(double *) { return std::vector<double>(_nFunctions*_nComponents, 0.); };
-  virtual std::vector<double> dLds(double *) { return std::vector<double>(_nFunctions*_nComponents, 0.); };
-  virtual std::vector<double> dLdt(double *) { return std::vector<double>(_nFunctions*_nComponents, 0.); };
-  virtual std::vector<double> d2Ldr2(double *) { return std::vector<double>(_nFunctions*_nComponents, 0.); };
-  virtual std::vector<double> d2Ldrs(double *) { return std::vector<double>(_nFunctions*_nComponents, 0.); };
-  virtual std::vector<double> d2Lds2(double *) { return std::vector<double>(_nFunctions*_nComponents, 0.); };
-  virtual std::vector<double> d2Ldt2(double *) { return std::vector<double>(_nFunctions*_nComponents, 0.); };
+  virtual std::vector<double> L(const double *r) const = 0;
+  virtual void L(const double *r, double *res) const = 0;
+  virtual std::vector<double> dLdr(const double *) const { return std::vector<double>(_nFunctions*_nComponents, 0.); };
+  virtual std::vector<double> dLds(const double *) const { return std::vector<double>(_nFunctions*_nComponents, 0.); };
+  virtual std::vector<double> dLdt(const double *) const { return std::vector<double>(_nFunctions*_nComponents, 0.); };
+  virtual std::vector<double> d2Ldr2(const double *) const { return std::vector<double>(_nFunctions*_nComponents, 0.); };
+  virtual std::vector<double> d2Ldrs(const double *) const { return std::vector<double>(_nFunctions*_nComponents, 0.); };
+  virtual std::vector<double> d2Lds2(const double *) const { return std::vector<double>(_nFunctions*_nComponents, 0.); };
+  virtual std::vector<double> d2Ldt2(const double *) const { return std::vector<double>(_nFunctions*_nComponents, 0.); };
 
   // These should eventually replace the ones above
   // virtual void shape(const double *r, std::vector<double> &res) = 0;
@@ -324,7 +324,7 @@ public:
 
   virtual void initializeNumberingUnknowns() = 0;
   virtual void initializeNumberingEssential() = 0;
-  virtual void initializeAddressingVector(int numElem, std::vector<feInt> &adr) = 0;
+  virtual void initializeAddressingVector(int numElem, std::vector<feInt> &adr) const = 0;
   // For discontinuous spaces: ensure that element-based DOF are marked
   // as essential after another feSpace has marked their corresponding vertex-based
   // or edge-based DOF as essential.
@@ -348,9 +348,9 @@ public:
 
   // Interpolate scalar field or derivatives at reference node r = [r,s,t]
   // using local shape functions (default)
-  double interpolateField(std::vector<double> &field, double *r);
-  double interpolateField_rDerivative(std::vector<double> &field, double *r);
-  double interpolateField_sDerivative(std::vector<double> &field, double *r);
+  double interpolateField(const std::vector<double> &field, const double *r) const;
+  double interpolateField_rDerivative(const std::vector<double> &field, const double *r) const;
+  double interpolateField_sDerivative(const std::vector<double> &field, const double *r) const;
 
   // Interpolate scalar field or derivatives at physical node x on element iElm
   // using global shape functions
@@ -362,9 +362,9 @@ public:
   // size(field) = size(shape) = fieldSize.
   // shape will be filled with values of the shape functions.
   // The result of the interpolation is stored in res.
-  void interpolateField(double *field, int fieldSize, double *r, double *shape, double &res);
+  void interpolateField(const double *field, const int fieldSize, const double *r, double *shape, double &res) const;
 
-  double interpolateField(feSolution *sol, std::vector<double> &x);
+  double interpolateField(const feSolution *sol, const std::vector<double> &x) const;
   void interpolateField_gradrs(feSolution *sol, std::vector<double> &x, std::vector<double> &grad);
 
   // Interpolate vector field or derivatives at reference node r = [r,s,t]
@@ -387,18 +387,18 @@ public:
 
   // Interpolate scalar field or derivatives at iNode-th quadrature node using local shape functions
   // (default)
-  double interpolateFieldAtQuadNode(std::vector<double> &field, int iNode);
+  double interpolateFieldAtQuadNode(std::vector<double> &field, int iNode) const;
   double interpolateFieldAtQuadNode_rDerivative(std::vector<double> &field, int iNode);
   double interpolateFieldAtQuadNode_sDerivative(std::vector<double> &field, int iNode);
   double interpolateFieldAtQuadNode_rrDerivative(std::vector<double> &field, int iNode);
   double interpolateFieldAtQuadNode_ssDerivative(std::vector<double> &field, int iNode);
 
-  void interpolateFieldAtQuadNode_physicalGradient(std::vector<double> &field, const int iQuadNode,
-                                                   const ElementTransformation &T, double *grad);
+  void interpolateFieldAtQuadNode_physicalGradient(const std::vector<double> &field, const int iQuadNode,
+                                                   const ElementTransformation &T, double *grad) const;
 
   // Interpolate scalar field or derivatives at iNode-th quadrature node using global shape
   // functions
-  double interpolateFieldAtQuadNode(std::vector<double> &field, int iElm, int iNode);
+  double interpolateFieldAtQuadNode(std::vector<double> &field, int iElm, int iNode) const;
   double interpolateFieldAtQuadNode_xDerivative(std::vector<double> &field, int iElm, int iNode);
   double interpolateFieldAtQuadNode_yDerivative(std::vector<double> &field, int iElm, int iNode);
 
@@ -406,14 +406,14 @@ public:
   // (default)
 
   // Interpolate vector valued function using scalar valued FE space
-  void interpolateVectorFieldAtQuadNode(std::vector<double> &field, int iNode,
-                                        std::vector<double> &res);
+  void interpolateVectorFieldAtQuadNode(const std::vector<double> &field, const int iNode,
+                                        std::vector<double> &res) const;
   // Interpolate vector valued function using vector valued FE space
-  void interpolateVectorFieldAtQuadNode(std::vector<double> &field, int iNode,
-                                        std::vector<double> &res, int nComponents);
+  void interpolateVectorFieldAtQuadNode(const std::vector<double> &field, const int iNode,
+                                        std::vector<double> &res, const int nComponents) const;
   // Interpolate scalar component of vector valued function using vector valued FE space
   double interpolateVectorFieldComponentAtQuadNode(std::vector<double> &field, int iNode, int iComponent);
-  double interpolateVectorFieldComponentAtQuadNode_fullField(std::vector<double> &field, int iNode, int iComponent);
+  double interpolateVectorFieldComponentAtQuadNode_fullField(const std::vector<double> &field, const int iNode, const int iComponent) const;
 
   void interpolateVectorFieldAtQuadNode_rDerivative(const std::vector<double> &field, int iNode,
                                                     std::vector<double> &res);
@@ -524,14 +524,14 @@ public:
   ~feSpace0DP0(){};
 
   int getNumFunctions() const { return 1; }
-  int getPolynomialDegree() { return 0; }
+  int getPolynomialDegree() const { return 0; }
 
-  std::vector<double> L(double *r);
-  void L(double *r, double *L);
+  std::vector<double> L(const double *r) const;
+  void L(const double *r, double *res) const;
 
   void initializeNumberingUnknowns();
   void initializeNumberingEssential();
-  void initializeAddressingVector(int numElem, std::vector<feInt> &adr);
+  void initializeAddressingVector(int numElem, std::vector<feInt> &adr) const;
 };
 
 // -----------------------------------------------------------------------------
@@ -545,14 +545,14 @@ public:
   ~feSpace0D_Hermite(){};
 
   int getNumFunctions() const { return 2; }
-  int getPolynomialDegree() { return 0; }
+  int getPolynomialDegree() const { return 0; }
 
-  std::vector<double> L(double *r);
-  void L(double *r, double *L);
+  std::vector<double> L(const double *r) const;
+  void L(const double *r, double *res) const;
 
   void initializeNumberingUnknowns();
   void initializeNumberingEssential();
-  void initializeAddressingVector(int numElem, std::vector<feInt> &adr);
+  void initializeAddressingVector(int numElem, std::vector<feInt> &adr) const;
 };
 
 // -----------------------------------------------------------------------------
@@ -566,14 +566,14 @@ public:
   ~feSpace1DP0(){};
 
   int getNumFunctions() const { return 1; }
-  int getPolynomialDegree() { return 0; }
+  int getPolynomialDegree() const { return 0; }
 
-  std::vector<double> L(double *r);
-  void L(double *r, double *L);
+  std::vector<double> L(const double *r) const;
+  void L(const double *r, double *res) const;
 
   void initializeNumberingUnknowns();
   void initializeNumberingEssential();
-  void initializeAddressingVector(int numElem, std::vector<feInt> &adr);
+  void initializeAddressingVector(int numElem, std::vector<feInt> &adr) const;
 };
 
 // -----------------------------------------------------------------------------
@@ -588,15 +588,15 @@ public:
   ~feSpace1DP1(){};
 
   int getNumFunctions() const { return 2; }
-  int getPolynomialDegree() { return 1; }
+  int getPolynomialDegree() const { return 1; }
 
-  std::vector<double> L(double *r);
-  void L(double *r, double *L);
-  std::vector<double> dLdr(double *r);
+  std::vector<double> L(const double *r) const;
+  void L(const double *r, double *res) const;
+  std::vector<double> dLdr(const double *r) const;
 
   void initializeNumberingUnknowns();
   void initializeNumberingEssential();
-  void initializeAddressingVector(int numElem, std::vector<feInt> &adr);
+  void initializeAddressingVector(int numElem, std::vector<feInt> &adr) const;
 };
 
 // -----------------------------------------------------------------------------
@@ -611,15 +611,15 @@ public:
   ~feSpaceVecP1(){};
 
   int getNumFunctions() const { return 2 * dim; }
-  int getPolynomialDegree() { return 1; }
+  int getPolynomialDegree() const { return 1; }
 
-  std::vector<double> L(double *r);
-  void L(double *r, double *L);
-  std::vector<double> dLdr(double *r);
+  std::vector<double> L(const double *r) const;
+  void L(const double *r, double *res) const;
+  std::vector<double> dLdr(const double *r) const;
 
   void initializeNumberingUnknowns();
   void initializeNumberingEssential();
-  void initializeAddressingVector(int numElem, std::vector<feInt> &adr);
+  void initializeAddressingVector(int numElem, std::vector<feInt> &adr) const;
 };
 
 // -----------------------------------------------------------------------------
@@ -634,15 +634,15 @@ public:
   ~feSpace1D_DG_P1(){};
 
   int getNumFunctions() const { return 2; }
-  int getPolynomialDegree() { return 1; }
+  int getPolynomialDegree() const { return 1; }
 
-  std::vector<double> L(double *r);
-  void L(double *r, double *L);
-  std::vector<double> dLdr(double *r);
+  std::vector<double> L(const double *r) const;
+  void L(const double *r, double *res) const;
+  std::vector<double> dLdr(const double *r) const;
 
   void initializeNumberingUnknowns();
   void initializeNumberingEssential();
-  void initializeAddressingVector(int numElem, std::vector<feInt> &adr);
+  void initializeAddressingVector(int numElem, std::vector<feInt> &adr) const;
 };
 
 // -----------------------------------------------------------------------------
@@ -658,14 +658,14 @@ public:
   ~feSpace1D_CR0() {}
 
   int getNumFunctions() const { return 1; }
-  int getPolynomialDegree() { return 0; }
+  int getPolynomialDegree() const { return 0; }
 
-  std::vector<double> L(double *r);
-  void L(double *r, double *L);
+  std::vector<double> L(const double *r) const;
+  void L(const double *r, double *res) const;
 
   void initializeNumberingUnknowns();
   void initializeNumberingEssential();
-  void initializeAddressingVector(int numElem, std::vector<feInt> &adr);
+  void initializeAddressingVector(int numElem, std::vector<feInt> &adr) const;
 };
 
 // -----------------------------------------------------------------------------
@@ -680,15 +680,15 @@ public:
   ~feSpace1DP2() {}
 
   int getNumFunctions() const { return 3; }
-  int getPolynomialDegree() { return 2; }
+  int getPolynomialDegree() const { return 2; }
 
-  std::vector<double> L(double *r);
-  void L(double *r, double *L);
-  std::vector<double> dLdr(double *r);
+  std::vector<double> L(const double *r) const;
+  void L(const double *r, double *res) const;
+  std::vector<double> dLdr(const double *r) const;
 
   void initializeNumberingUnknowns();
   void initializeNumberingEssential();
-  void initializeAddressingVector(int numElem, std::vector<feInt> &adr);
+  void initializeAddressingVector(int numElem, std::vector<feInt> &adr) const;
 };
 
 // -----------------------------------------------------------------------------
@@ -703,15 +703,15 @@ public:
   ~feSpaceVecP2(){};
 
   int getNumFunctions() const { return 3 * dim; }
-  int getPolynomialDegree() { return 2; }
+  int getPolynomialDegree() const { return 2; }
 
-  std::vector<double> L(double *r);
-  void L(double *r, double *L);
-  std::vector<double> dLdr(double *r);
+  std::vector<double> L(const double *r) const;
+  void L(const double *r, double *res) const;
+  std::vector<double> dLdr(const double *r) const;
 
   void initializeNumberingUnknowns();
   void initializeNumberingEssential();
-  void initializeAddressingVector(int numElem, std::vector<feInt> &adr);
+  void initializeAddressingVector(int numElem, std::vector<feInt> &adr) const;
 };
 
 // -----------------------------------------------------------------------------
@@ -726,15 +726,15 @@ public:
   ~feSpace1DP3() {}
 
   int getNumFunctions() const { return 4; }
-  int getPolynomialDegree() { return 3; }
+  int getPolynomialDegree() const { return 3; }
 
-  std::vector<double> L(double *r);
-  void L(double *r, double *L);
-  std::vector<double> dLdr(double *r);
+  std::vector<double> L(const double *r) const;
+  void L(const double *r, double *res) const;
+  std::vector<double> dLdr(const double *r) const;
 
   void initializeNumberingUnknowns();
   void initializeNumberingEssential();
-  void initializeAddressingVector(int numElem, std::vector<feInt> &adr);
+  void initializeAddressingVector(int numElem, std::vector<feInt> &adr) const;
 };
 
 // -----------------------------------------------------------------------------
@@ -749,15 +749,15 @@ public:
   ~feSpaceVecP3(){};
 
   int getNumFunctions() const { return 4 * dim; }
-  int getPolynomialDegree() { return 3; }
+  int getPolynomialDegree() const { return 3; }
 
-  std::vector<double> L(double *r);
-  void L(double *r, double *L);
-  std::vector<double> dLdr(double *r);
+  std::vector<double> L(const double *r) const;
+  void L(const double *r, double *res) const;
+  std::vector<double> dLdr(const double *r) const;
 
   void initializeNumberingUnknowns();
   void initializeNumberingEssential();
-  void initializeAddressingVector(int numElem, std::vector<feInt> &adr);
+  void initializeAddressingVector(int numElem, std::vector<feInt> &adr) const;
 };
 
 // -----------------------------------------------------------------------------
@@ -772,16 +772,16 @@ public:
   ~feSpace1D_H3() {}
 
   int getNumFunctions() const { return 4; }
-  int getPolynomialDegree() { return 3; }
+  int getPolynomialDegree() const { return 3; }
 
-  std::vector<double> L(double *r);
-  void L(double *r, double *L);
-  std::vector<double> dLdr(double *r);
-  std::vector<double> d2Ldr2(double *r);
+  std::vector<double> L(const double *r) const;
+  void L(const double *r, double *res) const;
+  std::vector<double> dLdr(const double *r) const;
+  std::vector<double> d2Ldr2(const double *r) const;
 
   void initializeNumberingUnknowns();
   void initializeNumberingEssential();
-  void initializeAddressingVector(int numElem, std::vector<feInt> &adr);
+  void initializeAddressingVector(int numElem, std::vector<feInt> &adr) const;
 };
 
 // -----------------------------------------------------------------------------
@@ -796,15 +796,15 @@ public:
   ~feSpace1DP4() {}
 
   int getNumFunctions() const { return 5; }
-  int getPolynomialDegree() { return 4; }
+  int getPolynomialDegree() const { return 4; }
 
-  std::vector<double> L(double *r);
-  void L(double *r, double *L);
-  std::vector<double> dLdr(double *r);
+  std::vector<double> L(const double *r) const;
+  void L(const double *r, double *res) const;
+  std::vector<double> dLdr(const double *r) const;
 
   void initializeNumberingUnknowns();
   void initializeNumberingEssential();
-  void initializeAddressingVector(int numElem, std::vector<feInt> &adr);
+  void initializeAddressingVector(int numElem, std::vector<feInt> &adr) const;
 };
 
 // -----------------------------------------------------------------------------
@@ -819,15 +819,15 @@ public:
   ~feSpaceVecP4(){};
 
   int getNumFunctions() const { return 5 * dim; }
-  int getPolynomialDegree() { return 4; }
+  int getPolynomialDegree() const { return 4; }
 
-  std::vector<double> L(double *r);
-  void L(double *r, double *L);
-  std::vector<double> dLdr(double *r);
+  std::vector<double> L(const double *r) const;
+  void L(const double *r, double *res) const;
+  std::vector<double> dLdr(const double *r) const;
 
   void initializeNumberingUnknowns();
   void initializeNumberingEssential();
-  void initializeAddressingVector(int numElem, std::vector<feInt> &adr);
+  void initializeAddressingVector(int numElem, std::vector<feInt> &adr) const;
 };
 
 // -----------------------------------------------------------------------------
@@ -844,15 +844,15 @@ public:
   ~feSpace1D_Legendre() {}
 
   int getNumFunctions() const { return _nFunctions; }
-  int getPolynomialDegree() { return _degree; }
+  int getPolynomialDegree() const { return _degree; }
 
-  std::vector<double> L(double *r);
-  void L(double *r, double *L);
-  std::vector<double> dLdr(double *r);
+  std::vector<double> L(const double *r) const;
+  void L(const double *r, double *res) const;
+  std::vector<double> dLdr(const double *r) const;
 
   void initializeNumberingUnknowns();
   void initializeNumberingEssential();
-  void initializeAddressingVector(int numElem, std::vector<feInt> &adr);
+  void initializeAddressingVector(int numElem, std::vector<feInt> &adr) const;
 };
 
 // -----------------------------------------------------------------------------
@@ -867,20 +867,20 @@ public:
   ~feSpaceTriP0() {}
 
   int getNumFunctions() const { return 1; }
-  int getPolynomialDegree() { return 0; }
+  int getPolynomialDegree() const { return 0; }
 
-  std::vector<double> L(double *r);
-  void L(double *r, double *L);
+  std::vector<double> L(const double *r) const;
+  void L(const double *r, double *res) const;
 
-  std::vector<double> dLdr(double *r);
-  std::vector<double> dLds(double *r);
-  std::vector<double> d2Ldr2(double *r);
-  std::vector<double> d2Ldrs(double *r);
-  std::vector<double> d2Lds2(double *r);
+  std::vector<double> dLdr(const double *r) const;
+  std::vector<double> dLds(const double *r) const;
+  std::vector<double> d2Ldr2(const double *r) const;
+  std::vector<double> d2Ldrs(const double *r) const;
+  std::vector<double> d2Lds2(const double *r) const;
 
   void initializeNumberingUnknowns();
   void initializeNumberingEssential();
-  void initializeAddressingVector(int numElem, std::vector<feInt> &adr);
+  void initializeAddressingVector(int numElem, std::vector<feInt> &adr) const;
 };
 
 // -----------------------------------------------------------------------------
@@ -896,20 +896,20 @@ public:
   ~feSpaceTriP1() {}
 
   int getNumFunctions() const { return 3; }
-  int getPolynomialDegree() { return 1; }
+  int getPolynomialDegree() const { return 1; }
 
-  std::vector<double> L(double *r);
-  void L(double *r, double *L);
+  std::vector<double> L(const double *r) const;
+  void L(const double *r, double *res) const;
 
-  std::vector<double> dLdr(double *r);
-  std::vector<double> dLds(double *r);
-  std::vector<double> d2Ldr2(double *r);
-  std::vector<double> d2Ldrs(double *r);
-  std::vector<double> d2Lds2(double *r);
+  std::vector<double> dLdr(const double *r) const;
+  std::vector<double> dLds(const double *r) const;
+  std::vector<double> d2Ldr2(const double *r) const;
+  std::vector<double> d2Ldrs(const double *r) const;
+  std::vector<double> d2Lds2(const double *r) const;
 
   void initializeNumberingUnknowns();
   void initializeNumberingEssential();
-  void initializeAddressingVector(int numElem, std::vector<feInt> &adr);
+  void initializeAddressingVector(int numElem, std::vector<feInt> &adr) const;
 };
 
 // ----------------------------------------------------------------------------------------
@@ -924,19 +924,19 @@ public:
   ~feSpaceTriP1_Discontinuous(){};
 
   int getNumFunctions() const { return 3; }
-  int getPolynomialDegree() { return 1; }
+  int getPolynomialDegree() const { return 1; }
 
-  std::vector<double> L(double *r);
-  void L(double *r, double *L);
-  std::vector<double> dLdr(double *r);
-  std::vector<double> dLds(double *r);
-  std::vector<double> d2Ldr2(double *r);
-  std::vector<double> d2Ldrs(double *r);
-  std::vector<double> d2Lds2(double *r);
+  std::vector<double> L(const double *r) const;
+  void L(const double *r, double *res) const;
+  std::vector<double> dLdr(const double *r) const;
+  std::vector<double> dLds(const double *r) const;
+  std::vector<double> d2Ldr2(const double *r) const;
+  std::vector<double> d2Ldrs(const double *r) const;
+  std::vector<double> d2Lds2(const double *r) const;
 
   void initializeNumberingUnknowns();
   void initializeNumberingEssential();
-  void initializeAddressingVector(int numElem, std::vector<feInt> &adr);
+  void initializeAddressingVector(int numElem, std::vector<feInt> &adr) const;
   void synchronizeCodeOfEssentialDOF();
   void synchronizeNumberingOfEssentialDOF(int &numModifiedDOF);
 };
@@ -953,20 +953,20 @@ public:
   ~feSpaceVecTriP1() {}
 
   int getNumFunctions() const { return 3 * dim; }
-  int getPolynomialDegree() { return 1; }
+  int getPolynomialDegree() const { return 1; }
 
-  std::vector<double> L(double *r);
-  void L(double *r, double *L);
+  std::vector<double> L(const double *r) const;
+  void L(const double *r, double *res) const;
 
-  std::vector<double> dLdr(double *r);
-  std::vector<double> dLds(double *r);
-  std::vector<double> d2Ldr2(double *r);
-  std::vector<double> d2Ldrs(double *r);
-  std::vector<double> d2Lds2(double *r);
+  std::vector<double> dLdr(const double *r) const;
+  std::vector<double> dLds(const double *r) const;
+  std::vector<double> d2Ldr2(const double *r) const;
+  std::vector<double> d2Ldrs(const double *r) const;
+  std::vector<double> d2Lds2(const double *r) const;
 
   void initializeNumberingUnknowns();
   void initializeNumberingEssential();
-  void initializeAddressingVector(int numElem, std::vector<feInt> &adr);
+  void initializeAddressingVector(int numElem, std::vector<feInt> &adr) const;
 };
 
 // -----------------------------------------------------------------------------
@@ -981,19 +981,19 @@ public:
   ~feSpaceTri_CR1() {}
 
   int getNumFunctions() const { return 3; }
-  int getPolynomialDegree() { return 1; }
+  int getPolynomialDegree() const { return 1; }
 
-  std::vector<double> L(double *r);
-  void L(double *r, double *L);
-  std::vector<double> dLdr(double *r);
-  std::vector<double> dLds(double *r);
-  std::vector<double> d2Ldr2(double *r);
-  std::vector<double> d2Ldrs(double *r);
-  std::vector<double> d2Lds2(double *r);
+  std::vector<double> L(const double *r) const;
+  void L(const double *r, double *res) const;
+  std::vector<double> dLdr(const double *r) const;
+  std::vector<double> dLds(const double *r) const;
+  std::vector<double> d2Ldr2(const double *r) const;
+  std::vector<double> d2Ldrs(const double *r) const;
+  std::vector<double> d2Lds2(const double *r) const;
 
   void initializeNumberingUnknowns();
   void initializeNumberingEssential();
-  void initializeAddressingVector(int numElem, std::vector<feInt> &adr);
+  void initializeAddressingVector(int numElem, std::vector<feInt> &adr) const;
 };
 
 // -----------------------------------------------------------------------------
@@ -1008,20 +1008,20 @@ public:
   ~feSpaceTriRT1() {}
 
   int getNumFunctions() const { return 3; }
-  int getPolynomialDegree() { return 1; }
+  int getPolynomialDegree() const { return 1; }
 
-  std::vector<double> L(double *r);
-  void L(double *r, double *L);
+  std::vector<double> L(const double *r) const;
+  void L(const double *r, double *res) const;
 
-  std::vector<double> dLdr(double *r);
-  std::vector<double> dLds(double *r);
-  std::vector<double> d2Ldr2(double *r);
-  std::vector<double> d2Ldrs(double *r);
-  std::vector<double> d2Lds2(double *r);
+  std::vector<double> dLdr(const double *r) const;
+  std::vector<double> dLds(const double *r) const;
+  std::vector<double> d2Ldr2(const double *r) const;
+  std::vector<double> d2Ldrs(const double *r) const;
+  std::vector<double> d2Lds2(const double *r) const;
 
   void initializeNumberingUnknowns();
   void initializeNumberingEssential();
-  void initializeAddressingVector(int numElem, std::vector<feInt> &adr);
+  void initializeAddressingVector(int numElem, std::vector<feInt> &adr) const;
 };
 
 // -----------------------------------------------------------------------------
@@ -1037,22 +1037,22 @@ public:
   ~feSpaceTriP2() {}
 
   int getNumFunctions() const { return 6; }
-  int getPolynomialDegree() { return 2; }
+  int getPolynomialDegree() const { return 2; }
 
-  std::vector<double> L(double *r);
-  void L(double *r, double *L);
-  std::vector<double> dLdr(double *r);
-  std::vector<double> dLds(double *r);
-  std::vector<double> d2Ldr2(double *r);
-  std::vector<double> d2Ldrs(double *r);
-  std::vector<double> d2Lds2(double *r);
+  std::vector<double> L(const double *r) const;
+  void L(const double *r, double *res) const;
+  std::vector<double> dLdr(const double *r) const;
+  std::vector<double> dLds(const double *r) const;
+  std::vector<double> d2Ldr2(const double *r) const;
+  std::vector<double> d2Ldrs(const double *r) const;
+  std::vector<double> d2Lds2(const double *r) const;
 
   feStatus Lphys(int iElm, std::vector<double> &x, std::vector<double> &L,
                  std::vector<double> &dLdx, std::vector<double> &dLdy);
 
   void initializeNumberingUnknowns();
   void initializeNumberingEssential();
-  void initializeAddressingVector(int numElem, std::vector<feInt> &adr);
+  void initializeAddressingVector(int numElem, std::vector<feInt> &adr) const;
 };
 
 // -----------------------------------------------------------------------------
@@ -1067,19 +1067,19 @@ public:
   ~feSpaceTriP2Bubble() {}
 
   int getNumFunctions() const { return 7; }
-  int getPolynomialDegree() { return 2; }
+  int getPolynomialDegree() const { return 2; }
 
-  std::vector<double> L(double *r);
-  void L(double *r, double *L);
-  std::vector<double> dLdr(double *r);
-  std::vector<double> dLds(double *r);
-  std::vector<double> d2Ldr2(double *r);
-  std::vector<double> d2Ldrs(double *r);
-  std::vector<double> d2Lds2(double *r);
+  std::vector<double> L(const double *r) const;
+  void L(const double *r, double *res) const;
+  std::vector<double> dLdr(const double *r) const;
+  std::vector<double> dLds(const double *r) const;
+  std::vector<double> d2Ldr2(const double *r) const;
+  std::vector<double> d2Ldrs(const double *r) const;
+  std::vector<double> d2Lds2(const double *r) const;
 
   void initializeNumberingUnknowns();
   void initializeNumberingEssential();
-  void initializeAddressingVector(int numElem, std::vector<feInt> &adr);
+  void initializeAddressingVector(int numElem, std::vector<feInt> &adr) const;
 };
 
 // -----------------------------------------------------------------------------
@@ -1093,20 +1093,20 @@ public:
   ~feSpaceVecTriP2() {}
 
   int getNumFunctions() const { return 6 * dim; }
-  int getPolynomialDegree() { return 2; }
+  int getPolynomialDegree() const { return 2; }
 
-  std::vector<double> L(double *r);
-  void L(double *r, double *L);
+  std::vector<double> L(const double *r) const;
+  void L(const double *r, double *res) const;
 
-  std::vector<double> dLdr(double *r);
-  std::vector<double> dLds(double *r);
-  std::vector<double> d2Ldr2(double *r);
-  std::vector<double> d2Ldrs(double *r);
-  std::vector<double> d2Lds2(double *r);
+  std::vector<double> dLdr(const double *r) const;
+  std::vector<double> dLds(const double *r) const;
+  std::vector<double> d2Ldr2(const double *r) const;
+  std::vector<double> d2Ldrs(const double *r) const;
+  std::vector<double> d2Lds2(const double *r) const;
 
   void initializeNumberingUnknowns();
   void initializeNumberingEssential();
-  void initializeAddressingVector(int numElem, std::vector<feInt> &adr);
+  void initializeAddressingVector(int numElem, std::vector<feInt> &adr) const;
 };
 
 // -----------------------------------------------------------------------------
@@ -1120,20 +1120,20 @@ public:
   ~feSpaceVecTriP2Bubble() {}
 
   int getNumFunctions() const { return 7 * dim; }
-  int getPolynomialDegree() { return 2; }
+  int getPolynomialDegree() const { return 2; }
 
-  std::vector<double> L(double *r);
-  void L(double *r, double *L);
+  std::vector<double> L(const double *r) const;
+  void L(const double *r, double *res) const;
 
-  std::vector<double> dLdr(double *r);
-  std::vector<double> dLds(double *r);
-  std::vector<double> d2Ldr2(double *r);
-  std::vector<double> d2Ldrs(double *r);
-  std::vector<double> d2Lds2(double *r);
+  std::vector<double> dLdr(const double *r) const;
+  std::vector<double> dLds(const double *r) const;
+  std::vector<double> d2Ldr2(const double *r) const;
+  std::vector<double> d2Ldrs(const double *r) const;
+  std::vector<double> d2Lds2(const double *r) const;
 
   void initializeNumberingUnknowns();
   void initializeNumberingEssential();
-  void initializeAddressingVector(int numElem, std::vector<feInt> &adr);
+  void initializeAddressingVector(int numElem, std::vector<feInt> &adr) const;
 };
 
 // -----------------------------------------------------------------------------
@@ -1148,16 +1148,16 @@ public:
   ~feSpaceTri_CR2() {}
 
   int getNumFunctions() const { return 7; }
-  int getPolynomialDegree() { return 2; }
+  int getPolynomialDegree() const { return 2; }
 
-  std::vector<double> L(double *r);
-  void L(double *r, double *L);
-  std::vector<double> dLdr(double *r);
-  std::vector<double> dLds(double *r);
+  std::vector<double> L(const double *r) const;
+  void L(const double *r, double *res) const;
+  std::vector<double> dLdr(const double *r) const;
+  std::vector<double> dLds(const double *r) const;
 
   void initializeNumberingUnknowns();
   void initializeNumberingEssential();
-  void initializeAddressingVector(int numElem, std::vector<feInt> &adr);
+  void initializeAddressingVector(int numElem, std::vector<feInt> &adr) const;
 };
 
 // -----------------------------------------------------------------------------
@@ -1173,16 +1173,16 @@ public:
   ~feSpaceTriP3() {}
 
   int getNumFunctions() const { return 10; }
-  int getPolynomialDegree() { return 3; }
+  int getPolynomialDegree() const { return 3; }
 
-  std::vector<double> L(double *r);
-  void L(double *r, double *L);
-  std::vector<double> dLdr(double *r);
-  std::vector<double> dLds(double *r);
+  std::vector<double> L(const double *r) const;
+  void L(const double *r, double *res) const;
+  std::vector<double> dLdr(const double *r) const;
+  std::vector<double> dLds(const double *r) const;
 
   void initializeNumberingUnknowns();
   void initializeNumberingEssential();
-  void initializeAddressingVector(int numElem, std::vector<feInt> &adr);
+  void initializeAddressingVector(int numElem, std::vector<feInt> &adr) const;
 };
 
 // -----------------------------------------------------------------------------
@@ -1196,17 +1196,17 @@ public:
   ~feSpaceVecTriP3() {}
 
   int getNumFunctions() const { return 10 * dim; }
-  int getPolynomialDegree() { return 3; }
+  int getPolynomialDegree() const { return 3; }
 
-  std::vector<double> L(double *r);
-  void L(double *r, double *L);
+  std::vector<double> L(const double *r) const;
+  void L(const double *r, double *res) const;
 
-  std::vector<double> dLdr(double *r);
-  std::vector<double> dLds(double *r);
+  std::vector<double> dLdr(const double *r) const;
+  std::vector<double> dLds(const double *r) const;
 
   void initializeNumberingUnknowns();
   void initializeNumberingEssential();
-  void initializeAddressingVector(int numElem, std::vector<feInt> &adr);
+  void initializeAddressingVector(int numElem, std::vector<feInt> &adr) const;
 };
 
 // -----------------------------------------------------------------------------
@@ -1222,16 +1222,16 @@ public:
   ~feSpaceTriP4() {}
 
   int getNumFunctions() const { return 15; }
-  int getPolynomialDegree() { return 4; }
+  int getPolynomialDegree() const { return 4; }
 
-  std::vector<double> L(double *r);
-  void L(double *r, double *L);
-  std::vector<double> dLdr(double *r);
-  std::vector<double> dLds(double *r);
+  std::vector<double> L(const double *r) const;
+  void L(const double *r, double *res) const;
+  std::vector<double> dLdr(const double *r) const;
+  std::vector<double> dLds(const double *r) const;
 
   void initializeNumberingUnknowns();
   void initializeNumberingEssential();
-  void initializeAddressingVector(int numElem, std::vector<feInt> &adr);
+  void initializeAddressingVector(int numElem, std::vector<feInt> &adr) const;
 };
 
 // -----------------------------------------------------------------------------
@@ -1245,17 +1245,17 @@ public:
   ~feSpaceVecTriP4() {}
 
   int getNumFunctions() const { return 15 * dim; }
-  int getPolynomialDegree() { return 4; }
+  int getPolynomialDegree() const { return 4; }
 
-  std::vector<double> L(double *r);
-  void L(double *r, double *L);
+  std::vector<double> L(const double *r) const;
+  void L(const double *r, double *res) const;
 
-  std::vector<double> dLdr(double *r);
-  std::vector<double> dLds(double *r);
+  std::vector<double> dLdr(const double *r) const;
+  std::vector<double> dLds(const double *r) const;
 
   void initializeNumberingUnknowns();
   void initializeNumberingEssential();
-  void initializeAddressingVector(int numElem, std::vector<feInt> &adr);
+  void initializeAddressingVector(int numElem, std::vector<feInt> &adr) const;
 };
 
 // -----------------------------------------------------------------------------
@@ -1276,26 +1276,26 @@ public:
   ~feSpaceTetPn() {}
 
   int getNumFunctions() const { return _nFunctions; }
-  int getPolynomialDegree() { return _n; }
+  int getPolynomialDegree() const { return _n; }
 
-  std::vector<double> L(double *r);
-  void L(double *r, double *L);
+  std::vector<double> L(const double *r) const;
+  void L(const double *r, double *res) const;
 
-  std::vector<double> shapeTetDerivatives(const double xsi[3], const int iDerivative);
+  std::vector<double> shapeTetDerivatives(const double xsi[3], const int iDerivative) const;
 
-  std::vector<double> dLdr(double *r);
-  std::vector<double> dLds(double *r);
-  std::vector<double> dLdt(double *r);
-  std::vector<double> d2Ldr2(double *r);
-  std::vector<double> d2Ldrs(double *r);
-  std::vector<double> d2Lds2(double *r);
+  std::vector<double> dLdr(const double *r) const;
+  std::vector<double> dLds(const double *r) const;
+  std::vector<double> dLdt(const double *r) const;
+  std::vector<double> d2Ldr2(const double *r) const;
+  std::vector<double> d2Ldrs(const double *r) const;
+  std::vector<double> d2Lds2(const double *r) const;
   // std::vector<double> d2Ldt2(double *r);
   // std::vector<double> d2Ldrt(double *r);
   // std::vector<double> d2Ldst(double *r);
 
   void initializeNumberingUnknowns();
   void initializeNumberingEssential();
-  void initializeAddressingVector(int numElem, std::vector<feInt> &adr);
+  void initializeAddressingVector(int numElem, std::vector<feInt> &adr) const;
 };
 
 #endif

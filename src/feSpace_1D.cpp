@@ -52,9 +52,15 @@ feSpace0DP0::feSpace0DP0(feMesh *mesh, const std::string fieldID, const std::str
   _Lcoor = {1., 0., 0.};
 }
 
-std::vector<double> feSpace0DP0::L(double *r) { UNUSED(r); return {1.}; }
+std::vector<double> feSpace0DP0::L(const double */*r*/) const 
+{ 
+  return {1.};
+}
 
-void feSpace0DP0::L(double *r, double *L) { UNUSED(r); L[0] = 1.; }
+void feSpace0DP0::L(const double */*r*/, double *res) const
+{
+  res[0] = 1.;
+}
 
 void feSpace0DP0::initializeNumberingUnknowns()
 {
@@ -68,7 +74,7 @@ void feSpace0DP0::initializeNumberingEssential()
     _numbering->setEssentialVertexDOF(_mesh, _cncGeoID, i, 0);
 }
 
-void feSpace0DP0::initializeAddressingVector(int numElem, std::vector<feInt> &adr)
+void feSpace0DP0::initializeAddressingVector(int numElem, std::vector<feInt> &adr) const
 {
   adr[0] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 0);
 }
@@ -84,13 +90,15 @@ feSpace0D_Hermite::feSpace0D_Hermite(feMesh *mesh, const std::string fieldID,
   _Lcoor = {1., 0., 0., 1., 0., 0.};
 }
 
-std::vector<double> feSpace0D_Hermite::L(double *r) { UNUSED(r); return {1., 1.}; }
-
-void feSpace0D_Hermite::L(double *r, double *L)
+std::vector<double> feSpace0D_Hermite::L(const double */*r*/) const
 {
-  UNUSED(r);
-  L[0] = 1.;
-  L[1] = 1.;
+  return {1., 1.};
+}
+
+void feSpace0D_Hermite::L(const double */*r*/, double *res) const
+{
+  res[0] = 1.;
+  res[1] = 1.;
 }
 
 void feSpace0D_Hermite::initializeNumberingUnknowns()
@@ -107,7 +115,7 @@ void feSpace0D_Hermite::initializeNumberingEssential()
   }
 }
 
-void feSpace0D_Hermite::initializeAddressingVector(int numElem, std::vector<feInt> &adr)
+void feSpace0D_Hermite::initializeAddressingVector(int numElem, std::vector<feInt> &adr) const
 {
   adr[0] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 0, 0);
   adr[1] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 0, 1);
@@ -132,9 +140,15 @@ feSpace1DP0::feSpace1DP0(feMesh *mesh, const std::string fieldID, const std::str
   _Lcoor = {1., 0., 0.};
 }
 
-std::vector<double> feSpace1DP0::L(double *r) { UNUSED(r); return {1.}; }
+std::vector<double> feSpace1DP0::L(const double */*r*/) const
+{
+  return {1.};
+}
 
-void feSpace1DP0::L(double *r, double *L) { UNUSED(r); L[0] = 1.; }
+void feSpace1DP0::L(const double */*r*/, double *res) const
+{
+  res[0] = 1.;
+}
 
 void feSpace1DP0::initializeNumberingUnknowns()
 {
@@ -148,7 +162,7 @@ void feSpace1DP0::initializeNumberingEssential()
     _numbering->setEssentialVertexDOF(_mesh, _cncGeoID, i, 0);
 }
 
-void feSpace1DP0::initializeAddressingVector(int numElem, std::vector<feInt> &adr)
+void feSpace1DP0::initializeAddressingVector(int numElem, std::vector<feInt> &adr) const
 {
   adr[0] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 0);
 }
@@ -171,15 +185,21 @@ feSpace1DP1::feSpace1DP1(feMesh *mesh, const std::string fieldID, const std::str
   _Lcoor = {-1., 0., 0., 1., 0., 0.};
 }
 
-std::vector<double> feSpace1DP1::L(double *r) { return {(1. - r[0]) / 2., (1. + r[0]) / 2.}; }
-
-void feSpace1DP1::L(double *r, double *L)
+std::vector<double> feSpace1DP1::L(const double *r) const
 {
-  L[0] = (1. - r[0]) / 2.;
-  L[1] = (1. + r[0]) / 2.;
+  return {(1. - r[0]) / 2., (1. + r[0]) / 2.};
 }
 
-std::vector<double> feSpace1DP1::dLdr(double *r) { UNUSED(r); return {-1. / 2., 1. / 2.}; }
+void feSpace1DP1::L(const double *r, double *res) const
+{
+  res[0] = (1. - r[0]) / 2.;
+  res[1] = (1. + r[0]) / 2.;
+}
+
+std::vector<double> feSpace1DP1::dLdr(const double */*r*/) const
+{
+  return {-1. / 2., 1. / 2.};
+}
 
 void feSpace1DP1::initializeNumberingUnknowns()
 {
@@ -197,7 +217,7 @@ void feSpace1DP1::initializeNumberingEssential()
   }
 }
 
-void feSpace1DP1::initializeAddressingVector(int numElem, std::vector<feInt> &adr)
+void feSpace1DP1::initializeAddressingVector(int numElem, std::vector<feInt> &adr) const
 {
   adr[0] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 0);
   adr[1] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 1);
@@ -218,7 +238,7 @@ feSpaceVecP1<dim>::feSpaceVecP1(feMesh *mesh, const std::string fieldID, const s
   duplicateScalarArray(6, 3, coor, dim, _Lcoor);
 }
 
-template <int dim> std::vector<double> feSpaceVecP1<dim>::L(double *r)
+template <int dim> std::vector<double> feSpaceVecP1<dim>::L(const double *r) const
 {
   double phi[2] = {(1. - r[0]) / 2., (1. + r[0]) / 2.};
   std::vector<double> res(_nFunctions*_nComponents);
@@ -227,14 +247,14 @@ template <int dim> std::vector<double> feSpaceVecP1<dim>::L(double *r)
   return res;
 }
 
-template <int dim> void feSpaceVecP1<dim>::L(double *r, double *res)
+template <int dim> void feSpaceVecP1<dim>::L(const double *r, double *res) const
 {
   double phi[2] = {(1. - r[0]) / 2., (1. + r[0]) / 2.};
   // duplicateScalarArray(2, 1, phi, dim, res);
   vectorLagrangeLayout(phi, 2, _nComponents, res);
 }
 
-template <int dim> std::vector<double> feSpaceVecP1<dim>::dLdr(double */*r*/)
+template <int dim> std::vector<double> feSpaceVecP1<dim>::dLdr(const double */*r*/) const
 {
   double dldr[2] = {-1. / 2., 1. / 2.};
   std::vector<double> res(_nFunctions*_nComponents);
@@ -266,7 +286,7 @@ template <int dim> void feSpaceVecP1<dim>::initializeNumberingEssential()
 }
 
 template <int dim>
-void feSpaceVecP1<dim>::initializeAddressingVector(int numElem, std::vector<feInt> &adr)
+void feSpaceVecP1<dim>::initializeAddressingVector(int numElem, std::vector<feInt> &adr) const
 {
   adr[0] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 0, 0);
   adr[1] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 0, 1);
@@ -289,15 +309,21 @@ feSpace1D_DG_P1::feSpace1D_DG_P1(feMesh *mesh, const std::string fieldID,
   _DOFinitialization = dofInitialization::NODEWISE;
 }
 
-std::vector<double> feSpace1D_DG_P1::L(double *r) { return {(1. - r[0]) / 2., (1. + r[0]) / 2.}; }
-
-void feSpace1D_DG_P1::L(double *r, double *L)
+std::vector<double> feSpace1D_DG_P1::L(const double *r) const
 {
-  L[0] = (1. - r[0]) / 2.;
-  L[1] = (1. + r[0]) / 2.;
+  return {(1. - r[0]) / 2., (1. + r[0]) / 2.};
 }
 
-std::vector<double> feSpace1D_DG_P1::dLdr(double *r) { UNUSED(r); return {-1. / 2., 1. / 2.}; }
+void feSpace1D_DG_P1::L(const double *r, double *res) const
+{
+  res[0] = (1. - r[0]) / 2.;
+  res[1] = (1. + r[0]) / 2.;
+}
+
+std::vector<double> feSpace1D_DG_P1::dLdr(const double */*r*/) const
+{
+  return {-1. / 2., 1. / 2.};
+}
 
 void feSpace1D_DG_P1::initializeNumberingUnknowns()
 {
@@ -315,7 +341,7 @@ void feSpace1D_DG_P1::initializeNumberingEssential()
   }
 }
 
-void feSpace1D_DG_P1::initializeAddressingVector(int numElem, std::vector<feInt> &adr)
+void feSpace1D_DG_P1::initializeAddressingVector(int numElem, std::vector<feInt> &adr) const
 {
   adr[0] = _numbering->getElementDOF(_mesh, _cncGeoID, numElem, 0);
   adr[1] = _numbering->getElementDOF(_mesh, _cncGeoID, numElem, 1);
@@ -332,9 +358,15 @@ feSpace1D_CR0::feSpace1D_CR0(feMesh *mesh, const std::string fieldID, const std:
   _Lcoor = {0., 0., 0.};
 }
 
-std::vector<double> feSpace1D_CR0::L(double *r) { UNUSED(r); return {1.}; }
+std::vector<double> feSpace1D_CR0::L(const double */*r*/) const
+{
+  return {1.};
+}
 
-void feSpace1D_CR0::L(double *r, double *L) { UNUSED(r); L[0] = 1.; }
+void feSpace1D_CR0::L(const double */*r*/, double *res) const
+{
+  res[0] = 1.;
+}
 
 void feSpace1D_CR0::initializeNumberingUnknowns()
 {
@@ -355,7 +387,7 @@ void feSpace1D_CR0::initializeNumberingEssential()
   }
 }
 
-void feSpace1D_CR0::initializeAddressingVector(int numElem, std::vector<feInt> &adr)
+void feSpace1D_CR0::initializeAddressingVector(int numElem, std::vector<feInt> &adr) const
 {
   adr[0] = _numbering->getElementDOF(_mesh, _cncGeoID, numElem, 0);
 }
@@ -378,19 +410,19 @@ feSpace1DP2::feSpace1DP2(feMesh *mesh, const std::string fieldID, const std::str
   _Lcoor = {-1., 0., 0., 1., 0., 0., 0., 0., 0.};
 }
 
-std::vector<double> feSpace1DP2::L(double *r)
+std::vector<double> feSpace1DP2::L(const double *r) const
 {
   return {-r[0] * (1. - r[0]) / 2., r[0] * (1. + r[0]) / 2., -(r[0] + 1.) * (r[0] - 1.)};
 }
 
-void feSpace1DP2::L(double *r, double *L)
+void feSpace1DP2::L(const double *r, double *res) const
 {
-  L[0] = -r[0] * (1. - r[0]) / 2.;
-  L[1] = r[0] * (1. + r[0]) / 2.;
-  L[2] = -(r[0] + 1.) * (r[0] - 1.);
+  res[0] = -r[0] * (1. - r[0]) / 2.;
+  res[1] = r[0] * (1. + r[0]) / 2.;
+  res[2] = -(r[0] + 1.) * (r[0] - 1.);
 }
 
-std::vector<double> feSpace1DP2::dLdr(double *r)
+std::vector<double> feSpace1DP2::dLdr(const double *r) const
 {
   return {(2. * r[0] - 1.) / 2., (2. * r[0] + 1.) / 2., -2. * r[0]};
 }
@@ -431,7 +463,7 @@ void feSpace1DP2::initializeNumberingEssential()
   }
 }
 
-void feSpace1DP2::initializeAddressingVector(int numElem, std::vector<feInt> &adr)
+void feSpace1DP2::initializeAddressingVector(int numElem, std::vector<feInt> &adr) const
 {
   adr[0] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 0);
   adr[1] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 1);
@@ -457,7 +489,7 @@ feSpaceVecP2<dim>::feSpaceVecP2(feMesh *mesh, const std::string fieldID, const s
   duplicateScalarArray(3 * 3, 3, coor, dim, _Lcoor);
 }
 
-template <int dim> std::vector<double> feSpaceVecP2<dim>::L(double *r)
+template <int dim> std::vector<double> feSpaceVecP2<dim>::L(const double *r) const
 {
   double phi[3] = {-r[0] * (1. - r[0]) / 2., r[0] * (1. + r[0]) / 2., -(r[0] + 1.) * (r[0] - 1.)};
   std::vector<double> res(_nFunctions*_nComponents);
@@ -466,14 +498,14 @@ template <int dim> std::vector<double> feSpaceVecP2<dim>::L(double *r)
   return res;
 }
 
-template <int dim> void feSpaceVecP2<dim>::L(double *r, double *res)
+template <int dim> void feSpaceVecP2<dim>::L(const double *r, double *res) const
 {
   double phi[3] = {-r[0] * (1. - r[0]) / 2., r[0] * (1. + r[0]) / 2., -(r[0] + 1.) * (r[0] - 1.)};
   // duplicateScalarArray(3, 1, phi, dim, res);
   vectorLagrangeLayout(phi, 3, _nComponents, res);
 }
 
-template <int dim> std::vector<double> feSpaceVecP2<dim>::dLdr(double *r)
+template <int dim> std::vector<double> feSpaceVecP2<dim>::dLdr(const double *r) const
 {
   double dldr[3] = {(2. * r[0] - 1.) / 2., (2. * r[0] + 1.) / 2., -2. * r[0]};
   std::vector<double> res(_nFunctions*_nComponents);
@@ -516,7 +548,7 @@ template <int dim> void feSpaceVecP2<dim>::initializeNumberingEssential()
 }
 
 template <int dim>
-void feSpaceVecP2<dim>::initializeAddressingVector(int numElem, std::vector<feInt> &adr)
+void feSpaceVecP2<dim>::initializeAddressingVector(int numElem, std::vector<feInt> &adr) const
 {
   adr[0] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 0, 0);
   adr[1] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 0, 1);
@@ -552,7 +584,7 @@ feSpace1DP3::feSpace1DP3(feMesh *mesh, const std::string fieldID, const std::str
   _Lcoor = {-1., 0., 0., 1., 0., 0., -1. / 3., 0., 0., 1. / 3., 0., 0.};
 }
 
-std::vector<double> feSpace1DP3::L(double *r)
+std::vector<double> feSpace1DP3::L(const double *r) const
 {
   return {-9. / 16. * (r[0] + 1. / 3.) * (r[0] - 1. / 3.) * (r[0] - 1.),
           9. / 16. * (r[0] + 1. / 3.) * (r[0] - 1. / 3.) * (r[0] + 1.),
@@ -560,15 +592,15 @@ std::vector<double> feSpace1DP3::L(double *r)
           -27. / 16. * (r[0] + 1.) * (r[0] + 1. / 3.) * (r[0] - 1.)};
 }
 
-void feSpace1DP3::L(double *r, double *L)
+void feSpace1DP3::L(const double *r, double *res) const
 {
-  L[0] = -9. / 16. * (r[0] + 1. / 3.) * (r[0] - 1. / 3.) * (r[0] - 1.);
-  L[1] = 9. / 16. * (r[0] + 1. / 3.) * (r[0] - 1. / 3.) * (r[0] + 1.);
-  L[2] = 27. / 16. * (r[0] + 1.) * (r[0] - 1. / 3.) * (r[0] - 1.);
-  L[3] = -27. / 16. * (r[0] + 1.) * (r[0] + 1. / 3.) * (r[0] - 1.);
+  res[0] = -9. / 16. * (r[0] + 1. / 3.) * (r[0] - 1. / 3.) * (r[0] - 1.);
+  res[1] = 9. / 16. * (r[0] + 1. / 3.) * (r[0] - 1. / 3.) * (r[0] + 1.);
+  res[2] = 27. / 16. * (r[0] + 1.) * (r[0] - 1. / 3.) * (r[0] - 1.);
+  res[3] = -27. / 16. * (r[0] + 1.) * (r[0] + 1. / 3.) * (r[0] - 1.);
 }
 
-std::vector<double> feSpace1DP3::dLdr(double *r)
+std::vector<double> feSpace1DP3::dLdr(const double *r) const
 {
   return {r[0] * (9. / 8.) - r[0] * r[0] * (27. / 16.) + 1. / 16.,
           r[0] * (9. / 8.) + r[0] * r[0] * (27. / 16.) - 1. / 16.,
@@ -600,7 +632,7 @@ void feSpace1DP3::initializeNumberingEssential()
   }
 }
 
-void feSpace1DP3::initializeAddressingVector(int numElem, std::vector<feInt> &adr)
+void feSpace1DP3::initializeAddressingVector(int numElem, std::vector<feInt> &adr) const
 {
   adr[0] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 0);
   adr[1] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 1);
@@ -629,7 +661,7 @@ feSpaceVecP3<dim>::feSpaceVecP3(feMesh *mesh, const std::string fieldID, const s
   duplicateScalarArray(4 * 3, 3, coor, dim, _Lcoor);
 }
 
-template <int dim> std::vector<double> feSpaceVecP3<dim>::L(double *r)
+template <int dim> std::vector<double> feSpaceVecP3<dim>::L(const double *r) const
 {
   double phi[4] = {-9. / 16. * (r[0] + 1. / 3.) * (r[0] - 1. / 3.) * (r[0] - 1.),
                    9. / 16. * (r[0] + 1. / 3.) * (r[0] - 1. / 3.) * (r[0] + 1.),
@@ -641,7 +673,7 @@ template <int dim> std::vector<double> feSpaceVecP3<dim>::L(double *r)
   return res;
 }
 
-template <int dim> void feSpaceVecP3<dim>::L(double *r, double *res)
+template <int dim> void feSpaceVecP3<dim>::L(const double *r, double *res) const
 {
   double phi[4] = {-9. / 16. * (r[0] + 1. / 3.) * (r[0] - 1. / 3.) * (r[0] - 1.),
                    9. / 16. * (r[0] + 1. / 3.) * (r[0] - 1. / 3.) * (r[0] + 1.),
@@ -651,7 +683,7 @@ template <int dim> void feSpaceVecP3<dim>::L(double *r, double *res)
   vectorLagrangeLayout(phi, 4, _nComponents, res);
 }
 
-template <int dim> std::vector<double> feSpaceVecP3<dim>::dLdr(double *r)
+template <int dim> std::vector<double> feSpaceVecP3<dim>::dLdr(const double *r) const
 {
   double dldr[4] = {r[0] * (9. / 8.) - r[0] * r[0] * (27. / 16.) + 1. / 16.,
                     r[0] * (9. / 8.) + r[0] * r[0] * (27. / 16.) - 1. / 16.,
@@ -688,7 +720,7 @@ template <int dim> void feSpaceVecP3<dim>::initializeNumberingEssential()
 }
 
 template <int dim>
-void feSpaceVecP3<dim>::initializeAddressingVector(int numElem, std::vector<feInt> &adr)
+void feSpaceVecP3<dim>::initializeAddressingVector(int numElem, std::vector<feInt> &adr) const
 {
   adr[0] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 0, 0);
   adr[1] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 0, 1);
@@ -722,7 +754,7 @@ feSpace1D_H3::feSpace1D_H3(feMesh *mesh, const std::string fieldID, const std::s
   _Lcoor = {-1., 0., 0., -1., 0., 0., 1., 0., 0., 1., 0., 0.};
 }
 
-std::vector<double> feSpace1D_H3::L(double *r)
+std::vector<double> feSpace1D_H3::L(const double *r) const
 {
   double x = r[0];
   return {x * (-3.0 / 4.0) + (x * x * x) / 4.0 + 1.0 / 2.0,
@@ -731,23 +763,23 @@ std::vector<double> feSpace1D_H3::L(double *r)
           x * (-1.0 / 4.0) + (x * x) / 4.0 + (x * x * x) / 4.0 - 1.0 / 4.0};
 }
 
-void feSpace1D_H3::L(double *r, double *L)
+void feSpace1D_H3::L(const double *r, double *res) const
 {
   double x = r[0];
-  L[0] = x * (-3.0 / 4.0) + (x * x * x) / 4.0 + 1.0 / 2.0;
-  L[1] = x * (-1.0 / 4.0) - (x * x) / 4.0 + (x * x * x) / 4.0 + 1.0 / 4.0;
-  L[2] = x * (3.0 / 4.0) - (x * x * x) / 4.0 + 1.0 / 2.0;
-  L[3] = x * (-1.0 / 4.0) + (x * x) / 4.0 + (x * x * x) / 4.0 - 1.0 / 4.0;
+  res[0] = x * (-3.0 / 4.0) + (x * x * x) / 4.0 + 1.0 / 2.0;
+  res[1] = x * (-1.0 / 4.0) - (x * x) / 4.0 + (x * x * x) / 4.0 + 1.0 / 4.0;
+  res[2] = x * (3.0 / 4.0) - (x * x * x) / 4.0 + 1.0 / 2.0;
+  res[3] = x * (-1.0 / 4.0) + (x * x) / 4.0 + (x * x * x) / 4.0 - 1.0 / 4.0;
 }
 
-std::vector<double> feSpace1D_H3::dLdr(double *r)
+std::vector<double> feSpace1D_H3::dLdr(const double *r) const
 {
   double x = r[0];
   return {(x * x) * (3.0 / 4.0) - 3.0 / 4.0, x * (-1.0 / 2.0) + (x * x) * (3.0 / 4.0) - 1.0 / 4.0,
           (x * x) * (-3.0 / 4.0) + 3.0 / 4.0, x / 2.0 + (x * x) * (3.0 / 4.0) - 1.0 / 4.0};
 }
 
-std::vector<double> feSpace1D_H3::d2Ldr2(double *r)
+std::vector<double> feSpace1D_H3::d2Ldr2(const double *r) const
 {
   double x = r[0];
   return {x * (3.0 / 2.0), x * (3.0 / 2.0) - 1.0 / 2.0, x * (-3.0 / 2.0),
@@ -770,7 +802,7 @@ void feSpace1D_H3::initializeNumberingEssential()
   }
 }
 
-void feSpace1D_H3::initializeAddressingVector(int numElem, std::vector<feInt> &adr)
+void feSpace1D_H3::initializeAddressingVector(int numElem, std::vector<feInt> &adr) const
 {
   adr[0] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 0, 0);
   adr[1] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 0, 1);
@@ -796,7 +828,7 @@ feSpace1DP4::feSpace1DP4(feMesh *mesh, const std::string fieldID, const std::str
   _Lcoor = {-1., 0., 0., 1., 0., 0., -1. / 2., 0., 0., 0., 0., 0., 1. / 2., 0., 0.};
 }
 
-std::vector<double> feSpace1DP4::L(double *r)
+std::vector<double> feSpace1DP4::L(const double *r) const
 {
   return {r[0] * (r[0] - 1.0) * (r[0] - 1.0 / 2.0) * (r[0] + 1.0 / 2.0) * (2.0 / 3.0),
           r[0] * (r[0] + 1.0) * (r[0] - 1.0 / 2.0) * (r[0] + 1.0 / 2.0) * (2.0 / 3.0),
@@ -805,16 +837,16 @@ std::vector<double> feSpace1DP4::L(double *r)
           r[0] * (r[0] - 1.0) * (r[0] + 1.0) * (r[0] + 1.0 / 2.0) * (-8.0 / 3.0)};
 }
 
-void feSpace1DP4::L(double *r, double *L)
+void feSpace1DP4::L(const double *r, double *res) const
 {
-  L[0] = r[0] * (r[0] - 1.0) * (r[0] - 1.0 / 2.0) * (r[0] + 1.0 / 2.0) * (2.0 / 3.0);
-  L[1] = r[0] * (r[0] + 1.0) * (r[0] - 1.0 / 2.0) * (r[0] + 1.0 / 2.0) * (2.0 / 3.0);
-  L[2] = r[0] * (r[0] - 1.0) * (r[0] + 1.0) * (r[0] - 1.0 / 2.0) * (-8.0 / 3.0);
-  L[3] = (r[0] - 1.0) * (r[0] + 1.0) * (r[0] - 1.0 / 2.0) * (r[0] + 1.0 / 2.0) * 4.0;
-  L[4] = r[0] * (r[0] - 1.0) * (r[0] + 1.0) * (r[0] + 1.0 / 2.0) * (-8.0 / 3.0);
+  res[0] = r[0] * (r[0] - 1.0) * (r[0] - 1.0 / 2.0) * (r[0] + 1.0 / 2.0) * (2.0 / 3.0);
+  res[1] = r[0] * (r[0] + 1.0) * (r[0] - 1.0 / 2.0) * (r[0] + 1.0 / 2.0) * (2.0 / 3.0);
+  res[2] = r[0] * (r[0] - 1.0) * (r[0] + 1.0) * (r[0] - 1.0 / 2.0) * (-8.0 / 3.0);
+  res[3] = (r[0] - 1.0) * (r[0] + 1.0) * (r[0] - 1.0 / 2.0) * (r[0] + 1.0 / 2.0) * 4.0;
+  res[4] = r[0] * (r[0] - 1.0) * (r[0] + 1.0) * (r[0] + 1.0 / 2.0) * (-8.0 / 3.0);
 }
 
-std::vector<double> feSpace1DP4::dLdr(double *r)
+std::vector<double> feSpace1DP4::dLdr(const double *r) const
 {
   return {r[0] * (r[0] - 1.0) * (r[0] - 1.0 / 2.0) * (2.0 / 3.0) +
             r[0] * (r[0] - 1.0) * (r[0] + 1.0 / 2.0) * (2.0 / 3.0) +
@@ -863,7 +895,7 @@ void feSpace1DP4::initializeNumberingEssential()
   }
 }
 
-void feSpace1DP4::initializeAddressingVector(int numElem, std::vector<feInt> &adr)
+void feSpace1DP4::initializeAddressingVector(int numElem, std::vector<feInt> &adr) const
 {
   adr[0] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 0);
   adr[1] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 1);
@@ -894,7 +926,7 @@ feSpaceVecP4<dim>::feSpaceVecP4(feMesh *mesh, const std::string fieldID, const s
   duplicateScalarArray(5 * 3, 3, coor, dim, _Lcoor);
 }
 
-template <int dim> std::vector<double> feSpaceVecP4<dim>::L(double *r)
+template <int dim> std::vector<double> feSpaceVecP4<dim>::L(const double *r) const
 {
   double phi[5] = {r[0] * (r[0] - 1.0) * (r[0] - 1.0 / 2.0) * (r[0] + 1.0 / 2.0) * (2.0 / 3.0),
                   r[0] * (r[0] + 1.0) * (r[0] - 1.0 / 2.0) * (r[0] + 1.0 / 2.0) * (2.0 / 3.0),
@@ -907,7 +939,7 @@ template <int dim> std::vector<double> feSpaceVecP4<dim>::L(double *r)
   return res;
 }
 
-template <int dim> void feSpaceVecP4<dim>::L(double *r, double *res)
+template <int dim> void feSpaceVecP4<dim>::L(const double *r, double *res) const
 {
   double phi[5] = {r[0] * (r[0] - 1.0) * (r[0] - 1.0 / 2.0) * (r[0] + 1.0 / 2.0) * (2.0 / 3.0),
                   r[0] * (r[0] + 1.0) * (r[0] - 1.0 / 2.0) * (r[0] + 1.0 / 2.0) * (2.0 / 3.0),
@@ -918,7 +950,7 @@ template <int dim> void feSpaceVecP4<dim>::L(double *r, double *res)
   vectorLagrangeLayout(phi, 5, _nComponents, res);
 }
 
-template <int dim> std::vector<double> feSpaceVecP4<dim>::dLdr(double *r)
+template <int dim> std::vector<double> feSpaceVecP4<dim>::dLdr(const double *r) const
 {
   double dldr[5] = {r[0] * (r[0] - 1.0) * (r[0] - 1.0 / 2.0) * (2.0 / 3.0) +
             r[0] * (r[0] - 1.0) * (r[0] + 1.0 / 2.0) * (2.0 / 3.0) +
@@ -973,7 +1005,7 @@ template <int dim> void feSpaceVecP4<dim>::initializeNumberingEssential()
 }
 
 template <int dim>
-void feSpaceVecP4<dim>::initializeAddressingVector(int numElem, std::vector<feInt> &adr)
+void feSpaceVecP4<dim>::initializeAddressingVector(int numElem, std::vector<feInt> &adr) const
 {
   adr[0] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 0, 0);
   adr[1] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 0, 1);
@@ -1013,14 +1045,14 @@ feSpace1D_Legendre::feSpace1D_Legendre(const int degree, feMesh *mesh, const std
   _DOFinitialization = dofInitialization::LEAST_SQUARES;
 }
 
-void legendrePolynomials(double x, int p, double *phi)
+void legendrePolynomials(const double x, const int p, double *phi)
 {
   phi[0] = 1.0;
   if(p >= 1) phi[1] = x;
   for(int i = 1; i < p; i++) phi[i + 1] = ((2 * i + 1) * x * phi[i] - i * phi[i - 1]) / (i + 1);
 }
 
-void legendrePolynomialsDerivative(double x, int p, double *phi, double *dphi)
+void legendrePolynomialsDerivative(const double x, const int p, const double *phi, double *dphi)
 {
   dphi[0] = 0.0;
   if(p >= 1) dphi[1] = 1.0;
@@ -1028,16 +1060,19 @@ void legendrePolynomialsDerivative(double x, int p, double *phi, double *dphi)
     dphi[i + 1] = ((2 * i + 1) * (phi[i] + x * dphi[i]) - i * dphi[i - 1]) / (i + 1);
 }
 
-std::vector<double> feSpace1D_Legendre::L(double *r)
+std::vector<double> feSpace1D_Legendre::L(const double *r) const
 {
   std::vector<double> phi(_nFunctions);
   legendrePolynomials(r[0], _degree, phi.data());
   return phi;
 }
 
-void feSpace1D_Legendre::L(double *r, double *L) { legendrePolynomials(r[0], _degree, L); }
+void feSpace1D_Legendre::L(const double *r, double *res) const
+{
+  legendrePolynomials(r[0], _degree, res);
+}
 
-std::vector<double> feSpace1D_Legendre::dLdr(double *r)
+std::vector<double> feSpace1D_Legendre::dLdr(const double *r) const
 {
   // Make sure phi is computed because it's needed for the derivatives
   std::vector<double> phi(_nFunctions);
@@ -1063,7 +1098,7 @@ void feSpace1D_Legendre::initializeNumberingEssential()
   }
 }
 
-void feSpace1D_Legendre::initializeAddressingVector(int numElem, std::vector<feInt> &adr)
+void feSpace1D_Legendre::initializeAddressingVector(int numElem, std::vector<feInt> &adr) const
 {
   for(int i = 0; i < _degree + 1; ++i) {
     adr[i] = _numbering->getElementDOF(_mesh, _cncGeoID, numElem, i);

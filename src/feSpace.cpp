@@ -638,11 +638,10 @@ void feSpace::getFunctionsPhysicalHessianAtQuadNode(const int iQuadNode,
   }
 }
 
-void feSpace::interpolateField(double *field, int fieldSize, double *r, double *shape, double &res)
+void feSpace::interpolateField(const double *field, const int fieldSize, const double *r, double *shape, double &res) const
 {
   res = 0.0;
   L(r, shape);
-  feInfo("shape = %f - %f - %f", shape[0], shape[1], shape[2]);
   for(int i = 0; i < fieldSize; ++i) {
     res += field[i] * shape[i];
   }
@@ -650,7 +649,7 @@ void feSpace::interpolateField(double *field, int fieldSize, double *r, double *
 
 thread_local double SHAPE_FUNCTIONS[18];
 
-double feSpace::interpolateField(std::vector<double> &field, double *r)
+double feSpace::interpolateField(const std::vector<double> &field, const double *r) const
 {
   double res = 0.0;
 #ifdef FENG_DEBUG
@@ -684,7 +683,7 @@ double feSpace::interpolateField(std::vector<double> &field, int iElm, std::vect
   return res;
 }
 
-double feSpace::interpolateField(feSolution *sol, std::vector<double> &x)
+double feSpace::interpolateField(const feSolution *sol, const std::vector<double> &x) const
 {
   double u[3];
   int elm = -1;
@@ -701,7 +700,7 @@ double feSpace::interpolateField(feSolution *sol, std::vector<double> &x)
 #endif
   std::vector<feInt> adr(this->getNumFunctions());
   std::vector<double> solution(adr.size());
-  std::vector<double> &solVec = sol->getSolutionReference();
+  const std::vector<double> &solVec = sol->getSolution();
   this->initializeAddressingVector(elm, adr);
   for(size_t i = 0; i < adr.size(); ++i) {
     solution[i] = solVec[adr[i]];
@@ -709,7 +708,7 @@ double feSpace::interpolateField(feSolution *sol, std::vector<double> &x)
   return this->interpolateField(solution, u); // Attention : fonctions de forme locales
 }
 
-double feSpace::interpolateField_rDerivative(std::vector<double> &field, double *r) // match
+double feSpace::interpolateField_rDerivative(const std::vector<double> &field, const double *r) const
 {
   double res = 0.0;
 #ifdef FENG_DEBUG
@@ -723,7 +722,7 @@ double feSpace::interpolateField_rDerivative(std::vector<double> &field, double 
   return res;
 }
 
-double feSpace::interpolateField_sDerivative(std::vector<double> &field, double *r) // match
+double feSpace::interpolateField_sDerivative(const std::vector<double> &field, const double *r) const
 {
   double res = 0.0;
 #ifdef FENG_DEBUG
@@ -801,7 +800,7 @@ void feSpace::interpolateField_gradrs(feSolution *sol, std::vector<double> &x,
   }
 }
 
-double feSpace::interpolateFieldAtQuadNode(std::vector<double> &field, int iNode) // match
+double feSpace::interpolateFieldAtQuadNode(std::vector<double> &field, int iNode) const
 {
   double res = 0.0;
 #ifdef FENG_DEBUG
@@ -815,7 +814,7 @@ double feSpace::interpolateFieldAtQuadNode(std::vector<double> &field, int iNode
   return res;
 }
 
-double feSpace::interpolateFieldAtQuadNode(std::vector<double> &field, int iElm, int iNode)
+double feSpace::interpolateFieldAtQuadNode(std::vector<double> &field, int iElm, int iNode) const
 {
   double res = 0.0;
 #ifdef FENG_DEBUG
@@ -889,10 +888,10 @@ double feSpace::interpolateFieldAtQuadNode_ssDerivative(std::vector<double> &fie
   return res;
 }
 
-void feSpace::interpolateFieldAtQuadNode_physicalGradient(std::vector<double> &field,
+void feSpace::interpolateFieldAtQuadNode_physicalGradient(const std::vector<double> &field,
                                                           const int iQuadNode,
                                                           const ElementTransformation &T,
-                                                          double *grad)
+                                                          double *grad) const
 {
   if(_dim == 0)
   {
@@ -1226,8 +1225,8 @@ void feSpace::interpolateVectorField_sDerivative(std::vector<double> &field, dou
   }
 }
 
-void feSpace::interpolateVectorFieldAtQuadNode(std::vector<double> &field, int iNode,
-                                               std::vector<double> &res)
+void feSpace::interpolateVectorFieldAtQuadNode(const std::vector<double> &field, const int iNode,
+                                               std::vector<double> &res) const
 {
   // Field structure :
   // [fx0 fy0 fz0 fx1 fy1 fz1 ... fxn fyn fzn]
@@ -1241,8 +1240,8 @@ void feSpace::interpolateVectorFieldAtQuadNode(std::vector<double> &field, int i
   }
 }
 
-void feSpace::interpolateVectorFieldAtQuadNode(std::vector<double> &field, int iNode,
-                                               std::vector<double> &res, int nComponents)
+void feSpace::interpolateVectorFieldAtQuadNode(const std::vector<double> &field, const int iNode,
+                                               std::vector<double> &res, const int nComponents) const
 {
   for(int i = 0; i < nComponents; ++i) res[i] = 0.0;
 
@@ -1269,7 +1268,7 @@ double feSpace::interpolateVectorFieldComponentAtQuadNode(std::vector<double> &f
 }
 
 // Same as above but the "field" vector has the same size as the number of DOFs of the space
-double feSpace::interpolateVectorFieldComponentAtQuadNode_fullField(std::vector<double> &field, int iNode, int iComponent)
+double feSpace::interpolateVectorFieldComponentAtQuadNode_fullField(const std::vector<double> &field, const int iNode, const int iComponent) const
 {
   double res = 0.;
   // for(int i = 0; i < _nFunctions / _nComponents; ++i) {

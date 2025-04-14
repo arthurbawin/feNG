@@ -66,13 +66,13 @@ feSpaceTriP0::feSpaceTriP0(feMesh *mesh, const std::string fieldID, const std::s
   _dofLocations = {dofLocation::ELEMENT};
 }
 
-std::vector<double> feSpaceTriP0::L(double */*r*/) { return {1.0}; }
-void feSpaceTriP0::L(double */*r*/, double *L) { L[0] = 1.0; }
-std::vector<double> feSpaceTriP0::dLdr(double */*r*/) { return {0.}; }
-std::vector<double> feSpaceTriP0::dLds(double */*r*/) { return {0.}; }
-std::vector<double> feSpaceTriP0::d2Ldr2(double */*r*/) { return {0.}; }
-std::vector<double> feSpaceTriP0::d2Ldrs(double */*r*/) { return {0.}; }
-std::vector<double> feSpaceTriP0::d2Lds2(double */*r*/) { return {0.}; }
+std::vector<double> feSpaceTriP0::L(const double */*r*/) const { return {1.0}; }
+void feSpaceTriP0::L(const double */*r*/, double *res) const { res[0] = 1.0; }
+std::vector<double> feSpaceTriP0::dLdr(const double */*r*/) const { return {0.}; }
+std::vector<double> feSpaceTriP0::dLds(const double */*r*/) const { return {0.}; }
+std::vector<double> feSpaceTriP0::d2Ldr2(const double */*r*/) const { return {0.}; }
+std::vector<double> feSpaceTriP0::d2Ldrs(const double */*r*/) const { return {0.}; }
+std::vector<double> feSpaceTriP0::d2Lds2(const double */*r*/) const { return {0.}; }
 
 void feSpaceTriP0::initializeNumberingUnknowns()
 {
@@ -89,7 +89,7 @@ void feSpaceTriP0::initializeNumberingEssential()
   }
 }
 
-void feSpaceTriP0::initializeAddressingVector(int numElem, std::vector<feInt> &adr)
+void feSpaceTriP0::initializeAddressingVector(int numElem, std::vector<feInt> &adr) const
 {
   adr[0] = _numbering->getElementDOF(_mesh, _cncGeoID, numElem, 0);
 }
@@ -115,18 +115,23 @@ feSpaceTriP1::feSpaceTriP1(feMesh *mesh, const std::string fieldID, const std::s
   _dofLocations = {dofLocation::VERTEX, dofLocation::VERTEX, dofLocation::VERTEX};
 }
 
-std::vector<double> feSpaceTriP1::L(double *r) { return {1.0 - r[0] - r[1], r[0], r[1]}; }
-void feSpaceTriP1::L(double *r, double *L)
+std::vector<double> feSpaceTriP1::L(const double *r) const
 {
-  L[0] = 1.0 - r[0] - r[1];
-  L[1] = r[0];
-  L[2] = r[1];
+  return {1.0 - r[0] - r[1], r[0], r[1]};
 }
-std::vector<double> feSpaceTriP1::dLdr(double *r) { UNUSED(r); return {-1.0, 1.0, 0.0}; }
-std::vector<double> feSpaceTriP1::dLds(double *r) { UNUSED(r); return {-1.0, 0.0, 1.0}; }
-std::vector<double> feSpaceTriP1::d2Ldr2(double *r) { UNUSED(r); return {0., 0., 0.}; }
-std::vector<double> feSpaceTriP1::d2Ldrs(double *r) { UNUSED(r); return {0., 0., 0.}; }
-std::vector<double> feSpaceTriP1::d2Lds2(double *r) { UNUSED(r); return {0., 0., 0.}; }
+
+void feSpaceTriP1::L(const double *r, double *res) const
+{
+  res[0] = 1.0 - r[0] - r[1];
+  res[1] = r[0];
+  res[2] = r[1];
+}
+
+std::vector<double> feSpaceTriP1::dLdr(const double */*r*/) const { return {-1.0, 1.0, 0.0}; }
+std::vector<double> feSpaceTriP1::dLds(const double */*r*/) const { return {-1.0, 0.0, 1.0}; }
+std::vector<double> feSpaceTriP1::d2Ldr2(const double */*r*/) const { return {0., 0., 0.}; }
+std::vector<double> feSpaceTriP1::d2Ldrs(const double */*r*/) const { return {0., 0., 0.}; }
+std::vector<double> feSpaceTriP1::d2Lds2(const double */*r*/) const { return {0., 0., 0.}; }
 
 void feSpaceTriP1::initializeNumberingUnknowns()
 {
@@ -146,7 +151,7 @@ void feSpaceTriP1::initializeNumberingEssential()
   }
 }
 
-void feSpaceTriP1::initializeAddressingVector(int numElem, std::vector<feInt> &adr)
+void feSpaceTriP1::initializeAddressingVector(int numElem, std::vector<feInt> &adr) const
 {
   adr[0] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 0);
   adr[1] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 1);
@@ -166,18 +171,22 @@ feSpaceTriP1_Discontinuous::feSpaceTriP1_Discontinuous(feMesh *mesh, const std::
   _dofLocations = {dofLocation::VERTEX, dofLocation::VERTEX, dofLocation::VERTEX};
 }
 
-std::vector<double> feSpaceTriP1_Discontinuous::L(double *r) { return {1.0 - r[0] - r[1], r[0], r[1]}; }
-void feSpaceTriP1_Discontinuous::L(double *r, double *L)
+std::vector<double> feSpaceTriP1_Discontinuous::L(const double *r) const
 {
-  L[0] = 1.0 - r[0] - r[1];
-  L[1] = r[0];
-  L[2] = r[1];
+  return {1.0 - r[0] - r[1], r[0], r[1]};
 }
-std::vector<double> feSpaceTriP1_Discontinuous::dLdr(double *r) { UNUSED(r); return {-1.0, 1.0, 0.0}; }
-std::vector<double> feSpaceTriP1_Discontinuous::dLds(double *r) { UNUSED(r); return {-1.0, 0.0, 1.0}; }
-std::vector<double> feSpaceTriP1_Discontinuous::d2Ldr2(double *r) { UNUSED(r); return {0., 0., 0.}; }
-std::vector<double> feSpaceTriP1_Discontinuous::d2Ldrs(double *r) { UNUSED(r); return {0., 0., 0.}; }
-std::vector<double> feSpaceTriP1_Discontinuous::d2Lds2(double *r) { UNUSED(r); return {0., 0., 0.}; }
+
+void feSpaceTriP1_Discontinuous::L(const double *r, double *res) const
+{
+  res[0] = 1.0 - r[0] - r[1];
+  res[1] = r[0];
+  res[2] = r[1];
+}
+std::vector<double> feSpaceTriP1_Discontinuous::dLdr(const double */*r*/) const { return {-1.0, 1.0, 0.0}; }
+std::vector<double> feSpaceTriP1_Discontinuous::dLds(const double */*r*/) const { return {-1.0, 0.0, 1.0}; }
+std::vector<double> feSpaceTriP1_Discontinuous::d2Ldr2(const double */*r*/) const { return {0., 0., 0.}; }
+std::vector<double> feSpaceTriP1_Discontinuous::d2Ldrs(const double */*r*/) const { return {0., 0., 0.}; }
+std::vector<double> feSpaceTriP1_Discontinuous::d2Lds2(const double */*r*/) const { return {0., 0., 0.}; }
 
 void feSpaceTriP1_Discontinuous::initializeNumberingUnknowns()
 {
@@ -194,7 +203,7 @@ void feSpaceTriP1_Discontinuous::initializeNumberingEssential()
   }
 }
 
-void feSpaceTriP1_Discontinuous::initializeAddressingVector(int numElem, std::vector<feInt> &adr)
+void feSpaceTriP1_Discontinuous::initializeAddressingVector(int numElem, std::vector<feInt> &adr) const
 {
   int nDOFPerElem = 3;
   for(int i = 0; i < nDOFPerElem; ++i) {
@@ -259,7 +268,7 @@ feSpaceVecTriP1<dim>::feSpaceVecTriP1(feMesh *mesh, const std::string fieldID,
   for(int i = 0; i < _nFunctions; ++i) _dofLocations[i] = dofLocation::VERTEX;
 }
 
-template <int dim> std::vector<double> feSpaceVecTriP1<dim>::L(double *r)
+template <int dim> std::vector<double> feSpaceVecTriP1<dim>::L(const double *r) const
 {
   double phi[3] = {1.0 - r[0] - r[1], r[0], r[1]};
   std::vector<double> res(_nFunctions*_nComponents);
@@ -268,14 +277,14 @@ template <int dim> std::vector<double> feSpaceVecTriP1<dim>::L(double *r)
   return res;
 }
 
-template <int dim> void feSpaceVecTriP1<dim>::L(double *r, double *res)
+template <int dim> void feSpaceVecTriP1<dim>::L(const double *r, double *res) const
 {
   double phi[3] = {1.0 - r[0] - r[1], r[0], r[1]};
   // duplicateScalarArray(3, 1, phi, dim, res);
   vectorLagrangeLayout(phi, 3, _nComponents, res);
 }
 
-template <int dim> std::vector<double> feSpaceVecTriP1<dim>::dLdr(double */*r*/)
+template <int dim> std::vector<double> feSpaceVecTriP1<dim>::dLdr(const double */*r*/) const
 {
   double dldr[3] = {-1.0, 1.0, 0.0};
   std::vector<double> res(_nFunctions*_nComponents);
@@ -284,7 +293,7 @@ template <int dim> std::vector<double> feSpaceVecTriP1<dim>::dLdr(double */*r*/)
   return res;
 }
 
-template <int dim> std::vector<double> feSpaceVecTriP1<dim>::dLds(double */*r*/)
+template <int dim> std::vector<double> feSpaceVecTriP1<dim>::dLds(const double */*r*/) const
 {
   double dlds[3] = {-1.0, 0.0, 1.0};
   std::vector<double> res(_nFunctions*_nComponents);
@@ -293,7 +302,7 @@ template <int dim> std::vector<double> feSpaceVecTriP1<dim>::dLds(double */*r*/)
   return res;
 }
 
-template <int dim> std::vector<double> feSpaceVecTriP1<dim>::d2Ldr2(double */*r*/)
+template <int dim> std::vector<double> feSpaceVecTriP1<dim>::d2Ldr2(const double */*r*/) const
 {
   double d2ldr2[3] = {0., 0., 0.};
   std::vector<double> res(_nFunctions*_nComponents);
@@ -302,7 +311,7 @@ template <int dim> std::vector<double> feSpaceVecTriP1<dim>::d2Ldr2(double */*r*
   return res;
 }
 
-template <int dim> std::vector<double> feSpaceVecTriP1<dim>::d2Ldrs(double */*r*/)
+template <int dim> std::vector<double> feSpaceVecTriP1<dim>::d2Ldrs(const double */*r*/) const
 {
   double d2ldrs[3] = {0., 0., 0.};
   std::vector<double> res(_nFunctions*_nComponents);
@@ -311,7 +320,7 @@ template <int dim> std::vector<double> feSpaceVecTriP1<dim>::d2Ldrs(double */*r*
   return res;
 }
 
-template <int dim> std::vector<double> feSpaceVecTriP1<dim>::d2Lds2(double */*r*/)
+template <int dim> std::vector<double> feSpaceVecTriP1<dim>::d2Lds2(const double */*r*/) const
 {
   double d2lds2[3] = {0., 0., 0.};
   std::vector<double> res(_nFunctions*_nComponents);
@@ -339,7 +348,7 @@ template <int dim> void feSpaceVecTriP1<dim>::initializeNumberingEssential()
 }
 
 template <int dim>
-void feSpaceVecTriP1<dim>::initializeAddressingVector(int numElem, std::vector<feInt> &adr)
+void feSpaceVecTriP1<dim>::initializeAddressingVector(int numElem, std::vector<feInt> &adr) const
 {
   adr[0] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 0, 0);
   adr[1] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 0, 1);
@@ -364,21 +373,23 @@ feSpaceTri_CR1::feSpaceTri_CR1(feMesh *mesh, std::string fieldID, std::string cn
   _dofLocations = {dofLocation::EDGE, dofLocation::EDGE, dofLocation::EDGE};
 }
 
-std::vector<double> feSpaceTri_CR1::L(double *r)
+std::vector<double> feSpaceTri_CR1::L(const double *r) const
 {
   return {1 - 2.0 * r[1], -1.0 + 2.0 * r[0] + 2.0 * r[1], 1 - 2.0 * r[0]};
 }
-void feSpaceTri_CR1::L(double *r, double *L)
+
+void feSpaceTri_CR1::L(const double *r, double *res) const
 {
-  L[0] = 1 - 2.0 * r[1];
-  L[1] = -1.0 + 2.0 * r[0] + 2.0 * r[1];
-  L[2] = 1 - 2.0 * r[0];
+  res[0] = 1 - 2.0 * r[1];
+  res[1] = -1.0 + 2.0 * r[0] + 2.0 * r[1];
+  res[2] = 1 - 2.0 * r[0];
 }
-std::vector<double> feSpaceTri_CR1::dLdr(double *r) { UNUSED(r); return {0.0, 2.0, -2.0}; }
-std::vector<double> feSpaceTri_CR1::dLds(double *r) { UNUSED(r); return {-2.0, 2.0, 0.0}; }
-std::vector<double> feSpaceTri_CR1::d2Ldr2(double *r) { UNUSED(r); return {0., 0., 0.}; }
-std::vector<double> feSpaceTri_CR1::d2Ldrs(double *r) { UNUSED(r); return {0., 0., 0.}; }
-std::vector<double> feSpaceTri_CR1::d2Lds2(double *r) { UNUSED(r); return {0., 0., 0.}; }
+
+std::vector<double> feSpaceTri_CR1::dLdr(const double */*r*/) const { return {0.0, 2.0, -2.0}; }
+std::vector<double> feSpaceTri_CR1::dLds(const double */*r*/) const { return {-2.0, 2.0, 0.0}; }
+std::vector<double> feSpaceTri_CR1::d2Ldr2(const double */*r*/) const { return {0., 0., 0.}; }
+std::vector<double> feSpaceTri_CR1::d2Ldrs(const double */*r*/) const { return {0., 0., 0.}; }
+std::vector<double> feSpaceTri_CR1::d2Lds2(const double */*r*/) const { return {0., 0., 0.}; }
 
 void feSpaceTri_CR1::initializeNumberingUnknowns()
 {
@@ -399,7 +410,7 @@ void feSpaceTri_CR1::initializeNumberingEssential()
   }
 }
 
-void feSpaceTri_CR1::initializeAddressingVector(int numElem, std::vector<feInt> &adr)
+void feSpaceTri_CR1::initializeAddressingVector(int numElem, std::vector<feInt> &adr) const
 {
   adr[0] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 0, 0);
   adr[1] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 1, 0);
@@ -430,7 +441,7 @@ feSpaceTriRT1::feSpaceTriRT1(feMesh *mesh, const std::string fieldID,
   for(int i = 0; i < _nFunctions; ++i) _dofLocations[i] = dofLocation::EDGE;
 }
 
-std::vector<double> feSpaceTriRT1::L(double *r)
+std::vector<double> feSpaceTriRT1::L(const double *r) const
 {
   // These are the shape functions from Guermond
   // The shape functions from defelement may require
@@ -438,34 +449,34 @@ std::vector<double> feSpaceTriRT1::L(double *r)
   return {r[0], r[1], r[0]-1., r[1], r[0], -1.+r[1]};
 }
 
-void feSpaceTriRT1::L(double *r, double *res)
+void feSpaceTriRT1::L(const double *r, double *res) const
 {
   res[0] =   -r[0]; res[1] =   -r[1];
   res[2] = r[0]-1.; res[3] =    r[1];
   res[4] =   -r[0]; res[5] = 1.-r[1];
 }
 
-std::vector<double> feSpaceTriRT1::dLdr(double */*r*/)
+std::vector<double> feSpaceTriRT1::dLdr(const double */*r*/) const
 {
   return {-1., 0., 1., 0., -1., 0.};
 }
 
-std::vector<double> feSpaceTriRT1::dLds(double */*r*/)
+std::vector<double> feSpaceTriRT1::dLds(const double */*r*/) const
 {
   return {0., -1., 0., 1., 0., -1.};
 }
 
-std::vector<double> feSpaceTriRT1::d2Ldr2(double */*r*/)
+std::vector<double> feSpaceTriRT1::d2Ldr2(const double */*r*/) const
 {
   return {0., 0., 0., 0., 0., 0.};
 }
 
-std::vector<double> feSpaceTriRT1::d2Ldrs(double */*r*/)
+std::vector<double> feSpaceTriRT1::d2Ldrs(const double */*r*/) const
 {
   return {0., 0., 0., 0., 0., 0.};
 }
 
-std::vector<double> feSpaceTriRT1::d2Lds2(double */*r*/)
+std::vector<double> feSpaceTriRT1::d2Lds2(const double */*r*/) const
 {
   return {0., 0., 0., 0., 0., 0.};
 }
@@ -489,7 +500,7 @@ void feSpaceTriRT1::initializeNumberingEssential()
   }
 }
 
-void feSpaceTriRT1::initializeAddressingVector(int numElem, std::vector<feInt> &adr)
+void feSpaceTriRT1::initializeAddressingVector(int numElem, std::vector<feInt> &adr) const
 {
   // Warning : the standard numbering of the Raviart-Thomas dof
   // is different from the numbering of the mesh edges.
@@ -524,7 +535,7 @@ feSpaceTriP2::feSpaceTriP2(feMesh *mesh, const std::string fieldID, const std::s
                    dofLocation::EDGE,   dofLocation::EDGE,   dofLocation::EDGE};
 }
 
-std::vector<double> feSpaceTriP2::L(double *r)
+std::vector<double> feSpaceTriP2::L(const double *r) const
 {
   return {(1. - r[0] - r[1]) * (1. - 2. * r[0] - 2. * r[1]),
           r[0] * (2. * r[0] - 1.),
@@ -533,14 +544,14 @@ std::vector<double> feSpaceTriP2::L(double *r)
           4. * r[0] * r[1],
           4. * r[1] * (1. - r[0] - r[1])};
 }
-void feSpaceTriP2::L(double *r, double *L)
+void feSpaceTriP2::L(const double *r, double *res) const
 {
-  L[0] = (1. - r[0] - r[1]) * (1. - 2. * r[0] - 2. * r[1]);
-  L[1] = r[0] * (2. * r[0] - 1.);
-  L[2] = r[1] * (2. * r[1] - 1.);
-  L[3] = 4. * r[0] * (1. - r[0] - r[1]);
-  L[4] = 4. * r[0] * r[1];
-  L[5] = 4. * r[1] * (1. - r[0] - r[1]);
+  res[0] = (1. - r[0] - r[1]) * (1. - 2. * r[0] - 2. * r[1]);
+  res[1] = r[0] * (2. * r[0] - 1.);
+  res[2] = r[1] * (2. * r[1] - 1.);
+  res[3] = 4. * r[0] * (1. - r[0] - r[1]);
+  res[4] = 4. * r[0] * r[1];
+  res[5] = 4. * r[1] * (1. - r[0] - r[1]);
 }
 
 /*
@@ -715,21 +726,21 @@ feStatus feSpaceTriP2::Lphys(int iElm, std::vector<double> &x, std::vector<doubl
   // return {p[0].eval(x), p[1].eval(x), p[2].eval(x), p[3].eval(x), p[4].eval(x), p[5].eval(x)};
 }
 
-std::vector<double> feSpaceTriP2::dLdr(double *r)
+std::vector<double> feSpaceTriP2::dLdr(const double *r) const
 {
   return {4. * (r[0] + r[1]) - 3.,      4. * r[0] - 1., 0.,
           4. * (1. - 2. * r[0] - r[1]), 4. * r[1],      -4. * r[1]};
 }
 
-std::vector<double> feSpaceTriP2::dLds(double *r)
+std::vector<double> feSpaceTriP2::dLds(const double *r) const
 {
   return {4. * (r[0] + r[1]) - 3.,     0., 4. * r[1] - 1., -4. * r[0], 4. * r[0],
           4. * (1. - r[0] - 2. * r[1])};
 }
 
-std::vector<double> feSpaceTriP2::d2Ldr2(double *r) { UNUSED(r); return {4., 4., 0., -8., 0., 0.}; }
-std::vector<double> feSpaceTriP2::d2Ldrs(double *r) { UNUSED(r); return {4., 0., 0., -4., 4., -4.}; }
-std::vector<double> feSpaceTriP2::d2Lds2(double *r) { UNUSED(r); return {4., 0., 4., 0., 0., -8.}; }
+std::vector<double> feSpaceTriP2::d2Ldr2(const double */*r*/) const { return {4., 4., 0., -8., 0., 0.}; }
+std::vector<double> feSpaceTriP2::d2Ldrs(const double */*r*/) const { return {4., 0., 0., -4., 4., -4.}; }
+std::vector<double> feSpaceTriP2::d2Lds2(const double */*r*/) const { return {4., 0., 4., 0., 0., -8.}; }
 
 void feSpaceTriP2::initializeNumberingUnknowns()
 {
@@ -760,7 +771,7 @@ void feSpaceTriP2::initializeNumberingEssential()
   }
 }
 
-void feSpaceTriP2::initializeAddressingVector(int numElem, std::vector<feInt> &adr)
+void feSpaceTriP2::initializeAddressingVector(int numElem, std::vector<feInt> &adr) const
 {
   adr[0] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 0);
   adr[1] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 1);
@@ -796,7 +807,7 @@ feSpaceTriP2Bubble::feSpaceTriP2Bubble(feMesh *mesh, const std::string fieldID, 
                    dofLocation::ELEMENT};
 }
 
-std::vector<double> feSpaceTriP2Bubble::L(double *r)
+std::vector<double> feSpaceTriP2Bubble::L(const double *r) const
 {
   return {(1. - r[0] - r[1]) * (1. - 2. * r[0] - 2. * r[1]),
           r[0] * (2. * r[0] - 1.),
@@ -806,34 +817,35 @@ std::vector<double> feSpaceTriP2Bubble::L(double *r)
           4. * r[1] * (1. - r[0] - r[1]),
           27. * r[0] * r[1] * (1. - r[0] - r[1])};
 }
-void feSpaceTriP2Bubble::L(double *r, double *L)
+
+void feSpaceTriP2Bubble::L(const double *r, double *res) const
 {
-  L[0] = (1. - r[0] - r[1]) * (1. - 2. * r[0] - 2. * r[1]);
-  L[1] = r[0] * (2. * r[0] - 1.);
-  L[2] = r[1] * (2. * r[1] - 1.);
-  L[3] = 4. * r[0] * (1. - r[0] - r[1]);
-  L[4] = 4. * r[0] * r[1];
-  L[5] = 4. * r[1] * (1. - r[0] - r[1]);
-  L[6] = 27. * r[0] * r[1] * (1. - r[0] - r[1]);
+  res[0] = (1. - r[0] - r[1]) * (1. - 2. * r[0] - 2. * r[1]);
+  res[1] = r[0] * (2. * r[0] - 1.);
+  res[2] = r[1] * (2. * r[1] - 1.);
+  res[3] = 4. * r[0] * (1. - r[0] - r[1]);
+  res[4] = 4. * r[0] * r[1];
+  res[5] = 4. * r[1] * (1. - r[0] - r[1]);
+  res[6] = 27. * r[0] * r[1] * (1. - r[0] - r[1]);
 }
 
-std::vector<double> feSpaceTriP2Bubble::dLdr(double *r)
+std::vector<double> feSpaceTriP2Bubble::dLdr(const double *r) const
 {
   return {4. * (r[0] + r[1]) - 3.,      4. * r[0] - 1., 0.,
           4. * (1. - 2. * r[0] - r[1]), 4. * r[1], -4. * r[1],
           27. * r[1] * (1. - r[1] - 2.*r[0])};
 }
 
-std::vector<double> feSpaceTriP2Bubble::dLds(double *r)
+std::vector<double> feSpaceTriP2Bubble::dLds(const double *r) const
 {
   return {4. * (r[0] + r[1]) - 3.,     0., 4. * r[1] - 1., -4. * r[0], 4. * r[0],
           4. * (1. - r[0] - 2. * r[1]),
           27. * r[0] * (1. - r[0] - 2.*r[1])};
 }
 
-std::vector<double> feSpaceTriP2Bubble::d2Ldr2(double *r) { return {4., 4., 0., -8., 0.,  0., -54.*r[1]}; }
-std::vector<double> feSpaceTriP2Bubble::d2Ldrs(double *r) { return {4., 0., 0., -4., 4., -4., 27. * (1. - 2.*(r[0]+r[1]))}; }
-std::vector<double> feSpaceTriP2Bubble::d2Lds2(double *r) { return {4., 0., 4.,  0., 0., -8., -54.*r[0]}; }
+std::vector<double> feSpaceTriP2Bubble::d2Ldr2(const double *r) const { return {4., 4., 0., -8., 0.,  0., -54.*r[1]}; }
+std::vector<double> feSpaceTriP2Bubble::d2Ldrs(const double *r) const { return {4., 0., 0., -4., 4., -4., 27. * (1. - 2.*(r[0]+r[1]))}; }
+std::vector<double> feSpaceTriP2Bubble::d2Lds2(const double *r) const { return {4., 0., 4.,  0., 0., -8., -54.*r[0]}; }
 
 void feSpaceTriP2Bubble::initializeNumberingUnknowns()
 {
@@ -867,7 +879,7 @@ void feSpaceTriP2Bubble::initializeNumberingEssential()
   }
 }
 
-void feSpaceTriP2Bubble::initializeAddressingVector(int numElem, std::vector<feInt> &adr)
+void feSpaceTriP2Bubble::initializeAddressingVector(int numElem, std::vector<feInt> &adr) const
 {
   adr[0] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 0);
   adr[1] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 1);
@@ -904,7 +916,7 @@ feSpaceVecTriP2<dim>::feSpaceVecTriP2(feMesh *mesh, const std::string fieldID,
   }
 }
 
-template <int dim> std::vector<double> feSpaceVecTriP2<dim>::L(double *r)
+template <int dim> std::vector<double> feSpaceVecTriP2<dim>::L(const double *r) const
 {
   double phi[6] = {(1. - r[0] - r[1]) * (1. - 2. * r[0] - 2. * r[1]),
                    r[0] * (2. * r[0] - 1.),
@@ -918,7 +930,7 @@ template <int dim> std::vector<double> feSpaceVecTriP2<dim>::L(double *r)
   return res;
 }
 
-template <int dim> void feSpaceVecTriP2<dim>::L(double *r, double *res)
+template <int dim> void feSpaceVecTriP2<dim>::L(const double *r, double *res) const
 {
   double phi[6] = {(1. - r[0] - r[1]) * (1. - 2. * r[0] - 2. * r[1]),
                    r[0] * (2. * r[0] - 1.),
@@ -930,7 +942,7 @@ template <int dim> void feSpaceVecTriP2<dim>::L(double *r, double *res)
   vectorLagrangeLayout(phi, 6, _nComponents, res);
 }
 
-template <int dim> std::vector<double> feSpaceVecTriP2<dim>::dLdr(double *r)
+template <int dim> std::vector<double> feSpaceVecTriP2<dim>::dLdr(const double *r) const
 {
   double dldr[6] = {4. * (r[0] + r[1]) - 3.,      4. * r[0] - 1., 0.,
                     4. * (1. - 2. * r[0] - r[1]), 4. * r[1],      -4. * r[1]};
@@ -940,7 +952,7 @@ template <int dim> std::vector<double> feSpaceVecTriP2<dim>::dLdr(double *r)
   return res;
 }
 
-template <int dim> std::vector<double> feSpaceVecTriP2<dim>::dLds(double *r)
+template <int dim> std::vector<double> feSpaceVecTriP2<dim>::dLds(const double *r) const
 {
   double dlds[6] = {4. * (r[0] + r[1]) - 3.,     0., 4. * r[1] - 1., -4. * r[0], 4. * r[0],
                     4. * (1. - r[0] - 2. * r[1])};
@@ -950,7 +962,7 @@ template <int dim> std::vector<double> feSpaceVecTriP2<dim>::dLds(double *r)
   return res;
 }
 
-template <int dim> std::vector<double> feSpaceVecTriP2<dim>::d2Ldr2(double */*r*/)
+template <int dim> std::vector<double> feSpaceVecTriP2<dim>::d2Ldr2(const double */*r*/) const
 {
   double d2ldr2[6] = {4., 4., 0., -8., 0., 0.};
   std::vector<double> res(_nFunctions*_nComponents);
@@ -959,7 +971,7 @@ template <int dim> std::vector<double> feSpaceVecTriP2<dim>::d2Ldr2(double */*r*
   return res;
 }
 
-template <int dim> std::vector<double> feSpaceVecTriP2<dim>::d2Ldrs(double */*r*/)
+template <int dim> std::vector<double> feSpaceVecTriP2<dim>::d2Ldrs(const double */*r*/) const
 {
   double d2ldrs[6] = {4., 0., 0., -4., 4., -4.};
   std::vector<double> res(_nFunctions*_nComponents);
@@ -968,7 +980,7 @@ template <int dim> std::vector<double> feSpaceVecTriP2<dim>::d2Ldrs(double */*r*
   return res;
 }
 
-template <int dim> std::vector<double> feSpaceVecTriP2<dim>::d2Lds2(double */*r*/)
+template <int dim> std::vector<double> feSpaceVecTriP2<dim>::d2Lds2(const double */*r*/) const
 {
   double d2lds2[6] = {4., 0., 4., 0., 0., -8.};
   std::vector<double> res(_nFunctions*_nComponents);
@@ -1010,7 +1022,7 @@ template <int dim> void feSpaceVecTriP2<dim>::initializeNumberingEssential()
 }
 
 template <int dim>
-void feSpaceVecTriP2<dim>::initializeAddressingVector(int numElem, std::vector<feInt> &adr)
+void feSpaceVecTriP2<dim>::initializeAddressingVector(int numElem, std::vector<feInt> &adr) const
 {
   adr[0] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 0, 0);
   adr[1] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 0, 1);
@@ -1066,7 +1078,7 @@ feSpaceVecTriP2Bubble<dim>::feSpaceVecTriP2Bubble(feMesh *mesh, const std::strin
   }
 }
 
-template <int dim> std::vector<double> feSpaceVecTriP2Bubble<dim>::L(double *r)
+template <int dim> std::vector<double> feSpaceVecTriP2Bubble<dim>::L(const double *r) const
 {
   double phi[7] = {(1. - r[0] - r[1]) * (1. - 2. * r[0] - 2. * r[1]),
                    r[0] * (2. * r[0] - 1.),
@@ -1080,7 +1092,7 @@ template <int dim> std::vector<double> feSpaceVecTriP2Bubble<dim>::L(double *r)
   return res;
 }
 
-template <int dim> void feSpaceVecTriP2Bubble<dim>::L(double *r, double *res)
+template <int dim> void feSpaceVecTriP2Bubble<dim>::L(const double *r, double *res) const
 {
   double phi[7] = {(1. - r[0] - r[1]) * (1. - 2. * r[0] - 2. * r[1]),
                    r[0] * (2. * r[0] - 1.),
@@ -1092,7 +1104,7 @@ template <int dim> void feSpaceVecTriP2Bubble<dim>::L(double *r, double *res)
   duplicateScalarArray(7, 1, phi, dim, res);
 }
 
-template <int dim> std::vector<double> feSpaceVecTriP2Bubble<dim>::dLdr(double *r)
+template <int dim> std::vector<double> feSpaceVecTriP2Bubble<dim>::dLdr(const double *r) const
 {
   double dldr[7] = {4. * (r[0] + r[1]) - 3.,      4. * r[0] - 1., 0.,
                     4. * (1. - 2. * r[0] - r[1]), 4. * r[1],      -4. * r[1],
@@ -1102,7 +1114,7 @@ template <int dim> std::vector<double> feSpaceVecTriP2Bubble<dim>::dLdr(double *
   return res;
 }
 
-template <int dim> std::vector<double> feSpaceVecTriP2Bubble<dim>::dLds(double *r)
+template <int dim> std::vector<double> feSpaceVecTriP2Bubble<dim>::dLds(const double *r) const
 {
   double dlds[7] = {4. * (r[0] + r[1]) - 3.,     0., 4. * r[1] - 1., -4. * r[0], 4. * r[0],
                     4. * (1. - r[0] - 2. * r[1]),
@@ -1112,7 +1124,7 @@ template <int dim> std::vector<double> feSpaceVecTriP2Bubble<dim>::dLds(double *
   return res;
 }
 
-template <int dim> std::vector<double> feSpaceVecTriP2Bubble<dim>::d2Ldr2(double *r)
+template <int dim> std::vector<double> feSpaceVecTriP2Bubble<dim>::d2Ldr2(const double *r) const
 {
   UNUSED(r);
   double d2ldr2[7] = {4., 4., 0., -8., 0., 0., -54.*r[1]};
@@ -1121,7 +1133,7 @@ template <int dim> std::vector<double> feSpaceVecTriP2Bubble<dim>::d2Ldr2(double
   return res;
 }
 
-template <int dim> std::vector<double> feSpaceVecTriP2Bubble<dim>::d2Ldrs(double *r)
+template <int dim> std::vector<double> feSpaceVecTriP2Bubble<dim>::d2Ldrs(const double *r) const
 {
   UNUSED(r);
   double d2ldrs[7] = {4., 0., 0., -4., 4., -4., 27. * (1. - 2.*(r[0]+r[1]))};
@@ -1130,7 +1142,7 @@ template <int dim> std::vector<double> feSpaceVecTriP2Bubble<dim>::d2Ldrs(double
   return res;
 }
 
-template <int dim> std::vector<double> feSpaceVecTriP2Bubble<dim>::d2Lds2(double *r)
+template <int dim> std::vector<double> feSpaceVecTriP2Bubble<dim>::d2Lds2(const double *r) const
 {
   UNUSED(r);
   double d2lds2[7] = {4., 0., 4., 0., 0., -8., -54.*r[0]};
@@ -1173,7 +1185,7 @@ template <int dim> void feSpaceVecTriP2Bubble<dim>::initializeNumberingEssential
 }
 
 template <int dim>
-void feSpaceVecTriP2Bubble<dim>::initializeAddressingVector(int numElem, std::vector<feInt> &adr)
+void feSpaceVecTriP2Bubble<dim>::initializeAddressingVector(int numElem, std::vector<feInt> &adr) const
 {
   adr[0] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 0, 0);
   adr[1] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 0, 1);
@@ -1217,7 +1229,7 @@ feSpaceTri_CR2::feSpaceTri_CR2(feMesh *mesh, std::string fieldID, std::string cn
                    dofLocation::EDGE, dofLocation::EDGE, dofLocation::EDGE};
 }
 
-std::vector<double> feSpaceTri_CR2::L(double *r)
+std::vector<double> feSpaceTri_CR2::L(const double *r) const
 {
   return {(1. - r[0] - r[1]) * (1. - 2. * r[0] - 2. * r[1]),
           r[0] * (2. * r[0] - 1.),
@@ -1227,25 +1239,25 @@ std::vector<double> feSpaceTri_CR2::L(double *r)
           4. * r[1] * (1. - r[0] - r[1]),
           2. - 3. * (r[0] * r[0] + r[1] * r[1] + (1. - r[0] - r[1]) * (1. - r[0] - r[1]))};
 }
-void feSpaceTri_CR2::L(double *r, double *L)
+void feSpaceTri_CR2::L(const double *r, double *res) const
 {
-  L[0] = (1. - r[0] - r[1]) * (1. - 2. * r[0] - 2. * r[1]);
-  L[1] = r[0] * (2. * r[0] - 1.);
-  L[2] = r[1] * (2. * r[1] - 1.);
-  L[3] = 4. * r[0] * (1. - r[0] - r[1]);
-  L[4] = 4. * r[0] * r[1];
-  L[5] = 4. * r[1] * (1. - r[0] - r[1]);
-  L[6] = 2. - 3. * (r[0] * r[0] + r[1] * r[1] + (1. - r[0] - r[1]) * (1. - r[0] - r[1]));
+  res[0] = (1. - r[0] - r[1]) * (1. - 2. * r[0] - 2. * r[1]);
+  res[1] = r[0] * (2. * r[0] - 1.);
+  res[2] = r[1] * (2. * r[1] - 1.);
+  res[3] = 4. * r[0] * (1. - r[0] - r[1]);
+  res[4] = 4. * r[0] * r[1];
+  res[5] = 4. * r[1] * (1. - r[0] - r[1]);
+  res[6] = 2. - 3. * (r[0] * r[0] + r[1] * r[1] + (1. - r[0] - r[1]) * (1. - r[0] - r[1]));
 }
 
-std::vector<double> feSpaceTri_CR2::dLdr(double *r)
+std::vector<double> feSpaceTri_CR2::dLdr(const double *r) const
 {
   return {4. * (r[0] + r[1]) - 3.,      4. * r[0] - 1., 0.,
           4. * (1. - 2. * r[0] - r[1]), 4. * r[1],      -4. * r[1],
           6. * (1. - r[1] - 2. * r[0])};
 }
 
-std::vector<double> feSpaceTri_CR2::dLds(double *r)
+std::vector<double> feSpaceTri_CR2::dLds(const double *r) const
 {
   return {4. * (r[0] + r[1]) - 3.,
           0.,
@@ -1288,7 +1300,7 @@ void feSpaceTri_CR2::initializeNumberingEssential()
   }
 }
 
-void feSpaceTri_CR2::initializeAddressingVector(int numElem, std::vector<feInt> &adr)
+void feSpaceTri_CR2::initializeAddressingVector(int numElem, std::vector<feInt> &adr) const
 {
   adr[0] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 0);
   adr[1] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 1);
@@ -1336,7 +1348,7 @@ feSpaceTriP3::feSpaceTriP3(feMesh *mesh, const std::string fieldID, const std::s
                    dofLocation::ELEMENT};
 }
 
-std::vector<double> feSpaceTriP3::L(double *r)
+std::vector<double> feSpaceTriP3::L(const double *r) const
 {
   double R = r[0];
   double S = r[1];
@@ -1357,29 +1369,29 @@ std::vector<double> feSpaceTriP3::L(double *r)
             (S * S) * (4.5E1 / 2.0) + (S * S * S) * (2.7E1 / 2.0),
           R * S * 2.7E1 - R * (S * S) * 2.7E1 - (R * R) * S * 2.7E1};
 }
-void feSpaceTriP3::L(double *r, double *L)
+void feSpaceTriP3::L(const double *r, double *res) const
 {
   double R = r[0];
   double S = r[1];
-  L[0] = R * (-1.1E1 / 2.0) - S * (1.1E1 / 2.0) + R * S * 1.8E1 - R * (S * S) * (2.7E1 / 2.0) -
+  res[0] = R * (-1.1E1 / 2.0) - S * (1.1E1 / 2.0) + R * S * 1.8E1 - R * (S * S) * (2.7E1 / 2.0) -
          (R * R) * S * (2.7E1 / 2.0) + (R * R) * 9.0 - (R * R * R) * (9.0 / 2.0) + (S * S) * 9.0 -
          (S * S * S) * (9.0 / 2.0) + 1.0;
-  L[1] = R - (R * R) * (9.0 / 2.0) + (R * R * R) * (9.0 / 2.0);
-  L[2] = S - (S * S) * (9.0 / 2.0) + (S * S * S) * (9.0 / 2.0);
-  L[3] = R * 9.0 - R * S * (4.5E1 / 2.0) + R * (S * S) * (2.7E1 / 2.0) + (R * R) * S * 2.7E1 -
+  res[1] = R - (R * R) * (9.0 / 2.0) + (R * R * R) * (9.0 / 2.0);
+  res[2] = S - (S * S) * (9.0 / 2.0) + (S * S * S) * (9.0 / 2.0);
+  res[3] = R * 9.0 - R * S * (4.5E1 / 2.0) + R * (S * S) * (2.7E1 / 2.0) + (R * R) * S * 2.7E1 -
          (R * R) * (4.5E1 / 2.0) + (R * R * R) * (2.7E1 / 2.0);
-  L[4] = R * (-9.0 / 2.0) + R * S * (9.0 / 2.0) - (R * R) * S * (2.7E1 / 2.0) + (R * R) * 1.8E1 -
+  res[4] = R * (-9.0 / 2.0) + R * S * (9.0 / 2.0) - (R * R) * S * (2.7E1 / 2.0) + (R * R) * 1.8E1 -
          (R * R * R) * (2.7E1 / 2.0);
-  L[5] = R * S * (-9.0 / 2.0) + (R * R) * S * (2.7E1 / 2.0);
-  L[6] = R * S * (-9.0 / 2.0) + R * (S * S) * (2.7E1 / 2.0);
-  L[7] = S * (-9.0 / 2.0) + R * S * (9.0 / 2.0) - R * (S * S) * (2.7E1 / 2.0) + (S * S) * 1.8E1 -
+  res[5] = R * S * (-9.0 / 2.0) + (R * R) * S * (2.7E1 / 2.0);
+  res[6] = R * S * (-9.0 / 2.0) + R * (S * S) * (2.7E1 / 2.0);
+  res[7] = S * (-9.0 / 2.0) + R * S * (9.0 / 2.0) - R * (S * S) * (2.7E1 / 2.0) + (S * S) * 1.8E1 -
          (S * S * S) * (2.7E1 / 2.0);
-  L[8] = S * 9.0 - R * S * (4.5E1 / 2.0) + R * (S * S) * 2.7E1 + (R * R) * S * (2.7E1 / 2.0) -
+  res[8] = S * 9.0 - R * S * (4.5E1 / 2.0) + R * (S * S) * 2.7E1 + (R * R) * S * (2.7E1 / 2.0) -
          (S * S) * (4.5E1 / 2.0) + (S * S * S) * (2.7E1 / 2.0);
-  L[9] = R * S * 2.7E1 - R * (S * S) * 2.7E1 - (R * R) * S * 2.7E1;
+  res[9] = R * S * 2.7E1 - R * (S * S) * 2.7E1 - (R * R) * S * 2.7E1;
 }
 
-std::vector<double> feSpaceTriP3::dLdr(double *r)
+std::vector<double> feSpaceTriP3::dLdr(const double *r) const
 {
   double R = r[0];
   double S = r[1];
@@ -1397,7 +1409,7 @@ std::vector<double> feSpaceTriP3::dLdr(double *r)
           S * 2.7E1 - R * S * 5.4E1 - (S * S) * 2.7E1};
 }
 
-std::vector<double> feSpaceTriP3::dLds(double *r)
+std::vector<double> feSpaceTriP3::dLds(const double *r) const
 {
   double R = r[0];
   double S = r[1];
@@ -1443,7 +1455,7 @@ void feSpaceTriP3::initializeNumberingEssential()
   }
 }
 
-void feSpaceTriP3::initializeAddressingVector(int numElem, std::vector<feInt> &adr)
+void feSpaceTriP3::initializeAddressingVector(int numElem, std::vector<feInt> &adr) const
 {
   adr[0] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 0);
   adr[1] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 1);
@@ -1502,7 +1514,7 @@ feSpaceVecTriP3<dim>::feSpaceVecTriP3(feMesh *mesh, const std::string fieldID,
   }
 }
 
-template <int dim> std::vector<double> feSpaceVecTriP3<dim>::L(double *r)
+template <int dim> std::vector<double> feSpaceVecTriP3<dim>::L(const double *r) const
 {
   double R = r[0];
   double S = r[1];
@@ -1529,7 +1541,7 @@ template <int dim> std::vector<double> feSpaceVecTriP3<dim>::L(double *r)
   return res;
 }
 
-template <int dim> void feSpaceVecTriP3<dim>::L(double *r, double *res)
+template <int dim> void feSpaceVecTriP3<dim>::L(const double *r, double *res) const
 {
   double R = r[0];
   double S = r[1];
@@ -1554,7 +1566,7 @@ template <int dim> void feSpaceVecTriP3<dim>::L(double *r, double *res)
   vectorLagrangeLayout(phi, 10, _nComponents, res);
 }
 
-template <int dim> std::vector<double> feSpaceVecTriP3<dim>::dLdr(double *r)
+template <int dim> std::vector<double> feSpaceVecTriP3<dim>::dLdr(const double *r) const
 {
   double R = r[0];
   double S = r[1];
@@ -1577,7 +1589,7 @@ template <int dim> std::vector<double> feSpaceVecTriP3<dim>::dLdr(double *r)
   return res;
 }
 
-template <int dim> std::vector<double> feSpaceVecTriP3<dim>::dLds(double *r)
+template <int dim> std::vector<double> feSpaceVecTriP3<dim>::dLds(const double *r) const
 {
   double R = r[0];
   double S = r[1];
@@ -1627,7 +1639,7 @@ template <int dim> void feSpaceVecTriP3<dim>::initializeNumberingEssential()
 }
 
 template <int dim>
-void feSpaceVecTriP3<dim>::initializeAddressingVector(int numElem, std::vector<feInt> &adr)
+void feSpaceVecTriP3<dim>::initializeAddressingVector(int numElem, std::vector<feInt> &adr) const
 {
   adr[0] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 0, 0);
   adr[1] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 0, 1);
@@ -1730,7 +1742,7 @@ feSpaceTriP4::feSpaceTriP4(feMesh *mesh, const std::string fieldID, const std::s
                    dofLocation::ELEMENT, dofLocation::ELEMENT, dofLocation::ELEMENT};
 }
 
-std::vector<double> feSpaceTriP4::L(double *r)
+std::vector<double> feSpaceTriP4::L(const double *r) const
 {
   double R = r[0];
   double S = r[1];
@@ -1751,7 +1763,7 @@ std::vector<double> feSpaceTriP4::L(double *r)
           R * S * f3 * f4 * 128.,       R * S * r1 * f4 * 128.,      R * S * s1 * f4 * 128.};
 }
 
-void feSpaceTriP4::L(double *r, double *L)
+void feSpaceTriP4::L(const double *r, double *res) const
 {
   double R = r[0];
   double S = r[1];
@@ -1765,24 +1777,24 @@ void feSpaceTriP4::L(double *r, double *L)
   double s1 = S - 1. / 4.;
   double s2 = S - 1. / 2.;
   double s3 = S - 3. / 4.;
-  L[0] = f1 * f2 * f3 * f4 * 32. / 3.;
-  L[1] =  R * r1 * r2 * r3 * 32. / 3.;
-  L[2] =  S * s1 * s2 * s3 * 32. / 3.;
-  L[3] = R * f2 * f3 * f4 * 128. / 3.;
-  L[4] = R * r1 * f3 * f4 * 64.;
-  L[5] = R * r1 * r2 * f4 * 128. / 3.,
-  L[6] = S * R * r1 * r2 * 128. / 3.;
-  L[7] = R * S * r1 * s1 * 64.;
-  L[8] = R * S * s1 * s2 * 128. / 3.,
-  L[9] = S * s1 * s2 * f4 * 128. / 3.;
-  L[10] = S * s1 * f3 * f4 * 64.;
-  L[11] = S * f2 * f3 * f4 * 128. / 3.,
-  L[12] = R * S * f3 * f4 * 128.;
-  L[13] = R * S * r1 * f4 * 128.;
-  L[14] = R * S * s1 * f4 * 128.;
+  res[0] = f1 * f2 * f3 * f4 * 32. / 3.;
+  res[1] =  R * r1 * r2 * r3 * 32. / 3.;
+  res[2] =  S * s1 * s2 * s3 * 32. / 3.;
+  res[3] = R * f2 * f3 * f4 * 128. / 3.;
+  res[4] = R * r1 * f3 * f4 * 64.;
+  res[5] = R * r1 * r2 * f4 * 128. / 3.,
+  res[6] = S * R * r1 * r2 * 128. / 3.;
+  res[7] = R * S * r1 * s1 * 64.;
+  res[8] = R * S * s1 * s2 * 128. / 3.,
+  res[9] = S * s1 * s2 * f4 * 128. / 3.;
+  res[10] = S * s1 * f3 * f4 * 64.;
+  res[11] = S * f2 * f3 * f4 * 128. / 3.,
+  res[12] = R * S * f3 * f4 * 128.;
+  res[13] = R * S * r1 * f4 * 128.;
+  res[14] = R * S * s1 * f4 * 128.;
 }
 
-std::vector<double> feSpaceTriP4::dLdr(double *r)
+std::vector<double> feSpaceTriP4::dLdr(const double *r) const
 {
   double R = r[0];
   double S = r[1];
@@ -1811,7 +1823,7 @@ std::vector<double> feSpaceTriP4::dLdr(double *r)
           128. * (-(S * (4. * S - 1.) * (2. * R + S - 1.)) / 4.)};
 }
 
-std::vector<double> feSpaceTriP4::dLds(double *r)
+std::vector<double> feSpaceTriP4::dLds(const double *r) const
 {
   double R = r[0];
   double S = r[1];
@@ -1870,7 +1882,7 @@ void feSpaceTriP4::initializeNumberingEssential()
   }
 }
 
-void feSpaceTriP4::initializeAddressingVector(int numElem, std::vector<feInt> &adr)
+void feSpaceTriP4::initializeAddressingVector(int numElem, std::vector<feInt> &adr) const
 {
   adr[0] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 0);
   adr[1] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 1);
@@ -1941,7 +1953,7 @@ feSpaceVecTriP4<dim>::feSpaceVecTriP4(feMesh *mesh, const std::string fieldID,
   }
 }
 
-template <int dim> std::vector<double> feSpaceVecTriP4<dim>::L(double *r)
+template <int dim> std::vector<double> feSpaceVecTriP4<dim>::L(const double *r) const
 {
   double R = r[0];
   double S = r[1];
@@ -1966,7 +1978,7 @@ template <int dim> std::vector<double> feSpaceVecTriP4<dim>::L(double *r)
   return res;
 }
 
-template <int dim> void feSpaceVecTriP4<dim>::L(double *r, double *res)
+template <int dim> void feSpaceVecTriP4<dim>::L(const double *r, double *res) const
 {
   double R = r[0];
   double S = r[1];
@@ -1991,7 +2003,7 @@ template <int dim> void feSpaceVecTriP4<dim>::L(double *r, double *res)
   vectorLagrangeLayout(phi, 15, _nComponents, res);
 }
 
-template <int dim> std::vector<double> feSpaceVecTriP4<dim>::dLdr(double *r)
+template <int dim> std::vector<double> feSpaceVecTriP4<dim>::dLdr(const double *r) const
 {
   double R = r[0];
   double S = r[1];
@@ -2024,7 +2036,7 @@ template <int dim> std::vector<double> feSpaceVecTriP4<dim>::dLdr(double *r)
   return res;
 }
 
-template <int dim> std::vector<double> feSpaceVecTriP4<dim>::dLds(double *r)
+template <int dim> std::vector<double> feSpaceVecTriP4<dim>::dLds(const double *r) const
 {
   double R = r[0];
   double S = r[1];
@@ -2088,7 +2100,7 @@ template <int dim> void feSpaceVecTriP4<dim>::initializeNumberingEssential()
 }
 
 template <int dim>
-void feSpaceVecTriP4<dim>::initializeAddressingVector(int numElem, std::vector<feInt> &adr)
+void feSpaceVecTriP4<dim>::initializeAddressingVector(int numElem, std::vector<feInt> &adr) const
 {
   adr[0] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 0, 0);
   adr[1] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 0, 1);

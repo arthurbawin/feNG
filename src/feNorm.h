@@ -84,7 +84,7 @@ class feNorm;
 //                 integral to compute, see enum (typically the exact solution)
 // vectorSolution: ptr to a vector field used in the definition of the norm or
 //                 integral to compute, see enum (typically the exact solution)
-feStatus createNorm(feNorm *&norm, normType type, const std::vector<feSpace *> &spaces,
+feStatus createNorm(feNorm *&norm, normType type, const std::vector<const feSpace*> &spaces,
                     feSolution *sol, feFunction *scalarSolution = nullptr,
                     feVectorFunction *vectorSolution = nullptr);
 
@@ -97,7 +97,7 @@ protected:
   // The type of norm/integral to compute
   normType _type;
   // FE spaces
-  std::vector<feSpace *> _spaces;
+  std::vector<const feSpace*> _spaces;
   // Convenience ptr to the solution and the geometric connectivity
   const feSolution *_solution;
   const feCncGeo *_cnc;
@@ -140,7 +140,7 @@ protected:
 
 public:
   // Create a norm. To perform safety checks, create a norm using createNorm instead.
-  feNorm(normType type, const std::vector<feSpace *> &spaces, feSolution *sol,
+  feNorm(normType type, const std::vector<const feSpace*> &spaces, feSolution *sol,
          feFunction *scalarSolution = nullptr, feVectorFunction *vectorSolution = nullptr);
   // Create a norm providing only the geometric connectivity and a solution.
   // Used to compute integrals over user-defined field only (not on FE solution).
@@ -167,6 +167,8 @@ public:
   double compute(normType type);
   // Compute and return the norm of integral matching the norm's _type attribute
   double compute();
+
+  feStatus probeScalarField(const std::vector<double> &pos, double &res);
 
   double computeSquaredErrorOnElement(int iElm);
   double computeSquaredErrorFromEstimatorOnElement(int iElm, bool useAverageEvaluations);

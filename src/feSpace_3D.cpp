@@ -101,14 +101,14 @@ static int factorial(const int n)
   return f;
 }
 
-std::vector<double> feSpaceTetPn::L(double *r)
+std::vector<double> feSpaceTetPn::L(const double *r) const
 { 
   std::vector<double> phi(_nFunctions);
   this->L(r, phi.data());
   return phi;
 }
 
-void feSpaceTetPn::L(double *r, double *phi)
+void feSpaceTetPn::L(const double *r, double *phi) const
 {
   double u[4] = {1.0 - r[0] - r[1] - r[2], r[0], r[1], r[2]};
 
@@ -160,7 +160,7 @@ static double jacg[4][3] = {{-1., -1., -1.}, {1., 0., 0.}, {0., 1., 0.}, {0., 0.
 // For the product rule of an arbitrary number of functions,
 // see e.g. https://en.wikipedia.org/wiki/Product_rule#Generalizations
 //
-std::vector<double> feSpaceTetPn::shapeTetDerivatives(const double xsi[3], const int m)
+std::vector<double> feSpaceTetPn::shapeTetDerivatives(const double xsi[3], const int m) const
 {
   std::vector<double> res(_nFunctions);
 
@@ -234,12 +234,12 @@ std::vector<double> feSpaceTetPn::shapeTetDerivatives(const double xsi[3], const
   return res;
 }
 
-std::vector<double> feSpaceTetPn::dLdr(double *r) { return this->shapeTetDerivatives(r, 0); }
-std::vector<double> feSpaceTetPn::dLds(double *r) { return this->shapeTetDerivatives(r, 1); }
-std::vector<double> feSpaceTetPn::dLdt(double *r) { return this->shapeTetDerivatives(r, 2); }
-std::vector<double> feSpaceTetPn::d2Ldr2(double *r) { UNUSED(r); std::vector<double> res(_nFunctions, 0.); return res; }
-std::vector<double> feSpaceTetPn::d2Ldrs(double *r) { UNUSED(r); std::vector<double> res(_nFunctions, 0.); return res; }
-std::vector<double> feSpaceTetPn::d2Lds2(double *r) { UNUSED(r); std::vector<double> res(_nFunctions, 0.); return res; }
+std::vector<double> feSpaceTetPn::dLdr(const double *r) const { return this->shapeTetDerivatives(r, 0); }
+std::vector<double> feSpaceTetPn::dLds(const double *r) const { return this->shapeTetDerivatives(r, 1); }
+std::vector<double> feSpaceTetPn::dLdt(const double *r) const { return this->shapeTetDerivatives(r, 2); }
+std::vector<double> feSpaceTetPn::d2Ldr2(const double */*r*/) const { std::vector<double> res(_nFunctions, 0.); return res; }
+std::vector<double> feSpaceTetPn::d2Ldrs(const double */*r*/) const { std::vector<double> res(_nFunctions, 0.); return res; }
+std::vector<double> feSpaceTetPn::d2Lds2(const double */*r*/) const { std::vector<double> res(_nFunctions, 0.); return res; }
 
 void feSpaceTetPn::initializeNumberingUnknowns()
 {
@@ -290,7 +290,7 @@ void feSpaceTetPn::initializeNumberingEssential()
   }
 }
 
-void feSpaceTetPn::initializeAddressingVector(int numElem, std::vector<feInt> &adr)
+void feSpaceTetPn::initializeAddressingVector(int numElem, std::vector<feInt> &adr) const
 {
   for(int j = 0; j < 4; ++j) {
     adr[j] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, j);
