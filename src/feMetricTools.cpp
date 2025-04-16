@@ -774,7 +774,7 @@ double solveErrorFunction(double k, double *v, double *w, double H[2][2], double
 
 double evaluateHomogeneousErrorPolynomial(const std::vector<double> &errorCoefficients,
   const int degree, const double xLoc, const double yLoc,
-  const bool applyBinomialCoefficients, MetricTensor &Hij)
+  const bool applyBinomialCoefficients, MetricTensor &/*Hij*/)
 {
 	// Using homogeneous polynomial factorization.
 	// See e.g. Coulaud & Loseille, Very High Order Anisotropic Metric-Based Mesh Adaptation in 3D
@@ -829,7 +829,7 @@ double evaluateHomogeneousErrorPolynomial(const std::vector<double> &errorCoeffi
       exit(-1);
     }
 
-    for(int i = 0; i < errorCoefficients.size(); i++, expx--, expy++) {
+    for(size_t i = 0; i < errorCoefficients.size(); i++, expx--, expy++) {
       res2 += coeff[i] * errorCoefficients[i] * pow(xLoc, expx) * pow(yLoc, expy);
     }
   } else {
@@ -837,7 +837,7 @@ double evaluateHomogeneousErrorPolynomial(const std::vector<double> &errorCoeffi
     // This is used when adapting for the H1 seminorm for P3+,
     // where the full coefficients of the gradient of the error
     // polynomial are given.
-    for(int i = 0; i < errorCoefficients.size(); i++, expx--, expy++) {
+    for(size_t i = 0; i < errorCoefficients.size(); i++, expx--, expy++) {
       res2 += errorCoefficients[i] * pow(xLoc, expx) * pow(yLoc, expy);
     }
   }
@@ -964,12 +964,39 @@ void computeLvl1Curved(double K1, double K2, double *g1, double *g2, double Hij[
   }
 }
 
+void printSoplexErrorMessage(linearProblem &myLP)
+{
+  switch(myLP.stat) {
+    case SPxSolver::ERROR:feInfo("Soplex status: an error occured"); break;
+    case SPxSolver::NO_RATIOTESTER: feInfo("No ratiotester loaded"); break;
+    case SPxSolver::NO_PRICER: feInfo("No pricer loaded"); break;
+    case SPxSolver::NO_SOLVER: feInfo("No linear solver loaded"); break;
+    case SPxSolver::NOT_INIT: feInfo("not initialised error"); break;
+    case SPxSolver::ABORT_EXDECOMP: feInfo("solve() aborted to exit decomposition simplex"); break;
+    case SPxSolver::ABORT_DECOMP: feInfo("solve() aborted due to commence decomposition simplex"); break;
+    case SPxSolver::ABORT_CYCLING: feInfo("solve() aborted due to detection of cycling."); break;
+    case SPxSolver::ABORT_TIME: feInfo("solve() aborted due to time limit."); break;
+    case SPxSolver::ABORT_ITER: feInfo("solve() aborted due to iteration limit."); break;
+    case SPxSolver::ABORT_VALUE: feInfo("solve() aborted due to objective limit."); break;
+    case SPxSolver::SINGULAR: feInfo("Basis is singular, numerical troubles?"); break;
+    case SPxSolver::NO_PROBLEM: feInfo("No Problem has been loaded."); break;
+    case SPxSolver::REGULAR: feInfo("LP has a usable Basis (maybe LP is changed)."); break;
+    case SPxSolver::RUNNING: feInfo("algorithm is running"); break;
+    case SPxSolver::UNKNOWN: feInfo("nothing known on loaded problem."); break;
+    case SPxSolver::OPTIMAL: feInfo("LP has been solved to optimality."); break;
+    case SPxSolver::UNBOUNDED: feInfo("LP has been proven to be primal unbounded."); break;
+    case SPxSolver::INFEASIBLE: feInfo("LP has been proven to be primal infeasible."); break;
+    case SPxSolver::INForUNBD: feInfo("LP is primal infeasible or unbounded."); break;
+    case SPxSolver::OPTIMAL_UNSCALED_VIOLATIONS: feInfo("LP has beed solved to optimality but unscaled solution contains violations."); break;
+  }
+}
+
 bool solveLP(linearProblem &myLP, Eigen::Matrix2d &L)
 {
   // Removing/adding constraint rows seems to be much faster
   // than changing rows from one solve to the next
   double xi, yi, normSquared, lhs;
-  for(int i = 0; i < myLP.numConstraints; ++i) {
+  for(size_t i = 0; i < myLP.numConstraints; ++i) {
     xi = myLP.constraints[2 * i];
     yi = myLP.constraints[2 * i + 1];
     normSquared = xi * xi + yi * yi;
@@ -1010,29 +1037,7 @@ bool solveLP(linearProblem &myLP, Eigen::Matrix2d &L)
     // feInfo("L = %+-1.16e - %+-1.16e - %+-1.16e", L(0,0), L(0,1), L(1,1));
     return true;
   } else {
-    switch(myLP.stat) {
-      case SPxSolver::ERROR:feInfo("Soplex status: an error occured"); break;
-      case SPxSolver::NO_RATIOTESTER: feInfo("No ratiotester loaded"); break;
-      case SPxSolver::NO_PRICER: feInfo("No pricer loaded"); break;
-      case SPxSolver::NO_SOLVER: feInfo("No linear solver loaded"); break;
-      case SPxSolver::NOT_INIT: feInfo("not initialised error"); break;
-      case SPxSolver::ABORT_EXDECOMP: feInfo("solve() aborted to exit decomposition simplex"); break;
-      case SPxSolver::ABORT_DECOMP: feInfo("solve() aborted due to commence decomposition simplex"); break;
-      case SPxSolver::ABORT_CYCLING: feInfo("solve() aborted due to detection of cycling."); break;
-      case SPxSolver::ABORT_TIME: feInfo("solve() aborted due to time limit."); break;
-      case SPxSolver::ABORT_ITER: feInfo("solve() aborted due to iteration limit."); break;
-      case SPxSolver::ABORT_VALUE: feInfo("solve() aborted due to objective limit."); break;
-      case SPxSolver::SINGULAR: feInfo("Basis is singular, numerical troubles?"); break;
-      case SPxSolver::NO_PROBLEM: feInfo("No Problem has been loaded."); break;
-      case SPxSolver::REGULAR: feInfo("LP has a usable Basis (maybe LP is changed)."); break;
-      case SPxSolver::RUNNING: feInfo("algorithm is running"); break;
-      case SPxSolver::UNKNOWN: feInfo("nothing known on loaded problem."); break;
-      case SPxSolver::OPTIMAL: feInfo("LP has been solved to optimality."); break;
-      case SPxSolver::UNBOUNDED: feInfo("LP has been proven to be primal unbounded."); break;
-      case SPxSolver::INFEASIBLE: feInfo("LP has been proven to be primal infeasible."); break;
-      case SPxSolver::INForUNBD: feInfo("LP is primal infeasible or unbounded."); break;
-      case SPxSolver::OPTIMAL_UNSCALED_VIOLATIONS: feInfo("LP has beed solved to optimality but unscaled solution contains violations."); break;
-    }
+    if(!myLP.quietError) printSoplexErrorMessage(myLP);
     return false;
   }
 }
@@ -1040,7 +1045,7 @@ bool solveLP(linearProblem &myLP, Eigen::Matrix2d &L)
 // #define LOG_SIMPLEX_DEBUG
 
 bool computeMetricLogSimplexStraight(const double *x, const std::vector<double> &errorCoefficients,
-                                     const int degree, const int nThetaPerQuadrant,
+                                     const int degree, const int /*nThetaPerQuadrant*/,
                                      const int maxIter, const double tol,
                                      const bool applyBinomialCoefficients, MetricTensor &Qres,
                                      int &numIter, linearProblem &myLP)
@@ -1060,9 +1065,11 @@ bool computeMetricLogSimplexStraight(const double *x, const std::vector<double> 
     	1.);
   }
   fprintf(ff, "};\n"); fclose(ff);
+  #else
+  UNUSED(x);
   #endif
 
-  Eigen::Matrix2d Q, Qprev, Q12, Qm12, L, diff;
+  Eigen::Matrix2d Q, Qprev, Q12, L, diff;
 
   Q = Eigen::Matrix2d::Identity();
   L = Eigen::Matrix2d::Identity();
@@ -1118,7 +1125,7 @@ bool computeMetricLogSimplexStraight(const double *x, const std::vector<double> 
     } else {
 
       // LP solver returned an error : return the last valid Q
-      feWarning("LP solver returned an error at iteration %d.", iter);
+      if(!myLP.quietError) feWarning("LP solver returned an error at iteration %d.", iter);
       numIter = iter;
       Qres(0,0) = Q(0,0);
       Qres(0,1) = Q(0,1);
@@ -1151,7 +1158,7 @@ bool computeMetricLogSimplexStraight(const double *x, const std::vector<double> 
 }
 
 bool logSimplexOneIteration(const double *x, const std::vector<double> &errorCoefficients,
-                            const int degree, const int nThetaPerQuadrant, const bool applyBinomialCoefficients,
+                            const int degree, const int /*nThetaPerQuadrant*/, const bool applyBinomialCoefficients,
                             MetricTensor &Qres, linearProblem &myLP)
 {
   #if defined(LOG_SIMPLEX_DEBUG)
@@ -1169,6 +1176,8 @@ bool logSimplexOneIteration(const double *x, const std::vector<double> &errorCoe
       1.);
   }
   fprintf(ff, "};\n"); fclose(ff);
+  #else
+  UNUSED(x);
   #endif
 
   Eigen::Matrix2d L = Eigen::Matrix2d::Identity();
@@ -1278,9 +1287,11 @@ bool computeMetricLogSimplexCurved(const int vertex, double *x, double direction
       1.);
   }
   fprintf(ff, "};\n"); fclose(ff);
+  #else
+  UNUSED(x);
   #endif
 
-  Eigen::Matrix2d Q, Qprev, Q12, Qm12, L, diff;
+  Eigen::Matrix2d Q, Qprev, Q12, L, diff;
 
   Q = Eigen::Matrix2d::Identity();
   L = Eigen::Matrix2d::Identity();

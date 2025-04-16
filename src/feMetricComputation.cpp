@@ -242,7 +242,6 @@ feStatus feMetric::computeMetricsP2(std::vector<std::size_t> &nodeTags, std::vec
              "Computing metric tensors (ANISO_P2) for %d vertices...", nodeTags.size());
 
   size_t numVertices = nodeTags.size();
-  std::map<int, std::vector<double> > &errorCoeffAtVertices = _recoveredFields[0]->getErrorCoefficients();
 
 #if defined(HAVE_OMP)
 #pragma omp parallel
@@ -256,7 +255,7 @@ feStatus feMetric::computeMetricsP2(std::vector<std::size_t> &nodeTags, std::vec
     std::vector<double> errorCoeff(numCubicCoeff, 0.);
 
     std::vector<double> D3U_EXACT(8, 0.);
-    feFunctionArguments args;
+    feFunctionArguments args(_currentTime);
 
 // Compute bounded absolute value of upper bound Q at vertices (at nodetags)
 #if defined(HAVE_OMP)
@@ -284,7 +283,8 @@ feStatus feMetric::computeMetricsP2(std::vector<std::size_t> &nodeTags, std::vec
       } else {
 
         // Get the coefficients of the homogeneous error polynomial at vertex
-        std::vector<double> &errorCoeffAtVertex = errorCoeffAtVertices[_nodeTag2sequentialTag[nodeTags[i]]];
+        const std::map<int, std::vector<double> > &errorCoeffAtVertices = _recoveredFields[0]->getErrorCoefficients();
+        const std::vector<double> &errorCoeffAtVertex = errorCoeffAtVertices.at(_nodeTag2sequentialTag[nodeTags[i]]);
 
         for(size_t j = 0; j < numCubicCoeff; ++j) {
           errorCoeff[j] = errorCoeffAtVertex[j];
@@ -374,7 +374,7 @@ feStatus feMetric::computeMetricsP1_referenceSpace(std::vector<std::size_t> &nod
     double x[2];
     MetricTensor Qprev, Qtri, Mmud, Mud;
     std::vector<double> D2U_EXACT(4, 0.);
-    feFunctionArguments args;
+    feFunctionArguments args(_currentTime);
 
     // Initialize all metrics to identity for the first iteration
     if(setToIdentity) {
@@ -527,7 +527,7 @@ feStatus feMetric::computeMetricsP2_referenceSpace(std::vector<std::size_t> &nod
     double x[2];
     MetricTensor Qprev, Qtri, Mmud, Mud, foo;
     std::vector<double> D3U_EXACT(8, 0.);
-    feFunctionArguments args;
+    feFunctionArguments args(_currentTime);
 
     // Initialize all metrics to identity for the first iteration
     if(setToIdentity) {
@@ -660,6 +660,8 @@ feStatus feMetric::computeMetricsP2_referenceSpace(std::vector<std::size_t> &nod
 void setUpLinearProblem(linearProblem &myLP, feMetricOptions &options, int nTheta,
                         bool reset = false)
 {
+  myLP.quietError = false;
+
   if(reset) {
     myLP.problem.clearLPReal();
     myLP.lprowset.clear();
@@ -757,7 +759,7 @@ feStatus feMetric::computeMetricsP2_forGraphSurface(std::vector<std::size_t> &no
     double x[2];
     MetricTensor Q;
     std::vector<double> DU_EXACT(2, 0.), D2U_EXACT(4, 0.), D3U_EXACT(8, 0.);
-    feFunctionArguments args;
+    feFunctionArguments args(_currentTime);
 
 // Compute bounded absolute value of upper bound Q at vertices (at nodetags)
 #if defined(HAVE_OMP)
@@ -838,9 +840,6 @@ feStatus feMetric::computeMetricsPn(std::vector<std::size_t> &nodeTags, std::vec
 
 #if defined(HAVE_SOPLEX)
 
-  std::map<int, std::vector<double> > &errorCoeffAtVertices =
-    _recoveredFields[0]->getErrorCoefficients();
-
   bool OK = true;
 
   size_t numVertices = nodeTags.size();
@@ -862,7 +861,7 @@ feStatus feMetric::computeMetricsPn(std::vector<std::size_t> &nodeTags, std::vec
     std::vector<double> coeffGradErrorPolynomial(n * _options.polynomialDegree + 1, 0.);
 
     std::vector<double> D2U_EXACT(4, 0.), D3U_EXACT(8, 0.), D4U_EXACT(16, 0.), D5U_EXACT(32, 0.);
-    feFunctionArguments args;
+    feFunctionArguments args(_currentTime);
 
     int numIter;
     int nTheta = _options.logSimplexOptions.nThetaPerQuadrant;
@@ -941,9 +940,10 @@ feStatus feMetric::computeMetricsPn(std::vector<std::size_t> &nodeTags, std::vec
       } else {
 
         // Get the coefficients of the homogeneous error polynomial at vertex
-        std::vector<double> &errorCoeffAtVertex = errorCoeffAtVertices[_nodeTag2sequentialTag[nodeTags[i]]];
+        const std::map<int, std::vector<double> > &errorCoeffAtVertices = _recoveredFields[0]->getErrorCoefficients();
+        const std::vector<double> &errorCoeffAtVertex = errorCoeffAtVertices.at(_nodeTag2sequentialTag[nodeTags[i]]);
 
-        for(size_t j = 0; j < _options.polynomialDegree + 1; ++j) {
+        for(int j = 0; j < _options.polynomialDegree + 1; ++j) {
           errorCoeff[j] = errorCoeffAtVertex[j];
         }
 
@@ -981,6 +981,9 @@ feStatus feMetric::computeMetricsPn(std::vector<std::size_t> &nodeTags, std::vec
       }
 
       bool res = false;
+
+      // Print SoPlex error only if multiple consecutive fails with increasing constraints
+      myLP.quietError = true;
 
       // This is the degree-1 of the ERROR POLYNOMIAL
       // I do this degree + 1 when evaluating the polynomial in the logsimplex 
@@ -1136,12 +1139,13 @@ feStatus feMetric::computeMetricsPn(std::vector<std::size_t> &nodeTags, std::vec
       int retry = 0, maxTry = 5;
       while(!res && retry < maxTry) {
         nTheta *= 2;
-        feInfoCond(FE_VERBOSE >= VERBOSE_MODERATE,
+        feInfoCond(FE_VERBOSE > VERBOSE_MODERATE,
                    "Could not compute metric. Trying again with %d constraints.", nTheta);
         setUpLinearProblem(myLP, _options, nTheta, true);
+        myLP.quietError = true;
         res = computeMetricLogSimplexStraight(x, errorCoeff, polynomialDegreeMinusOne, nTheta,
                                               maxIter, tol, applyBinomialCoefficients, Q, numIter, myLP);
-        if(res) feInfoCond(FE_VERBOSE >= VERBOSE_MODERATE, "Success");
+        if(res) feInfoCond(FE_VERBOSE > VERBOSE_MODERATE, "Success");
         retry++;
       }
 
@@ -1157,25 +1161,33 @@ feStatus feMetric::computeMetricsPn(std::vector<std::size_t> &nodeTags, std::vec
           if(isotropic) {
             _metricTensorAtNodetags[nodeTags[i]] =
               Q.boundEigenvaluesOfAbsIsotropic(_lambdaMin, _lambdaMax);
-          } else
+              _metrics[_nodeTag2sequentialTag[_nodeTags[i]]] = Q.boundEigenvaluesOfAbsIsotropic(_lambdaMin, _lambdaMax);
+          } else {
             _metricTensorAtNodetags[nodeTags[i]] = Q.boundEigenvaluesOfAbs(_lambdaMin, _lambdaMax);
+            _metrics[_nodeTag2sequentialTag[_nodeTags[i]]] = Q.boundEigenvaluesOfAbs(_lambdaMin, _lambdaMax);
+          }
         }
 
         // feInfoCond(FE_VERBOSE >= VERBOSE_MODERATE,
         //        "Computed metric in %2d iterations - vertex %6d/%6d",
         //        numIter, ++cnter, numVertices);
       } else {
-        // OK = false;
+        OK = false;
+        printSoplexErrorMessage(myLP);
+        feWarning("Could not compute a metric at (%+-1.5e - %+-1.5e) (vertex %d/%d)", x[0], x[1],
+                   i, nodeTags.size());
+
         #if defined(HAVE_OMP)
         #pragma omp critical
         #endif
-        Q(0,0) = _lambdaMin;
-        Q(0,1) = 0.;
-        Q(1,0) = 0.;
-        Q(1,1) = _lambdaMin;
-        _metricTensorAtNodetags[nodeTags[i]] = Q.boundEigenvaluesOfAbs(_lambdaMin, _lambdaMax);
-        feWarning("Could not compute a metric at (%+-1.5e - %+-1.5e) (vertex %d/%d)", x[0], x[1],
-                   i, nodeTags.size());
+        {
+          Q(0,0) = _lambdaMin;
+          Q(0,1) = 0.;
+          Q(1,0) = 0.;
+          Q(1,1) = _lambdaMin;
+          _metricTensorAtNodetags[nodeTags[i]] = Q.boundEigenvaluesOfAbs(_lambdaMin, _lambdaMax);
+          _metrics[_nodeTag2sequentialTag[_nodeTags[i]]] = Q.boundEigenvaluesOfAbs(_lambdaMin, _lambdaMax);
+        }
       }
     }
   }
@@ -1497,12 +1509,6 @@ feStatus feMetric::computeMetricsCurvedLogSimplex(std::vector<std::size_t> &node
 
   size_t numVertices = nodeTags.size();
 
-  // Compute the principal sizes
-  const int deg = _options.polynomialDegree;
-  const double lMin = _options.hMin;
-  const double lMax = _options.hMax;
-  const double eps = _options.eTargetError;
-
   bool OK = true;
 
   // FILE *directionFile;
@@ -1543,8 +1549,8 @@ feStatus feMetric::computeMetricsCurvedLogSimplex(std::vector<std::size_t> &node
       // Get the direction of the gradient
       double directionsGrad[2];
       computeDirectionFieldFromGradient(x, _nodeTag2sequentialTag[nodeTags[i]], du, 1e-8, directionsGrad);
-      double C = directionsGrad[0];
-      double S = directionsGrad[1];
+      // double C = directionsGrad[0];
+      // double S = directionsGrad[1];
       // #pragma omp critical
       // {
       //   fprintf(directionFile, "VP(%g,%g,%g){%g,%g,%g};\n", x[0], x[1], 0.,  C, S, 0.);
@@ -1943,10 +1949,10 @@ feStatus feMetric::computeMetricsCurvedReferenceSpace(std::vector<std::size_t> &
         std::vector<double> pos(3, 0.);
 
         #if defined(HAVE_SOPLEX)
-        int numIter;
+        // int numIter;
         int nTheta = _options.logSimplexOptions.nThetaPerQuadrant;
-        int maxIter = _options.logSimplexOptions.maxIter;
-        double tol = _options.logSimplexOptions.tol;
+        // int maxIter = _options.logSimplexOptions.maxIter;
+        // double tol = _options.logSimplexOptions.tol;
         linearProblem myLP;
         setUpLinearProblem(myLP, _options, nTheta);
         #endif

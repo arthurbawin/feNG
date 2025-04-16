@@ -33,6 +33,7 @@ typedef struct {
   int numLoopsUniformErrorCurve;
   Eigen::VectorXd lvl1PolynomialCoeffs_minus;
   Eigen::VectorXd lvl1PolynomialCoeffs_plus;
+  bool quietError;
 } linearProblem;
 #endif
 
@@ -93,6 +94,8 @@ void metricHechtKuate(int nbpoints, double *x, double *y, double &A, double &B, 
                       int degreeSolution);
 
 #if defined(HAVE_SOPLEX)
+void printSoplexErrorMessage(linearProblem &myLP);
+
 bool computeMetricLogSimplexStraight(const double *x, const std::vector<double> &errorCoefficients,
                                      const int degree, const int nThetaPerQuadrant,
                                      const int maxIter, const double tol, 

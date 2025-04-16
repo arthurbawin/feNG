@@ -328,21 +328,21 @@ public:
   {
     for(auto n : _nodeTags) {
       _metricTensorAtNodetags.at(n).assignMatrixFrom(other.at(n));
-      _metrics[_nodeTag2sequentialTag[n]].assignMatrixFrom(other.at(n));
+      _metrics.at(_nodeTag2sequentialTag[n]).assignMatrixFrom(other.at(n));
     }
   }
   void setMetricsToZero()
   {
     for(auto n : _nodeTags) {
       _metricTensorAtNodetags.at(n).setToZero();
-      _metrics[_nodeTag2sequentialTag[n]].setToZero();
+      _metrics.at(_nodeTag2sequentialTag[n]).setToZero();
     }
   }
   void setMetricsToIdentity()
   {
     for(auto n : _nodeTags) {
       _metricTensorAtNodetags.at(n).setToIdentity();
-      _metrics[_nodeTag2sequentialTag[n]].setToIdentity();
+      _metrics.at(_nodeTag2sequentialTag[n]).setToIdentity();
     }
   }
 

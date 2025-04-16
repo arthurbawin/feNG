@@ -184,17 +184,15 @@ double feMetric::computeIntegralOfDeterminant(const double exponentInIntegral)
   // }
   // feInfoCond(FE_VERBOSE > 0, "I1 = %+-1.16e in %f s", I, toc());
 
-  tic();
+  // tic();
   double I = 0.;
   #if defined(HAVE_OMP)
   #pragma omp parallel
   #endif
   {
     double xsi[2];
-    MetricTensor M_interpolated;
+    // MetricTensor M_interpolated;
     int tags[MAX_VERTICES_BACKMESH];
-
-    // feMesh::cncConstIter it2 = _mesh->first2DCnc();
 
     for(feMesh::cncConstIter it = _mesh->first2DCnc(); it != _mesh->last2DCnc(); ++it)
     {
@@ -654,6 +652,7 @@ feStatus feMetric::computeMetrics()
       exponentInIntegral = p * (deg + 1.0) / (2.* (p * (deg + 1.0) + n));
       exponentForDeterminant = -1. / (p * (deg + 1.) + n);
       feInfo("Exponents for scaling for L%2.1f norm = %+-1.4e - %+-1.4e", p, exponentForDeterminant, exponentInIntegral);
+      feInfo("Target number of vertices = %+-1.4e", N);
     } else {
       exponentInIntegral = p * deg / (2.* (p * deg + n));
       exponentForDeterminant = -1. / (p * deg + n);
