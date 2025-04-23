@@ -110,7 +110,7 @@ void DCBDFContainer::computeDCCoefficients(const std::vector<double> &deltaT)
 {
   // Coefficients for DC methods based on BDF1
   if(_orderBDF == 1) {
-    assert(_correctionCoefficients.size() == _order - 1);
+    assert(_correctionCoefficients.size() == (size_t) _order - 1);
 
     switch(_order)
     {
@@ -138,7 +138,7 @@ void DCBDFContainer::computeDCCoefficients(const std::vector<double> &deltaT)
 
   // Coefficients for DC methods based on BDF2
   if(_orderBDF == 2) {
-    assert(_correctionCoefficients.size() == _order - 2);
+    assert(_correctionCoefficients.size() == (size_t) _order - 2);
 
     switch(_order)
     {
@@ -159,7 +159,7 @@ void DCBDFContainer::computeFirstDCCoefficients(const std::vector<double> &delta
 {
   // Starting coefficients for DC methods based on BDF1
   if(_orderBDF == 1) {
-    assert(_correctionCoefficients.size() == _order - 1);
+    assert(_correctionCoefficients.size() == (size_t) _order - 1);
 
     switch(_order)
     {
@@ -185,7 +185,7 @@ void DCBDFContainer::computeFirstDCCoefficients(const std::vector<double> &delta
 
   // Coefficients for DC methods based on BDF2
   if(_orderBDF == 2) {
-    assert(_correctionCoefficients.size() == _order - 2);
+    assert(_correctionCoefficients.size() == (size_t) _order - 2);
 
     switch(_order)
     {
