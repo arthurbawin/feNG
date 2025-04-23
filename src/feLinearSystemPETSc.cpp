@@ -540,7 +540,8 @@ void feLinearSystemPETSc::setResidualToZero()
 #endif
 }
 
-void feLinearSystemPETSc::assembleMatrices(feSolution *sol)
+void feLinearSystemPETSc::assembleMatrices(const feSolution *sol,
+                                           const bool assembleOnlyTransientMatrices)
 {
 #if defined(HAVE_PETSC)
 
@@ -551,130 +552,135 @@ void feLinearSystemPETSc::assembleMatrices(feSolution *sol)
   PetscCallAbort(PETSC_COMM_WORLD, MatGetOwnershipRange(_A, &low, &high));
 
   tic();
-  for(feInt eq = 0; eq < _numMatrixForms; ++eq) {
+  for(feInt eq = 0; eq < _numMatrixForms; ++eq)
+  {
     feBilinearForm *f = _formMatrices[eq];
-    const feCncGeo *cnc = f->getCncGeo();
-    int numColors = cnc->getNbColor();
-    const std::vector<int> &numElemPerColor = cnc->getNbElmPerColor();
-    const std::vector<std::vector<int> > &listElmPerColor = cnc->getListElmPerColor();
-    int numElementsInColor;
-    std::vector<int> listElmC;
 
-    for(int iColor = 0; iColor < numColors; ++iColor) {
-      numElementsInColor = numElemPerColor[iColor];
-      listElmC = listElmPerColor[iColor];
+    if(!assembleOnlyTransientMatrices || (assembleOnlyTransientMatrices && f->isTransientMatrix()))
+    {
+      const feCncGeo *cnc = f->getCncGeo();
+      int numColors = cnc->getNbColor();
+      const std::vector<int> &numElemPerColor = cnc->getNbElmPerColor();
+      const std::vector<std::vector<int> > &listElmPerColor = cnc->getListElmPerColor();
+      int numElementsInColor;
+      std::vector<int> listElmC;
 
-      int elm;
-      feInt sizeI;
-      feInt sizeJ;
-      std::vector<feInt> niElm;
-      std::vector<feInt> njElm;
-      std::vector<feInt> adrI;
-      std::vector<feInt> adrJ;
-      std::vector<PetscScalar> values;
+      for(int iColor = 0; iColor < numColors; ++iColor) {
+        numElementsInColor = numElemPerColor[iColor];
+        listElmC = listElmPerColor[iColor];
 
-#if defined(HAVE_OMP)
-#pragma omp parallel for private(elm, f, niElm, njElm, sizeI, sizeJ, adrI, adrJ, values)
-#endif
-      for(int iElm = 0; iElm < numElementsInColor; ++iElm) {
-#if defined(HAVE_OMP)
-        int eqt = eq + omp_get_thread_num() * _numMatrixForms;
-        f = _formMatrices[eqt];
-#endif
-        elm = listElmC[iElm];
+        int elm;
+        feInt sizeI;
+        feInt sizeJ;
+        std::vector<feInt> niElm;
+        std::vector<feInt> njElm;
+        std::vector<feInt> adrI;
+        std::vector<feInt> adrJ;
+        std::vector<PetscScalar> values;
 
-        // Compute element-wise matrix
-        f->computeMatrix(sol, elm);
-        const double* const * const &Ae = f->getAe();
+  #if defined(HAVE_OMP)
+  #pragma omp parallel for private(elm, f, niElm, njElm, sizeI, sizeJ, adrI, adrJ, values)
+  #endif
+        for(int iElm = 0; iElm < numElementsInColor; ++iElm) {
+  #if defined(HAVE_OMP)
+          int eqt = eq + omp_get_thread_num() * _numMatrixForms;
+          f = _formMatrices[eqt];
+  #endif
+          elm = listElmC[iElm];
 
-        // Determine global assignment indices
-        adrI = f->getAdrI();
-        adrJ = f->getAdrJ();
-        sizeI = adrI.size();
-        niElm.reserve(sizeI);
-        for(feInt i = 0; i < sizeI; ++i) {
-          if(adrI[i] < _nInc) niElm.push_back(i);
-        }
-        sizeJ = adrJ.size();
-        njElm.reserve(sizeJ);
-        for(feInt i = 0; i < sizeJ; ++i) {
-          if(adrJ[i] < _nInc) njElm.push_back(i);
-        }
+          // Compute element-wise matrix
+          f->computeMatrix(sol, elm);
+          const double* const * const &Ae = f->getAe();
 
-        adrI.erase(std::remove_if(adrI.begin(), adrI.end(),
-                                  [this](const int &x) { return x >= this->_nInc; }),
-                   adrI.end());
-        adrJ.erase(std::remove_if(adrJ.begin(), adrJ.end(),
-                                  [this](const int &x) { return x >= this->_nInc; }),
-                   adrJ.end());
-
-        // //////////////////////////////////////////////////////////////////
-        // MPI_Comm_rank(PETSC_COMM_WORLD, &rank);
-        // if(iColor == 0 && iElm == 4) {
-        //   feInfo("sizes = %d - %d", adrI.size(), adrJ.size());
-        //   for(size_t i = 0; i < adrI.size(); ++i) {
-        //     feInfo("From P%d - A adri = %d - adrj = %d", rank, adrI[i], adrJ[i]);
-        //   }
-        // }
-        // MPI_Barrier(PETSC_COMM_WORLD);
-
-        // In addition remove row indices in adrI that are not owned by this proc
-        
-        auto it_nielm = niElm.begin();
-        for(auto it_i = adrI.begin();  it_i != adrI.end(); )
-        {
-          if(low <= (*it_i) && (*it_i) < high) {
-            // In owned range of rows : do nothing
-            ++it_i;
-            ++it_nielm;
-          } else {
-            // Erase in adrI only
-            it_i = adrI.erase(it_i);
-            it_nielm = niElm.erase(it_nielm);
+          // Determine global assignment indices
+          adrI = f->getAdrI();
+          adrJ = f->getAdrJ();
+          sizeI = adrI.size();
+          niElm.reserve(sizeI);
+          for(feInt i = 0; i < sizeI; ++i) {
+            if(adrI[i] < _nInc) niElm.push_back(i);
           }
-        }
-
-        // if(iColor == 0 && iElm == 4) {
-        //   int ranktoprint = 0;
-        //   while(ranktoprint < size) {
-        //     if(rank == ranktoprint) {
-        //       feInfo("sizes after erase on P%d = %d - %d", rank, adrI.size(), adrJ.size());
-        //       for(size_t i = 0; i < adrI.size(); ++i) {
-        //         for(size_t j = 0; j < adrJ.size(); ++j) {
-        //           feInfo("proc %d - range %d - %d - assigning at (%d, %d)", rank, Istart, Iend, adrI[i], adrJ[j]);
-        //         }
-        //       }
-        //     }
-
-        //     ranktoprint++;
-        //     MPI_Barrier(PETSC_COMM_WORLD);
-        //   }
-        // }
-        // //////////////////////////////////////////////////////////////////
-
-        // Flatten Ae at relevant indices
-        sizeI = adrI.size();
-        sizeJ = adrJ.size();
-
-        if(!(adrI.size() == niElm.size())){ feErrorMsg(FE_STATUS_ERROR, "assert failed : adrI size = %d - niElm size = %d", adrI.size(), niElm.size()); };
-        if(!(adrJ.size() == njElm.size())){ feErrorMsg(FE_STATUS_ERROR, "assert failed : adrJ size = %d - njElm size = %d", adrJ.size(), njElm.size()); };
-
-        values.resize(sizeI * sizeJ);
-        for(feInt i = 0; i < sizeI; ++i) {
-          for(feInt j = 0; j < sizeJ; ++j) {
-            values[sizeJ * i + j] = Ae[niElm[i]][njElm[j]];
+          sizeJ = adrJ.size();
+          njElm.reserve(sizeJ);
+          for(feInt i = 0; i < sizeJ; ++i) {
+            if(adrJ[i] < _nInc) njElm.push_back(i);
           }
-        }
 
-// Increment global matrix
-// Seems to be issues without the critical, even though it should not race 
-#if defined(HAVE_OMP)
-#pragma omp critical
-#endif
-        PetscCallAbort(PETSC_COMM_WORLD, 
-          MatSetValues(_A, adrI.size(), adrI.data(), adrJ.size(), adrJ.data(), values.data(), ADD_VALUES));
-        niElm.clear();
-        njElm.clear();
+          adrI.erase(std::remove_if(adrI.begin(), adrI.end(),
+                                    [this](const int &x) { return x >= this->_nInc; }),
+                     adrI.end());
+          adrJ.erase(std::remove_if(adrJ.begin(), adrJ.end(),
+                                    [this](const int &x) { return x >= this->_nInc; }),
+                     adrJ.end());
+
+          // //////////////////////////////////////////////////////////////////
+          // MPI_Comm_rank(PETSC_COMM_WORLD, &rank);
+          // if(iColor == 0 && iElm == 4) {
+          //   feInfo("sizes = %d - %d", adrI.size(), adrJ.size());
+          //   for(size_t i = 0; i < adrI.size(); ++i) {
+          //     feInfo("From P%d - A adri = %d - adrj = %d", rank, adrI[i], adrJ[i]);
+          //   }
+          // }
+          // MPI_Barrier(PETSC_COMM_WORLD);
+
+          // In addition remove row indices in adrI that are not owned by this proc
+          
+          auto it_nielm = niElm.begin();
+          for(auto it_i = adrI.begin();  it_i != adrI.end(); )
+          {
+            if(low <= (*it_i) && (*it_i) < high) {
+              // In owned range of rows : do nothing
+              ++it_i;
+              ++it_nielm;
+            } else {
+              // Erase in adrI only
+              it_i = adrI.erase(it_i);
+              it_nielm = niElm.erase(it_nielm);
+            }
+          }
+
+          // if(iColor == 0 && iElm == 4) {
+          //   int ranktoprint = 0;
+          //   while(ranktoprint < size) {
+          //     if(rank == ranktoprint) {
+          //       feInfo("sizes after erase on P%d = %d - %d", rank, adrI.size(), adrJ.size());
+          //       for(size_t i = 0; i < adrI.size(); ++i) {
+          //         for(size_t j = 0; j < adrJ.size(); ++j) {
+          //           feInfo("proc %d - range %d - %d - assigning at (%d, %d)", rank, Istart, Iend, adrI[i], adrJ[j]);
+          //         }
+          //       }
+          //     }
+
+          //     ranktoprint++;
+          //     MPI_Barrier(PETSC_COMM_WORLD);
+          //   }
+          // }
+          // //////////////////////////////////////////////////////////////////
+
+          // Flatten Ae at relevant indices
+          sizeI = adrI.size();
+          sizeJ = adrJ.size();
+
+          if(!(adrI.size() == niElm.size())){ feErrorMsg(FE_STATUS_ERROR, "assert failed : adrI size = %d - niElm size = %d", adrI.size(), niElm.size()); };
+          if(!(adrJ.size() == njElm.size())){ feErrorMsg(FE_STATUS_ERROR, "assert failed : adrJ size = %d - njElm size = %d", adrJ.size(), njElm.size()); };
+
+          values.resize(sizeI * sizeJ);
+          for(feInt i = 0; i < sizeI; ++i) {
+            for(feInt j = 0; j < sizeJ; ++j) {
+              values[sizeJ * i + j] = Ae[niElm[i]][njElm[j]];
+            }
+          }
+
+  // Increment global matrix
+  // Seems to be issues without the critical, even though it should not race 
+  #if defined(HAVE_OMP)
+  #pragma omp critical
+  #endif
+          PetscCallAbort(PETSC_COMM_WORLD, 
+            MatSetValues(_A, adrI.size(), adrI.data(), adrJ.size(), adrJ.data(), values.data(), ADD_VALUES));
+          niElm.clear();
+          njElm.clear();
+        }
       }
     }
   }
@@ -696,11 +702,11 @@ void feLinearSystemPETSc::assembleMatrices(feSolution *sol)
     PetscViewerDestroy(&viewer);
   }
 #else
-  UNUSED(sol);
+  UNUSED(sol, assembleOnlyTransientMatrices);
 #endif
 }
 
-void feLinearSystemPETSc::assembleResiduals(feSolution *sol)
+void feLinearSystemPETSc::assembleResiduals(const feSolution *sol)
 {
 #if defined(HAVE_PETSC)
 
@@ -798,15 +804,16 @@ void feLinearSystemPETSc::assembleResiduals(feSolution *sol)
 #endif
 }
 
-void feLinearSystemPETSc::assemble(feSolution *sol)
+void feLinearSystemPETSc::assemble(const feSolution *sol,
+                                   const bool assembleOnlyTransientMatrices)
 {
   if(_recomputeMatrix) {
-    this->assembleMatrices(sol);
+    this->assembleMatrices(sol, assembleOnlyTransientMatrices);
   }
   this->assembleResiduals(sol);
 }
 
-void feLinearSystemPETSc::constrainEssentialComponents(feSolution *sol)
+void feLinearSystemPETSc::constrainEssentialComponents(const feSolution *sol)
 {
 #if defined(HAVE_PETSC)
   tic();
@@ -1018,11 +1025,12 @@ bool feLinearSystemPETSc::solve(double *normSolution, double *normRHS, double *n
 #endif
 }
 
-void feLinearSystemPETSc::correctSolution(feSolution *sol)
+void feLinearSystemPETSc::correctSolution(feSolution *sol,
+                                          const bool correctSolutionDot)
 {
 #if defined(HAVE_PETSC)
 
-  std::vector<double> &solArray = sol->getSolutionReference();
+  std::vector<double> &solArray = correctSolutionDot ? sol->getSolutionDot() : sol->getSolution();
 
   PetscMPIInt rank;
   MPI_Comm_rank(PETSC_COMM_WORLD, &rank);
@@ -1042,7 +1050,7 @@ void feLinearSystemPETSc::correctSolution(feSolution *sol)
   MPI_Allgatherv(_ownedSolution, high-low, MPI_DOUBLE, solArray.data(),
     _numOwnedRows, _ownedLowerBounds, MPI_DOUBLE, PETSC_COMM_WORLD);
 #else
-  UNUSED(sol);
+  UNUSED(sol, correctSolutionDot);
 #endif
 }
 

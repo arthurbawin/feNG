@@ -177,11 +177,10 @@ protected:
   bool _computeMatrixWithFD = false;
   // Does this form have an elementary matrix to assemble?
   bool _hasMatrix = false;
+  // Is this form associated to a d/dt operator?
+  bool _isTransientMatrix = false;
   // Is the computation thread safe?
   bool _isThreadSafe = true;
-
-  // Physical coordinates of a node
-  // std::vector<double> _pos;
 
 public:
   // Quadrature rule
@@ -195,7 +194,6 @@ public:
   // Do not call directly, call derived classes instead
   feSysElm(int dim, int nFields, elementSystemType ID, bool hasMatrix)
     : _ID(ID), _dim(dim), _nFields(nFields), _hasMatrix(hasMatrix)
-  // , _pos(3, 0.)
   {
     _fieldsLayoutI.resize(1);
     _fieldsLayoutJ.resize(1);
@@ -213,6 +211,7 @@ public:
   bool computeMatrixWithFD() const { return _computeMatrixWithFD; }
   void setComputeMatrixWithFD(bool flag) { _computeMatrixWithFD = flag; }
   bool hasMatrix() const { return _hasMatrix; }
+  bool isTransientMatrix() const { return _isTransientMatrix; }
   bool isThreadSafe() const { return _isThreadSafe; }
 
   virtual void createElementarySystem(std::vector<feSpace *> &spaces) { UNUSED(spaces); };
@@ -438,7 +437,7 @@ public:
 
 //
 // Mass matrix for one vector-valued variable tested with the test functions
-// of another vector-valued variable"
+// of another vector-valued variable
 // Matrix and residual
 //
 //  /
@@ -527,6 +526,7 @@ public:
   feSysElm_TransientMass(feFunction *coeff) : feSysElm(-1, 1, TRANSIENT_MASS, true), _coeff(coeff)
   {
     _computeMatrixWithFD = false;
+    _isTransientMatrix = true;
   };
   ~feSysElm_TransientMass(){};
   void createElementarySystem(std::vector<feSpace *> &space);
@@ -559,6 +559,7 @@ public:
     : feSysElm(-1, 2, MIXED_TRANSIENT_MASS, true), _coeff(coeff)
   {
     _computeMatrixWithFD = true;
+    _isTransientMatrix = true;
   };
   ~feSysElm_MixedTransientMass(){};
   void createElementarySystem(std::vector<feSpace *> &space);
@@ -590,7 +591,8 @@ public:
   feSysElm_TransientVectorMass(feFunction *coeff)
     : feSysElm(-1, 1, TRANSIENT_VECTOR_MASS, true), _coeff(coeff)
   {
-    _computeMatrixWithFD = true;
+    _computeMatrixWithFD = false;
+    _isTransientMatrix = true;
   };
   ~feSysElm_TransientVectorMass(){};
   void createElementarySystem(std::vector<feSpace *> &space);

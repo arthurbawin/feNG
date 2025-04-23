@@ -272,12 +272,6 @@ void feSysElm_TransientVectorMass::computeBe(feBilinearForm *form)
       form->_Be[i] -= coeff * _dudtdotphi_i[i] * jac * _wQuad[k];
     }
   }
-
-  // if(form->_numElem == 10) {
-  //   feInfo("%s - Local RHS on elem 10 :", toString(_ID).data());
-  //   for(int i = 0; i < form->_M; ++i)
-  //     feInfo("B[%2d] = %+-1.10e", i, form->_Be[i]);
-  // }
 }
 
 // -----------------------------------------------------------------------------

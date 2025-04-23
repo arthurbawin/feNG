@@ -46,7 +46,7 @@ feSolutionContainer::feSolutionContainer(int nSol, double tn, int nDOF)
   }
 
   _cn.resize(3, 0.);
-  _d.resize(_nDofs);
+  _d.resize(_nDofs, 0.);
 }
 
 feSolutionContainer::feSolutionContainer(int nSol, double tn, feMetaNumber *metaNumber)
@@ -66,7 +66,7 @@ feSolutionContainer::feSolutionContainer(int nSol, double tn, feMetaNumber *meta
   }
 
   _cn.resize(3, 0.);
-  _d.resize(_nDofs);
+  _d.resize(_nDofs, 0.);
 }
 
 void feSolutionContainer::setCurrentSolution(const feSolution *other)
@@ -106,7 +106,157 @@ void feSolutionContainer::setBDFCoefficients(const std::vector<double> &coeff)
   } 
 }
 
-void feSolutionContainer::computeCurrentSolDot(feLinearSystem* /* linearSystem */)
+void DCBDFContainer::computeDCCoefficients(const std::vector<double> &deltaT)
+{
+  // Coefficients for DC methods based on BDF1
+  if(_orderBDF == 1) {
+    assert(_correctionCoefficients.size() == _order - 1);
+
+    switch(_order)
+    {
+      case 2: // DC2/BDF1
+        _correctionCoefficients[0][0] =  1. / deltaT[0];
+        _correctionCoefficients[0][1] = -1. / deltaT[0];
+        break;
+      case 3: // DC3/BDF1
+        // a_2i coefficients
+        _correctionCoefficients[0][0] = (2.*deltaT[0] + deltaT[1])/(deltaT[0]*(deltaT[0] + deltaT[1]));
+        _correctionCoefficients[0][1] = (-deltaT[0] - deltaT[1])/(deltaT[0]*deltaT[1]);
+        _correctionCoefficients[0][2] = deltaT[0]/(deltaT[1]*(deltaT[0] + deltaT[1]));
+
+        // b_2i coefficients
+        _correctionCoefficients[1][0] = (2./deltaT[0]) * (1/(deltaT[0] +deltaT[1]));
+        _correctionCoefficients[1][1] = -2./(deltaT[0]*deltaT[1]);
+        _correctionCoefficients[1][2] = (2./deltaT[1]) * (1/(deltaT[0] +deltaT[1]));
+        break;
+      default:
+        feErrorMsg(FE_STATUS_ERROR, "Cannot compute DC coefficients for method of order %d",
+          _order);
+        exit(-1);
+    }
+  }
+
+  // Coefficients for DC methods based on BDF2
+  if(_orderBDF == 2) {
+    assert(_correctionCoefficients.size() == _order - 2);
+
+    switch(_order)
+    {
+      case 3: // DC3/BDF2
+        _correctionCoefficients[0][0] =  2. / (deltaT[0] * (deltaT[0] + deltaT[1]));
+        _correctionCoefficients[0][1] = -2. / (deltaT[0] * deltaT[1]);
+        _correctionCoefficients[0][2] =  2. / (deltaT[1] * (deltaT[0] + deltaT[1]));
+        break;
+      default:
+        feErrorMsg(FE_STATUS_ERROR, "Cannot compute DC coefficients for method of order %d",
+          _order);
+        exit(-1);
+    }
+  }
+}
+
+void DCBDFContainer::computeFirstDCCoefficients(const std::vector<double> &deltaT)
+{
+  // Starting coefficients for DC methods based on BDF1
+  if(_orderBDF == 1) {
+    assert(_correctionCoefficients.size() == _order - 1);
+
+    switch(_order)
+    {
+      // DC2/BDF1 is self-starting
+
+      case 3: // DC3/BDF1
+        // a_2i coefficients
+        _correctionCoefficients[0][0] =              deltaT[1]  / (deltaT[0]*(deltaT[0] + deltaT[1]));
+        _correctionCoefficients[0][1] = (deltaT[0] - deltaT[1]) / (deltaT[0]*deltaT[1]) ;
+        _correctionCoefficients[0][2] =             -deltaT[0]  / (deltaT[1]*(deltaT[0] + deltaT[1]));
+
+        // b_2i coefficients (same as following time steps)
+        _correctionCoefficients[1][0] = (2./deltaT[0]) * (1/(deltaT[0] +deltaT[1]));
+        _correctionCoefficients[1][1] = -2./(deltaT[0]*deltaT[1]);
+        _correctionCoefficients[1][2] = (2./deltaT[1]) * (1/(deltaT[0] +deltaT[1]));
+        break;
+      default:
+        feErrorMsg(FE_STATUS_ERROR, "Cannot compute DC coefficients for method of order %d",
+          _order);
+        exit(-1);
+    }
+  }
+
+  // Coefficients for DC methods based on BDF2
+  if(_orderBDF == 2) {
+    assert(_correctionCoefficients.size() == _order - 2);
+
+    switch(_order)
+    {
+      case 3: // DC3/BDF2
+        _correctionCoefficients[0][0] =  2. / (deltaT[0] * (deltaT[0] + deltaT[1]));
+        _correctionCoefficients[0][1] = -2. / (deltaT[0] * deltaT[1]);
+        _correctionCoefficients[0][2] =  2. / (deltaT[1] * (deltaT[0] + deltaT[1]));
+        break;
+      default:
+        feErrorMsg(FE_STATUS_ERROR, "Cannot compute DC coefficients for method of order %d",
+          _order);
+        exit(-1);
+    }
+  }
+}
+
+static int factorial(const int n)
+{
+  int f = 1;
+  for(int i = 1; i <= n; ++i)
+    f *= i;
+  return f;
+}
+
+void DCBDFContainer::computeDCCorrection(const BDFContainer &bdfcontainer,
+                                         const std::vector<double> &deltaT)
+{
+  // Reset
+  std::fill(_d.begin(), _d.end(), 0.);
+
+  // The number of solutions stored in the BDF or DC container
+  // one order lower, used to compute the correction
+  const int nTimeSolutions = bdfcontainer.getNbSol();
+  const std::vector<double> &cn = bdfcontainer.getBDFCoefficients();
+
+  double factor = 0., sign = 1.;
+
+  for(size_t k = 0; k < _correctionCoefficients.size(); ++k, sign *= -1)
+  {
+    const std::vector<double> &coeff_k = _correctionCoefficients[k];
+
+    const size_t m = k + 1;
+    if(_orderBDF == 1) {
+      //                         deltaT_n^(k+1)
+      // Factor is (-1)^(k+1) * ---------------
+      //                             (k+1)!   
+      factor = sign * pow(deltaT[0], m);
+      factor /= factorial(m+1);
+    }
+
+    if(_orderBDF == 2) {
+      //                         c_1 * deltaT_n^(k+1) + c_2 (deltaT_n + deltaT_n+1)^(k+1)
+      // Factor is (-1)^(k+1) * ----------------------------------------------------------
+      //                                                  (k+1)!   
+      factor = sign * (cn[1] * pow(deltaT[0], m) + cn[2] * pow(deltaT[0] + deltaT[1], m));
+      factor /= factorial(m+1);
+    }
+
+    for(int iSol = 0; iSol < nTimeSolutions; ++iSol)
+    {
+      const std::vector<double> &solDotBDF = bdfcontainer.getSolutionDot(iSol);
+
+      for(int j = 0; j < _nDofs; ++j)
+      {
+        _d[j] += factor * coeff_k[iSol] * solDotBDF[j];
+      }
+    }
+  }
+}
+
+void feSolutionContainer::computeCurrentSolDot(feLinearSystem */*linearSystem*/)
 {
   // Estimate time derivative with BDF coefficients
   for(int i = 0; i < _nDofs; ++i) {
@@ -138,7 +288,7 @@ void feSolutionContainer::initialize(feSolution *sol, feMesh *mesh)
   _fResidual[0].resize(_nDofs);
 }
 
-void feSolutionContainer::rotate(double dt)
+void feSolutionContainer::rotate(const double dt)
 {
   for(int i = _nSol - 1; i > 0; --i) {
     _t[i]         = _t[i - 1];
@@ -154,6 +304,22 @@ void feSolutionContainer::rotate(double dt)
   _deltaT[0] = _t[0] - _t[1];
 }
 
+void feSolutionContainer::invRotate(const double dt)
+{
+  for(int i = 0; i < _nSol - 1; ++i) {
+    _t[i]         = _t[i + 1];
+    _deltaT[i]    = _deltaT[i + 1];
+    _sol[i]       = _sol[i + 1];
+    for(int j = 0; j < _nDofs; ++j) {
+      _sol[i][j]       = _sol[i + 1][j];
+    }
+    _solDot[i]    = _solDot[i + 1];
+    _fResidual[i] = _fResidual[i + 1];
+  }
+  _t[_nSol-1] -= dt;
+  // _deltaT[0] = _t[0] - _t[1];
+}
+
 void feSolutionContainer::rotateWithoutTime()
 {
   for(int i = _nSol - 1; i > 0; --i) {
@@ -164,17 +330,16 @@ void feSolutionContainer::rotateWithoutTime()
   }
 }
 
-void feSolutionContainer::computeSolTimeDerivative(feSolution *sol, feLinearSystem *linearSystem)
+void feSolutionContainer::computeSolTimeDerivative(feSolution *sol, feLinearSystem */*linearSystem*/)
 {
-  UNUSED(linearSystem);
   for(int i = 0; i < _nDofs; ++i) sol->setSolDotAtDOF(i, 0.0);
 }
 
-void BDFContainer::computeSolTimeDerivative(feSolution *sol, feLinearSystem *linearSystem)
+void BDFContainer::computeSolTimeDerivative(feSolution *sol, feLinearSystem */*linearSystem*/)
 {
-  UNUSED(linearSystem);
   for(int i = 0; i < _nDofs; ++i) {
     _solDot[0][i] = 0.;
+    // Regular BDF time derivative
     for(size_t j = 0; j <  _sol.size(); j++) {
       _solDot[0][i] += _cn[j] * _sol[j][i];
     }
@@ -182,6 +347,29 @@ void BDFContainer::computeSolTimeDerivative(feSolution *sol, feLinearSystem *lin
   }
 }
 
+void DCBDFContainer::computeSolTimeDerivative(feSolution *sol, feLinearSystem */*linearSystem*/)
+{
+  for(int i = 0; i < _nDofs; ++i) {
+    _solDot[0][i] = 0.;
+
+    // Regular BDF time derivative
+    for(size_t j = 0; j <  _sol.size(); j++) {
+      _solDot[0][i] += _cn[j] * _sol[j][i];
+    }
+
+    // Correction of DC methods
+    _solDot[0][i] += _d[i];
+
+    // feInfo("sol[0] = %+-1.6e - sol[1] = %+-1.6e - solDot = %+-1.6e (added %+-1.4e)", 
+    //   _sol[0][i], _sol[1][i], _solDot[0][i], _d[i]);
+
+    sol->setSolDotAtDOF(i, _solDot[0][i]);
+  }
+}
+
+//
+// Below is deprecated
+//
 void feStationarySolution::computeSolTimeDerivative(feSolution *sol, feLinearSystem *linearSystem)
 {
   UNUSED(linearSystem);

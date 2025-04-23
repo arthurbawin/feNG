@@ -15,9 +15,9 @@ enum class timeIntegratorScheme {
   STATIONARY,
   BDF1,
   BDF2,
-  DC2F,
-  DC3,
-  DC3F,
+  DC2BDF1,
+  DC3BDF1,
+  DC3BDF2,
   EIGENSOLVER
 };
 
@@ -107,8 +107,10 @@ public:
 protected:
   void initialize();
   void updateTime(const int iStep, const double dt);
+  void resetTime();
   void computePostProcessing(const int iStep, const double t);
   feStatus writeVisualizationFile(const int iStep, const feExportData &data);
+  feStatus postProcessingAndVisualization(const int localStep, const int globalStep, const double t, const feExportData &data);
 };
 
 class StationaryIntegrator : public TimeIntegrator
@@ -136,7 +138,7 @@ public:
 
 class BDF1Integrator : public TimeIntegrator
 {
-protected:
+public:
   BDFContainer *_sC;
 
 public:
@@ -160,7 +162,7 @@ public:
 class BDF2Integrator : public TimeIntegrator
 {
 public:
-  BDF2Starter _startMethod = BDF2Starter::BDF1;
+  BDF2Starter _startMethod = BDF2Starter::InitialCondition;
   BDFContainer *_sC;
 
 public:
@@ -173,6 +175,66 @@ public:
                  double t0, double tEnd, int nTimeSteps);
   ~BDF2Integrator()
   {
+    delete _sC;
+  };
+  feStatus makeStep(double dt);
+  feStatus makeSteps(int nSteps);
+  feSolutionContainer getSolutionContainer() const { return *_sC; };
+  feStatus restartFromContainer(const feSolutionContainer &container);
+private:
+  feStatus startWithBDF1(const double timeStepRatio);
+};
+
+//
+// Deferred correction implicit methods based on BDF1
+//
+class DCBDF1Integrator : public TimeIntegrator
+{
+public:
+  // A container for the BDF1 solution
+  BDFContainer *_scBDF1;
+  // Containers for the DC solutions of increasing order.
+  // A DCn/BDF1 method needs the DC solutions of order 2 to n. 
+  std::vector<DCBDFContainer*> _scDC;
+
+public:
+  DCBDF1Integrator(const int order,
+                   feLinearSystem *linearSystem,
+                   feSolution *sol,
+                   feMesh *mesh,
+                   feNLSolverOptions &NLoptions,
+                   std::vector<feNorm*> &postProcessing,
+                   feExportData &exportData,
+                   double t0, double tEnd, int nTimeSteps);
+  ~DCBDF1Integrator()
+  {
+    delete _scBDF1;
+    for(auto *ptr : _scDC) delete ptr;
+  };
+  feStatus makeStep(double dt);
+  feStatus makeSteps(int nSteps);
+  feSolutionContainer getSolutionContainer() const { return *_scDC[0]; };
+  feStatus restartFromContainer(const feSolutionContainer &container);
+};
+
+class DC3BDF2Integrator : public TimeIntegrator
+{
+public:
+  BDF2Starter _startMethod = BDF2Starter::BDF1;
+  BDFContainer *_sCBDF2;
+  DCBDFContainer *_sC;
+
+public:
+  DC3BDF2Integrator(feLinearSystem *linearSystem,
+                    feSolution *sol,
+                    feMesh *mesh,
+                    feNLSolverOptions &NLoptions,
+                    std::vector<feNorm*> &postProcessing,
+                    feExportData &exportData,
+                    double t0, double tEnd, int nTimeSteps);
+  ~DC3BDF2Integrator()
+  {
+    delete _sCBDF2;
     delete _sC;
   };
   feStatus makeStep(double dt);

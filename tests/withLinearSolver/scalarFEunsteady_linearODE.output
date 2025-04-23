@@ -1,0 +1,32 @@
+Linear ODE - Error on scalar-valued solution u - Time integrator: BDF1
+            nElm           error            rate
+              10    2.100000e-01    0.000000e+00
+              20    1.025000e-01    1.034765e+00
+              40    5.062500e-02    1.017702e+00
+              80    2.515625e-02    1.008933e+00
+             160    1.253906e-02    1.004487e+00
+
+Linear ODE - Error on scalar-valued solution u - Time integrator: BDF2
+            nElm           error            rate
+              10    3.429999e-02    0.000000e+00
+              20    9.268750e-03    1.887762e+00
+              40    2.407422e-03    1.944886e+00
+              80    6.133545e-04    1.972696e+00
+             160    1.547897e-04    1.986411e+00
+
+Linear ODE - Error on scalar-valued solution u - Time integrator: DC2BDF1
+            nElm           error            rate
+              10    1.000000e-02    0.000000e+00
+              20    2.500000e-03    2.000000e+00
+              40    6.250000e-04    2.000000e+00
+              80    1.562500e-04    2.000000e+00
+             160    3.906250e-05    2.000000e+00
+
+Linear ODE - Error on scalar-valued solution u - Time integrator: DC3BDF1
+            nElm           error            rate
+              10    8.000000e-04    0.000000e+00
+              20    1.125000e-04    2.830075e+00
+              40    1.484375e-05    2.921997e+00
+              80    1.904297e-06    2.962525e+00
+             160    2.410889e-07    2.981621e+00
+

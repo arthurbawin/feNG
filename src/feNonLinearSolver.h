@@ -43,10 +43,29 @@ typedef struct feNLSolverOptionsStruct
 // Assembles and solves the nonlinear problem NL(u) = 0 at a given time step
 // using the Newton-Raphson method.
 //
+// If solveForTimeDerivative = true, instead solve the nonlinear problem,
+// but the unknown is the time derivative of the solution dudt.
+// This is done by 
+//   - replacing the coefficient c0 (e.g. first coefficient of BDF sum)
+//     by 1 in the "transient" mass matrices, turning them into regular mass matrices,
+//   - assembling only the residuals and the "transient" mass matrices
+//
+// For instance, the Navier-Stokes momentum equation:
+//
+// dudt + (u_0 dot grad)u_0 - div(sigma_0) - rho*f = 0
+//
+// becomes the equation for w := dudt:
+//
+// w + (u_0 dot grad)u_0 - div(sigma_0) - rho*f = 0
+//
+// and is solved for w. This effectively determines dudt|_t=0 weakly.
+// This is a linear problem in w, which converges in a single iteration.
+//
 feStatus solveNewtonRaphson(feLinearSystem *linearSystem,
                             feSolution *sol,
                             feSolutionContainer *solDot,
-                            feNLSolverOptions &tol);
+                            const feNLSolverOptions &tol,
+                            const bool solveForTimeDerivative = false);
 
 
 

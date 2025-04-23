@@ -271,7 +271,7 @@ void feBilinearForm::initializeAddressingVectors(int numElem)
 // Initialize the form (feSysElm handler) on element numElem
 // Called before computing a local residual or local matrix
 //
-void feBilinearForm::initialize(feSolution *sol, int numElem)
+void feBilinearForm::initialize(const feSolution *sol, const int numElem)
 {
   _numElem = numElem;
   _c0 = sol->getC0();
@@ -288,7 +288,7 @@ void feBilinearForm::initialize(feSolution *sol, int numElem)
     _cnc->getElementTransformation(numElem, _transformation);
   }
 
-  std::vector<double> &solArray = sol->getSolutionReference();
+  const std::vector<double> &solArray = sol->getSolution();
 
   for(size_t i = 0; i < _intSpaces.size(); i++)
   {
@@ -349,26 +349,26 @@ void feBilinearForm::initialize(feSolution *sol, int numElem)
   }
 }
 
-void feBilinearForm::computeMatrix(feSolution *sol, int numElem)
+void feBilinearForm::computeMatrix(const feSolution *sol, const int numElem)
 {
   (this->*feBilinearForm::ptrComputeMatrix)(sol, numElem);
 }
 
-void feBilinearForm::computeResidual(feSolution *sol, int numElem)
+void feBilinearForm::computeResidual(const feSolution *sol, const int numElem)
 {
   this->initialize(sol, numElem);
   setResidualToZero(_M, &_Be);
   _sysElm->computeBe(this);
 }
 
-void feBilinearForm::computeMatrixAnalytical(feSolution *sol, int numElem)
+void feBilinearForm::computeMatrixAnalytical(const feSolution *sol, const int numElem)
 {
   this->initialize(sol, numElem);
   setMatrixToZero(_M, _N, _Ae);
   _sysElm->computeAe(this);
 }
 
-void feBilinearForm::computeMatrixFiniteDifference(feSolution *sol, int numElem)
+void feBilinearForm::computeMatrixFiniteDifference(const feSolution *sol, const int numElem)
 {
   this->initialize(sol, numElem);
   setMatrixToZero(_M, _N, _Ae);
@@ -410,7 +410,7 @@ void feBilinearForm::computeMatrixFiniteDifference(feSolution *sol, int numElem)
   }
 }
 
-double feBilinearForm::compareAnalyticalAndFDMatrices(feSolution *sol, int numElem)
+double feBilinearForm::compareAnalyticalAndFDMatrices(const feSolution *sol, const int numElem)
 {
   double **Aexact = allocateMatrix(_M, _N);
   double **Afd    = allocateMatrix(_M, _N);

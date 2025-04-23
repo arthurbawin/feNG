@@ -102,11 +102,13 @@ public:
   virtual void setResidualToZero() = 0;
 
   // Assemble the matrix and/or the right-hand side
-  virtual void assemble(feSolution *sol) = 0;
-  virtual void assembleMatrices(feSolution *sol) = 0;
-  virtual void assembleResiduals(feSolution *sol) = 0;
+  virtual void assemble(const feSolution *sol,
+                        const bool assembleOnlyTransientMatrices = false) = 0;
+  virtual void assembleMatrices(const feSolution *sol,
+                                const bool assembleOnlyTransientMatrices = false) = 0;
+  virtual void assembleResiduals(const feSolution *sol) = 0;
 
-  virtual void constrainEssentialComponents(feSolution *sol) = 0;
+  virtual void constrainEssentialComponents(const feSolution *sol) = 0;
 
   virtual void permute() = 0;
 
@@ -119,7 +121,8 @@ public:
   virtual bool solve(double *normDx, double *normResidual, double *normAxb, int *nIter) = 0;
 
   // Apply the Newton-Raphson correction u_new = u_old + du
-  virtual void correctSolution(feSolution *sol) = 0;
+  virtual void correctSolution(feSolution *sol,
+                               const bool correctSolutionDot = false) = 0;
 
   // Assign the RHS to the residual vector of the solution container.
   // Used in DC (deferred correction) time integration schemes to
@@ -215,13 +218,16 @@ public:
   void setToZero();
   void setMatrixToZero();
   void setResidualToZero();
-  void assemble(feSolution *sol);
-  void assembleMatrices(feSolution *sol);
-  void assembleResiduals(feSolution *sol);
-  void constrainEssentialComponents(feSolution *sol);
+  void assemble(const feSolution *sol,
+                const bool assembleOnlyTransientMatrices);
+  void assembleMatrices(const feSolution *sol,
+                        const bool assembleOnlyTransientMatrices);
+  void assembleResiduals(const feSolution *sol);
+  void constrainEssentialComponents(const feSolution *sol);
   void permute();
   bool solve(double *normSolution, double *normRHS, double *normResidualAxMinusb, int *nIter);
-  void correctSolution(feSolution *sol);
+  void correctSolution(feSolution *sol,
+                       const bool correctSolutionDot);
   void assignResidualToDCResidual(feSolutionContainer *solContainer);
   void applyCorrectionToResidual(double coeff, std::vector<double> &d);
   void viewMatrix() const;
@@ -322,15 +328,18 @@ public:
   void setToZero();
   void setMatrixToZero();
   void setResidualToZero();
-  void assemble(feSolution *sol);
-  void assembleMatrices(feSolution *sol);
-  void assembleResiduals(feSolution *sol);
-  void constrainEssentialComponents(feSolution *sol);
+  void assemble(const feSolution *sol,
+                const bool assembleOnlyTransientMatrices);
+  void assembleMatrices(const feSolution *sol,
+                        const bool assembleOnlyTransientMatrices);
+  void assembleResiduals(const feSolution *sol);
+  void constrainEssentialComponents(const feSolution *sol);
   void permute();
   bool solve(double *normDx, double *normResidual, double *normAxb, int *nIter);
   void assignResidualToDCResidual(feSolutionContainer *solContainer);
   void applyCorrectionToResidual(double coeff, std::vector<double> &d);
-  void correctSolution(feSolution *sol);
+  void correctSolution(feSolution *sol,
+                       const bool correctSolutionDot = false);
   void viewMatrix() const;
   void viewRHS() const;
   void viewResidual() const;

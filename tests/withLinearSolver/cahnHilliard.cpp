@@ -438,10 +438,17 @@ namespace cahnHilliardNavierStokes {
               const int degreeQuadrature,
               const feNLSolverOptions &NLoptions,
               int &numInteriorElements,
+              int &numVertices,
               double &L2ErrorU,
               double &L2ErrorP,
               double &L2ErrorPhi,
               double &L2ErrorMu)
+              // ,
+              // double &H1ErrorU,
+              // double &H1ErrorP,
+              // double &H1ErrorPhi,
+              // double &H1ErrorMu
+              // )
     {
       feVectorFunction uSol(uSol_f);
       feFunction   pSol(pSol_f);
@@ -473,6 +480,7 @@ namespace cahnHilliardNavierStokes {
 
       feMesh2DP1 mesh(meshFile);
       numInteriorElements = mesh.getNumInteriorElements();
+      numVertices = mesh.getNumVertices();
 
       // Velocity and pressure
       feSpace *u = nullptr, *uB = nullptr, *p = nullptr, *pP = nullptr;
@@ -536,8 +544,9 @@ namespace cahnHilliardNavierStokes {
       std::vector<feNorm *> norms = {};
 
       double t0 = 0.;
-      double t1 = 0.1;
-      int nTimeSteps = 20;
+      // double t1 = 0.1;
+      double t1 = 0.0001;
+      int nTimeSteps = 10;
       TimeIntegrator *solver;
       feCheck(createTimeIntegrator(solver, timeIntegratorScheme::BDF2, NLoptions,
         system, &sol, &mesh, norms, {nullptr, 1, ""}, t0, t1, nTimeSteps));
@@ -553,6 +562,16 @@ namespace cahnHilliardNavierStokes {
       L2ErrorP   = errorP_L2->compute();
       L2ErrorPhi = errorPhi_L2->compute();
       L2ErrorMu  = errorMu_L2->compute();
+
+      // feNorm *errorU_H1 = nullptr, *errorP_H1 = nullptr, *errorPhi_H1 = nullptr, *errorMu_H1 = nullptr;
+      // feCheck(createNorm(errorU_H1, VECTOR_H1_ERROR, {u}, &sol, nullptr, &uSol));
+      // feCheck(createNorm(errorP_H1, H1_ERROR, {p}, &sol, &pSol));
+      // feCheck(createNorm(errorPhi_H1, H1_ERROR, {phi}, &sol, &phiSol));
+      // feCheck(createNorm(errorMu_H1 , H1_ERROR, {mu}, &sol, &muSol));
+      // H1ErrorU   = errorU_H1->compute();
+      // H1ErrorP   = errorP_H1->compute();
+      // H1ErrorPhi = errorPhi_H1->compute();
+      // H1ErrorMu  = errorMu_H1->compute();
 
       delete errorU_L2;
       delete errorP_L2;
@@ -573,17 +592,47 @@ namespace cahnHilliardNavierStokes {
       feNLSolverOptions NLoptions{1e-10, 1e-10, 1e4, 10, 4, 1e-1};
 
       std::vector<int> nElm(numMeshes);
+      std::vector<int> nVertices(numMeshes);
       std::vector<double> errU(numMeshes, 0.);
       std::vector<double> errP(numMeshes, 0.);
       std::vector<double> errPhi(numMeshes, 0.);
       std::vector<double> errMu(numMeshes, 0.);
+      // std::vector<double> errU_H1(numMeshes, 0.);
+      // std::vector<double> errP_H1(numMeshes, 0.);
+      // std::vector<double> errPhi_H1(numMeshes, 0.);
+      // std::vector<double> errMu_H1(numMeshes, 0.);
+
+      bool writeErrorToFile = false;
+      std::string outputDirectory = "./";
+      std::ofstream errorFileL2, errorFileH1;
+      if(writeErrorToFile) {
+        errorFileL2.open(outputDirectory + "errorL2.txt");
+        errorFileH1.open(outputDirectory + "errorH1.txt");
+      }
 
       for(int i = 0; i < numMeshes; ++i)
       {
         std::string meshFile = "../../../data/stokes" + std::to_string(i+1) + ".msh";
         cahnHilliardNavierStokes::MMS::solve(meshFile, orderU, orderPhiMu,
-          degreeQuadrature, NLoptions, nElm[i], errU[i], errP[i], errPhi[i], errMu[i]);
+          degreeQuadrature, NLoptions, nElm[i], nVertices[i],
+          errU[i], errP[i], errPhi[i], errMu[i]);
+          // errU_H1[i], errP_H1[i], errPhi_H1[i], errMu_H1[i]);
+
+        if(writeErrorToFile) {
+          errorFileL2 << nVertices[i] << "\t" << nElm[i] << "\t"
+            << std::setprecision(DEFAULT_SIGNIFICANT_DIGITS) << errU[i] << "\t"
+            << std::setprecision(DEFAULT_SIGNIFICANT_DIGITS) << errP[i] << "\t"
+            << std::setprecision(DEFAULT_SIGNIFICANT_DIGITS) << errPhi[i] << "\t"
+            << std::setprecision(DEFAULT_SIGNIFICANT_DIGITS) << errMu[i] << "\n";
+          // errorFileL2.flush();
+        }
       }
+
+      if(writeErrorToFile) {
+        errorFileL2.close();
+        errorFileH1.close();
+      }
+
       resultBuffer << "   (u,p) : Taylor-Hood elements P" << orderU << "-P" << orderU-1 << std::endl; 
       resultBuffer << "(phi,mu) : Equal order elements P" << orderPhiMu << "-P" << orderPhiMu << std::endl; 
       resultBuffer << "Cahn-Hilliard Navier-Stokes MMS - Error on velocity" << std::endl;

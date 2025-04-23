@@ -123,7 +123,7 @@ protected:
   double *_Rh;
   double _h0;
   // Function pointer to the matrix computation method
-  void (feBilinearForm::*ptrComputeMatrix)(feSolution *sol, int numElem);
+  void (feBilinearForm::*ptrComputeMatrix)(const feSolution *sol, const int numElem);
 
 public:
   // Addressing vector of the current element for each FE space
@@ -161,15 +161,16 @@ public:
   // Return true if there is a local matrix associated to the weak form
   // (false if there is only a residual).
   bool hasMatrix() const { return _sysElm->hasMatrix(); }
+  bool isTransientMatrix() const { return _sysElm->isTransientMatrix(); }
 
   // Sets the Jacobian matrix to be evaluated numerically
   // using finite differences, allocates the necessary arrays.
   void setComputeMatrixWithFD(bool flag);
-  double compareAnalyticalAndFDMatrices(feSolution *sol, int numElem);
+  double compareAnalyticalAndFDMatrices(const feSolution *sol, const int numElem);
 
   // Compute element-wise matrix and residual on element numElem
-  void computeMatrix(feSolution *sol, int numElem);
-  void computeResidual(feSolution *sol, int numElem);
+  void computeMatrix(const feSolution *sol, const int numElem);
+  void computeResidual(const feSolution *sol, const int numElem);
 
   // Initialize the addressing vectors _adrI and _adrJ on element numElem
   void initializeAddressingVectors(int numElem);
@@ -183,10 +184,10 @@ public:
 private:
   // Initialize the form on element numElem.
   // Initializes _adr and the local solutions _sol, _solDot, _solPrev, _solNext
-  void initialize(feSolution *sol, int numElem);
+  void initialize(const feSolution *sol, const int numElem);
 
-  void computeMatrixAnalytical(feSolution *sol, int numElem);
-  void computeMatrixFiniteDifference(feSolution *sol, int numElem);
+  void computeMatrixAnalytical(const feSolution *sol, const int numElem);
+  void computeMatrixFiniteDifference(const feSolution *sol, const int numElem);
 };
 
 #endif

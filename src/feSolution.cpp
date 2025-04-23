@@ -144,6 +144,37 @@ void feSolution::initializeUnknowns(feMesh *mesh)
             }
 
             _sol[adr[j]] = val;
+
+            /////////////////////////////////////////
+            // // Solution time derivative
+            // const double x = args.pos[0];
+            // const double y = args.pos[1];
+            // const double t = args.t;
+            // const double a = 0.;
+            // const double b = 0.;
+            // vecVal[0] = -exp(-t) * (a * pow(x, 3) + x * y*y);
+            // vecVal[1] = -exp(-t) * b * x*y;
+            // vecVal[2] = 0.;
+
+            // // const double t = args.t;
+            // // vecVal[0] = -exp(-t);
+            // // vecVal[1] = -exp(-t);
+            // // vecVal[2] = 0.;
+
+            // int indexComponent = j % fS->getNumComponents();
+            // val = vecVal[indexComponent];
+            // _dsoldt[adr[j]] = val;
+
+            // Scalar valued time derivative
+            // const double x = args.pos[0];
+            // const double t = args.t;
+            // const double udot = -2./((1.+t)*(1.+t)) * x;
+            // const double udot = -2./((1.+t)*(1.+t));
+            // const double udot = (double) rand() / (double)RAND_MAX;
+            // const double udot = nan("");
+            // _dsoldt[adr[j]] = udot;
+            /////////////////////////////////////////
+
           }
         }
       }
@@ -264,6 +295,45 @@ void feSolution::initializeEssentialBC(feMesh *mesh, feSolutionContainer *solCon
                 solContainer->_sol[0][adr[j]] = val;
               };
             }
+
+            ///////////////////////////////////////////////
+            // // Solution time derivative
+            // const double x = args.pos[0];
+            // const double y = args.pos[1];
+            // const double t = args.t;
+            // const double a = 0.;
+            // const double b = 0.;
+            // // vecVal[0] = 5.*t*t*t*t * (a * pow(x, 3) + x * y*y);
+            // // vecVal[1] = 5.*t*t*t*t * b * x*y;
+            // // vecVal[2] = 0.;
+
+            // // vecVal[0] = -exp(-t) * (a * pow(x, 3) + x * y*y);
+            // // vecVal[1] = -exp(-t) * b * x*y;
+            // // vecVal[2] = 0.;
+
+            // // vecVal[0] = -2./((1.+t)*(1.+t)) * (a * pow(x, 3) + x * y*y);
+            // // vecVal[1] = -2./((1.+t)*(1.+t)) * b * x*y;
+            // // vecVal[2] = 0.;
+
+            // vecVal[0] = -2./((1.+t)*(1.+t)) * (a * y + x);
+            // vecVal[1] = -2./((1.+t)*(1.+t)) * b * x*y;
+            // vecVal[2] = 0.;
+
+            // // const double t = args.t;
+            // // vecVal[0] = -exp(-t);
+            // // vecVal[1] = -exp(-t);
+            // // vecVal[2] = 0.;
+
+            // indexComponent = j % fS->getNumComponents();
+            // val = vecVal[indexComponent];
+            // if(fS->isEssentialComponent(indexComponent)) {
+            //   _dsoldt[adr[j]] = val;
+            //   if(solContainer != nullptr) {
+            //     solContainer->_solDot[0][adr[j]] = val;
+            //   };
+            // }
+            ///////////////////////////////////////////////
+
           } else {
             // Scalar valued finite element space
             val = fS->evalFun(args);
@@ -271,6 +341,20 @@ void feSolution::initializeEssentialBC(feMesh *mesh, feSolutionContainer *solCon
             if(solContainer != nullptr) {
               solContainer->_sol[0][adr[j]] = val;
             };
+
+            // ///////////////////////////////////////////////
+            // // const double x = args.pos[0];
+            // // const double t = args.t;
+            // // const double udot = -2./((1.+t)*(1.+t)) * x;
+            // // const double udot = -2./((1.+t)*(1.+t));
+            // const double udot = (double) rand() / (double)RAND_MAX;
+            // // const double udot = nan("");
+            // _dsoldt[adr[j]] = udot;
+            // if(solContainer != nullptr) {
+            //   solContainer->_solDot[0][adr[j]] = udot;
+            // };
+            // ///////////////////////////////////////////////
+
           }
         }
       }
@@ -413,7 +497,7 @@ feStatus feSolution::addSquaredNormOfVectorSpace(feMesh *mesh,
 
 
 
-void feSolution::setSolFromContainer(feSolutionContainer *solContainer, int iSol)
+void feSolution::setSolFromContainer(const feSolutionContainer *solContainer, const int iSol)
 {
   const std::vector<double> &solFromContainer = solContainer->getSolution(iSol);
   if(_sol.size() != solFromContainer.size()) {

@@ -1,0 +1,32 @@
+Linear ODE - Error on vector-valued solution u - Time integrator: BDF1
+            nElm           error            rate
+              10    4.169040e-02    0.000000e+00
+              20    2.094100e-02    9.933850e-01
+              40    1.049444e-02    9.967046e-01
+              80    5.253208e-03    9.983552e-01
+             160    2.628100e-03    9.991783e-01
+
+Linear ODE - Error on vector-valued solution u - Time integrator: BDF2
+            nElm           error            rate
+              10    2.402235e-03    0.000000e+00
+              20    6.519402e-04    1.881566e+00
+              40    1.692162e-04    1.945872e+00
+              80    4.306988e-05    1.974117e+00
+             160    1.086235e-05    1.987343e+00
+
+Linear ODE - Error on vector-valued solution u - Time integrator: DC2BDF1
+            nElm           error            rate
+              10    7.013427e-04    0.000000e+00
+              20    1.753138e-04    2.000180e+00
+              40    4.382707e-05    2.000045e+00
+              80    1.095668e-05    2.000011e+00
+             160    2.739165e-06    2.000003e+00
+
+Linear ODE - Error on vector-valued solution u - Time integrator: DC3BDF1
+            nElm           error            rate
+              10    2.742157e-05    0.000000e+00
+              20    3.905131e-06    2.811869e+00
+              40    5.180005e-07    2.914345e+00
+              80    6.661523e-08    2.959030e+00
+             160    8.443419e-09    2.979953e+00
+

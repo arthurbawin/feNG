@@ -120,8 +120,14 @@ double feNorm::compute(normType type)
     case LINF_ERROR:
       res = this->computeLInfNorm(true);
       break;
+    case LINF_UDOT_ERROR:
+      res = this->computeLInfNormTimeDerivative(true);
+      break;
     case VECTOR_LINF_ERROR:
       res = this->computeVectorLInfNorm(true);
+      break;
+    case VECTOR_LINF_UDOT_ERROR:
+      res = this->computeVectorLInfNormTimeDerivative(true);
       break;
     case SEMI_H1:
       res = this->computeH1SemiNorm(false);
@@ -1149,6 +1155,56 @@ double feNorm::computeVectorLInfNorm(bool error)
   return res;
 }
 
+double feNorm::computeVectorLInfNormTimeDerivative(bool error)
+{
+  double res = 0.0;
+  _args.t = _solution->getCurrentTime();
+  std::vector<double> dudt(3, 0.);
+  std::vector<double> duhdt(3, 0.);
+  int nComponents = _spaces[0]->getNumComponents();
+
+  if(error && _vectorSolution == nullptr) {
+    feErrorMsg(FE_STATUS_ERROR, "Cannot compute Linf norm of vector error function"
+                                " because exact solution is NULL");
+    exit(-1);
+  }
+
+  double avg = 0.;
+  for(int iElm = 0; iElm < _nElm; ++iElm) {
+    this->initializeLocalSolutionTimeDerivativeOnSpace(0, iElm);
+    _spaces[0]->_mesh->getCoord(_cnc, iElm, _geoCoord);
+
+    //////////////////
+    // const std::vector<double> &Lcoor = _spaces[0]->getLcoor();
+    // for(size_t kk = 0; kk < Lcoor.size()/3; ++kk)
+    // {
+    //   // feInfo("%d", Lcoor.size());
+    //   // feInfo("%d", _localSolDot[0].size());
+    //   std::vector<double> xsi = {Lcoor[3*kk], Lcoor[3*kk+1], Lcoor[3*kk+2]};
+    //   _geoSpace->interpolateVectorField(_geoCoord, xsi.data(), _args.pos);
+    //   (*_vectorSolution)(_args, dudt);
+    //   // _spaces[0]->interpolateVectorField(_localSolDot[0], k, duhdt, nComponents);
+    //   feInfo("Exact dudt[0] at vertex %d = %f - dsoldt = %f", kk, dudt[kk % 2], _localSolDot[0][kk]);
+    // }
+    //////////////////
+
+    for(int k = 0; k < _nQuad; ++k) {
+      _spaces[0]->interpolateVectorFieldAtQuadNode(_localSolDot[0], k, duhdt, nComponents);
+      _geoSpace->interpolateVectorFieldAtQuadNode(_geoCoord, k, _args.pos);
+      if(error) (*_vectorSolution)(_args, dudt);
+
+      for(int i = 0; i < nComponents; ++i) {
+        // feInfo("Comp %d = %f vs %f", i, dudt[i], duhdt[i]);
+        res = fmax(res, fabs(dudt[i] - duhdt[i]));
+        avg += fabs(dudt[i] - duhdt[i]) * _J[_nQuad * iElm + k] * _w[k];
+      }
+    }
+  }
+  // feInfo("Avg = %+-1.8e", avg);
+  // feInfo("Err = %+-1.8e", res);
+  return res;
+}
+
 // Deprecated by general Lp norm function
 // double feNorm::computeL1Norm(bool error)
 // {
@@ -1213,6 +1269,29 @@ double feNorm::computeLInfNorm(bool error)
       _geoSpace->interpolateVectorFieldAtQuadNode(_geoCoord, k, _args.pos);
       u = error ? _scalarSolution->eval(_args) : 0.0;
       res = fmax(res, fabs(u - uh));
+    }
+  }
+  return res;
+}
+
+double feNorm::computeLInfNormTimeDerivative(bool error)
+{
+  double res = -DBL_MAX, duhdt, dudt;
+  _args.t = _solution->getCurrentTime();
+
+  // #if defined(HAVE_OMP)
+  // #pragma omp parallel for private(_geoCoord, uh, u) reduction(+ : res) schedule(dynamic)
+  // #endif
+  for(int iElm = 0; iElm < _nElm; ++iElm) {
+    this->initializeLocalSolutionTimeDerivativeOnSpace(0, iElm);
+
+    _spaces[0]->_mesh->getCoord(_cnc, iElm, _geoCoord);
+
+    for(int k = 0; k < _nQuad; ++k) {
+      duhdt = _spaces[0]->interpolateFieldAtQuadNode(_localSolDot[0], k);
+      _geoSpace->interpolateVectorFieldAtQuadNode(_geoCoord, k, _args.pos);
+      dudt = error ? _scalarSolution->eval(_args) : 0.0;
+      res = fmax(res, fabs(dudt - duhdt));
     }
   }
   return res;

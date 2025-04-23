@@ -1,0 +1,32 @@
+Nonlinear ODE - Error on scalar-valued solution u - Time integrator: BDF1
+            nElm           error            rate
+              10    1.723417e-02    0.000000e+00
+              20    8.890189e-03    9.549860e-01
+              40    4.520179e-03    9.758340e-01
+              80    2.279458e-03    9.876894e-01
+             160    1.144649e-03    9.937857e-01
+
+Nonlinear ODE - Error on scalar-valued solution u - Time integrator: BDF2
+            nElm           error            rate
+              10    2.429789e-03    0.000000e+00
+              20    6.710384e-04    1.856364e+00
+              40    1.762214e-04    1.929006e+00
+              80    4.515804e-05    1.964335e+00
+             160    1.143059e-05    1.982083e+00
+
+Nonlinear ODE - Error on scalar-valued solution u - Time integrator: DC2BDF1
+            nElm           error            rate
+              10    4.863093e-04    0.000000e+00
+              20    1.262922e-04    1.945109e+00
+              40    3.220071e-05    1.971601e+00
+              80    8.131210e-06    1.985551e+00
+             160    2.043050e-06    1.992745e+00
+
+Nonlinear ODE - Error on scalar-valued solution u - Time integrator: DC3BDF1
+            nElm           error            rate
+              10    4.950046e-05    0.000000e+00
+              20    9.735745e-06    2.346079e+00
+              40    1.547401e-06    2.653444e+00
+              80    2.184111e-07    2.824729e+00
+             160    2.901107e-08    2.912371e+00
+

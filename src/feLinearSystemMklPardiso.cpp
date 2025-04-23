@@ -496,7 +496,8 @@ void feLinearSystemMklPardiso::writeResidual(const std::string fileName,
   fclose(myfile); 
 }
 
-void feLinearSystemMklPardiso::assembleMatrices(feSolution *sol)
+void feLinearSystemMklPardiso::assembleMatrices(const feSolution *sol,
+                                                const bool assembleOnlyTransientMatrices)
 {
   tic();
 
@@ -518,104 +519,109 @@ void feLinearSystemMklPardiso::assembleMatrices(feSolution *sol)
   PardisoInt high = _ownedUpperBounds[rank];
 #endif
 
-  for(feInt eq = 0; eq < _numMatrixForms; ++eq) {
+  for(feInt eq = 0; eq < _numMatrixForms; ++eq)
+  {
     feBilinearForm *f = _formMatrices[eq];
-    const feCncGeo *cnc = f->getCncGeo();
-    int numColors = cnc->getNbColor();
-    const std::vector<int> &nbElmPerColor = cnc->getNbElmPerColor();
-    const std::vector<std::vector<int> > &listElmPerColor = cnc->getListElmPerColor();
-    int numElementsInColor;
-    std::vector<int> listElmC;
 
-    for(int iColor = 0; iColor < numColors; ++iColor) {
-      numElementsInColor = nbElmPerColor[iColor];
-      listElmC = listElmPerColor[iColor];
+    if(!assembleOnlyTransientMatrices || (assembleOnlyTransientMatrices && f->isTransientMatrix()))
+    {
+      const feCncGeo *cnc = f->getCncGeo();
+      int numColors = cnc->getNbColor();
+      const std::vector<int> &nbElmPerColor = cnc->getNbElmPerColor();
+      const std::vector<std::vector<int> > &listElmPerColor = cnc->getListElmPerColor();
+      int numElementsInColor;
+      std::vector<int> listElmC;
 
-      int elm;
-      feInt sizeI;
-      feInt sizeJ;
-      std::vector<feInt> niElm;
-      std::vector<feInt> njElm;
-      std::vector<feInt> adrI;
-      std::vector<feInt> adrJ;
+      for(int iColor = 0; iColor < numColors; ++iColor) {
+        numElementsInColor = nbElmPerColor[iColor];
+        listElmC = listElmPerColor[iColor];
 
-#if defined(HAVE_OMP)
-#pragma omp parallel for private(elm, f, niElm, njElm, sizeI, sizeJ, adrI, adrJ)               \
-  schedule(dynamic)
-#endif
-      for(int iElm = 0; iElm < numElementsInColor; ++iElm) {
-#if defined(HAVE_OMP)
-        int eqt = eq + omp_get_thread_num() * _numMatrixForms;
-        f = _formMatrices[eqt];
-#endif
-        elm = listElmC[iElm];
+        int elm;
+        feInt sizeI;
+        feInt sizeJ;
+        std::vector<feInt> niElm;
+        std::vector<feInt> njElm;
+        std::vector<feInt> adrI;
+        std::vector<feInt> adrJ;
 
-        // Compute element-wise matrix
-        f->computeMatrix(sol, elm);
-        const double* const *Ae = f->getAe();
+  #if defined(HAVE_OMP)
+  #pragma omp parallel for private(elm, f, niElm, njElm, sizeI, sizeJ, adrI, adrJ)               \
+    schedule(dynamic)
+  #endif
+        for(int iElm = 0; iElm < numElementsInColor; ++iElm) {
+  #if defined(HAVE_OMP)
+          int eqt = eq + omp_get_thread_num() * _numMatrixForms;
+          f = _formMatrices[eqt];
+  #endif
+          elm = listElmC[iElm];
 
-        // Determine global assignment indices
-        adrI = f->getAdrI();
-        adrJ = f->getAdrJ();
-        sizeI = adrI.size();
-        niElm.reserve(sizeI);
-        for(feInt i = 0; i < sizeI; ++i) {
-          if(adrI[i] < _nInc) niElm.push_back(i);
-        }
-        sizeJ = adrJ.size();
-        njElm.reserve(sizeJ);
-        for(feInt i = 0; i < sizeJ; ++i) {
-          if(adrJ[i] < _nInc) njElm.push_back(i);
-        }
+          // Compute element-wise matrix
+          f->computeMatrix(sol, elm);
+          const double* const *Ae = f->getAe();
 
-        adrI.erase(std::remove_if(adrI.begin(), adrI.end(),
-                                  [this](const int &x) { return x >= this->_nInc; }),
-                   adrI.end());
-        adrJ.erase(std::remove_if(adrJ.begin(), adrJ.end(),
-                                  [this](const int &x) { return x >= this->_nInc; }),
-                   adrJ.end());
-
-#if defined(HAVE_MPI)
-        // Remove row indices in adrI that are not owned by this proc
-        auto it_nielm = niElm.begin();
-        for(auto it_i = adrI.begin();  it_i != adrI.end(); )
-        {
-          if(low <= (*it_i) && (*it_i) <= high) {
-            // In owned range of rows : do nothing
-            ++it_i;
-            ++it_nielm;
-          } else {
-            // Erase in adrI only
-            it_i = adrI.erase(it_i);
-            it_nielm = niElm.erase(it_nielm);
+          // Determine global assignment indices
+          adrI = f->getAdrI();
+          adrJ = f->getAdrJ();
+          sizeI = adrI.size();
+          niElm.reserve(sizeI);
+          for(feInt i = 0; i < sizeI; ++i) {
+            if(adrI[i] < _nInc) niElm.push_back(i);
           }
-        }
-#endif
+          sizeJ = adrJ.size();
+          njElm.reserve(sizeJ);
+          for(feInt i = 0; i < sizeJ; ++i) {
+            if(adrJ[i] < _nInc) njElm.push_back(i);
+          }
 
-        // Flatten Ae at relevant indices
-        sizeI = adrI.size();
-        sizeJ = adrJ.size();
+          adrI.erase(std::remove_if(adrI.begin(), adrI.end(),
+                                    [this](const int &x) { return x >= this->_nInc; }),
+                     adrI.end());
+          adrJ.erase(std::remove_if(adrJ.begin(), adrJ.end(),
+                                    [this](const int &x) { return x >= this->_nInc; }),
+                     adrJ.end());
 
-        for(feInt i = 0; i < sizeI; i++) {
-          feInt I = adrI[i] - low;
-          feInt debut = _mat_ia[I];
-          feInt fin = _mat_ia[I + 1];
-          feInt numColumns = fin - debut;
+  #if defined(HAVE_MPI)
+          // Remove row indices in adrI that are not owned by this proc
+          auto it_nielm = niElm.begin();
+          for(auto it_i = adrI.begin();  it_i != adrI.end(); )
+          {
+            if(low <= (*it_i) && (*it_i) <= high) {
+              // In owned range of rows : do nothing
+              ++it_i;
+              ++it_nielm;
+            } else {
+              // Erase in adrI only
+              it_i = adrI.erase(it_i);
+              it_nielm = niElm.erase(it_nielm);
+            }
+          }
+  #endif
 
-          // For each entry of the local matrix,
-          // find the matching column in the sparse matrix.
-          // The entries of the local matrix are not sorted for P2+ elements.
-          for(feInt j = 0; j < sizeJ; ++j) {
-            for(feInt J = 0; J < numColumns; ++J) {
-              if(_mat_ja[debut + J] == adrJ[j]) {
-                _mat_values[debut + J] += Ae[niElm[i]][njElm[j]];
-                break;
+          // Flatten Ae at relevant indices
+          sizeI = adrI.size();
+          sizeJ = adrJ.size();
+
+          for(feInt i = 0; i < sizeI; i++) {
+            feInt I = adrI[i] - low;
+            feInt debut = _mat_ia[I];
+            feInt fin = _mat_ia[I + 1];
+            feInt numColumns = fin - debut;
+
+            // For each entry of the local matrix,
+            // find the matching column in the sparse matrix.
+            // The entries of the local matrix are not sorted for P2+ elements.
+            for(feInt j = 0; j < sizeJ; ++j) {
+              for(feInt J = 0; J < numColumns; ++J) {
+                if(_mat_ja[debut + J] == adrJ[j]) {
+                  _mat_values[debut + J] += Ae[niElm[i]][njElm[j]];
+                  break;
+                }
               }
             }
           }
+          niElm.clear();
+          njElm.clear();
         }
-        niElm.clear();
-        njElm.clear();
       }
     }
   }
@@ -629,7 +635,7 @@ void feLinearSystemMklPardiso::assembleMatrices(feSolution *sol)
 #endif
 }
 
-void feLinearSystemMklPardiso::assembleResiduals(feSolution *sol)
+void feLinearSystemMklPardiso::assembleResiduals(const feSolution *sol)
 {
   tic();
 
@@ -713,9 +719,10 @@ void feLinearSystemMklPardiso::applyCorrectionToResidual(double coeff, std::vect
   for(int i = 0; i < _nInc; ++i) _rhs[i] += coeff * d[i];
 }
 
-void feLinearSystemMklPardiso::correctSolution(feSolution *sol)
+void feLinearSystemMklPardiso::correctSolution(feSolution *sol,
+                                               const bool correctSolutionDot)
 {
-  std::vector<double> &solArray = sol->getSolutionReference();
+  std::vector<double> &solArray = correctSolutionDot ? sol->getSolutionDot() : sol->getSolution();
 
 #if defined(HAVE_MPI)
   int rank;
@@ -936,15 +943,16 @@ void feLinearSystemMklPardiso::setResidualToZero()
   for(feInt i = 0; i < _numOwnedRows; i++) _rhs[i] = 0;
 }
 
-void feLinearSystemMklPardiso::assemble(feSolution *sol)
+void feLinearSystemMklPardiso::assemble(const feSolution *sol,
+                                        const bool assembleOnlyTransientMatrices)
 {
   if(_recomputeMatrix) {
-    this->assembleMatrices(sol);
+    this->assembleMatrices(sol, assembleOnlyTransientMatrices);
   }
   this->assembleResiduals(sol);
 }
 
-void feLinearSystemMklPardiso::constrainEssentialComponents(feSolution *sol)
+void feLinearSystemMklPardiso::constrainEssentialComponents(const feSolution *sol)
 {
   tic();
   // Initialize data at first pass
@@ -1071,7 +1079,7 @@ void feLinearSystemMklPardiso::mklFactorization(void)
     cluster_sparse_solver(PT, &MAXFCT, &MNUM, &MTYPE, &PHASE, &_nInc, _mat_values, _mat_ia, _mat_ja, IDUM, &NRHS, IPARM, &MSGLVL,
                &DDUM, &DDUM, &comm, &ERROR);
 #else
-    feInfo("Entering phase 22 with IPARM[17] = %d", IPARM[17]);
+    // feInfo("Entering phase 22 with IPARM[17] = %d", IPARM[17]);
   #ifdef MKL_ILP64
     pardiso_64(PT, &MAXFCT, &MNUM, &MTYPE, &PHASE, &_nInc, _mat_values, _mat_ia, _mat_ja, IDUM, &NRHS, IPARM, &MSGLVL,
                &DDUM, &DDUM, &ERROR);
@@ -1098,9 +1106,11 @@ void feLinearSystemMklPardiso::mklSolve(void)
                _rhs, du, &comm, &ERROR);
 #else
   #ifdef MKL_ILP64
+    // feInfo("ILP64");
     pardiso_64(PT, &MAXFCT, &MNUM, &MTYPE, &PHASE, &_nInc, _mat_values, _mat_ia, _mat_ja, IDUM, &NRHS, IPARM, &MSGLVL,
                _rhs, du, &ERROR);
   #else
+    // feInfo("Not ILP64");
     pardiso(PT, &MAXFCT, &MNUM, &MTYPE, &PHASE, &_nInc, _mat_values, _mat_ia, _mat_ja, IDUM, &NRHS, IPARM, &MSGLVL,
                _rhs, du, &ERROR);
   #endif
@@ -1119,11 +1129,11 @@ feLinearSystemMklPardiso::~feLinearSystemMklPardiso(void)
              IPARM, &MSGLVL, &DDUM, &DDUM, &comm, &ERROR);
 #else
   #ifdef MKL_ILP64
-    pardiso(PT, &MAXFCT, &MNUM, &MTYPE, &PHASE,
+    pardiso_64(PT, &MAXFCT, &MNUM, &MTYPE, &PHASE,
              &_nInc, &DDUM, _mat_ia, _mat_ja, IDUM, &NRHS,
              IPARM, &MSGLVL, &DDUM, &DDUM, &ERROR);
   #else
-    pardiso_64(PT, &MAXFCT, &MNUM, &MTYPE, &PHASE,
+    pardiso(PT, &MAXFCT, &MNUM, &MTYPE, &PHASE,
              &_nInc, &DDUM, _mat_ia, _mat_ja, IDUM, &NRHS,
              IPARM, &MSGLVL, &DDUM, &DDUM, &ERROR);
   #endif

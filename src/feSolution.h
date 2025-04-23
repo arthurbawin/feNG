@@ -66,8 +66,11 @@ public:
   double getInitialTime() const { return _t0; }
   double getFinalTime() const { return _t1; }
 
+  std::vector<double> &getSolution() { return _sol; }
+  std::vector<double> &getSolutionDot() { return _dsoldt; }
   const std::vector<double> &getSolution() const { return _sol; }
   const std::vector<double> &getSolutionDot() const { return _dsoldt; }
+  // To remove
   std::vector<double> getSolutionCopy() const { return _sol; }
   std::vector<double> getSolutionDotCopy() const { return _dsoldt; }
   std::vector<double> &getSolutionReference() { return _sol; }
@@ -87,7 +90,7 @@ public:
   void incrementSolAtDOF(int iDOF, double val) { _sol[iDOF] += val; }
 
   // Set the solution array to the iSol-th solution stored in solContainer
-  void setSolFromContainer(feSolutionContainer *solContainer, int iSol = 0);
+  void setSolFromContainer(const feSolutionContainer *solContainer, const int iSol = 0);
 
   // Reset the time derivative of the solution
   void setSolDotToZero();

@@ -315,12 +315,6 @@ void feSysElm_TransientMass::computeAe(feBilinearForm *form)
       for(int j = 0; j < _nFunctions; ++j)
         form->_Ae[i][j] += _feU[i] * coeff * form->_c0 * _feU[j] * jac * _wQuad[k];
   }
-  // if(form->_numElem == 10) {
-  //   feInfo("%s - Local matrix on elem 10 :", toString(_ID).data());
-  //   for(int i = 0; i < form->_M; ++i)
-  //     for(int j = 0; j < form->_N; ++j)
-  //       feInfo("A[%2d][%2d] = %+-1.10e", i, j, form->_Ae[i][j]);
-  // }
 }
 
 void feSysElm_TransientMass::computeBe(feBilinearForm *form)
