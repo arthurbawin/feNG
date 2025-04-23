@@ -79,7 +79,7 @@ feLinearSystem::feLinearSystem(const std::vector<feBilinearForm*> bilinearForms)
 #endif
 
   for(int i = 0; i < nThreads; ++i) {
-    for(const feBilinearForm *f : bilinearForms) {
+    for(feBilinearForm *f : bilinearForms) {
 #if defined(HAVE_OMP)
       feBilinearForm *fCpy = new feBilinearForm(*f);
       _formResiduals.push_back(fCpy);
