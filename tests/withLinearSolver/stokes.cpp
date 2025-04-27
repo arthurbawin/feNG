@@ -70,19 +70,19 @@ namespace stokes {
       feSolution sol(numbering.getNbDOFs(), spaces, essentialSpaces);
 
       feBilinearForm *divSigma = nullptr, *diffU = nullptr, *gradP = nullptr, *divU = nullptr, *source = nullptr;
-      feCheck(createBilinearForm( divU, {p, u}, new feSysElm_MixedDivergence(&scalarConstant::one)));
-      feCheck(createBilinearForm(source,   {u}, new feSysElm_VectorSource(&uSrc)));
+      feCheck(createBilinearForm( divU, {p, u}, new feSysElm_MixedDivergence<2>(&scalarConstant::one)));
+      feCheck(createBilinearForm(source,   {u}, new feSysElm_VectorSource<2>(&uSrc)));
       std::vector<feBilinearForm*> forms = {divU, source};
 
       if(divergenceFormulation) {
         UNUSED(diffU, gradP);
-        feCheck(createBilinearForm(divSigma, {u, p}, new feSysElm_DivergenceNewtonianStress(&scalarConstant::one, &scalarConstant::one)));
+        feCheck(createBilinearForm(divSigma, {u, p}, new feSysElm_DivergenceNewtonianStress<2>(&scalarConstant::one, &scalarConstant::one)));
         forms.push_back(divSigma);
       } else {
         // Laplacian formulation
         UNUSED(divSigma);
-        feCheck(createBilinearForm(gradP, {u, p}, new feSysElm_MixedGradient(&scalarConstant::minusOne)));
-        feCheck(createBilinearForm(diffU,    {u}, new feSysElm_VectorDiffusion(&scalarConstant::minusOne, &scalarConstant::one)));
+        feCheck(createBilinearForm(gradP, {u, p}, new feSysElm_MixedGradient<2>(&scalarConstant::minusOne)));
+        feCheck(createBilinearForm(diffU,    {u}, new feSysElm_VectorDiffusion<2>(&scalarConstant::minusOne, &scalarConstant::one)));
         forms.push_back(diffU);
         forms.push_back(gradP);
       }
@@ -223,18 +223,18 @@ namespace stokes {
       feSolution sol(numbering.getNbDOFs(), spaces, essentialSpaces);
 
       feBilinearForm *divSigma = nullptr, *diffU = nullptr, *gradP = nullptr, *divU = nullptr;
-      feCheck(createBilinearForm( divU, {p, u}, new feSysElm_MixedDivergence(&scalarConstant::one)));
+      feCheck(createBilinearForm( divU, {p, u}, new feSysElm_MixedDivergence<2>(&scalarConstant::one)));
       std::vector<feBilinearForm*> forms = {divU};
 
       if(divergenceFormulation) {
         UNUSED(diffU, gradP);
-        feCheck(createBilinearForm(divSigma, {u, p}, new feSysElm_DivergenceNewtonianStress(&scalarConstant::one, &scalarConstant::one)));
+        feCheck(createBilinearForm(divSigma, {u, p}, new feSysElm_DivergenceNewtonianStress<2>(&scalarConstant::one, &scalarConstant::one)));
         forms.push_back(divSigma);
       } else {
         // Laplacian formulation
         UNUSED(divSigma);
-        feCheck(createBilinearForm(gradP, {u, p}, new feSysElm_MixedGradient(&scalarConstant::minusOne)));
-        feCheck(createBilinearForm(diffU,    {u}, new feSysElm_VectorDiffusion(&scalarConstant::minusOne, &scalarConstant::one)));
+        feCheck(createBilinearForm(gradP, {u, p}, new feSysElm_MixedGradient<2>(&scalarConstant::minusOne)));
+        feCheck(createBilinearForm(diffU,    {u}, new feSysElm_VectorDiffusion<2>(&scalarConstant::minusOne, &scalarConstant::one)));
         forms.push_back(diffU);
         forms.push_back(gradP);
       }

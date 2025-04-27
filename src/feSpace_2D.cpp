@@ -77,21 +77,21 @@ std::vector<double> feSpaceTriP0::d2Lds2(const double */*r*/) const { return {0.
 void feSpaceTriP0::initializeNumberingUnknowns()
 {
   int nDOFPerElem = 1;
-  for(int i = 0; i < _mesh->getNumElements(_cncGeoID); ++i) {
-    _numbering->setUnknownElementDOF(_mesh, _cncGeoID, i, nDOFPerElem);
+  for(int i = 0; i < _mesh->getNumElements(_cncGeoTag); ++i) {
+    _numbering->setUnknownElementDOF(_mesh, _cncGeoTag, i, nDOFPerElem);
   }
 }
 
 void feSpaceTriP0::initializeNumberingEssential()
 {
-  for(int i = 0; i < _mesh->getNumElements(_cncGeoID); ++i) {
-    _numbering->setEssentialElementDOF(_mesh, _cncGeoID, i);
+  for(int i = 0; i < _mesh->getNumElements(_cncGeoTag); ++i) {
+    _numbering->setEssentialElementDOF(_mesh, _cncGeoTag, i);
   }
 }
 
 void feSpaceTriP0::initializeAddressingVector(int numElem, std::vector<feInt> &adr) const
 {
-  adr[0] = _numbering->getElementDOF(_mesh, _cncGeoID, numElem, 0);
+  adr[0] = _numbering->getElementDOF(_mesh, _cncGeoTag, numElem, 0);
 }
 
 // -----------------------------------------------------------------------------
@@ -135,27 +135,27 @@ std::vector<double> feSpaceTriP1::d2Lds2(const double */*r*/) const { return {0.
 
 void feSpaceTriP1::initializeNumberingUnknowns()
 {
-  for(int i = 0; i < _mesh->getNumElements(_cncGeoID); ++i) {
-    _numbering->setUnknownVertexDOF(_mesh, _cncGeoID, i, 0);
-    _numbering->setUnknownVertexDOF(_mesh, _cncGeoID, i, 1);
-    _numbering->setUnknownVertexDOF(_mesh, _cncGeoID, i, 2);
+  for(int i = 0; i < _mesh->getNumElements(_cncGeoTag); ++i) {
+    _numbering->setUnknownVertexDOF(_mesh, _cncGeoTag, i, 0);
+    _numbering->setUnknownVertexDOF(_mesh, _cncGeoTag, i, 1);
+    _numbering->setUnknownVertexDOF(_mesh, _cncGeoTag, i, 2);
   }
 }
 
 void feSpaceTriP1::initializeNumberingEssential()
 {
-  for(int i = 0; i < _mesh->getNumElements(_cncGeoID); ++i) {
-    _numbering->setEssentialVertexDOF(_mesh, _cncGeoID, i, 0);
-    _numbering->setEssentialVertexDOF(_mesh, _cncGeoID, i, 1);
-    _numbering->setEssentialVertexDOF(_mesh, _cncGeoID, i, 2);
+  for(int i = 0; i < _mesh->getNumElements(_cncGeoTag); ++i) {
+    _numbering->setEssentialVertexDOF(_mesh, _cncGeoTag, i, 0);
+    _numbering->setEssentialVertexDOF(_mesh, _cncGeoTag, i, 1);
+    _numbering->setEssentialVertexDOF(_mesh, _cncGeoTag, i, 2);
   }
 }
 
 void feSpaceTriP1::initializeAddressingVector(int numElem, std::vector<feInt> &adr) const
 {
-  adr[0] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 0);
-  adr[1] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 1);
-  adr[2] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 2);
+  adr[0] = _numbering->getVertexDOF(_mesh, _cncGeoTag, numElem, 0);
+  adr[1] = _numbering->getVertexDOF(_mesh, _cncGeoTag, numElem, 1);
+  adr[2] = _numbering->getVertexDOF(_mesh, _cncGeoTag, numElem, 2);
 }
 
 // -----------------------------------------------------------------------------
@@ -191,15 +191,15 @@ std::vector<double> feSpaceTriP1_Discontinuous::d2Lds2(const double */*r*/) cons
 void feSpaceTriP1_Discontinuous::initializeNumberingUnknowns()
 {
   int nDOFPerElem = 3;
-  for(int i = 0; i < _mesh->getNumElements(_cncGeoID); ++i) {
-    _numbering->setUnknownElementDOF(_mesh, _cncGeoID, i, nDOFPerElem);
+  for(int i = 0; i < _mesh->getNumElements(_cncGeoTag); ++i) {
+    _numbering->setUnknownElementDOF(_mesh, _cncGeoTag, i, nDOFPerElem);
   }
 }
 
 void feSpaceTriP1_Discontinuous::initializeNumberingEssential()
 {
-  for(int i = 0; i < _mesh->getNumElements(_cncGeoID); ++i) {
-    _numbering->setEssentialElementDOF(_mesh, _cncGeoID, i);
+  for(int i = 0; i < _mesh->getNumElements(_cncGeoTag); ++i) {
+    _numbering->setEssentialElementDOF(_mesh, _cncGeoTag, i);
   }
 }
 
@@ -207,7 +207,7 @@ void feSpaceTriP1_Discontinuous::initializeAddressingVector(int numElem, std::ve
 {
   int nDOFPerElem = 3;
   for(int i = 0; i < nDOFPerElem; ++i) {
-    adr[i] = _numbering->getElementDOF(_mesh, _cncGeoID, numElem, i);
+    adr[i] = _numbering->getElementDOF(_mesh, _cncGeoTag, numElem, i);
   }
 }
 
@@ -218,12 +218,12 @@ void feSpaceTriP1_Discontinuous::synchronizeCodeOfEssentialDOF()
     // For each element, request the DOF status (unknown or essential)
     // at each vertex, then update the corresponding element DOF
     // if this DOF has been marked as essential by another feSpace.
-    for(int iElm = 0; iElm < _mesh->getNumElements(_cncGeoID); ++iElm) {
+    for(int iElm = 0; iElm < _mesh->getNumElements(_cncGeoTag); ++iElm) {
       for(int j = 0; j < numDOFAssociatedToVertices; ++j) {
-        int vert = _mesh->getVertex(_cncGeoID, iElm, j);
+        int vert = _mesh->getVertex(_cncGeoTag, iElm, j);
         int vertexDOFtype = _numbering->getDOFCodeAtVertex(vert);
         if(vertexDOFtype == dofType::DOF_ESSENTIAL) {
-          _numbering->setEssentialElementDOF(_mesh, _cncGeoID, iElm, j);
+          _numbering->setEssentialElementDOF(_mesh, _cncGeoTag, iElm, j);
         }
       }
     }
@@ -236,13 +236,13 @@ void feSpaceTriP1_Discontinuous::synchronizeNumberingOfEssentialDOF(int &numModi
     int numDOFAssociatedToVertices = 3;
     // If vertex DOF is essential, assign its DOF number from the 
     // list of vertex DOF numbers.
-    for(int iElm = 0; iElm < _mesh->getNumElements(_cncGeoID); ++iElm) {
+    for(int iElm = 0; iElm < _mesh->getNumElements(_cncGeoTag); ++iElm) {
       for(int j = 0; j < numDOFAssociatedToVertices; ++j) {
-        int vert = _mesh->getVertex(_cncGeoID, iElm, j);
+        int vert = _mesh->getVertex(_cncGeoTag, iElm, j);
         int vertexDOFtype = _numbering->getDOFCodeAtVertex(vert);
         if(vertexDOFtype == dofType::DOF_ESSENTIAL) {
           int dofNumber = _numbering->getDOFNumberAtVertex(vert, 0); // Is it always 0? Probably for scalar spaces
-          _numbering->setElementDOF(_mesh, _cncGeoID, iElm, j, dofNumber);
+          _numbering->setElementDOF(_mesh, _cncGeoTag, iElm, j, dofNumber);
           numModifiedDOF++;
         }
       }
@@ -257,23 +257,22 @@ template <int dim>
 feSpaceVecTriP1<dim>::feSpaceVecTriP1(feMesh *mesh, const std::string fieldID,
                                       const std::string cncGeoID, feVectorFunction *fct,
                                       const bool useGlobalShapeFunctions)
-  : feVectorSpace(2, mesh, fieldID, cncGeoID, fct, useGlobalShapeFunctions)
+  : feVectorSpace<dim>(2, mesh, fieldID, cncGeoID, fct, useGlobalShapeFunctions)
 {
-  _nComponents = dim;
-  _nFunctions = 3 * dim;
+  this->_nFunctions = 3 * dim;
   double coor[9] = {0., 0., 0., 1., 0., 0., 0., 1., 0.};
-  _Lcoor.resize(9 * dim);
-  duplicateScalarArray(9, 3, coor, dim, _Lcoor);
-  _dofLocations.resize(_nFunctions);
-  for(int i = 0; i < _nFunctions; ++i) _dofLocations[i] = dofLocation::VERTEX;
+  this->_Lcoor.resize(9 * dim);
+  duplicateScalarArray(9, 3, coor, dim, this->_Lcoor);
+  this->_dofLocations.resize(this->_nFunctions);
+  for(int i = 0; i < this->_nFunctions; ++i) this->_dofLocations[i] = dofLocation::VERTEX;
 }
 
 template <int dim> std::vector<double> feSpaceVecTriP1<dim>::L(const double *r) const
 {
   double phi[3] = {1.0 - r[0] - r[1], r[0], r[1]};
-  std::vector<double> res(_nFunctions*_nComponents);
+  std::vector<double> res(this->_nFunctions*this->_nComponents);
   // duplicateScalarArray(3, 1, phi, dim, res);
-  vectorLagrangeLayout(phi, 3, _nComponents, res.data());
+  vectorLagrangeLayout(phi, 3, this->_nComponents, res.data());
   return res;
 }
 
@@ -281,81 +280,81 @@ template <int dim> void feSpaceVecTriP1<dim>::L(const double *r, double *res) co
 {
   double phi[3] = {1.0 - r[0] - r[1], r[0], r[1]};
   // duplicateScalarArray(3, 1, phi, dim, res);
-  vectorLagrangeLayout(phi, 3, _nComponents, res);
+  vectorLagrangeLayout(phi, 3, this->_nComponents, res);
 }
 
 template <int dim> std::vector<double> feSpaceVecTriP1<dim>::dLdr(const double */*r*/) const
 {
   double dldr[3] = {-1.0, 1.0, 0.0};
-  std::vector<double> res(_nFunctions*_nComponents);
+  std::vector<double> res(this->_nFunctions*this->_nComponents);
   // duplicateScalarArray(3, 1, dldr, dim, res);
-  vectorLagrangeLayout(dldr, 3, _nComponents, res.data());
+  vectorLagrangeLayout(dldr, 3, this->_nComponents, res.data());
   return res;
 }
 
 template <int dim> std::vector<double> feSpaceVecTriP1<dim>::dLds(const double */*r*/) const
 {
   double dlds[3] = {-1.0, 0.0, 1.0};
-  std::vector<double> res(_nFunctions*_nComponents);
+  std::vector<double> res(this->_nFunctions*this->_nComponents);
   // duplicateScalarArray(3, 1, dlds, dim, res);
-  vectorLagrangeLayout(dlds, 3, _nComponents, res.data());
+  vectorLagrangeLayout(dlds, 3, this->_nComponents, res.data());
   return res;
 }
 
 template <int dim> std::vector<double> feSpaceVecTriP1<dim>::d2Ldr2(const double */*r*/) const
 {
   double d2ldr2[3] = {0., 0., 0.};
-  std::vector<double> res(_nFunctions*_nComponents);
+  std::vector<double> res(this->_nFunctions*this->_nComponents);
   // duplicateScalarArray(3, 1, d2ldr2, dim, res);
-  vectorLagrangeLayout(d2ldr2, 3, _nComponents, res.data());
+  vectorLagrangeLayout(d2ldr2, 3, this->_nComponents, res.data());
   return res;
 }
 
 template <int dim> std::vector<double> feSpaceVecTriP1<dim>::d2Ldrs(const double */*r*/) const
 {
   double d2ldrs[3] = {0., 0., 0.};
-  std::vector<double> res(_nFunctions*_nComponents);
+  std::vector<double> res(this->_nFunctions*this->_nComponents);
   // duplicateScalarArray(3, 1, d2ldrs, dim, res);
-  vectorLagrangeLayout(d2ldrs, 3, _nComponents, res.data());
+  vectorLagrangeLayout(d2ldrs, 3, this->_nComponents, res.data());
   return res;
 }
 
 template <int dim> std::vector<double> feSpaceVecTriP1<dim>::d2Lds2(const double */*r*/) const
 {
   double d2lds2[3] = {0., 0., 0.};
-  std::vector<double> res(_nFunctions*_nComponents);
+  std::vector<double> res(this->_nFunctions*this->_nComponents);
   // duplicateScalarArray(3, 1, d2lds2, dim, res);
-  vectorLagrangeLayout(d2lds2, 3, _nComponents, res.data());
+  vectorLagrangeLayout(d2lds2, 3, this->_nComponents, res.data());
   return res;
 }
 
 template <int dim> void feSpaceVecTriP1<dim>::initializeNumberingUnknowns()
 {
-  for(int i = 0; i < _mesh->getNumElements(_cncGeoID); ++i) {
-    _numbering->setUnknownVertexDOF(_mesh, _cncGeoID, i, 0, dim);
-    _numbering->setUnknownVertexDOF(_mesh, _cncGeoID, i, 1, dim);
-    _numbering->setUnknownVertexDOF(_mesh, _cncGeoID, i, 2, dim);
+  for(int i = 0; i < this->_mesh->getNumElements(this->_cncGeoTag); ++i) {
+    this->_numbering->setUnknownVertexDOF(this->_mesh, this->_cncGeoTag, i, 0, dim);
+    this->_numbering->setUnknownVertexDOF(this->_mesh, this->_cncGeoTag, i, 1, dim);
+    this->_numbering->setUnknownVertexDOF(this->_mesh, this->_cncGeoTag, i, 2, dim);
   }
 }
 
 template <int dim> void feSpaceVecTriP1<dim>::initializeNumberingEssential()
 {
-  for(int i = 0; i < _mesh->getNumElements(_cncGeoID); ++i) {
-    _numbering->setEssentialVertexDOF(_mesh, _cncGeoID, i, 0);
-    _numbering->setEssentialVertexDOF(_mesh, _cncGeoID, i, 1);
-    _numbering->setEssentialVertexDOF(_mesh, _cncGeoID, i, 2);
+  for(int i = 0; i < this->_mesh->getNumElements(this->_cncGeoTag); ++i) {
+    this->_numbering->setEssentialVertexDOF(this->_mesh, this->_cncGeoTag, i, 0);
+    this->_numbering->setEssentialVertexDOF(this->_mesh, this->_cncGeoTag, i, 1);
+    this->_numbering->setEssentialVertexDOF(this->_mesh, this->_cncGeoTag, i, 2);
   }
 }
 
 template <int dim>
 void feSpaceVecTriP1<dim>::initializeAddressingVector(int numElem, std::vector<feInt> &adr) const
 {
-  adr[0] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 0, 0);
-  adr[1] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 0, 1);
-  adr[2] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 1, 0);
-  adr[3] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 1, 1);
-  adr[4] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 2, 0);
-  adr[5] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 2, 1);
+  adr[0] = this->_numbering->getVertexDOF(this->_mesh, this->_cncGeoTag, numElem, 0, 0);
+  adr[1] = this->_numbering->getVertexDOF(this->_mesh, this->_cncGeoTag, numElem, 0, 1);
+  adr[2] = this->_numbering->getVertexDOF(this->_mesh, this->_cncGeoTag, numElem, 1, 0);
+  adr[3] = this->_numbering->getVertexDOF(this->_mesh, this->_cncGeoTag, numElem, 1, 1);
+  adr[4] = this->_numbering->getVertexDOF(this->_mesh, this->_cncGeoTag, numElem, 2, 0);
+  adr[5] = this->_numbering->getVertexDOF(this->_mesh, this->_cncGeoTag, numElem, 2, 1);
 }
 
 template class feSpaceVecTriP1<1>;
@@ -394,54 +393,50 @@ std::vector<double> feSpaceTri_CR1::d2Lds2(const double */*r*/) const { return {
 void feSpaceTri_CR1::initializeNumberingUnknowns()
 {
   int nDOFPerEdge = 1;
-  for(int i = 0; i < _mesh->getNumElements(_cncGeoID); ++i) {
-    _numbering->setUnknownEdgeDOF(_mesh, _cncGeoID, i, 0, nDOFPerEdge);
-    _numbering->setUnknownEdgeDOF(_mesh, _cncGeoID, i, 1, nDOFPerEdge);
-    _numbering->setUnknownEdgeDOF(_mesh, _cncGeoID, i, 2, nDOFPerEdge);
+  for(int i = 0; i < _mesh->getNumElements(_cncGeoTag); ++i) {
+    _numbering->setUnknownEdgeDOF(_mesh, _cncGeoTag, i, 0, nDOFPerEdge);
+    _numbering->setUnknownEdgeDOF(_mesh, _cncGeoTag, i, 1, nDOFPerEdge);
+    _numbering->setUnknownEdgeDOF(_mesh, _cncGeoTag, i, 2, nDOFPerEdge);
   }
 }
 
 void feSpaceTri_CR1::initializeNumberingEssential()
 {
-  for(int i = 0; i < _mesh->getNumElements(_cncGeoID); ++i) {
-    _numbering->setEssentialEdgeDOF(_mesh, _cncGeoID, i, 0);
-    _numbering->setEssentialEdgeDOF(_mesh, _cncGeoID, i, 1);
-    _numbering->setEssentialEdgeDOF(_mesh, _cncGeoID, i, 2);
+  for(int i = 0; i < _mesh->getNumElements(_cncGeoTag); ++i) {
+    _numbering->setEssentialEdgeDOF(_mesh, _cncGeoTag, i, 0);
+    _numbering->setEssentialEdgeDOF(_mesh, _cncGeoTag, i, 1);
+    _numbering->setEssentialEdgeDOF(_mesh, _cncGeoTag, i, 2);
   }
 }
 
 void feSpaceTri_CR1::initializeAddressingVector(int numElem, std::vector<feInt> &adr) const
 {
-  adr[0] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 0, 0);
-  adr[1] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 1, 0);
-  adr[2] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 2, 0);
+  adr[0] = _numbering->getEdgeDOF(_mesh, _cncGeoTag, numElem, 0, 0);
+  adr[1] = _numbering->getEdgeDOF(_mesh, _cncGeoTag, numElem, 1, 0);
+  adr[2] = _numbering->getEdgeDOF(_mesh, _cncGeoTag, numElem, 2, 0);
 }
 
 // -----------------------------------------------------------------------------
 // Raviart-Thomas (vector-valued) element of degree 1 on reference triangle r = [0,1], s = [0,1-r]
 // -----------------------------------------------------------------------------
-feSpaceTriRT1::feSpaceTriRT1(feMesh *mesh, const std::string fieldID,
+template <int dim>
+feSpaceTriRT1<dim>::feSpaceTriRT1(feMesh *mesh, const std::string fieldID,
                              const std::string cncGeoID, feVectorFunction *fct,
                              const bool useGlobalShapeFunctions)
-  : feVectorSpace(2, mesh, fieldID, cncGeoID, fct, useGlobalShapeFunctions)
+  : feVectorSpace<dim>(2, mesh, fieldID, cncGeoID, fct, useGlobalShapeFunctions)
 {
-  _elementType = elementType::RAVIART_THOMAS;
-  _isDiscontinuous = true;
-  _nComponents = 2;
-  _nFunctions = 3;
-  // const double coord[9] = {0.5, 0.5, 0.0,
-  //                          0.0, 0.5, 0.0,
-  //                          0.5, 0.0, 0.0};
-  // _Lcoor.resize(9 * _dim);
-  // duplicateScalarArray(9, 3, coord, _dim, _Lcoor);
-  _Lcoor = {0.5, 0.5, 0.0,
-            0.0, 0.5, 0.0,
-            0.5, 0.0, 0.0};
-  _dofLocations.resize(_nFunctions);
-  for(int i = 0; i < _nFunctions; ++i) _dofLocations[i] = dofLocation::EDGE;
+  this->_elementType = elementType::RAVIART_THOMAS;
+  this->_isDiscontinuous = true;
+  this->_nFunctions = 3;
+  this->_Lcoor = {0.5, 0.5, 0.0,
+                  0.0, 0.5, 0.0,
+                  0.5, 0.0, 0.0};
+  this->_dofLocations.resize(this->_nFunctions);
+  for(int i = 0; i < this->_nFunctions; ++i)
+    this->_dofLocations[i] = dofLocation::EDGE;
 }
 
-std::vector<double> feSpaceTriRT1::L(const double *r) const
+template <int dim> std::vector<double> feSpaceTriRT1<dim>::L(const double *r) const
 {
   // These are the shape functions from Guermond
   // The shape functions from defelement may require
@@ -449,68 +444,71 @@ std::vector<double> feSpaceTriRT1::L(const double *r) const
   return {r[0], r[1], r[0]-1., r[1], r[0], -1.+r[1]};
 }
 
-void feSpaceTriRT1::L(const double *r, double *res) const
+template <int dim> void feSpaceTriRT1<dim>::L(const double *r, double *res) const
 {
   res[0] =   -r[0]; res[1] =   -r[1];
   res[2] = r[0]-1.; res[3] =    r[1];
   res[4] =   -r[0]; res[5] = 1.-r[1];
 }
 
-std::vector<double> feSpaceTriRT1::dLdr(const double */*r*/) const
+template <int dim> std::vector<double> feSpaceTriRT1<dim>::dLdr(const double */*r*/) const
 {
   return {-1., 0., 1., 0., -1., 0.};
 }
 
-std::vector<double> feSpaceTriRT1::dLds(const double */*r*/) const
+template <int dim> std::vector<double> feSpaceTriRT1<dim>::dLds(const double */*r*/) const
 {
   return {0., -1., 0., 1., 0., -1.};
 }
 
-std::vector<double> feSpaceTriRT1::d2Ldr2(const double */*r*/) const
+template <int dim> std::vector<double> feSpaceTriRT1<dim>::d2Ldr2(const double */*r*/) const
 {
   return {0., 0., 0., 0., 0., 0.};
 }
 
-std::vector<double> feSpaceTriRT1::d2Ldrs(const double */*r*/) const
+template <int dim> std::vector<double> feSpaceTriRT1<dim>::d2Ldrs(const double */*r*/) const
 {
   return {0., 0., 0., 0., 0., 0.};
 }
 
-std::vector<double> feSpaceTriRT1::d2Lds2(const double */*r*/) const
+template <int dim> std::vector<double> feSpaceTriRT1<dim>::d2Lds2(const double */*r*/) const
 {
   return {0., 0., 0., 0., 0., 0.};
 }
 
-void feSpaceTriRT1::initializeNumberingUnknowns()
+template <int dim> void feSpaceTriRT1<dim>::initializeNumberingUnknowns()
 {
   int nDOFPerEdge = 1;
-  for(int i = 0; i < _mesh->getNumElements(_cncGeoID); ++i) {
-    _numbering->setUnknownEdgeDOF(_mesh, _cncGeoID, i, 0, nDOFPerEdge);
-    _numbering->setUnknownEdgeDOF(_mesh, _cncGeoID, i, 1, nDOFPerEdge);
-    _numbering->setUnknownEdgeDOF(_mesh, _cncGeoID, i, 2, nDOFPerEdge);
+  for(int i = 0; i < this->_mesh->getNumElements(this->_cncGeoTag); ++i) {
+    this->_numbering->setUnknownEdgeDOF(this->_mesh, this->_cncGeoTag, i, 0, nDOFPerEdge);
+    this->_numbering->setUnknownEdgeDOF(this->_mesh, this->_cncGeoTag, i, 1, nDOFPerEdge);
+    this->_numbering->setUnknownEdgeDOF(this->_mesh, this->_cncGeoTag, i, 2, nDOFPerEdge);
   }
 }
 
-void feSpaceTriRT1::initializeNumberingEssential()
+template <int dim> void feSpaceTriRT1<dim>::initializeNumberingEssential()
 {
-  for(int i = 0; i < _mesh->getNumElements(_cncGeoID); ++i) {
-    _numbering->setEssentialEdgeDOF(_mesh, _cncGeoID, i, 0);
-    _numbering->setEssentialEdgeDOF(_mesh, _cncGeoID, i, 1);
-    _numbering->setEssentialEdgeDOF(_mesh, _cncGeoID, i, 2);
+  for(int i = 0; i < this->_mesh->getNumElements(this->_cncGeoTag); ++i) {
+    this->_numbering->setEssentialEdgeDOF(this->_mesh, this->_cncGeoTag, i, 0);
+    this->_numbering->setEssentialEdgeDOF(this->_mesh, this->_cncGeoTag, i, 1);
+    this->_numbering->setEssentialEdgeDOF(this->_mesh, this->_cncGeoTag, i, 2);
   }
 }
 
-void feSpaceTriRT1::initializeAddressingVector(int numElem, std::vector<feInt> &adr) const
+template <int dim> void feSpaceTriRT1<dim>::initializeAddressingVector(int numElem, std::vector<feInt> &adr) const
 {
   // Warning : the standard numbering of the Raviart-Thomas dof
   // is different from the numbering of the mesh edges.
   // For instance : a triangle (v0,v1,v2) has its mesh edges numbered
   // (e0,e1,e2) = (v1-v0, v2-v1, v0-v2), but the first RT dof is 
   // associated to the edge v2-v1, thus e1, and yields the order (e1, e2, e0)
-  adr[0] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 1, 0);
-  adr[1] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 2, 0);
-  adr[2] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 0, 0);
+  adr[0] = this->_numbering->getEdgeDOF(this->_mesh, this->_cncGeoTag, numElem, 1, 0);
+  adr[1] = this->_numbering->getEdgeDOF(this->_mesh, this->_cncGeoTag, numElem, 2, 0);
+  adr[2] = this->_numbering->getEdgeDOF(this->_mesh, this->_cncGeoTag, numElem, 0, 0);
 }
+
+template class feSpaceTriRT1<1>;
+template class feSpaceTriRT1<2>;
 
 // -----------------------------------------------------------------------------
 // Lagrange element of degree 2 on reference triangle r = [0,1], s = [0,1-r]
@@ -745,45 +743,45 @@ std::vector<double> feSpaceTriP2::d2Lds2(const double */*r*/) const { return {4.
 void feSpaceTriP2::initializeNumberingUnknowns()
 {
   int nDOFPerEdge = 1;
-  for(int i = 0; i < _mesh->getNumElements(_cncGeoID); ++i) {
+  for(int i = 0; i < _mesh->getNumElements(_cncGeoTag); ++i) {
     for(int j = 0; j < this->getCncGeo()->getNumVerticesPerElem(); ++j) {
-      _numbering->setUnknownVertexDOF(_mesh, _cncGeoID, i, j);
+      _numbering->setUnknownVertexDOF(_mesh, _cncGeoTag, i, j);
     }
     if(this->getCncGeo()->getFeSpace()->getPolynomialDegree() != 2) {
-      _numbering->setUnknownEdgeDOF(_mesh, _cncGeoID, i, 0, nDOFPerEdge);
-      _numbering->setUnknownEdgeDOF(_mesh, _cncGeoID, i, 1, nDOFPerEdge);
-      _numbering->setUnknownEdgeDOF(_mesh, _cncGeoID, i, 2, nDOFPerEdge);
+      _numbering->setUnknownEdgeDOF(_mesh, _cncGeoTag, i, 0, nDOFPerEdge);
+      _numbering->setUnknownEdgeDOF(_mesh, _cncGeoTag, i, 1, nDOFPerEdge);
+      _numbering->setUnknownEdgeDOF(_mesh, _cncGeoTag, i, 2, nDOFPerEdge);
     }
   }
 }
 
 void feSpaceTriP2::initializeNumberingEssential()
 {
-  for(int i = 0; i < _mesh->getNumElements(_cncGeoID); ++i) {
+  for(int i = 0; i < _mesh->getNumElements(_cncGeoTag); ++i) {
     for(int j = 0; j < this->getCncGeo()->getNumVerticesPerElem(); ++j) {
-      _numbering->setEssentialVertexDOF(_mesh, _cncGeoID, i, j);
+      _numbering->setEssentialVertexDOF(_mesh, _cncGeoTag, i, j);
     }
     if(this->getCncGeo()->getFeSpace()->getPolynomialDegree() != 2) {
-      _numbering->setEssentialEdgeDOF(_mesh, _cncGeoID, i, 0);
-      _numbering->setEssentialEdgeDOF(_mesh, _cncGeoID, i, 1);
-      _numbering->setEssentialEdgeDOF(_mesh, _cncGeoID, i, 2);
+      _numbering->setEssentialEdgeDOF(_mesh, _cncGeoTag, i, 0);
+      _numbering->setEssentialEdgeDOF(_mesh, _cncGeoTag, i, 1);
+      _numbering->setEssentialEdgeDOF(_mesh, _cncGeoTag, i, 2);
     }
   }
 }
 
 void feSpaceTriP2::initializeAddressingVector(int numElem, std::vector<feInt> &adr) const
 {
-  adr[0] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 0);
-  adr[1] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 1);
-  adr[2] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 2);
+  adr[0] = _numbering->getVertexDOF(_mesh, _cncGeoTag, numElem, 0);
+  adr[1] = _numbering->getVertexDOF(_mesh, _cncGeoTag, numElem, 1);
+  adr[2] = _numbering->getVertexDOF(_mesh, _cncGeoTag, numElem, 2);
   if(this->getCncGeo()->getFeSpace()->getPolynomialDegree() == 2) {
-    adr[3] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 3);
-    adr[4] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 4);
-    adr[5] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 5);
+    adr[3] = _numbering->getVertexDOF(_mesh, _cncGeoTag, numElem, 3);
+    adr[4] = _numbering->getVertexDOF(_mesh, _cncGeoTag, numElem, 4);
+    adr[5] = _numbering->getVertexDOF(_mesh, _cncGeoTag, numElem, 5);
   } else {
-    adr[3] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 0, 0);
-    adr[4] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 1, 0);
-    adr[5] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 2, 0);
+    adr[3] = _numbering->getEdgeDOF(_mesh, _cncGeoTag, numElem, 0, 0);
+    adr[4] = _numbering->getEdgeDOF(_mesh, _cncGeoTag, numElem, 1, 0);
+    adr[5] = _numbering->getEdgeDOF(_mesh, _cncGeoTag, numElem, 2, 0);
   }
 }
 
@@ -851,49 +849,49 @@ void feSpaceTriP2Bubble::initializeNumberingUnknowns()
 {
   int nDOFPerEdge = 1;
   int nDOFPerElement = 1;
-  for(int i = 0; i < _mesh->getNumElements(_cncGeoID); ++i) {
+  for(int i = 0; i < _mesh->getNumElements(_cncGeoTag); ++i) {
     for(int j = 0; j < this->getCncGeo()->getNumVerticesPerElem(); ++j) {
-      _numbering->setUnknownVertexDOF(_mesh, _cncGeoID, i, j);
+      _numbering->setUnknownVertexDOF(_mesh, _cncGeoTag, i, j);
     }
     if(this->getCncGeo()->getFeSpace()->getPolynomialDegree() != 2) {
-      _numbering->setUnknownEdgeDOF(_mesh, _cncGeoID, i, 0, nDOFPerEdge);
-      _numbering->setUnknownEdgeDOF(_mesh, _cncGeoID, i, 1, nDOFPerEdge);
-      _numbering->setUnknownEdgeDOF(_mesh, _cncGeoID, i, 2, nDOFPerEdge);
+      _numbering->setUnknownEdgeDOF(_mesh, _cncGeoTag, i, 0, nDOFPerEdge);
+      _numbering->setUnknownEdgeDOF(_mesh, _cncGeoTag, i, 1, nDOFPerEdge);
+      _numbering->setUnknownEdgeDOF(_mesh, _cncGeoTag, i, 2, nDOFPerEdge);
     }
-    _numbering->setUnknownElementDOF(_mesh, _cncGeoID, i, nDOFPerElement);
+    _numbering->setUnknownElementDOF(_mesh, _cncGeoTag, i, nDOFPerElement);
   }
 }
 
 void feSpaceTriP2Bubble::initializeNumberingEssential()
 {
-  for(int i = 0; i < _mesh->getNumElements(_cncGeoID); ++i) {
+  for(int i = 0; i < _mesh->getNumElements(_cncGeoTag); ++i) {
     for(int j = 0; j < this->getCncGeo()->getNumVerticesPerElem(); ++j) {
-      _numbering->setEssentialVertexDOF(_mesh, _cncGeoID, i, j);
+      _numbering->setEssentialVertexDOF(_mesh, _cncGeoTag, i, j);
     }
     if(this->getCncGeo()->getFeSpace()->getPolynomialDegree() != 2) {
-      _numbering->setEssentialEdgeDOF(_mesh, _cncGeoID, i, 0);
-      _numbering->setEssentialEdgeDOF(_mesh, _cncGeoID, i, 1);
-      _numbering->setEssentialEdgeDOF(_mesh, _cncGeoID, i, 2);
+      _numbering->setEssentialEdgeDOF(_mesh, _cncGeoTag, i, 0);
+      _numbering->setEssentialEdgeDOF(_mesh, _cncGeoTag, i, 1);
+      _numbering->setEssentialEdgeDOF(_mesh, _cncGeoTag, i, 2);
     }
-    _numbering->setEssentialElementDOF(_mesh, _cncGeoID, i);
+    _numbering->setEssentialElementDOF(_mesh, _cncGeoTag, i);
   }
 }
 
 void feSpaceTriP2Bubble::initializeAddressingVector(int numElem, std::vector<feInt> &adr) const
 {
-  adr[0] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 0);
-  adr[1] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 1);
-  adr[2] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 2);
+  adr[0] = _numbering->getVertexDOF(_mesh, _cncGeoTag, numElem, 0);
+  adr[1] = _numbering->getVertexDOF(_mesh, _cncGeoTag, numElem, 1);
+  adr[2] = _numbering->getVertexDOF(_mesh, _cncGeoTag, numElem, 2);
   if(this->getCncGeo()->getFeSpace()->getPolynomialDegree() == 2) {
-    adr[3] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 3);
-    adr[4] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 4);
-    adr[5] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 5);
+    adr[3] = _numbering->getVertexDOF(_mesh, _cncGeoTag, numElem, 3);
+    adr[4] = _numbering->getVertexDOF(_mesh, _cncGeoTag, numElem, 4);
+    adr[5] = _numbering->getVertexDOF(_mesh, _cncGeoTag, numElem, 5);
   } else {
-    adr[3] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 0, 0);
-    adr[4] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 1, 0);
-    adr[5] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 2, 0);
+    adr[3] = _numbering->getEdgeDOF(_mesh, _cncGeoTag, numElem, 0, 0);
+    adr[4] = _numbering->getEdgeDOF(_mesh, _cncGeoTag, numElem, 1, 0);
+    adr[5] = _numbering->getEdgeDOF(_mesh, _cncGeoTag, numElem, 2, 0);
   }
-  adr[6] = _numbering->getElementDOF(_mesh, _cncGeoID, numElem, 0);
+  adr[6] = _numbering->getElementDOF(_mesh, _cncGeoTag, numElem, 0);
 }
 
 // -----------------------------------------------------------------------------
@@ -903,16 +901,15 @@ template <int dim>
 feSpaceVecTriP2<dim>::feSpaceVecTriP2(feMesh *mesh, const std::string fieldID,
                                       const std::string cncGeoID, feVectorFunction *fct,
                                       const bool useGlobalShapeFunctions)
-  : feVectorSpace(2, mesh, fieldID, cncGeoID, fct, useGlobalShapeFunctions)
+  : feVectorSpace<dim>(2, mesh, fieldID, cncGeoID, fct, useGlobalShapeFunctions)
 {
-  _nComponents = dim;
-  _nFunctions = 6 * dim;
+  this->_nFunctions = 6 * dim;
   double coor[6 * 3] = {0., 0., 0., 1., 0., 0., 0., 1., 0., 0.5, 0., 0., 0.5, 0.5, 0., 0., 0.5, 0.};
-  _Lcoor.resize(6 * 3 * dim);
-  duplicateScalarArray(6 * 3, 3, coor, dim, _Lcoor);
-  _dofLocations.resize(_nFunctions);
-  for(int i = 0; i < _nFunctions; ++i) {
-    _dofLocations[i] = (i < 3 * dim) ? dofLocation::VERTEX : dofLocation::EDGE;
+  this->_Lcoor.resize(6 * 3 * dim);
+  duplicateScalarArray(6 * 3, 3, coor, dim, this->_Lcoor);
+  this->_dofLocations.resize(this->_nFunctions);
+  for(int i = 0; i < this->_nFunctions; ++i) {
+    this->_dofLocations[i] = (i < 3 * dim) ? dofLocation::VERTEX : dofLocation::EDGE;
   }
 }
 
@@ -924,9 +921,9 @@ template <int dim> std::vector<double> feSpaceVecTriP2<dim>::L(const double *r) 
                    4. * r[0] * (1. - r[0] - r[1]),
                    4. * r[0] * r[1],
                    4. * r[1] * (1. - r[0] - r[1])};
-  std::vector<double> res(_nFunctions*_nComponents);
+  std::vector<double> res(this->_nFunctions*this->_nComponents);
   // duplicateScalarArray(6, 1, phi, dim, res);
-  vectorLagrangeLayout(phi, 6, _nComponents, res.data());
+  vectorLagrangeLayout(phi, 6, this->_nComponents, res.data());
   return res;
 }
 
@@ -939,16 +936,16 @@ template <int dim> void feSpaceVecTriP2<dim>::L(const double *r, double *res) co
                    4. * r[0] * r[1],
                    4. * r[1] * (1. - r[0] - r[1])};
   // duplicateScalarArray(6, 1, phi, dim, res);
-  vectorLagrangeLayout(phi, 6, _nComponents, res);
+  vectorLagrangeLayout(phi, 6, this->_nComponents, res);
 }
 
 template <int dim> std::vector<double> feSpaceVecTriP2<dim>::dLdr(const double *r) const
 {
   double dldr[6] = {4. * (r[0] + r[1]) - 3.,      4. * r[0] - 1., 0.,
                     4. * (1. - 2. * r[0] - r[1]), 4. * r[1],      -4. * r[1]};
-  std::vector<double> res(_nFunctions*_nComponents);
+  std::vector<double> res(this->_nFunctions*this->_nComponents);
   // duplicateScalarArray(6, 1, dldr, dim, res);
-  vectorLagrangeLayout(dldr, 6, _nComponents, res.data());
+  vectorLagrangeLayout(dldr, 6, this->_nComponents, res.data());
   return res;
 }
 
@@ -956,94 +953,90 @@ template <int dim> std::vector<double> feSpaceVecTriP2<dim>::dLds(const double *
 {
   double dlds[6] = {4. * (r[0] + r[1]) - 3.,     0., 4. * r[1] - 1., -4. * r[0], 4. * r[0],
                     4. * (1. - r[0] - 2. * r[1])};
-  std::vector<double> res(_nFunctions*_nComponents);
+  std::vector<double> res(this->_nFunctions*this->_nComponents);
   // duplicateScalarArray(6, 1, dlds, dim, res);
-  vectorLagrangeLayout(dlds, 6, _nComponents, res.data());
+  vectorLagrangeLayout(dlds, 6, this->_nComponents, res.data());
   return res;
 }
 
 template <int dim> std::vector<double> feSpaceVecTriP2<dim>::d2Ldr2(const double */*r*/) const
 {
   double d2ldr2[6] = {4., 4., 0., -8., 0., 0.};
-  std::vector<double> res(_nFunctions*_nComponents);
+  std::vector<double> res(this->_nFunctions*this->_nComponents);
   // duplicateScalarArray(6, 1, d2ldr2, dim, res);
-  vectorLagrangeLayout(d2ldr2, 6, _nComponents, res.data());
+  vectorLagrangeLayout(d2ldr2, 6, this->_nComponents, res.data());
   return res;
 }
 
 template <int dim> std::vector<double> feSpaceVecTriP2<dim>::d2Ldrs(const double */*r*/) const
 {
   double d2ldrs[6] = {4., 0., 0., -4., 4., -4.};
-  std::vector<double> res(_nFunctions*_nComponents);
+  std::vector<double> res(this->_nFunctions*this->_nComponents);
   // duplicateScalarArray(6, 1, d2ldrs, dim, res);
-  vectorLagrangeLayout(d2ldrs, 6, _nComponents, res.data());
+  vectorLagrangeLayout(d2ldrs, 6, this->_nComponents, res.data());
   return res;
 }
 
 template <int dim> std::vector<double> feSpaceVecTriP2<dim>::d2Lds2(const double */*r*/) const
 {
   double d2lds2[6] = {4., 0., 4., 0., 0., -8.};
-  std::vector<double> res(_nFunctions*_nComponents);
+  std::vector<double> res(this->_nFunctions*this->_nComponents);
   // duplicateScalarArray(6, 1, d2lds2, dim, res);
-  vectorLagrangeLayout(d2lds2, 6, _nComponents, res.data());
+  vectorLagrangeLayout(d2lds2, 6, this->_nComponents, res.data());
   return res;
 }
 
 template <int dim> void feSpaceVecTriP2<dim>::initializeNumberingUnknowns()
 {
-  for(int i = 0; i < _mesh->getNumElements(_cncGeoID); ++i) {
+  for(int i = 0; i < this->_mesh->getNumElements(this->_cncGeoTag); ++i) {
     for(int j = 0; j < this->getCncGeo()->getNumVerticesPerElem(); ++j) {
-      _numbering->setUnknownVertexDOF(_mesh, _cncGeoID, i, j, dim);
+      this->_numbering->setUnknownVertexDOF(this->_mesh, this->_cncGeoTag, i, j, dim);
     }
     if(this->getCncGeo()->getFeSpace()->getPolynomialDegree() != 2) {
-      _numbering->setUnknownEdgeDOF(_mesh, _cncGeoID, i, 0, dim);
-      _numbering->setUnknownEdgeDOF(_mesh, _cncGeoID, i, 1, dim);
-      _numbering->setUnknownEdgeDOF(_mesh, _cncGeoID, i, 2, dim);
+      this->_numbering->setUnknownEdgeDOF(this->_mesh, this->_cncGeoTag, i, 0, dim);
+      this->_numbering->setUnknownEdgeDOF(this->_mesh, this->_cncGeoTag, i, 1, dim);
+      this->_numbering->setUnknownEdgeDOF(this->_mesh, this->_cncGeoTag, i, 2, dim);
     }
   }
 }
 
 template <int dim> void feSpaceVecTriP2<dim>::initializeNumberingEssential()
 {
-  // for(int iComp = 0; iComp < _nComponents; ++iComp){
-  //   if(_essentialComponents[iComp]){
-  for(int i = 0; i < _mesh->getNumElements(_cncGeoID); ++i) {
+  for(int i = 0; i < this->_mesh->getNumElements(this->_cncGeoTag); ++i) {
     for(int j = 0; j < this->getCncGeo()->getNumVerticesPerElem(); ++j) {
-      _numbering->setEssentialVertexDOF(_mesh, _cncGeoID, i, j); //, iComp);
+      this->_numbering->setEssentialVertexDOF(this->_mesh, this->_cncGeoTag, i, j);
     }
     if(this->getCncGeo()->getFeSpace()->getPolynomialDegree() != 2) {
-      _numbering->setEssentialEdgeDOF(_mesh, _cncGeoID, i, 0); //, iComp);
-      _numbering->setEssentialEdgeDOF(_mesh, _cncGeoID, i, 1); //, iComp);
-      _numbering->setEssentialEdgeDOF(_mesh, _cncGeoID, i, 2); //, iComp);
+      this->_numbering->setEssentialEdgeDOF(this->_mesh, this->_cncGeoTag, i, 0);
+      this->_numbering->setEssentialEdgeDOF(this->_mesh, this->_cncGeoTag, i, 1);
+      this->_numbering->setEssentialEdgeDOF(this->_mesh, this->_cncGeoTag, i, 2);
     }
   }
-  //   }
-  // }
 }
 
 template <int dim>
 void feSpaceVecTriP2<dim>::initializeAddressingVector(int numElem, std::vector<feInt> &adr) const
 {
-  adr[0] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 0, 0);
-  adr[1] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 0, 1);
-  adr[2] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 1, 0);
-  adr[3] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 1, 1);
-  adr[4] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 2, 0);
-  adr[5] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 2, 1);
+  adr[0] = this->_numbering->getVertexDOF(this->_mesh, this->_cncGeoTag, numElem, 0, 0);
+  adr[1] = this->_numbering->getVertexDOF(this->_mesh, this->_cncGeoTag, numElem, 0, 1);
+  adr[2] = this->_numbering->getVertexDOF(this->_mesh, this->_cncGeoTag, numElem, 1, 0);
+  adr[3] = this->_numbering->getVertexDOF(this->_mesh, this->_cncGeoTag, numElem, 1, 1);
+  adr[4] = this->_numbering->getVertexDOF(this->_mesh, this->_cncGeoTag, numElem, 2, 0);
+  adr[5] = this->_numbering->getVertexDOF(this->_mesh, this->_cncGeoTag, numElem, 2, 1);
   if(this->getCncGeo()->getFeSpace()->getPolynomialDegree() == 2) {
-    adr[6] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 3, 0);
-    adr[7] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 3, 1);
-    adr[8] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 4, 0);
-    adr[9] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 4, 1);
-    adr[10] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 5, 0);
-    adr[11] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 5, 1);
+    adr[6] = this->_numbering->getVertexDOF(this->_mesh, this->_cncGeoTag, numElem, 3, 0);
+    adr[7] = this->_numbering->getVertexDOF(this->_mesh, this->_cncGeoTag, numElem, 3, 1);
+    adr[8] = this->_numbering->getVertexDOF(this->_mesh, this->_cncGeoTag, numElem, 4, 0);
+    adr[9] = this->_numbering->getVertexDOF(this->_mesh, this->_cncGeoTag, numElem, 4, 1);
+    adr[10] = this->_numbering->getVertexDOF(this->_mesh, this->_cncGeoTag, numElem, 5, 0);
+    adr[11] = this->_numbering->getVertexDOF(this->_mesh, this->_cncGeoTag, numElem, 5, 1);
   } else {
-    adr[6] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 0, 0);
-    adr[7] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 0, 1);
-    adr[8] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 1, 0);
-    adr[9] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 1, 1);
-    adr[10] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 2, 0);
-    adr[11] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 2, 1);
+    adr[6] = this->_numbering->getEdgeDOF(this->_mesh, this->_cncGeoTag, numElem, 0, 0);
+    adr[7] = this->_numbering->getEdgeDOF(this->_mesh, this->_cncGeoTag, numElem, 0, 1);
+    adr[8] = this->_numbering->getEdgeDOF(this->_mesh, this->_cncGeoTag, numElem, 1, 0);
+    adr[9] = this->_numbering->getEdgeDOF(this->_mesh, this->_cncGeoTag, numElem, 1, 1);
+    adr[10] = this->_numbering->getEdgeDOF(this->_mesh, this->_cncGeoTag, numElem, 2, 0);
+    adr[11] = this->_numbering->getEdgeDOF(this->_mesh, this->_cncGeoTag, numElem, 2, 1);
   }
 }
 
@@ -1057,10 +1050,9 @@ template <int dim>
 feSpaceVecTriP2Bubble<dim>::feSpaceVecTriP2Bubble(feMesh *mesh, const std::string fieldID,
                                       const std::string cncGeoID, feVectorFunction *fct,
                                       const bool useGlobalShapeFunctions)
-  : feVectorSpace(2, mesh, fieldID, cncGeoID, fct, useGlobalShapeFunctions)
+  : feVectorSpace<dim>(2, mesh, fieldID, cncGeoID, fct, useGlobalShapeFunctions)
 {
-  _nComponents = dim;
-  _nFunctions = 7 * dim;
+  this->_nFunctions = 7 * dim;
   double coor[7 * 3] = {0., 0., 0.,
     1., 0., 0.,
     0., 1., 0.,
@@ -1068,13 +1060,13 @@ feSpaceVecTriP2Bubble<dim>::feSpaceVecTriP2Bubble(feMesh *mesh, const std::strin
     0.5, 0.5, 0.,
     0., 0.5, 0.,
     1./3., 1./3., 0.};
-  _Lcoor.resize(7 * 3 * dim);
-  duplicateScalarArray(7 * 3, 3, coor, dim, _Lcoor);
-  _dofLocations.resize(_nFunctions);
-  for(int i = 0; i < _nFunctions; ++i) {
-    if     (i < 3 * dim) _dofLocations[i] = dofLocation::VERTEX;
-    else if(i < 6 * dim) _dofLocations[i] = dofLocation::EDGE;
-    else _dofLocations[i] = dofLocation::ELEMENT;
+  this->_Lcoor.resize(7 * 3 * dim);
+  duplicateScalarArray(7 * 3, 3, coor, dim, this->_Lcoor);
+  this->_dofLocations.resize(this->_nFunctions);
+  for(int i = 0; i < this->_nFunctions; ++i) {
+    if     (i < 3 * dim) this->_dofLocations[i] = dofLocation::VERTEX;
+    else if(i < 6 * dim) this->_dofLocations[i] = dofLocation::EDGE;
+    else this->_dofLocations[i] = dofLocation::ELEMENT;
   }
 }
 
@@ -1087,7 +1079,7 @@ template <int dim> std::vector<double> feSpaceVecTriP2Bubble<dim>::L(const doubl
                    4. * r[0] * r[1],
                    4. * r[1] * (1. - r[0] - r[1]),
                    27. * r[0] * r[1] * (1. - r[0] - r[1])};
-  std::vector<double> res(_nFunctions);
+  std::vector<double> res(this->_nFunctions);
   duplicateScalarArray(7, 1, phi, dim, res);
   return res;
 }
@@ -1109,7 +1101,7 @@ template <int dim> std::vector<double> feSpaceVecTriP2Bubble<dim>::dLdr(const do
   double dldr[7] = {4. * (r[0] + r[1]) - 3.,      4. * r[0] - 1., 0.,
                     4. * (1. - 2. * r[0] - r[1]), 4. * r[1],      -4. * r[1],
                     27. * r[1] * (1. - r[1] - 2.*r[0])};
-  std::vector<double> res(_nFunctions);
+  std::vector<double> res(this->_nFunctions);
   duplicateScalarArray(7, 1, dldr, dim, res);
   return res;
 }
@@ -1119,7 +1111,7 @@ template <int dim> std::vector<double> feSpaceVecTriP2Bubble<dim>::dLds(const do
   double dlds[7] = {4. * (r[0] + r[1]) - 3.,     0., 4. * r[1] - 1., -4. * r[0], 4. * r[0],
                     4. * (1. - r[0] - 2. * r[1]),
                     27. * r[0] * (1. - r[0] - 2.*r[1])};
-  std::vector<double> res(_nFunctions);
+  std::vector<double> res(this->_nFunctions);
   duplicateScalarArray(7, 1, dlds, dim, res);
   return res;
 }
@@ -1128,7 +1120,7 @@ template <int dim> std::vector<double> feSpaceVecTriP2Bubble<dim>::d2Ldr2(const 
 {
   UNUSED(r);
   double d2ldr2[7] = {4., 4., 0., -8., 0., 0., -54.*r[1]};
-  std::vector<double> res(_nFunctions);
+  std::vector<double> res(this->_nFunctions);
   duplicateScalarArray(7, 1, d2ldr2, dim, res);
   return res;
 }
@@ -1137,7 +1129,7 @@ template <int dim> std::vector<double> feSpaceVecTriP2Bubble<dim>::d2Ldrs(const 
 {
   UNUSED(r);
   double d2ldrs[7] = {4., 0., 0., -4., 4., -4., 27. * (1. - 2.*(r[0]+r[1]))};
-  std::vector<double> res(_nFunctions);
+  std::vector<double> res(this->_nFunctions);
   duplicateScalarArray(7, 1, d2ldrs, dim, res);
   return res;
 }
@@ -1146,7 +1138,7 @@ template <int dim> std::vector<double> feSpaceVecTriP2Bubble<dim>::d2Lds2(const 
 {
   UNUSED(r);
   double d2lds2[7] = {4., 0., 4., 0., 0., -8., -54.*r[0]};
-  std::vector<double> res(_nFunctions);
+  std::vector<double> res(this->_nFunctions);
   duplicateScalarArray(7, 1, d2lds2, dim, res);
   return res;
 }
@@ -1156,60 +1148,60 @@ template <int dim> void feSpaceVecTriP2Bubble<dim>::initializeNumberingUnknowns(
   int nDOFPerVertex = dim;
   int nDOFPerEdge = dim;
   int nDOFPerElem = dim;
-  for(int i = 0; i < _mesh->getNumElements(_cncGeoID); ++i) {
+  for(int i = 0; i < this->_mesh->getNumElements(this->_cncGeoTag); ++i) {
     for(int j = 0; j < this->getCncGeo()->getNumVerticesPerElem(); ++j) {
-      _numbering->setUnknownVertexDOF(_mesh, _cncGeoID, i, j, nDOFPerVertex);
+      this->_numbering->setUnknownVertexDOF(this->_mesh, this->_cncGeoTag, i, j, nDOFPerVertex);
     }
     if(this->getCncGeo()->getFeSpace()->getPolynomialDegree() != 2) {
-      _numbering->setUnknownEdgeDOF(_mesh, _cncGeoID, i, 0, nDOFPerEdge);
-      _numbering->setUnknownEdgeDOF(_mesh, _cncGeoID, i, 1, nDOFPerEdge);
-      _numbering->setUnknownEdgeDOF(_mesh, _cncGeoID, i, 2, nDOFPerEdge);
+      this->_numbering->setUnknownEdgeDOF(this->_mesh, this->_cncGeoTag, i, 0, nDOFPerEdge);
+      this->_numbering->setUnknownEdgeDOF(this->_mesh, this->_cncGeoTag, i, 1, nDOFPerEdge);
+      this->_numbering->setUnknownEdgeDOF(this->_mesh, this->_cncGeoTag, i, 2, nDOFPerEdge);
     }
-    _numbering->setUnknownElementDOF(_mesh, _cncGeoID, i, nDOFPerElem);
+    this->_numbering->setUnknownElementDOF(this->_mesh, this->_cncGeoTag, i, nDOFPerElem);
   }
 }
 
 template <int dim> void feSpaceVecTriP2Bubble<dim>::initializeNumberingEssential()
 {
-  for(int i = 0; i < _mesh->getNumElements(_cncGeoID); ++i) {
+  for(int i = 0; i < this->_mesh->getNumElements(this->_cncGeoTag); ++i) {
     for(int j = 0; j < this->getCncGeo()->getNumVerticesPerElem(); ++j) {
-      _numbering->setEssentialVertexDOF(_mesh, _cncGeoID, i, j);
+      this->_numbering->setEssentialVertexDOF(this->_mesh, this->_cncGeoTag, i, j);
     }
     if(this->getCncGeo()->getFeSpace()->getPolynomialDegree() != 2) {
-      _numbering->setEssentialEdgeDOF(_mesh, _cncGeoID, i, 0);
-      _numbering->setEssentialEdgeDOF(_mesh, _cncGeoID, i, 1);
-      _numbering->setEssentialEdgeDOF(_mesh, _cncGeoID, i, 2);
+      this->_numbering->setEssentialEdgeDOF(this->_mesh, this->_cncGeoTag, i, 0);
+      this->_numbering->setEssentialEdgeDOF(this->_mesh, this->_cncGeoTag, i, 1);
+      this->_numbering->setEssentialEdgeDOF(this->_mesh, this->_cncGeoTag, i, 2);
     }
-    _numbering->setEssentialElementDOF(_mesh, _cncGeoID, i);
+    this->_numbering->setEssentialElementDOF(this->_mesh, this->_cncGeoTag, i);
   }
 }
 
 template <int dim>
 void feSpaceVecTriP2Bubble<dim>::initializeAddressingVector(int numElem, std::vector<feInt> &adr) const
 {
-  adr[0] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 0, 0);
-  adr[1] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 0, 1);
-  adr[2] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 1, 0);
-  adr[3] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 1, 1);
-  adr[4] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 2, 0);
-  adr[5] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 2, 1);
+  adr[0] = this->_numbering->getVertexDOF(this->_mesh, this->_cncGeoTag, numElem, 0, 0);
+  adr[1] = this->_numbering->getVertexDOF(this->_mesh, this->_cncGeoTag, numElem, 0, 1);
+  adr[2] = this->_numbering->getVertexDOF(this->_mesh, this->_cncGeoTag, numElem, 1, 0);
+  adr[3] = this->_numbering->getVertexDOF(this->_mesh, this->_cncGeoTag, numElem, 1, 1);
+  adr[4] = this->_numbering->getVertexDOF(this->_mesh, this->_cncGeoTag, numElem, 2, 0);
+  adr[5] = this->_numbering->getVertexDOF(this->_mesh, this->_cncGeoTag, numElem, 2, 1);
   if(this->getCncGeo()->getFeSpace()->getPolynomialDegree() == 2) {
-    adr[6] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 3, 0);
-    adr[7] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 3, 1);
-    adr[8] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 4, 0);
-    adr[9] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 4, 1);
-    adr[10] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 5, 0);
-    adr[11] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 5, 1);
+    adr[6] = this->_numbering->getVertexDOF(this->_mesh, this->_cncGeoTag, numElem, 3, 0);
+    adr[7] = this->_numbering->getVertexDOF(this->_mesh, this->_cncGeoTag, numElem, 3, 1);
+    adr[8] = this->_numbering->getVertexDOF(this->_mesh, this->_cncGeoTag, numElem, 4, 0);
+    adr[9] = this->_numbering->getVertexDOF(this->_mesh, this->_cncGeoTag, numElem, 4, 1);
+    adr[10] = this->_numbering->getVertexDOF(this->_mesh, this->_cncGeoTag, numElem, 5, 0);
+    adr[11] = this->_numbering->getVertexDOF(this->_mesh, this->_cncGeoTag, numElem, 5, 1);
   } else {
-    adr[6] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 0, 0);
-    adr[7] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 0, 1);
-    adr[8] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 1, 0);
-    adr[9] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 1, 1);
-    adr[10] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 2, 0);
-    adr[11] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 2, 1);
+    adr[6] = this->_numbering->getEdgeDOF(this->_mesh, this->_cncGeoTag, numElem, 0, 0);
+    adr[7] = this->_numbering->getEdgeDOF(this->_mesh, this->_cncGeoTag, numElem, 0, 1);
+    adr[8] = this->_numbering->getEdgeDOF(this->_mesh, this->_cncGeoTag, numElem, 1, 0);
+    adr[9] = this->_numbering->getEdgeDOF(this->_mesh, this->_cncGeoTag, numElem, 1, 1);
+    adr[10] = this->_numbering->getEdgeDOF(this->_mesh, this->_cncGeoTag, numElem, 2, 0);
+    adr[11] = this->_numbering->getEdgeDOF(this->_mesh, this->_cncGeoTag, numElem, 2, 1);
   }
-  adr[12] = _numbering->getElementDOF(_mesh, _cncGeoID, numElem, 0);
-  adr[13] = _numbering->getElementDOF(_mesh, _cncGeoID, numElem, 1);
+  adr[12] = this->_numbering->getElementDOF(this->_mesh, this->_cncGeoTag, numElem, 0);
+  adr[13] = this->_numbering->getElementDOF(this->_mesh, this->_cncGeoTag, numElem, 1);
 }
 
 template class feSpaceVecTriP2Bubble<1>;
@@ -1272,49 +1264,49 @@ void feSpaceTri_CR2::initializeNumberingUnknowns()
 {
   int nDOFPerEdge = 1;
   int nDOFPerElem = 1;
-  for(int i = 0; i < _mesh->getNumElements(_cncGeoID); ++i) {
+  for(int i = 0; i < _mesh->getNumElements(_cncGeoTag); ++i) {
     for(int j = 0; j < this->getCncGeo()->getNumVerticesPerElem(); ++j) {
-      _numbering->setUnknownVertexDOF(_mesh, _cncGeoID, i, j);
+      _numbering->setUnknownVertexDOF(_mesh, _cncGeoTag, i, j);
     }
     if(this->getCncGeo()->getFeSpace()->getPolynomialDegree() != 2) {
-      _numbering->setUnknownEdgeDOF(_mesh, _cncGeoID, i, 0, nDOFPerEdge);
-      _numbering->setUnknownEdgeDOF(_mesh, _cncGeoID, i, 1, nDOFPerEdge);
-      _numbering->setUnknownEdgeDOF(_mesh, _cncGeoID, i, 2, nDOFPerEdge);
-      _numbering->setUnknownElementDOF(_mesh, _cncGeoID, i, nDOFPerElem);
+      _numbering->setUnknownEdgeDOF(_mesh, _cncGeoTag, i, 0, nDOFPerEdge);
+      _numbering->setUnknownEdgeDOF(_mesh, _cncGeoTag, i, 1, nDOFPerEdge);
+      _numbering->setUnknownEdgeDOF(_mesh, _cncGeoTag, i, 2, nDOFPerEdge);
+      _numbering->setUnknownElementDOF(_mesh, _cncGeoTag, i, nDOFPerElem);
     }
   }
 }
 
 void feSpaceTri_CR2::initializeNumberingEssential()
 {
-  for(int i = 0; i < _mesh->getNumElements(_cncGeoID); ++i) {
+  for(int i = 0; i < _mesh->getNumElements(_cncGeoTag); ++i) {
     for(int j = 0; j < this->getCncGeo()->getNumVerticesPerElem(); ++j) {
-      _numbering->setEssentialVertexDOF(_mesh, _cncGeoID, i, j);
+      _numbering->setEssentialVertexDOF(_mesh, _cncGeoTag, i, j);
     }
     if(this->getCncGeo()->getFeSpace()->getPolynomialDegree() != 2) {
-      _numbering->setEssentialEdgeDOF(_mesh, _cncGeoID, i, 0);
-      _numbering->setEssentialEdgeDOF(_mesh, _cncGeoID, i, 1);
-      _numbering->setEssentialEdgeDOF(_mesh, _cncGeoID, i, 2);
-      _numbering->setEssentialElementDOF(_mesh, _cncGeoID, i);
+      _numbering->setEssentialEdgeDOF(_mesh, _cncGeoTag, i, 0);
+      _numbering->setEssentialEdgeDOF(_mesh, _cncGeoTag, i, 1);
+      _numbering->setEssentialEdgeDOF(_mesh, _cncGeoTag, i, 2);
+      _numbering->setEssentialElementDOF(_mesh, _cncGeoTag, i);
     }
   }
 }
 
 void feSpaceTri_CR2::initializeAddressingVector(int numElem, std::vector<feInt> &adr) const
 {
-  adr[0] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 0);
-  adr[1] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 1);
-  adr[2] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 2);
+  adr[0] = _numbering->getVertexDOF(_mesh, _cncGeoTag, numElem, 0);
+  adr[1] = _numbering->getVertexDOF(_mesh, _cncGeoTag, numElem, 1);
+  adr[2] = _numbering->getVertexDOF(_mesh, _cncGeoTag, numElem, 2);
   if(this->getCncGeo()->getFeSpace()->getPolynomialDegree() == 2) {
-    adr[3] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 3);
-    adr[4] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 4);
-    adr[5] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 5);
+    adr[3] = _numbering->getVertexDOF(_mesh, _cncGeoTag, numElem, 3);
+    adr[4] = _numbering->getVertexDOF(_mesh, _cncGeoTag, numElem, 4);
+    adr[5] = _numbering->getVertexDOF(_mesh, _cncGeoTag, numElem, 5);
   } else {
-    adr[3] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 0, 0);
-    adr[4] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 1, 0);
-    adr[5] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 2, 0);
+    adr[3] = _numbering->getEdgeDOF(_mesh, _cncGeoTag, numElem, 0, 0);
+    adr[4] = _numbering->getEdgeDOF(_mesh, _cncGeoTag, numElem, 1, 0);
+    adr[5] = _numbering->getEdgeDOF(_mesh, _cncGeoTag, numElem, 2, 0);
   }
-  adr[6] = _numbering->getElementDOF(_mesh, _cncGeoID, numElem, 0);
+  adr[6] = _numbering->getElementDOF(_mesh, _cncGeoTag, numElem, 0);
 }
 
 // -----------------------------------------------------------------------------
@@ -1431,60 +1423,60 @@ void feSpaceTriP3::initializeNumberingUnknowns()
 {
   int nDOFPerEdge = 2;
   int nDOFPerElem = 1;
-  for(int i = 0; i < _mesh->getNumElements(_cncGeoID); ++i) {
-    _numbering->setUnknownVertexDOF(_mesh, _cncGeoID, i, 0);
-    _numbering->setUnknownVertexDOF(_mesh, _cncGeoID, i, 1);
-    _numbering->setUnknownVertexDOF(_mesh, _cncGeoID, i, 2);
-    _numbering->setUnknownElementDOF(_mesh, _cncGeoID, i, nDOFPerElem);
-    _numbering->setUnknownEdgeDOF(_mesh, _cncGeoID, i, 0, nDOFPerEdge);
-    _numbering->setUnknownEdgeDOF(_mesh, _cncGeoID, i, 1, nDOFPerEdge);
-    _numbering->setUnknownEdgeDOF(_mesh, _cncGeoID, i, 2, nDOFPerEdge);
+  for(int i = 0; i < _mesh->getNumElements(_cncGeoTag); ++i) {
+    _numbering->setUnknownVertexDOF(_mesh, _cncGeoTag, i, 0);
+    _numbering->setUnknownVertexDOF(_mesh, _cncGeoTag, i, 1);
+    _numbering->setUnknownVertexDOF(_mesh, _cncGeoTag, i, 2);
+    _numbering->setUnknownElementDOF(_mesh, _cncGeoTag, i, nDOFPerElem);
+    _numbering->setUnknownEdgeDOF(_mesh, _cncGeoTag, i, 0, nDOFPerEdge);
+    _numbering->setUnknownEdgeDOF(_mesh, _cncGeoTag, i, 1, nDOFPerEdge);
+    _numbering->setUnknownEdgeDOF(_mesh, _cncGeoTag, i, 2, nDOFPerEdge);
   }
 }
 
 void feSpaceTriP3::initializeNumberingEssential()
 {
-  for(int i = 0; i < _mesh->getNumElements(_cncGeoID); ++i) {
-    _numbering->setEssentialVertexDOF(_mesh, _cncGeoID, i, 0);
-    _numbering->setEssentialVertexDOF(_mesh, _cncGeoID, i, 1);
-    _numbering->setEssentialVertexDOF(_mesh, _cncGeoID, i, 2);
-    _numbering->setEssentialElementDOF(_mesh, _cncGeoID, i);
-    _numbering->setEssentialEdgeDOF(_mesh, _cncGeoID, i, 0);
-    _numbering->setEssentialEdgeDOF(_mesh, _cncGeoID, i, 1);
-    _numbering->setEssentialEdgeDOF(_mesh, _cncGeoID, i, 2);
+  for(int i = 0; i < _mesh->getNumElements(_cncGeoTag); ++i) {
+    _numbering->setEssentialVertexDOF(_mesh, _cncGeoTag, i, 0);
+    _numbering->setEssentialVertexDOF(_mesh, _cncGeoTag, i, 1);
+    _numbering->setEssentialVertexDOF(_mesh, _cncGeoTag, i, 2);
+    _numbering->setEssentialElementDOF(_mesh, _cncGeoTag, i);
+    _numbering->setEssentialEdgeDOF(_mesh, _cncGeoTag, i, 0);
+    _numbering->setEssentialEdgeDOF(_mesh, _cncGeoTag, i, 1);
+    _numbering->setEssentialEdgeDOF(_mesh, _cncGeoTag, i, 2);
   }
 }
 
 void feSpaceTriP3::initializeAddressingVector(int numElem, std::vector<feInt> &adr) const
 {
-  adr[0] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 0);
-  adr[1] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 1);
-  adr[2] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 2);
-  int e0 = _mesh->getEdge(_cncGeoID, numElem, 0);
+  adr[0] = _numbering->getVertexDOF(_mesh, _cncGeoTag, numElem, 0);
+  adr[1] = _numbering->getVertexDOF(_mesh, _cncGeoTag, numElem, 1);
+  adr[2] = _numbering->getVertexDOF(_mesh, _cncGeoTag, numElem, 2);
+  int e0 = _mesh->getEdge(_cncGeoTag, numElem, 0);
   if(e0 > 0) {
-    adr[3] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 0, 0);
-    adr[4] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 0, 1);
+    adr[3] = _numbering->getEdgeDOF(_mesh, _cncGeoTag, numElem, 0, 0);
+    adr[4] = _numbering->getEdgeDOF(_mesh, _cncGeoTag, numElem, 0, 1);
   } else {
-    adr[3] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 0, 1);
-    adr[4] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 0, 0);
+    adr[3] = _numbering->getEdgeDOF(_mesh, _cncGeoTag, numElem, 0, 1);
+    adr[4] = _numbering->getEdgeDOF(_mesh, _cncGeoTag, numElem, 0, 0);
   }
-  int e1 = _mesh->getEdge(_cncGeoID, numElem, 1);
+  int e1 = _mesh->getEdge(_cncGeoTag, numElem, 1);
   if(e1 > 0) {
-    adr[5] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 1, 0);
-    adr[6] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 1, 1);
+    adr[5] = _numbering->getEdgeDOF(_mesh, _cncGeoTag, numElem, 1, 0);
+    adr[6] = _numbering->getEdgeDOF(_mesh, _cncGeoTag, numElem, 1, 1);
   } else {
-    adr[5] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 1, 1);
-    adr[6] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 1, 0);
+    adr[5] = _numbering->getEdgeDOF(_mesh, _cncGeoTag, numElem, 1, 1);
+    adr[6] = _numbering->getEdgeDOF(_mesh, _cncGeoTag, numElem, 1, 0);
   }
-  int e2 = _mesh->getEdge(_cncGeoID, numElem, 2);
+  int e2 = _mesh->getEdge(_cncGeoTag, numElem, 2);
   if(e2 > 0) {
-    adr[7] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 2, 0);
-    adr[8] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 2, 1);
+    adr[7] = _numbering->getEdgeDOF(_mesh, _cncGeoTag, numElem, 2, 0);
+    adr[8] = _numbering->getEdgeDOF(_mesh, _cncGeoTag, numElem, 2, 1);
   } else {
-    adr[7] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 2, 1);
-    adr[8] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 2, 0);
+    adr[7] = _numbering->getEdgeDOF(_mesh, _cncGeoTag, numElem, 2, 1);
+    adr[8] = _numbering->getEdgeDOF(_mesh, _cncGeoTag, numElem, 2, 0);
   }
-  adr[9] = _numbering->getElementDOF(_mesh, _cncGeoID, numElem, 0);
+  adr[9] = _numbering->getElementDOF(_mesh, _cncGeoTag, numElem, 0);
 }
 
 // -----------------------------------------------------------------------------
@@ -1494,23 +1486,22 @@ template <int dim>
 feSpaceVecTriP3<dim>::feSpaceVecTriP3(feMesh *mesh, const std::string fieldID,
                                       const std::string cncGeoID, feVectorFunction *fct,
                                       const bool useGlobalShapeFunctions)
-  : feVectorSpace(2, mesh, fieldID, cncGeoID, fct, useGlobalShapeFunctions)
+  : feVectorSpace<dim>(2, mesh, fieldID, cncGeoID, fct, useGlobalShapeFunctions)
 {
-  _nComponents = dim;
-  _nFunctions = 10 * dim;
+  this->_nFunctions = 10 * dim;
   double coor[10 * 3] = {0., 0., 0.,      1., 0., 0.,      0.,      1.,      0.,      1. / 3.,
                          0., 0., 2. / 3., 0., 0., 2. / 3., 1. / 3., 0.,      1. / 3., 2. / 3.,
                          0., 0., 2. / 3., 0., 0., 1. / 3., 0.,      1. / 3., 1. / 3., 0.};
-  _Lcoor.resize(10 * 3 * dim);
-  duplicateScalarArray(10 * 3, 3, coor, dim, _Lcoor);
-  _dofLocations.resize(_nFunctions);
-  for(int i = 0; i < _nFunctions; ++i) {
+  this->_Lcoor.resize(10 * 3 * dim);
+  duplicateScalarArray(10 * 3, 3, coor, dim, this->_Lcoor);
+  this->_dofLocations.resize(this->_nFunctions);
+  for(int i = 0; i < this->_nFunctions; ++i) {
     if(i < 3 * dim)
-      _dofLocations[i] = dofLocation::VERTEX;
+      this->_dofLocations[i] = dofLocation::VERTEX;
     else if(i < 9 * dim)
-      _dofLocations[i] = dofLocation::EDGE;
+      this->_dofLocations[i] = dofLocation::EDGE;
     else
-      _dofLocations[i] = dofLocation::ELEMENT;
+      this->_dofLocations[i] = dofLocation::ELEMENT;
   }
 }
 
@@ -1535,9 +1526,9 @@ template <int dim> std::vector<double> feSpaceVecTriP3<dim>::L(const double *r) 
                       (R * R) * S * (2.7E1 / 2.0) - (S * S) * (4.5E1 / 2.0) +
                       (S * S * S) * (2.7E1 / 2.0),
                     R * S * 2.7E1 - R * (S * S) * 2.7E1 - (R * R) * S * 2.7E1};
-  std::vector<double> res(_nFunctions*_nComponents);
+  std::vector<double> res(this->_nFunctions*this->_nComponents);
   // duplicateScalarArray(10, 1, phi, dim, res);
-  vectorLagrangeLayout(phi, 10, _nComponents, res.data());
+  vectorLagrangeLayout(phi, 10, this->_nComponents, res.data());
   return res;
 }
 
@@ -1563,7 +1554,7 @@ template <int dim> void feSpaceVecTriP3<dim>::L(const double *r, double *res) co
                       (S * S * S) * (2.7E1 / 2.0),
                     R * S * 2.7E1 - R * (S * S) * 2.7E1 - (R * R) * S * 2.7E1};
   // duplicateScalarArray(10, 1, phi, dim, res);
-  vectorLagrangeLayout(phi, 10, _nComponents, res);
+  vectorLagrangeLayout(phi, 10, this->_nComponents, res);
 }
 
 template <int dim> std::vector<double> feSpaceVecTriP3<dim>::dLdr(const double *r) const
@@ -1583,9 +1574,9 @@ template <int dim> std::vector<double> feSpaceVecTriP3<dim>::dLdr(const double *
                      S * (9.0 / 2.0) - (S * S) * (2.7E1 / 2.0),
                      S * (-4.5E1 / 2.0) + R * S * 2.7E1 + (S * S) * 2.7E1,
                      S * 2.7E1 - R * S * 5.4E1 - (S * S) * 2.7E1};
-  std::vector<double> res(_nFunctions*_nComponents);
+  std::vector<double> res(this->_nFunctions*this->_nComponents);
   // duplicateScalarArray(10, 1, dldr, dim, res);
-  vectorLagrangeLayout(dldr, 10, _nComponents, res.data());
+  vectorLagrangeLayout(dldr, 10, this->_nComponents, res.data());
   return res;
 }
 
@@ -1606,85 +1597,85 @@ template <int dim> std::vector<double> feSpaceVecTriP3<dim>::dLds(const double *
                      R * (-4.5E1 / 2.0) - S * 4.5E1 + R * S * 5.4E1 + (R * R) * (2.7E1 / 2.0) +
                        (S * S) * (8.1E1 / 2.0) + 9.0,
                      R * 2.7E1 - R * S * 5.4E1 - (R * R) * 2.7E1};
-  std::vector<double> res(_nFunctions*_nComponents);
+  std::vector<double> res(this->_nFunctions*this->_nComponents);
   // duplicateScalarArray(10, 1, dlds, dim, res);
-  vectorLagrangeLayout(dlds, 10, _nComponents, res.data());
+  vectorLagrangeLayout(dlds, 10, this->_nComponents, res.data());
   return res;
 }
 
 template <int dim> void feSpaceVecTriP3<dim>::initializeNumberingUnknowns()
 {
-  for(int i = 0; i < _mesh->getNumElements(_cncGeoID); ++i) {
-    _numbering->setUnknownVertexDOF(_mesh, _cncGeoID, i, 0, dim);
-    _numbering->setUnknownVertexDOF(_mesh, _cncGeoID, i, 1, dim);
-    _numbering->setUnknownVertexDOF(_mesh, _cncGeoID, i, 2, dim);
-    _numbering->setUnknownElementDOF(_mesh, _cncGeoID, i, dim);
-    _numbering->setUnknownEdgeDOF(_mesh, _cncGeoID, i, 0, 2 * dim);
-    _numbering->setUnknownEdgeDOF(_mesh, _cncGeoID, i, 1, 2 * dim);
-    _numbering->setUnknownEdgeDOF(_mesh, _cncGeoID, i, 2, 2 * dim);
+  for(int i = 0; i < this->_mesh->getNumElements(this->_cncGeoTag); ++i) {
+    this->_numbering->setUnknownVertexDOF(this->_mesh, this->_cncGeoTag, i, 0, dim);
+    this->_numbering->setUnknownVertexDOF(this->_mesh, this->_cncGeoTag, i, 1, dim);
+    this->_numbering->setUnknownVertexDOF(this->_mesh, this->_cncGeoTag, i, 2, dim);
+    this->_numbering->setUnknownElementDOF(this->_mesh, this->_cncGeoTag, i, dim);
+    this->_numbering->setUnknownEdgeDOF(this->_mesh, this->_cncGeoTag, i, 0, 2 * dim);
+    this->_numbering->setUnknownEdgeDOF(this->_mesh, this->_cncGeoTag, i, 1, 2 * dim);
+    this->_numbering->setUnknownEdgeDOF(this->_mesh, this->_cncGeoTag, i, 2, 2 * dim);
   }
 }
 
 template <int dim> void feSpaceVecTriP3<dim>::initializeNumberingEssential()
 {
-  for(int i = 0; i < _mesh->getNumElements(_cncGeoID); ++i) {
-    _numbering->setEssentialVertexDOF(_mesh, _cncGeoID, i, 0);
-    _numbering->setEssentialVertexDOF(_mesh, _cncGeoID, i, 1);
-    _numbering->setEssentialVertexDOF(_mesh, _cncGeoID, i, 2);
-    _numbering->setEssentialElementDOF(_mesh, _cncGeoID, i);
-    _numbering->setEssentialEdgeDOF(_mesh, _cncGeoID, i, 0);
-    _numbering->setEssentialEdgeDOF(_mesh, _cncGeoID, i, 1);
-    _numbering->setEssentialEdgeDOF(_mesh, _cncGeoID, i, 2);
+  for(int i = 0; i < this->_mesh->getNumElements(this->_cncGeoTag); ++i) {
+    this->_numbering->setEssentialVertexDOF(this->_mesh, this->_cncGeoTag, i, 0);
+    this->_numbering->setEssentialVertexDOF(this->_mesh, this->_cncGeoTag, i, 1);
+    this->_numbering->setEssentialVertexDOF(this->_mesh, this->_cncGeoTag, i, 2);
+    this->_numbering->setEssentialElementDOF(this->_mesh, this->_cncGeoTag, i);
+    this->_numbering->setEssentialEdgeDOF(this->_mesh, this->_cncGeoTag, i, 0);
+    this->_numbering->setEssentialEdgeDOF(this->_mesh, this->_cncGeoTag, i, 1);
+    this->_numbering->setEssentialEdgeDOF(this->_mesh, this->_cncGeoTag, i, 2);
   }
 }
 
 template <int dim>
 void feSpaceVecTriP3<dim>::initializeAddressingVector(int numElem, std::vector<feInt> &adr) const
 {
-  adr[0] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 0, 0);
-  adr[1] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 0, 1);
-  adr[2] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 1, 0);
-  adr[3] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 1, 1);
-  adr[4] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 2, 0);
-  adr[5] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 2, 1);
-  int e0 = _mesh->getEdge(_cncGeoID, numElem, 0);
+  adr[0] = this->_numbering->getVertexDOF(this->_mesh, this->_cncGeoTag, numElem, 0, 0);
+  adr[1] = this->_numbering->getVertexDOF(this->_mesh, this->_cncGeoTag, numElem, 0, 1);
+  adr[2] = this->_numbering->getVertexDOF(this->_mesh, this->_cncGeoTag, numElem, 1, 0);
+  adr[3] = this->_numbering->getVertexDOF(this->_mesh, this->_cncGeoTag, numElem, 1, 1);
+  adr[4] = this->_numbering->getVertexDOF(this->_mesh, this->_cncGeoTag, numElem, 2, 0);
+  adr[5] = this->_numbering->getVertexDOF(this->_mesh, this->_cncGeoTag, numElem, 2, 1);
+  int e0 = this->_mesh->getEdge(this->_cncGeoTag, numElem, 0);
   if(e0 > 0) {
-    adr[6] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 0, 0);
-    adr[7] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 0, 1);
-    adr[8] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 0, 2);
-    adr[9] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 0, 3);
+    adr[6] = this->_numbering->getEdgeDOF(this->_mesh, this->_cncGeoTag, numElem, 0, 0);
+    adr[7] = this->_numbering->getEdgeDOF(this->_mesh, this->_cncGeoTag, numElem, 0, 1);
+    adr[8] = this->_numbering->getEdgeDOF(this->_mesh, this->_cncGeoTag, numElem, 0, 2);
+    adr[9] = this->_numbering->getEdgeDOF(this->_mesh, this->_cncGeoTag, numElem, 0, 3);
   } else {
-    adr[6] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 0, 2);
-    adr[7] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 0, 3);
-    adr[8] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 0, 0);
-    adr[9] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 0, 1);
+    adr[6] = this->_numbering->getEdgeDOF(this->_mesh, this->_cncGeoTag, numElem, 0, 2);
+    adr[7] = this->_numbering->getEdgeDOF(this->_mesh, this->_cncGeoTag, numElem, 0, 3);
+    adr[8] = this->_numbering->getEdgeDOF(this->_mesh, this->_cncGeoTag, numElem, 0, 0);
+    adr[9] = this->_numbering->getEdgeDOF(this->_mesh, this->_cncGeoTag, numElem, 0, 1);
   }
-  int e1 = _mesh->getEdge(_cncGeoID, numElem, 1);
+  int e1 = this->_mesh->getEdge(this->_cncGeoTag, numElem, 1);
   if(e1 > 0) {
-    adr[10] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 1, 0);
-    adr[11] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 1, 1);
-    adr[12] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 1, 2);
-    adr[13] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 1, 3);
+    adr[10] = this->_numbering->getEdgeDOF(this->_mesh, this->_cncGeoTag, numElem, 1, 0);
+    adr[11] = this->_numbering->getEdgeDOF(this->_mesh, this->_cncGeoTag, numElem, 1, 1);
+    adr[12] = this->_numbering->getEdgeDOF(this->_mesh, this->_cncGeoTag, numElem, 1, 2);
+    adr[13] = this->_numbering->getEdgeDOF(this->_mesh, this->_cncGeoTag, numElem, 1, 3);
   } else {
-    adr[10] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 1, 2);
-    adr[11] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 1, 3);
-    adr[12] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 1, 0);
-    adr[13] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 1, 1);
+    adr[10] = this->_numbering->getEdgeDOF(this->_mesh, this->_cncGeoTag, numElem, 1, 2);
+    adr[11] = this->_numbering->getEdgeDOF(this->_mesh, this->_cncGeoTag, numElem, 1, 3);
+    adr[12] = this->_numbering->getEdgeDOF(this->_mesh, this->_cncGeoTag, numElem, 1, 0);
+    adr[13] = this->_numbering->getEdgeDOF(this->_mesh, this->_cncGeoTag, numElem, 1, 1);
   }
-  int e2 = _mesh->getEdge(_cncGeoID, numElem, 2);
+  int e2 = this->_mesh->getEdge(this->_cncGeoTag, numElem, 2);
   if(e2 > 0) {
-    adr[14] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 2, 0);
-    adr[15] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 2, 1);
-    adr[16] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 2, 2);
-    adr[17] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 2, 3);
+    adr[14] = this->_numbering->getEdgeDOF(this->_mesh, this->_cncGeoTag, numElem, 2, 0);
+    adr[15] = this->_numbering->getEdgeDOF(this->_mesh, this->_cncGeoTag, numElem, 2, 1);
+    adr[16] = this->_numbering->getEdgeDOF(this->_mesh, this->_cncGeoTag, numElem, 2, 2);
+    adr[17] = this->_numbering->getEdgeDOF(this->_mesh, this->_cncGeoTag, numElem, 2, 3);
   } else {
-    adr[14] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 2, 2);
-    adr[15] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 2, 3);
-    adr[16] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 2, 0);
-    adr[17] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 2, 1);
+    adr[14] = this->_numbering->getEdgeDOF(this->_mesh, this->_cncGeoTag, numElem, 2, 2);
+    adr[15] = this->_numbering->getEdgeDOF(this->_mesh, this->_cncGeoTag, numElem, 2, 3);
+    adr[16] = this->_numbering->getEdgeDOF(this->_mesh, this->_cncGeoTag, numElem, 2, 0);
+    adr[17] = this->_numbering->getEdgeDOF(this->_mesh, this->_cncGeoTag, numElem, 2, 1);
   }
-  adr[18] = _numbering->getElementDOF(_mesh, _cncGeoID, numElem, 0);
-  adr[19] = _numbering->getElementDOF(_mesh, _cncGeoID, numElem, 1);
+  adr[18] = this->_numbering->getElementDOF(this->_mesh, this->_cncGeoTag, numElem, 0);
+  adr[19] = this->_numbering->getElementDOF(this->_mesh, this->_cncGeoTag, numElem, 1);
 }
 
 template class feSpaceVecTriP3<1>;
@@ -1858,68 +1849,68 @@ void feSpaceTriP4::initializeNumberingUnknowns()
 {
   int nDOFPerEdge = 3;
   int nDOFPerElem = 3;
-  for(int i = 0; i < _mesh->getNumElements(_cncGeoID); ++i) {
-    _numbering->setUnknownVertexDOF(_mesh, _cncGeoID, i, 0);
-    _numbering->setUnknownVertexDOF(_mesh, _cncGeoID, i, 1);
-    _numbering->setUnknownVertexDOF(_mesh, _cncGeoID, i, 2);
-    _numbering->setUnknownElementDOF(_mesh, _cncGeoID, i, nDOFPerElem);
-    _numbering->setUnknownEdgeDOF(_mesh, _cncGeoID, i, 0, nDOFPerEdge);
-    _numbering->setUnknownEdgeDOF(_mesh, _cncGeoID, i, 1, nDOFPerEdge);
-    _numbering->setUnknownEdgeDOF(_mesh, _cncGeoID, i, 2, nDOFPerEdge);
+  for(int i = 0; i < _mesh->getNumElements(_cncGeoTag); ++i) {
+    _numbering->setUnknownVertexDOF(_mesh, _cncGeoTag, i, 0);
+    _numbering->setUnknownVertexDOF(_mesh, _cncGeoTag, i, 1);
+    _numbering->setUnknownVertexDOF(_mesh, _cncGeoTag, i, 2);
+    _numbering->setUnknownElementDOF(_mesh, _cncGeoTag, i, nDOFPerElem);
+    _numbering->setUnknownEdgeDOF(_mesh, _cncGeoTag, i, 0, nDOFPerEdge);
+    _numbering->setUnknownEdgeDOF(_mesh, _cncGeoTag, i, 1, nDOFPerEdge);
+    _numbering->setUnknownEdgeDOF(_mesh, _cncGeoTag, i, 2, nDOFPerEdge);
   }
 }
 
 void feSpaceTriP4::initializeNumberingEssential()
 {
-  for(int i = 0; i < _mesh->getNumElements(_cncGeoID); ++i) {
-    _numbering->setEssentialVertexDOF(_mesh, _cncGeoID, i, 0);
-    _numbering->setEssentialVertexDOF(_mesh, _cncGeoID, i, 1);
-    _numbering->setEssentialVertexDOF(_mesh, _cncGeoID, i, 2);
-    _numbering->setEssentialElementDOF(_mesh, _cncGeoID, i);
-    _numbering->setEssentialEdgeDOF(_mesh, _cncGeoID, i, 0);
-    _numbering->setEssentialEdgeDOF(_mesh, _cncGeoID, i, 1);
-    _numbering->setEssentialEdgeDOF(_mesh, _cncGeoID, i, 2);
+  for(int i = 0; i < _mesh->getNumElements(_cncGeoTag); ++i) {
+    _numbering->setEssentialVertexDOF(_mesh, _cncGeoTag, i, 0);
+    _numbering->setEssentialVertexDOF(_mesh, _cncGeoTag, i, 1);
+    _numbering->setEssentialVertexDOF(_mesh, _cncGeoTag, i, 2);
+    _numbering->setEssentialElementDOF(_mesh, _cncGeoTag, i);
+    _numbering->setEssentialEdgeDOF(_mesh, _cncGeoTag, i, 0);
+    _numbering->setEssentialEdgeDOF(_mesh, _cncGeoTag, i, 1);
+    _numbering->setEssentialEdgeDOF(_mesh, _cncGeoTag, i, 2);
   }
 }
 
 void feSpaceTriP4::initializeAddressingVector(int numElem, std::vector<feInt> &adr) const
 {
-  adr[0] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 0);
-  adr[1] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 1);
-  adr[2] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 2);
-  int e0 = _mesh->getEdge(_cncGeoID, numElem, 0);
+  adr[0] = _numbering->getVertexDOF(_mesh, _cncGeoTag, numElem, 0);
+  adr[1] = _numbering->getVertexDOF(_mesh, _cncGeoTag, numElem, 1);
+  adr[2] = _numbering->getVertexDOF(_mesh, _cncGeoTag, numElem, 2);
+  int e0 = _mesh->getEdge(_cncGeoTag, numElem, 0);
   if(e0 > 0) {
-    adr[3] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 0, 0);
-    adr[4] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 0, 1);
-    adr[5] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 0, 2);
+    adr[3] = _numbering->getEdgeDOF(_mesh, _cncGeoTag, numElem, 0, 0);
+    adr[4] = _numbering->getEdgeDOF(_mesh, _cncGeoTag, numElem, 0, 1);
+    adr[5] = _numbering->getEdgeDOF(_mesh, _cncGeoTag, numElem, 0, 2);
   } else {
-    adr[3] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 0, 2);
-    adr[4] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 0, 1);
-    adr[5] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 0, 0);
+    adr[3] = _numbering->getEdgeDOF(_mesh, _cncGeoTag, numElem, 0, 2);
+    adr[4] = _numbering->getEdgeDOF(_mesh, _cncGeoTag, numElem, 0, 1);
+    adr[5] = _numbering->getEdgeDOF(_mesh, _cncGeoTag, numElem, 0, 0);
   }
-  int e1 = _mesh->getEdge(_cncGeoID, numElem, 1);
+  int e1 = _mesh->getEdge(_cncGeoTag, numElem, 1);
   if(e1 > 0) {
-    adr[6] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 1, 0);
-    adr[7] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 1, 1);
-    adr[8] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 1, 2);
+    adr[6] = _numbering->getEdgeDOF(_mesh, _cncGeoTag, numElem, 1, 0);
+    adr[7] = _numbering->getEdgeDOF(_mesh, _cncGeoTag, numElem, 1, 1);
+    adr[8] = _numbering->getEdgeDOF(_mesh, _cncGeoTag, numElem, 1, 2);
   } else {
-    adr[6] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 1, 2);
-    adr[7] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 1, 1);
-    adr[8] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 1, 0);
+    adr[6] = _numbering->getEdgeDOF(_mesh, _cncGeoTag, numElem, 1, 2);
+    adr[7] = _numbering->getEdgeDOF(_mesh, _cncGeoTag, numElem, 1, 1);
+    adr[8] = _numbering->getEdgeDOF(_mesh, _cncGeoTag, numElem, 1, 0);
   }
-  int e2 = _mesh->getEdge(_cncGeoID, numElem, 2);
+  int e2 = _mesh->getEdge(_cncGeoTag, numElem, 2);
   if(e2 > 0) {
-    adr[9] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 2, 0);
-    adr[10] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 2, 1);
-    adr[11] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 2, 2);
+    adr[9] = _numbering->getEdgeDOF(_mesh, _cncGeoTag, numElem, 2, 0);
+    adr[10] = _numbering->getEdgeDOF(_mesh, _cncGeoTag, numElem, 2, 1);
+    adr[11] = _numbering->getEdgeDOF(_mesh, _cncGeoTag, numElem, 2, 2);
   } else {
-    adr[9] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 2, 2);
-    adr[10] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 2, 1);
-    adr[11] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 2, 0);
+    adr[9] = _numbering->getEdgeDOF(_mesh, _cncGeoTag, numElem, 2, 2);
+    adr[10] = _numbering->getEdgeDOF(_mesh, _cncGeoTag, numElem, 2, 1);
+    adr[11] = _numbering->getEdgeDOF(_mesh, _cncGeoTag, numElem, 2, 0);
   }
-  adr[12] = _numbering->getElementDOF(_mesh, _cncGeoID, numElem, 0);
-  adr[13] = _numbering->getElementDOF(_mesh, _cncGeoID, numElem, 1);
-  adr[14] = _numbering->getElementDOF(_mesh, _cncGeoID, numElem, 2);
+  adr[12] = _numbering->getElementDOF(_mesh, _cncGeoTag, numElem, 0);
+  adr[13] = _numbering->getElementDOF(_mesh, _cncGeoTag, numElem, 1);
+  adr[14] = _numbering->getElementDOF(_mesh, _cncGeoTag, numElem, 2);
 }
 
 // -----------------------------------------------------------------------------
@@ -1929,10 +1920,9 @@ template <int dim>
 feSpaceVecTriP4<dim>::feSpaceVecTriP4(feMesh *mesh, const std::string fieldID,
                                       const std::string cncGeoID, feVectorFunction *fct,
                                       const bool useGlobalShapeFunctions)
-  : feVectorSpace(2, mesh, fieldID, cncGeoID, fct, useGlobalShapeFunctions)
+  : feVectorSpace<dim>(2, mesh, fieldID, cncGeoID, fct, useGlobalShapeFunctions)
 {
-  _nComponents = dim;
-  _nFunctions = 15 * dim;
+  this->_nFunctions = 15 * dim;
   double x0 = 0.0, x1 = 1. / 4., x2 = 1. / 2., x3 = 3. / 4., x4 = 1.;
   double y0 = 0.0, y1 = 1. / 4., y2 = 1. / 2., y3 = 3. / 4., y4 = 1.;
   double coor[15 * 3] = {x0, y0, 0., x4, y0, 0., x0, y4, 0.,
@@ -1940,16 +1930,16 @@ feSpaceVecTriP4<dim>::feSpaceVecTriP4(feMesh *mesh, const std::string fieldID,
                          x3, y1, 0., x2, y2, 0., x1, y3, 0.,
                          x0, y3, 0., x0, y2, 0., x0, y1, 0.,
                          x1, y1, 0., x2, y1, 0., x1, y2, 0.};
-  _Lcoor.resize(15 * 3 * dim);
-  duplicateScalarArray(15 * 3, 3, coor, dim, _Lcoor);
-  _dofLocations.resize(_nFunctions);
-  for(int i = 0; i < _nFunctions; ++i) {
+  this->_Lcoor.resize(15 * 3 * dim);
+  duplicateScalarArray(15 * 3, 3, coor, dim, this->_Lcoor);
+  this->_dofLocations.resize(this->_nFunctions);
+  for(int i = 0; i < this->_nFunctions; ++i) {
     if(i < 3 * dim)
-      _dofLocations[i] = dofLocation::VERTEX;
+      this->_dofLocations[i] = dofLocation::VERTEX;
     else if(i < 12 * dim)
-      _dofLocations[i] = dofLocation::EDGE;
+      this->_dofLocations[i] = dofLocation::EDGE;
     else
-      _dofLocations[i] = dofLocation::ELEMENT;
+      this->_dofLocations[i] = dofLocation::ELEMENT;
   }
 }
 
@@ -1972,9 +1962,9 @@ template <int dim> std::vector<double> feSpaceVecTriP4<dim>::L(const double *r) 
                       S * R * r1 * r2 * 128. / 3.,  R * S * r1 * s1 * 64.,       R * S * s1 * s2 * 128. / 3.,
                       S * s1 * s2 * f4 * 128. / 3., S * s1 * f3 * f4 * 64.,      S * f2 * f3 * f4 * 128. / 3.,
                       R * S * f3 * f4 * 128.,       R * S * r1 * f4 * 128.,      R * S * s1 * f4 * 128.};
-  std::vector<double> res(_nFunctions*_nComponents);
+  std::vector<double> res(this->_nFunctions*this->_nComponents);
   // duplicateScalarArray(15, 1, phi, dim, res);
-  vectorLagrangeLayout(phi, 15, _nComponents, res.data());
+  vectorLagrangeLayout(phi, 15, this->_nComponents, res.data());
   return res;
 }
 
@@ -2000,7 +1990,7 @@ template <int dim> void feSpaceVecTriP4<dim>::L(const double *r, double *res) co
                       (S * S * S) * (2.7E1 / 2.0),
                     R * S * 2.7E1 - R * (S * S) * 2.7E1 - (R * R) * S * 2.7E1};
   // duplicateScalarArray(15, 1, phi, dim, res);
-  vectorLagrangeLayout(phi, 15, _nComponents, res);
+  vectorLagrangeLayout(phi, 15, this->_nComponents, res);
 }
 
 template <int dim> std::vector<double> feSpaceVecTriP4<dim>::dLdr(const double *r) const
@@ -2030,9 +2020,9 @@ template <int dim> std::vector<double> feSpaceVecTriP4<dim>::dLdr(const double *
                     128. * ((S * (12. * R * R + 16. * R * S - 14. * R + 4. * S * S - 7. * S + 3.)) / 4.),
                     128. * (-(S * (8. * R * S - S - 10. * R + 12. * R * R + 1.)) / 4.),
                     128. * (-(S * (4. * S - 1.) * (2. * R + S - 1.)) / 4.)};
-  std::vector<double> res(_nFunctions*_nComponents);
+  std::vector<double> res(this->_nFunctions*this->_nComponents);
   // duplicateScalarArray(15, 1, dldr, dim, res);
-  vectorLagrangeLayout(dldr, 15, _nComponents, res.data());
+  vectorLagrangeLayout(dldr, 15, this->_nComponents, res.data());
   return res;
 }
 
@@ -2065,9 +2055,9 @@ template <int dim> std::vector<double> feSpaceVecTriP4<dim>::dLds(const double *
                     128. * ((R * (4. * R * R + 16. * R * S - 7. * R + 12. * S * S - 14. * S + 3.)) / 4.),
                     128. * (-(R * (4. * R - 1.) * (R + 2. * S - 1.)) / 4.),
                     128. * (-(R * (8. * R * S - 10. * S - R + 12. * S * S + 1.)) / 4.)};
-  std::vector<double> res(_nFunctions*_nComponents);
+  std::vector<double> res(this->_nFunctions*this->_nComponents);
   // duplicateScalarArray(15, 1, dlds, dim, res);
-  vectorLagrangeLayout(dlds, 15, _nComponents, res.data());
+  vectorLagrangeLayout(dlds, 15, this->_nComponents, res.data());
   return res;
 }
 
@@ -2075,93 +2065,93 @@ template <int dim> void feSpaceVecTriP4<dim>::initializeNumberingUnknowns()
 {
   int nDOFPerEdge = 3;
   int nDOFPerElem = 3;
-  for(int i = 0; i < _mesh->getNumElements(_cncGeoID); ++i) {
-    _numbering->setUnknownVertexDOF(_mesh, _cncGeoID, i, 0, dim);
-    _numbering->setUnknownVertexDOF(_mesh, _cncGeoID, i, 1, dim);
-    _numbering->setUnknownVertexDOF(_mesh, _cncGeoID, i, 2, dim);
-    _numbering->setUnknownElementDOF(_mesh, _cncGeoID, i, nDOFPerElem * dim);
-    _numbering->setUnknownEdgeDOF(_mesh, _cncGeoID, i, 0, nDOFPerEdge * dim);
-    _numbering->setUnknownEdgeDOF(_mesh, _cncGeoID, i, 1, nDOFPerEdge * dim);
-    _numbering->setUnknownEdgeDOF(_mesh, _cncGeoID, i, 2, nDOFPerEdge * dim);
+  for(int i = 0; i < this->_mesh->getNumElements(this->_cncGeoTag); ++i) {
+    this->_numbering->setUnknownVertexDOF(this->_mesh, this->_cncGeoTag, i, 0, dim);
+    this->_numbering->setUnknownVertexDOF(this->_mesh, this->_cncGeoTag, i, 1, dim);
+    this->_numbering->setUnknownVertexDOF(this->_mesh, this->_cncGeoTag, i, 2, dim);
+    this->_numbering->setUnknownElementDOF(this->_mesh, this->_cncGeoTag, i, nDOFPerElem * dim);
+    this->_numbering->setUnknownEdgeDOF(this->_mesh, this->_cncGeoTag, i, 0, nDOFPerEdge * dim);
+    this->_numbering->setUnknownEdgeDOF(this->_mesh, this->_cncGeoTag, i, 1, nDOFPerEdge * dim);
+    this->_numbering->setUnknownEdgeDOF(this->_mesh, this->_cncGeoTag, i, 2, nDOFPerEdge * dim);
   }
 }
 
 template <int dim> void feSpaceVecTriP4<dim>::initializeNumberingEssential()
 {
-  for(int i = 0; i < _mesh->getNumElements(_cncGeoID); ++i) {
-    _numbering->setEssentialVertexDOF(_mesh, _cncGeoID, i, 0);
-    _numbering->setEssentialVertexDOF(_mesh, _cncGeoID, i, 1);
-    _numbering->setEssentialVertexDOF(_mesh, _cncGeoID, i, 2);
-    _numbering->setEssentialElementDOF(_mesh, _cncGeoID, i);
-    _numbering->setEssentialEdgeDOF(_mesh, _cncGeoID, i, 0);
-    _numbering->setEssentialEdgeDOF(_mesh, _cncGeoID, i, 1);
-    _numbering->setEssentialEdgeDOF(_mesh, _cncGeoID, i, 2);
+  for(int i = 0; i < this->_mesh->getNumElements(this->_cncGeoTag); ++i) {
+    this->_numbering->setEssentialVertexDOF(this->_mesh, this->_cncGeoTag, i, 0);
+    this->_numbering->setEssentialVertexDOF(this->_mesh, this->_cncGeoTag, i, 1);
+    this->_numbering->setEssentialVertexDOF(this->_mesh, this->_cncGeoTag, i, 2);
+    this->_numbering->setEssentialElementDOF(this->_mesh, this->_cncGeoTag, i);
+    this->_numbering->setEssentialEdgeDOF(this->_mesh, this->_cncGeoTag, i, 0);
+    this->_numbering->setEssentialEdgeDOF(this->_mesh, this->_cncGeoTag, i, 1);
+    this->_numbering->setEssentialEdgeDOF(this->_mesh, this->_cncGeoTag, i, 2);
   }
 }
 
 template <int dim>
 void feSpaceVecTriP4<dim>::initializeAddressingVector(int numElem, std::vector<feInt> &adr) const
 {
-  adr[0] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 0, 0);
-  adr[1] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 0, 1);
-  adr[2] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 1, 0);
-  adr[3] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 1, 1);
-  adr[4] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 2, 0);
-  adr[5] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, 2, 1);
-  int e0 = _mesh->getEdge(_cncGeoID, numElem, 0);
+  adr[0] = this->_numbering->getVertexDOF(this->_mesh, this->_cncGeoTag, numElem, 0, 0);
+  adr[1] = this->_numbering->getVertexDOF(this->_mesh, this->_cncGeoTag, numElem, 0, 1);
+  adr[2] = this->_numbering->getVertexDOF(this->_mesh, this->_cncGeoTag, numElem, 1, 0);
+  adr[3] = this->_numbering->getVertexDOF(this->_mesh, this->_cncGeoTag, numElem, 1, 1);
+  adr[4] = this->_numbering->getVertexDOF(this->_mesh, this->_cncGeoTag, numElem, 2, 0);
+  adr[5] = this->_numbering->getVertexDOF(this->_mesh, this->_cncGeoTag, numElem, 2, 1);
+  int e0 = this->_mesh->getEdge(this->_cncGeoTag, numElem, 0);
   if(e0 > 0) {
-    adr[6] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 0, 0);
-    adr[7] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 0, 1);
-    adr[8] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 0, 2);
-    adr[9] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 0, 3);
-    adr[10] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 0, 4);
-    adr[11] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 0, 5);
+    adr[6] = this->_numbering->getEdgeDOF(this->_mesh, this->_cncGeoTag, numElem, 0, 0);
+    adr[7] = this->_numbering->getEdgeDOF(this->_mesh, this->_cncGeoTag, numElem, 0, 1);
+    adr[8] = this->_numbering->getEdgeDOF(this->_mesh, this->_cncGeoTag, numElem, 0, 2);
+    adr[9] = this->_numbering->getEdgeDOF(this->_mesh, this->_cncGeoTag, numElem, 0, 3);
+    adr[10] = this->_numbering->getEdgeDOF(this->_mesh, this->_cncGeoTag, numElem, 0, 4);
+    adr[11] = this->_numbering->getEdgeDOF(this->_mesh, this->_cncGeoTag, numElem, 0, 5);
   } else {
-    adr[6] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 0, 4);
-    adr[7] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 0, 5);
-    adr[8] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 0, 2);
-    adr[9] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 0, 3);
-    adr[10] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 0, 0);
-    adr[11] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 0, 1);
+    adr[6] = this->_numbering->getEdgeDOF(this->_mesh, this->_cncGeoTag, numElem, 0, 4);
+    adr[7] = this->_numbering->getEdgeDOF(this->_mesh, this->_cncGeoTag, numElem, 0, 5);
+    adr[8] = this->_numbering->getEdgeDOF(this->_mesh, this->_cncGeoTag, numElem, 0, 2);
+    adr[9] = this->_numbering->getEdgeDOF(this->_mesh, this->_cncGeoTag, numElem, 0, 3);
+    adr[10] = this->_numbering->getEdgeDOF(this->_mesh, this->_cncGeoTag, numElem, 0, 0);
+    adr[11] = this->_numbering->getEdgeDOF(this->_mesh, this->_cncGeoTag, numElem, 0, 1);
   }
-  int e1 = _mesh->getEdge(_cncGeoID, numElem, 1);
+  int e1 = this->_mesh->getEdge(this->_cncGeoTag, numElem, 1);
   if(e1 > 0) {
-    adr[12] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 1, 0);
-    adr[13] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 1, 1);
-    adr[14] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 1, 2);
-    adr[15] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 1, 3);
-    adr[16] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 1, 4);
-    adr[17] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 1, 5);
+    adr[12] = this->_numbering->getEdgeDOF(this->_mesh, this->_cncGeoTag, numElem, 1, 0);
+    adr[13] = this->_numbering->getEdgeDOF(this->_mesh, this->_cncGeoTag, numElem, 1, 1);
+    adr[14] = this->_numbering->getEdgeDOF(this->_mesh, this->_cncGeoTag, numElem, 1, 2);
+    adr[15] = this->_numbering->getEdgeDOF(this->_mesh, this->_cncGeoTag, numElem, 1, 3);
+    adr[16] = this->_numbering->getEdgeDOF(this->_mesh, this->_cncGeoTag, numElem, 1, 4);
+    adr[17] = this->_numbering->getEdgeDOF(this->_mesh, this->_cncGeoTag, numElem, 1, 5);
   } else {
-    adr[12] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 1, 4);
-    adr[13] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 1, 5);
-    adr[14] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 1, 2);
-    adr[15] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 1, 3);
-    adr[16] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 1, 0);
-    adr[17] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 1, 1);
+    adr[12] = this->_numbering->getEdgeDOF(this->_mesh, this->_cncGeoTag, numElem, 1, 4);
+    adr[13] = this->_numbering->getEdgeDOF(this->_mesh, this->_cncGeoTag, numElem, 1, 5);
+    adr[14] = this->_numbering->getEdgeDOF(this->_mesh, this->_cncGeoTag, numElem, 1, 2);
+    adr[15] = this->_numbering->getEdgeDOF(this->_mesh, this->_cncGeoTag, numElem, 1, 3);
+    adr[16] = this->_numbering->getEdgeDOF(this->_mesh, this->_cncGeoTag, numElem, 1, 0);
+    adr[17] = this->_numbering->getEdgeDOF(this->_mesh, this->_cncGeoTag, numElem, 1, 1);
   }
-  int e2 = _mesh->getEdge(_cncGeoID, numElem, 2);
+  int e2 = this->_mesh->getEdge(this->_cncGeoTag, numElem, 2);
   if(e2 > 0) {
-    adr[18] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 2, 0);
-    adr[19] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 2, 1);
-    adr[20] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 2, 2);
-    adr[21] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 2, 3);
-    adr[22] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 2, 4);
-    adr[23] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 2, 5);
+    adr[18] = this->_numbering->getEdgeDOF(this->_mesh, this->_cncGeoTag, numElem, 2, 0);
+    adr[19] = this->_numbering->getEdgeDOF(this->_mesh, this->_cncGeoTag, numElem, 2, 1);
+    adr[20] = this->_numbering->getEdgeDOF(this->_mesh, this->_cncGeoTag, numElem, 2, 2);
+    adr[21] = this->_numbering->getEdgeDOF(this->_mesh, this->_cncGeoTag, numElem, 2, 3);
+    adr[22] = this->_numbering->getEdgeDOF(this->_mesh, this->_cncGeoTag, numElem, 2, 4);
+    adr[23] = this->_numbering->getEdgeDOF(this->_mesh, this->_cncGeoTag, numElem, 2, 5);
   } else {
-    adr[18] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 2, 4);
-    adr[19] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 2, 5);
-    adr[20] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 2, 2);
-    adr[21] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 2, 3);
-    adr[22] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 2, 0);
-    adr[23] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, 2, 1);
+    adr[18] = this->_numbering->getEdgeDOF(this->_mesh, this->_cncGeoTag, numElem, 2, 4);
+    adr[19] = this->_numbering->getEdgeDOF(this->_mesh, this->_cncGeoTag, numElem, 2, 5);
+    adr[20] = this->_numbering->getEdgeDOF(this->_mesh, this->_cncGeoTag, numElem, 2, 2);
+    adr[21] = this->_numbering->getEdgeDOF(this->_mesh, this->_cncGeoTag, numElem, 2, 3);
+    adr[22] = this->_numbering->getEdgeDOF(this->_mesh, this->_cncGeoTag, numElem, 2, 0);
+    adr[23] = this->_numbering->getEdgeDOF(this->_mesh, this->_cncGeoTag, numElem, 2, 1);
   }
-  adr[24] = _numbering->getElementDOF(_mesh, _cncGeoID, numElem, 0);
-  adr[25] = _numbering->getElementDOF(_mesh, _cncGeoID, numElem, 1);
-  adr[26] = _numbering->getElementDOF(_mesh, _cncGeoID, numElem, 2);
-  adr[27] = _numbering->getElementDOF(_mesh, _cncGeoID, numElem, 3);
-  adr[28] = _numbering->getElementDOF(_mesh, _cncGeoID, numElem, 4);
-  adr[29] = _numbering->getElementDOF(_mesh, _cncGeoID, numElem, 5);
+  adr[24] = this->_numbering->getElementDOF(this->_mesh, this->_cncGeoTag, numElem, 0);
+  adr[25] = this->_numbering->getElementDOF(this->_mesh, this->_cncGeoTag, numElem, 1);
+  adr[26] = this->_numbering->getElementDOF(this->_mesh, this->_cncGeoTag, numElem, 2);
+  adr[27] = this->_numbering->getElementDOF(this->_mesh, this->_cncGeoTag, numElem, 3);
+  adr[28] = this->_numbering->getElementDOF(this->_mesh, this->_cncGeoTag, numElem, 4);
+  adr[29] = this->_numbering->getElementDOF(this->_mesh, this->_cncGeoTag, numElem, 5);
 }
 
 template class feSpaceVecTriP4<1>;

@@ -87,8 +87,8 @@ struct linearODE {
     feSolution sol(numbering.getNbDOFs(), spaces, essentialSpaces);
     
     feBilinearForm *dudt = nullptr, *src = nullptr;
-    feCheckReturn(createBilinearForm(dudt, {u}, new feSysElm_TransientVectorMass(&scalarConstant::one)));
-    feCheckReturn(createBilinearForm( src, {u}, new feSysElm_VectorSource(&uSrc)));
+    feCheckReturn(createBilinearForm(dudt, {u}, new feSysElm_TransientVectorMass<2>(&scalarConstant::one)));
+    feCheckReturn(createBilinearForm( src, {u}, new feSysElm_VectorSource<2>(&uSrc)));
     std::vector<feBilinearForm*> forms = {dudt, src};
 
     feLinearSystem *system;
@@ -231,9 +231,9 @@ struct diffusion {
     feSolution sol(numbering.getNbDOFs(), spaces, essentialSpaces);
     
     feBilinearForm *dudt = nullptr, *diff = nullptr, *src = nullptr;
-    feCheckReturn(createBilinearForm(dudt, {u}, new feSysElm_TransientVectorMass(&scalarConstant::one)));
-    feCheckReturn(createBilinearForm(diff, {u}, new feSysElm_VectorDiffusion(&scalarConstant::one, &scalarConstant::one)));
-    feCheckReturn(createBilinearForm( src, {u}, new feSysElm_VectorSource(&uSrc)));
+    feCheckReturn(createBilinearForm(dudt, {u}, new feSysElm_TransientVectorMass<2>(&scalarConstant::one)));
+    feCheckReturn(createBilinearForm(diff, {u}, new feSysElm_VectorDiffusion<2>(&scalarConstant::one, &scalarConstant::one)));
+    feCheckReturn(createBilinearForm( src, {u}, new feSysElm_VectorSource<2>(&uSrc)));
     std::vector<feBilinearForm*> forms = {dudt, diff, src};
 
     feLinearSystem *system;
@@ -363,10 +363,10 @@ struct diffusionWeakBC {
 
     // Equation 1: PDE for u with Lagrange multiplier l
     feBilinearForm *dudt = nullptr, *diff = nullptr, *src = nullptr, *massLU = nullptr;
-    feCheckReturn(createBilinearForm(  dudt, {u}, new feSysElm_TransientVectorMass(&scalarConstant::one)));
-    feCheckReturn(createBilinearForm(  diff, {u}, new feSysElm_VectorDiffusion(&scalarConstant::one, &scalarConstant::one)));
-    feCheckReturn(createBilinearForm(   src, {u}, new feSysElm_VectorSource(&uSrc)));
-    feCheckReturn(createBilinearForm(massLU, {uBord, l}, new feSysElm_MixedVectorMass(&scalarConstant::one)));
+    feCheckReturn(createBilinearForm(  dudt, {u}, new feSysElm_TransientVectorMass<2>(&scalarConstant::one)));
+    feCheckReturn(createBilinearForm(  diff, {u}, new feSysElm_VectorDiffusion<2>(&scalarConstant::one, &scalarConstant::one)));
+    feCheckReturn(createBilinearForm(   src, {u}, new feSysElm_VectorSource<2>(&uSrc)));
+    feCheckReturn(createBilinearForm(massLU, {uBord, l}, new feSysElm_MixedVectorMass<2>(&scalarConstant::one)));
     forms.push_back(dudt);
     forms.push_back(diff);
     forms.push_back(src);
@@ -374,15 +374,15 @@ struct diffusionWeakBC {
 
     // Equation 2: Coupling uBord - vBord (equation for l)
     feBilinearForm *massU = nullptr, *massV = nullptr;
-    feCheckReturn(createBilinearForm(massU, {l, uBord}, new feSysElm_MixedVectorMass(&scalarConstant::one)));
-    feCheckReturn(createBilinearForm(massV, {l, vBord}, new feSysElm_MixedVectorMass(&scalarConstant::minusOne)));
+    feCheckReturn(createBilinearForm(massU, {l, uBord}, new feSysElm_MixedVectorMass<2>(&scalarConstant::one)));
+    feCheckReturn(createBilinearForm(massV, {l, vBord}, new feSysElm_MixedVectorMass<2>(&scalarConstant::minusOne)));
     forms.push_back(massU);
     forms.push_back(massV);
 
     // Equation 3: Coupling vBord - d/dt of BC (equation for vBord)
     feBilinearForm *dvdt = nullptr, *srcv = nullptr;
-    feCheckReturn(createBilinearForm(dvdt, {vBord}, new feSysElm_TransientVectorMass(&scalarConstant::one)));
-    feCheckReturn(createBilinearForm(srcv, {vBord}, new feSysElm_VectorSource(&duSoldt)));
+    feCheckReturn(createBilinearForm(dvdt, {vBord}, new feSysElm_TransientVectorMass<2>(&scalarConstant::one)));
+    feCheckReturn(createBilinearForm(srcv, {vBord}, new feSysElm_VectorSource<2>(&duSoldt)));
     forms.push_back(dvdt);
     forms.push_back(srcv);
 
@@ -517,29 +517,29 @@ struct navierStokesMMS {
 
     // Momentum
     feBilinearForm *dudt = nullptr, *convU = nullptr, *source = nullptr;
-    feCheck(createBilinearForm( dudt,    {u}, new feSysElm_TransientVectorMass(&scalarConstant::one)));
-    feCheck(createBilinearForm(convU,    {u}, new feSysElm_VectorConvectiveAcceleration(&scalarConstant::one)));
-    feCheck(createBilinearForm(source,   {u}, new feSysElm_VectorSource(&uSrc)));
+    feCheck(createBilinearForm( dudt,    {u}, new feSysElm_TransientVectorMass<2>(&scalarConstant::one)));
+    feCheck(createBilinearForm(convU,    {u}, new feSysElm_VectorConvectiveAcceleration<2>(&scalarConstant::one)));
+    feCheck(createBilinearForm(source,   {u}, new feSysElm_VectorSource<2>(&uSrc)));
     std::vector<feBilinearForm*> forms = {dudt, convU, source};
     // std::vector<feBilinearForm*> forms = {convU, source};
 
     feBilinearForm *divSigma = nullptr, *diffU = nullptr, *gradP = nullptr;
     if(divergenceFormulation) {
       UNUSED(diffU, gradP);
-      feCheck(createBilinearForm(divSigma, {u, p}, new feSysElm_DivergenceNewtonianStress(&scalarConstant::minusOne, &scalarConstant::one)));
+      feCheck(createBilinearForm(divSigma, {u, p}, new feSysElm_DivergenceNewtonianStress<2>(&scalarConstant::minusOne, &scalarConstant::one)));
       forms.push_back(divSigma);
     } else {
       // Laplacian formulation
       UNUSED(divSigma);
-      feCheck(createBilinearForm(gradP, {u, p}, new feSysElm_MixedGradient(&scalarConstant::one)));
-      feCheck(createBilinearForm(diffU,    {u}, new feSysElm_VectorDiffusion(&scalarConstant::one, &scalarConstant::one)));
+      feCheck(createBilinearForm(gradP, {u, p}, new feSysElm_MixedGradient<2>(&scalarConstant::one)));
+      feCheck(createBilinearForm(diffU,    {u}, new feSysElm_VectorDiffusion<2>(&scalarConstant::one, &scalarConstant::one)));
       forms.push_back(diffU);
       forms.push_back(gradP);
     }
 
     // Continuity
     feBilinearForm *divU = nullptr;
-    feCheck(createBilinearForm(divU, {p, u}, new feSysElm_MixedDivergence(&scalarConstant::one)));
+    feCheck(createBilinearForm(divU, {p, u}, new feSysElm_MixedDivergence<2>(&scalarConstant::one)));
     forms.push_back(divU);
 
     feLinearSystem *system;

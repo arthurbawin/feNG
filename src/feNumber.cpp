@@ -34,15 +34,15 @@ feNumber::feNumber(feMesh *mesh, const std::string &fieldName) :
   _nDOFFaces.resize(_nFac);
 }
 
-void feNumber::setUnknownVertexDOF(feMesh *mesh, std::string const &cncGeoID, int numElem,
+void feNumber::setUnknownVertexDOF(feMesh *mesh, const int cncGeoTag, int numElem,
                                    int numVertex, int numDOF)
 {
-  int vert = mesh->getVertex(cncGeoID, numElem, numVertex);
+  int vert = mesh->getVertex(cncGeoTag, numElem, numVertex);
 #if defined(FENG_DEBUG)
   feInfoCond(FE_VERBOSE > 2,
              "Assigning %d DOF_UNKNOWN at global vertex %d defined on "
-             "connectivity %s: local elem %d at vertex %d",
-             numDOF, vert, cncGeoID.data(), numElem, numVertex);
+             "connectivity %d: local elem %d at vertex %d",
+             numDOF, vert, cncGeoTag, numElem, numVertex);
 #endif
   _nDOFVertices[vert] = numDOF;
   if(!COUNT_ONLY) {
@@ -50,15 +50,15 @@ void feNumber::setUnknownVertexDOF(feMesh *mesh, std::string const &cncGeoID, in
   }
 }
 
-void feNumber::setUnknownElementDOF(feMesh *mesh, std::string const &cncGeoID, int numElem,
+void feNumber::setUnknownElementDOF(feMesh *mesh, const int cncGeoTag, int numElem,
                                     int numDOF)
 {
-  int elem = mesh->getElement(cncGeoID, numElem);
+  int elem = mesh->getElement(cncGeoTag, numElem);
 #if defined(FENG_DEBUG)
   feInfoCond(FE_VERBOSE > 2,
              "Assigning %d DOF_UNKNOWN at global element %d defined on "
-             "connectivity %s: local elem %d",
-             numDOF, elem, cncGeoID.data(), numElem);
+             "connectivity %d: local elem %d",
+             numDOF, elem, cncGeoTag, numElem);
 #endif
   _nDOFElements[elem] = numDOF;
   if(!COUNT_ONLY) {
@@ -66,15 +66,15 @@ void feNumber::setUnknownElementDOF(feMesh *mesh, std::string const &cncGeoID, i
   }
 }
 
-void feNumber::setUnknownEdgeDOF(feMesh *mesh, std::string const &cncGeoID, int numElem,
+void feNumber::setUnknownEdgeDOF(feMesh *mesh, const int cncGeoTag, int numElem,
                                  int numEdge, int numDOF)
 {
-  int edge = fabs(mesh->getEdge(cncGeoID, numElem, numEdge)) - 1;
+  int edge = fabs(mesh->getEdge(cncGeoTag, numElem, numEdge)) - 1;
 #if defined(FENG_DEBUG)
   feInfoCond(FE_VERBOSE > 2,
              "Assigning %d DOF_UNKNOWN at global edge %d defined on "
-             "connectivity %s: local elem %d at edge %d",
-             numDOF, edge, cncGeoID.data(), numElem, numEdge);
+             "connectivity %d: local elem %d at edge %d",
+             numDOF, edge, cncGeoTag, numElem, numEdge);
 #endif
   _nDOFEdges[edge] = numDOF;
   if(!COUNT_ONLY) {
@@ -82,15 +82,15 @@ void feNumber::setUnknownEdgeDOF(feMesh *mesh, std::string const &cncGeoID, int 
   }
 }
 
-void feNumber::setUnknownFaceDOF(feMesh *mesh, std::string const &cncGeoID, int numElem,
+void feNumber::setUnknownFaceDOF(feMesh *mesh, const int cncGeoTag, int numElem,
                                  int numFace, int numDOF)
 {
-  int face = fabs(mesh->getFace(cncGeoID, numElem, numFace)) - 1;
+  int face = fabs(mesh->getFace(cncGeoTag, numElem, numFace)) - 1;
 #if defined(FENG_DEBUG)
   feInfoCond(FE_VERBOSE > 2,
              "Assigning %d DOF_UNKNOWN at global face %d defined on "
-             "connectivity %s: local elem %d at face %d",
-             numDOF, face, cncGeoID.data(), numElem, numFace);
+             "connectivity %d: local elem %d at face %d",
+             numDOF, face, cncGeoTag, numElem, numFace);
 #endif
   _nDOFFaces[face] = numDOF;
   if(!COUNT_ONLY) {
@@ -98,15 +98,15 @@ void feNumber::setUnknownFaceDOF(feMesh *mesh, std::string const &cncGeoID, int 
   }
 }
 
-void feNumber::setEssentialVertexDOF(feMesh *mesh, std::string const &cncGeoID, int numElem,
+void feNumber::setEssentialVertexDOF(feMesh *mesh, const int cncGeoTag, int numElem,
                                      int numVertex, int numDOF)
 {
-  int vert = mesh->getVertex(cncGeoID, numElem, numVertex);
+  int vert = mesh->getVertex(cncGeoTag, numElem, numVertex);
 #if defined(FENG_DEBUG)
   feInfoCond(FE_VERBOSE > 2,
              "Setting DOF_ESSENTIAL at global vertex %d defined on "
-             "connectivity %s: local elem %d at vertex %d",
-             vert, cncGeoID.data(), numElem, numVertex);
+             "connectivity %d: local elem %d at vertex %d",
+             vert, cncGeoTag, numElem, numVertex);
 #endif
   if(numDOF == -1) {
     // Mark all DOFs on this entity as essential
@@ -117,15 +117,15 @@ void feNumber::setEssentialVertexDOF(feMesh *mesh, std::string const &cncGeoID, 
   }
 }
 
-void feNumber::setEssentialElementDOF(feMesh *mesh, std::string const &cncGeoID, int numElem,
+void feNumber::setEssentialElementDOF(feMesh *mesh, const int cncGeoTag, int numElem,
                                       int numDOF)
 {
-  int elem = mesh->getElement(cncGeoID, numElem);
+  int elem = mesh->getElement(cncGeoTag, numElem);
 #if defined(FENG_DEBUG)
   feInfoCond(FE_VERBOSE > 2,
              "Setting DOF_ESSENTIAL at global element %d defined on "
-             "connectivity %s: local elem %d",
-             elem, cncGeoID.data(), numElem);
+             "connectivity %d: local elem %d",
+             elem, cncGeoTag, numElem);
 #endif
   if(numDOF == -1) {
     // Mark all DOFs on this entity as essential
@@ -136,15 +136,15 @@ void feNumber::setEssentialElementDOF(feMesh *mesh, std::string const &cncGeoID,
   }
 }
 
-void feNumber::setEssentialEdgeDOF(feMesh *mesh, std::string const &cncGeoID, int numElem,
+void feNumber::setEssentialEdgeDOF(feMesh *mesh, const int cncGeoTag, int numElem,
                                    int numEdge, int numDOF)
 {
-  int edge = fabs(mesh->getEdge(cncGeoID, numElem, numEdge)) - 1;
+  int edge = fabs(mesh->getEdge(cncGeoTag, numElem, numEdge)) - 1;
 #if defined(FENG_DEBUG)
   feInfoCond(FE_VERBOSE > 2,
              "Setting DOF_ESSENTIAL at global edge %d defined on "
-             "connectivity %s: local elem %d at edge %d",
-             edge, cncGeoID.data(), numElem, numEdge);
+             "connectivity %d: local elem %d at edge %d",
+             edge, cncGeoTag, numElem, numEdge);
 #endif
   if(numDOF == -1) {
     // Mark all DOFs on this entity as essential
@@ -155,15 +155,15 @@ void feNumber::setEssentialEdgeDOF(feMesh *mesh, std::string const &cncGeoID, in
   }
 }
 
-void feNumber::setEssentialFaceDOF(feMesh *mesh, std::string const &cncGeoID, int numElem,
+void feNumber::setEssentialFaceDOF(feMesh *mesh, const int cncGeoTag, int numElem,
                                    int numFace, int numDOF)
 {
-  int face = fabs(mesh->getFace(cncGeoID, numElem, numFace)) - 1;
+  int face = fabs(mesh->getFace(cncGeoTag, numElem, numFace)) - 1;
 #if defined(FENG_DEBUG)
   feInfoCond(FE_VERBOSE > 2,
              "Setting DOF_ESSENTIAL at global face %d defined on "
-             "connectivity %s: local elem %d at face %d",
-             face, cncGeoID.data(), numElem, numFace);
+             "connectivity %d: local elem %d at face %d",
+             face, cncGeoTag, numElem, numFace);
 #endif
   if(numDOF == -1) {
     // Mark all DOFs on this entity as essential
@@ -174,42 +174,42 @@ void feNumber::setEssentialFaceDOF(feMesh *mesh, std::string const &cncGeoID, in
   }
 }
 
-int feNumber::getVertexDOF(feMesh *mesh, std::string const &cncGeoID, int numElem, int numVertex,
+int feNumber::getVertexDOF(feMesh *mesh, const int cncGeoTag, int numElem, int numVertex,
                            int numDOF)
 {
-  int vert = mesh->getVertex(cncGeoID, numElem, numVertex);
+  int vert = mesh->getVertex(cncGeoTag, numElem, numVertex);
   assert(_numberingVertices[_maxDOFperVertex * vert + numDOF] != DOF_NOT_ASSIGNED);
   return _numberingVertices[_maxDOFperVertex * vert + numDOF];
 }
 
-int feNumber::getElementDOF(feMesh *mesh, std::string const &cncGeoID, int numElem, int numDOF)
+int feNumber::getElementDOF(feMesh *mesh, const int cncGeoTag, int numElem, int numDOF)
 {
-  int elem = mesh->getElement(cncGeoID, numElem);
+  int elem = mesh->getElement(cncGeoTag, numElem);
   assert(_numberingElements[_maxDOFperElem * elem + numDOF] != DOF_NOT_ASSIGNED);
   return _numberingElements[_maxDOFperElem * elem + numDOF];
 }
 
-void feNumber::setElementDOF(feMesh *mesh, std::string const &cncGeoID, int numElem, int numDOF, int dofNumber)
+void feNumber::setElementDOF(feMesh *mesh, const int cncGeoTag, int numElem, int numDOF, int dofNumber)
 {
-  int elem = mesh->getElement(cncGeoID, numElem);
+  int elem = mesh->getElement(cncGeoTag, numElem);
   assert(_numberingElements[_maxDOFperElem * elem + numDOF] != DOF_NOT_ASSIGNED);
   _numberingElements[_maxDOFperElem * elem + numDOF] = dofNumber;
 }
 
-int feNumber::getEdgeDOF(feMesh *mesh, std::string const &cncGeoID, int numElem, int numEdge,
+int feNumber::getEdgeDOF(feMesh *mesh, const int cncGeoTag, int numElem, int numEdge,
                          int numDOF)
 {
   // In connecEdges, edges are numbered starting from 1 and can be negative
-  int edge = fabs(mesh->getEdge(cncGeoID, numElem, numEdge)) - 1;
+  int edge = fabs(mesh->getEdge(cncGeoTag, numElem, numEdge)) - 1;
   assert(_numberingEdges[_maxDOFperEdge * edge + numDOF] != DOF_NOT_ASSIGNED);
   return _numberingEdges[_maxDOFperEdge * edge + numDOF];
 }
 
-int feNumber::getFaceDOF(feMesh *mesh, std::string const &cncGeoID, int numElem, int numFace,
+int feNumber::getFaceDOF(feMesh *mesh, const int cncGeoTag, int numElem, int numFace,
                          int numDOF)
 {
   // In _connecTriangles, faces are numbered starting from 1 and can be negative
-  int face = fabs(mesh->getFace(cncGeoID, numElem, numFace)) - 1;
+  int face = fabs(mesh->getFace(cncGeoTag, numElem, numFace)) - 1;
   assert(_numberingFaces[_maxDOFperFace * face + numDOF] != DOF_NOT_ASSIGNED);
   return _numberingFaces[_maxDOFperFace * face + numDOF];
 }
@@ -548,17 +548,20 @@ void feNumber::printCodeElements(std::ostream &os)
   // for(auto val : _codeDOFElements) os << val << std::endl;
 }
 
-feMetaNumber::feMetaNumber(feMesh *mesh, const std::vector<feSpace *> &spaces,
-                           const std::vector<feSpace *> &essentialSpaces)
+// FIXME: should not exit from constructor
+// Create a createNumbering wrapper instead for example.
+feMetaNumber::feMetaNumber(feMesh *mesh,
+                           const std::vector<feSpace*> &spaces,
+                           const std::vector<feSpace*> &essentialSpaces)
 {
-  for(auto *fS : spaces) {
+  for(const auto &fS : spaces) {
     if(fS == nullptr) {
       feErrorMsg(FE_STATUS_ERROR,
                  "Null pointer in vector of FE spaces, maybe you forgot to initialize it.");
       exit(-1);
     }
   }
-  for(auto *fS : essentialSpaces) {
+  for(const auto &fS : essentialSpaces) {
     if(fS == nullptr) {
       feErrorMsg(
         FE_STATUS_ERROR,
@@ -567,17 +570,16 @@ feMetaNumber::feMetaNumber(feMesh *mesh, const std::vector<feSpace *> &spaces,
     }
   }
 
-  for(feSpace *fS : spaces) {
+  for(const auto &fS : spaces) {
     if(std::find(_fieldIDs.begin(), _fieldIDs.end(), fS->getFieldID()) == _fieldIDs.end())
       _fieldIDs.push_back(fS->getFieldID());
   }
   _nFields = _fieldIDs.size();
 
-  for(feSpace *fSBC : essentialSpaces) {
+  for(const auto &fSBC : essentialSpaces) {
     bool err = true;
-    for(feSpace *fS : spaces)
-      if(fSBC->getFieldID() == fS->getFieldID() && fSBC->getCncGeoID() == fS->getCncGeoID())
-        err = false;
+    for(const auto &fS : spaces)
+      if(fSBC->representsSameFieldAs(*fS)) err = false;
     if(err) {
       feErrorMsg(FE_STATUS_ERROR,
                  "Space for field \"%s\" and connectivity \"%s\" was marked as\n"
@@ -588,12 +590,19 @@ feMetaNumber::feMetaNumber(feMesh *mesh, const std::vector<feSpace *> &spaces,
     }
   }
 
+  // Set _essentialComponent to true for all fully essential spaces.
+  for(auto &space : essentialSpaces) {
+    space->setEssentialComponent(0, true);
+    space->setEssentialComponent(1, true);
+    space->setEssentialComponent(2, true);
+  }
+
   // Create one numbering for each field
   for(int i = 0; i < _nFields; ++i) {
     _numberings[_fieldIDs[i]] = new feNumber(mesh, _fieldIDs[i]);
   }
 
-  for(feSpace *fS : spaces) {
+  for(auto &fS : spaces) {
     fS->setNumberingPtr(_numberings[fS->getFieldID()]);
   }
 
@@ -602,7 +611,7 @@ feMetaNumber::feMetaNumber(feMesh *mesh, const std::vector<feSpace *> &spaces,
   // modifying all FE spaces and adding a count function)
   COUNT_ONLY = true;
 
-  for(feSpace *fS : spaces) {
+  for(const auto &fS : spaces) {
     fS->initializeNumberingUnknowns();
   }
 
@@ -613,10 +622,10 @@ feMetaNumber::feMetaNumber(feMesh *mesh, const std::vector<feSpace *> &spaces,
   COUNT_ONLY = false;
 
   // Now mark the DOFs as unknown or essential
-  for(feSpace *fS : spaces) {
+  for(const auto &fS : spaces) {
     fS->initializeNumberingUnknowns();
   }
-  for(feSpace *fSBC : essentialSpaces) {
+  for(const auto &fSBC : essentialSpaces) {
     fSBC->initializeNumberingEssential();
   }
 

@@ -121,7 +121,7 @@ namespace cahnHilliard {
       // Tracer convection with imposed velocity field u = (1,1)
       feBilinearForm *dphidt = nullptr, *convPhi = nullptr, *diffMu = nullptr, *phiS = nullptr;
       feCheck(createBilinearForm( dphidt,     {phi}, new feSysElm_TransientMass(&scalarConstant::one)));
-      feCheck(createBilinearForm(convPhi,  {phi, u}, new feSysElm_TracerConvection(&scalarConstant::one)));
+      feCheck(createBilinearForm(convPhi,  {phi, u}, new feSysElm_TracerConvection<2>(&scalarConstant::one)));
       feCheck(createBilinearForm( diffMu, {phi, mu}, new feSysElm_MixedGradGrad<2>(&mobility)));
       feCheck(createBilinearForm(   phiS,     {phi}, new feSysElm_Source(&phiSource)));
 
@@ -507,17 +507,17 @@ namespace cahnHilliardNavierStokes {
 
       // Momentum
       feBilinearForm *CHNS_momentum = nullptr, *uS = nullptr;
-      feCheck(createBilinearForm(CHNS_momentum, {u, p, phi, mu}, new feSysElm_CHNS_Momentum(&density, &drhodphi, &viscosity, &dviscdphi, &mobility, &coeffKorteweg, &volumeForce)));
-      feCheck(createBilinearForm(           uS,             {u}, new feSysElm_VectorSource(&uSource)));
+      feCheck(createBilinearForm(CHNS_momentum, {u, p, phi, mu}, new feSysElm_CHNS_Momentum<2>(&density, &drhodphi, &viscosity, &dviscdphi, &mobility, &coeffKorteweg, &volumeForce)));
+      feCheck(createBilinearForm(           uS,             {u}, new feSysElm_VectorSource<2>(&uSource)));
 
       // Continuity
       feBilinearForm *divU = nullptr;
-      feCheck(createBilinearForm(divU, {p, u}, new feSysElm_MixedDivergence(&scalarConstant::one)));
+      feCheck(createBilinearForm(divU, {p, u}, new feSysElm_MixedDivergence<2>(&scalarConstant::one)));
 
       // Tracer convection
       feBilinearForm *dphidt = nullptr, *convPhi = nullptr, *diffMu = nullptr, *phiS = nullptr;
       feCheck(createBilinearForm( dphidt,     {phi}, new feSysElm_TransientMass(&scalarConstant::one)));
-      feCheck(createBilinearForm(convPhi,  {phi, u}, new feSysElm_TracerConvection(&scalarConstant::one)));
+      feCheck(createBilinearForm(convPhi,  {phi, u}, new feSysElm_TracerConvection<2>(&scalarConstant::one)));
       feCheck(createBilinearForm( diffMu, {phi, mu}, new feSysElm_MixedGradGrad<2>(&mobility)));
       feCheck(createBilinearForm(   phiS,     {phi}, new feSysElm_Source(&phiSource)));
 

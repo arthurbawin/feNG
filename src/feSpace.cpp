@@ -1,6 +1,7 @@
-#include "feSpace.h"
+#include "feMatrixInterface.h"
 #include "feMesh.h"
 #include "feSolution.h"
+#include "feSpace.h"
 
 extern int FE_VERBOSE;
 
@@ -122,7 +123,7 @@ feStatus createFiniteElementSpace(feSpace *&space, feMesh *mesh, const elementTy
         switch(degree) {
           case 1:
             feInfoCond(FE_VERBOSE > 0, "\t\t\tFinite element: Raviart-Thomas");
-            space = new feSpaceTriRT1(mesh, fieldName, cncGeoID, (feVectorFunction *)fct);
+            space = new feSpaceTriRT1<1>(mesh, fieldName, cncGeoID, (feVectorFunction *)fct);
             break;
           default:
             return feErrorMsg(
@@ -236,7 +237,7 @@ feStatus createFiniteElementSpace(feSpace *&space, feMesh *mesh, const elementTy
         switch(degree) {
           case 1:
             feInfoCond(FE_VERBOSE > 0, "\t\t\tFinite element: Raviart-Thomas");
-            space = new feSpaceTriRT1(mesh, fieldName, cncGeoID, (feVectorFunction *)fct);
+            space = new feSpaceTriRT1<2>(mesh, fieldName, cncGeoID, (feVectorFunction *)fct);
             break;
           default:
             return feErrorMsg(
@@ -310,6 +311,10 @@ feScalarSpace::feScalarSpace(const int dimension, feMesh *mesh, const std::strin
 {
 }
 
+template class feVectorSpace<1>;
+template class feVectorSpace<2>;
+template class feVectorSpace<3>;
+
 int feSpace::getNumElements() const { return _mesh->getNumElements(_cncGeoTag); }
 int feSpace::getNumVerticesPerElem() const { return _mesh->getNumVerticesPerElem(_cncGeoTag); }
 
@@ -364,6 +369,11 @@ feStatus feSpace::setQuadratureRule(feQuadrature *rule)
     // _barycentricCoordinates[3 * i + 1] = r[0];
     // _barycentricCoordinates[3 * i + 2] = r[1];
   }
+
+  _Ldata = _L.data();
+  _dLdrdata = _dLdr.data();
+  _dLdsdata = _dLds.data();
+  _dLdtdata = _dLdt.data();
 
   /* Physical frame discretization : shape functions are computed on the physical element. */
   if(_fieldID != "GEO" && _useGlobalShapeFunctions) {
@@ -516,6 +526,7 @@ void feSpace::getVectorFunctionsPhysicalGradientAtQuadNode(const int iQuadNode,
 
   int offset = _nFunctions * _nComponents;
   int offsetGrad = _dim * _nComponents;
+  double *gradPhi_p = gradPhi.data();
 
   if(_dim == 0) {
     // gradPhi[0] = 0.;
@@ -527,48 +538,94 @@ void feSpace::getVectorFunctionsPhysicalGradientAtQuadNode(const int iQuadNode,
     // }
     feErrorMsg(FE_STATUS_ERROR, "Not implemented");
     exit(-1);
-  } else if(_dim == 2) {
+  } else if(_dim == 2)
+  {
+    const double *dLdr_p = _dLdrdata + offset * iQuadNode;
+    const double *dLds_p = _dLdsdata + offset * iQuadNode;
 
-
-    for(int i = 0; i < _nFunctions; ++i) {
-
+    for(int i = 0; i < _nFunctions; ++i, dLdr_p += _nComponents,
+                                         dLds_p += _nComponents,
+                                         gradPhi_p += offsetGrad)
+    {
       // Compute gradient tensor of vector-valued phi
       // Tensor gradient is defined with the convention :
       //      grad(phi)_{mn} = d/dx_m (phi_n)
-      double dphi_i_x_dx = _dLdr[offset * iQuadNode + i * _nComponents + 0] * T.drdx[0]
-                         + _dLds[offset * iQuadNode + i * _nComponents + 0] * T.drdx[1];
-      double dphi_i_y_dx = _dLdr[offset * iQuadNode + i * _nComponents + 1] * T.drdx[0]
-                         + _dLds[offset * iQuadNode + i * _nComponents + 1] * T.drdx[1];
-      double dphi_i_x_dy = _dLdr[offset * iQuadNode + i * _nComponents + 0] * T.drdy[0]
-                         + _dLds[offset * iQuadNode + i * _nComponents + 0] * T.drdy[1];
-      double dphi_i_y_dy = _dLdr[offset * iQuadNode + i * _nComponents + 1] * T.drdy[0]
-                         + _dLds[offset * iQuadNode + i * _nComponents + 1] * T.drdy[1];
+      double dphi_i_x_dx = dLdr_p[0] * T.drdx[0] + dLds_p[0] * T.drdx[1];
+      double dphi_i_y_dx = dLdr_p[1] * T.drdx[0] + dLds_p[1] * T.drdx[1];
+      double dphi_i_x_dy = dLdr_p[0] * T.drdy[0] + dLds_p[0] * T.drdy[1];
+      double dphi_i_y_dy = dLdr_p[1] * T.drdy[0] + dLds_p[1] * T.drdy[1];
 
-      gradPhi[offsetGrad * i + 0] = dphi_i_x_dx;
-      gradPhi[offsetGrad * i + 1] = dphi_i_y_dx;
-      gradPhi[offsetGrad * i + 2] = dphi_i_x_dy;
-      gradPhi[offsetGrad * i + 3] = dphi_i_y_dy;
+      gradPhi_p[0] = dphi_i_x_dx;
+      gradPhi_p[1] = dphi_i_y_dx;
+      gradPhi_p[2] = dphi_i_x_dy;
+      gradPhi_p[3] = dphi_i_y_dy;
     }
-
 
   } else if(_dim == 3) {
     feErrorMsg(FE_STATUS_ERROR, "Not implemented : 3D gradient of vector shape functions");
     exit(-1);
-    // for(int i = 0; i < _nFunctions; ++i) {
-    //   gradPhi[i * _dim + 0] = _dLdr[_nFunctions * iQuadNode + i] * T.drdx[0] +
-    //                           _dLds[_nFunctions * iQuadNode + i] * T.drdx[1] +
-    //                           _dLdt[_nFunctions * iQuadNode + i] * T.drdx[2];
-    //   gradPhi[i * _dim + 1] = _dLdr[_nFunctions * iQuadNode + i] * T.drdy[0] +
-    //                           _dLds[_nFunctions * iQuadNode + i] * T.drdy[1] +
-    //                           _dLdt[_nFunctions * iQuadNode + i] * T.drdy[2];
-    //   gradPhi[i * _dim + 2] = _dLdr[_nFunctions * iQuadNode + i] * T.drdz[0] +
-    //                           _dLds[_nFunctions * iQuadNode + i] * T.drdz[1] +
-    //                           _dLdt[_nFunctions * iQuadNode + i] * T.drdz[2];
-    // }
   }
 }
 
-#include "feMatrixInterface.h"
+// void feSpace::getVectorFunctionsPhysicalGradientAtQuadNode(const int iQuadNode,
+//                                                            const ElementTransformation &T,
+//                                                            std::vector<double> &gradPhi) const
+// {
+//   assert(gradPhi.size() == (size_t)((unsigned) _dim * _nComponents * _nFunctions));
+
+//   int offset = _nFunctions * _nComponents;
+//   int offsetGrad = _dim * _nComponents;
+
+//   if(_dim == 0) {
+//     // gradPhi[0] = 0.;
+//     feErrorMsg(FE_STATUS_ERROR, "Not implemented");
+//     exit(-1);
+//   } else if(_dim == 1) {
+//     // for(int i = 0; i < _nFunctions; ++i) {
+//     //   gradPhi[i] = _dLdr[_nFunctions * iQuadNode + i] * T.drdx[0];
+//     // }
+//     feErrorMsg(FE_STATUS_ERROR, "Not implemented");
+//     exit(-1);
+//   } else if(_dim == 2) {
+
+
+//     for(int i = 0; i < _nFunctions; ++i) {
+
+//       // Compute gradient tensor of vector-valued phi
+//       // Tensor gradient is defined with the convention :
+//       //      grad(phi)_{mn} = d/dx_m (phi_n)
+//       double dphi_i_x_dx = _dLdr[offset * iQuadNode + i * _nComponents + 0] * T.drdx[0]
+//                          + _dLds[offset * iQuadNode + i * _nComponents + 0] * T.drdx[1];
+//       double dphi_i_y_dx = _dLdr[offset * iQuadNode + i * _nComponents + 1] * T.drdx[0]
+//                          + _dLds[offset * iQuadNode + i * _nComponents + 1] * T.drdx[1];
+//       double dphi_i_x_dy = _dLdr[offset * iQuadNode + i * _nComponents + 0] * T.drdy[0]
+//                          + _dLds[offset * iQuadNode + i * _nComponents + 0] * T.drdy[1];
+//       double dphi_i_y_dy = _dLdr[offset * iQuadNode + i * _nComponents + 1] * T.drdy[0]
+//                          + _dLds[offset * iQuadNode + i * _nComponents + 1] * T.drdy[1];
+
+//       gradPhi[offsetGrad * i + 0] = dphi_i_x_dx;
+//       gradPhi[offsetGrad * i + 1] = dphi_i_y_dx;
+//       gradPhi[offsetGrad * i + 2] = dphi_i_x_dy;
+//       gradPhi[offsetGrad * i + 3] = dphi_i_y_dy;
+//     }
+
+
+//   } else if(_dim == 3) {
+//     feErrorMsg(FE_STATUS_ERROR, "Not implemented : 3D gradient of vector shape functions");
+//     exit(-1);
+//     // for(int i = 0; i < _nFunctions; ++i) {
+//     //   gradPhi[i * _dim + 0] = _dLdr[_nFunctions * iQuadNode + i] * T.drdx[0] +
+//     //                           _dLds[_nFunctions * iQuadNode + i] * T.drdx[1] +
+//     //                           _dLdt[_nFunctions * iQuadNode + i] * T.drdx[2];
+//     //   gradPhi[i * _dim + 1] = _dLdr[_nFunctions * iQuadNode + i] * T.drdy[0] +
+//     //                           _dLds[_nFunctions * iQuadNode + i] * T.drdy[1] +
+//     //                           _dLdt[_nFunctions * iQuadNode + i] * T.drdy[2];
+//     //   gradPhi[i * _dim + 2] = _dLdr[_nFunctions * iQuadNode + i] * T.drdz[0] +
+//     //                           _dLds[_nFunctions * iQuadNode + i] * T.drdz[1] +
+//     //                           _dLdt[_nFunctions * iQuadNode + i] * T.drdz[2];
+//     // }
+//   }
+// }
 
 void feSpace::getFunctionsPhysicalHessianAtQuadNode(const int iQuadNode,
                                                     const ElementTransformation &T, double *hessPhi) const
@@ -647,18 +704,17 @@ void feSpace::interpolateField(const double *field, const int fieldSize, const d
   }
 }
 
+// FIXME: this is atrocious
 thread_local double SHAPE_FUNCTIONS[18];
 
 double feSpace::interpolateField(const std::vector<double> &field, const double *r) const
 {
   double res = 0.0;
 #ifdef FENG_DEBUG
-  if(field.size() != (unsigned)_nFunctions) {
-    feInfo("Erreur - Nombre de valeurs nodales non compatible avec "
-           "le nombre d'interpolants de l'espace.\n");
-    return res;
-  }
+  if(field.size() < (unsigned)_nFunctions)
+    feErrorMsg(FE_STATUS_ERROR, "Field size (%d) does not match number of shape functions (%d)", field.size(), _nFunctions);
 #endif
+  assert(field.size() >= (unsigned)_nFunctions);
   L(r, SHAPE_FUNCTIONS);
   // for(int i = 0; i < _nFunctions; ++i) res += field[i] * L(r)[i];
   for(int i = 0; i < _nFunctions; ++i) res += field[i] * SHAPE_FUNCTIONS[i];
@@ -671,8 +727,8 @@ double feSpace::interpolateField(std::vector<double> &field, int iElm, std::vect
 #ifdef FENG_DEBUG
   if(field.size() != (unsigned)_nFunctions) {
     printf(" In feSpace::interpolateField : Erreur - Nombre de valeurs nodales non compatible avec "
-           "le nombre d'interpolants de l'espace.\n");
-    return res;
+           "le nombre d'interpolants de l'espace.");
+    exit(-1);
   }
 #endif
   std::vector<double> l(_nFunctions, 0.0);
@@ -810,7 +866,9 @@ double feSpace::interpolateFieldAtQuadNode(std::vector<double> &field, int iNode
     return res;
   }
 #endif
-  for(int i = 0; i < _nFunctions; ++i) res += field[i] * _L[_nFunctions * iNode + i];
+  const double *shape = _Ldata + _nFunctions * iNode;
+  // for(int i = 0; i < _nFunctions; ++i) res += field[i] * _L[_nFunctions * iNode + i];
+  for(int i = 0; i < _nFunctions; ++i) res += field[i] * shape[i];
   return res;
 }
 
@@ -942,7 +1000,7 @@ void feSpace::interpolateVectorFieldAtQuadNode_physicalGradient(const std::vecto
                                                                 const int nComponents,
                                                                 const int iQuadNode,
                                                                 const ElementTransformation &T,
-                                                                double *grad)
+                                                                double *grad) const
 {
   // Size of grad is nComponents x nComponents: derivatives are computed
   // assuming the highest space dimension is the number of vector components.
@@ -951,57 +1009,36 @@ void feSpace::interpolateVectorFieldAtQuadNode_physicalGradient(const std::vecto
   for(int i = 0; i < nComponents * nComponents; ++i) grad[i] = 0.;
 
   int offset = _nFunctions * _nComponents;
+  const double *field_p = field.data();
 
   if(nComponents == 1) {
     for(int i = 0; i < _nFunctions; ++i) {
       double dphi_i_dx = _dLdr[offset * iQuadNode + i] * T.drdx[0];
       grad[0] += field[i] * dphi_i_dx;
     }
-  } else if(nComponents == 2) {
-    for(int i = 0; i < _nFunctions; ++i) {
-      // double dphi_i_dx = _dLdr[offset * iQuadNode + i] * T.drdx[0] +
-      //                    _dLds[offset * iQuadNode + i] * T.drdx[1];
-      // double dphi_i_dy = _dLdr[offset * iQuadNode + i] * T.drdy[0] +
-      //                    _dLds[offset * iQuadNode + i] * T.drdy[1];
+  } else if(nComponents == 2)
+  {
+    const double *dLdr_p = _dLdrdata + offset * iQuadNode;
+    const double *dLds_p = _dLdsdata + offset * iQuadNode;
 
-      // grad[(i % nComponents) * nComponents + 0] += field[i] * dphi_i_dx;
-      // grad[(i % nComponents) * nComponents + 1] += field[i] * dphi_i_dy;
+    for(int i = 0; i < _nFunctions; ++i, dLdr_p += _nComponents, dLds_p += _nComponents)
+    {
+      const double fieldVal = field_p[i];
+      const double dphi_i_x_dx = dLdr_p[0] * T.drdx[0] + dLds_p[0] * T.drdx[1];
+      const double dphi_i_y_dx = dLdr_p[1] * T.drdx[0] + dLds_p[1] * T.drdx[1];
+      const double dphi_i_x_dy = dLdr_p[0] * T.drdy[0] + dLds_p[0] * T.drdy[1];
+      const double dphi_i_y_dy = dLdr_p[1] * T.drdy[0] + dLds_p[1] * T.drdy[1];
 
-      double dphi_i_x_dx = _dLdr[offset * iQuadNode + i * _nComponents + 0] * T.drdx[0]
-                         + _dLds[offset * iQuadNode + i * _nComponents + 0] * T.drdx[1];
-      double dphi_i_y_dx = _dLdr[offset * iQuadNode + i * _nComponents + 1] * T.drdx[0]
-                         + _dLds[offset * iQuadNode + i * _nComponents + 1] * T.drdx[1];
-      double dphi_i_x_dy = _dLdr[offset * iQuadNode + i * _nComponents + 0] * T.drdy[0]
-                         + _dLds[offset * iQuadNode + i * _nComponents + 0] * T.drdy[1];
-      double dphi_i_y_dy = _dLdr[offset * iQuadNode + i * _nComponents + 1] * T.drdy[0]
-                         + _dLds[offset * iQuadNode + i * _nComponents + 1] * T.drdy[1];
-
-      grad[0] += field[i] * dphi_i_x_dx;
-      grad[1] += field[i] * dphi_i_y_dx;
-      grad[2] += field[i] * dphi_i_x_dy;
-      grad[3] += field[i] * dphi_i_y_dy;
+      grad[0] += fieldVal * dphi_i_x_dx;
+      grad[1] += fieldVal * dphi_i_y_dx;
+      grad[2] += fieldVal * dphi_i_x_dy;
+      grad[3] += fieldVal * dphi_i_y_dy;
 
     }
   } else if(nComponents == 3) {
     for(int i = 0; i < _nFunctions; ++i) {
       feErrorMsg(FE_STATUS_ERROR, "Not implemented");
       exit(-1);
-      // double dphi_i_dx = _dLdr[_nFunctions * iQuadNode + i] * T.drdx[0] +
-      //                    _dLds[_nFunctions * iQuadNode + i] * T.drdx[1] +
-      //                    _dLdt[_nFunctions * iQuadNode + i] * T.drdx[2];
-
-      // double dphi_i_dy = _dLdr[_nFunctions * iQuadNode + i] * T.drdy[0] +
-      //                    _dLds[_nFunctions * iQuadNode + i] * T.drdy[1] +
-      //                    _dLdt[_nFunctions * iQuadNode + i] * T.drdy[2];
-
-      // double dphi_i_dz = _dLdr[_nFunctions * iQuadNode + i] * T.drdz[0] +
-      //                    _dLds[_nFunctions * iQuadNode + i] * T.drdz[1] +
-      //                    _dLdt[_nFunctions * iQuadNode + i] * T.drdz[2];
-
-      // FIXME
-      // grad[0] += field[i] * dphi_i_dx;
-      // grad[1] += field[i] * dphi_i_dy;
-      // grad[2] += field[i] * dphi_i_dz;
     }
   }
 }
@@ -1010,7 +1047,7 @@ void feSpace::interpolateVectorFieldAtQuadNode_physicalHessian(const std::vector
                                                                const int nComponents,
                                                                const int iQuadNode,
                                                                const ElementTransformation &T,
-                                                               double *hessian)
+                                                               double *hessian) const
 {
   // Size of hessian is nComponents x [1, 3 or 6]: derivatives are computed
   // assuming the highest space dimension is the number of vector components.
@@ -1228,37 +1265,97 @@ void feSpace::interpolateVectorField_sDerivative(std::vector<double> &field, dou
 void feSpace::interpolateVectorFieldAtQuadNode(const std::vector<double> &field, const int iNode,
                                                std::vector<double> &res) const
 {
+  assert(field.size() == 3 * (unsigned)_nFunctions);
+
   // Field structure :
   // [fx0 fy0 fz0 fx1 fy1 fz1 ... fxn fyn fzn]
-  res[0] = res[1] = res[2] = 0.0;
-  assert(field.size() == 3 * (unsigned)_nFunctions);
-  for(int i = 0; i < 3; ++i) {
-    for(int j = 0; j < _nFunctions; ++j) {
-      // res[i] += field[3*i+j]*_L[_nFunctions*iNode+j];
-      res[i] += field[3 * j + i] * _L[_nFunctions * iNode + j];
+  const double *field_p = field.data();
+  const double *shape = _Ldata + _nFunctions * iNode;
+  double *res_p = res.data();
+
+  res_p[0] = res_p[1] = res_p[2] = 0.0;
+  for(int i = 0; i < _nFunctions; ++i) {
+    const double shapeVal = shape[i];
+    res_p[0] += field_p[3*i+0] * shapeVal;
+    res_p[1] += field_p[3*i+1] * shapeVal;
+    res_p[2] += field_p[3*i+2] * shapeVal;
+  }
+}
+
+void feSpace::interpolateVectorFieldAtQuadNode(const double *field, const int iNode, double *res, const int nComponents) const
+{
+  double val[3] = {0., 0., 0.};
+  
+  for(int j = 0; j < _nFunctions; ++j) {
+    const double *phi_j = _Ldata + _nFunctions * _nComponents * iNode + nComponents * j;
+    for(int i = 0; i < nComponents; ++i) {
+      val[i] += field[j] * phi_j[i];
     }
   }
+
+  for(int i = 0; i < nComponents; ++i) res[i] = val[i];
 }
 
 void feSpace::interpolateVectorFieldAtQuadNode(const std::vector<double> &field, const int iNode,
                                                std::vector<double> &res, const int nComponents) const
 {
-  for(int i = 0; i < nComponents; ++i) res[i] = 0.0;
-
-  // for(int i = 0; i < _nFunctions; ++i) {
-  //   res[i % nComponents] += field[i] * _L[_nFunctions * iNode + i];
-  // }
+  // for(int i = 0; i < nComponents; ++i) res[i] = 0.0;
+  const double *field_ptr = field.data();
+  double val[3] = {0., 0., 0.};
 
   for(int j = 0; j < _nFunctions; ++j) {
+    const double *phi_j = _Ldata + _nFunctions * _nComponents * iNode + nComponents * j;
     for(int i = 0; i < nComponents; ++i) {
-      res[i] += field[j] * _L[_nFunctions * _nComponents * iNode + nComponents * j + i];
+      // res[i] += field[j] * _L[_nFunctions * _nComponents * iNode + nComponents * j + i];
+      // res[i] += field[j] * phi_j[i];
+      val[i] += field_ptr[j] * phi_j[i];
+    }
+  }
+
+  for(int i = 0; i < nComponents; ++i) res[i] = val[i];
+}
+
+//
+// Specialization for vector-valued space, knows number of components at compile time.
+// Quite ugly, should be rethought in depth...
+//
+template <int dim>
+void feVectorSpace<dim>::interpolateVectorFieldAtQuadNode(const std::vector<double> &field,
+                                                          const int iNode,
+                                                          std::vector<double> &res,
+                                                          const int nComponents) const
+{
+  const double *field_ptr = field.data();
+  double *res_p = res.data();
+  const double *phiAtNode = _Ldata + _nFunctions * _nComponents * iNode;
+
+  if constexpr(dim == 2) {
+    res_p[0] = res_p[1] = 0.;
+  }
+  if constexpr(dim == 3) {
+    res_p[0] = res_p[1] = res_p[2] = 0.;
+  }
+
+  for(int j = 0; j < _nFunctions; ++j) {
+    const double *phi_j = phiAtNode + nComponents * j;
+    if constexpr(dim == 2) {
+      res_p[0] += field_ptr[j] * phi_j[0];
+      res_p[1] += field_ptr[j] * phi_j[1];
+    }
+    if constexpr(dim == 3) {
+      res_p[0] += field_ptr[j] * phi_j[0];
+      res_p[1] += field_ptr[j] * phi_j[1];
+      res_p[2] += field_ptr[j] * phi_j[2];
     }
   }
 }
 
+template void feVectorSpace<2>::interpolateVectorFieldAtQuadNode(const std::vector<double> &field, const int iNode,
+                                               std::vector<double> &res, const int nComponents) const;
+
 double feSpace::interpolateVectorFieldComponentAtQuadNode(std::vector<double> &field, int iNode, int iComponent)
 {
-  UNUSED(iComponent); // (?? Check this at some point)
+  UNUSED(iComponent); // (?? FIXME: Check this at some point)
   feWarning("Component index is not used in interpolation function!");
   double res = 0.;
   for(int i = 0; i < _nFunctions / _nComponents; ++i) {

@@ -261,7 +261,7 @@ feLinearSystemMklPardiso::feLinearSystemMklPardiso(const std::vector<feBilinearF
 
   NRHS = 1;
   MAXFCT = 1;
-  MSGLVL = FE_VERBOSE > VERBOSE_MODERATE;
+  MSGLVL = FE_VERBOSE > VERBOSE_HIGH;
   MNUM = 1;
   ERROR = 0;
 #else
@@ -303,7 +303,7 @@ feLinearSystemMklPardiso::feLinearSystemMklPardiso(const std::vector<feBilinearF
   IPARM[34] = 1; /* 0-based indexing - (0) Fortran-style (1-based) - (1) C-style (0-based) */
   NRHS = 1;
   MAXFCT = 1;
-  MSGLVL = FE_VERBOSE > VERBOSE_MODERATE;
+  MSGLVL = FE_VERBOSE > VERBOSE_HIGH;
   MNUM = 1;
   ERROR = 0;
   IDUM = (PardisoInt*) malloc(_nInc*sizeof(PardisoInt));
@@ -532,21 +532,17 @@ void feLinearSystemMklPardiso::assembleMatrices(const feSolution *sol,
       int numElementsInColor;
       std::vector<int> listElmC;
 
-      for(int iColor = 0; iColor < numColors; ++iColor) {
+      for(int iColor = 0; iColor < numColors; ++iColor)
+      {
         numElementsInColor = nbElmPerColor[iColor];
         listElmC = listElmPerColor[iColor];
 
         int elm;
-        feInt sizeI;
-        feInt sizeJ;
-        std::vector<feInt> niElm;
-        std::vector<feInt> njElm;
-        std::vector<feInt> adrI;
-        std::vector<feInt> adrJ;
+        feInt sizeI, sizeJ;
+        std::vector<feInt> niElm, njElm, adrI, adrJ, sorted_index_i, sorted_index_j;
 
   #if defined(HAVE_OMP)
-  #pragma omp parallel for private(elm, f, niElm, njElm, sizeI, sizeJ, adrI, adrJ)               \
-    schedule(dynamic)
+  #pragma omp parallel for private(elm, f, niElm, njElm, sizeI, sizeJ, adrI, adrJ, sorted_index_i, sorted_index_j) schedule(dynamic)
   #endif
         for(int iElm = 0; iElm < numElementsInColor; ++iElm) {
   #if defined(HAVE_OMP)
@@ -601,19 +597,60 @@ void feLinearSystemMklPardiso::assembleMatrices(const feSolution *sol,
           sizeI = adrI.size();
           sizeJ = adrJ.size();
 
-          for(feInt i = 0; i < sizeI; i++) {
-            feInt I = adrI[i] - low;
+          // Get the sorted indices of adrI/adrJ without sorting them
+          // We could also sort them, it does not really matter,
+          // as long as the local matrix Ae is permuted accordingly.
+          sorted_index_i.resize(sizeI);
+          sorted_index_j.resize(sizeJ);
+          for(feInt i = 0; i < sizeI; ++i) sorted_index_i[i] = i;
+          for(feInt i = 0; i < sizeJ; ++i) sorted_index_j[i] = i;
+          std::sort(sorted_index_i.begin(), sorted_index_i.end(), [&](const int& a, const int& b) { return (adrI[a] < adrI[b]); });
+          std::sort(sorted_index_j.begin(), sorted_index_j.end(), [&](const int& a, const int& b) { return (adrJ[a] < adrJ[b]); });
+
+          const feInt *adrI_ptr = adrI.data();
+          const feInt *adrJ_ptr = adrJ.data();
+
+          //
+          // Increment _mat_values at indices J with the local matrix.
+          // Local row and column indices are sorted in increasing order.
+          //
+          for(feInt i = 0; i < sizeI; i++)
+          {
+            // feInt I = adrI[i] - low;
+            // feInt debut = _mat_ia[I];
+            // feInt fin = _mat_ia[I + 1];
+            // feInt numColumns = fin - debut;
+
+            // // For each entry of the local matrix,
+            // // find the matching column in the sparse matrix.
+            // // The entries of the local matrix are not sorted for P2+ elements.
+            // for(feInt j = 0; j < sizeJ; ++j) {
+            //   for(feInt J = 0; J < numColumns; ++J) {
+            //     totalColumns++;
+            //     if(_mat_ja[debut + J] == adrJ[j]) {
+            //       _mat_values[debut + J] += Ae[niElm[i]][njElm[j]];
+            //       break;
+            //     }
+            //   }
+            // }
+
+            feInt I = adrI_ptr[sorted_index_i[i]] - low;
             feInt debut = _mat_ia[I];
             feInt fin = _mat_ia[I + 1];
             feInt numColumns = fin - debut;
 
-            // For each entry of the local matrix,
-            // find the matching column in the sparse matrix.
-            // The entries of the local matrix are not sorted for P2+ elements.
+            const PardisoInt *mat_ja_ptr = _mat_ja + debut;
+            double *mat_values_ptr = _mat_values + debut;
+            const feInt niElm_i = niElm[sorted_index_i[i]];
+
+            int start_ja = 0;
             for(feInt j = 0; j < sizeJ; ++j) {
-              for(feInt J = 0; J < numColumns; ++J) {
-                if(_mat_ja[debut + J] == adrJ[j]) {
-                  _mat_values[debut + J] += Ae[niElm[i]][njElm[j]];
+              const feInt njElm_j = njElm[sorted_index_j[j]];
+
+              for(feInt J = start_ja; J < numColumns; ++J) {
+                if(mat_ja_ptr[J] == adrJ_ptr[sorted_index_j[j]]) {
+                  mat_values_ptr[J] += Ae[niElm_i][njElm_j];
+                  start_ja = J;
                   break;
                 }
               }
@@ -963,19 +1000,22 @@ void feLinearSystemMklPardiso::constrainEssentialComponents(const feSolution *so
     _rowsToConstrain.reserve(_nInc);
 
     std::vector<feInt> adr;
-    for(auto space : sol->_spaces) {
-      int nComponents = space->getNumComponents();
+    for(const auto &space : sol->_spaces) {
+      const int nComponents = space->getNumComponents();
+      const int nFunctions = space->getNumFunctions();
+      const int nElm = space->getNumElements();
+
       if(nComponents > 1) {
-        adr.resize(space->getNumFunctions(), 0);
+        adr.resize(nFunctions, 0);
         for(int i = 0; i < nComponents; ++i) {
           if(space->isEssentialComponent(i)) {
-            for(int iElm = 0; iElm < space->getNumElements(); ++iElm) {
+            for(int iElm = 0; iElm < nElm; ++iElm) {
               // Constrain matrix and RHS
               space->initializeAddressingVector(iElm, adr);
-              for(int j = 0; j < space->getNumFunctions(); ++j) {
+              for(int j = 0; j < nFunctions; ++j) {
                 if(j % nComponents == i) {
-                  feInt DOF = adr[j];
-                  if(adr[j] < _nInc) {
+                  const feInt DOF = adr[j];
+                  if(DOF < _nInc) {
 
                     #if defined(HAVE_MPI)
                       feErrorMsg(FE_STATUS_ERROR, "constrainEssentialComponents must be modified for a distributed matrix!");
@@ -1001,17 +1041,46 @@ void feLinearSystemMklPardiso::constrainEssentialComponents(const feSolution *so
     _numOccurencesInJa.resize(_rowsToConstrain.size(), 0);
     _posOccurencesInJa.resize(_rowsToConstrain.size());
 
-    #if defined(HAVE_OMP)
-    #pragma omp parallel for
-    #endif
+    std::sort(_rowsToConstrain.begin(), _rowsToConstrain.end());
+
+    // Get the sortex indices of _mat_ja, but without sorting _mat_ja
+    // This way, the occurences of a DOF in (the sorted) ja are consecutive.
+    std::vector<feInt> sortex_index_ja(_nnz);
+    for(feInt i = 0; i < _nnz; ++i) sortex_index_ja[i] = i;
+    std::sort(sortex_index_ja.begin(), sortex_index_ja.end(),
+      [&](const int& a, const int& b) { return (_mat_ja[a] < _mat_ja[b]); });
+
+    // #if defined(HAVE_OMP)
+    // #pragma omp parallel for
+    // #endif
+    // for(size_t i = 0; i < _rowsToConstrain.size(); ++i)
+    // {
+    //   feInt row = _rowsToConstrain[i];
+    //   // Find every occurence of 'row' in ja
+    //   for(feInt j = 0; j < _nnz; ++j) {
+    //     if(_mat_ja[j] == row) {
+    //       _numOccurencesInJa[i]++;
+    //       _posOccurencesInJa[i].insert(j);
+    //     }
+    //   }
+    // }
+
+    feInt start_ja = 0;
     for(size_t i = 0; i < _rowsToConstrain.size(); ++i)
     {
-      feInt row = _rowsToConstrain[i];
-      // Find every occurence of 'row' in ja
-      for(feInt j = 0; j < _nnz; ++j) {
-        if(_mat_ja[j] == row) {
+      const feInt row = _rowsToConstrain[i];
+      // Find every (consecutive) occurence of 'row' in ja
+      for(feInt j = start_ja; j < _nnz; ++j)
+      {
+        if(_mat_ja[sortex_index_ja[j]] == row) {
           _numOccurencesInJa[i]++;
-          _posOccurencesInJa[i].insert(j);
+          _posOccurencesInJa[i].insert(sortex_index_ja[j]);
+
+          // Stop if next sorted entry of _mat_ja is > row
+          if(j < _nnz-1 && _mat_ja[sortex_index_ja[j+1]] > row) {
+            start_ja = j;
+            break;
+          }
         }
       }
     }

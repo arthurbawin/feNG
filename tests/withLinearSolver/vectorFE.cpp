@@ -74,8 +74,8 @@ namespace weakGradient {
     feSolution sol(numbering.getNbDOFs(), spaces, essentialSpaces);
     
     feBilinearForm *mass = nullptr, *gradsource = nullptr;
-    feCheck(createBilinearForm(      mass, {u}, new feSysElm_VectorMass(&scalarConstant::one)));
-    feCheck(createBilinearForm(gradsource, {u}, new feSysElm_GradSource(&scalarSource)));
+    feCheck(createBilinearForm(      mass, {u}, new feSysElm_VectorMass<2>(&scalarConstant::one)));
+    feCheck(createBilinearForm(gradsource, {u}, new feSysElm_GradSource<2>(&scalarSource)));
     std::vector<feBilinearForm*> forms = {mass, gradsource};
 
     feLinearSystem *system;
@@ -233,16 +233,16 @@ namespace vectorLaplacian {
     feSolution sol(numbering.getNbDOFs(), spaces, essentialSpaces);
 
     feBilinearForm *diff = nullptr, *source = nullptr;
-    feCheck(createBilinearForm(  diff, {u}, new feSysElm_VectorDiffusion(&scalarConstant::one, &scalarConstant::one) ));
-    feCheck(createBilinearForm(source, {u}, new feSysElm_VectorSource(&uSrc) ));
+    feCheck(createBilinearForm(  diff, {u}, new feSysElm_VectorDiffusion<2>(&scalarConstant::one, &scalarConstant::one) ));
+    feCheck(createBilinearForm(source, {u}, new feSysElm_VectorSource<2>(&uSrc) ));
     std::vector<feBilinearForm*> forms = {diff, source};
 
     feBilinearForm *massUL = nullptr, *massLU = nullptr, *srcLambda = nullptr;
     if(imposeDirichletBCWeakly)
     {
-      feCheck(createBilinearForm(   massUL, {uB, lB}, new feSysElm_MixedVectorMass(&scalarConstant::one)));
-      feCheck(createBilinearForm(   massLU, {lB, uB}, new feSysElm_MixedVectorMass(&scalarConstant::minusOne)));
-      feCheck(createBilinearForm(srcLambda, {lB}, new feSysElm_VectorSource(&uSol)));
+      feCheck(createBilinearForm(   massUL, {uB, lB}, new feSysElm_MixedVectorMass<2>(&scalarConstant::one)));
+      feCheck(createBilinearForm(   massLU, {lB, uB}, new feSysElm_MixedVectorMass<2>(&scalarConstant::minusOne)));
+      feCheck(createBilinearForm(srcLambda, {lB}, new feSysElm_VectorSource<2>(&uSol)));
       forms.push_back(massUL);
       forms.push_back(massLU);
       forms.push_back(srcLambda);

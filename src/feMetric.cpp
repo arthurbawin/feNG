@@ -499,21 +499,22 @@ void feMetric::writeMetricField()
 // to adapt with MMG
 feStatus feMetric::computeMetrics()
 {
+  feInfoCond(FE_VERBOSE > 0, "");
+  feInfoCond(FE_VERBOSE > 0, "RIEMANNIAN METRIC:");
+  feInfoCond(FE_VERBOSE > 0, "\t\tReading mesh model with Gmsh");
+
   if(!_options.useAnalyticDerivatives && _recoveredFields.size() == 0)
   {
     return feErrorMsg(FE_STATUS_ERROR, "Provide either a solution recovery "
       "or analytical derivatives to compute a metric field.");
   }
 
-  feStatus s = FE_STATUS_OK;
-
   initializeGmsh();
   gmsh::open(_options.backgroundMeshfile);
   gmsh::model::getCurrent(_options.modelForMetric);
 
-  feInfoCond(FE_VERBOSE >= VERBOSE_MODERATE, "Computing metrics on Gmsh model %s",
-             _options.modelForMetric.data());
-  // gmsh::model::setCurrent(_options.modelForMetric);
+  feInfoCond(FE_VERBOSE >= 0, "\t\tComputing metrics on Gmsh model %s",
+    _options.modelForMetric.data());
 
   double N = (double)_options.nTargetVertices;
   double p = _options.LpNorm;
@@ -524,28 +525,28 @@ feStatus feMetric::computeMetrics()
   switch(_options.method) {
 
     case adaptationMethod::ANALYTIC_METRIC:
-      s = setAnalyticMetric(_nodeTags, _coord);
+      feCheckReturn(setAnalyticMetric(_nodeTags, _coord));
       _scaleMetricField = false;
       break;
 
     case adaptationMethod::ISO_P1: {
       bool isotropic = true;
-      s = computeMetricsP1(_nodeTags, _coord, isotropic);
+      feCheckReturn(computeMetricsP1(_nodeTags, _coord, isotropic));
       break;
     }
 
     case adaptationMethod::ANISO_P1:
-      s = computeMetricsP1(_nodeTags, _coord);
+      feCheckReturn(computeMetricsP1(_nodeTags, _coord));
       break;
 
     case adaptationMethod::ISO_PN: {
       bool isotropic = true;
-      s = computeMetricsPn(_nodeTags, _coord, isotropic);
+      feCheckReturn(computeMetricsPn(_nodeTags, _coord, isotropic));
       break;
     }
 
     case adaptationMethod::ANISO_P2:
-      s = computeMetricsP2(_nodeTags, _coord);
+      feCheckReturn(computeMetricsP2(_nodeTags, _coord));
       break;
 
     case adaptationMethod::ANISO_P1_REFERENCE_SPACE:
@@ -554,8 +555,7 @@ feStatus feMetric::computeMetrics()
         for(int iter = 0; iter < maxIter; ++iter) {
           // Compute Q_triangle in the reference space, then Q = M^(1/2) * Q_triangle * M^(1/2)
           bool setToIdentity = (iter == 0);
-          s = computeMetricsP1_referenceSpace(_nodeTags, _coord, setToIdentity);
-          if(s != FE_STATUS_OK) return s;
+          feCheckReturn(computeMetricsP1_referenceSpace(_nodeTags, _coord, setToIdentity));
           std::string name1 = "Q_iter" + std::to_string(iter) + ".pos";
           std::string name2 = "M_iter" + std::to_string(iter) + ".pos";
           drawEllipsoids(name1, _metricTensorAtNodetags, _nodeTags, _coord, _options.plotSizeFactor, 20);
@@ -581,8 +581,7 @@ feStatus feMetric::computeMetrics()
         for(int iter = 0; iter < maxIter; ++iter) {
           // Compute Q_triangle in the reference space, then Q = M^(1/2) * Q_triangle * M^(1/2)
           bool setToIdentity = (iter == 0);
-          s = computeMetricsP2_referenceSpace(_nodeTags, _coord, setToIdentity);
-          if(s != FE_STATUS_OK) return s;
+          feCheckReturn(computeMetricsP2_referenceSpace(_nodeTags, _coord, setToIdentity));
           std::string name1 = "Q_iter" + std::to_string(iter) + ".pos";
           std::string name2 = "M_iter" + std::to_string(iter) + ".pos";
           // drawEllipsoids(name1, _metricTensorAtNodetags, nodeTags, _coord, _options.plotSizeFactor, 20);
@@ -594,7 +593,7 @@ feStatus feMetric::computeMetrics()
         // drawEllipsoids("M_final.pos", _metricTensorAtNodetags, nodeTags, _coord, _options.plotSizeFactor, 20);
 
         // Compute in the physical space to compare
-        s = computeMetricsP2(_nodeTags, _coord);
+        feCheckReturn(computeMetricsP2(_nodeTags, _coord));
         // drawEllipsoids("Q_physical.pos", _metricTensorAtNodetags, nodeTags, _coord, _options.plotSizeFactor, 20);
         // metricScalingFromGmshSubstitute(_metricTensorAtNodetags, nodeTags, _coord, exponentInIntegral, exponentForDeterminant);
         // drawEllipsoids("M_physical.pos", _metricTensorAtNodetags, nodeTags, _coord, _options.plotSizeFactor, 20);
@@ -603,39 +602,37 @@ feStatus feMetric::computeMetrics()
       }
 
     case adaptationMethod::ANISO_PN:
-        s = computeMetricsPn(_nodeTags, _coord);
+        feCheckReturn(computeMetricsPn(_nodeTags, _coord));
       break;
 
     case adaptationMethod::GOAL_ORIENTED_ANISO_P1:
-      s = computeMetricsGoalOrientedP1(_nodeTags, _coord);
+      feCheckReturn(computeMetricsGoalOrientedP1(_nodeTags, _coord));
       break;
 
     case adaptationMethod::CURVED_LS:
-      s = computeMetricsCurvedLogSimplex(_nodeTags, _coord);
+      feCheckReturn(computeMetricsCurvedLogSimplex(_nodeTags, _coord));
       break;
 
     case adaptationMethod::CURVED_LS_INDUCED_DIRECTIONS: {
       bool useInducedDirections = true;
-      s = computeMetricsCurvedLogSimplex(_nodeTags, _coord, useInducedDirections);
+      feCheckReturn(computeMetricsCurvedLogSimplex(_nodeTags, _coord, useInducedDirections));
       break;
     }
 
     case adaptationMethod::CURVED_ISOLINES:
-      s = computeMetricsCurvedIsolines(_nodeTags, _coord);
+      feCheckReturn(computeMetricsCurvedIsolines(_nodeTags, _coord));
       _scaleMetricField = _options.scaleIsolineMetric;
       break;
 
     case adaptationMethod::CURVED_REFERENCE_SPACE:
-      s = computeMetricsCurvedReferenceSpace(_nodeTags, _coord);
+      feCheckReturn(computeMetricsCurvedReferenceSpace(_nodeTags, _coord));
       break;
 
     case adaptationMethod::CURVED_GRAPH_SURFACE:
-      s = computeMetricsP2_forGraphSurface(_nodeTags, _coord);
+      feCheckReturn(computeMetricsP2_forGraphSurface(_nodeTags, _coord));
       _scaleMetricField = false;
       break;
   }
-
-  if(s != FE_STATUS_OK) return s;
 
   // Reconstruct the underlying manifold before scaling
   // reconstructManifoldFromMetric(_nodeTags, _coord, _metricTensorAtNodetags, _sequentialTag2nodeTagVec, _recoveredFields[0]);

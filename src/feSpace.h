@@ -132,6 +132,8 @@ protected:
   std::vector<double> _d2Lds2;
   std::vector<double> _d2Ldt2;
 
+  const double *_Ldata, *_dLdrdata, *_dLdsdata, *_dLdtdata;
+
   // Barycentric (linear) coordinates at quadrature nodes
   // std::vector<double> _barycentricCoordinates;
 
@@ -217,6 +219,21 @@ public:
   virtual int getNumFunctions() const = 0;
   // Return highest degree of the polynomial basis
   virtual int getPolynomialDegree() const = 0;
+
+  // A comparator which checks if two spaces:
+  // - have the same dimension
+  // - are associated to the same field
+  // - are defined on Physical groups with the same name
+  //
+  // Both spaces can be discretized by different finite elements.
+  bool representsSameFieldAs(const feSpace &other) const
+  {
+    bool same = true;
+    same &= this->_dim == other._dim;
+    same &= this->_fieldID == other._fieldID;
+    same &= this->_cncGeoID == other._cncGeoID;
+    return same;
+  }
 
   EigenMat innerProductBasisFunctions(int iElm);
   double innerProductBasisFunctions(int iElm, int ex, int ey);
@@ -409,7 +426,9 @@ public:
   void interpolateVectorFieldAtQuadNode(const std::vector<double> &field, const int iNode,
                                         std::vector<double> &res) const;
   // Interpolate vector valued function using vector valued FE space
-  void interpolateVectorFieldAtQuadNode(const std::vector<double> &field, const int iNode,
+  void interpolateVectorFieldAtQuadNode(const double *field, const int iNode,
+                                        double *res, const int nComponents) const;
+  virtual void interpolateVectorFieldAtQuadNode(const std::vector<double> &field, const int iNode,
                                         std::vector<double> &res, const int nComponents) const;
   // Interpolate scalar component of vector valued function using vector valued FE space
   double interpolateVectorFieldComponentAtQuadNode(std::vector<double> &field, int iNode, int iComponent);
@@ -432,28 +451,28 @@ public:
   void interpolateVectorFieldAtQuadNode_physicalGradient(const std::vector<double> &field,
                                                          const int nComponents, const int iQuadNode,
                                                          const ElementTransformation &T,
-                                                         double *grad);
+                                                         double *grad) const;
 
   void interpolateVectorFieldAtQuadNode_physicalHessian(const std::vector<double> &field,
                                                         const int nComponents, const int iQuadNode,
                                                         const ElementTransformation &T,
-                                                        double *hessian);
+                                                        double *hessian) const;
 
-  // Routines for vector-valued shape functions
-  virtual void dotProductShapeShape(const int, std::vector<double> &){};
-  virtual void dotProductShapeOther(const int, const std::vector<double> &, std::vector<double> &){};
-  virtual void dotProductShapeShapeOtherSpace(const int, const feSpace*, std::vector<double> &){};
-  virtual void dotProductShapeGradShapeOtherSpace(const int, const int, const std::vector<double> &, std::vector<double> &){};
+  // // Routines for vector-valued shape functions
+  // virtual template<int dim> void dotProductShapeShape(const int, std::vector<double> &) const {};
+  // virtual template<int dim> void dotProductShapeOther(const int, const std::vector<double> &, std::vector<double> &) const {};
+  // virtual template<int dim> void dotProductShapeShapeOtherSpace(const int, const feSpace*, std::vector<double> &) const {};
+  // virtual template<int dim> void dotProductShapeGradShapeOtherSpace(const int, const int, const std::vector<double> &, std::vector<double> &) const {};
 
-  virtual void vectorDotGradShapeDotShape(const int, const std::vector<double> &, const std::vector<double> &, std::vector<double> &){};
-  virtual void shapeDotTensorDotShape(const int, const std::vector<double> &, std::vector<double> &){};
-  virtual void gradOtherScalarShapeDotTensorDotShape(const int, const int, const std::vector<double> &, const std::vector<double> &, std::vector<double> &){};
+  // virtual template<int dim> void vectorDotGradShapeDotShape(const int, const std::vector<double> &, const std::vector<double> &, std::vector<double> &) const {};
+  // virtual template<int dim> void shapeDotTensorDotShape(const int, const double*, double*) const {};
+  // virtual template<int dim> void gradOtherScalarShapeDotTensorDotShape(const int, const int, const std::vector<double> &, const std::vector<double> &, std::vector<double> &) const {};
 
-  virtual void doubleContractionGradShapeGradShape(const std::vector<double> &, std::vector<double> &){};
-  virtual void doubleContractionGradShapeGradShapeTransposed(const std::vector<double> &, std::vector<double> &){};
-  virtual void doubleContractionGradShapeOther(const std::vector<double> &, const std::vector<double> &, std::vector<double> &){};
+  // virtual template<int dim> void doubleContractionGradShapeGradShape(const std::vector<double> &, std::vector<double> &) const {};
+  // virtual template<int dim> void doubleContractionGradShapeGradShapeTransposed(const std::vector<double> &, std::vector<double> &) const {};
+  // virtual template<int dim> void doubleContractionGradShapeOther(const std::vector<double> &, const std::vector<double> &, std::vector<double> &) const {};
   
-  virtual void divergence(const std::vector<double> &, std::vector<double> &){};
+  // virtual template<int dim> void divergence(const std::vector<double> &, std::vector<double> &) const {};
 };
 
 class feScalarSpace : public feSpace
@@ -466,9 +485,12 @@ public:
   ~feScalarSpace(){};
 };
 
+template <int dim>
 class feVectorSpace : public feSpace
 {
 protected:
+  static constexpr int _nVectorComponents = dim;
+
 public:
   feVectorSpace(const int dimension,
     feMesh *mesh = nullptr,
@@ -477,40 +499,56 @@ public:
     feVectorFunction *vectorField = nullptr,
     const bool useGlobalShapeFunctions = false) 
   : feSpace(dimension, mesh, fieldID, cncGeoID,
-    nullptr, vectorField, useGlobalShapeFunctions) {};
+    nullptr, vectorField, useGlobalShapeFunctions)
+  {
+    this->_nComponents = dim;
+  };
+
+  virtual void interpolateVectorFieldAtQuadNode(const std::vector<double> &field, const int iNode,
+                                        std::vector<double> &res, const int nComponents) const override;
 
   // Dot product of each shape function with each shape function :
   //      res[i][j] = phi_i cdot phi_j
-  void dotProductShapeShape(const int iNode, std::vector<double> &res) override;
+  void dotProductShapeShape(const int iNode, std::vector<double> &res) const;
   // Dot product of each shape function with given vector :
   //      res[i] = phi_i cdot other
-  void dotProductShapeOther(const int iNode, const std::vector<double> &other, std::vector<double> &res) override;
+  void dotProductShapeOther(const int iNode, const std::vector<double> &other, std::vector<double> &res) const;
   //      res[i][j] = phi_i cdot phi_j, phi_j are the test functions of another space
-  void dotProductShapeShapeOtherSpace(const int iNode, const feSpace *other, std::vector<double> &res) override;
+  void dotProductShapeShapeOtherSpace(const int iNode, const feSpace *other, std::vector<double> &res) const;
   //      res[i][j] = phi_i cdot grad(phi_j), phi_j are scalar-valued test functions of another space
   void dotProductShapeGradShapeOtherSpace(const int iNode, const int nFunctionsOther,
-    const std::vector<double> &gradOtherScalarShape, std::vector<double> &res) override;
+    const std::vector<double> &gradOtherScalarShape, std::vector<double> &res) const;
 
-  void vectorDotGradShapeDotShape(const int iNode, const std::vector<double> &gradPhi, const std::vector<double> &other, std::vector<double> &res) override;
-  void shapeDotTensorDotShape(const int iNode, const std::vector<double> &other, std::vector<double> &res) override;
+  // res[i][j] = other_m * grad(phi_j)_mn * (phi_i)_n, where other is a given vector
+  //
+  // Example use : (u0 * grad(u)) => (u0 * grad(phi_j)) * phi_i in the VectorConvectiveAcceleration form.
+  void vectorDotGradShapeDotShape(const int iNode, const std::vector<double> &gradPhi, const std::vector<double> &other, std::vector<double> &res) const;
+  // res[i][j] = (phi_j)_m * other_mn * (phi_i)_nm where other is a given 2-tensor (flattened as a vector)
+  //
+  // Example use : (u * grad(u0)) => (phi_j * grad(u0)) * phi_i in the VectorConvectiveAcceleration form.
+  void shapeDotTensorDotShape(const int iNode, const std::vector<double> &other, std::vector<double> &res) const;
+  // res[i][j] = (gradOtherScalarShape_j)_m * other_mn * (phi_i)_n, where gradOtherScalarShape
+  // is the gradient of the shape functions of another scalar unknown
+  // and other is a given 2-tensor (flattened as a vector)
+  //
+  // Example use : (grad(mu) * grad(u)) => (grad(phi_mu) * grad(u0)) * phi_i in the CHNS form.
   void gradOtherScalarShapeDotTensorDotShape(const int iNode, const int nFunctionsOther, 
-    const std::vector<double> &gradOtherScalarShape, const std::vector<double> &other, std::vector<double> &res) override;
+    const std::vector<double> &gradOtherScalarShape, const std::vector<double> &other, std::vector<double> &res) const;
 
   // Double contraction of the gradient of each shape function
   // with the gradient of each shape function :
   //       res[i][j] = grad(phi_i) : grad(phi_j)
-  void doubleContractionGradShapeGradShape(const std::vector<double> &gradPhi, std::vector<double> &res) override;
+  void doubleContractionGradShapeGradShape(const std::vector<double> &gradPhi, std::vector<double> &res) const;
   //       res[i][j] = grad(phi_i) : grad(phi_j)^T
-  void doubleContractionGradShapeGradShapeTransposed(const std::vector<double> &, std::vector<double> &) override;
+  void doubleContractionGradShapeGradShapeTransposed(const std::vector<double> &, std::vector<double> &) const;
   // Double contraction of the gradient of each shape function
   // with the gradient of each shape function :
   //       res[i] = grad(phi_i) : other
-  void doubleContractionGradShapeOther(const std::vector<double> &gradPhi, const std::vector<double> &other, std::vector<double> &res) override;
+  void doubleContractionGradShapeOther(const std::vector<double> &gradPhi, const std::vector<double> &other, std::vector<double> &res) const;
   
   // Divergence of all shape functions :
   //       res[i] = div(phi_i)
-  void divergence(const std::vector<double> &gradPhi, std::vector<double> &res) override;
-
+  void divergence(const std::vector<double> &gradPhi, std::vector<double> &res) const;
 };
 
 // -----------------------------------------------------------------------------
@@ -602,13 +640,11 @@ public:
 // -----------------------------------------------------------------------------
 // Vector Lagrange element of degree 1 on 1D reference element [-1,1]
 // -----------------------------------------------------------------------------
-template <int dim> class feSpaceVecP1 : public feVectorSpace
+template <int dim> class feSpaceVecP1 : public feVectorSpace<dim>
 {
-protected:
 public:
   feSpaceVecP1(feMesh *mesh, const std::string fieldID, const std::string cncGeoID,
                feVectorFunction *fct);
-  ~feSpaceVecP1(){};
 
   int getNumFunctions() const { return 2 * dim; }
   int getPolynomialDegree() const { return 1; }
@@ -694,7 +730,7 @@ public:
 // -----------------------------------------------------------------------------
 // Vector Lagrange element of degree 2 on 1D reference element [-1,1]
 // -----------------------------------------------------------------------------
-template <int dim> class feSpaceVecP2 : public feVectorSpace
+template <int dim> class feSpaceVecP2 : public feVectorSpace<dim>
 {
 protected:
 public:
@@ -740,7 +776,7 @@ public:
 // -----------------------------------------------------------------------------
 // Vector Lagrange element of degree 3 on 1D reference element [-1,1]
 // -----------------------------------------------------------------------------
-template <int dim> class feSpaceVecP3 : public feVectorSpace
+template <int dim> class feSpaceVecP3 : public feVectorSpace<dim>
 {
 protected:
 public:
@@ -810,7 +846,7 @@ public:
 // -----------------------------------------------------------------------------
 // Vector Lagrange element of degree 4 on 1D reference element [-1,1]
 // -----------------------------------------------------------------------------
-template <int dim> class feSpaceVecP4 : public feVectorSpace
+template <int dim> class feSpaceVecP4 : public feVectorSpace<dim>
 {
 protected:
 public:
@@ -944,7 +980,7 @@ public:
 // -----------------------------------------------------------------------------
 // Vector Lagrange element of degree 1 on reference triangle r = [0,1], s = [0,1-r]
 // -----------------------------------------------------------------------------
-template <int dim> class feSpaceVecTriP1 : public feVectorSpace
+template <int dim> class feSpaceVecTriP1 : public feVectorSpace<dim>
 {
 protected:
 public:
@@ -999,7 +1035,7 @@ public:
 // -----------------------------------------------------------------------------
 // Raviart-Thomas (vector-valued) element of degree 1 on reference triangle r = [0,1], s = [0,1-r]
 // -----------------------------------------------------------------------------
-class feSpaceTriRT1 : public feVectorSpace
+template <int dim> class feSpaceTriRT1 : public feVectorSpace<dim>
 {
 protected:
 public:
@@ -1085,7 +1121,7 @@ public:
 // -----------------------------------------------------------------------------
 // Vector Lagrange element of degree 2 on reference triangle r = [0,1], s = [0,1-r]
 // -----------------------------------------------------------------------------
-template <int dim> class feSpaceVecTriP2 : public feVectorSpace
+template <int dim> class feSpaceVecTriP2 : public feVectorSpace<dim>
 {
 public:
   feSpaceVecTriP2(feMesh *mesh, const std::string fieldID, const std::string cncGeoID,
@@ -1112,7 +1148,7 @@ public:
 // -----------------------------------------------------------------------------
 // Vector Lagrange element of degree 2 with cubic bubble on reference triangle
 // -----------------------------------------------------------------------------
-template <int dim> class feSpaceVecTriP2Bubble : public feVectorSpace
+template <int dim> class feSpaceVecTriP2Bubble : public feVectorSpace<dim>
 {
 public:
   feSpaceVecTriP2Bubble(feMesh *mesh, const std::string fieldID, const std::string cncGeoID,
@@ -1188,7 +1224,7 @@ public:
 // -----------------------------------------------------------------------------
 // Vector Lagrange element of degree 3 on reference triangle r = [0,1], s = [0,1-r]
 // -----------------------------------------------------------------------------
-template <int dim> class feSpaceVecTriP3 : public feVectorSpace
+template <int dim> class feSpaceVecTriP3 : public feVectorSpace<dim>
 {
 public:
   feSpaceVecTriP3(feMesh *mesh, const std::string fieldID, const std::string cncGeoID,
@@ -1237,7 +1273,7 @@ public:
 // -----------------------------------------------------------------------------
 // Vector Lagrange element of degree 4 on reference triangle r = [0,1], s = [0,1-r]
 // -----------------------------------------------------------------------------
-template <int dim> class feSpaceVecTriP4 : public feVectorSpace
+template <int dim> class feSpaceVecTriP4 : public feVectorSpace<dim>
 {
 public:
   feSpaceVecTriP4(feMesh *mesh, const std::string fieldID, const std::string cncGeoID,

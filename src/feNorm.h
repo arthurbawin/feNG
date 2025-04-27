@@ -190,6 +190,20 @@ public:
   double computeErrorFourthDerivativesExactVsEstimator(bool excludeBoundary, double boundaryWidth, double boundingBox[4]);
   double computeErrorFourthDerivativesExactVsEstimator_Linf(bool excludeBoundary, double boundaryWidth, double boundingBox[4]);
 
+  // For each finite element space in _spaces, compute the
+  // L2 error w.r.t. the reference solution.
+  //
+  // The result is stored in the vector "res" of same size as _spaces.
+  //
+  // Fails if at least one FE space is not found in referenceSpaces.
+  //
+  feStatus computeErrorNormFromExternalSolution(feMesh *referenceMesh,
+                                                const feSolution *referenceSolution,
+                                                const std::vector<feSpace*> referenceSpaces,
+                                                feMesh *currentMesh,
+                                                const feSolution *currentSolution,
+                                                std::vector<double> &res);
+
   // iComponent = 0 : e_x
   // iComponent = 1 : e_y
   double computeForcesFromLagrangeMultiplier(int iComponent = 0);
@@ -229,11 +243,6 @@ private:
   double computePressureLift();
   double computePressureDrag();
   double computeViscousLift();
-  feStatus computeErrorNormFromExternalSolution(feMetaNumber *metaNumber, feSolution *sol,
-                                                feMesh *mesh, feMetaNumber *refMN,
-                                                feSolution *refSol, feMesh *refMesh,
-                                                const std::vector<feSpace *> refSpaces,
-                                                double &res);
 };
 
 #endif

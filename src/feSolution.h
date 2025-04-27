@@ -39,23 +39,26 @@ protected:
 
 public:
   // Copy of the FE spaces ptrs
-  std::vector<feSpace *> _spaces;
-  std::vector<feSpace *> _essentialSpaces;
+  std::vector<feSpace*> _spaces;
+  std::vector<feSpace*> _essentialSpaces;
 
 public:
+  feSolution() {};
   // Create a solution wrapper holding numDOF degrees of freedom and their time derivative.
-  feSolution(int numDOF, const std::vector<feSpace *> &spaces,
-             const std::vector<feSpace *> &essentialSpaces);
+  feSolution(const int numDOF,
+             const std::vector<feSpace*> &spaces,
+             const std::vector<feSpace*> &essentialSpaces);
+  // Create a solution wrapper from an existing solution container,
+  // using the solution stored at position solutionIndex
   feSolution(const feSolutionContainer &container,
              const int solutionIndex,
              const std::vector<feSpace*> &spaces,
              const std::vector<feSpace*> &essentialSpaces);
-  // Create a solution wrapper from a solution file. See printSol function for parsing.
-  feSolution(){};
-  feSolution(std::string solutionFile);
-  ~feSolution() {}
+  // Create a solution wrapper holding numDOF degrees of freedom from a solution file.
+  // See printSol function for parsing.
+  feSolution(const int numDOF,
+             const std::string solutionFile);
 
-  // Trivial getters and setters
   int getNumDOFs() { return _nDOF; }
   double getC0() const { return _c0; }
   void setC0(double c0) { _c0 = c0; }
@@ -110,7 +113,7 @@ public:
   feStatus addSquaredNormOfVectorSpace(feMesh *mesh, 
     const double coeff, feSpace *sourceSpace, feSpace *targetSpace);
 
-  void printSol(std::string file = "");
+  void printSol(const std::string &file = "");
 };
 
 #endif

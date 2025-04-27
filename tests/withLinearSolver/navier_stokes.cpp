@@ -80,21 +80,20 @@ namespace navier_stokes {
 
       feBilinearForm *convU = nullptr, *divSigma = nullptr, *diffU = nullptr,
         *gradP = nullptr, *divU = nullptr, *source = nullptr;
-      feCheck(createBilinearForm(convU,    {u}, new feSysElm_VectorConvectiveAcceleration(&scalarConstant::minusOne)));
-      feCheck(createBilinearForm( divU, {p, u}, new feSysElm_MixedDivergence(&scalarConstant::one)));
-      feCheck(createBilinearForm(source,   {u}, new feSysElm_VectorSource(&uSrc)));
+      feCheck(createBilinearForm(convU,    {u}, new feSysElm_VectorConvectiveAcceleration<2>(&scalarConstant::minusOne)));
+      feCheck(createBilinearForm( divU, {p, u}, new feSysElm_MixedDivergence<2>(&scalarConstant::one)));
+      feCheck(createBilinearForm(source,   {u}, new feSysElm_VectorSource<2>(&uSrc)));
       std::vector<feBilinearForm*> forms = {convU, divU, source};
-      // convU->setComputeMatrixWithFD(true);
 
       if(divergenceFormulation) {
         UNUSED(diffU, gradP);
-        feCheck(createBilinearForm(divSigma, {u, p}, new feSysElm_DivergenceNewtonianStress(&scalarConstant::one, &scalarConstant::one)));
+        feCheck(createBilinearForm(divSigma, {u, p}, new feSysElm_DivergenceNewtonianStress<2>(&scalarConstant::one, &scalarConstant::one)));
         forms.push_back(divSigma);
       } else {
         // Laplacian formulation
         UNUSED(divSigma);
-        feCheck(createBilinearForm(gradP, {u, p}, new feSysElm_MixedGradient(&scalarConstant::minusOne)));
-        feCheck(createBilinearForm(diffU,    {u}, new feSysElm_VectorDiffusion(&scalarConstant::minusOne, &scalarConstant::one)));
+        feCheck(createBilinearForm(gradP, {u, p}, new feSysElm_MixedGradient<2>(&scalarConstant::minusOne)));
+        feCheck(createBilinearForm(diffU,    {u}, new feSysElm_VectorDiffusion<2>(&scalarConstant::minusOne, &scalarConstant::one)));
         forms.push_back(diffU);
         forms.push_back(gradP);
       }
@@ -235,19 +234,19 @@ namespace navier_stokes {
       feSolution sol(numbering.getNbDOFs(), spaces, essentialSpaces);
 
       feBilinearForm *convU = nullptr, *divSigma = nullptr, *diffU = nullptr, *gradP = nullptr, *divU = nullptr;
-      feCheck(createBilinearForm(convU,    {u}, new feSysElm_VectorConvectiveAcceleration(&scalarConstant::one)));
-      feCheck(createBilinearForm( divU, {p, u}, new feSysElm_MixedDivergence(&scalarConstant::one)));
+      feCheck(createBilinearForm(convU,    {u}, new feSysElm_VectorConvectiveAcceleration<2>(&scalarConstant::one)));
+      feCheck(createBilinearForm( divU, {p, u}, new feSysElm_MixedDivergence<2>(&scalarConstant::one)));
       std::vector<feBilinearForm*> forms = {convU, divU};
 
       if(divergenceFormulation) {
         UNUSED(diffU, gradP);
-        feCheck(createBilinearForm(divSigma, {u, p}, new feSysElm_DivergenceNewtonianStress(&scalarConstant::minusOne, &scalarConstant::one)));
+        feCheck(createBilinearForm(divSigma, {u, p}, new feSysElm_DivergenceNewtonianStress<2>(&scalarConstant::minusOne, &scalarConstant::one)));
         forms.push_back(divSigma);
       } else {
         // Laplacian formulation
         UNUSED(divSigma);
-        feCheck(createBilinearForm(gradP, {u, p}, new feSysElm_MixedGradient(&scalarConstant::minusOne)));
-        feCheck(createBilinearForm(diffU,    {u}, new feSysElm_VectorDiffusion(&scalarConstant::minusOne, &scalarConstant::one)));
+        feCheck(createBilinearForm(gradP, {u, p}, new feSysElm_MixedGradient<2>(&scalarConstant::minusOne)));
+        feCheck(createBilinearForm(diffU,    {u}, new feSysElm_VectorDiffusion<2>(&scalarConstant::minusOne, &scalarConstant::one)));
         forms.push_back(diffU);
         forms.push_back(gradP);
       }
@@ -347,7 +346,7 @@ namespace navier_stokes {
 TEST(NavierStokes, MMS)
 {
   initialize(my_argc, my_argv);
-  setVerbose(0);
+  setVerbose(1);
   
   std::string testRoot = "../../../tests/withLinearSolver/navier_stokes_MMS";
 

@@ -5,7 +5,7 @@
 #include "feSpace.h"
 
 #define CLONEABLE(Type)                                                                            \
-  virtual Type *clone() const { return new Type(*this); }
+  virtual Type *clone() const override { return new Type(*this); }
 
 typedef enum {
   SOURCE,
@@ -195,6 +195,7 @@ public:
   feSysElm(int dim, int nFields, elementSystemType ID, bool hasMatrix)
     : _ID(ID), _dim(dim), _nFields(nFields), _hasMatrix(hasMatrix)
   {
+    // FIXME: remove this
     _fieldsLayoutI.resize(1);
     _fieldsLayoutJ.resize(1);
   };
@@ -214,8 +215,8 @@ public:
   bool isTransientMatrix() const { return _isTransientMatrix; }
   bool isThreadSafe() const { return _isThreadSafe; }
 
-  virtual void createElementarySystem(std::vector<feSpace *> &spaces) { UNUSED(spaces); };
-  virtual void computeAe(feBilinearForm *form) { UNUSED(form); };
+  virtual void createElementarySystem(std::vector<feSpace*> &spaces) = 0;
+  virtual void computeAe(feBilinearForm */*form*/) {};
   virtual void computeBe(feBilinearForm *form) = 0;
 };
 
@@ -240,9 +241,8 @@ protected:
 
 public:
   feSysElm_Source(feFunction *source) : feSysElm(-1, 1, SOURCE, false), _source(source){};
-  ~feSysElm_Source(){};
-  void createElementarySystem(std::vector<feSpace *> &space);
-  void computeBe(feBilinearForm *form);
+  virtual void createElementarySystem(std::vector<feSpace *> &space) override;
+  virtual void computeBe(feBilinearForm *form) override;
   CLONEABLE(feSysElm_Source)
 };
 
@@ -265,12 +265,12 @@ public:
   {
     _isThreadSafe = false;
   };
-  ~feSysElm_SourceDirac(){};
-  void createElementarySystem(std::vector<feSpace *> &space);
-  void computeBe(feBilinearForm *form);
+  virtual void createElementarySystem(std::vector<feSpace *> &space) override;
+  virtual void computeBe(feBilinearForm *form) override;
   CLONEABLE(feSysElm_SourceDirac)
 };
 
+template <int dim>
 class feSysElm_VectorSource : public feSysElm
 {
 protected:
@@ -283,7 +283,7 @@ public:
     : feSysElm(-1, 1, VECTOR_SOURCE, false), _source(source), _S(3, 0.){};
   ~feSysElm_VectorSource(){};
   void createElementarySystem(std::vector<feSpace *> &spaces);
-  void computeBe(feBilinearForm *form);
+  virtual void computeBe(feBilinearForm *form) override;
   CLONEABLE(feSysElm_VectorSource)
 };
 
@@ -309,14 +309,10 @@ protected:
   std::vector<double> _phiU;
 
 public:
-  feSysElm_Mass(feFunction *coeff) : feSysElm(-1, 1, MASS, true), _coeff(coeff)
-  {
-    _computeMatrixWithFD = false;
-  };
-  ~feSysElm_Mass(){};
-  void createElementarySystem(std::vector<feSpace *> &space);
-  void computeAe(feBilinearForm *form);
-  void computeBe(feBilinearForm *form);
+  feSysElm_Mass(feFunction *coeff) : feSysElm(-1, 1, MASS, true), _coeff(coeff) { };
+  virtual void createElementarySystem(std::vector<feSpace *> &space) override;
+  virtual void computeAe(feBilinearForm *form) override;
+  virtual void computeBe(feBilinearForm *form) override;
   CLONEABLE(feSysElm_Mass)
 };
 
@@ -348,10 +344,9 @@ public:
   {
     _computeMatrixWithFD = true;
   };
-  ~feSysElm_MassPower(){};
-  void createElementarySystem(std::vector<feSpace *> &space);
-  void computeAe(feBilinearForm *form);
-  void computeBe(feBilinearForm *form);
+  virtual void createElementarySystem(std::vector<feSpace *> &space) override;
+  virtual void computeAe(feBilinearForm *form) override;
+  virtual void computeBe(feBilinearForm *form) override;
   CLONEABLE(feSysElm_MassPower)
 };
 
@@ -377,14 +372,10 @@ protected:
   std::vector<double> _phiU, _phiV;
 
 public:
-  feSysElm_MixedMass(feFunction *coeff) : feSysElm(-1, 2, MIXED_MASS, true), _coeff(coeff)
-  {
-    _computeMatrixWithFD = false;
-  };
-  ~feSysElm_MixedMass(){};
-  void createElementarySystem(std::vector<feSpace *> &space);
-  void computeAe(feBilinearForm *form);
-  void computeBe(feBilinearForm *form);
+  feSysElm_MixedMass(feFunction *coeff) : feSysElm(-1, 2, MIXED_MASS, true), _coeff(coeff) { };
+  virtual void createElementarySystem(std::vector<feSpace *> &space) override;
+  virtual void computeAe(feBilinearForm *form) override;
+  virtual void computeBe(feBilinearForm *form) override;
   CLONEABLE(feSysElm_MixedMass)
 };
 
@@ -405,17 +396,14 @@ protected:
 
 public:
   feSysElm_MixedMassPower(feFunction *coeff, int exponent)
-    : feSysElm(-1, 2, MIXED_MASS_POWER, true), _coeff(coeff), _p(exponent)
-  {
-    _computeMatrixWithFD = false;
-  };
-  ~feSysElm_MixedMassPower(){};
-  void createElementarySystem(std::vector<feSpace *> &space);
-  void computeAe(feBilinearForm *form);
-  void computeBe(feBilinearForm *form);
+    : feSysElm(-1, 2, MIXED_MASS_POWER, true), _coeff(coeff), _p(exponent) { };
+  virtual void createElementarySystem(std::vector<feSpace *> &space) override;
+  virtual void computeAe(feBilinearForm *form) override;
+  virtual void computeBe(feBilinearForm *form) override;
   CLONEABLE(feSysElm_MixedMassPower)
 };
 
+template <int dim>
 class feSysElm_VectorMass : public feSysElm
 {
 protected:
@@ -424,14 +412,10 @@ protected:
   std::vector<double> _u, _phi_idotphi_j, _udotphi_i;
 
 public:
-  feSysElm_VectorMass(feFunction *coeff) : feSysElm(-1, 1, VECTOR_MASS, true), _coeff(coeff)
-  {
-    _computeMatrixWithFD = false;
-  };
-  ~feSysElm_VectorMass(){};
-  void createElementarySystem(std::vector<feSpace *> &space);
-  void computeAe(feBilinearForm *form);
-  void computeBe(feBilinearForm *form);
+  feSysElm_VectorMass(feFunction *coeff) : feSysElm(dim, 1, VECTOR_MASS, true), _coeff(coeff) { };
+  virtual void createElementarySystem(std::vector<feSpace *> &space) override;
+  virtual void computeAe(feBilinearForm *form) override;
+  virtual void computeBe(feBilinearForm *form) override;
   CLONEABLE(feSysElm_VectorMass)
 };
 
@@ -450,6 +434,7 @@ public:
 //                    U
 // Fields layout: V [   ]
 //
+template <int dim>
 class feSysElm_MixedVectorMass : public feSysElm
 {
 protected:
@@ -460,11 +445,10 @@ protected:
 
 public:
   feSysElm_MixedVectorMass(feFunction *coeff)
-    : feSysElm(-1, 2, MIXED_VECTOR_MASS, true), _coeff(coeff){};
-  ~feSysElm_MixedVectorMass(){};
-  void createElementarySystem(std::vector<feSpace *> &space);
-  void computeAe(feBilinearForm *form);
-  void computeBe(feBilinearForm *form);
+    : feSysElm(-1, 2, MIXED_VECTOR_MASS, true), _coeff(coeff) {};
+  virtual void createElementarySystem(std::vector<feSpace *> &space) override;
+  virtual void computeAe(feBilinearForm *form) override;
+  virtual void computeBe(feBilinearForm *form) override;
   CLONEABLE(feSysElm_MixedVectorMass)
 };
 
@@ -482,6 +466,7 @@ public:
 //                    U
 // Fields layout: V [   ]
 //
+template <int dim>
 class feSysElm_MixedScalarVectorMass : public feSysElm
 {
 protected:
@@ -492,14 +477,13 @@ protected:
 
 public:
   feSysElm_MixedScalarVectorMass(feFunction *coeff)
-    : feSysElm(-1, 2, MIXED_SCALAR_VECTOR_MASS, true), _coeff(coeff)
+    : feSysElm(dim, 2, MIXED_SCALAR_VECTOR_MASS, true), _coeff(coeff)
   {
     _computeMatrixWithFD = true;
   };
-  ~feSysElm_MixedScalarVectorMass(){};
-  void createElementarySystem(std::vector<feSpace *> &space);
-  void computeAe(feBilinearForm *form);
-  void computeBe(feBilinearForm *form);
+  virtual void createElementarySystem(std::vector<feSpace *> &space) override;
+  virtual void computeAe(feBilinearForm *form) override;
+  virtual void computeBe(feBilinearForm *form) override;
   CLONEABLE(feSysElm_MixedScalarVectorMass)
 };
 
@@ -525,13 +509,11 @@ protected:
 public:
   feSysElm_TransientMass(feFunction *coeff) : feSysElm(-1, 1, TRANSIENT_MASS, true), _coeff(coeff)
   {
-    _computeMatrixWithFD = false;
     _isTransientMatrix = true;
   };
-  ~feSysElm_TransientMass(){};
-  void createElementarySystem(std::vector<feSpace *> &space);
-  void computeAe(feBilinearForm *form);
-  void computeBe(feBilinearForm *form);
+  virtual void createElementarySystem(std::vector<feSpace *> &space) override;
+  virtual void computeAe(feBilinearForm *form) override;
+  virtual void computeBe(feBilinearForm *form) override;
   CLONEABLE(feSysElm_TransientMass)
 };
 
@@ -561,10 +543,9 @@ public:
     _computeMatrixWithFD = true;
     _isTransientMatrix = true;
   };
-  ~feSysElm_MixedTransientMass(){};
-  void createElementarySystem(std::vector<feSpace *> &space);
-  void computeAe(feBilinearForm *form);
-  void computeBe(feBilinearForm *form);
+  virtual void createElementarySystem(std::vector<feSpace *> &space) override;
+  virtual void computeAe(feBilinearForm *form) override;
+  virtual void computeBe(feBilinearForm *form) override;
   CLONEABLE(feSysElm_MixedTransientMass)
 };
 
@@ -580,6 +561,7 @@ public:
 //                        U
 // Fields layout: phi_U [   ]
 //
+template <int dim>
 class feSysElm_TransientVectorMass : public feSysElm
 {
 protected:
@@ -589,15 +571,13 @@ protected:
 
 public:
   feSysElm_TransientVectorMass(feFunction *coeff)
-    : feSysElm(-1, 1, TRANSIENT_VECTOR_MASS, true), _coeff(coeff)
+    : feSysElm(dim, 1, TRANSIENT_VECTOR_MASS, true), _coeff(coeff)
   {
-    _computeMatrixWithFD = false;
     _isTransientMatrix = true;
   };
-  ~feSysElm_TransientVectorMass(){};
-  void createElementarySystem(std::vector<feSpace *> &space);
-  void computeAe(feBilinearForm *form);
-  void computeBe(feBilinearForm *form);
+  virtual void createElementarySystem(std::vector<feSpace *> &space) override;
+  virtual void computeAe(feBilinearForm *form) override;
+  virtual void computeBe(feBilinearForm *form) override;
   CLONEABLE(feSysElm_TransientVectorMass)
 };
 
@@ -619,7 +599,8 @@ public:
 //                        U
 // Fields layout: phi_U [   ]
 //
-template <int dim> class feSysElm_Diffusion : public feSysElm
+template <int dim>
+class feSysElm_Diffusion : public feSysElm
 {
 protected:
   feFunction *_coeff;
@@ -628,10 +609,9 @@ protected:
 
 public:
   feSysElm_Diffusion(feFunction *coeff) : feSysElm(dim, 1, DIFFUSION, true), _coeff(coeff){};
-  ~feSysElm_Diffusion(){};
-  void createElementarySystem(std::vector<feSpace *> &space);
-  void computeAe(feBilinearForm *form);
-  void computeBe(feBilinearForm *form);
+  virtual void createElementarySystem(std::vector<feSpace *> &space) override;
+  virtual void computeAe(feBilinearForm *form) override;
+  virtual void computeBe(feBilinearForm *form) override;
   CLONEABLE(feSysElm_Diffusion)
 };
 
@@ -645,6 +625,7 @@ public:
 // Weak form:  | coeff * grad(u) : grad(v) dx
 //             /
 //
+template <int dim>
 class feSysElm_VectorDiffusion : public feSysElm
 {
 protected:
@@ -655,18 +636,15 @@ protected:
 
 public:
   feSysElm_VectorDiffusion(feFunction *coeff, feFunction *diffusivity)
-    : feSysElm(-1, 1, VECTOR_DIFFUSION, true), _coeff(coeff), _diffusivity(diffusivity)
-  {
-    _computeMatrixWithFD = false;
-  };
-  ~feSysElm_VectorDiffusion(){};
-  void createElementarySystem(std::vector<feSpace *> &space);
-  void computeAe(feBilinearForm *form);
-  void computeBe(feBilinearForm *form);
+    : feSysElm(dim, 1, VECTOR_DIFFUSION, true), _coeff(coeff), _diffusivity(diffusivity) { };
+  virtual void createElementarySystem(std::vector<feSpace *> &space) override;
+  virtual void computeAe(feBilinearForm *form) override;
+  virtual void computeBe(feBilinearForm *form) override;
   CLONEABLE(feSysElm_VectorDiffusion)
 };
 
-template <int dim> class feSysElm_NonlinearDiffusion : public feSysElm
+template <int dim>
+class feSysElm_NonlinearDiffusion : public feSysElm
 {
 protected:
   feFunction *_diffusivity, *_ddiffdu;
@@ -675,14 +653,10 @@ protected:
 
 public:
   feSysElm_NonlinearDiffusion(feFunction *diffusivity, feFunction *ddiffdu)
-    : feSysElm(dim, 1, NONLINEAR_DIFFUSION, true), _diffusivity(diffusivity), _ddiffdu(ddiffdu)
-  {
-    _computeMatrixWithFD = false;
-  };
-  ~feSysElm_NonlinearDiffusion(){};
-  void createElementarySystem(std::vector<feSpace *> &space);
-  void computeAe(feBilinearForm *form);
-  void computeBe(feBilinearForm *form);
+    : feSysElm(dim, 1, NONLINEAR_DIFFUSION, true), _diffusivity(diffusivity), _ddiffdu(ddiffdu) { };
+  virtual void createElementarySystem(std::vector<feSpace *> &space) override;
+  virtual void computeAe(feBilinearForm *form) override;
+  virtual void computeBe(feBilinearForm *form) override;
   CLONEABLE(feSysElm_NonlinearDiffusion)
 };
 
@@ -700,7 +674,8 @@ public:
 //                        U
 // Fields layout: phi_U [   ]
 //
-template <int dim> class feSysElm_Advection : public feSysElm
+template <int dim>
+class feSysElm_Advection : public feSysElm
 {
 protected:
   // Imposed velocity field
@@ -715,10 +690,9 @@ public:
   {
     _computeMatrixWithFD = true;
   };
-  ~feSysElm_Advection(){};
-  void createElementarySystem(std::vector<feSpace *> &space);
-  void computeAe(feBilinearForm *form);
-  void computeBe(feBilinearForm *form);
+  virtual void createElementarySystem(std::vector<feSpace *> &space) override;
+  virtual void computeAe(feBilinearForm *form) override;
+  virtual void computeBe(feBilinearForm *form) override;
   CLONEABLE(feSysElm_Advection)
 };
 
@@ -739,7 +713,8 @@ public:
 //                        U
 // Fields layout: phi_U [   ]
 //
-template <int dim> class feSysElm_NonlinearAdvection : public feSysElm
+template <int dim>
+class feSysElm_NonlinearAdvection : public feSysElm
 {
 protected:
   // Nonlinear flux
@@ -754,10 +729,9 @@ public:
   {
     _computeMatrixWithFD = true;
   };
-  ~feSysElm_NonlinearAdvection(){};
-  void createElementarySystem(std::vector<feSpace *> &space);
-  void computeAe(feBilinearForm *form);
-  void computeBe(feBilinearForm *form);
+  virtual void createElementarySystem(std::vector<feSpace *> &space) override;
+  virtual void computeAe(feBilinearForm *form) override;
+  virtual void computeBe(feBilinearForm *form) override;
   CLONEABLE(feSysElm_NonlinearAdvection)
 };
 
@@ -778,6 +752,7 @@ public:
 //
 // which is associated to (grad u)_ij = du_j/dx_i
 //
+template <int dim>
 class feSysElm_VectorConvectiveAcceleration : public feSysElm
 {
 protected:
@@ -788,14 +763,10 @@ protected:
 
 public:
   feSysElm_VectorConvectiveAcceleration(feFunction *coeff)
-    : feSysElm(-1, 1, VECTOR_CONVECTIVE_ACCELERATION, true), _coeff(coeff)
-  {
-    _computeMatrixWithFD = false;
-  };
-  ~feSysElm_VectorConvectiveAcceleration(){};
-  void createElementarySystem(std::vector<feSpace *> &space);
-  void computeAe(feBilinearForm *form);
-  void computeBe(feBilinearForm *form);
+    : feSysElm(dim, 1, VECTOR_CONVECTIVE_ACCELERATION, true), _coeff(coeff) { };
+  virtual void createElementarySystem(std::vector<feSpace *> &space) override;
+  virtual void computeAe(feBilinearForm *form) override;
+  virtual void computeBe(feBilinearForm *form) override;
   CLONEABLE(feSysElm_VectorConvectiveAcceleration)
 };
 
@@ -808,6 +779,7 @@ public:
 //  - c is a different solved scalar field (active or passive tracer),
 //  - phi_c are the test functions of c.
 //
+template <int dim>
 class feSysElm_TracerConvection : public feSysElm
 {
 protected:
@@ -818,14 +790,10 @@ protected:
 
 public:
   feSysElm_TracerConvection(feFunction *coeff)
-    : feSysElm(-1, 2, TRACER_CONVECTION, true), _coeff(coeff)
-  {
-    _computeMatrixWithFD = false;
-  };
-  ~feSysElm_TracerConvection(){};
-  void createElementarySystem(std::vector<feSpace *> &space);
-  void computeAe(feBilinearForm *form);
-  void computeBe(feBilinearForm *form);
+    : feSysElm(dim, 2, TRACER_CONVECTION, true), _coeff(coeff) { };
+  virtual void createElementarySystem(std::vector<feSpace *> &space) override;
+  virtual void computeAe(feBilinearForm *form) override;
+  virtual void computeBe(feBilinearForm *form) override;
   CLONEABLE(feSysElm_TracerConvection)
 };
 
@@ -838,6 +806,7 @@ public:
 //
 // Convective term in the adjoint Navier-Stokes equations
 //
+template <int dim>
 class feSysElm_VectorAdjointConvectiveAcceleration : public feSysElm
 {
 protected:
@@ -852,14 +821,13 @@ protected:
 
 public:
   feSysElm_VectorAdjointConvectiveAcceleration(feFunction *coeff)
-    : feSysElm(-1, 2, VECTOR_ADJOINT_CONVECTIVE_ACCELERATION, true), _coeff(coeff)
+    : feSysElm(dim, 2, VECTOR_ADJOINT_CONVECTIVE_ACCELERATION, true), _coeff(coeff)
   {
     _computeMatrixWithFD = true;
   };
-  ~feSysElm_VectorAdjointConvectiveAcceleration(){};
-  void createElementarySystem(std::vector<feSpace *> &space);
-  void computeAe(feBilinearForm *form);
-  void computeBe(feBilinearForm *form);
+  virtual void createElementarySystem(std::vector<feSpace *> &space) override;
+  virtual void computeAe(feBilinearForm *form) override;
+  virtual void computeBe(feBilinearForm *form) override;
   CLONEABLE(feSysElm_VectorAdjointConvectiveAcceleration)
 };
 
@@ -870,6 +838,7 @@ public:
 // Hence: integral of +p * div(v) - mu * d : grad(v) dx
 // Residual is the negative of this integral.
 //
+template <int dim>
 class feSysElm_DivergenceNewtonianStress : public feSysElm
 {
 protected:
@@ -881,21 +850,18 @@ protected:
 
 public:
   feSysElm_DivergenceNewtonianStress(feFunction *coeff, feFunction *viscosity)
-    : feSysElm(-1, 2, DIV_NEWTONIAN_STRESS, true), _coeff(coeff), _viscosity(viscosity)
-  {
-    _computeMatrixWithFD = false;
-  };
+    : feSysElm(dim, 2, DIV_NEWTONIAN_STRESS, true), _coeff(coeff), _viscosity(viscosity) { };
   ~feSysElm_DivergenceNewtonianStress(){};
-  void createElementarySystem(std::vector<feSpace *> &space);
-  void computeAe(feBilinearForm *form);
-  void computeBe(feBilinearForm *form);
+  virtual void createElementarySystem(std::vector<feSpace *> &space) override;
+  virtual void computeAe(feBilinearForm *form) override;
+  virtual void computeBe(feBilinearForm *form) override;
   CLONEABLE(feSysElm_DivergenceNewtonianStress)
 };
 
 // Weak form of grad(f) cdot v, with f scalar and v vector-valued
 //
 // Integral of -f div(v)
-
+template <int dim>
 class feSysElm_GradSource : public feSysElm
 {
 protected:
@@ -904,10 +870,9 @@ protected:
   std::vector<double> _gradPhi, _divPhi;
 
 public:
-  feSysElm_GradSource(feFunction *source) : feSysElm(-1, 1, GRAD_SOURCE, false), _source(source){};
-  ~feSysElm_GradSource(){};
-  void createElementarySystem(std::vector<feSpace *> &space);
-  void computeBe(feBilinearForm *form);
+  feSysElm_GradSource(feFunction *source) : feSysElm(dim, 1, GRAD_SOURCE, false), _source(source){};
+  virtual void createElementarySystem(std::vector<feSpace *> &space) override;
+  virtual void computeBe(feBilinearForm *form) override;
   CLONEABLE(feSysElm_GradSource)
 };
 
@@ -916,6 +881,7 @@ public:
 //                                                 coeff: a scalar coefficient
 // Integral of - coeff * u * div(v)
 //
+template <int dim>
 class feSysElm_MixedGradient : public feSysElm
 {
 protected:
@@ -924,14 +890,10 @@ protected:
   std::vector<double> _phiU, _gradPhiV, _divPhiV;
 
 public:
-  feSysElm_MixedGradient(feFunction *coeff) : feSysElm(-1, 2, MIXED_GRADIENT, true), _coeff(coeff)
-  {
-    _computeMatrixWithFD = false;
-  };
-  ~feSysElm_MixedGradient(){};
-  void createElementarySystem(std::vector<feSpace *> &space);
-  void computeAe(feBilinearForm *form);
-  void computeBe(feBilinearForm *form);
+  feSysElm_MixedGradient(feFunction *coeff) : feSysElm(dim, 2, MIXED_GRADIENT, true), _coeff(coeff) { };
+  virtual void createElementarySystem(std::vector<feSpace *> &space) override;
+  virtual void computeAe(feBilinearForm *form) override;
+  virtual void computeBe(feBilinearForm *form) override;
   CLONEABLE(feSysElm_MixedGradient)
 };
 
@@ -947,6 +909,7 @@ public:
 //
 // Weak forn : integral of - coeff(w) * p * div(v)
 //
+template <int dim>
 class feSysElm_MixedGradientFieldDependentCoeff : public feSysElm
 {
 protected:
@@ -957,14 +920,13 @@ protected:
 
 public:
   feSysElm_MixedGradientFieldDependentCoeff(feFunction *coeff)
-    : feSysElm(-1, 3, MIXED_GRADIENT_FIELD_DEPENDENT_COEFF, true), _coeff(coeff)
+    : feSysElm(dim, 3, MIXED_GRADIENT_FIELD_DEPENDENT_COEFF, true), _coeff(coeff)
   {
     _computeMatrixWithFD = true;
   };
-  ~feSysElm_MixedGradientFieldDependentCoeff(){};
-  void createElementarySystem(std::vector<feSpace *> &space);
-  void computeAe(feBilinearForm *form);
-  void computeBe(feBilinearForm *form);
+  virtual void createElementarySystem(std::vector<feSpace *> &space) override;
+  virtual void computeAe(feBilinearForm *form) override;
+  virtual void computeBe(feBilinearForm *form) override;
   CLONEABLE(feSysElm_MixedGradientFieldDependentCoeff)
 };
 
@@ -979,7 +941,8 @@ public:
 //  -     u: a resolved SCALAR field
 //  - phi_v: the test functions of another resolved SCALAR field
 //
-template <int dim> class feSysElm_MixedGradGrad : public feSysElm
+template <int dim>
+class feSysElm_MixedGradGrad : public feSysElm
 {
 protected:
   feFunction *_coeff;
@@ -987,14 +950,10 @@ protected:
   std::vector<double> _gradPhiU, _gradPhiV;
 
 public:
-  feSysElm_MixedGradGrad(feFunction *coeff) : feSysElm(dim, 2, MIXED_GRADGRAD, true), _coeff(coeff)
-  {
-    _computeMatrixWithFD = false;
-  };
-  ~feSysElm_MixedGradGrad(){};
-  void createElementarySystem(std::vector<feSpace *> &space);
-  void computeAe(feBilinearForm *form);
-  void computeBe(feBilinearForm *form);
+  feSysElm_MixedGradGrad(feFunction *coeff) : feSysElm(dim, 2, MIXED_GRADGRAD, true), _coeff(coeff) { };
+  virtual void createElementarySystem(std::vector<feSpace *> &space) override;
+  virtual void computeAe(feBilinearForm *form) override;
+  virtual void computeBe(feBilinearForm *form) override;
   CLONEABLE(feSysElm_MixedGradGrad)
 };
 
@@ -1003,6 +962,7 @@ public:
 //                                                 coeff a scalar coefficient
 // Integral of (coeff * div(u)) * v
 //
+template <int dim>
 class feSysElm_MixedDivergence : public feSysElm
 {
 protected:
@@ -1012,14 +972,10 @@ protected:
 
 public:
   feSysElm_MixedDivergence(feFunction *coeff)
-    : feSysElm(-1, 2, MIXED_DIVERGENCE, true), _coeff(coeff)
-  {
-    _computeMatrixWithFD = false;
-  };
-  ~feSysElm_MixedDivergence(){};
-  void createElementarySystem(std::vector<feSpace *> &space);
-  void computeAe(feBilinearForm *form);
-  void computeBe(feBilinearForm *form);
+    : feSysElm(dim, 2, MIXED_DIVERGENCE, true), _coeff(coeff) { };
+  virtual void createElementarySystem(std::vector<feSpace *> &space) override;
+  virtual void computeAe(feBilinearForm *form) override;
+  virtual void computeBe(feBilinearForm *form) override;
   CLONEABLE(feSysElm_MixedDivergence)
 };
 
@@ -1030,6 +986,7 @@ public:
 
 // Integral of coeff * (div(rho(phi) * u)) * v
 //
+template <int dim>
 class feSysElm_MixedDivergenceCHNS : public feSysElm
 {
 protected:
@@ -1042,18 +999,15 @@ protected:
 
 public:
   feSysElm_MixedDivergenceCHNS(feFunction *coeff, feFunction *density, feFunction *drhodphi)
-    : feSysElm(-1, 3, MIXED_DIVERGENCE_CHNS, true), _coeff(coeff), _density(density),
-      _drhodphi(drhodphi)
-  {
-    _computeMatrixWithFD = false;
-  };
-  ~feSysElm_MixedDivergenceCHNS(){};
-  void createElementarySystem(std::vector<feSpace *> &space);
-  void computeAe(feBilinearForm *form);
-  void computeBe(feBilinearForm *form);
+    : feSysElm(dim, 3, MIXED_DIVERGENCE_CHNS, true), _coeff(coeff), _density(density),
+      _drhodphi(drhodphi) { };
+  virtual void createElementarySystem(std::vector<feSpace *> &space) override;
+  virtual void computeAe(feBilinearForm *form) override;
+  virtual void computeBe(feBilinearForm *form) override;
   CLONEABLE(feSysElm_MixedDivergenceCHNS)
 };
 
+template <int dim>
 class feSysElm_MixedCurl : public feSysElm
 {
 protected:
@@ -1062,20 +1016,20 @@ protected:
   std::vector<double> _gradu, _gradPhiU, _phiV;
 
 public:
-  feSysElm_MixedCurl(feFunction *coeff) : feSysElm(2, 2, MIXED_CURL, true), _coeff(coeff)
+  feSysElm_MixedCurl(feFunction *coeff) : feSysElm(dim, 2, MIXED_CURL, true), _coeff(coeff)
   {
     _computeMatrixWithFD = true;
   };
-  ~feSysElm_MixedCurl(){};
-  void createElementarySystem(std::vector<feSpace *> &space);
-  void computeAe(feBilinearForm *form);
-  void computeBe(feBilinearForm *form);
+  virtual void createElementarySystem(std::vector<feSpace *> &space) override;
+  virtual void computeAe(feBilinearForm *form) override;
+  virtual void computeBe(feBilinearForm *form) override;
   CLONEABLE(feSysElm_MixedCurl)
 };
 
 // Mixed dot product : u cdot f, with u an unknown vector field and
 //                                    f a user-defined vector field.
 // Integral of (u cdot f) dot v, with v the test function of another scalar unknown field.
+template <int dim>
 class feSysElm_MixedDotProduct : public feSysElm
 {
 protected:
@@ -1084,14 +1038,10 @@ protected:
   std::vector<double> _u, _fVal, _phiU, _phiV;
 
 public:
-  feSysElm_MixedDotProduct(feVectorFunction *f) : feSysElm(2, 2, MIXED_DOTPRODUCT, true), _f(f)
-  {
-    _computeMatrixWithFD = false;
-  };
-  ~feSysElm_MixedDotProduct(){};
-  void createElementarySystem(std::vector<feSpace *> &space);
-  void computeAe(feBilinearForm *form);
-  void computeBe(feBilinearForm *form);
+  feSysElm_MixedDotProduct(feVectorFunction *f) : feSysElm(dim, 2, MIXED_DOTPRODUCT, true), _f(f) { };
+  virtual void createElementarySystem(std::vector<feSpace *> &space) override;
+  virtual void computeAe(feBilinearForm *form) override;
+  virtual void computeBe(feBilinearForm *form) override;
   CLONEABLE(feSysElm_MixedDotProduct)
 };
 
@@ -1107,6 +1057,7 @@ public:
 //  -     v: another resolved SCALAR field
 //  - phi_w: the test functions of yet another resolved VECTOR field
 //
+template <int dim>
 class feSysElm_TripleMixedGradient : public feSysElm
 {
 protected:
@@ -1118,14 +1069,13 @@ protected:
 
 public:
   feSysElm_TripleMixedGradient(feFunction *coeff)
-    : feSysElm(-1, 3, TRIPLE_MIXED_GRADIENT, true), _coeff(coeff)
+    : feSysElm(dim, 3, TRIPLE_MIXED_GRADIENT, true), _coeff(coeff)
   {
     _computeMatrixWithFD = true;
   };
-  ~feSysElm_TripleMixedGradient(){};
-  void createElementarySystem(std::vector<feSpace *> &space);
-  void computeAe(feBilinearForm *form);
-  void computeBe(feBilinearForm *form);
+  virtual void createElementarySystem(std::vector<feSpace *> &space) override;
+  virtual void computeAe(feBilinearForm *form) override;
+  virtual void computeBe(feBilinearForm *form) override;
   CLONEABLE(feSysElm_TripleMixedGradient)
 };
 
@@ -1151,6 +1101,7 @@ public:
 // Requires 4 fields: u, p (through sigma), phi, mu.
 // The density is a function depending on the solution.
 //
+template <int dim>
 class feSysElm_CHNS_Momentum : public feSysElm
 {
 protected:
@@ -1175,16 +1126,12 @@ public:
   feSysElm_CHNS_Momentum(feFunction *density, feFunction *drhodphi, feFunction *viscosity,
                          feFunction *dviscdphi, feFunction *mobility, feFunction *coeffKorteweg,
                          feVectorFunction *volumeForce)
-    : feSysElm(-1, 4, CHNS_MOMENTUM, true), _density(density), _drhodphi(drhodphi),
+    : feSysElm(dim, 4, CHNS_MOMENTUM, true), _density(density), _drhodphi(drhodphi),
       _viscosity(viscosity), _dviscdphi(dviscdphi), _mobility(mobility),
-      _coeffKorteweg(coeffKorteweg), _volumeForce(volumeForce)
-  {
-    _computeMatrixWithFD = false;
-  };
-  ~feSysElm_CHNS_Momentum(){};
-  void createElementarySystem(std::vector<feSpace *> &space);
-  void computeAe(feBilinearForm *form);
-  void computeBe(feBilinearForm *form);
+      _coeffKorteweg(coeffKorteweg), _volumeForce(volumeForce) { };
+  virtual void createElementarySystem(std::vector<feSpace *> &space) override;
+  virtual void computeAe(feBilinearForm *form) override;
+  virtual void computeBe(feBilinearForm *form) override;
   CLONEABLE(feSysElm_CHNS_Momentum)
 };
 
@@ -1212,9 +1159,8 @@ protected:
 public:
   feSysElm_1D_NeumannBC(feFunction *neumannBC)
     : feSysElm(1, 1, NEUMANN_1D, false), _neumannBC(neumannBC){};
-  ~feSysElm_1D_NeumannBC() {}
-  void createElementarySystem(std::vector<feSpace *> &space);
-  void computeBe(feBilinearForm *form);
+  virtual void createElementarySystem(std::vector<feSpace *> &space) override;
+  virtual void computeBe(feBilinearForm *form) override;
   CLONEABLE(feSysElm_1D_NeumannBC)
 };
 
@@ -1258,11 +1204,9 @@ public:
   {
     _computeMatrixWithFD = true;
   };
-  ~feSysElm_1D_SUPGStab() {}
-
-  void createElementarySystem(std::vector<feSpace *> &space);
-  void computeAe(feBilinearForm *form);
-  void computeBe(feBilinearForm *form);
+  virtual void createElementarySystem(std::vector<feSpace *> &space) override;
+  virtual void computeAe(feBilinearForm *form) override;
+  virtual void computeBe(feBilinearForm *form) override;
   CLONEABLE(feSysElm_1D_SUPGStab)
 };
 
@@ -1285,17 +1229,16 @@ public:
   {
     _computeMatrixWithFD = true;
   };
-  ~feSysElm_2D_SUPGStab() {}
-
-  void createElementarySystem(std::vector<feSpace *> &space);
-  void computeAe(feBilinearForm *form);
-  void computeBe(feBilinearForm *form);
+  virtual void createElementarySystem(std::vector<feSpace *> &space) override;
+  virtual void computeAe(feBilinearForm *form) override;
+  virtual void computeBe(feBilinearForm *form) override;
   CLONEABLE(feSysElm_2D_SUPGStab)
 };
 
 //
 // SUPG + PSPG stabilization for the (Navier-)Stokes equations
 //
+template <int dim>
 class feSysElm_Stokes_SUPG_PSPG : public feSysElm
 {
 protected:
@@ -1320,18 +1263,18 @@ protected:
 public:
   feSysElm_Stokes_SUPG_PSPG(feFunction *coeff, feFunction *density, feFunction *viscosity,
                             feVectorFunction *volumeForce)
-    : feSysElm(-1, 2, SUPG_PSPG_STOKES, true), _coeff(coeff), _density(density),
+    : feSysElm(dim, 2, SUPG_PSPG_STOKES, true), _coeff(coeff), _density(density),
       _viscosity(viscosity), _volumeForce(volumeForce)
   {
     _computeMatrixWithFD = true;
   };
-  ~feSysElm_Stokes_SUPG_PSPG(){};
-  void createElementarySystem(std::vector<feSpace *> &space);
-  void computeAe(feBilinearForm *form);
-  void computeBe(feBilinearForm *form);
+  virtual void createElementarySystem(std::vector<feSpace *> &space) override;
+  virtual void computeAe(feBilinearForm *form) override;
+  virtual void computeBe(feBilinearForm *form) override;
   CLONEABLE(feSysElm_Stokes_SUPG_PSPG)
 };
 
+template <int dim>
 class feSysElm_NS_SUPG_PSPG : public feSysElm
 {
 protected:
@@ -1346,21 +1289,21 @@ protected:
 public:
   feSysElm_NS_SUPG_PSPG(feFunction *coeff, feFunction *density, feFunction *viscosity,
                         feVectorFunction *volumeForce)
-    : feSysElm(-1, 2, SUPG_PSPG_NAVIERSTOKES, true), _coeff(coeff), _density(density),
+    : feSysElm(dim, 2, SUPG_PSPG_NAVIERSTOKES, true), _coeff(coeff), _density(density),
       _viscosity(viscosity), _volumeForce(volumeForce)
   {
     _computeMatrixWithFD = true;
   };
-  ~feSysElm_NS_SUPG_PSPG(){};
-  void createElementarySystem(std::vector<feSpace *> &space);
-  void computeAe(feBilinearForm *form);
-  void computeBe(feBilinearForm *form);
+  virtual void createElementarySystem(std::vector<feSpace *> &space) override;
+  virtual void computeAe(feBilinearForm *form) override;
+  virtual void computeBe(feBilinearForm *form) override;
   CLONEABLE(feSysElm_NS_SUPG_PSPG)
 };
 
 //
 // Galerkin least-squares stabilization for the (Navier-)Stokes equations
 //
+template <int dim>
 class feSysElm_GLS_Stokes : public feSysElm
 {
 protected:
@@ -1374,18 +1317,18 @@ protected:
 public:
   feSysElm_GLS_Stokes(feFunction *coeff, feFunction *density, feFunction *viscosity,
                       feVectorFunction *volumeForce)
-    : feSysElm(-1, 2, GLS_STOKES, true), _coeff(coeff), _density(density), _viscosity(viscosity),
+    : feSysElm(dim, 2, GLS_STOKES, true), _coeff(coeff), _density(density), _viscosity(viscosity),
       _volumeForce(volumeForce)
   {
     _computeMatrixWithFD = true;
   };
-  ~feSysElm_GLS_Stokes(){};
-  void createElementarySystem(std::vector<feSpace *> &space);
-  void computeAe(feBilinearForm *form);
-  void computeBe(feBilinearForm *form);
+  virtual void createElementarySystem(std::vector<feSpace *> &space) override;
+  virtual void computeAe(feBilinearForm *form) override;
+  virtual void computeBe(feBilinearForm *form) override;
   CLONEABLE(feSysElm_GLS_Stokes)
 };
 
+template <int dim>
 class feSysElm_GLS_NavierStokes : public feSysElm
 {
 protected:
@@ -1400,15 +1343,14 @@ protected:
 public:
   feSysElm_GLS_NavierStokes(feFunction *coeff, feFunction *density, feFunction *viscosity,
                             feVectorFunction *volumeForce)
-    : feSysElm(-1, 2, GLS_NAVIERSTOKES, true), _coeff(coeff), _density(density),
+    : feSysElm(dim, 2, GLS_NAVIERSTOKES, true), _coeff(coeff), _density(density),
       _viscosity(viscosity), _volumeForce(volumeForce)
   {
     _computeMatrixWithFD = true;
   };
-  ~feSysElm_GLS_NavierStokes(){};
-  void createElementarySystem(std::vector<feSpace *> &space);
-  void computeAe(feBilinearForm *form);
-  void computeBe(feBilinearForm *form);
+  virtual void createElementarySystem(std::vector<feSpace *> &space) override;
+  virtual void computeAe(feBilinearForm *form) override;
+  virtual void computeBe(feBilinearForm *form) override;
   CLONEABLE(feSysElm_GLS_NavierStokes)
 };
 

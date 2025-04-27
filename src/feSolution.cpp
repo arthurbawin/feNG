@@ -3,8 +3,9 @@
 #include <iostream>
 #include <fstream>
 
-feSolution::feSolution(int numDOF, const std::vector<feSpace *> &spaces,
-                       const std::vector<feSpace *> &essentialSpaces)
+feSolution::feSolution(const int numDOF,
+                       const std::vector<feSpace*> &spaces,
+                       const std::vector<feSpace*> &essentialSpaces)
   : _nDOF(numDOF), _c0(0.), _tn(0.), _spaces(spaces), _essentialSpaces(essentialSpaces)
 {
   _sol.resize(numDOF);
@@ -22,17 +23,22 @@ feSolution::feSolution(const feSolutionContainer &container,
   : _nDOF(container.getNbDOFs()),
   _sol(container.getSolution(solutionIndex)),
   _dsoldt(container.getSolutionDot(solutionIndex)),
-  _c0(0.), _tn(0.),
+  _c0(container.getC0()),
+  _tn(container.getTime()[0]),
   _spaces(spaces), _essentialSpaces(essentialSpaces)
 {
 
 }
 
 /* Constructs an feSolution from a file created by feSolution::printSol. */
-feSolution::feSolution(std::string solutionFile)
-  : _c0(0.), _spaces(std::vector<feSpace *>()), _essentialSpaces(std::vector<feSpace *>())
+feSolution::feSolution(const int numDOF,
+                       const std::string solutionFile)
+  : _c0(0.),
+  _spaces(std::vector<feSpace*>()),
+  _essentialSpaces(std::vector<feSpace*>())
 {
-  feInfo("Reading solution file : %s\n", solutionFile.c_str());
+  feInfo("");
+  feInfo("Reading solution file : %s", solutionFile.c_str());
   std::filebuf fb;
   if(fb.open(solutionFile, std::ios::in)) {
     std::istream input(&fb);
@@ -41,6 +47,14 @@ feSolution::feSolution(std::string solutionFile)
     input >> solutionTime;
     getline(input, buffer);
     input >> _nDOF;
+
+    if(_nDOF != numDOF) {
+      feErrorMsg(FE_STATUS_ERROR, "Could not create feSolution from file \"%s\":\n"
+        "Solution expects %d degrees of freedom but solution file has %d.",
+        solutionFile.data(), numDOF, _nDOF);
+      fb.close();
+      exit(-1);
+    }
 
     _tn = solutionTime;
 
@@ -97,7 +111,7 @@ void feSolution::initialize(feMesh *mesh)
 
 void feSolution::initializeUnknowns(feMesh *mesh)
 {
-  for(feSpace *fS : _spaces) {
+  for(const auto &fS : _spaces) {
     if(fS->getDOFInitialization() == dofInitialization::PREVIOUS_SOL) {
       continue;
     }
@@ -236,12 +250,13 @@ void feSolution::initializeEssentialBC(feMesh *mesh, feSolutionContainer *solCon
   std::vector<double> vecVal(3);
   double val;
 
+  // FIXME: this should be done once and for all,
+  // not every time the spaces are initialized.
   // Essential spaces + non essential vector spaces with one or more
   // essential component. The whole vector space is re-initialized,
   // which is fine since initialization order for non-essential
   // spaces is irrelevant.
-  // Also set _essentialComponent to true for all fully essential spaces.
-  std::vector<feSpace *> allEssentialSpaces = _essentialSpaces;
+  std::vector<feSpace*> allEssentialSpaces = _essentialSpaces;
   for(auto *space : _spaces) {
     if(space->getNumComponents() > 1) {
       bool toAdd = false;
@@ -253,13 +268,8 @@ void feSolution::initializeEssentialBC(feMesh *mesh, feSolutionContainer *solCon
       if(toAdd) allEssentialSpaces.push_back(space);
     }
   }
-  for(auto *space : _essentialSpaces) {
-    space->setEssentialComponent(0, true);
-    space->setEssentialComponent(1, true);
-    space->setEssentialComponent(2, true);
-  }
 
-  for(feSpace *fS : allEssentialSpaces) {
+  for(const auto &fS : allEssentialSpaces) {
     if(fS->getDOFInitialization() == dofInitialization::PREVIOUS_SOL) {
       continue;
     }
@@ -495,18 +505,19 @@ feStatus feSolution::addSquaredNormOfVectorSpace(feMesh *mesh,
   return FE_STATUS_OK;
 }
 
-
-
 void feSolution::setSolFromContainer(const feSolutionContainer *solContainer, const int iSol)
 {
-  const std::vector<double> &solFromContainer = solContainer->getSolution(iSol);
-  if(_sol.size() != solFromContainer.size()) {
-    _sol.resize(solFromContainer.size());
-    _dsoldt.resize(solFromContainer.size());
+  // Resize if necessary, then copy
+  if(_sol.size() != (size_t) solContainer->getNbDOFs()) {
+    _nDOF = solContainer->getNbDOFs();
   }
-  size_t nDOFs = solFromContainer.size();
-  for(size_t i = 0; i < nDOFs; ++i) {
-    _sol[i] = solFromContainer[i];
+  _sol = solContainer->getSolution(iSol);
+  _dsoldt = solContainer->getSolutionDot(iSol);
+
+  if(_sol.size() != (size_t) _nDOF) {
+    // Should not happen
+    feErrorMsg(FE_STATUS_ERROR, "Size mismatch");
+    exit(-1);
   }
 }
 
@@ -519,11 +530,11 @@ void feSolution::setSolDotToZero()
 // Only prints the current solution, not the full container
 // The export function should be for the container
 // to export the full solution history
-void feSolution::printSol(std::string file)
+void feSolution::printSol(const std::string &file)
 {
   FILE *f = nullptr;
   if(file != "") {
-    f = fopen(file.c_str(), "w");
+    f = fopen(file.data(), "w");
     fprintf(f, "%12.16f\n", _tn); // Print the current time
     fprintf(f, "%ld\n", _sol.size()); // Print the number of DOFs
   }

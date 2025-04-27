@@ -29,8 +29,8 @@ feCncGeo *feMesh::getCncGeoByName(const std::string &cncGeoID)
 
 feCncGeo *feMesh::getCncGeoByTag(int cncGeoTag)
 {
-  if(cncGeoTag < 0)
-    if((unsigned)cncGeoTag > _cncGeo.size()) return nullptr;
+  assert(cncGeoTag >= 0);
+  assert((size_t) cncGeoTag < _cncGeo.size());
   return _cncGeo[cncGeoTag];
 }
 
@@ -231,7 +231,10 @@ int feMesh::getNumElements(std::string const &cncGeoID)
   return getCncGeoByName(cncGeoID)->getNumElements();
 }
 
-int feMesh::getNumElements(int cncGeoTag) { return getCncGeoByTag(cncGeoTag)->getNumElements(); }
+int feMesh::getNumElements(int cncGeoTag)
+{
+  return getCncGeoByTag(cncGeoTag)->getNumElements();
+}
 
 feSpace *feMesh::getGeometricSpace(std::string const &cncGeoID)
 {

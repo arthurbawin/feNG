@@ -248,44 +248,44 @@ void feSpaceTetPn::initializeNumberingUnknowns()
   int nDOFPerFace = (_n-1)*(_n-2)/2;
   int nDOFPerElem = _nFunctions - 4 - 6 * nDOFPerEdge - 4 * nDOFPerFace;
 
-  for(int i = 0; i < _mesh->getNumElements(_cncGeoID); ++i) {
+  for(int i = 0; i < _mesh->getNumElements(_cncGeoTag); ++i) {
     for(int j = 0; j < 4; ++j) {
-      _numbering->setUnknownVertexDOF(_mesh, _cncGeoID, i, j, nDOFPerVert);
+      _numbering->setUnknownVertexDOF(_mesh, _cncGeoTag, i, j, nDOFPerVert);
     }
     if(_n >= 2) {
       for(int j = 0; j < 6; ++j) {
-        _numbering->setUnknownEdgeDOF(_mesh, _cncGeoID, i, j, nDOFPerEdge);
+        _numbering->setUnknownEdgeDOF(_mesh, _cncGeoTag, i, j, nDOFPerEdge);
       }
     }
     if(_n >= 3) {
       for(int j = 0; j < 4; ++j) {
-        _numbering->setUnknownFaceDOF(_mesh, _cncGeoID, i, j, nDOFPerFace);
+        _numbering->setUnknownFaceDOF(_mesh, _cncGeoTag, i, j, nDOFPerFace);
       }
     }
     if(_n >= 4) {
-      _numbering->setUnknownElementDOF(_mesh, _cncGeoID, i, nDOFPerElem);
+      _numbering->setUnknownElementDOF(_mesh, _cncGeoTag, i, nDOFPerElem);
     }
   }
 }
 
 void feSpaceTetPn::initializeNumberingEssential()
 {
-  for(int i = 0; i < _mesh->getNumElements(_cncGeoID); ++i) {
+  for(int i = 0; i < _mesh->getNumElements(_cncGeoTag); ++i) {
     for(int j = 0; j < 4; ++j) {
-      _numbering->setEssentialVertexDOF(_mesh, _cncGeoID, i, j);
+      _numbering->setEssentialVertexDOF(_mesh, _cncGeoTag, i, j);
     }
     if(_n >= 2) {
       for(int j = 0; j < 6; ++j) {
-        _numbering->setEssentialEdgeDOF(_mesh, _cncGeoID, i, j);
+        _numbering->setEssentialEdgeDOF(_mesh, _cncGeoTag, i, j);
       }
     }
     if(_n >= 3) {
       for(int j = 0; j < 4; ++j) {
-        _numbering->setEssentialFaceDOF(_mesh, _cncGeoID, i, j);
+        _numbering->setEssentialFaceDOF(_mesh, _cncGeoTag, i, j);
       }
     }
     if(_n >= 4) {
-      _numbering->setEssentialElementDOF(_mesh, _cncGeoID, i);
+      _numbering->setEssentialElementDOF(_mesh, _cncGeoTag, i);
     }
   }
 }
@@ -293,23 +293,23 @@ void feSpaceTetPn::initializeNumberingEssential()
 void feSpaceTetPn::initializeAddressingVector(int numElem, std::vector<feInt> &adr) const
 {
   for(int j = 0; j < 4; ++j) {
-    adr[j] = _numbering->getVertexDOF(_mesh, _cncGeoID, numElem, j);
+    adr[j] = _numbering->getVertexDOF(_mesh, _cncGeoTag, numElem, j);
   }
   int start = 4;
   if(_n >= 2) {
     // Loop over the edges
     for(int iE = 0; iE < 6; ++iE) {
-      int e = _mesh->getEdge(_cncGeoID, numElem, iE);
+      int e = _mesh->getEdge(_cncGeoTag, numElem, iE);
 
       if(e > 0) {
         // Edge orientation is positive: Number edge DOF in default order
         for(int j = 0; j < _n-1; ++j) {
-          adr[start + iE * (_n-1) + j] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, iE, j);
+          adr[start + iE * (_n-1) + j] = _numbering->getEdgeDOF(_mesh, _cncGeoTag, numElem, iE, j);
         }
       } else {
         // Edge orientation is negative: Number edge DOF in reverse order
         for(int j = 0; j < _n-1; ++j) {
-          adr[start + (iE+1) * (_n-1) - j - 1] = _numbering->getEdgeDOF(_mesh, _cncGeoID, numElem, iE, j);
+          adr[start + (iE+1) * (_n-1) - j - 1] = _numbering->getEdgeDOF(_mesh, _cncGeoTag, numElem, iE, j);
         }
       }
     }
@@ -320,18 +320,18 @@ void feSpaceTetPn::initializeAddressingVector(int numElem, std::vector<feInt> &a
     // Loop over the edges
     for(int iF = 0; iF < 4; ++iF) {
 
-      int f = _mesh->getFace(_cncGeoID, numElem, iF);
+      int f = _mesh->getFace(_cncGeoTag, numElem, iF);
 
       // MODIFY: Rotate when necessary
       if(f > 0) {
         // Face orientation is positive: Number face DOF in default order
         for(int j = 0; j < nDOFPerFace; ++j) {
-          adr[start + iF * nDOFPerFace + j] = _numbering->getFaceDOF(_mesh, _cncGeoID, numElem, iF, j);
+          adr[start + iF * nDOFPerFace + j] = _numbering->getFaceDOF(_mesh, _cncGeoTag, numElem, iF, j);
         }
       } else {
         // Face orientation is negative: Number face DOF in reverse order
         for(int j = 0; j < nDOFPerFace; ++j) {
-          adr[start + (iF+1) * (nDOFPerFace) - j - 1] = _numbering->getFaceDOF(_mesh, _cncGeoID, numElem, iF, j);
+          adr[start + (iF+1) * (nDOFPerFace) - j - 1] = _numbering->getFaceDOF(_mesh, _cncGeoTag, numElem, iF, j);
         }
       }
     }
@@ -340,7 +340,7 @@ void feSpaceTetPn::initializeAddressingVector(int numElem, std::vector<feInt> &a
     start += 4 * (_n-1)*(_n-2)/2;
     int nDOFPerElem = _nFunctions - 4 - 6 * (_n-1) - 4 * (_n-1)*(_n-2)/2;
     for(int i = 0; i < nDOFPerElem; ++i) {
-      adr[start + i] = _numbering->getElementDOF(_mesh, _cncGeoID, numElem, i);
+      adr[start + i] = _numbering->getElementDOF(_mesh, _cncGeoTag, numElem, i);
     }
   }
 }

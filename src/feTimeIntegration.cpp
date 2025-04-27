@@ -485,6 +485,9 @@ feStatus BDF2Integrator::makeSteps(int nSteps)
         // Start the BDF2 by computing initial conditions at time n and n-1
         // Only for verification purposes with exact solution, and
         // not suitable for actual simulation where solution at first step is not known.
+        feInfoCond(FE_VERBOSE > 0, "\t\tBDF2 - Overall step = 1 - Step 1/%d from t = %1.4e to t = %1.4e", 
+          nSteps, _currentTime, _currentTime + _dt);
+        feInfoCond(FE_VERBOSE > 0, "\t\t\tStarting with exact solution");
         this->updateTime(0, _dt);
         _sC->rotate(_dt);
         _currentSolution->initializeUnknowns(_mesh);

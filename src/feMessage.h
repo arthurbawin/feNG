@@ -13,7 +13,8 @@
   - 2 : All information messages */
 #define VERBOSE_NONE 0
 #define VERBOSE_MODERATE 1
-#define VERBOSE_ALL 2
+#define VERBOSE_HIGH 2
+#define VERBOSE_ALL 3
 
 typedef enum {
   FE_MSGLEVEL_INFO = 0,

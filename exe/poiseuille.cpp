@@ -89,24 +89,24 @@ int main(int argc, char **argv)
 
   // Continuity
   feBilinearForm *divU = nullptr;
-  feCheck(createBilinearForm(divU, {p, u}, new feSysElm_MixedDivergence(&scalarConstant::one)));
+  feCheck(createBilinearForm(divU, {p, u}, new feSysElm_MixedDivergence<2>(&scalarConstant::one)));
   std::vector<feBilinearForm*> forms = {divU};
 
   // Momentum
   feBilinearForm *diffU = nullptr, *gradP = nullptr, *divSigma = nullptr;
   if(divergenceFormulation) {
-    feCheck(createBilinearForm(divSigma, {u, p}, new feSysElm_DivergenceNewtonianStress(&scalarConstant::one, &viscosity)));
+    feCheck(createBilinearForm(divSigma, {u, p}, new feSysElm_DivergenceNewtonianStress<2>(&scalarConstant::one, &viscosity)));
     forms.push_back(divSigma);
    } else {
-    feCheck(createBilinearForm(gradP, {u, p}, new feSysElm_MixedGradient(&scalarConstant::minusOne)));
-    feCheck(createBilinearForm(diffU,    {u}, new feSysElm_VectorDiffusion(&scalarConstant::minusOne, &viscosity)));
+    feCheck(createBilinearForm(gradP, {u, p}, new feSysElm_MixedGradient<2>(&scalarConstant::minusOne)));
+    feCheck(createBilinearForm(diffU,    {u}, new feSysElm_VectorDiffusion<2>(&scalarConstant::minusOne, &viscosity)));
     forms.push_back(gradP);
     forms.push_back(diffU);
   }
 
   // Nonlinear term (optional)
   feBilinearForm *convU = nullptr;
-  feCheck(createBilinearForm(convU, {u}, new feSysElm_VectorConvectiveAcceleration(&scalarConstant::one)));
+  feCheck(createBilinearForm(convU, {u}, new feSysElm_VectorConvectiveAcceleration<2>(&scalarConstant::one)));
   forms.push_back(convU);
 
   feLinearSystem *system;

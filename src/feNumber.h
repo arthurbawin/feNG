@@ -80,45 +80,45 @@ public:
   // Set the numDOF-th DOF associated to the numVertex-th vertex on the numElem-th element
   // of geometric connectivity cncGeoID as UNKNOWN. The default number of DOF per vertex
   // for continuous elements (not DG) is 1.
-  void setUnknownVertexDOF(feMesh *mesh, std::string const &cncGeoID, int numElem, int numVertex,
+  void setUnknownVertexDOF(feMesh *mesh, const int cncGeoTag, int numElem, int numVertex,
                            int numDOF = 1);
   // Set the numDOF-th DOF associated to the numElem-th element
   // of geometric connectivity cncGeoID as UNKNOWN.
-  void setUnknownElementDOF(feMesh *mesh, std::string const &cncGeoID, int numElem, int numDOF);
+  void setUnknownElementDOF(feMesh *mesh, const int cncGeoTag, int numElem, int numDOF);
   // Set the numDOF-th DOF associated to the numEdge-th edge on the numElem-th element
   // of geometric connectivity cncGeoID as UNKNOWN.
-  void setUnknownEdgeDOF(feMesh *mesh, std::string const &cncGeoID, int numElem, int numEdge,
+  void setUnknownEdgeDOF(feMesh *mesh, const int cncGeoTag, int numElem, int numEdge,
                          int numDOF);
   // Set the numDOF-th DOF associated to the numFace-th face on the numElem-th element
   // of geometric connectivity cncGeoID as UNKNOWN.
-  void setUnknownFaceDOF(feMesh *mesh, std::string const &cncGeoID, int numElem, int numFace,
+  void setUnknownFaceDOF(feMesh *mesh, const int cncGeoTag, int numElem, int numFace,
                          int numDOF);
 
   // Same as above, but mark the DOF as ESSENTIAL.
   // Multiple degrees of freedom defined on the same entity (vertex/element/edge) cannot
   // be part UNKNOWN and part ESSENTIAL: the whole entity (and thus all of its DOF) is marked as
   // ESSENTIAL.
-  void setEssentialVertexDOF(feMesh *mesh, std::string const &cncGeoID, int numElem, int numVertex,
+  void setEssentialVertexDOF(feMesh *mesh, const int cncGeoTag, int numElem, int numVertex,
                              int numDOF = -1);
-  void setEssentialElementDOF(feMesh *mesh, std::string const &cncGeoID, int numElem,
+  void setEssentialElementDOF(feMesh *mesh, const int cncGeoTag, int numElem,
                               int numDOF = -1);
-  void setEssentialEdgeDOF(feMesh *mesh, std::string const &cncGeoID, int numElem, int numEdge,
+  void setEssentialEdgeDOF(feMesh *mesh, const int cncGeoTag, int numElem, int numEdge,
                            int numDOF = -1);
-  void setEssentialFaceDOF(feMesh *mesh, std::string const &cncGeoID, int numElem, int numFace,
+  void setEssentialFaceDOF(feMesh *mesh, const int cncGeoTag, int numElem, int numFace,
                            int numDOF = -1);
 
   // Get the global number of the specified DOF
-  int getVertexDOF(feMesh *mesh, std::string const &cncGeoID, int numElem, int numVertex,
+  int getVertexDOF(feMesh *mesh, const int cncGeoTag, int numElem, int numVertex,
                    int numDOF = 0);
   int getDOFNumberAtVertex(int iVertex) { return _numberingVertices[iVertex]; };
   int getDOFNumberAtVertex(int iVertex, int numDOF)
   {
     return _numberingVertices[_maxDOFperVertex * iVertex + numDOF];
   };
-  int  getElementDOF(feMesh *mesh, std::string const &cncGeoID, int numElem, int numDOF);
-  void setElementDOF(feMesh *mesh, std::string const &cncGeoID, int numElem, int numDOF, int dofNumber);
-  int getEdgeDOF(feMesh *mesh, std::string const &cncGeoID, int numElem, int numEdge, int numDOF);
-  int getFaceDOF(feMesh *mesh, std::string const &cncGeoID, int numElem, int numFace, int numDOF);
+  int  getElementDOF(feMesh *mesh, const int cncGeoTag, int numElem, int numDOF);
+  void setElementDOF(feMesh *mesh, const int cncGeoTag, int numElem, int numDOF, int dofNumber);
+  int getEdgeDOF(feMesh *mesh, const int cncGeoTag, int numElem, int numEdge, int numDOF);
+  int getFaceDOF(feMesh *mesh, const int cncGeoTag, int numElem, int numFace, int numDOF);
 
   int getDOFCodeAtVertex(int iVertex) { return _codeDOFVertices[iVertex]; };
 
@@ -178,8 +178,9 @@ public:
   // spaces is the vector of all the FE spaces defined on the mesh, and
   // essentialSpaces is the vector of FE spaces on which essential
   // boundary conditions are applied.
-  feMetaNumber(feMesh *mesh, const std::vector<feSpace *> &spaces,
-               const std::vector<feSpace *> &essentialSpaces);
+  feMetaNumber(feMesh *mesh,
+               const std::vector<feSpace*> &spaces,
+               const std::vector<feSpace*> &essentialSpaces);
   feMetaNumber(){};
   ~feMetaNumber();
 

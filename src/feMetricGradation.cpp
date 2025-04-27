@@ -563,7 +563,7 @@ feStatus feMetric::newGradation(const std::vector<std::size_t> &nodeTags, const 
       	  correction = true;
         };
       }
-      feInfoCond(FE_VERBOSE > 0, "Gradation: Passe %d - Corrected %d edges", iter, numCorrected);
+      feInfoCond(FE_VERBOSE > 0, "\tMetric gradation: Sweep %d - Corrected %d edges", iter, numCorrected);
     }
   } else {
 

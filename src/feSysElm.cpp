@@ -354,6 +354,7 @@ void feSysElm_MixedTransientMass::computeAe(feBilinearForm *form)
 {
   UNUSED(form);
   feErrorMsg(FE_STATUS_ERROR, "Implement matrix for MixedTransientMass");
+  exit(-1);
   // double jac, coeff;
   // for(int k = 0; k < _nQuad; ++k) {
   //   jac = form->_J[_nQuad * form->_numElem + k];
@@ -402,7 +403,8 @@ void feSysElm_Diffusion<dim>::createElementarySystem(std::vector<feSpace *> &spa
   _gradPhi.resize(dim * _nFunctions);
 }
 
-template <int dim> void feSysElm_Diffusion<dim>::computeAe(feBilinearForm *form)
+template <int dim>
+void feSysElm_Diffusion<dim>::computeAe(feBilinearForm *form)
 {
   double jac, coeff;
   for(int k = 0; k < _nQuad; ++k) {
@@ -428,7 +430,8 @@ template <int dim> void feSysElm_Diffusion<dim>::computeAe(feBilinearForm *form)
   }
 }
 
-template <int dim> void feSysElm_Diffusion<dim>::computeBe(feBilinearForm *form)
+template <int dim>
+void feSysElm_Diffusion<dim>::computeBe(feBilinearForm *form)
 {
   double jac, coeff, grad_u[3] = {0., 0., 0.};
   for(int k = 0; k < _nQuad; ++k) {
