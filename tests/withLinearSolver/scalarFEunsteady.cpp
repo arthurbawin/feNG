@@ -93,6 +93,11 @@ struct linearODE {
     TimeIntegrator *solver;
     feCheckReturn(createTimeIntegrator(solver, scheme, NLoptions,
       system, &sol, &mesh, norms, {nullptr, 1, ""}, t0, t1, nTimeSteps));
+
+    // Start BDF2 with manufactured solution
+    if(scheme == timeIntegratorScheme::BDF2)
+      static_cast<BDF2Integrator*>(solver)->setStartingMethod(BDF2Starter::InitialCondition);
+
     feCheckReturn(solver->makeSteps(nTimeSteps));
 
     std::vector<std::vector<double>> postProc = solver->getPostProcessingData();
@@ -171,6 +176,11 @@ struct nonlinearODE {
     TimeIntegrator *solver;
     feCheckReturn(createTimeIntegrator(solver, scheme, NLoptions,
       system, &sol, &mesh, norms, {nullptr, 1, ""}, t0, t1, nTimeSteps));
+
+    // Start BDF2 with manufactured solution
+    if(scheme == timeIntegratorScheme::BDF2)
+      static_cast<BDF2Integrator*>(solver)->setStartingMethod(BDF2Starter::InitialCondition);
+
     feCheckReturn(solver->makeSteps(nTimeSteps));
 
     std::vector<std::vector<double>> postProc = solver->getPostProcessingData();
@@ -290,8 +300,13 @@ struct diffusion {
     TimeIntegrator *solver;
     feCheckReturn(createTimeIntegrator(solver, scheme, NLoptions,
       system, &sol, &mesh, norms, {nullptr, 1, ""}, t0, t1, nTimeSteps));
-    feCheckReturn(solver->makeSteps(nTimeSteps));
 
+    // Start BDF2 with manufactured solution
+    if(scheme == timeIntegratorScheme::BDF2)
+      static_cast<BDF2Integrator*>(solver)->setStartingMethod(BDF2Starter::InitialCondition);
+
+    feCheckReturn(solver->makeSteps(nTimeSteps));
+    
     std::vector<std::vector<double>> postProc = solver->getPostProcessingData();
     error = 0.;
     for(int j = 0; j < nTimeSteps+1; ++j) {
@@ -399,6 +414,11 @@ namespace nonLinearDiffusion {
     TimeIntegrator *solver;
     feCheckReturn(createTimeIntegrator(solver, scheme, NLoptions,
       system, &sol, &mesh, norms, {nullptr, 1, ""}, t0, t1, nTimeSteps));
+
+    // Start BDF2 with manufactured solution
+    if(scheme == timeIntegratorScheme::BDF2)
+      static_cast<BDF2Integrator*>(solver)->setStartingMethod(BDF2Starter::InitialCondition);
+
     feCheckReturn(solver->makeSteps(nTimeSteps));
 
     L2Error = errorU_L2->compute();

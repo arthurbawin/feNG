@@ -550,6 +550,10 @@ namespace cahnHilliardNavierStokes {
       TimeIntegrator *solver;
       feCheck(createTimeIntegrator(solver, timeIntegratorScheme::BDF2, NLoptions,
         system, &sol, &mesh, norms, {nullptr, 1, ""}, t0, t1, nTimeSteps));
+
+      // Start BDF2 with manufactured solution
+      static_cast<BDF2Integrator*>(solver)->setStartingMethod(BDF2Starter::InitialCondition);
+
       // Solve
       feCheck(solver->makeSteps(nTimeSteps));
 
