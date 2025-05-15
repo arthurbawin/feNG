@@ -720,12 +720,6 @@ void feSysElm_MixedGradGrad<dim>::computeAe(feBilinearForm *form)
       }
     }
   }
-  // if(form->_numElem == 10) {
-  //   feInfo("%s - Local matrix on elem 10 :", toString(_ID).data());
-  //   for(int i = 0; i < form->_M; ++i)
-  //     for(int j = 0; j < form->_N; ++j)
-  //       feInfo("A[%2d][%2d] = %+-1.10e", i, j, form->_Ae[i][j]);
-  // }
 }
 
 template <int dim>
@@ -754,11 +748,6 @@ void feSysElm_MixedGradGrad<dim>::computeBe(feBilinearForm *form)
       form->_Be[i] -= coeff * dotprod * jac * _wQuad[k];
     }
   }
-  // if(form->_numElem == 10) {
-  //   feInfo("%s - Local RHS on elem 10 :", toString(_ID).data());
-  //   for(int i = 0; i < form->_M; ++i)
-  //     feInfo("B[%2d] = %+-1.10e", i, form->_Be[i]);
-  // }
 }
 
 template class feSysElm_MixedGradGrad<1>;

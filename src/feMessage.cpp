@@ -5,6 +5,7 @@
 */
 
 #include "feNG.h"
+#include <ctime>
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdarg.h>
@@ -73,8 +74,14 @@ const char *feGetStatusString(feStatus status)
 
 feStatus defaultMessageCallback(feMessage *msg)
 {
+
+  auto now = std::chrono::system_clock::now();
+  std::time_t time = std::chrono::system_clock::to_time_t(now);
+  char timeString[std::size("hh:mm:ss")];
+  std::strftime(std::data(timeString), std::size(timeString), "%X", std::gmtime(&time));
+
   if(msg->level == FE_MSGLEVEL_INFO)
-    fprintf(stdout, "Info : %s\n", msg->string);
+    fprintf(stdout, "Info %s: %s\n", timeString, msg->string);
   else if(msg->level == FE_MSGLEVEL_INFO_COLLECTIVE) {
 #if defined(HAVE_MPI)
       int rank, size;

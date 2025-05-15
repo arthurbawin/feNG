@@ -243,14 +243,14 @@ feStatus BDF1Integrator::restartFromContainer(const feSolutionContainer &contain
   // In the meantime:
   // Copy data from container : 
   const std::vector<double> &tC = container.getTime();
-  const std::vector<double> &deltaTC = container.getTimeDifferences();
+
+  *_sC = container;
 
   for(int i = 0; i < _nSol; ++i) {
     _t[i] = tC[i];
-    _deltaT[i] = deltaTC[i];
-    _sC->setSolution(container.getSolution(i), i);
-    _sC->setSolutionDot(container.getSolutionDot(i), i);
-    _sC->setResidual(container.getFResidual(i), i);
+  }
+  for(int i = 0; i < _nSol-1; ++i) {
+    _deltaT[i] = _t[i] - _t[i+1];
   }
 
   return FE_STATUS_OK;

@@ -48,6 +48,18 @@ typedef enum {
   //         / cnc
   INTEGRAL,
   //         /
+  // Compute |    f(x,t,uh) dx, with f a user-defined scalar field
+  //         / cnc
+  //
+  // f can depend on up to 1 scalar FE space and 1 vector FE space
+  INTEGRAL_SOL_DEPENDENT_F,
+  //         /
+  // Compute |    F(x,t,uh) dx, with F a user-defined vector field
+  //         / cnc
+  //
+  // F can depend on up to 1 scalar FE space and 1 vector FE space
+  VECTOR_INTEGRAL_SOL_DEPENDENT_F,
+  //         /
   // Compute |    duh/dt dx from the stored temporal derivative
   //         / cnc
   INTEGRAL_DT,
@@ -170,6 +182,8 @@ public:
   double compute(normType type);
   // Compute and return the norm of integral matching the norm's _type attribute
   double compute();
+  // Compute and populate vector-valued result
+  void compute(std::vector<double> &result);
 
   feStatus probeScalarField(const std::vector<double> &pos, double &res);
 
@@ -211,6 +225,12 @@ public:
 
   double computeLpErrorFromTransferredSolution(int p, feSolution *otherSol);
 
+  // Reconstruct the isoline u = val for the scalar field
+  // associated to this feNorm and return the points of the curve
+  // in "isoline".
+  feStatus reconstructScalarIsoline(const double val,
+                                    std::vector<double> &isoline);
+
   // void computeInterpolationErrorGradientRochery(const int whichElements[2],
   //                                               const int whichControlPoint_localTag[2],
   //                                               double gradient[2]);
@@ -223,6 +243,7 @@ public:
 private:
   void initializeLocalSolutionOnSpace(int iSpace, int iElm);
   void initializeLocalSolutionTimeDerivativeOnSpace(int iSpace, int iElm);
+  void assignFieldsToCallbackArguments(const int iNode);
   double computeLpNorm(int p, bool error = false);
   double computeVectorLpNorm(int p, bool error = false);
   double computeLpErrorEstimator(int p);
@@ -237,6 +258,8 @@ private:
   double computeH1Norm(bool error = false);
   double computeArea();
   double computeIntegral();
+  double computeIntegralSolutionDependentFunction();
+  void computeVectorIntegralSolutionDependentFunction(std::vector<double> &res);
   double computeIntegralDt();
   double computeIntegralUserFunction();
   double computeIntegralDotProduct();

@@ -46,8 +46,13 @@ typedef enum {
   MIXED_CURL,
   MIXED_DOTPRODUCT,
 
+  SCALAR_VECTOR_PRODUCT,
+
   CHNS_MOMENTUM,
   MIXED_DIVERGENCE_CHNS,
+  CHNS_TRACER_SUPG,
+
+  CHNS_MOMENTUM_ALTERNATIVE,
 
   SUPG_PSPG_STOKES,
   SUPG_PSPG_NAVIERSTOKES,
@@ -127,12 +132,18 @@ inline const std::string toString(elementSystemType t)
       return "MIXED_CURL";
     case MIXED_DOTPRODUCT:
       return "MIXED_DOTPRODUCT";
+    case SCALAR_VECTOR_PRODUCT:
+      return "SCALAR_VECTOR_PRODUCT";
     case TRIPLE_MIXED_GRADIENT:
       return "TRIPLE_MIXED_GRADIENT";
     case CHNS_MOMENTUM:
       return "CHNS_MOMENTUM";
+    case CHNS_MOMENTUM_ALTERNATIVE:
+      return "CHNS_MOMENTUM_ALTERNATIVE";
     case MIXED_DIVERGENCE_CHNS:
       return "MIXED_DIVERGENCE_CHNS";
+    case CHNS_TRACER_SUPG:
+      return "CHNS_TRACER_SUPG";
     case NEUMANN_1D:
       return "NEUMANN_1D";
     case SUPG_STABILIZATION_1D:
@@ -983,7 +994,7 @@ public:
 // Mixed divergence with density function of the phase marker phi:
 //
 //    coeff * (rho(phi) * div(u)) * q, with      q (= phiP) : pressure test functions
-
+//
 // Integral of coeff * (div(rho(phi) * u)) * v
 //
 template <int dim>
@@ -1005,6 +1016,33 @@ public:
   virtual void computeAe(feBilinearForm *form) override;
   virtual void computeBe(feBilinearForm *form) override;
   CLONEABLE(feSysElm_MixedDivergenceCHNS)
+};
+
+//
+// SUPG formulation for the tracer equation in the CHNS model:
+//
+//   (dphidt + u dot grad(phi) - M*lap(mu)) * (tau * u * grad(test_phi))
+//
+template <int dim>
+class feSysElm_CHNS_Tracer_SUPG : public feSysElm
+{
+protected:
+  feFunction *_coeff;
+  feFunction *_mobility;
+  int _idPhi, _idU, _idMu;
+  int _nFunctionsPhi, _nFunctionsU, _nFunctionsMu;
+  std::vector<double> _u, _gradphi, _gradPhiphi, _hessMu;
+
+public:
+  feSysElm_CHNS_Tracer_SUPG(feFunction *coeff, feFunction *mobility)
+    : feSysElm(dim, 3, CHNS_TRACER_SUPG, true), _coeff(coeff), _mobility(mobility)
+  {
+    _computeMatrixWithFD = true;
+  };
+  virtual void createElementarySystem(std::vector<feSpace *> &space) override;
+  virtual void computeAe(feBilinearForm *form) override;
+  virtual void computeBe(feBilinearForm *form) override;
+  CLONEABLE(feSysElm_CHNS_Tracer_SUPG)
 };
 
 template <int dim>
@@ -1043,6 +1081,32 @@ public:
   virtual void computeAe(feBilinearForm *form) override;
   virtual void computeBe(feBilinearForm *form) override;
   CLONEABLE(feSysElm_MixedDotProduct)
+};
+
+// This is actually a weak divergence,
+// but the scalar coefficient is also an unknown field.
+//
+// Scalar-vector product : u v, with u an unknown scalar field
+//                                   v an unknown vector field
+// Integral of (u v) cdot grad(phi_u), with v the test function of another scalar unknown field.
+template <int dim>
+class feSysElm_ScalarVectorProduct : public feSysElm
+{
+protected:
+  feFunction *_coeff;
+  int _idU, _idV, _nFunctionsU, _nFunctionsV;
+  std::vector<double> _v, _gradPhiU;
+
+public:
+  feSysElm_ScalarVectorProduct(feFunction *coeff)
+    : feSysElm(dim, 2, SCALAR_VECTOR_PRODUCT, true), _coeff(coeff)
+  {
+    _computeMatrixWithFD = true;
+  };
+  virtual void createElementarySystem(std::vector<feSpace *> &space) override;
+  virtual void computeAe(feBilinearForm *form) override;
+  virtual void computeBe(feBilinearForm *form) override;
+  CLONEABLE(feSysElm_ScalarVectorProduct)
 };
 
 //
@@ -1133,6 +1197,45 @@ public:
   virtual void computeAe(feBilinearForm *form) override;
   virtual void computeBe(feBilinearForm *form) override;
   CLONEABLE(feSysElm_CHNS_Momentum)
+};
+
+template <int dim>
+class feSysElm_CHNS_Momentum_Alternative : public feSysElm
+{
+protected:
+  feFunction *_density;
+  feFunction *_drhodphi;
+  feFunction *_viscosity;
+  feFunction *_dviscdphi;
+  feFunction *_mobility;
+  feFunction *_coeffKorteweg;
+  feVectorFunction *_volumeForce;
+  int _idU, _idP, _idPhi, _idMu;
+  int _nFunctionsU, _nFunctionsP, _nFunctionsPhi, _nFunctionsMu;
+  // A lot of vectors for the dot products and contractions
+  std::vector<double> _f, _u, _dudt, _gradu, _uDotGradu, _gradphi, _gradmu, _gradmuDotGradu,
+    _symmetricGradu, _phiU, _gradPhiU, _phiP, _phiPhi, _gradPhiPhi, _phiMu, _gradPhiMu,
+    _dudtDotPhiU, _uDotGraduDotPhiU, _fDotPhiU, _gradPhiDotphiU, _gradMuDotgradUdotphiU, _divPhiU,
+    _doubleContraction, _phi_idotphi_j, _u0DotGradPhiUDotPhiU, _phiUDotGradu0DotPhiU,
+    _doubleContractionPhiPhi, _doubleContractionPhiPhiT, _gradMu0DotgradUdotphiU,
+    _gradMuDotgradU0DotphiU, _gradPhi0dotPhiU, _gradPhiPhiDotPhiU, _symGraduDDotGradPhiU;
+
+  std::vector<double> _uDotPhiU, _gradMuDotphiU;
+
+public:
+  feSysElm_CHNS_Momentum_Alternative(feFunction *density, feFunction *drhodphi, feFunction *viscosity,
+                         feFunction *dviscdphi, feFunction *mobility, feFunction *coeffKorteweg,
+                         feVectorFunction *volumeForce)
+    : feSysElm(dim, 4, CHNS_MOMENTUM, true), _density(density), _drhodphi(drhodphi),
+      _viscosity(viscosity), _dviscdphi(dviscdphi), _mobility(mobility),
+      _coeffKorteweg(coeffKorteweg), _volumeForce(volumeForce)
+  {
+    _computeMatrixWithFD = true;
+  };
+  virtual void createElementarySystem(std::vector<feSpace *> &space) override;
+  virtual void computeAe(feBilinearForm *form) override;
+  virtual void computeBe(feBilinearForm *form) override;
+  CLONEABLE(feSysElm_CHNS_Momentum_Alternative)
 };
 
 //

@@ -521,6 +521,12 @@ feStatus feMetric::computeMetrics()
   double n = 2.; // Space dimension
   double deg = (double)_options.polynomialDegree;
 
+  feInfoCond(FE_VERBOSE > 0, "\t\tComputing metric with parameters:");
+  feInfoCond(FE_VERBOSE > 0, "\t\t\tTarget number of vertices: %f", N);
+  feInfoCond(FE_VERBOSE > 0, "\t\t\tTarget Lp norm: %f", p);
+  feInfoCond(FE_VERBOSE > 0, "\t\t\tSpace dimension: %f", n);
+  feInfoCond(FE_VERBOSE > 0, "\t\t\tPolynomial degree of sensor: %f", deg);
+
   // Compute the raw metric field (no scaling)
   switch(_options.method) {
 

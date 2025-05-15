@@ -2,6 +2,99 @@
 #include "feBilinearForm.h"
 #include "feNumeric.h"
 
+//
+// SUPG element sizes and tau coefficient
+//
+static double hFortin(int dim, const double velocity[3], double normVelocity, int nFunctions,
+                      const std::vector<double> &gradphi)
+{
+  // Compute h from (13.17) in Fortin & Garon
+  double res = 0., dotprod;
+  for(int i = 0; i < nFunctions; ++i) {
+    dotprod = 0.;
+    for(int iDim = 0; iDim < dim; ++iDim) {
+      dotprod += velocity[iDim] / normVelocity * gradphi[i * dim + iDim];
+    }
+    res += dotprod * dotprod;
+  }
+
+  return sqrt(2.) / sqrt(res);
+}
+
+static double getInnerRadius(const std::vector<double> &triCoord)
+{
+  // radius of inscribed circle = 2 * Area / sum(Line_i)
+  double dist[3], k = 0.;
+  for(int i = 0; i < 3; i++) {
+    double x0 = triCoord[3 * i + 0];
+    double y0 = triCoord[3 * i + 1];
+    double x1 = triCoord[3 * ((i + 1) % 3) + 0];
+    double y1 = triCoord[3 * ((i + 1) % 3) + 1];
+    dist[i] = sqrt((x1 - x0) * (x1 - x0) + (y1 - y0) * (y1 - y0));
+    k += 0.5 * dist[i];
+  }
+  double const area = std::sqrt(k * (k - dist[0]) * (k - dist[1]) * (k - dist[2]));
+  return area / k;
+}
+
+static double getOuterRadius(const std::vector<double> &triCoord)
+{
+  // radius of circle circumscribing a triangle
+  double dist[3], k = 0.0;
+  for(int i = 0; i < 3; i++) {
+    double x0 = triCoord[3 * i + 0];
+    double y0 = triCoord[3 * i + 1];
+    double x1 = triCoord[3 * ((i + 1) % 3) + 0];
+    double y1 = triCoord[3 * ((i + 1) % 3) + 1];
+    dist[i] = sqrt((x1 - x0) * (x1 - x0) + (y1 - y0) * (y1 - y0));
+    k += 0.5 * dist[i];
+  }
+  double const area = std::sqrt(k * (k - dist[0]) * (k - dist[1]) * (k - dist[2]));
+  return dist[0] * dist[1] * dist[2] / (4 * area);
+}
+
+static double hCircumInscr(const std::vector<double> &triCoord)
+{
+  double hInscribed = 2. * getInnerRadius(triCoord);
+  double hCircumscribed = 2. * getOuterRadius(triCoord);
+  return (hInscribed + hCircumscribed) / 2.;
+}
+
+// Diameter of circle of equivalent area
+inline double hEquivalentCircle(const double jac) { return 2. * sqrt(jac / (2. * M_PI)); }
+
+template <int dim> 
+static double compute_tau(const std::vector<double> &triCoord, double velocity[3],
+                          double viscosity, int nFunctions, std::vector<double> &gradphi,
+                          double jac)
+{
+  double normV = 0.;
+  if constexpr(dim == 2) {
+    normV = sqrt(velocity[0] * velocity[0]
+               + velocity[1] * velocity[1]);
+  }
+  if constexpr(dim == 3) {
+    normV = sqrt(velocity[0] * velocity[0]
+               + velocity[1] * velocity[1]
+               + velocity[2] * velocity[2]);
+  }
+
+  double h1 = hFortin(dim, velocity, normV, nFunctions, gradphi);
+  if(normV < 1e-12) {
+    return 0.;
+  }
+  double h2 = hCircumInscr(triCoord);
+  double h3 = hEquivalentCircle(jac);
+
+  UNUSED(h1, h2, h3);
+  double h = h1;
+
+  double r1 = 2. * normV / h;
+  double r2 = 4. * viscosity / (h * h);
+
+  return 1. / sqrt(r1 * r1 + 9. * r2 * r2);
+}
+
 // -----------------------------------------------------------------------------
 // Linear form: vector-valued source term
 // -----------------------------------------------------------------------------
@@ -661,8 +754,8 @@ template class feSysElm_MixedDivergence<2>;
 
 // -----------------------------------------------------------------------------
 // Bilinear form: mixed divergence with density function of phase marker (CHNS)
-
-template <int dim>// -----------------------------------------------------------------------------
+// -----------------------------------------------------------------------------
+template <int dim>
 void feSysElm_MixedDivergenceCHNS<dim>::createElementarySystem(std::vector<feSpace *> &space)
 {
   _idP   = 0; // Pressure test functions
@@ -771,9 +864,103 @@ template class feSysElm_MixedDivergenceCHNS<2>;
 // template class feSysElm_MixedDivergenceCHNS<3>;
 
 // -----------------------------------------------------------------------------
-// Bilinear form: mixed curl
+// SUPG stabilization for CHNS tracer equation
+// -----------------------------------------------------------------------------
+template <int dim>
+void feSysElm_CHNS_Tracer_SUPG<dim>::createElementarySystem(std::vector<feSpace *> &space)
+{
+  _idPhi = 0;
+  _idU   = 1;
+  _idMu  = 2;
+  _fieldsLayoutI = {_idPhi};
+  _fieldsLayoutJ = {_idPhi, _idU, _idMu};
+  _nFunctionsPhi = space[_idPhi]->getNumFunctions();
+  _nFunctionsU   = space[_idU]->getNumFunctions();
+  _nFunctionsMu  = space[_idMu]->getNumFunctions();
+  // _nComponents = space[_idU]->getNumComponents();
+  _u.resize(dim);
+  _gradphi.resize(dim);
+  _gradPhiphi.resize(dim * _nFunctionsPhi);
+  if constexpr(dim == 2) _hessMu.resize(3); // xx xy yy
+  if constexpr(dim == 3) _hessMu.resize(6); // xx xy yy xz yz zz
+}
 
-template <int dim>// -----------------------------------------------------------------------------
+template <int dim>
+void feSysElm_CHNS_Tracer_SUPG<dim>::computeAe(feBilinearForm *form)
+{
+  UNUSED(form);
+  feErrorMsg(FE_STATUS_ERROR, "Computing matrix with finite differences");
+  exit(-1);
+}
+
+template <int dim>
+void feSysElm_CHNS_Tracer_SUPG<dim>::computeBe(feBilinearForm *form)
+{
+  double jac, coeff, phi, M, R, uDotGradPhi, laplacian_mu, uDotGradPhiphi,
+    dphidt, tau;
+  for(int k = 0; k < _nQuad; ++k) {
+    jac = form->_J[_nQuad * form->_numElem + k];
+    form->_cnc->getElementTransformation(form->_geoCoord, k, jac, form->_transformation);
+
+    // Evaluate scalar coefficients
+    form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, form->_args.pos);
+    phi = form->_intSpaces[_idPhi]->interpolateFieldAtQuadNode(form->_sol[_idPhi], k);
+    form->_args.u = phi;
+    coeff = (*_coeff)(form->_args);
+    M = (*_mobility)(form->_args);
+
+    // u
+    form->_intSpaces[_idU]->interpolateVectorFieldAtQuadNode(form->_sol[_idU], k, _u, dim);
+    // gradphi
+    form->_intSpaces[_idPhi]->interpolateFieldAtQuadNode_physicalGradient(
+      form->_sol[_idPhi], k, form->_transformation, _gradphi.data());
+    // gradPhiphi
+    form->_intSpaces[_idPhi]->getFunctionsPhysicalGradientAtQuadNode(k, form->_transformation, _gradPhiphi.data());
+    // hessian of mu
+    form->_intSpaces[_idMu]->interpolateFieldAtQuadNode_physicalHessian(form->_sol[_idMu], k, form->_transformation, _hessMu.data());
+
+    if constexpr(dim == 2) {
+      uDotGradPhi = _u[0] * _gradphi[0] + _u[1] * _gradphi[1];
+      laplacian_mu = _hessMu[0] + _hessMu[2];
+    }
+
+    if constexpr(dim == 3) {
+      uDotGradPhi = _u[0] * _gradphi[0] + _u[1] * _gradphi[1] + _u[2] * _gradphi[2];
+      laplacian_mu = _hessMu[0] + _hessMu[2] + _hessMu[5];
+    }
+
+    // Residual of the tracer equation
+    dphidt = form->_intSpaces[_idPhi]->interpolateFieldAtQuadNode(form->_solDot[_idPhi], k);
+    R = dphidt + uDotGradPhi - M * laplacian_mu;
+
+    // Which "viscosity" coefficient to take? Here the mobility M?
+    tau = compute_tau<dim>(form->_geoCoord, _u.data(), M, _nFunctionsPhi, _gradPhiphi, jac);
+
+    for(int i = 0; i < _nFunctionsPhi; ++i) {
+
+      // Dot product u dot grad(shape_i)
+      if constexpr(dim == 2) {
+        uDotGradPhiphi = _u[0] * _gradPhiphi[i * dim]
+                       + _u[1] * _gradPhiphi[i * dim + 1];
+      }
+
+      if constexpr(dim == 3) {
+        uDotGradPhiphi = _u[0] * _gradPhiphi[i * dim]
+                       + _u[1] * _gradPhiphi[i * dim + 1]
+                       + _u[2] * _gradPhiphi[i * dim + 2];
+      }
+
+      form->_Be[i] -= coeff * R * tau * uDotGradPhiphi * jac * _wQuad[k];
+    }
+  }
+}
+
+template class feSysElm_CHNS_Tracer_SUPG<2>;
+
+// -----------------------------------------------------------------------------
+// Bilinear form: mixed curl
+// -----------------------------------------------------------------------------
+template <int dim>
 void feSysElm_MixedCurl<dim>::createElementarySystem(std::vector<feSpace *> &space)
 {
   _idV = 0; // Scalar test functions
@@ -827,8 +1014,8 @@ template class feSysElm_MixedCurl<2>;
 
 // -----------------------------------------------------------------------------
 // Bilinear form: mixed dot product
-
-template <int dim>// -----------------------------------------------------------------------------
+// -----------------------------------------------------------------------------
+template <int dim>
 void feSysElm_MixedDotProduct<dim>::createElementarySystem(std::vector<feSpace *> &space)
 {
   _idV = 0; // Scalar test functions
@@ -905,10 +1092,70 @@ template class feSysElm_MixedDotProduct<2>;
 // template class feSysElm_MixedDotProduct<3>;
 
 // -----------------------------------------------------------------------------
+// Bilinear form: weak divergence
+// -----------------------------------------------------------------------------
+template <int dim>
+void feSysElm_ScalarVectorProduct<dim>::createElementarySystem(std::vector<feSpace *> &space)
+{
+  _idU = 0; // Scalar unknown
+  _idV = 1; // Vector unknown
+  _fieldsLayoutI = {_idU};
+  _fieldsLayoutJ = {_idU + _idV};
+  _nFunctionsV = space[_idV]->getNumFunctions();
+  _nFunctionsU = space[_idU]->getNumFunctions();
+  _v.resize(dim);
+  _gradPhiU.resize(_nFunctionsU * dim);
+}
+
+template <int dim>
+void feSysElm_ScalarVectorProduct<dim>::computeAe(feBilinearForm *form)
+{
+  UNUSED(form);
+  feErrorMsg(FE_STATUS_ERROR, "Computing with FD");
+  exit(-1);
+}
+
+template <int dim>
+void feSysElm_ScalarVectorProduct<dim>::computeBe(feBilinearForm *form)
+{
+  double jac, coeff, u, vDotGradPhiU;
+  
+  for(int k = 0; k < _nQuad; ++k)
+  {
+    jac = form->_J[_nQuad * form->_numElem + k];
+    form->_cnc->getElementTransformation(form->_geoCoord, k, jac, form->_transformation);
+
+    // Evaluate fields and coefficients
+    form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, form->_args.pos);
+    coeff = (*_coeff)(form->_args);
+
+    // Scalar u
+    u = form->_intSpaces[_idU]->interpolateFieldAtQuadNode(form->_sol[_idU], k);
+    // Vector v
+    form->_intSpaces[_idV]->interpolateVectorFieldAtQuadNode(form->_sol[_idV], k, _v, dim);
+
+    // Gradient of shape functions of u
+    form->_intSpaces[_idU]->getFunctionsPhysicalGradientAtQuadNode(k, form->_transformation,
+                                                                   _gradPhiU.data());
+
+    for(int i = 0; i < _nFunctionsU; ++i)
+    {
+      if constexpr(dim == 2) {
+        vDotGradPhiU = _v[0] * _gradPhiU[i * dim + 0] + _v[1] *  _gradPhiU[i * dim + 1];
+      }
+
+      form->_Be[i] -= coeff * u * vDotGradPhiU * jac * _wQuad[k];
+    }
+  }
+}
+
+template class feSysElm_ScalarVectorProduct<2>;
+
+// -----------------------------------------------------------------------------
 // Bilinear form: mixed weak gradient involving 2 scalar fields and the test
 //                functions of a 3rd vector field
-
-template <int dim>// -----------------------------------------------------------------------------
+// -----------------------------------------------------------------------------
+template <int dim>
 void feSysElm_TripleMixedGradient<dim>::createElementarySystem(std::vector<feSpace *> &space)
 {
   _idW = 0; // Vector-valued test functions
@@ -1023,13 +1270,14 @@ void feSysElm_CHNS_Momentum<dim>::createElementarySystem(std::vector<feSpace *> 
 template <int dim>
 void feSysElm_CHNS_Momentum<dim>::computeAe(feBilinearForm *form)
 {
+  // feErrorMsg(FE_STATUS_ERROR, "Escaping");
+  // exit(-1);
+
   const feVectorSpace<dim> *uSpace = static_cast<feVectorSpace<dim>*>(form->_intSpaces[_idU]);
   const feSpace *pSpace = form->_intSpaces[_idP];
   const feSpace *fSpace = form->_intSpaces[_idPhi];
   const feSpace *mSpace = form->_intSpaces[_idMu];
   const double *Jptr = form->_J.data() + _nQuad * form->_numElem;
-  // const double *uSol = form->_sol[_idU].data();
-  // const double *uSolDot = form->_solDot[_idU].data();
 
   double jac, jacw, rho0, mobility, drhodphi, coeffKorteweg, eta0, detadphi, phi0, mu;
   for(int k = 0; k < _nQuad; ++k)
@@ -1132,6 +1380,9 @@ void feSysElm_CHNS_Momentum<dim>::computeAe(feBilinearForm *form)
     uSpace->doubleContractionGradShapeOther(_gradPhiU, _symmetricGradu, _symGraduDDotGradPhiU);
     // Pressure gradient
     uSpace->divergence(_gradPhiU, _divPhiU);
+
+    UNUSED(mobility);
+    UNUSED(drhodphi);
     
     // Increment local matrix
     for(int i = 0; i < _nFunctionsU; ++i)
@@ -1177,7 +1428,7 @@ void feSysElm_CHNS_Momentum<dim>::computeAe(feBilinearForm *form)
       {
         form->_Ae[i][J] += (
           // Diffusive flux
-          mobility * drhodphi * _gradMuDotgradU0DotphiU[i*_nFunctionsMu+j]
+          + mobility * drhodphi * _gradMuDotgradU0DotphiU[i*_nFunctionsMu+j]
           // Korteweg force
           + coeffKorteweg * _phiMu[j] * _gradPhi0dotPhiU[i]) * jacw;
       }
@@ -1236,16 +1487,27 @@ void feSysElm_CHNS_Momentum<dim>::computeBe(feBilinearForm *form)
     // Compute u dot gradu
     // Compute gradmu dot gradu
     // Compute symmetric gradient (2*d(u))
-    std::fill(_uDotGradu.begin(), _uDotGradu.end(), 0.);
-    std::fill(_gradmuDotGradu.begin(), _gradmuDotGradu.end(), 0.);
-    for(int m = 0; m < _nComponents; ++m) {
-      for(int n = 0; n < _nComponents; ++n) {
-        // Contract _u and _gradmu with the lines of _gradu
-        _uDotGradu[m] += _u[n] * _gradu[n * _nComponents + m];
-        _gradmuDotGradu[m] += _gradmu[n] * _gradu[n * _nComponents + m];
-        _symmetricGradu[m * _nComponents + n] =
-          _gradu[m * _nComponents + n] + _gradu[n * _nComponents + m];
-      }
+    // std::fill(_uDotGradu.begin(), _uDotGradu.end(), 0.);
+    // std::fill(_gradmuDotGradu.begin(), _gradmuDotGradu.end(), 0.);
+    // for(int m = 0; m < _nComponents; ++m) {
+    //   for(int n = 0; n < _nComponents; ++n) {
+    //     // Contract _u and _gradmu with the lines of _gradu
+    //     _uDotGradu[m] += _u[n] * _gradu[n * _nComponents + m];
+    //     _gradmuDotGradu[m] += _gradmu[n] * _gradu[n * _nComponents + m];
+    //     _symmetricGradu[m * _nComponents + n] =
+    //       _gradu[m * _nComponents + n] + _gradu[n * _nComponents + m];
+    //   }
+    // }
+
+    if constexpr(dim == 2) {
+      _uDotGradu[0] = _u[0] * _gradu[0] + _u[1] * _gradu[2];
+      _uDotGradu[1] = _u[0] * _gradu[1] + _u[1] * _gradu[3];
+      _gradmuDotGradu[0] = _gradmu[0] * _gradu[0] + _gradmu[1] * _gradu[2];
+      _gradmuDotGradu[1] = _gradmu[0] * _gradu[1] + _gradmu[1] * _gradu[3];
+      _symmetricGradu[0] = _gradu[0] + _gradu[0];
+      _symmetricGradu[1] = _gradu[1] + _gradu[2];
+      _symmetricGradu[2] = _gradu[2] + _gradu[1];
+      _symmetricGradu[3] = _gradu[3] + _gradu[3];
     }
 
     uSpace->dotProductShapeOther(k, _dudt, _dudtDotPhiU);
@@ -1255,6 +1517,9 @@ void feSysElm_CHNS_Momentum<dim>::computeBe(feBilinearForm *form)
     uSpace->dotProductShapeOther(k, _gradphi, _gradPhiDotphiU);
     uSpace->divergence(_gradPhiU, _divPhiU);
     uSpace->doubleContractionGradShapeOther(_gradPhiU, _symmetricGradu, _doubleContraction);
+
+    UNUSED(mobility);
+    UNUSED(drhodphi);
 
     // Increment RHS
     for(int i = 0; i < _nFunctionsU; ++i)
@@ -1278,6 +1543,328 @@ void feSysElm_CHNS_Momentum<dim>::computeBe(feBilinearForm *form)
 // template class feSysElm_CHNS_Momentum<1>;
 template class feSysElm_CHNS_Momentum<2>;
 // template class feSysElm_CHNS_Momentum<3>;
+
+// // -----------------------------------------------------------------------------
+// // Bilinear form: Alternative CHNS Momentum equation
+// -----------------------------------------------------------------------------
+template <int dim>
+void feSysElm_CHNS_Momentum_Alternative<dim>::createElementarySystem(std::vector<feSpace *> &space)
+{
+  _idU   = 0;
+  _idP   = 1;
+  _idPhi = 2;
+  _idMu  = 3;
+  _fieldsLayoutI = {_idU};
+  _fieldsLayoutJ = {_idU, _idP, _idPhi, _idMu};
+  _nFunctionsU = space[_idU]->getNumFunctions();
+  _nFunctionsP = space[_idP]->getNumFunctions();
+  _nFunctionsPhi = space[_idPhi]->getNumFunctions();
+  _nFunctionsMu = space[_idMu]->getNumFunctions();
+  _nComponents = space[_idU]->getNumComponents();
+  _f.resize(_nComponents);
+  _u.resize(_nComponents);
+  _dudt.resize(_nComponents);
+  _gradu.resize(_nComponents * _nComponents);
+  _uDotGradu.resize(_nComponents);
+  _gradphi.resize(_nComponents);
+  _gradmu.resize(_nComponents);
+  _gradmuDotGradu.resize(_nComponents);
+  _symmetricGradu.resize(_nComponents * _nComponents);
+
+  // phiU is the test function of U, unrelated to the phase marker Phi
+  _phiU.resize(_nFunctionsU);
+  _gradPhiU.resize(_nComponents * _nComponents * _nFunctionsU);
+  _phiP.resize(_nFunctionsP);
+  _phiPhi.resize(_nFunctionsPhi);
+  _gradPhiPhi.resize(_nComponents * _nFunctionsPhi);
+  _phiMu.resize(_nFunctionsMu);
+  _gradPhiMu.resize(_nComponents * _nFunctionsMu);
+
+  _uDotPhiU.resize(_nFunctionsU);
+  _dudtDotPhiU.resize(_nFunctionsU);
+  _uDotGraduDotPhiU.resize(_nFunctionsU);
+  _fDotPhiU.resize(_nFunctionsU);
+  _gradPhiDotphiU.resize(_nFunctionsU);
+  _gradMuDotphiU.resize(_nFunctionsU);
+  _gradMuDotgradUdotphiU.resize(_nFunctionsU);
+  _divPhiU.resize(_nFunctionsU);
+  _doubleContraction.resize(_nFunctionsU);
+
+  _phi_idotphi_j.resize(_nFunctionsU*_nFunctionsU);
+  _u0DotGradPhiUDotPhiU.resize(_nFunctionsU*_nFunctionsU);
+  _phiUDotGradu0DotPhiU.resize(_nFunctionsU*_nFunctionsU);
+  _doubleContractionPhiPhi.resize(_nFunctionsU*_nFunctionsU);
+  _doubleContractionPhiPhiT.resize(_nFunctionsU*_nFunctionsU);
+  _gradMu0DotgradUdotphiU.resize(_nFunctionsU*_nFunctionsU);
+  _gradMuDotgradU0DotphiU.resize(_nFunctionsU*_nFunctionsMu);
+  _gradPhi0dotPhiU.resize(_nFunctionsU);
+  _gradPhiPhiDotPhiU.resize(_nFunctionsU*_nFunctionsPhi);
+  _symGraduDDotGradPhiU.resize(_nFunctionsU);
+}
+
+template <int dim>
+void feSysElm_CHNS_Momentum_Alternative<dim>::computeAe(feBilinearForm *form)
+{
+  UNUSED(form);
+  feErrorMsg(FE_STATUS_ERROR, "Computing with FD");
+  exit(-1);
+  // const feVectorSpace<dim> *uSpace = static_cast<feVectorSpace<dim>*>(form->_intSpaces[_idU]);
+  // const feSpace *pSpace = form->_intSpaces[_idP];
+  // const feSpace *fSpace = form->_intSpaces[_idPhi];
+  // const feSpace *mSpace = form->_intSpaces[_idMu];
+  // const double *Jptr = form->_J.data() + _nQuad * form->_numElem;
+
+  // double jac, jacw, rho0, mobility, drhodphi, coeffKorteweg, eta0, detadphi, phi0, mu;
+  // for(int k = 0; k < _nQuad; ++k)
+  // {
+  //   // jac = form->_J[_nQuad * form->_numElem + k];
+  //   jac = Jptr[k];
+  //   jacw = jac * _wQuad[k];
+  //   form->_cnc->getElementTransformation(form->_geoCoord, k, jac, form->_transformation);
+
+  //   // Evaluate scalar coefficients
+  //   form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, form->_args.pos);
+  //   phi0 = fSpace->interpolateFieldAtQuadNode(form->_sol[_idPhi], k);
+  //   form->_args.u = phi0;
+  //   rho0 = (*_density)(form->_args);
+  //   mobility = (*_mobility)(form->_args);
+  //   drhodphi = (*_drhodphi)(form->_args);
+  //   eta0 = (*_viscosity)(form->_args);
+  //   detadphi = (*_dviscdphi)(form->_args);
+  //   coeffKorteweg = (*_coeffKorteweg)(form->_args);
+  //   (*_volumeForce)(form->_args, _f);
+
+  //   // Get all relevant values and gradients
+  //   // u
+  //   uSpace->interpolateVectorFieldAtQuadNode(form->_sol[_idU], k, _u, _nComponents);
+  //   // dudt
+  //   uSpace->interpolateVectorFieldAtQuadNode(form->_solDot[_idU], k, _dudt, _nComponents);
+  //   // grad_u
+  //   uSpace->interpolateVectorFieldAtQuadNode_physicalGradient(form->_sol[_idU], _nComponents, k, form->_transformation, _gradu.data());
+  //   // grad_phiU
+  //   uSpace->getVectorFunctionsPhysicalGradientAtQuadNode(k, form->_transformation, _gradPhiU);
+
+  //   // phiP
+  //   pSpace->getFunctionsAtQuadNode(k, _phiP);
+
+  //   // grad_phi
+  //   fSpace->interpolateFieldAtQuadNode_physicalGradient(
+  //     form->_sol[_idPhi], k, form->_transformation, _gradphi.data());
+  //   // phiPhi
+  //   fSpace->getFunctionsAtQuadNode(k, _phiPhi);
+  //   // grad_phiPhi
+  //   fSpace->getFunctionsPhysicalGradientAtQuadNode(k, form->_transformation,
+  //                                                                  _gradPhiPhi.data());
+
+  //   // mu
+  //   mu = mSpace->interpolateFieldAtQuadNode(form->_sol[_idMu], k);
+  //   // grad_mu
+  //   mSpace->interpolateFieldAtQuadNode_physicalGradient(
+  //     form->_sol[_idMu], k, form->_transformation, _gradmu.data());
+  //   // phiMu
+  //   mSpace->getFunctionsAtQuadNode(k, _phiMu);
+  //   // grad_phiMu
+  //   mSpace->getFunctionsPhysicalGradientAtQuadNode(k, form->_transformation,
+  //                                                                  _gradPhiMu.data());
+
+  //   // Compute u0 dot gradu0
+  //   // std::fill(_uDotGradu.begin(), _uDotGradu.end(), 0.);
+  //   // for(int m = 0; m < _nComponents; ++m) {
+  //   //   for(int n = 0; n < _nComponents; ++n) {
+  //   //     // Contract _u and _gradmu with the lines of _gradu
+  //   //     _uDotGradu[m] += _u[n] * _gradu[n * _nComponents + m];
+  //   //     _symmetricGradu[m * _nComponents + n] =
+  //   //       _gradu[m * _nComponents + n] + _gradu[n * _nComponents + m];
+  //   //   }
+  //   // }
+
+  //   if constexpr(dim == 2) {
+  //     _uDotGradu[0] = _u[0] * _gradu[0] + _u[1] * _gradu[2];
+  //     _uDotGradu[1] = _u[0] * _gradu[1] + _u[1] * _gradu[3];
+  //     _symmetricGradu[0] = _gradu[0] + _gradu[0];
+  //     _symmetricGradu[1] = _gradu[1] + _gradu[2];
+  //     _symmetricGradu[2] = _gradu[2] + _gradu[1];
+  //     _symmetricGradu[3] = _gradu[3] + _gradu[3];
+  //   }
+
+  //   if constexpr(dim == 3) {
+  //     feErrorMsg(FE_STATUS_ERROR, "Add contractions in 3D");
+  //     exit(-1);
+  //   } 
+
+  //   // Compute all the required dot products and contractions:
+
+  //   // Acceleration, convective acceleration and source term
+  //   uSpace->dotProductShapeShape(k, _phi_idotphi_j);
+  //   uSpace->dotProductShapeOther(k, _dudt, _dudtDotPhiU);
+  //   uSpace->dotProductShapeOther(k, _uDotGradu, _uDotGraduDotPhiU);
+  //   uSpace->dotProductShapeOther(k, _f, _fDotPhiU);
+  //   // [(u0 dot gradu) + (u dot gradu0)] cdot phiU
+  //   uSpace->vectorDotGradShapeDotShape(k, _gradPhiU, _u, _u0DotGradPhiUDotPhiU);
+  //   uSpace->shapeDotTensorDotShape(k, _gradu, _phiUDotGradu0DotPhiU);
+  //   // Diffusive flux
+  //   // [(gradmu0 dot gradu) + (gradmu dot gradu0)] cdot phiU
+  //   uSpace->vectorDotGradShapeDotShape(k, _gradPhiU, _gradmu, _gradMu0DotgradUdotphiU);
+  //   uSpace->gradOtherScalarShapeDotTensorDotShape(k, _nFunctionsMu, _gradPhiMu, _gradu, _gradMuDotgradU0DotphiU);
+  //   // Korteweg force
+  //   uSpace->dotProductShapeOther(k, _gradphi, _gradPhi0dotPhiU);
+  //   uSpace->dotProductShapeGradShapeOtherSpace(k, _nFunctionsPhi, _gradPhiPhi, _gradPhiPhiDotPhiU);
+  //   // Viscous term
+  //   uSpace->doubleContractionGradShapeGradShape(_gradPhiU, _doubleContractionPhiPhi);
+  //   uSpace->doubleContractionGradShapeGradShapeTransposed(_gradPhiU, _doubleContractionPhiPhiT);
+  //   uSpace->doubleContractionGradShapeOther(_gradPhiU, _symmetricGradu, _symGraduDDotGradPhiU);
+  //   // Pressure gradient
+  //   uSpace->divergence(_gradPhiU, _divPhiU);
+
+  //   UNUSED(mobility);
+  //   UNUSED(drhodphi);
+    
+  //   // Increment local matrix
+  //   for(int i = 0; i < _nFunctionsU; ++i)
+  //   {
+  //     int J = 0;
+  //     // phiU - u block
+  //     for(int j = 0; j < _nFunctionsU; ++j, ++J)
+  //     {
+  //       form->_Ae[i][J] += (
+  //         // Acceleration
+  //         rho0 * (form->_c0 * _phi_idotphi_j[i*_nFunctionsU+j]
+  //                    + _u0DotGradPhiUDotPhiU[i*_nFunctionsU+j]
+  //                    + _phiUDotGradu0DotPhiU[i*_nFunctionsU+j])
+  //         // Diffusive flux
+  //         // + mobility * drhodphi * _gradMu0DotgradUdotphiU[i*_nFunctionsU+j]
+  //         // Viscous term
+  //         + eta0 * (_doubleContractionPhiPhi [i*_nFunctionsU+j]
+  //                 + _doubleContractionPhiPhiT[i*_nFunctionsU+j])) * jacw;
+  //     }
+
+  //     // phiU - p block
+  //     for(int j = 0; j < _nFunctionsP; ++j, ++J)
+  //     {
+  //       // Pressure gradient
+  //       form->_Ae[i][J] += (- _phiP[j]) * _divPhiU[i] * jacw;
+  //     }
+
+  //     // phiU - phi block
+  //     for(int j = 0; j < _nFunctionsPhi; ++j, ++J)
+  //     {
+  //       form->_Ae[i][J] += (
+  //         // Acceleration and source term
+  //         drhodphi * _phiPhi[j] * (_dudtDotPhiU[i] + _uDotGraduDotPhiU[i] - _fDotPhiU[i])
+  //         // Korteweg force
+  //         + coeffKorteweg * mu * _gradPhiPhiDotPhiU[i*_nFunctionsPhi+j]
+  //         // Viscous term
+  //         + detadphi * _phiPhi[j] * _symGraduDDotGradPhiU[i]
+  //         ) * jacw;
+  //     }
+
+  //     // phiU - mu block
+  //     for(int j = 0; j < _nFunctionsMu; ++j, ++J)
+  //     {
+  //       form->_Ae[i][J] += (
+  //         // Diffusive flux
+  //         // mobility * drhodphi * _gradMuDotgradU0DotphiU[i*_nFunctionsMu+j]
+  //         // Korteweg force
+  //         + coeffKorteweg * _phiMu[j] * _gradPhi0dotPhiU[i]) * jacw;
+  //     }
+  //   }
+  // }
+}
+
+template <int dim>
+void feSysElm_CHNS_Momentum_Alternative<dim>::computeBe(feBilinearForm *form)
+{
+  const feVectorSpace<dim> *uSpace = static_cast<feVectorSpace<dim>*>(form->_intSpaces[_idU]);
+
+  double jac, rho, drhodphi, eta, p, phi, dphidt, divu, divRhoU, uDotGradRho;
+
+  for(int k = 0; k < _nQuad; ++k)
+  {
+    jac = form->_J[_nQuad * form->_numElem + k];
+    form->_cnc->getElementTransformation(form->_geoCoord, k, jac, form->_transformation);
+
+    // Evaluate scalar coefficients
+    form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, form->_args.pos);
+    phi = form->_intSpaces[_idPhi]->interpolateFieldAtQuadNode(form->_sol[_idPhi], k);
+    
+    // Set phi as current solution value in function arguments
+    form->_args.u = phi;
+
+    rho = (*_density)(form->_args);
+    drhodphi = (*_drhodphi)(form->_args);
+    eta = (*_viscosity)(form->_args);
+    (*_volumeForce)(form->_args, _f);
+    
+    // Get all relevant values and gradients
+    // u
+    uSpace->interpolateVectorFieldAtQuadNode(form->_sol[_idU], k, _u, _nComponents);
+    // dudt
+    uSpace->interpolateVectorFieldAtQuadNode(form->_solDot[_idU], k, _dudt, _nComponents);
+    // grad_u
+    uSpace->interpolateVectorFieldAtQuadNode_physicalGradient(
+      form->_sol[_idU], _nComponents, k, form->_transformation, _gradu.data());
+    // grad_phiU
+    uSpace->getVectorFunctionsPhysicalGradientAtQuadNode(k, form->_transformation, _gradPhiU);
+
+    // p
+    p = form->_intSpaces[_idP]->interpolateFieldAtQuadNode(form->_sol[_idP], k);
+
+    // dphidt
+    dphidt = form->_intSpaces[_idPhi]->interpolateFieldAtQuadNode(form->_solDot[_idPhi], k);
+    // grad_phi
+    form->_intSpaces[_idPhi]->interpolateFieldAtQuadNode_physicalGradient(
+      form->_sol[_idPhi], k, form->_transformation, _gradphi.data());
+
+    // grad_mu
+    form->_intSpaces[_idMu]->interpolateFieldAtQuadNode_physicalGradient(
+      form->_sol[_idMu], k, form->_transformation, _gradmu.data());
+
+    if constexpr(dim == 2) {
+      _uDotGradu[0] = _u[0] * _gradu[0] + _u[1] * _gradu[2];
+      _uDotGradu[1] = _u[0] * _gradu[1] + _u[1] * _gradu[3];
+      _symmetricGradu[0] = _gradu[0] + _gradu[0];
+      _symmetricGradu[1] = _gradu[1] + _gradu[2];
+      _symmetricGradu[2] = _gradu[2] + _gradu[1];
+      _symmetricGradu[3] = _gradu[3] + _gradu[3];
+
+      divu = _gradu[0] + _gradu[3];
+      uDotGradRho = drhodphi * (_u[0] * _gradphi[0] + _u[1] * _gradphi[1]);
+    }
+
+    divRhoU = rho * divu + uDotGradRho;
+
+    uSpace->dotProductShapeOther(k, _u, _uDotPhiU);
+    uSpace->dotProductShapeOther(k, _dudt, _dudtDotPhiU);
+    uSpace->dotProductShapeOther(k, _uDotGradu, _uDotGraduDotPhiU);
+    uSpace->dotProductShapeOther(k, _f, _fDotPhiU);
+    uSpace->dotProductShapeOther(k, _gradmu, _gradMuDotphiU);
+    uSpace->divergence(_gradPhiU, _divPhiU);
+    uSpace->doubleContractionGradShapeOther(_gradPhiU, _symmetricGradu, _doubleContraction);
+
+    // Increment RHS
+    for(int i = 0; i < _nFunctionsU; ++i)
+    {
+      form->_Be[i] -= jac * _wQuad[k] * (
+        
+        // Acceleration
+        rho * (_dudtDotPhiU[i] + _uDotGraduDotPhiU[i] - _fDotPhiU[i])
+        
+        // Mass conservation
+        + 0.5 * _uDotPhiU[i] * (drhodphi * dphidt + divRhoU)
+
+        // Korteweg force
+        + phi * _gradMuDotphiU[i]
+        
+        // Pressure gradient
+        - p * _divPhiU[i]
+        
+        // Viscous term
+        + eta * _doubleContraction[i]);
+    }
+  }
+}
+
+template class feSysElm_CHNS_Momentum_Alternative<2>;
 
 // -----------------------------------------------------------------------------
 // Bilinear form: convective acceleration of vector-valued field
@@ -1671,92 +2258,6 @@ template class feSysElm_DivergenceNewtonianStress<2>;
 // -----------------------------------------------------------------------------
 // Bilinear forms: Stabilization for the (Navier-)Stokes equations
 // -----------------------------------------------------------------------------
-// static double hFortin(int dim, const double velocity[3], double normVelocity, int nFunctions,
-//                       const std::vector<double> &gradphi)
-// {
-//   // Compute h from (13.17) in Fortin & Garon
-//   double res = 0., dotprod;
-//   for(int i = 0; i < nFunctions; ++i) {
-//     dotprod = 0.;
-//     for(int iDim = 0; iDim < dim; ++iDim) {
-//       dotprod += velocity[iDim] / normVelocity * gradphi[i * dim + iDim];
-//     }
-//     res += dotprod * dotprod;
-//   }
-
-//   return sqrt(2.) / sqrt(res);
-// }
-
-// static double getInnerRadius(const std::vector<double> &triCoord)
-// {
-//   // radius of inscribed circle = 2 * Area / sum(Line_i)
-//   double dist[3], k = 0.;
-//   for(int i = 0; i < 3; i++) {
-//     double x0 = triCoord[3 * i + 0];
-//     double y0 = triCoord[3 * i + 1];
-//     double x1 = triCoord[3 * ((i + 1) % 3) + 0];
-//     double y1 = triCoord[3 * ((i + 1) % 3) + 1];
-//     dist[i] = sqrt((x1 - x0) * (x1 - x0) + (y1 - y0) * (y1 - y0));
-//     k += 0.5 * dist[i];
-//   }
-//   double const area = std::sqrt(k * (k - dist[0]) * (k - dist[1]) * (k - dist[2]));
-//   return area / k;
-// }
-
-// static double getOuterRadius(const std::vector<double> &triCoord)
-// {
-//   // radius of circle circumscribing a triangle
-//   double dist[3], k = 0.0;
-//   for(int i = 0; i < 3; i++) {
-//     double x0 = triCoord[3 * i + 0];
-//     double y0 = triCoord[3 * i + 1];
-//     double x1 = triCoord[3 * ((i + 1) % 3) + 0];
-//     double y1 = triCoord[3 * ((i + 1) % 3) + 1];
-//     dist[i] = sqrt((x1 - x0) * (x1 - x0) + (y1 - y0) * (y1 - y0));
-//     k += 0.5 * dist[i];
-//   }
-//   double const area = std::sqrt(k * (k - dist[0]) * (k - dist[1]) * (k - dist[2]));
-//   return dist[0] * dist[1] * dist[2] / (4 * area);
-// }
-
-// static double hCircumInscr(const std::vector<double> &triCoord)
-// {
-//   double hInscribed = 2. * getInnerRadius(triCoord);
-//   double hCircumscribed = 2. * getOuterRadius(triCoord);
-//   return (hInscribed + hCircumscribed) / 2.;
-// }
-
-// Diameter of circle of equivalent area
-inline double hEquivalentCircle(const double jac) { return 2. * sqrt(jac / (2. * M_PI)); }
-
-static double compute_tau(const std::vector<double> &triCoord, int dim, double velocity[3],
-                          double viscosity, int nFunctions, std::vector<double> &gradphi,
-                          double jac)
-{
-  // Unused parameters unless using hFortin above
-  UNUSED(triCoord, nFunctions, gradphi);
-
-  double normV = 0.;
-  for(int i = 0; i < dim; ++i) {
-    normV += velocity[i] * velocity[i];
-  }
-  normV = sqrt(normV);
-
-  // double h1 = hFortin(dim, velocity, normV, nFunctions, gradphi);
-  if(normV < 1e-12) {
-    return 0.;
-  }
-  // double h2 = hCircumInscr(triCoord);
-  double h3 = hEquivalentCircle(jac);
-
-  double h = h3;
-
-  double r1 = 2. * normV / h;
-  double r2 = 4. * viscosity / (h * h);
-
-  return 1. / sqrt(r1 * r1 + 9. * r2 * r2);
-}
-
 template <int dim>
 void feSysElm_Stokes_SUPG_PSPG<dim>::createElementarySystem(std::vector<feSpace *> &space)
 {
@@ -1828,7 +2329,7 @@ void feSysElm_Stokes_SUPG_PSPG<dim>::computeBe(feBilinearForm *form)
                                                                   _hessPhiU.data());
 
     // Stabilization parameter
-    tau = compute_tau(form->_geoCoord, _nComponents, _u.data(), mu, _nFunctionsU, _gradPhiU, jac);
+    tau = compute_tau<dim>(form->_geoCoord, _u.data(), mu, _nFunctionsU, _gradPhiU, jac);
 
     // Residual for Navier-Stokes (laplacian form):
     double lapu[2] = {_hessu[0] + _hessu[2], _hessu[3] + _hessu[5]};
@@ -1938,7 +2439,7 @@ void feSysElm_NS_SUPG_PSPG<dim>::computeBe(feBilinearForm *form)
                                                                   _hessPhiU.data());
 
     // Stabilization parameter
-    tau = compute_tau(form->_geoCoord, _nComponents, _u.data(), mu, _nFunctionsU, _gradPhiU, jac);
+    tau = compute_tau<dim>(form->_geoCoord, _u.data(), mu, _nFunctionsU, _gradPhiU, jac);
 
     // Compute (u dot gradu)
     std::fill(_uDotGradu.begin(), _uDotGradu.end(), 0.);

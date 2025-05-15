@@ -17,8 +17,12 @@ public:
   double t = 0.;
   // Position
   std::vector<double> pos = {0., 0., 0.};
-  // Solution or variable
-  double u;
+
+  // FIXME: We should be able to give any number of scalar/vector fields
+  // Scalar-valued solution or variable
+  double u = 0.;
+  // Vector-valued solution or variable
+  std::vector<double> v = {0., 0., 0.};
 
   feFunctionArguments(const double time = 0.)
   {
@@ -122,6 +126,13 @@ public:
   {
     _fct(args, _param, res);
   };
+
+  // Prevent implicit conversion when calling eval or operator()
+  template <class T>
+  void eval(const T&, std::vector<double> &res) = delete;
+  template <class T>
+  void operator()(const T&, std::vector<double> &res) = delete;
+
   std::vector<double> getParam() { return _param; }
 };
 

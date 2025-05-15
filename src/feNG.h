@@ -85,6 +85,7 @@ void finalize();
 
 #if defined(HAVE_GMSH)
 void initializeGmsh();
+void openGmshModel(std::string &filename);
 void finalizeGmsh();
 #endif
 

@@ -20,6 +20,34 @@ double det3x3(double mat[3][3]);
 double inv3x3(double mat[3][3], double inv[3][3]);
 double inv2x2(double mat[2][2], double inv[2][2]);
 
+template <typename T>
+bool solveNewtonRaphson1D(const T &f,
+                          const T &dfdx,
+                          const int maxiter,
+                          const double tol,
+                          double &x)
+{
+  bool success = false, stop = false;
+  int iter = 0;
+  double fx = f(x);
+
+  while(!stop)
+  {
+    x -= fx / dfdx(x);
+
+    fx = f(x);
+    iter++;
+    feInfo("NR - Iter %d: x = %+-1.6e - fx = %+-1.6e", iter, x, fx);
+
+    if(fabs(fx) <= tol || iter > maxiter) {
+      stop = true;
+      if(fabs(fx) <= tol) success = true;
+    }
+  }
+
+  return success;
+}
+
 // Compute matrix exponential of 2x2 symmetric matrix [a b; b c]
 template <class MetricType>
 void exponentialMatrix(const double a, const double b, const double c, MetricType &expm)

@@ -1,5 +1,6 @@
 #include "feMatrixInterface.h"
 #include "feMesh.h"
+#include "feNumeric.h"
 #include "feSolution.h"
 #include "feSpace.h"
 
@@ -567,68 +568,9 @@ void feSpace::getVectorFunctionsPhysicalGradientAtQuadNode(const int iQuadNode,
   }
 }
 
-// void feSpace::getVectorFunctionsPhysicalGradientAtQuadNode(const int iQuadNode,
-//                                                            const ElementTransformation &T,
-//                                                            std::vector<double> &gradPhi) const
-// {
-//   assert(gradPhi.size() == (size_t)((unsigned) _dim * _nComponents * _nFunctions));
-
-//   int offset = _nFunctions * _nComponents;
-//   int offsetGrad = _dim * _nComponents;
-
-//   if(_dim == 0) {
-//     // gradPhi[0] = 0.;
-//     feErrorMsg(FE_STATUS_ERROR, "Not implemented");
-//     exit(-1);
-//   } else if(_dim == 1) {
-//     // for(int i = 0; i < _nFunctions; ++i) {
-//     //   gradPhi[i] = _dLdr[_nFunctions * iQuadNode + i] * T.drdx[0];
-//     // }
-//     feErrorMsg(FE_STATUS_ERROR, "Not implemented");
-//     exit(-1);
-//   } else if(_dim == 2) {
-
-
-//     for(int i = 0; i < _nFunctions; ++i) {
-
-//       // Compute gradient tensor of vector-valued phi
-//       // Tensor gradient is defined with the convention :
-//       //      grad(phi)_{mn} = d/dx_m (phi_n)
-//       double dphi_i_x_dx = _dLdr[offset * iQuadNode + i * _nComponents + 0] * T.drdx[0]
-//                          + _dLds[offset * iQuadNode + i * _nComponents + 0] * T.drdx[1];
-//       double dphi_i_y_dx = _dLdr[offset * iQuadNode + i * _nComponents + 1] * T.drdx[0]
-//                          + _dLds[offset * iQuadNode + i * _nComponents + 1] * T.drdx[1];
-//       double dphi_i_x_dy = _dLdr[offset * iQuadNode + i * _nComponents + 0] * T.drdy[0]
-//                          + _dLds[offset * iQuadNode + i * _nComponents + 0] * T.drdy[1];
-//       double dphi_i_y_dy = _dLdr[offset * iQuadNode + i * _nComponents + 1] * T.drdy[0]
-//                          + _dLds[offset * iQuadNode + i * _nComponents + 1] * T.drdy[1];
-
-//       gradPhi[offsetGrad * i + 0] = dphi_i_x_dx;
-//       gradPhi[offsetGrad * i + 1] = dphi_i_y_dx;
-//       gradPhi[offsetGrad * i + 2] = dphi_i_x_dy;
-//       gradPhi[offsetGrad * i + 3] = dphi_i_y_dy;
-//     }
-
-
-//   } else if(_dim == 3) {
-//     feErrorMsg(FE_STATUS_ERROR, "Not implemented : 3D gradient of vector shape functions");
-//     exit(-1);
-//     // for(int i = 0; i < _nFunctions; ++i) {
-//     //   gradPhi[i * _dim + 0] = _dLdr[_nFunctions * iQuadNode + i] * T.drdx[0] +
-//     //                           _dLds[_nFunctions * iQuadNode + i] * T.drdx[1] +
-//     //                           _dLdt[_nFunctions * iQuadNode + i] * T.drdx[2];
-//     //   gradPhi[i * _dim + 1] = _dLdr[_nFunctions * iQuadNode + i] * T.drdy[0] +
-//     //                           _dLds[_nFunctions * iQuadNode + i] * T.drdy[1] +
-//     //                           _dLdt[_nFunctions * iQuadNode + i] * T.drdy[2];
-//     //   gradPhi[i * _dim + 2] = _dLdr[_nFunctions * iQuadNode + i] * T.drdz[0] +
-//     //                           _dLds[_nFunctions * iQuadNode + i] * T.drdz[1] +
-//     //                           _dLdt[_nFunctions * iQuadNode + i] * T.drdz[2];
-//     // }
-//   }
-// }
-
 void feSpace::getFunctionsPhysicalHessianAtQuadNode(const int iQuadNode,
-                                                    const ElementTransformation &T, double *hessPhi) const
+                                                    const ElementTransformation &T,
+                                                    double *hessPhi) const
 {
   // Size hessPhi = nFunctions * [1, 3 or 6]
   if(_dim == 0) {
@@ -951,10 +893,7 @@ void feSpace::interpolateFieldAtQuadNode_physicalGradient(const std::vector<doub
                                                           const ElementTransformation &T,
                                                           double *grad) const
 {
-  if(_dim == 0)
-  {
-    grad[0] = 0.;
-  } 
+  if(_dim == 0) { grad[0] = 0.; } 
   else if(_dim == 1)
   {
     grad[0] = 0.;
@@ -962,7 +901,6 @@ void feSpace::interpolateFieldAtQuadNode_physicalGradient(const std::vector<doub
       double dphi_i_dx = _dLdr[_nFunctions * iQuadNode + i] * T.drdx[0];
       grad[0] += field[i] * dphi_i_dx;
     }
-    // grad[0] /= jac;
   }
   else if(_dim == 2)
   {
@@ -975,8 +913,6 @@ void feSpace::interpolateFieldAtQuadNode_physicalGradient(const std::vector<doub
       grad[0] += field[i] * dphi_i_dx;
       grad[1] += field[i] * dphi_i_dy;
     }
-    // grad[0] /= jac;
-    // grad[1] /= jac;
   } else if(_dim == 3) {
     grad[0] = grad[1] = grad[2] = 0.;
     for(int i = 0; i < _nFunctions; ++i) {
@@ -993,6 +929,48 @@ void feSpace::interpolateFieldAtQuadNode_physicalGradient(const std::vector<doub
       grad[1] += field[i] * dphi_i_dy;
       grad[2] += field[i] * dphi_i_dz;
     }
+  }
+}
+
+void feSpace::interpolateFieldAtQuadNode_physicalHessian(const std::vector<double> &field,
+                                                         const int iQuadNode,
+                                                         const ElementTransformation &T,
+                                                         double *hess) const
+{
+  if(_dim == 0) { hess[0] = 0.; } 
+  else if(_dim == 1)
+  {
+    hess[0] = 0.;
+    for(int i = 0; i < _nFunctions; ++i) {
+      double d2phi_i_dx2 = _d2Ldr2[_nFunctions * iQuadNode + i] * T.drdx[0] * T.drdx[0];;
+      hess[0] += field[i] * d2phi_i_dx2;
+    }
+  }
+  else if(_dim == 2)
+  {
+    hess[0] = hess[1] = hess[2] = 0.;
+    for(int i = 0; i < _nFunctions; ++i) {
+      double d2phi_i_dx2 = _d2Ldr2[_nFunctions * iQuadNode + i] * T.drdx[0] * T.drdx[0] +
+                           2.0 * _d2Ldrs[_nFunctions * iQuadNode + i] * T.drdx[0] * T.drdx[1] +
+                           _d2Lds2[_nFunctions * iQuadNode + i] * T.drdx[1] * T.drdx[1];
+
+      double d2phi_i_dxy = _d2Ldr2[_nFunctions * iQuadNode + i] * T.drdx[0] * T.drdy[0] +
+                           _d2Ldrs[_nFunctions * iQuadNode + i] * T.drdx[1] * T.drdy[0] +
+                           _d2Ldrs[_nFunctions * iQuadNode + i] * T.drdx[0] * T.drdy[1] +
+                           _d2Lds2[_nFunctions * iQuadNode + i] * T.drdx[1] * T.drdy[1];
+
+      double d2phi_i_dy2 = _d2Ldr2[_nFunctions * iQuadNode + i] * T.drdy[0] * T.drdy[0] +
+                           2.0 * _d2Ldrs[_nFunctions * iQuadNode + i] * T.drdy[0] * T.drdy[1] +
+                           _d2Lds2[_nFunctions * iQuadNode + i] * T.drdy[1] * T.drdy[1];
+
+      hess[0] += field[i] * d2phi_i_dx2;
+      hess[1] += field[i] * d2phi_i_dxy;
+      hess[2] += field[i] * d2phi_i_dy2;
+    }
+  } else if(_dim == 3) {
+    // TODO
+    feErrorMsg(FE_STATUS_ERROR, "Add physical-space hessian for 3d scalar fields");
+    exit(-1);
   }
 }
 
@@ -1475,4 +1453,113 @@ void feSpace::interpolateVectorFieldAtQuadNode_tDerivative(const std::vector<dou
       res[i] += field[3 * j + i] * _dLdt[_nFunctions * iNode + j];
     }
   }
+}
+
+using func = std::function<double(const double)>;
+
+bool feSpace::getRootOnEdge(const int iEdge,
+                            const std::vector<double> &field,
+                            const double val,
+                            double xsi[3],
+                            const double tol) const
+{
+  // const int nEdges = _cnc->getNumEdgesPerElem();
+  const geometryType geometry = _cnc->getGeometry();
+  // const geometricInterpolant interp = _cnc->getInterpolant();
+
+  bool success = false;
+
+  if(geometry == geometryType::TRI)
+  {
+    switch(iEdge)
+    {
+      case 0: // Edge 0: (xsi, eta = 0)
+      {
+        // Single variable x = xsi
+        func fx = [&, field](const double x)->double {
+          double xsi_loc[3] = {x, 0., 0.};
+          return this->interpolateField(field, xsi_loc) - val;
+        };
+
+        func dfdx = [&, field](const double x)->double {
+          double xsi_loc[3] = {x, 0., 0.};
+          double dphidxsi = this->interpolateField_rDerivative(field, xsi_loc);
+          return dphidxsi;
+        };
+
+        double x = 0.;
+        success = solveNewtonRaphson1D(fx, dfdx, 10, tol, x);
+        if(x < 0. - tol || x > 1. + tol) return false;
+        
+        if(success) {
+          xsi[0] = x;
+          xsi[1] = 0.;
+          xsi[2] = 0.;
+        } else {
+          return false;
+        }
+
+        break;
+      }
+      case 1: // Edge 1: 1 - xsi - eta = 0
+      {
+        // Single variable x = xsi
+        func fx = [&, field](const double x)->double {
+          double xsi_loc[3] = {x, 1. - x, 0.};
+          return this->interpolateField(field, xsi_loc) - val;
+        };
+
+        func dfdx = [&, field](const double x)->double {
+          double xsi_loc[3] = {x, 1. - x, 0.};
+          double dphidxsi = this->interpolateField_rDerivative(field, xsi_loc);
+          double dphideta = this->interpolateField_sDerivative(field, xsi_loc);
+          return dphidxsi - dphideta;
+        };
+
+        double x = 0.;
+        success = solveNewtonRaphson1D(fx, dfdx, 10, tol, x);
+        if(x < 0. - tol || x > 1. + tol) return false;
+        
+        if(success) {
+          xsi[0] = x;
+          xsi[1] = 1. - x;
+          xsi[2] = 0.;
+        } else {
+          return false;
+        }
+        break;
+      }
+      case 2: // Edge 2: (xsi = 0, eta)
+      {
+        // Single variable x = eta
+        func fx = [&, field](const double x)->double {
+          double xsi_loc[3] = {0, x, 0.};
+          return this->interpolateField(field, xsi_loc) - val;
+        };
+
+        func dfdx = [&, field](const double x)->double {
+          double xsi_loc[3] = {0, x, 0.};
+          double dphideta = this->interpolateField_sDerivative(field, xsi_loc);
+          return dphideta;
+        };
+
+        double x = 0.;
+        success = solveNewtonRaphson1D(fx, dfdx, 10, tol, x);
+        if(x < 0. - tol || x > 1. + tol) return false;
+        
+        if(success) {
+          xsi[0] = 0.;
+          xsi[1] = x;
+          xsi[2] = 0.;
+        } else {
+          return false;
+        }
+        break;
+      }
+      default:
+        return false;
+    }
+  }
+
+  return success;
 }

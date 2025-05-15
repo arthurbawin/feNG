@@ -3,6 +3,8 @@
 
 extern int FE_VERBOSE;
 
+#define NEWTON_OUTPUT_PRECISION "%10.6e"
+
 //
 // Decide if the Jacobian matrix should be recomputed
 // using various heuristics
@@ -35,7 +37,7 @@ feStatus solveNewtonRaphson(feLinearSystem *linearSystem,
                             const feNLSolverOptions &tol,
                             const bool solveForTimeDerivative)
 {
-  feInfoCond(FE_VERBOSE > 0, "\t\t\tNONLINEAR SOLVER:");
+  feInfoCond(FE_VERBOSE > 0, "\t\tNONLINEAR SOLVER:");
 
   bool stop = false, isStationary = (container->getNbSol() == 1);
   int iter = 0, linearSystemIter;
@@ -69,7 +71,7 @@ feStatus solveNewtonRaphson(feLinearSystem *linearSystem,
     linearSystem->getRHSMaxNorm(&normResidual);
     if(iter > 0 && normResidual <= tol.tolResidual) {
       feInfoCond(FE_VERBOSE > 0,
-               "\t\t\t\tStopping because residual norm ||NL(u)|| = %10.10e is"
+               "\t\t\tStopping because next residual norm ||NL(u)|| = " NEWTON_OUTPUT_PRECISION " is"
                " below prescribed tolerance (%10.4e)", normResidual, tol.tolResidual);
       break;
     }
@@ -85,8 +87,10 @@ feStatus solveNewtonRaphson(feLinearSystem *linearSystem,
     bool successSolve = linearSystem->solve(&normCorrection, &normResidual, &normAxb, &linearSystemIter);
 
     if(!successSolve) {
-      feWarning("Iter %2d : ||J*du - NL(u)|| = %10.10e (%4d iter.) \t ||du|| = %10.10e \t "
-                "||NL(u)|| = %10.10e (%s)",
+      feWarning("It. %2d : "
+                "||J*du - NL|| = " NEWTON_OUTPUT_PRECISION " (%4d iter.) \t "
+                "||du|| = " NEWTON_OUTPUT_PRECISION " \t "
+                "||NL(u)|| = " NEWTON_OUTPUT_PRECISION " (%s)",
                 ++iter, normAxb, linearSystemIter, normCorrection, normResidual,
                 linearSystem->getRecomputeStatus() ? "true" : "false");
       return feErrorMsg(FE_STATUS_ERROR, "Could not solve linear system at iter %2d )-:", iter);
@@ -111,8 +115,10 @@ feStatus solveNewtonRaphson(feLinearSystem *linearSystem,
 
     // Status message for successful iteration
     feInfoCond(FE_VERBOSE > 0,
-               "\t\t\t\tIter %2d : ||J*du - NL(u)|| = %10.10e (%4d iter.) \t ||du|| = %10.20e \t "
-               "||NL(u)|| = %10.20e (%s)",
+               "\t\t\tIt. %2d : "
+               "||J*du - NL|| = " NEWTON_OUTPUT_PRECISION " (%4d iter.) \t "
+               "||du|| = " NEWTON_OUTPUT_PRECISION " \t "
+               "||NL(u)|| = " NEWTON_OUTPUT_PRECISION " (%s)",
                ++iter, normAxb, linearSystemIter, normCorrection, normResidual,
                linearSystem->getRecomputeStatus() ? "true" : "false");
 
@@ -130,7 +136,9 @@ feStatus solveNewtonRaphson(feLinearSystem *linearSystem,
     // Solver converged as expected
     feInfoCond(
       FE_VERBOSE > 0,
-      "\t\t\t\tConverged in %2d Newton iteration(s) (Residual converged):        ||du|| = %10.10e \t ||NL(u)|| = %10.10e", iter,
+      "\t\t\tConverged in %2d Newton iteration(s) - Residual converged: "
+      "||du|| = " NEWTON_OUTPUT_PRECISION " \t "
+      "||NL(u)|| = " NEWTON_OUTPUT_PRECISION "", iter,
       normCorrection, normResidual);
     return FE_STATUS_OK;
   } else if(normCorrection <= tol.tolCorrection)
@@ -138,7 +146,7 @@ feStatus solveNewtonRaphson(feLinearSystem *linearSystem,
     // Increment du is low enough but residual NL(u) is not
     feInfoCond(
       FE_VERBOSE > 0,
-      "\t\t\t\tConverged in %2d Newton iteration(s) (Increment converged):       ||du|| = %10.10e \t ||NL(u)|| = %10.10e", iter,
+      "\t\t\tConverged in %2d Newton iteration(s) (increment converged): ||du|| = %10.10e \t ||NL(u)|| = %10.10e", iter,
       normCorrection, normResidual);
     printf("\n");
     feWarning("Nonlinear solver converged because increment du = %10.4e is below prescribed tolerance (%1.4e),\n"
@@ -149,13 +157,13 @@ feStatus solveNewtonRaphson(feLinearSystem *linearSystem,
   {
     // Solver did not converge
     feErrorMsg(FE_STATUS_ERROR,
-                      "Nonlinear solver did not converge at iter %2d : ||J*du - NL(u)|| = %10.10e  "
+                      "Nonlinear solver did not converge at iter %2d : ||J*du - NL|| = %10.10e  "
                       "(%4d iter.) \t ||du|| = "
                       "%10.10e \t ||NL(u)|| = %10.10e",
                       iter, normAxb, linearSystemIter, normCorrection, normResidual);
     exit(-1);
     return feErrorMsg(FE_STATUS_ERROR,
-                      "Nonlinear solver did not converge at iter %2d : ||J*du - NL(u)|| = %10.10e  "
+                      "Nonlinear solver did not converge at iter %2d : ||J*du - NL|| = %10.10e  "
                       "(%4d iter.) \t ||du|| = "
                       "%10.10e \t ||NL(u)|| = %10.10e",
                       iter, normAxb, linearSystemIter, normCorrection, normResidual);

@@ -297,6 +297,9 @@ namespace cahnHilliardNavierStokes {
       const double epsilon = par[6];
       bool isStationary = par[7] > 0;
 
+      UNUSED(gamma, epsilon);
+      const double coeffKorteweg = par[8];
+
       const double emt = exp(-t);
       const double sx = sin(M_PI*x);
       const double sy = sin(M_PI*y);
@@ -330,7 +333,7 @@ namespace cahnHilliardNavierStokes {
       const double f[2] = {0., -9.81};
 
       const double drhodphi = (rhoA-rhoB)/2.;
-      const double korteweg = - gamma/epsilon;
+      // const double korteweg = - gamma/epsilon;
       const double dviscdphi = (viscA-viscB)/2.;
 
       const double d[2][2] = {{gradu[0][0], (gradu[0][1] + gradu[1][0])/2.},
@@ -342,11 +345,11 @@ namespace cahnHilliardNavierStokes {
         // For stationary test, do not include dudt because it will not be computed by the solver (BDF coefficient is 0).
         // If dudt is included, it adds du/dt at t = 0 to the source term, which is wrong with a stationary solver.
         UNUSED(dudt);
-        res[0] = - (rho * (          uDotGradu[0] - f[0]) + M * drhodphi * gMudgu[0] + gradp[0] - 2.*(dviscdphi*gradPhidotd[0] + visc*divd[0]) + korteweg*mu*gradphi[0]);
-        res[1] = - (rho * (          uDotGradu[1] - f[1]) + M * drhodphi * gMudgu[1] + gradp[1] - 2.*(dviscdphi*gradPhidotd[1] + visc*divd[1]) + korteweg*mu*gradphi[1]);
+        res[0] = - (rho * (          uDotGradu[0] - f[0]) + M * drhodphi * gMudgu[0] + gradp[0] - 2.*(dviscdphi*gradPhidotd[0] + visc*divd[0]) + coeffKorteweg*mu*gradphi[0]);
+        res[1] = - (rho * (          uDotGradu[1] - f[1]) + M * drhodphi * gMudgu[1] + gradp[1] - 2.*(dviscdphi*gradPhidotd[1] + visc*divd[1]) + coeffKorteweg*mu*gradphi[1]);
       } else {
-        res[0] = - (rho * (dudt[0] + uDotGradu[0] - f[0]) + M * drhodphi * gMudgu[0] + gradp[0] - 2.*(dviscdphi*gradPhidotd[0] + visc*divd[0]) + korteweg*mu*gradphi[0]);
-        res[1] = - (rho * (dudt[1] + uDotGradu[1] - f[1]) + M * drhodphi * gMudgu[1] + gradp[1] - 2.*(dviscdphi*gradPhidotd[1] + visc*divd[1]) + korteweg*mu*gradphi[1]);
+        res[0] = - (rho * (dudt[0] + uDotGradu[0] - f[0]) + M * drhodphi * gMudgu[0] + gradp[0] - 2.*(dviscdphi*gradPhidotd[0] + visc*divd[0]) + coeffKorteweg*mu*gradphi[0]);
+        res[1] = - (rho * (dudt[1] + uDotGradu[1] - f[1]) + M * drhodphi * gMudgu[1] + gradp[1] - 2.*(dviscdphi*gradPhidotd[1] + visc*divd[1]) + coeffKorteweg*mu*gradphi[1]);
       }
     }
 
@@ -420,7 +423,10 @@ namespace cahnHilliardNavierStokes {
       const double x = args.pos[0];
       const double y = args.pos[1];
       const double t = args.t;
-      const double epsilon = par[0];
+      // const double epsilon = par[0];
+      const double coeffPhiCube = par[0];
+      const double coeffPhi     = par[1];
+      const double coeffDiffPhi = par[2];
       const double sx = sin(M_PI*x);
       const double sy = sin(M_PI*y);
       const double emt = exp(-t);
@@ -429,10 +435,11 @@ namespace cahnHilliardNavierStokes {
       const double phiCube = emt*emt*emt*sx*sx*sx*sy*sy*sy;
       const double lapPhi  = emt * (-2.*M_PI*M_PI*sx*sy);
 
-      return - (mu - (phiCube - phi) + epsilon*epsilon*lapPhi);
+      return - (mu + coeffPhiCube * phiCube + coeffPhi * phi + coeffDiffPhi * lapPhi);
     }
 
     int solve(const std::string &meshFile,
+              const int timeStepFactor,
               const int orderU,
               const int orderPhiMu,
               const int degreeQuadrature,
@@ -442,7 +449,8 @@ namespace cahnHilliardNavierStokes {
               double &L2ErrorU,
               double &L2ErrorP,
               double &L2ErrorPhi,
-              double &L2ErrorMu)
+              double &L2ErrorMu,
+              int &timesteps)
               // ,
               // double &H1ErrorU,
               // double &H1ErrorP,
@@ -464,16 +472,47 @@ namespace cahnHilliardNavierStokes {
       const double gamma = 1e-1;
       const double epsilon = 1.;
       const double stationaryVal = isStationary ? 1. : -1.;
-      feVectorFunction uSource(uSource_f, {rhoA, rhoB, viscA, viscB, mobility_val, gamma, epsilon, stationaryVal});
+
+      // // coeffKorteweg = new feConstantFunction(-_gamma/_epsilon);
+      // // coeffPhiCube  = new feConstantFunction(-1.);
+      // // coeffPhi      = new feConstantFunction(+1.);
+      // // coeffDiffPhi  = new feConstantFunction(-_epsilon*_epsilon);
+
+      // // const double lambda = 3. * _epsilon * _gamma / (2.*sqrt(2.));
+      // const double lambda = _epsilon * _gamma;
+      // coeffKorteweg = new feConstantFunction(-1.);
+      // coeffPhiCube  = new feConstantFunction(- lambda / (_epsilon * _epsilon));
+      // coeffPhi      = new feConstantFunction(+ lambda / (_epsilon * _epsilon));
+      // coeffDiffPhi  = new feConstantFunction(- lambda);
+
+      // // Mémoire de Zeineb:
+      // const double kortewegCoeff = -gamma/epsilon;
+      // const double phiCubeCoeff  = -1.;
+      // const double phiCoeff      = +1.;
+      // const double diffPhiCoeff  = -epsilon*epsilon;
+
+      // Mémoire de Pierre:
+      const double lambda = 3. * epsilon * gamma / (2. * sqrt(2.));
+      const double kortewegCoeff = -1.;
+      // const double phiCubeCoeff  = - (epsilon * epsilon) / lambda;
+      // const double phiCoeff      = + (epsilon * epsilon) / lambda;
+      const double phiCubeCoeff  = - lambda / (epsilon * epsilon);
+      const double phiCoeff      = + lambda / (epsilon * epsilon);
+      const double diffPhiCoeff  = - lambda;
+
+      feConstantFunction coeffKorteweg(kortewegCoeff);
+      feConstantFunction coeffPhiCube(phiCubeCoeff);
+      feConstantFunction coeffPhi(phiCoeff);
+      feConstantFunction coeffDiffPhi(diffPhiCoeff);
+
+      feVectorFunction uSource(uSource_f, {rhoA, rhoB, viscA, viscB, mobility_val, gamma, epsilon, stationaryVal, kortewegCoeff});
       feFunction pSource(pSource_f, {rhoA, rhoB});
       feFunction phiSource(phiSource_f, {stationaryVal, mobility_val});
-      feFunction  muSource( muSource_f, {epsilon});
+      feFunction  muSource( muSource_f, {phiCubeCoeff, phiCoeff, -diffPhiCoeff}); // Minus sign because the coeff is set after integration by parts
 
-      feConstantFunction minusEpsInterfaceSquared(-epsilon*epsilon);
       feConstantFunction mobility(mobility_val);
       feFunction density(rho_f, {rhoA, rhoB});
       feFunction drhodphi(drhodphi_f, {rhoA, rhoB});
-      feConstantFunction coeffKorteweg(-gamma/epsilon);
       feFunction viscosity(viscosity_f, {viscA, viscB});
       feFunction dviscdphi(dviscdphi_f, {viscA, viscB});
       feConstantVectorFunction volumeForce({0, -9.81});
@@ -521,16 +560,24 @@ namespace cahnHilliardNavierStokes {
       feCheck(createBilinearForm( diffMu, {phi, mu}, new feSysElm_MixedGradGrad<2>(&mobility)));
       feCheck(createBilinearForm(   phiS,     {phi}, new feSysElm_Source(&phiSource)));
 
+      // SUPG for tracer
+      // feBilinearForm *supgTracer = nullptr;
+      // feCheckReturn(createBilinearForm(supgTracer, {phi, u, mu}, new feSysElm_CHNS_Tracer_SUPG<2>(&scalarConstant::one, &mobility)));
+
       // Chemical potential
       feBilinearForm *muMass = nullptr, *phiCube = nullptr, *phiMass = nullptr, *diffPhi = nullptr, *muS = nullptr;
       feCheck(createBilinearForm( muMass,      {mu}, new feSysElm_Mass(&scalarConstant::one)));
-      feCheck(createBilinearForm(phiCube, {mu, phi}, new feSysElm_MixedMassPower(&scalarConstant::minusOne, 3)));
-      feCheck(createBilinearForm(phiMass, {mu, phi}, new feSysElm_MixedMass(&scalarConstant::one)));
-      feCheck(createBilinearForm(diffPhi, {mu, phi}, new feSysElm_MixedGradGrad<2>(&minusEpsInterfaceSquared)));
+      feCheck(createBilinearForm(phiCube, {mu, phi}, new feSysElm_MixedMassPower(&coeffPhiCube, 3)));
+      feCheck(createBilinearForm(phiMass, {mu, phi}, new feSysElm_MixedMass(&coeffPhi)));
+      feCheck(createBilinearForm(diffPhi, {mu, phi}, new feSysElm_MixedGradGrad<2>(&coeffDiffPhi)));
       feCheck(createBilinearForm(    muS,      {mu}, new feSysElm_Source(&muSource)));
 
       std::vector<feBilinearForm*> forms = {CHNS_momentum, uS, divU, dphidt,
-        convPhi, diffMu, phiS, muMass, phiCube, phiMass, diffPhi, muS};
+        convPhi, diffMu, phiS, muMass, phiCube, phiMass, diffPhi, muS,
+        // supgTracer
+      };
+
+      // CHNS_momentum->setComputeMatrixWithFD(true);
 
       feLinearSystem *system;
       #if defined(HAVE_MKL)
@@ -541,15 +588,34 @@ namespace cahnHilliardNavierStokes {
         feCheck(createLinearSystem(system, PETSC, forms, numbering.getNbUnknowns()));
       #endif
 
-      std::vector<feNorm *> norms = {};
+      feNorm *errorU_L2 = nullptr, *errorP_L2 = nullptr, *errorPhi_L2 = nullptr, *errorMu_L2 = nullptr;
+      feCheck(createNorm(errorU_L2, VECTOR_L2_ERROR, {u}, &sol, nullptr, &uSol));
+      feCheck(createNorm(errorP_L2, L2_ERROR, {p}, &sol, &pSol));
+      feCheck(createNorm(errorPhi_L2, L2_ERROR, {phi}, &sol, &phiSol));
+      feCheck(createNorm(errorMu_L2 , L2_ERROR, {mu}, &sol, &muSol));
+      // feCheck(createNorm(errorU_L2, VECTOR_LINF_ERROR, {u}, &sol, nullptr, &uSol));
+      // feCheck(createNorm(errorP_L2, LINF_ERROR, {p}, &sol, &pSol));
+      // feCheck(createNorm(errorPhi_L2, LINF_ERROR, {phi}, &sol, &phiSol));
+      // feCheck(createNorm(errorMu_L2 , LINF_ERROR, {mu}, &sol, &muSol));
+      std::vector<feNorm *> norms = {errorU_L2, errorP_L2, errorPhi_L2, errorMu_L2};
 
+      // Reference test file matches those parameters and L2 error evaluated at t1:
+      UNUSED(timeStepFactor);
       double t0 = 0.;
-      // double t1 = 0.1;
       double t1 = 0.0001;
       int nTimeSteps = 10;
+
+      // For other convergence studies:
+      // double t1 = 0.00001;
+      // double t1 = 5.;
+      // int nTimeSteps = 10 * pow(2, timeStepFactor);
+
+      timesteps = nTimeSteps;
       TimeIntegrator *solver;
       feCheck(createTimeIntegrator(solver, timeIntegratorScheme::BDF2, NLoptions,
         system, &sol, &mesh, norms, {nullptr, 1, ""}, t0, t1, nTimeSteps));
+
+      // const double dt = solver->getTimeStep();
 
       // Start BDF2 with manufactured solution
       static_cast<BDF2Integrator*>(solver)->setStartingMethod(BDF2Starter::InitialCondition);
@@ -557,15 +623,32 @@ namespace cahnHilliardNavierStokes {
       // Solve
       feCheck(solver->makeSteps(nTimeSteps));
 
-      feNorm *errorU_L2 = nullptr, *errorP_L2 = nullptr, *errorPhi_L2 = nullptr, *errorMu_L2 = nullptr;
-      feCheck(createNorm(errorU_L2, VECTOR_L2_ERROR, {u}, &sol, nullptr, &uSol));
-      feCheck(createNorm(errorP_L2, L2_ERROR, {p}, &sol, &pSol));
-      feCheck(createNorm(errorPhi_L2, L2_ERROR, {phi}, &sol, &phiSol));
-      feCheck(createNorm(errorMu_L2 , L2_ERROR, {mu}, &sol, &muSol));
+      // Use L2 at t1 to compare with reference test files:
       L2ErrorU   = errorU_L2->compute();
       L2ErrorP   = errorP_L2->compute();
       L2ErrorPhi = errorPhi_L2->compute();
       L2ErrorMu  = errorMu_L2->compute();
+
+      // Or use L1 or Linf error in time:
+      // std::vector<std::vector<double>> postProc = solver->getPostProcessingData();
+      // L2ErrorU = 0.;
+      // L2ErrorP = 0.;
+      // L2ErrorPhi = 0.;
+      // L2ErrorMu = 0.;
+      // for(int j = 1; j < nTimeSteps+1; ++j) {
+
+      //   // L1 norm in time, method of rectangles
+      //   L2ErrorU   += dt * postProc[1][j];
+      //   L2ErrorP   += dt * postProc[2][j];
+      //   L2ErrorPhi += dt * postProc[3][j];
+      //   L2ErrorMu  += dt * postProc[4][j];
+
+      //   // // Linf norm in time
+      //   // L2ErrorU = fmax(L2ErrorU, postProc[1][j]);
+      //   // L2ErrorP = fmax(L2ErrorP, postProc[2][j]);
+      //   // L2ErrorPhi = fmax(L2ErrorPhi, postProc[3][j]);
+      //   // L2ErrorMu = fmax(L2ErrorMu, postProc[4][j]);
+      // }
 
       // feNorm *errorU_H1 = nullptr, *errorP_H1 = nullptr, *errorPhi_H1 = nullptr, *errorMu_H1 = nullptr;
       // feCheck(createNorm(errorU_H1, VECTOR_H1_ERROR, {u}, &sol, nullptr, &uSol));
@@ -596,6 +679,7 @@ namespace cahnHilliardNavierStokes {
       feNLSolverOptions NLoptions{1e-10, 1e-10, 1e4, 10, 4, 1e-1};
 
       std::vector<int> nElm(numMeshes);
+      std::vector<int> timesteps(numMeshes);
       std::vector<int> nVertices(numMeshes);
       std::vector<double> errU(numMeshes, 0.);
       std::vector<double> errP(numMeshes, 0.);
@@ -606,20 +690,23 @@ namespace cahnHilliardNavierStokes {
       // std::vector<double> errPhi_H1(numMeshes, 0.);
       // std::vector<double> errMu_H1(numMeshes, 0.);
 
-      bool writeErrorToFile = false;
+      bool writeErrorToFile = true;
       std::string outputDirectory = "./";
-      std::ofstream errorFileL2, errorFileH1;
+      std::ofstream errorFileL2, errorFileH1, timeErrorFile;
       if(writeErrorToFile) {
         errorFileL2.open(outputDirectory + "errorL2.txt");
         errorFileH1.open(outputDirectory + "errorH1.txt");
+        timeErrorFile.open(outputDirectory + "timeErrorFile.txt");
       }
 
       for(int i = 0; i < numMeshes; ++i)
       {
+        const int timeStepFactor = i;
         std::string meshFile = "../../../data/stokes" + std::to_string(i+1) + ".msh";
-        cahnHilliardNavierStokes::MMS::solve(meshFile, orderU, orderPhiMu,
+        // std::string meshFile = "../../../data/stokes4.msh";
+        cahnHilliardNavierStokes::MMS::solve(meshFile, timeStepFactor, orderU, orderPhiMu,
           degreeQuadrature, NLoptions, nElm[i], nVertices[i],
-          errU[i], errP[i], errPhi[i], errMu[i]);
+          errU[i], errP[i], errPhi[i], errMu[i], timesteps[i]);
           // errU_H1[i], errP_H1[i], errPhi_H1[i], errMu_H1[i]);
 
         if(writeErrorToFile) {
@@ -628,13 +715,20 @@ namespace cahnHilliardNavierStokes {
             << std::setprecision(DEFAULT_SIGNIFICANT_DIGITS) << errP[i] << "\t"
             << std::setprecision(DEFAULT_SIGNIFICANT_DIGITS) << errPhi[i] << "\t"
             << std::setprecision(DEFAULT_SIGNIFICANT_DIGITS) << errMu[i] << "\n";
-          // errorFileL2.flush();
+          errorFileL2.flush();
+          timeErrorFile << timesteps[i] << "\t" << nElm[i] << "\t"
+            << std::setprecision(DEFAULT_SIGNIFICANT_DIGITS) << errU[i] << "\t"
+            << std::setprecision(DEFAULT_SIGNIFICANT_DIGITS) << errP[i] << "\t"
+            << std::setprecision(DEFAULT_SIGNIFICANT_DIGITS) << errPhi[i] << "\t"
+            << std::setprecision(DEFAULT_SIGNIFICANT_DIGITS) << errMu[i] << "\n";
+          timeErrorFile.flush();
         }
       }
 
       if(writeErrorToFile) {
         errorFileL2.close();
         errorFileH1.close();
+        timeErrorFile.close();
       }
 
       resultBuffer << "   (u,p) : Taylor-Hood elements P" << orderU << "-P" << orderU-1 << std::endl; 
@@ -647,6 +741,561 @@ namespace cahnHilliardNavierStokes {
       computeAndPrintConvergence(2, numMeshes, errPhi, nElm, DEFAULT_SIGNIFICANT_DIGITS, resultBuffer);
       resultBuffer << "Cahn-Hilliard Navier-Stokes MMS - Error on chemical potential mu" << std::endl;
       computeAndPrintConvergence(2, numMeshes, errMu, nElm, DEFAULT_SIGNIFICANT_DIGITS, resultBuffer);
+
+      // resultBuffer << "Time convergence:" << std::endl; 
+      // computeAndPrintConvergence(1, numMeshes, errU, timesteps, DEFAULT_SIGNIFICANT_DIGITS, resultBuffer);
+      // computeAndPrintConvergence(1, numMeshes, errP, timesteps, DEFAULT_SIGNIFICANT_DIGITS, resultBuffer);
+      // computeAndPrintConvergence(1, numMeshes, errPhi, timesteps, DEFAULT_SIGNIFICANT_DIGITS, resultBuffer);
+      // computeAndPrintConvergence(1, numMeshes, errMu, timesteps, DEFAULT_SIGNIFICANT_DIGITS, resultBuffer);
+
+      return 0;
+    }
+
+  } // namespace MMS
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// Modify here for another MMS
+#define CU 1.
+#define CV 1.
+#define U(x,y,t) CU * exp(-t) * x*x*x*x * y*y*y*y
+#define V(x,y,t) CV * exp(-t) * -4./5. * x*x*x * y*y*y*y*y
+
+#define DUDT(x,y,t) - CU * exp(-t) * x*x*x*x * y*y*y*y
+#define DVDT(x,y,t) - CV * exp(-t) * -4./5. * x*x*x * y*y*y*y*y
+
+#define DUDX(x,y,t) CU * exp(-t) *      4. *   x*x*x *   y*y*y*y
+#define DUDY(x,y,t) CU * exp(-t) *      4. * x*x*x*x *     y*y*y
+#define DVDX(x,y,t) CV * exp(-t) * -12./5. *     x*x * y*y*y*y*y
+#define DVDY(x,y,t) CV * exp(-t) *     -4. *   x*x*x *   y*y*y*y
+
+#define UXX(x,y,t) CU * exp(-t) *  12.    *          x*x * y*y*y*y
+#define UXY(x,y,t) CU * exp(-t) *  16.    *        x*x*x * y*y*y
+#define UYY(x,y,t) CU * exp(-t) *  12.    *      x*x*x*x * y*y
+#define VXX(x,y,t) CV * exp(-t) * -24./5. *            x * y*y*y*y*y
+#define VXY(x,y,t) CV * exp(-t) * -12.    *          x*x * y*y*y*y
+#define VYY(x,y,t) CV * exp(-t) * -16.    *        x*x*x * y*y*y
+
+#define P(x,y,t) x*x*y*y - 1./9 // Zero-average on [0,1]^2
+#define DPDX(x,y,t) 2*x*y*y
+#define DPDY(x,y,t) 2*x*x*y
+#define DPDXX(x,y,t) 2*y*y
+#define DPDYY(x,y,t) 2*x*x
+
+#define PHI(x,y,t)                     exp(-t) * sin(M_PI*x) * sin(M_PI*y)
+#define DPHIDT(x,y,t)                - exp(-t) * sin(M_PI*x) * sin(M_PI*y)
+#define DPHIDX(x,y,t)           M_PI * exp(-t) * cos(M_PI*x) * sin(M_PI*y)
+#define DPHIDY(x,y,t)           M_PI * exp(-t) * sin(M_PI*x) * cos(M_PI*y)
+#define DPHIDXX(x,y,t) - M_PI * M_PI * exp(-t) * sin(M_PI*x) * sin(M_PI*y)
+#define DPHIDYY(x,y,t) - M_PI * M_PI * exp(-t) * sin(M_PI*x) * sin(M_PI*y)
+
+#define MU(x,y,t)                     sin(M_PI*x) * sin(M_PI*y)
+#define DMUDX(x,y,t)           M_PI * cos(M_PI*x) * sin(M_PI*y)
+#define DMUDY(x,y,t)           M_PI * sin(M_PI*x) * cos(M_PI*y)
+#define DMUDXX(x,y,t) - M_PI * M_PI * sin(M_PI*x) * sin(M_PI*y)
+#define DMUDYY(x,y,t) - M_PI * M_PI * sin(M_PI*x) * sin(M_PI*y)
+///////////////////////////////////////////////////////////////////////////////
+// These should not be changed (-:
+#define UVEC(x,y,t) {U(x,y,t), V(x,y,t)}
+#define DUDTVEC(x,y,t) {DUDT(x,y,t), DVDT(x,y,t)}
+
+#define DIVU(x,y,t) DUDX(x,y,t) + DVDY(x,y,t)
+
+// Convention: defined as gradu_ij = du_j/dx_i to agree with directional derivatives
+#define GRADU(x,y,t) {{DUDX(x,y,t), DVDX(x,y,t)},    \
+                      {DUDY(x,y,t), DVDY(x,y,t)}}    \
+
+#define DIV_RATE_STRAIN(x,y,t) {UXX(x,y,t) + 0.5 * (UYY(x,y,t) + VXY(x,y,t)), \
+                                VYY(x,y,t) + 0.5 * (UXY(x,y,t) + VXX(x,y,t))}
+
+#define GRADP(x,y,t) {DPDX(x,y,t), DPDY(x,y,t)}
+#define LAP_P(x,y,t) DPDXX(x,y,t) + DPDYY(x,y,t)
+
+#define GRADPHI(x,y,t) {DPHIDX(x,y,t), DPHIDY(x,y,t)}
+#define LAP_PHI(x,y,t) DPHIDXX(x,y,t) + DPHIDYY(x,y,t)
+
+#define GRADMU(x,y,t) {DMUDX(x,y,t), DMUDY(x,y,t)}
+#define LAP_MU(x,y,t) DMUDXX(x,y,t) + DMUDYY(x,y,t)
+///////////////////////////////////////////////////////////////////////////////
+
+
+#define DECLARE_VARIABLES(args, par)               \
+  const double x   = args.pos[0]; \
+  const double y   = args.pos[1]; \
+  const double t   = args.t;      \
+  const double phi = args.u;      \
+                                  \
+  const double rhoA       = par[0];     \
+  const double rhoB       = par[1];     \
+  const double viscA      = par[2];     \
+  const double viscB      = par[3];     \
+  const double M          = par[4];     \
+  const double gamma      = par[5];     \
+  const double epsilon    = par[6];     \
+  const double beta       = par[7];     \
+  const double tau        = par[8];     \
+  const double alpha      = par[9];     \
+\
+  UNUSED(x,y,t,phi,rhoA, rhoB, \
+    viscA, viscB, M, gamma, epsilon, beta, tau, alpha);                                \
+
+
+//
+// Alternative mass-conservative formulation of CHNS
+//
+namespace alternativeCHNS {
+
+  namespace MMS {
+
+    void uSol_f(const feFunctionArguments &args, const std::vector<double> &par, std::vector<double> &res)
+    {
+      DECLARE_VARIABLES(args, par);
+      res[0] = U(x,y,t);
+      res[1] = V(x,y,t);
+    }
+
+    double pSol_f(const feFunctionArguments &args, const std::vector<double> &par)
+    {
+      DECLARE_VARIABLES(args, par);
+      return P(x,y,t);
+    }
+
+    double phiSol_f(const feFunctionArguments &args, const std::vector<double> &par)
+    {
+      DECLARE_VARIABLES(args, par);
+      return PHI(x,y,t);
+    }
+
+    double muSol_f(const feFunctionArguments &args, const std::vector<double> &par)
+    {
+      DECLARE_VARIABLES(args, par);
+      return MU(x,y,t);
+    }
+
+    double rho_f(const feFunctionArguments &args, const std::vector<double> &par)
+    {
+      DECLARE_VARIABLES(args, par);
+      return (rhoA - rhoB)/2. * phi + (rhoA + rhoB)/2.;
+    }
+
+    double drhodphi_f(const feFunctionArguments &args, const std::vector<double> &par)
+    {
+      DECLARE_VARIABLES(args, par);
+      return (rhoA - rhoB)/2.;
+    }
+
+    double viscosity_f(const feFunctionArguments &args, const std::vector<double> &par)
+    {
+      DECLARE_VARIABLES(args, par);
+      return (viscA - viscB)/2. * phi + (viscA + viscB)/2.;
+    }
+
+    double dviscdphi_f(const feFunctionArguments &args, const std::vector<double> &par)
+    {
+      DECLARE_VARIABLES(args, par);
+      return (viscA - viscB)/2.;
+    }
+
+    double pSource_f(const feFunctionArguments &args, const std::vector<double> &par)
+    {
+      DECLARE_VARIABLES(args, par);
+
+      const double div_u = DIVU(x,y,t);
+      const double lapP  = LAP_P(x,y,t);
+      const double lapMu = LAP_MU(x,y,t);
+
+      return - (div_u - alpha * M * lapMu - alpha*alpha*M * lapP);
+    }
+
+    void uSource_f(const feFunctionArguments &args, const std::vector<double> &par, std::vector<double> &res)
+    {
+      DECLARE_VARIABLES(args, par);
+
+      const double u[2]       = UVEC(x,y,t);
+      const double dudt[2]    = DUDTVEC(x,y,t);
+      const double phiRef     = PHI(x,y,t);
+
+      const double rho  = ( rhoA -  rhoB)/2. * phiRef + ( rhoA +  rhoB)/2.;
+      const double visc = (viscA - viscB)/2. * phiRef + (viscA + viscB)/2.;
+
+      const double gradu[2][2] = GRADU(x,y,t);
+      const double gradp[2]    = GRADP(x,y,t);
+      const double gradphi[2]  = GRADPHI(x,y,t);
+      const double gradmu[2]   = GRADMU(x,y,t);
+
+      const double divd[2] = DIV_RATE_STRAIN(x,y,t);
+
+      const double uDotGradu[2] = {u[0]*gradu[0][0] + u[1]*gradu[1][0],
+                                   u[0]*gradu[0][1] + u[1]*gradu[1][1]};
+      const double f[2] = {0., -9.81};
+
+      const double drhodphi  = (rhoA-rhoB)/2.;
+      const double dviscdphi = (viscA-viscB)/2.;
+
+      const double d[2][2] = {{gradu[0][0], (gradu[0][1] + gradu[1][0])/2.},
+                             {(gradu[0][1] + gradu[1][0])/2., gradu[1][1]}};
+      const double gradPhidotd[2] = {gradphi[0]*d[0][0] + gradphi[1]*d[1][0],
+                                     gradphi[0]*d[0][1] + gradphi[1]*d[1][1]};
+
+      const double dphidt = DPHIDT(x,y,t);
+      const double uDotGradPhi = u[0]*gradphi[0] + u[1]*gradphi[1];
+      const double consMass = drhodphi * dphidt + uDotGradPhi;
+
+      res[0] = - (rho * (dudt[0] + uDotGradu[0] - f[0]) + u[0]/2. * (consMass) + gradp[0] - 2.*(dviscdphi*gradPhidotd[0] + visc*divd[0]) + phiRef*gradmu[0]);
+      res[1] = - (rho * (dudt[1] + uDotGradu[1] - f[1]) + u[1]/2. * (consMass) + gradp[1] - 2.*(dviscdphi*gradPhidotd[1] + visc*divd[1]) + phiRef*gradmu[1]);
+    }
+
+    double phiSource_f(const feFunctionArguments &args, const std::vector<double> &par)
+    {
+      DECLARE_VARIABLES(args, par);
+      const double u[2]        = UVEC(x,y,t);
+      const double gradphi[2]  = GRADPHI(x,y,t);
+      const double dphidt      = DPHIDT(x,y,t);
+      const double lapP        = LAP_P(x,y,t);
+      const double lapMu       = LAP_MU(x,y,t);
+      const double uDotGradPhi = u[0]*gradphi[0] + u[1]*gradphi[1];
+
+      return - (dphidt + uDotGradPhi - M*lapMu - M*alpha*lapP);
+    }
+
+    double muSource_f(const feFunctionArguments &args, const std::vector<double> &par)
+    {
+      DECLARE_VARIABLES(args, par);
+      const double mu      = MU(x,y,t);
+      const double phiRef  = PHI(x,y,t);
+      const double phiCube = PHI(x,y,t) * PHI(x,y,t) * PHI(x,y,t);
+      const double lapPhi  = LAP_PHI(x,y,t);
+
+      return - (mu + tau * lapPhi - beta * (phiCube - phiRef));
+    }
+
+    int solve(const std::string &meshFile,
+              const int timeStepFactor,
+              const int orderU,
+              const int orderPhiMu,
+              const int degreeQuadrature,
+              const feNLSolverOptions &NLoptions,
+              int &numInteriorElements,
+              int &numVertices,
+              double &L2ErrorU,
+              double &L2ErrorP,
+              double &L2ErrorPhi,
+              double &L2ErrorMu,
+              double &integralP,
+              int &timesteps)
+    {
+      feVectorFunction uSol(uSol_f);
+      feFunction       pSol(pSol_f);
+      feFunction     phiSol(phiSol_f);
+      feFunction      muSol(muSol_f);
+
+      const double rhoA    = 1.234;
+      const double rhoB    = 999.;
+      const double viscA   = 0.02;
+      const double viscB   = 12.678;
+      const double M       = 2e-1;
+      const double gamma   = 2e-2;
+      const double epsilon = 2e-3;
+
+      const double alpha = (rhoB - rhoA) / (rhoA + rhoB);
+      const double beta   = 3. * gamma / (2. * sqrt(2.)) / epsilon;
+      const double tau    = 3. * gamma / (2. * sqrt(2.)) * epsilon;
+
+      std::vector<double> params = {rhoA, rhoB, viscA, viscB, M, gamma, epsilon, beta, tau, alpha};
+
+      feVectorFunction   uSource(  uSource_f, params);
+      feFunction         pSource(  pSource_f, params);
+      feFunction       phiSource(phiSource_f, params);
+      feFunction        muSource( muSource_f, params); 
+
+      feConstantFunction mobility(M);
+      feConstantFunction mobilityAlpha(M * alpha);
+
+      feFunction   density(      rho_f, params);
+      feFunction  drhodphi( drhodphi_f, params);
+      feFunction viscosity(viscosity_f, params);
+      feFunction dviscdphi(dviscdphi_f, params);
+      feConstantVectorFunction volumeForce({0, -9.81});
+      
+      feConstantFunction coeffKorteweg(0.); // Unused
+
+      // Phi equation
+      feConstantFunction coeffDiffMu(alpha * M);
+      feConstantFunction  coeffDiffP(alpha * alpha * M);
+      
+      // Mu equation
+      feConstantFunction coeffDiffPhi(- tau);
+      feConstantFunction coeffPhiCube(- beta);
+      feConstantFunction coeffPhi    (+ beta);
+
+      feMesh2DP1 mesh(meshFile);
+      numInteriorElements = mesh.getNumInteriorElements();
+      numVertices = mesh.getNumVertices();
+
+      // Velocity and pressure
+      feSpace *u = nullptr, *uB = nullptr, *p = nullptr,*pB = nullptr, *pP = nullptr;
+      // Phase marker and chemical potential
+      feSpace *phi = nullptr, *phiB = nullptr, *mu = nullptr,  *muB = nullptr;
+      // feSpace *l;
+
+      // Initialize with exact initial condition
+      // Use Taylor-Hood elements for (u,p) and equal order for (phi,u)
+      int dQ = degreeQuadrature;
+      feCheck(createFiniteElementSpace( u, &mesh, elementType::VECTOR_LAGRANGE, orderU, "U",       "Domaine", dQ, &uSol));
+      feCheck(createFiniteElementSpace(uB, &mesh, elementType::VECTOR_LAGRANGE, orderU, "U",          "Bord", dQ, &uSol));
+      feCheck(createFiniteElementSpace( p, &mesh, elementType::LAGRANGE,      orderU-1, "P",       "Domaine", dQ, &pSol));
+      feCheck(createFiniteElementSpace(pP, &mesh, elementType::LAGRANGE,      orderU-1, "P", "PointPression", dQ, &pSol));
+      feCheck(createFiniteElementSpace(pB, &mesh, elementType::LAGRANGE,      orderU-1, "P",          "Bord", dQ, &pSol));
+
+      feCheck(createFiniteElementSpace( phi, &mesh, elementType::LAGRANGE, orderPhiMu, "Phi", "Domaine", dQ, &phiSol));
+      feCheck(createFiniteElementSpace(phiB, &mesh, elementType::LAGRANGE, orderPhiMu, "Phi",    "Bord", dQ, &phiSol));
+      feCheck(createFiniteElementSpace(  mu, &mesh, elementType::LAGRANGE, orderPhiMu,  "Mu", "Domaine", dQ, &muSol));
+      feCheck(createFiniteElementSpace( muB, &mesh, elementType::LAGRANGE, orderPhiMu,  "Mu",    "Bord", dQ, &muSol));
+
+      // feCheck(createFiniteElementSpace(   l, &mesh, elementType::LAGRANGE, orderU-2,   "L", "Domaine", dQ, &scalarConstant::zero));
+
+      // std::vector<feSpace*> spaces = {u, uB, p, pP, phi, phiB, mu, muB};
+      // std::vector<feSpace*> essentialSpaces = {uB, pP, phiB, muB};
+
+      std::vector<feSpace*> spaces = {u, uB, p, pB, phi, phiB, mu, muB};
+      std::vector<feSpace*> essentialSpaces = {uB, pB, phiB, muB};
+
+      feMetaNumber numbering(&mesh, spaces, essentialSpaces);
+      feSolution sol(numbering.getNbDOFs(), spaces, essentialSpaces);
+
+      std::vector<feBilinearForm*> forms;
+
+      // Continuity
+      feBilinearForm *divU = nullptr, *diffMu_p = nullptr, *diffp_p = nullptr, *pS = nullptr;
+      feCheck(createBilinearForm(    divU,  {p, u}, new feSysElm_MixedDivergence<2>(&scalarConstant::one)));
+      feCheck(createBilinearForm(diffMu_p, {p, mu}, new feSysElm_MixedGradGrad<2>(&coeffDiffMu)));
+      feCheck(createBilinearForm( diffp_p,     {p}, new feSysElm_Diffusion<2>(&coeffDiffP)));
+      feCheck(createBilinearForm(      pS,     {p}, new feSysElm_Source(&pSource)));
+      forms.push_back(divU);
+      forms.push_back(diffMu_p);
+      forms.push_back(diffp_p);
+      forms.push_back(pS);
+
+      // Momentum
+      feBilinearForm *CHNS_momentum = nullptr, *uS = nullptr;
+      feCheck(createBilinearForm(CHNS_momentum, {u, p, phi, mu}, new feSysElm_CHNS_Momentum_Alternative<2>(&density, &drhodphi, &viscosity, &dviscdphi, &mobility, &coeffKorteweg, &volumeForce)));
+      feCheck(createBilinearForm(           uS,             {u}, new feSysElm_VectorSource<2>(&uSource)));
+      forms.push_back(CHNS_momentum);
+      forms.push_back(uS);
+
+      // Tracer convection
+      feBilinearForm *dphidt = nullptr, *divPhiU = nullptr, *diffMu_phi = nullptr, *diffP_phi = nullptr, *phiS = nullptr;
+      feCheck(createBilinearForm(    dphidt,     {phi}, new feSysElm_TransientMass(&scalarConstant::one)));
+      feCheck(createBilinearForm(   divPhiU,  {phi, u}, new feSysElm_ScalarVectorProduct<2>(&scalarConstant::minusOne)));
+      feCheck(createBilinearForm(diffMu_phi, {phi, mu}, new feSysElm_MixedGradGrad<2>(&mobility)));
+      feCheck(createBilinearForm( diffP_phi,  {phi, p}, new feSysElm_MixedGradGrad<2>(&mobilityAlpha)));
+      feCheck(createBilinearForm(      phiS,     {phi}, new feSysElm_Source(&phiSource)));
+      forms.push_back(dphidt);
+      forms.push_back(divPhiU);
+      forms.push_back(diffMu_phi);
+      forms.push_back(diffP_phi);
+      forms.push_back(phiS);
+
+      // Chemical potential
+      feBilinearForm *muMass = nullptr, *phiCube = nullptr, *phiMass = nullptr, *diffPhi = nullptr, *muS = nullptr;
+      feCheck(createBilinearForm( muMass,      {mu}, new feSysElm_Mass(&scalarConstant::one)));
+      feCheck(createBilinearForm(diffPhi, {mu, phi}, new feSysElm_MixedGradGrad<2>(&coeffDiffPhi)));
+      feCheck(createBilinearForm(phiCube, {mu, phi}, new feSysElm_MixedMassPower(&coeffPhiCube, 3)));
+      feCheck(createBilinearForm(phiMass, {mu, phi}, new feSysElm_MixedMass(&coeffPhi)));
+      feCheck(createBilinearForm(    muS,      {mu}, new feSysElm_Source(&muSource)));
+      forms.push_back(muMass);
+      forms.push_back(diffPhi);
+      forms.push_back(phiCube);
+      forms.push_back(phiMass);
+      forms.push_back(muS);
+
+      // // Zero-average pressure field
+      // feBilinearForm *massLP, *massPL;
+      // feCheck(createBilinearForm(massLP, {l, p}, new feSysElm_MixedMass(&scalarConstant::one)));
+      // feCheck(createBilinearForm(massPL, {p, l}, new feSysElm_MixedMass(&scalarConstant::one)));
+      // forms.push_back(massLP);
+      // forms.push_back(massPL);
+
+      feLinearSystem *system;
+      #if defined(HAVE_MKL)
+        feCheck(createLinearSystem(system, MKLPARDISO, forms, numbering.getNbUnknowns()));
+      #elif defined(HAVE_PETSC) && defined(PETSC_HAVE_MUMPS)
+        feCheck(createLinearSystem(system, PETSC_MUMPS, forms, numbering.getNbUnknowns()));
+      #else
+        feCheck(createLinearSystem(system, PETSC, forms, numbering.getNbUnknowns()));
+      #endif
+
+      feNorm *errorU_L2 = nullptr, *errorP_L2 = nullptr, *errorPhi_L2 = nullptr, *errorMu_L2 = nullptr;
+
+      feCheck(createNorm(  errorU_L2, VECTOR_L2_ERROR,   {u}, &sol, nullptr, &uSol));
+      feCheck(createNorm(  errorP_L2,        L2_ERROR,   {p}, &sol, &pSol));
+      feCheck(createNorm(errorPhi_L2,        L2_ERROR, {phi}, &sol, &phiSol));
+      feCheck(createNorm( errorMu_L2,        L2_ERROR,  {mu}, &sol, &muSol));
+
+      // feCheck(createNorm(  errorU_L2, VECTOR_LINF_ERROR,   {u}, &sol, nullptr, &uSol));
+      // feCheck(createNorm(  errorP_L2,        LINF_ERROR,   {p}, &sol, &pSol));
+      // feCheck(createNorm(errorPhi_L2,        LINF_ERROR, {phi}, &sol, &phiSol));
+      // feCheck(createNorm( errorMu_L2,        LINF_ERROR,  {mu}, &sol, &muSol));
+
+      std::vector<feNorm *> norms = {errorU_L2, errorP_L2, errorPhi_L2, errorMu_L2};
+
+      // Reference test file matches those parameters and L2 error evaluated at t1:
+      // UNUSED(timeStepFactor);
+      // double t0 = 0.;
+      // double t1 = 1e-6;
+      // int nTimeSteps = 10;
+
+      // For other convergence studies:
+      const double t0 = 0.;
+      const double t1 = 1e-3;
+      int nTimeSteps = 10 * pow(2, timeStepFactor);
+
+      timesteps = nTimeSteps;
+      TimeIntegrator *solver;
+      feCheck(createTimeIntegrator(solver, timeIntegratorScheme::BDF2, NLoptions,
+        system, &sol, &mesh, norms, {nullptr, 1, ""}, t0, t1, nTimeSteps));
+
+      // const double dt = solver->getTimeStep();
+
+      // Start BDF2 with manufactured solution
+      static_cast<BDF2Integrator*>(solver)->setStartingMethod(BDF2Starter::InitialCondition);
+
+      // Solve
+      feCheck(solver->makeSteps(nTimeSteps));
+
+      // Use L2 at t1 to compare with reference test files:
+      L2ErrorU   = errorU_L2->compute();
+      L2ErrorP   = errorP_L2->compute();
+      L2ErrorPhi = errorPhi_L2->compute();
+      L2ErrorMu  = errorMu_L2->compute();
+
+      // Integral of pressure (target is 0)
+      feNorm *intP;
+      feCheckReturn(createNorm(intP, INTEGRAL, {p}, &sol));
+      integralP = intP->compute();
+      delete intP;
+
+      // Or use L1 or Linf error in time:
+      // std::vector<std::vector<double>> postProc = solver->getPostProcessingData();
+      // L2ErrorU = 0.;
+      // L2ErrorP = 0.;
+      // L2ErrorPhi = 0.;
+      // L2ErrorMu = 0.;
+      // for(int j = 1; j < nTimeSteps+1; ++j) {
+
+      //   // L1 norm in time, method of rectangles
+      //   L2ErrorU   += dt * postProc[1][j];
+      //   L2ErrorP   += dt * postProc[2][j];
+      //   L2ErrorPhi += dt * postProc[3][j];
+      //   L2ErrorMu  += dt * postProc[4][j];
+
+      //   // // Linf norm in time
+      //   // L2ErrorU = fmax(L2ErrorU, postProc[1][j]);
+      //   // L2ErrorP = fmax(L2ErrorP, postProc[2][j]);
+      //   // L2ErrorPhi = fmax(L2ErrorPhi, postProc[3][j]);
+      //   // L2ErrorMu = fmax(L2ErrorMu, postProc[4][j]);
+      // }
+
+      // feNorm *errorU_H1 = nullptr, *errorP_H1 = nullptr, *errorPhi_H1 = nullptr, *errorMu_H1 = nullptr;
+      // feCheck(createNorm(errorU_H1, VECTOR_H1_ERROR, {u}, &sol, nullptr, &uSol));
+      // feCheck(createNorm(errorP_H1, H1_ERROR, {p}, &sol, &pSol));
+      // feCheck(createNorm(errorPhi_H1, H1_ERROR, {phi}, &sol, &phiSol));
+      // feCheck(createNorm(errorMu_H1 , H1_ERROR, {mu}, &sol, &muSol));
+      // H1ErrorU   = errorU_H1->compute();
+      // H1ErrorP   = errorP_H1->compute();
+      // H1ErrorPhi = errorPhi_H1->compute();
+      // H1ErrorMu  = errorMu_H1->compute();
+
+      delete errorU_L2;
+      delete errorP_L2;
+      delete errorPhi_L2;
+      delete errorMu_L2;
+      delete solver;
+      delete system;
+      for(feBilinearForm* f : forms)
+        delete f;
+      for(feSpace *s : spaces)
+        delete s;
+
+      return 0;
+    }
+
+    int meshConvergence(std::stringstream &resultBuffer, int orderU, int orderPhiMu, int numMeshes, int degreeQuadrature)
+    {
+      feNLSolverOptions NLoptions{1e-10, 1e-10, 1e8, 10, 4, 1e-1};
+
+      std::vector<int> nElm(numMeshes);
+      std::vector<int> timesteps(numMeshes);
+      std::vector<int> nVertices(numMeshes);
+      std::vector<double> errU(numMeshes, 0.);
+      std::vector<double> errP(numMeshes, 0.);
+      std::vector<double> errPhi(numMeshes, 0.);
+      std::vector<double> errMu(numMeshes, 0.);
+      std::vector<double> integralP(numMeshes, 0.);
+      // std::vector<double> errU_H1(numMeshes, 0.);
+      // std::vector<double> errP_H1(numMeshes, 0.);
+      // std::vector<double> errPhi_H1(numMeshes, 0.);
+      // std::vector<double> errMu_H1(numMeshes, 0.);
+
+      bool writeErrorToFile = true;
+      std::string outputDirectory = "./";
+      std::ofstream errorFileL2, errorFileH1, timeErrorFile;
+      if(writeErrorToFile) {
+        errorFileL2.open(outputDirectory + "errorL2.txt");
+        errorFileH1.open(outputDirectory + "errorH1.txt");
+        timeErrorFile.open(outputDirectory + "timeErrorFile.txt");
+      }
+
+      for(int i = 0; i < numMeshes; ++i)
+      {
+        const int timeStepFactor = i;
+        std::string meshFile = "../../../data/stokes" + std::to_string(i+1) + ".msh";
+        // std::string meshFile = "../../../data/stokes4.msh";
+        alternativeCHNS::MMS::solve(meshFile, timeStepFactor, orderU, orderPhiMu,
+          degreeQuadrature, NLoptions, nElm[i], nVertices[i],
+          errU[i], errP[i], errPhi[i], errMu[i], integralP[i], timesteps[i]);
+          // errU_H1[i], errP_H1[i], errPhi_H1[i], errMu_H1[i]);
+
+        if(writeErrorToFile) {
+          errorFileL2 << nVertices[i] << "\t" << nElm[i] << "\t"
+            << std::setprecision(DEFAULT_SIGNIFICANT_DIGITS) << errU[i] << "\t"
+            << std::setprecision(DEFAULT_SIGNIFICANT_DIGITS) << errP[i] << "\t"
+            << std::setprecision(DEFAULT_SIGNIFICANT_DIGITS) << errPhi[i] << "\t"
+            << std::setprecision(DEFAULT_SIGNIFICANT_DIGITS) << errMu[i] << "\n";
+          errorFileL2.flush();
+          timeErrorFile << timesteps[i] << "\t" << nElm[i] << "\t"
+            << std::setprecision(DEFAULT_SIGNIFICANT_DIGITS) << errU[i] << "\t"
+            << std::setprecision(DEFAULT_SIGNIFICANT_DIGITS) << errP[i] << "\t"
+            << std::setprecision(DEFAULT_SIGNIFICANT_DIGITS) << errPhi[i] << "\t"
+            << std::setprecision(DEFAULT_SIGNIFICANT_DIGITS) << errMu[i] << "\n";
+          timeErrorFile.flush();
+        }
+      }
+
+      if(writeErrorToFile) {
+        errorFileL2.close();
+        errorFileH1.close();
+        timeErrorFile.close();
+      }
+
+      resultBuffer << "   (u,p) : Taylor-Hood elements P" << orderU << "-P" << orderU-1 << std::endl; 
+      resultBuffer << "(phi,mu) : Equal order elements P" << orderPhiMu << "-P" << orderPhiMu << std::endl; 
+      resultBuffer << "Cahn-Hilliard Navier-Stokes MMS - Error on velocity" << std::endl;
+      computeAndPrintConvergence(2, numMeshes, errU, nElm, DEFAULT_SIGNIFICANT_DIGITS, resultBuffer);
+      resultBuffer << "Cahn-Hilliard Navier-Stokes MMS - Error on pressure" << std::endl;
+      computeAndPrintConvergence(2, numMeshes, errP, nElm, DEFAULT_SIGNIFICANT_DIGITS, resultBuffer);
+      resultBuffer << "Cahn-Hilliard Navier-Stokes MMS - Error on phase marker phi" << std::endl;
+      computeAndPrintConvergence(2, numMeshes, errPhi, nElm, DEFAULT_SIGNIFICANT_DIGITS, resultBuffer);
+      resultBuffer << "Cahn-Hilliard Navier-Stokes MMS - Error on chemical potential mu" << std::endl;
+      computeAndPrintConvergence(2, numMeshes, errMu, nElm, DEFAULT_SIGNIFICANT_DIGITS, resultBuffer);
+      resultBuffer << "Cahn-Hilliard Navier-Stokes MMS - Integral of pressure" << std::endl;
+      computeAndPrintConvergence(2, numMeshes, integralP, nElm, DEFAULT_SIGNIFICANT_DIGITS, resultBuffer);
+
+      // resultBuffer << "Time convergence:" << std::endl; 
+      // computeAndPrintConvergence(1, numMeshes, errU, timesteps, DEFAULT_SIGNIFICANT_DIGITS, resultBuffer);
+      // computeAndPrintConvergence(1, numMeshes, errP, timesteps, DEFAULT_SIGNIFICANT_DIGITS, resultBuffer);
+      // computeAndPrintConvergence(1, numMeshes, errPhi, timesteps, DEFAULT_SIGNIFICANT_DIGITS, resultBuffer);
+      // computeAndPrintConvergence(1, numMeshes, errMu, timesteps, DEFAULT_SIGNIFICANT_DIGITS, resultBuffer);
 
       return 0;
     }
@@ -684,6 +1333,23 @@ TEST(CahnHilliard, CHNS)
   int orderU = 2;
   int orderPhiMu = 1;
   cahnHilliardNavierStokes::MMS::meshConvergence(resultBuffer, orderU, orderPhiMu, 4, degreeQuadrature);
+  EXPECT_EQ(compareOutputFiles(testRoot, resultBuffer), 0);
+  finalize();
+}
+
+TEST(CahnHilliard, CHNS_Alt)
+{
+  initialize(my_argc, my_argv);
+  setVerbose(1);
+  
+  std::string testRoot = "../../../tests/withLinearSolver/CHNS_Alt_MMS";
+
+  std::stringstream resultBuffer;
+
+  int degreeQuadrature = 8;
+  int orderU = 2;
+  int orderPhiMu = 1;
+  alternativeCHNS::MMS::meshConvergence(resultBuffer, orderU, orderPhiMu, 4, degreeQuadrature);
   EXPECT_EQ(compareOutputFiles(testRoot, resultBuffer), 0);
   finalize();
 }

@@ -98,6 +98,7 @@ public:
 
   const std::vector<double> &getTime() const { return _t; }
   double                     getCurrentTime() const { return _t[0]; }
+  double                     getTimeStep() const { return _dt; }
   int                        getCurrentStep() { return _currentStep; };
   void                       setCurrentStep(int step) { _currentStep = step; };
   void                       setQuietStart(bool flag) { _quietStart = flag; }
