@@ -465,6 +465,82 @@ template class feSysElm_Diffusion<2>;
 template class feSysElm_Diffusion<3>;
 
 // -----------------------------------------------------------------------------
+// Bilinear form: diffusion with coefficient depending on scalar unknown field
+// -----------------------------------------------------------------------------
+template <int dim>
+void feSysElm_DiffusionFieldDependentCoeff<dim>::createElementarySystem(std::vector<feSpace *> &space)
+{
+  _idU = 0;
+  _idW = 1;
+  _fieldsLayoutI = {_idU};
+  _fieldsLayoutJ = {_idU, _idW};
+  _nFunctions = space[_idU]->getNumFunctions();
+  _gradPhi.resize(dim * _nFunctions);
+}
+
+template <int dim>
+void feSysElm_DiffusionFieldDependentCoeff<dim>::computeAe(feBilinearForm *form)
+{
+  UNUSED(form);
+  feErrorMsg(FE_STATUS_ERROR, "FD for now");
+  exit(-1);
+  // double jac, coeff;
+  // for(int k = 0; k < _nQuad; ++k) {
+  //   jac = form->_J[_nQuad * form->_numElem + k];
+  //   form->_cnc->getElementTransformation(form->_geoCoord, k, jac, form->_transformation);
+
+  //   // Evaluate scalar parameter
+  //   form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, form->_args.pos);
+  //   coeff = (*_coeff)(form->_args);
+
+  //   // Compute grad(phi)
+  //   form->_intSpaces[_idU]->getFunctionsPhysicalGradientAtQuadNode(k, form->_transformation,
+  //                                                                  _gradPhi.data());
+
+  //   for(int i = 0; i < _nFunctions; ++i) {
+  //     for(int j = 0; j < _nFunctions; ++j) {
+  //       for(int iDim = 0; iDim < dim; ++iDim) {
+  //         form->_Ae[i][j] +=
+  //           coeff * _gradPhi[i * dim + iDim] * _gradPhi[j * dim + iDim] * jac * _wQuad[k];
+  //       }
+  //     }
+  //   }
+  // }
+}
+
+template <int dim>
+void feSysElm_DiffusionFieldDependentCoeff<dim>::computeBe(feBilinearForm *form)
+{
+  double jac, coeff, w, grad_u[3] = {0., 0., 0.};
+  for(int k = 0; k < _nQuad; ++k) {
+    jac = form->_J[_nQuad * form->_numElem + k];
+    form->_cnc->getElementTransformation(form->_geoCoord, k, jac, form->_transformation);
+
+    // Evaluate field w and scalar coefficient
+    form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, form->_args.pos);
+    w = form->_intSpaces[_idW]->interpolateFieldAtQuadNode(form->_sol[_idW], k);
+    form->_args.u = w;
+    coeff = (*_coeff)(form->_args);
+
+    // Compute grad(u)
+    form->_intSpaces[_idU]->interpolateFieldAtQuadNode_physicalGradient(
+      form->_sol[_idU], k, form->_transformation, grad_u);
+
+    // Compute grad(phi)
+    form->_intSpaces[_idU]->getFunctionsPhysicalGradientAtQuadNode(k, form->_transformation,
+                                                                   _gradPhi.data());
+
+    for(int i = 0; i < _nFunctions; ++i) {
+      for(int iDim = 0; iDim < dim; ++iDim) {
+        form->_Be[i] -= coeff * _gradPhi[i * dim + iDim] * grad_u[iDim] * jac * _wQuad[k];
+      }
+    }
+  }
+}
+
+template class feSysElm_DiffusionFieldDependentCoeff<2>;
+
+// -----------------------------------------------------------------------------
 // Bilinear form: diffusion of scalar field with nonlinear diffusivity
 // -----------------------------------------------------------------------------
 template <int dim>
@@ -753,3 +829,84 @@ void feSysElm_MixedGradGrad<dim>::computeBe(feBilinearForm *form)
 template class feSysElm_MixedGradGrad<1>;
 template class feSysElm_MixedGradGrad<2>;
 template class feSysElm_MixedGradGrad<3>;
+
+// -----------------------------------------------------------------------------
+// Bilinear form: mixed gradient-gradient with coefficient depending on field
+// -----------------------------------------------------------------------------
+template <int dim>
+void feSysElm_MixedGradGradFieldDependentCoeff<dim>::createElementarySystem(std::vector<feSpace *> &space)
+{
+  _idV = 0; // Scalar test functions
+  _idU = 1; // Scalar unknown field
+  _idW = 2; // Scalar unknown field upon which the scalar coefficient depends
+  _fieldsLayoutI = {_idV}; // Rectangular local matrix
+  _fieldsLayoutJ = {_idU, _idW};
+  _nFunctionsU = space[_idU]->getNumFunctions();
+  _nFunctionsV = space[_idV]->getNumFunctions();
+  _gradPhiU.resize(dim * _nFunctionsU);
+  _gradPhiV.resize(dim * _nFunctionsV);
+}
+
+template <int dim>
+void feSysElm_MixedGradGradFieldDependentCoeff<dim>::computeAe(feBilinearForm *form)
+{
+  UNUSED(form);
+  feErrorMsg(FE_STATUS_ERROR, "FD for now");
+  exit(-1);
+  // double jac, coeff;
+  // for(int k = 0; k < _nQuad; ++k) {
+  //   jac = form->_J[_nQuad * form->_numElem + k];
+  //   form->_cnc->getElementTransformation(form->_geoCoord, k, jac, form->_transformation);
+
+  //   // Evaluate scalar parameter
+  //   form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, form->_args.pos);
+  //   coeff = (*_coeff)(form->_args);
+
+  //   // Get gradPhiU and gradPhiV
+  //   form->_intSpaces[_idU]->getFunctionsPhysicalGradientAtQuadNode(k, form->_transformation, _gradPhiU.data());
+  //   form->_intSpaces[_idV]->getFunctionsPhysicalGradientAtQuadNode(k, form->_transformation, _gradPhiV.data());
+
+  //   for(int i = 0; i < _nFunctionsV; ++i) {
+  //     for(int j = 0; j < _nFunctionsU; ++j) {
+  //       for(int iDim = 0; iDim < dim; ++iDim) {
+  //         form->_Ae[i][j] +=
+  //           coeff * _gradPhiV[i * dim + iDim] * _gradPhiU[j * dim + iDim] * jac * _wQuad[k];
+  //       }
+  //     }
+  //   }
+  // }
+}
+
+template <int dim>
+void feSysElm_MixedGradGradFieldDependentCoeff<dim>::computeBe(feBilinearForm *form)
+{
+  double jac, coeff, w, grad_u[3] = {0., 0., 0.};
+  for(int k = 0; k < _nQuad; ++k) {
+    jac = form->_J[_nQuad * form->_numElem + k];
+    form->_cnc->getElementTransformation(form->_geoCoord, k, jac, form->_transformation);
+
+    // Evaluate field w and scalar coefficient
+    form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, form->_args.pos);
+    w = form->_intSpaces[_idW]->interpolateFieldAtQuadNode(form->_sol[_idW], k);
+    form->_args.u = w;
+    coeff = (*_coeff)(form->_args);
+
+    // Get gradU and gradPhiV
+    form->_intSpaces[_idU]->interpolateFieldAtQuadNode_physicalGradient(form->_sol[_idU], k, form->_transformation, grad_u);
+    form->_intSpaces[_idV]->getFunctionsPhysicalGradientAtQuadNode(k, form->_transformation, _gradPhiV.data());
+
+    for(int i = 0; i < _nFunctionsV; ++i) {
+      
+      double dotprod = 0.;
+      for(int m = 0; m < dim; ++m) {
+        dotprod += grad_u[m] * _gradPhiV[i*dim + m];
+      }
+
+      form->_Be[i] -= coeff * dotprod * jac * _wQuad[k];
+    }
+  }
+}
+
+template class feSysElm_MixedGradGradFieldDependentCoeff<1>;
+template class feSysElm_MixedGradGradFieldDependentCoeff<2>;
+template class feSysElm_MixedGradGradFieldDependentCoeff<3>;

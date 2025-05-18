@@ -704,6 +704,16 @@ public:
     const std::vector<double> &gradOtherScalarShape,
     std::vector<double>       &res) const;
 
+  // Idem above, but transpose the result:
+  //
+  //      res[i][j] = phi_j cdot grad(phi_i), phi_i are scalar-valued test
+  //      functions of another space
+  void dotProductShapeGradShapeOtherSpaceTranspose(
+    const int                  iNode,
+    const int                  nFunctionsOther,
+    const std::vector<double> &gradOtherScalarShape,
+    std::vector<double>       &res) const;
+
   // res[i][j] = other_m * grad(phi_j)_mn * (phi_i)_n, where other is a given
   // vector
   //

@@ -163,6 +163,42 @@ void feVectorSpace<dim>::dotProductShapeGradShapeOtherSpace(
 }
 
 template <int dim>
+void feVectorSpace<dim>::dotProductShapeGradShapeOtherSpaceTranspose(
+  const int                  iNode,
+  const int                  nFunctionsOther,
+  const std::vector<double> &gradOtherScalarShape,
+  std::vector<double>       &res) const
+{
+  int           offset                 = iNode * _nFunctions * _nComponents;
+  const double *gradOtherScalarShape_p = gradOtherScalarShape.data();
+
+  for (int i = 0; i < nFunctionsOther; ++i)
+  {
+    const double *gradOtherScalarShape_i =
+        gradOtherScalarShape_p + i * _nComponents;
+    for (int j = 0; j < _nFunctions; ++j)
+    {
+      const double *phi_j = _Ldata + offset + j * _nComponents;
+      
+      static_assert(dim == 2 || dim == 3, "Dim should be 2 or 3");
+
+      if constexpr (dim == 2)
+      {
+        res[i * _nFunctions + j] = phi_j[0] * gradOtherScalarShape_i[0] +
+                                   phi_j[1] * gradOtherScalarShape_i[1];
+      }
+
+      if constexpr (dim == 3)
+      {
+        res[i * _nFunctions + j] = phi_j[0] * gradOtherScalarShape_i[0] +
+                                   phi_j[1] * gradOtherScalarShape_i[1] +
+                                   phi_j[2] * gradOtherScalarShape_i[2];
+      }
+    }
+  }
+}
+
+template <int dim>
 void feVectorSpace<dim>::vectorDotGradShapeDotShape(
   const int                  iNode,
   const std::vector<double> &gradPhi,
@@ -472,7 +508,7 @@ void feVectorSpace<dim>::divergence(const std::vector<double> &gradPhi,
 }
 
 //
-// Explicit instantiation
+// Explicit instantiations
 //
 template void
 feVectorSpace<2>::dotProductShapeShape(const int            iNode,
@@ -487,6 +523,11 @@ template void feVectorSpace<2>::dotProductShapeShapeOtherSpace(
   const feSpace       *other,
   std::vector<double> &res) const;
 template void feVectorSpace<2>::dotProductShapeGradShapeOtherSpace(
+  const int                  iNode,
+  const int                  nFunctionsOther,
+  const std::vector<double> &gradOtherScalarShape,
+  std::vector<double>       &res) const;
+template void feVectorSpace<2>::dotProductShapeGradShapeOtherSpaceTranspose(
   const int                  iNode,
   const int                  nFunctionsOther,
   const std::vector<double> &gradOtherScalarShape,

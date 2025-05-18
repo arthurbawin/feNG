@@ -26,6 +26,7 @@ typedef enum {
   TRANSIENT_VECTOR_MASS,
 
   DIFFUSION,
+  DIFFUSION_FIELD_DEPENDENT_COEFF,
   VECTOR_DIFFUSION,
   NONLINEAR_DIFFUSION,
 
@@ -40,6 +41,7 @@ typedef enum {
   MIXED_GRADIENT,
   MIXED_GRADIENT_FIELD_DEPENDENT_COEFF,
   MIXED_GRADGRAD,
+  MIXED_GRADGRAD_FIELD_DEPENDENT_COEFF,
   TRIPLE_MIXED_GRADIENT,
 
   MIXED_DIVERGENCE,
@@ -104,6 +106,8 @@ inline const std::string toString(elementSystemType t)
       return "TRANSIENT_VECTOR_MASS";
     case DIFFUSION:
       return "DIFFUSION";
+    case DIFFUSION_FIELD_DEPENDENT_COEFF:
+      return "DIFFUSION_FIELD_DEPENDENT_COEFF";
     case VECTOR_DIFFUSION:
       return "VECTOR_DIFFUSION";
     case NONLINEAR_DIFFUSION:
@@ -126,6 +130,8 @@ inline const std::string toString(elementSystemType t)
       return "MIXED_GRADIENT_FIELD_DEPENDENT_COEFF";
     case MIXED_GRADGRAD:
       return "MIXED_GRADGRAD";
+    case MIXED_GRADGRAD_FIELD_DEPENDENT_COEFF:
+      return "MIXED_GRADGRAD_FIELD_DEPENDENT_COEFF";
     case MIXED_DIVERGENCE:
       return "MIXED_DIVERGENCE";
     case MIXED_CURL:
@@ -627,6 +633,39 @@ public:
 };
 
 //
+// feSysElm_Diffusion, but the scalar diffusivity coefficient
+// depends on another scalar-valued unknown field.
+//
+// Strong form: - div(coeff(w) * grad(u))
+//
+//            /
+// Weak form: | coeff(w) * grad(u) dot grad(v) dx
+//            /
+//
+//                        U   W
+// Fields layout: phi_U [       ]
+//
+template <int dim>
+class feSysElm_DiffusionFieldDependentCoeff : public feSysElm
+{
+protected:
+  feFunction *_coeff;
+  int _idU, _idW, _nFunctions;
+  std::vector<double> _gradPhi;
+
+public:
+  feSysElm_DiffusionFieldDependentCoeff(feFunction *coeff)
+   : feSysElm(dim, 2, DIFFUSION_FIELD_DEPENDENT_COEFF, true), _coeff(coeff)
+  {
+    _computeMatrixWithFD = true;
+  };
+  virtual void createElementarySystem(std::vector<feSpace *> &space) override;
+  virtual void computeAe(feBilinearForm *form) override;
+  virtual void computeBe(feBilinearForm *form) override;
+  CLONEABLE(feSysElm_DiffusionFieldDependentCoeff)
+};
+
+//
 // Diffusion of vector-valued field
 // Matrix and residual
 //
@@ -969,6 +1008,38 @@ public:
 };
 
 //
+// Identical to feSysElm_MixedGradGrad, but the coefficient
+// depends on another scalar-valued variable.
+//
+// Strong form:       - div (coeff(w) * grad(u))
+//   Weak form: integral of (coeff(w) * grad(u)) dot grad(phi_v)
+//
+// with:
+//  - coeff: a scalar coefficient depending on SCLAR unknown w
+//  -     u: a resolved SCALAR field
+//  - phi_v: the test functions of another resolved SCALAR field
+//
+template <int dim>
+class feSysElm_MixedGradGradFieldDependentCoeff : public feSysElm
+{
+protected:
+  feFunction *_coeff;
+  int _idU, _idV, _idW, _nFunctionsU, _nFunctionsV;
+  std::vector<double> _gradPhiU, _gradPhiV;
+
+public:
+  feSysElm_MixedGradGradFieldDependentCoeff(feFunction *coeff)
+   : feSysElm(dim, 3, MIXED_GRADGRAD_FIELD_DEPENDENT_COEFF, true), _coeff(coeff)
+  {
+    _computeMatrixWithFD = true;
+  };
+  virtual void createElementarySystem(std::vector<feSpace *> &space) override;
+  virtual void computeAe(feBilinearForm *form) override;
+  virtual void computeBe(feBilinearForm *form) override;
+  CLONEABLE(feSysElm_MixedGradGradFieldDependentCoeff)
+};
+
+//
 // Mixed divergence : (coeff * div(u)) * v, with v scalar test functions
 //                                                 coeff a scalar coefficient
 // Integral of (coeff * div(u)) * v
@@ -1086,22 +1157,24 @@ public:
 // This is actually a weak divergence,
 // but the scalar coefficient is also an unknown field.
 //
-// Scalar-vector product : u v, with u an unknown scalar field
-//                                   v an unknown vector field
-// Integral of (u v) cdot grad(phi_u), with v the test function of another scalar unknown field.
+// Scalar-vector product : phi * u, with phi an unknown scalar field
+//                                         u an unknown vector field
+// Integral of (phi*u) cdot grad(test_phi).
 template <int dim>
 class feSysElm_ScalarVectorProduct : public feSysElm
 {
 protected:
   feFunction *_coeff;
+  // Convention : _idU associated to vector-valued u
+  //              _idV associated to scalar-valued phi   
   int _idU, _idV, _nFunctionsU, _nFunctionsV;
-  std::vector<double> _v, _gradPhiU;
+  std::vector<double> _u, _phiV, _gradPhiV, _phiUdotGradPhiV;
 
 public:
   feSysElm_ScalarVectorProduct(feFunction *coeff)
     : feSysElm(dim, 2, SCALAR_VECTOR_PRODUCT, true), _coeff(coeff)
   {
-    _computeMatrixWithFD = true;
+    _computeMatrixWithFD = false;
   };
   virtual void createElementarySystem(std::vector<feSpace *> &space) override;
   virtual void computeAe(feBilinearForm *form) override;
@@ -1208,10 +1281,10 @@ protected:
   feFunction *_viscosity;
   feFunction *_dviscdphi;
   feFunction *_mobility;
-  feFunction *_coeffKorteweg;
   feVectorFunction *_volumeForce;
   int _idU, _idP, _idPhi, _idMu;
   int _nFunctionsU, _nFunctionsP, _nFunctionsPhi, _nFunctionsMu;
+
   // A lot of vectors for the dot products and contractions
   std::vector<double> _f, _u, _dudt, _gradu, _uDotGradu, _gradphi, _gradmu, _gradmuDotGradu,
     _symmetricGradu, _phiU, _gradPhiU, _phiP, _phiPhi, _gradPhiPhi, _phiMu, _gradPhiMu,
@@ -1223,12 +1296,17 @@ protected:
   std::vector<double> _uDotPhiU, _gradMuDotphiU;
 
 public:
-  feSysElm_CHNS_Momentum_Alternative(feFunction *density, feFunction *drhodphi, feFunction *viscosity,
-                         feFunction *dviscdphi, feFunction *mobility, feFunction *coeffKorteweg,
-                         feVectorFunction *volumeForce)
-    : feSysElm(dim, 4, CHNS_MOMENTUM, true), _density(density), _drhodphi(drhodphi),
-      _viscosity(viscosity), _dviscdphi(dviscdphi), _mobility(mobility),
-      _coeffKorteweg(coeffKorteweg), _volumeForce(volumeForce)
+  feSysElm_CHNS_Momentum_Alternative(feFunction *density,
+                                     feFunction *drhodphi,
+                                     feFunction *viscosity,
+                                     feFunction *dviscdphi,
+                                     feVectorFunction *volumeForce)
+    : feSysElm(dim, 4, CHNS_MOMENTUM_ALTERNATIVE, true),
+    _density(density),
+    _drhodphi(drhodphi),
+    _viscosity(viscosity),
+    _dviscdphi(dviscdphi),
+    _volumeForce(volumeForce)
   {
     _computeMatrixWithFD = true;
   };
