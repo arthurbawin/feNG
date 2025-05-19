@@ -179,11 +179,15 @@ feBilinearForm::feBilinearForm(const std::vector<feSpace*> spaces,
   _adr.resize(_intSpaces.size());
   _sol.resize(_intSpaces.size());
   _solDot.resize(_intSpaces.size());
+  /////////////////////////////////
+  _solAtTimeN.resize(_intSpaces.size());
+  /////////////////////////////////
   _solPrev.resize(_intSpaces.size());
   _solNext.resize(_intSpaces.size());
   for(size_t k = 0; k < _intSpaces.size(); ++k) _adr[k].resize(_intSpaces[k]->getNumFunctions());
   for(size_t k = 0; k < _intSpaces.size(); ++k) _sol[k].resize(_intSpaces[k]->getNumFunctions());
   for(size_t k = 0; k < _intSpaces.size(); ++k) _solDot[k].resize(_intSpaces[k]->getNumFunctions());
+  for(size_t k = 0; k < _intSpaces.size(); ++k) _solAtTimeN[k].resize(_intSpaces[k]->getNumFunctions());
   for(size_t k = 0; k < _intSpaces.size(); ++k)
     _solPrev[k].resize(_intSpaces[k]->getNumFunctions());
   for(size_t k = 0; k < _intSpaces.size(); ++k)
@@ -197,7 +201,9 @@ feBilinearForm::feBilinearForm(const feBilinearForm &f)
   _fieldsLayoutI(f._fieldsLayoutI), _fieldsLayoutJ(f._fieldsLayoutJ),
   _M(f._M), _N(f._N), _adrI(f._adrI), _adrJ(f._adrJ), _R0(f._R0), _Rh(f._Rh),
   _h0(f._h0), ptrComputeMatrix(f.ptrComputeMatrix), _adr(f._adr), _sol(f._sol),
-  _solDot(f._solDot), _solPrev(f._solPrev), _solNext(f._solNext)
+  _solDot(f._solDot), 
+  _solAtTimeN(f._solAtTimeN), 
+  _solPrev(f._solPrev), _solNext(f._solNext)
 {
   _Ae = allocateMatrix(_M, _N);
   allocateResidual(_M, &_Be);
@@ -267,6 +273,10 @@ void feBilinearForm::initializeAddressingVectors(int numElem)
   }
 }
 
+///////////////////////////////////
+extern std::vector<double> solAtTimeN;
+///////////////////////////////////
+
 //
 // Initialize the form (feSysElm handler) on element numElem
 // Called before computing a local residual or local matrix
@@ -329,6 +339,9 @@ void feBilinearForm::initialize(const feSolution *sol, const int numElem)
     for(size_t k = 0; k < _adr[i].size(); ++k) {
       _sol[i][k] = solArray[_adr[i][k]];
       _solDot[i][k] = sol->getSolDotAtDOF(_adr[i][k]);
+      ////////////////////////////////////////////////////
+      _solAtTimeN[i][k] = solAtTimeN[_adr[i][k]];
+      ////////////////////////////////////////////////////
     }
   }
 

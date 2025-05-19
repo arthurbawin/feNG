@@ -35,10 +35,16 @@ typedef enum {
   // Compute |u - uh|_H1(cnc), with u a user-defined scalar field
   SEMI_H1_ERROR,
   SEMI_H1_ERROR_ESTIMATE,
+  /*               /  /                          \ 
+    Compute  sqrt |  |     grad(u) : grad(u) dx | with u vector-valued
+                   \  / cnc                      /
+  */
+  VECTOR_SEMI_H1_ERROR,
   // Compute ||uh||_H1(cnc)
   H1,
   // Compute ||u - uh||_H1(cnc), with u a user-defined scalar field
   H1_ERROR,
+  // VECTOR_H1_ERROR,
   //         /
   // Compute |    1 dx
   //         / cnc
@@ -255,7 +261,9 @@ private:
   double computeVectorLInfNormTimeDerivative(bool error = false);
   double computeH1SemiNorm(bool error = false);
   double computeH1SemiNormErrorEstimator();
+  double computeVectorH1SemiNorm(bool error = false);
   double computeH1Norm(bool error = false);
+  // double computeVectorH1Norm(bool error = false);
   double computeArea();
   double computeIntegral();
   double computeIntegralSolutionDependentFunction();

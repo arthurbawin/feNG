@@ -177,11 +177,17 @@ double feNorm::compute(normType type)
     case SEMI_H1_ERROR_ESTIMATE:
       res = this->computeH1SemiNormErrorEstimator();
       break;
+    case VECTOR_SEMI_H1_ERROR:
+      res = this->computeVectorH1SemiNorm(true);
+      break;
     case H1:
       res = this->computeH1Norm(false);
       break;
     case H1_ERROR:
       res = this->computeH1Norm(true);
+      break;
+    // case VECTOR_H1_ERROR: : Requires giving two vector-valued fields (solution and gradient tensor)
+    //   res = this->computeVectorH1Norm(true);
       break;
     case AREA:
       res = this->computeArea();
@@ -1782,12 +1788,73 @@ double feNorm::computeH1SemiNormErrorEstimator()
   return sqrt(res);
 }
 
+double feNorm::computeVectorH1SemiNorm(bool error)
+{
+  const int nComponents         = _spaces[0]->getNumComponents();
+  std::vector<double> gradu(nComponents * nComponents, 0.);
+  std::vector<double> graduh(nComponents * nComponents, 0.);
+  double              res       = 0.0, jac, doubleContraction;
+  _args.t = _solution->getCurrentTime();
+
+  if (error && _vectorSolution == nullptr)
+  {
+    feErrorMsg(FE_STATUS_ERROR,
+               "Cannot compute H1 seminorm because provided "
+               "tensor-valued function for gradient is NULL");
+    exit(-1);
+  }
+
+  ElementTransformation T;
+
+  for (int iElm = 0; iElm < _nElm; ++iElm)
+  {
+    if (_cnc->hasConstantTransformation())
+    {
+      _cnc->getElementTransformation(iElm, T);
+    }
+
+    _spaces[0]->_mesh->getCoord(_cnc, iElm, _geoCoord);
+    this->initializeLocalSolutionOnSpace(0, iElm);
+
+    for (int k = 0; k < _nQuad; ++k)
+    {
+      jac = _J[_nQuad * iElm + k];
+      _cnc->getElementTransformation(_geoCoord, k, jac, T);
+      _spaces[0]->interpolateVectorFieldAtQuadNode_physicalGradient(_localSol[0], nComponents, k, T, graduh.data());
+      _geoSpace->interpolateVectorFieldAtQuadNode(_geoCoord, k, _args.pos);
+      if (error)
+        _vectorSolution->eval(_args, gradu);
+
+      // Convention : (grad(u))_ij := du_j/dx^i
+      // 2D only for now (4 components in gradient tensor):
+      graduh[0] -= gradu[0];
+      graduh[1] -= gradu[1];
+      graduh[2] -= gradu[2];
+      graduh[3] -= gradu[3];
+      doubleContraction =
+          graduh[0] * graduh[0] + graduh[1] * graduh[1]
+        + graduh[2] * graduh[2] + graduh[3] * graduh[3];
+
+      res += doubleContraction * jac * _w[k];
+    }
+  }
+
+  return sqrt(res);
+}
+
 double feNorm::computeH1Norm(bool error)
 {
   double L2     = this->computeLpNorm(2, error);
   double SemiH1 = this->computeH1SemiNorm(error);
   return sqrt(L2 * L2 + SemiH1 * SemiH1);
 }
+
+// double feNorm::computeVectorH1Norm(bool error)
+// {
+//   double L2     = this->computeVectorLpNorm(2, error);
+//   double SemiH1 = this->computeVectorH1SemiNorm(error);
+//   return sqrt(L2 * L2 + SemiH1 * SemiH1);
+// }
 
 double feNorm::computeArea()
 {

@@ -132,6 +132,9 @@ public:
   // Solution at DOFs on the current element for each FE space
   std::vector<std::vector<double>> _sol;
   std::vector<std::vector<double>> _solDot;
+  /////////////////////////////////////////////////
+  std::vector<std::vector<double>> _solAtTimeN;
+  /////////////////////////////////////////////////
 
   // Solution on the previous and next element (for e.g. DG fluxes)
   // Next and previous only make sense in 1D for now.

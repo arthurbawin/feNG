@@ -1,67 +1,120 @@
-Vector Laplacian - Strong Dirichlet BC - Error on primary variable - Lagrange elements P1
+============ Lagrange P1 elements ================
+Vector Laplacian - Strong Dirichlet BC - L2 Error on primary variable
             nElm           error            rate
               42    2.100291e-02    0.000000e+00
              168    5.168593e-03    2.022746e+00
              672    1.286485e-03    2.006337e+00
             2688    3.212967e-04    2.001457e+00
 
-Vector Laplacian - Strong Dirichlet BC - Error on primary variable - Lagrange elements P2
+Vector Laplacian - Strong Dirichlet BC - H1 Error on primary variable
+            nElm           error            rate
+              42    3.408431e-01    0.000000e+00
+             168    1.712092e-01    9.933474e-01
+             672    8.569225e-02    9.985236e-01
+            2688    4.285848e-02    9.995840e-01
+
+============ Lagrange P2 elements ================
+Vector Laplacian - Strong Dirichlet BC - L2 Error on primary variable
             nElm           error            rate
               42    1.183067e-03    0.000000e+00
              168    1.454727e-04    3.023711e+00
              672    1.812249e-05    3.004896e+00
             2688    2.266050e-06    2.999530e+00
 
-Vector Laplacian - Weak Dirichlet BC - Error on primary variable - Lagrange elements P2
+Vector Laplacian - Strong Dirichlet BC - H1 Error on primary variable
+            nElm           error            rate
+              42    3.800807e-02    0.000000e+00
+             168    9.511922e-03    1.998497e+00
+             672    2.380397e-03    1.998535e+00
+            2688    5.955249e-04    1.998968e+00
+
+Vector Laplacian - Weak Dirichlet BC - L2 Error on primary variable
             nElm           error            rate
               42    5.505725e-03    0.000000e+00
              168    1.367614e-03    2.009272e+00
              672    3.400855e-04    2.007691e+00
             2688    8.492118e-05    2.001701e+00
 
-Vector Laplacian - Weak Dirichlet BC - Error on secondary variable - Lagrange elements P2
+Vector Laplacian - Weak Dirichlet BC - H1 Error on primary variable
+            nElm           error            rate
+              42    1.373374e-01    0.000000e+00
+             168    6.562653e-02    1.065374e+00
+             672    3.233504e-02    1.021181e+00
+            2688    1.610341e-02    1.005732e+00
+
+Vector Laplacian - Weak Dirichlet BC - L2 Error on secondary variable
             nElm           error            rate
               42    8.175409e-01    0.000000e+00
              168    5.684936e-01    5.241467e-01
              672    3.998725e-01    5.076042e-01
             2688    2.823632e-01    5.019881e-01
 
-Vector Laplacian - Strong Dirichlet BC - Error on primary variable - Lagrange elements P3
+============ Lagrange P3 elements ================
+Vector Laplacian - Strong Dirichlet BC - L2 Error on primary variable
             nElm           error            rate
               42    5.588173e-05    0.000000e+00
              168    3.447330e-06    4.018825e+00
              672    2.138988e-07    4.010479e+00
             2688    1.331590e-08    4.005706e+00
 
-Vector Laplacian - Weak Dirichlet BC - Error on primary variable - Lagrange elements P3
+Vector Laplacian - Strong Dirichlet BC - H1 Error on primary variable
+            nElm           error            rate
+              42    2.454217e-03    0.000000e+00
+             168    3.046707e-04    3.009940e+00
+             672    3.797702e-05    3.004052e+00
+            2688    4.741553e-06    3.001695e+00
+
+Vector Laplacian - Weak Dirichlet BC - L2 Error on primary variable
             nElm           error            rate
               42    1.252558e-03    0.000000e+00
              168    3.124288e-04    2.003278e+00
              672    7.801744e-05    2.001659e+00
             2688    1.950105e-05    2.000245e+00
 
-Vector Laplacian - Weak Dirichlet BC - Error on secondary variable - Lagrange elements P3
+Vector Laplacian - Weak Dirichlet BC - H1 Error on primary variable
+            nElm           error            rate
+              42    5.047157e-02    0.000000e+00
+             168    2.512154e-02    1.006546e+00
+             672    1.254732e-02    1.001545e+00
+            2688    6.272647e-03    1.000233e+00
+
+Vector Laplacian - Weak Dirichlet BC - L2 Error on secondary variable
             nElm           error            rate
               42    5.127040e-01    0.000000e+00
              168    3.614517e-01    5.043235e-01
              672    2.554739e-01    5.006270e-01
             2688    1.806379e-01    5.000754e-01
 
-Vector Laplacian - Strong Dirichlet BC - Error on primary variable - Lagrange elements P4
+============ Lagrange P4 elements ================
+Vector Laplacian - Strong Dirichlet BC - L2 Error on primary variable
             nElm           error            rate
               42    1.651591e-06    0.000000e+00
              168    5.132295e-08    5.008109e+00
              672    1.607020e-09    4.997144e+00
             2688    5.033474e-11    4.996690e+00
 
-Vector Laplacian - Weak Dirichlet BC - Error on primary variable - Lagrange elements P4
+Vector Laplacian - Strong Dirichlet BC - H1 Error on primary variable
+            nElm           error            rate
+              42    1.001167e-04    0.000000e+00
+             168    6.251054e-06    4.001440e+00
+             672    3.910860e-07    3.998542e+00
+            2688    2.446530e-08    3.998677e+00
+
+Vector Laplacian - Weak Dirichlet BC - L2 Error on primary variable
             nElm           error            rate
               42    4.675238e-04    0.000000e+00
              168    1.171219e-04    1.997029e+00
              672    2.928023e-05    2.000012e+00
             2688    7.320061e-06    1.999999e+00
 
-Vector Laplacian - Weak Dirichlet BC - Error on secondary variable - Lagrange elements P4
+Vector Laplacian - Weak Dirichlet BC - H1 Error on primary variable
+            nElm           error            rate
+              42    2.638830e-02    0.000000e+00
+             168    1.321966e-02    9.972140e-01
+             672    6.610115e-03    9.999373e-01
+            2688    3.305055e-03    1.000001e+00
+
+Vector Laplacian - Weak Dirichlet BC - L2 Error on secondary variable
             nElm           error            rate
               42    3.788732e-01    0.000000e+00
              168    2.677791e-01    5.006721e-01

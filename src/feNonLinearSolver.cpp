@@ -31,6 +31,10 @@ bool recomputeMatrixHeuristic(const feNLSolverOptions &tol,
   return false;
 }
 
+//////////////////////////////////
+std::vector<double> solAtTimeN;
+//////////////////////////////////
+
 feStatus solveNewtonRaphson(feLinearSystem *linearSystem,
                             feSolution *sol,
                             feSolutionContainer *container,
@@ -49,6 +53,12 @@ feStatus solveNewtonRaphson(feLinearSystem *linearSystem,
   if(solveForTimeDerivative) {
     sol->setC0(1.);
   }
+
+  ////////////////////////////////////////////
+  // Save the solution at beginning of time step
+  // This is solution at time n, and is not updated
+  solAtTimeN = sol->getSolution();
+  ////////////////////////////////////////////
 
   // Newton-Rapshon iteration
   while(!stop)

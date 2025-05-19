@@ -154,6 +154,25 @@ namespace vectorLaplacian {
     res[1] = b * sin(x*y);
   }
 
+  void grad_uSol_f(const feFunctionArguments &args, const std::vector<double> &par, std::vector<double> &res)
+  {
+    const double x = args.pos[0];
+    const double y = args.pos[1];
+    const double a = par[0];
+    const double b = par[1];
+
+    const double dudx = 6. * a * pow(x, 5) + 5. * pow(x,4) * y*y;
+    const double dudy = 2. * pow(x, 5) * y;
+    const double dvdx = y * b * cos(x*y);
+    const double dvdy = x * b * cos(x*y);
+
+    // Convention : (grad(u))_ij := du_j/dx^i
+    res[0] = dudx;
+    res[1] = dvdx;
+    res[2] = dudy;
+    res[3] = dvdy;
+  }
+
   // Normal derivative on the boundary
   // Using tests on the position (assuming unit square domain) to check on which side we are
   void minus_dudn_f(const feFunctionArguments &args, const std::vector<double> &par, std::vector<double> &res)
@@ -198,12 +217,14 @@ namespace vectorLaplacian {
             const feNLSolverOptions &NLoptions,
             int &numInteriorElements,
             double &L2Error,
+            double &H1Error,
             double &L2ErrorSecondaryVariable,
             const bool imposeDirichletBCWeakly)
   {
     double a = 0.1234;
     double b = 1.2345;
     feVectorFunction uSol(uSol_f, {a, b});
+    feVectorFunction grad_uSol(grad_uSol_f, {a, b});
     feVectorFunction uSrc(uSrc_f, {a, b});
     feVectorFunction minus_dudn(minus_dudn_f, {a, b});
 
@@ -259,8 +280,9 @@ namespace vectorLaplacian {
         feCheck(createLinearSystem(system, PETSC, forms, numbering.getNbUnknowns()));
       #endif
 
-    feNorm *errorU_L2 = nullptr;
+    feNorm *errorU_L2 = nullptr, *errorU_H1 = nullptr;
     feCheck(createNorm(errorU_L2, VECTOR_L2_ERROR, {u}, &sol, nullptr, &uSol));
+    feCheck(createNorm(errorU_H1, VECTOR_SEMI_H1_ERROR, {u}, &sol, nullptr, &grad_uSol));
     std::vector<feNorm *> norms = {};
 
     // feExporter *exporter;
@@ -272,6 +294,7 @@ namespace vectorLaplacian {
     feCheck(solver->makeSteps(1));
 
     L2Error = errorU_L2->compute();
+    H1Error = errorU_H1->compute();
 
     if(imposeDirichletBCWeakly)
     {
@@ -297,7 +320,8 @@ namespace vectorLaplacian {
     feNLSolverOptions NLoptions{1e-10, 1e-10, 1e4, 10, 4, 1e-1};
 
     std::vector<int> nElm(numMeshes);
-    std::vector<double> err(numMeshes, 0.);
+    std::vector<double> errL2(numMeshes, 0.);
+    std::vector<double> errH1(numMeshes, 0.);
     std::vector<double> errSecondary(numMeshes, 0.);
 
     // Strongly enforced Dirichlet BC
@@ -305,10 +329,13 @@ namespace vectorLaplacian {
     for(int i = 0; i < numMeshes; ++i)
     {
       std::string meshFile = "../../../data/square" + std::to_string(i+1) + ".msh";
-      solve(meshFile, order, degreeQuadrature, NLoptions, nElm[i], err[i], errSecondary[i], imposeDirichletBCWeakly);
+      solve(meshFile, order, degreeQuadrature, NLoptions, nElm[i], errL2[i], errH1[i], errSecondary[i], imposeDirichletBCWeakly);
     }
-    resultBuffer << "Vector Laplacian - Strong Dirichlet BC - Error on primary variable - Lagrange elements P" << order << std::endl;
-    computeAndPrintConvergence(2, numMeshes, err, nElm, DEFAULT_SIGNIFICANT_DIGITS, resultBuffer);
+    resultBuffer << "============ Lagrange P" << order << " elements ================" << std::endl;
+    resultBuffer << "Vector Laplacian - Strong Dirichlet BC - L2 Error on primary variable" << std::endl;
+    computeAndPrintConvergence(2, numMeshes, errL2, nElm, DEFAULT_SIGNIFICANT_DIGITS, resultBuffer);
+    resultBuffer << "Vector Laplacian - Strong Dirichlet BC - H1 Error on primary variable" << std::endl;
+    computeAndPrintConvergence(2, numMeshes, errH1, nElm, DEFAULT_SIGNIFICANT_DIGITS, resultBuffer);
 
     // Weakly enforced Dirichlet BC
     if(order > 1) {
@@ -316,11 +343,13 @@ namespace vectorLaplacian {
       for(int i = 0; i < numMeshes; ++i)
       {
         std::string meshFile = "../../../data/square" + std::to_string(i+1) + ".msh";
-        solve(meshFile, order, degreeQuadrature, NLoptions, nElm[i], err[i], errSecondary[i], imposeDirichletBCWeakly);
+        solve(meshFile, order, degreeQuadrature, NLoptions, nElm[i], errL2[i], errH1[i], errSecondary[i], imposeDirichletBCWeakly);
       }
-      resultBuffer << "Vector Laplacian - Weak Dirichlet BC - Error on primary variable - Lagrange elements P" << order << std::endl;
-      computeAndPrintConvergence(2, numMeshes, err, nElm, DEFAULT_SIGNIFICANT_DIGITS, resultBuffer);
-      resultBuffer << "Vector Laplacian - Weak Dirichlet BC - Error on secondary variable - Lagrange elements P" << order << std::endl;
+      resultBuffer << "Vector Laplacian - Weak Dirichlet BC - L2 Error on primary variable" << std::endl;
+      computeAndPrintConvergence(2, numMeshes, errL2, nElm, DEFAULT_SIGNIFICANT_DIGITS, resultBuffer);
+      resultBuffer << "Vector Laplacian - Weak Dirichlet BC - H1 Error on primary variable" << std::endl;
+      computeAndPrintConvergence(2, numMeshes, errH1, nElm, DEFAULT_SIGNIFICANT_DIGITS, resultBuffer);
+      resultBuffer << "Vector Laplacian - Weak Dirichlet BC - L2 Error on secondary variable" << std::endl;
       computeAndPrintConvergence(2, numMeshes, errSecondary, nElm, DEFAULT_SIGNIFICANT_DIGITS, resultBuffer);
     }
 

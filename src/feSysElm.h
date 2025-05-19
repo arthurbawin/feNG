@@ -389,7 +389,10 @@ protected:
   std::vector<double> _phiU, _phiV;
 
 public:
-  feSysElm_MixedMass(feFunction *coeff) : feSysElm(-1, 2, MIXED_MASS, true), _coeff(coeff) { };
+  feSysElm_MixedMass(feFunction *coeff) : feSysElm(-1, 2, MIXED_MASS, true), _coeff(coeff)
+  {
+    _computeMatrixWithFD = true;
+  };
   virtual void createElementarySystem(std::vector<feSpace *> &space) override;
   virtual void computeAe(feBilinearForm *form) override;
   virtual void computeBe(feBilinearForm *form) override;
