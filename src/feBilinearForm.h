@@ -60,6 +60,10 @@ public:
   // Physical coordinates of a point in the reference space
   std::vector<double> _geoCoord;
 
+  ////////////////
+  const feSolution *_solution;
+  ////////////////
+
   // Elements jacobians
   const std::vector<double> &_J;
 

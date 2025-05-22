@@ -15,7 +15,6 @@ feStatus createBilinearForm(feBilinearForm *&form, const std::vector<feSpace *> 
                       spaces.size());
   }
 
-  int cncGeoTag = spaces[0]->getCncGeoTag();
 
   // Perform some checks and exit on error:
   for(feSpace *s : spaces)
@@ -35,15 +34,16 @@ feStatus createBilinearForm(feBilinearForm *&form, const std::vector<feSpace *> 
         s->getFieldID().data(), s->getCncGeoID().data());
     }
 
-    // Check that all interpolation spaces are defined on the same connectivity
-    if(s->getCncGeoTag() != cncGeoTag) {
-      return feErrorMsg(
-        FE_STATUS_ERROR,
-        "(Bi-)linear form %s is defined on more than one geometric connectivity.\n"
-        "All finite element spaces in \"spaces\" should be defined on the same geometric "
-        "connectivity.\n",
-        elementarySystem->getWeakFormName().data());
-    }
+    // // Check that all interpolation spaces are defined on the same connectivity
+    // int cncGeoTag = spaces[0]->getCncGeoTag();
+    // if(s->getCncGeoTag() != cncGeoTag) {
+    //   return feErrorMsg(
+    //     FE_STATUS_ERROR,
+    //     "(Bi-)linear form %s is defined on more than one geometric connectivity.\n"
+    //     "All finite element spaces in \"spaces\" should be defined on the same geometric "
+    //     "connectivity.\n",
+    //     elementarySystem->getWeakFormName().data());
+    // }
 
     // Check that the elementary system is defined on a connectivity of same space dimension
     // Weak forms that can be defined on any dimension have dim = -1
@@ -283,6 +283,10 @@ extern std::vector<double> solAtTimeN;
 //
 void feBilinearForm::initialize(const feSolution *sol, const int numElem)
 {
+  ///////////////////////
+  _solution = sol;
+  ///////////////////////
+
   _numElem = numElem;
   _c0 = sol->getC0();
   _tn = sol->getCurrentTime();

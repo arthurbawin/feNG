@@ -63,6 +63,127 @@ void feSysElm_SourceDirac::computeBe(feBilinearForm *form)
 }
 
 // -----------------------------------------------------------------------------
+// Bilinear form: flux with prescribed normal angle only
+// -----------------------------------------------------------------------------
+template <int dim>
+void feSysElm_FluxPrescribedNormalAngle<dim>::createElementarySystem(std::vector<feSpace *> &space)
+{
+  _idV = 0;
+  _idU = 1;
+  _idU2D = 2;
+  _fieldsLayoutI = {_idV};
+  _fieldsLayoutJ = {_idU};
+  _nFunctionsV = space[_idV]->getNumFunctions();
+  _nFunctionsU = space[_idU]->getNumFunctions();
+  _phiV.resize(_nFunctionsV);
+  _phiU.resize(_nFunctionsU);
+  _gradu.resize(dim);
+}
+
+template <int dim>
+void feSysElm_FluxPrescribedNormalAngle<dim>::computeAe(feBilinearForm *form)
+{
+  UNUSED(form);
+  feErrorMsg(FE_STATUS_ERROR, "Compute with FD");
+  exit(-1);
+  // double jac, coeff;
+  // for(int k = 0; k < _nQuad; ++k) {
+  //   jac = form->_J[_nQuad * form->_numElem + k];
+
+  //   form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, form->_args.pos);
+  //   coeff = (*_coeff)(form->_args);
+
+  //   for(int i = 0; i < _nFunctions; ++i)
+  //     _phiU[i] = form->_intSpaces[_idU]->getFunctionAtQuadNode(i, k);
+
+  //   for(int i = 0; i < _nFunctions; ++i)
+  //     for(int j = 0; j < _nFunctions; ++j)
+  //       form->_Ae[i][j] += coeff * _phiU[i] * _phiU[j] * jac * _wQuad[k];
+  // }
+}
+
+template <int dim>
+void feSysElm_FluxPrescribedNormalAngle<dim>::computeBe(feBilinearForm *form)
+{
+  const feSpace *s2D = form->_intSpaces[_idU2D];
+  const feCncGeo *cnc2D = s2D->getCncGeo();
+  std::vector<double> geoCoord2D(3 * cnc2D->getNumVerticesPerElem());
+  ElementTransformation T2D;
+  std::vector<feInt> adr2D(s2D->getNumFunctions());
+  std::vector<double> sol2D(s2D->getNumFunctions());
+  const std::vector<double> &solArray = form->_solution->getSolution();
+
+  int elm;
+  double jac, norm_gradu, xsi[3];
+  bool isFound;
+
+  const double gamma   = 0.073;
+  const double epsilon = 0.044e-3;
+  const double lambda  = 3. / (2. * sqrt(2.)) * gamma * epsilon;
+
+  for(int k = 0; k < _nQuad; ++k)
+  {
+    jac = form->_J[_nQuad * form->_numElem + k];
+
+    form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, form->_args.pos);
+    // coeff = (*_coeff)(form->_args);
+
+    // Locate edge quadrature node in mesh and evaluate 2D gradient?
+    isFound = form->_cnc->getMesh()->locateVertex(form->_args.pos.data(), elm, xsi, 1e-4);
+
+    if(!isFound) {
+      feInfo("%f - %f - %f", xsi[0], xsi[1], xsi[2]);
+      feErrorMsg(FE_STATUS_ERROR, "Could not locate vertex (%+-1.4e - %+-1.4e) in the mesh!",
+        form->_args.pos[0], form->_args.pos[1]);
+    }
+
+    s2D->getMeshPtr()->getCoord(cnc2D, elm, geoCoord2D);
+
+    // feInfo("Located (%f,%f,%f) on (%f,%f,%f) - (%f,%f,%f) - (%f,%f,%f) at (%f,%f,%f)",
+    //   form->_args.pos[0], form->_args.pos[1], form->_args.pos[2],
+    //   geoCoord2D[3*0+0], geoCoord2D[3*0+1], geoCoord2D[3*0+2],
+    //   geoCoord2D[3*1+0], geoCoord2D[3*1+1], geoCoord2D[3*1+2],
+    //   geoCoord2D[3*2+0], geoCoord2D[3*2+1], geoCoord2D[3*2+2],
+    //   xsi[0], xsi[1], xsi[2]);
+
+    // Evaluate 2D gradient of shape functions
+    cnc2D->getElementTransformation(elm, T2D);
+    s2D->initializeAddressingVector(elm, adr2D);
+    for(size_t jj = 0; jj < adr2D.size(); ++jj) {
+      sol2D[jj] = solArray[adr2D[jj]];
+    }
+    s2D->interpolateField_physicalGradient(sol2D, xsi, T2D, _gradu.data());
+
+    // feInfo("Point (%f,%f) en (%f,%f,%f)", form->_args.pos[0], form->_args.pos[1], xsi[0], xsi[1], xsi[2]);
+    // feInfo("at (%f, %f) : grad = %f, %f ",  form->_args.pos[0], form->_args.pos[1], _gradu[0], _gradu[1]);
+
+    if constexpr(dim == 2) {
+      norm_gradu = sqrt(_gradu[0] * _gradu[0] + _gradu[1] * _gradu[1]);
+    }
+
+    // if(fabs(norm_gradu) > 1e-10) {
+    //   feInfo("norm    = %1.6e", norm_gradu);
+    //   feInfo("cos     = %1.6e", cos(_normalAngle));
+    //   feInfo("lambda  = %1.6e", lambda);
+    // }
+
+    form->_intSpaces[_idV]->getFunctionsAtQuadNode(k, _phiV);
+
+    for(int i = 0; i < _nFunctionsV; ++i)
+    {
+      form->_Be[i] -= - lambda * norm_gradu * cos(_normalAngle) * _phiV[i] * jac * _wQuad[k];
+    }
+
+    // lambda * phi_potential_i *
+    //                     std::cos(angle_of_contact * M_PI / 180.0) *
+    //                     (face_phase_grad_value.norm()) * JxW_face;
+
+  }
+}
+
+template class feSysElm_FluxPrescribedNormalAngle<2>;
+
+// -----------------------------------------------------------------------------
 // Bilinear form: mass matrix for scalar field
 // -----------------------------------------------------------------------------
 void feSysElm_Mass::createElementarySystem(std::vector<feSpace *> &space)

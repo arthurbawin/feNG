@@ -76,6 +76,14 @@ feNorm::feNorm(normType                            type,
     _localSolDot[k].resize(spaces[k]->getNumFunctions());
   }
 
+  // Count number of scalar spaces
+  _nScalarSpaces = 0;
+  for(const auto &s: _spaces)
+    if(!s->isVectorValued())
+      ++_nScalarSpaces;
+
+  _args.userScalarFields.resize(_nScalarSpaces);
+
   // Provide only a geometric connectivity, to compute integrals of source
   // terms, etc. but not of the finite element solution.
   _cncOnly = false;
@@ -256,8 +264,9 @@ void feNorm::initializeLocalSolutionTimeDerivativeOnSpace(int iSpace, int iElm)
 void feNorm::assignFieldsToCallbackArguments(const int iNode)
 {
   // Assign scalar- and vector-valued space to callback arguments
-  // Currently limited to one of each, so taking the first for each type
-  bool scalarWasSet = false, vectorWasSet = false;
+  // Currently limited to one vector space
+  bool vectorWasSet = false;
+  int indexScalar = 0;
   for(size_t iSpace = 0; iSpace < _spaces.size(); ++iSpace)
   {
     const feSpace *s = _spaces[iSpace];
@@ -281,17 +290,11 @@ void feNorm::assignFieldsToCallbackArguments(const int iNode)
     }
     else
     {
-      if (scalarWasSet)
-      {
-        // Handles only one field for now
-        feErrorMsg(
-          FE_STATUS_ERROR,
-          "Trying to add more than one scalar-valued field to function "
-          "argument. Can only handle a single field for now.");
-        exit(-1);
-      }
-      scalarWasSet = true;
-      _args.u      = s->interpolateFieldAtQuadNode(_localSol[iSpace], iNode);
+      const double scalar_val = s->interpolateFieldAtQuadNode(_localSol[iSpace], iNode);
+      if(indexScalar == 0)
+        _args.u = scalar_val;
+      _args.userScalarFields[indexScalar] = scalar_val;
+      indexScalar++;
     }
   }
 }
@@ -2382,7 +2385,7 @@ feStatus feNorm::reconstructScalarIsoline(const double val,
     double xsi[3] = {0., 0., 0.};
     bool s0 = _spaces[0]->getRootOnEdge(0, _localSol[0], val, xsi, 1e-6);
     if(s0) {
-      feInfo("Elm %d - Found root on edge 0 : (%+-1.4e, %+-1.4e, %+-1.4e)", iElm, xsi[0], xsi[1], xsi[2]);
+      // feInfo("Elm %d - Found root on edge 0 : (%+-1.4e, %+-1.4e, %+-1.4e)", iElm, xsi[0], xsi[1], xsi[2]);
       std::vector<double> pos(3);
       _geoSpace->interpolateVectorField(_geoCoord, xsi, pos);
       fprintf(isolinePos, "SP(%g,%g,%g){%g};\n", pos[0], pos[1], pos[2], 2.);
@@ -2396,7 +2399,7 @@ feStatus feNorm::reconstructScalarIsoline(const double val,
 
     bool s1 = _spaces[0]->getRootOnEdge(1, _localSol[0], val, xsi, 1e-6);
     if(s1) {
-      feInfo("Elm %d - Found root on edge 1 : (%+-1.4e, %+-1.4e, %+-1.4e)", iElm, xsi[0], xsi[1], xsi[2]);
+      // feInfo("Elm %d - Found root on edge 1 : (%+-1.4e, %+-1.4e, %+-1.4e)", iElm, xsi[0], xsi[1], xsi[2]);
       std::vector<double> pos(3);
       _geoSpace->interpolateVectorField(_geoCoord, xsi, pos);
       fprintf(isolinePos, "SP(%g,%g,%g){%g};\n", pos[0], pos[1], pos[2], 2.);
@@ -2410,7 +2413,7 @@ feStatus feNorm::reconstructScalarIsoline(const double val,
     
     bool s2 = _spaces[0]->getRootOnEdge(2, _localSol[0], val, xsi, 1e-6);
     if(s2) {
-      feInfo("Elm %d - Found root on edge 2 : (%+-1.4e, %+-1.4e, %+-1.4e)", iElm, xsi[0], xsi[1], xsi[2]);
+      // feInfo("Elm %d - Found root on edge 2 : (%+-1.4e, %+-1.4e, %+-1.4e)", iElm, xsi[0], xsi[1], xsi[2]);
       std::vector<double> pos(3);
       _geoSpace->interpolateVectorField(_geoCoord, xsi, pos);
       fprintf(isolinePos, "SP(%g,%g,%g){%g};\n", pos[0], pos[1], pos[2], 2.);

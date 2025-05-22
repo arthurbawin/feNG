@@ -119,6 +119,7 @@ protected:
   normType _type;
   // FE spaces
   std::vector<const feSpace*> _spaces;
+  int _nScalarSpaces;
   // Convenience ptr to the solution and the geometric connectivity
   const feSolution *_solution;
   const feCncGeo *_cnc;

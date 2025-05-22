@@ -932,6 +932,59 @@ void feSpace::interpolateFieldAtQuadNode_physicalGradient(const std::vector<doub
   }
 }
 
+void feSpace::interpolateField_physicalGradient(const std::vector<double> &field,
+                                                const double *r,
+                                                const ElementTransformation &T,
+                                                double *grad) const
+{
+  if(_dim == 0) { grad[0] = 0.; }
+  else if(_dim == 1)
+  {
+    // grad[0] = 0.;
+    // for(int i = 0; i < _nFunctions; ++i) {
+    //   double dphi_i_dx = _dLdr[_nFunctions * iQuadNode + i] * T.drdx[0];
+    //   grad[0] += field[i] * dphi_i_dx;
+    // }
+  }
+  else if(_dim == 2)
+  {
+    grad[0] = grad[1] = 0.;
+
+    // Uber inefficient, must modify the dLdr functions
+    std::vector<double> dphidr = this->dLdr(r);
+    std::vector<double> dphids = this->dLds(r);
+
+    // feInfo("Field %f - %f - %f", field[0], field[1], field[2]);
+    // feInfo("%f - %f - %f", dphidr[0], dphidr[1], dphidr[2]);
+    // feInfo("%f - %f - %f", dphids[0], dphids[1], dphids[2]);
+
+    for(int i = 0; i < _nFunctions; ++i) {
+      double dphi_i_dx = dphidr[i] * T.drdx[0] + dphids[i] * T.drdx[1];
+      double dphi_i_dy = dphidr[i] * T.drdy[0] + dphids[i] * T.drdy[1];
+      grad[0] += field[i] * dphi_i_dx;
+      grad[1] += field[i] * dphi_i_dy;
+    }
+  }
+  else if(_dim == 3)
+  {
+    // grad[0] = grad[1] = grad[2] = 0.;
+    // for(int i = 0; i < _nFunctions; ++i) {
+    //   double dphi_i_dx = _dLdr[_nFunctions * iQuadNode + i] * T.drdx[0] +
+    //                      _dLds[_nFunctions * iQuadNode + i] * T.drdx[1] +
+    //                      _dLdt[_nFunctions * iQuadNode + i] * T.drdx[2];
+    //   double dphi_i_dy = _dLdr[_nFunctions * iQuadNode + i] * T.drdy[0] +
+    //                      _dLds[_nFunctions * iQuadNode + i] * T.drdy[1] +
+    //                      _dLdt[_nFunctions * iQuadNode + i] * T.drdy[2];
+    //   double dphi_i_dz = _dLdr[_nFunctions * iQuadNode + i] * T.drdz[0] +
+    //                      _dLds[_nFunctions * iQuadNode + i] * T.drdz[1] +
+    //                      _dLdt[_nFunctions * iQuadNode + i] * T.drdz[2];
+    //   grad[0] += field[i] * dphi_i_dx;
+    //   grad[1] += field[i] * dphi_i_dy;
+    //   grad[2] += field[i] * dphi_i_dz;
+    // }
+  }
+}
+
 void feSpace::interpolateFieldAtQuadNode_physicalHessian(const std::vector<double> &field,
                                                          const int iQuadNode,
                                                          const ElementTransformation &T,

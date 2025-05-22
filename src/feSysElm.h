@@ -14,6 +14,8 @@ typedef enum {
   MIXED_SCALAR_VECTOR_SOURCE,
   GRAD_SOURCE,
 
+  FLUX_PRESCRIBED_NORMAL_ANGLE,
+
   MASS,
   MASS_POWER,
   MIXED_MASS,
@@ -54,6 +56,7 @@ typedef enum {
   MIXED_DIVERGENCE_CHNS,
   CHNS_TRACER_SUPG,
 
+  CHNS_ALTERNATIVE,
   CHNS_MOMENTUM_ALTERNATIVE,
 
   SUPG_PSPG_STOKES,
@@ -84,6 +87,8 @@ inline const std::string toString(elementSystemType t)
       return "MIXED_SCALAR_VECTOR_SOURCE";
     case GRAD_SOURCE:
       return "GRAD_SOURCE";
+    case FLUX_PRESCRIBED_NORMAL_ANGLE:
+      return "FLUX_PRESCRIBED_NORMAL_ANGLE";
     case MASS:
       return "MASS";
     case MASS_POWER:
@@ -144,6 +149,8 @@ inline const std::string toString(elementSystemType t)
       return "TRIPLE_MIXED_GRADIENT";
     case CHNS_MOMENTUM:
       return "CHNS_MOMENTUM";
+    case CHNS_ALTERNATIVE:
+      return "CHNS_ALTERNATIVE";
     case CHNS_MOMENTUM_ALTERNATIVE:
       return "CHNS_MOMENTUM_ALTERNATIVE";
     case MIXED_DIVERGENCE_CHNS:
@@ -302,6 +309,33 @@ public:
   void createElementarySystem(std::vector<feSpace *> &spaces);
   virtual void computeBe(feBilinearForm *form) override;
   CLONEABLE(feSysElm_VectorSource)
+};
+
+//
+// Prescribed flux on boundary, but only the
+// angle with the normal is prescribed
+//
+template <int dim>
+class feSysElm_FluxPrescribedNormalAngle : public feSysElm
+{
+protected:
+  feFunction *_coeff;
+  double _normalAngle;
+  int _idU, _idV, _idU2D, _nFunctionsU, _nFunctionsV;
+  std::vector<double> _phiU, _phiV, _gradu;
+
+public:
+  feSysElm_FluxPrescribedNormalAngle(feFunction *coeff, const double normalAngle)
+   : feSysElm(-1, 3, FLUX_PRESCRIBED_NORMAL_ANGLE, true),
+   _coeff(coeff),
+   _normalAngle(normalAngle)
+  {
+    _computeMatrixWithFD = true;
+  };
+  virtual void createElementarySystem(std::vector<feSpace *> &space) override;
+  virtual void computeAe(feBilinearForm *form) override;
+  virtual void computeBe(feBilinearForm *form) override;
+  CLONEABLE(feSysElm_FluxPrescribedNormalAngle)
 };
 
 //
@@ -1018,9 +1052,9 @@ public:
 //   Weak form: integral of (coeff(w) * grad(u)) dot grad(phi_v)
 //
 // with:
-//  - coeff: a scalar coefficient depending on SCLAR unknown w
-//  -     u: a resolved SCALAR field
-//  - phi_v: the test functions of another resolved SCALAR field
+//  - coeff: a scalar coefficient depending on SCALAR unknown w
+//  -     u: another unknown SCALAR field
+//  - phi_v: the test functions of yet another unknown SCALAR field
 //
 template <int dim>
 class feSysElm_MixedGradGradFieldDependentCoeff : public feSysElm
@@ -1317,6 +1351,168 @@ public:
   virtual void computeAe(feBilinearForm *form) override;
   virtual void computeBe(feBilinearForm *form) override;
   CLONEABLE(feSysElm_CHNS_Momentum_Alternative)
+};
+
+template <int dim>
+class CHNS_VolumeAveraged : public feSysElm
+{
+protected:
+  feFunction *_density;
+  feFunction *_drhodphi;
+  feFunction *_viscosity;
+  feFunction *_dviscdphi;
+  feFunction *_mobility;
+  feVectorFunction *_volumeForce;
+
+  feFunction *_sourceP;
+  feVectorFunction *_sourceU;
+  feFunction *_sourcePhi;
+  feFunction *_sourceMu;
+
+  double _surfaceTension, _epsilon, _lambda;
+
+  int _idU, _idP, _idPhi, _idMu;
+  int _nFunctionsU, _nFunctionsP, _nFunctionsPhi, _nFunctionsMu;
+
+  // A lot of vectors for the dot products and contractions
+  std::vector<double> _f, _Su, _u, _dudt;
+  std::vector<double> _gradu, _symmetricGradu, _uDotGradu, _gradp, _gradphi, _gradmu, _gradmuDotGradu;
+  std::vector<double> _phiP, _phiPhi, _phiMu, _gradPhiU, _gradPhiP, _gradPhiPhi, _gradPhiMu;
+  std::vector<double> _uDotPhiU, _dudtDotPhiU, _uDotGraduDotPhiU, _fDotPhiU,
+    _SuDotPhiU, _gradPhiDotphiU, _divPhiU, _doubleContraction, _gradMuDotgradUdotphiU;
+
+public:
+  CHNS_VolumeAveraged(feFunction *density,
+                      feFunction *drhodphi,
+                      feFunction *viscosity,
+                      feFunction *dviscdphi,
+                      feFunction *mobility,
+                      feVectorFunction *volumeForce,
+                      feFunction *sourceP,
+                      feVectorFunction *sourceU,
+                      feFunction *sourcePhi,
+                      feFunction *sourceMu,
+                      std::vector<double> &CHNSparameters)
+    : feSysElm(dim, 4, CHNS_ALTERNATIVE, true),
+    _density(density),
+    _drhodphi(drhodphi),
+    _viscosity(viscosity),
+    _dviscdphi(dviscdphi),
+    _mobility(mobility),
+    _volumeForce(volumeForce),
+    _sourceP(sourceP),
+    _sourceU(sourceU),
+    _sourcePhi(sourcePhi),
+    _sourceMu(sourceMu)
+  {
+    _computeMatrixWithFD = true;
+
+    size_t numRequiredParameters = 2;
+    if(CHNSparameters.size() != numRequiredParameters) {
+      feErrorMsg(FE_STATUS_ERROR,
+        "CHNS weak forms requires %d parameters:\n"
+        " - surface tension\n"
+        " - epsilon : interface thickness\n",
+        numRequiredParameters);
+      exit(-1);
+    }
+
+    _surfaceTension = CHNSparameters[0];
+    _epsilon        = CHNSparameters[1];
+    _lambda = 3. / (2. * sqrt(2.)) * _surfaceTension * _epsilon;
+  };
+
+  virtual void createElementarySystem(std::vector<feSpace *> &space) override;
+  virtual void computeAe(feBilinearForm *form) override;
+  virtual void computeBe(feBilinearForm *form) override;
+  CLONEABLE(CHNS_VolumeAveraged)
+};
+
+/*
+  Alternative formulation of the CHNS system,
+  including the complete system :
+  - continuity
+  - momentum
+  - tracer equation
+  - potential equation
+*/
+template <int dim>
+class feSysElm_CHNS_Alternative : public feSysElm
+{
+protected:
+  feFunction *_density;
+  feFunction *_drhodphi;
+  feFunction *_viscosity;
+  feFunction *_dviscdphi;
+  feFunction *_mobility;
+  feVectorFunction *_volumeForce;
+
+  feFunction *_sourceP;
+  feVectorFunction *_sourceU;
+  feFunction *_sourcePhi;
+  feFunction *_sourceMu;
+
+  double _alpha, _surfaceTension, _epsilon;
+  double _tau, _beta;
+
+  int _idU, _idP, _idPhi, _idMu;
+  int _nFunctionsU, _nFunctionsP, _nFunctionsPhi, _nFunctionsMu;
+
+  // A lot of vectors for the dot products and contractions
+  std::vector<double> _f, _Su, _u, _dudt;
+  std::vector<double> _gradu, _symmetricGradu, _uDotGradu, _gradp, _gradphi, _gradmu;
+  std::vector<double> _phiP, _phiPhi, _phiMu, _gradPhiU, _gradPhiP, _gradPhiPhi, _gradPhiMu;
+  std::vector<double> _uDotPhiU, _dudtDotPhiU, _uDotGraduDotPhiU, _fDotPhiU,
+    _SuDotPhiU, _gradMuDotphiU, _divPhiU, _doubleContraction;
+
+public:
+  feSysElm_CHNS_Alternative(feFunction *density,
+                            feFunction *drhodphi,
+                            feFunction *viscosity,
+                            feFunction *dviscdphi,
+                            feFunction *mobility,
+                            feVectorFunction *volumeForce,
+                            feFunction *sourceP,
+                            feVectorFunction *sourceU,
+                            feFunction *sourcePhi,
+                            feFunction *sourceMu,
+                            std::vector<double> &CHNSparameters)
+    : feSysElm(dim, 4, CHNS_ALTERNATIVE, true),
+    _density(density),
+    _drhodphi(drhodphi),
+    _viscosity(viscosity),
+    _dviscdphi(dviscdphi),
+    _mobility(mobility),
+    _volumeForce(volumeForce),
+    _sourceP(sourceP),
+    _sourceU(sourceU),
+    _sourcePhi(sourcePhi),
+    _sourceMu(sourceMu)
+  {
+    _computeMatrixWithFD = true;
+
+    size_t numRequiredParameters = 3;
+    if(CHNSparameters.size() != numRequiredParameters) {
+      feErrorMsg(FE_STATUS_ERROR,
+        "CHNS weak forms requires %d parameters:\n"
+        " - alpha = (rho_2 - rho_1) / (rho_1 + rho_2)\n"
+        " - surface tension\n"
+        " - epsilon : interface thickness\n",
+        numRequiredParameters);
+      exit(-1);
+    }
+
+    _alpha          = CHNSparameters[0];
+    _surfaceTension = CHNSparameters[1];
+    _epsilon        = CHNSparameters[2];
+
+    _beta = 3. / (2. * sqrt(2.)) * _surfaceTension / _epsilon;
+    _tau  = 3. / (2. * sqrt(2.)) * _surfaceTension * _epsilon;
+  };
+  virtual void createElementarySystem(std::vector<feSpace *> &space) override;
+  virtual void computeAe(feBilinearForm *form) override;
+  virtual void computeBe(feBilinearForm *form) override;
+  CLONEABLE(feSysElm_CHNS_Alternative)
 };
 
 //

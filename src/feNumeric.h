@@ -37,7 +37,7 @@ bool solveNewtonRaphson1D(const T &f,
 
     fx = f(x);
     iter++;
-    feInfo("NR - Iter %d: x = %+-1.6e - fx = %+-1.6e", iter, x, fx);
+    // feInfo("NR - Iter %d: x = %+-1.6e - fx = %+-1.6e", iter, x, fx);
 
     if(fabs(fx) <= tol || iter > maxiter) {
       stop = true;

@@ -527,6 +527,10 @@ public:
                                               const int iQuadNode,
                                               const ElementTransformation &T,
                                               double *grad) const;
+  void interpolateField_physicalGradient(const std::vector<double> &field,
+                                         const double *r,
+                                         const ElementTransformation &T,
+                                         double *grad) const;
   void
   interpolateFieldAtQuadNode_physicalHessian(const std::vector<double> &field,
                                              const int iQuadNode,

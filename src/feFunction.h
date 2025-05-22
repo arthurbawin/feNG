@@ -21,6 +21,10 @@ public:
   // FIXME: We should be able to give any number of scalar/vector fields
   // Scalar-valued solution or variable
   double u = 0.;
+
+  //
+  std::vector<double> userScalarFields;
+
   // Vector-valued solution or variable
   std::vector<double> v = {0., 0., 0.};
 
