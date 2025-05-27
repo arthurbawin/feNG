@@ -1995,7 +1995,8 @@ void CHNS_VolumeAveraged<dim>::computeBe(feBilinearForm *form)
 
   // const double hsize = hCircumInscr(form->_geoCoord);
 
-  double jac, jacw, rho, drhodphi, eta, p, phi, mu, dphidt, div_u;
+  double jac, jacw, rho, eta, p, phi, mu, dphidt, div_u;
+  // double drhodphi;
   double M, Sp, Sphi, Smu;
   double uDotGradPhi;
 
@@ -2033,7 +2034,7 @@ void CHNS_VolumeAveraged<dim>::computeBe(feBilinearForm *form)
     //
     form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, form->_args.pos);
     rho      = (*_density)(form->_args);
-    drhodphi = (*_drhodphi)(form->_args);
+    // drhodphi = (*_drhodphi)(form->_args);
     eta      = (*_viscosity)(form->_args);
     M        = (*_mobility)(form->_args);
     (*_volumeForce)(form->_args, _f);
@@ -2059,8 +2060,8 @@ void CHNS_VolumeAveraged<dim>::computeBe(feBilinearForm *form)
     if constexpr(dim == 2) {
       _uDotGradu[0] = _u[0] * _gradu[0] + _u[1] * _gradu[2];
       _uDotGradu[1] = _u[0] * _gradu[1] + _u[1] * _gradu[3];
-      _gradmuDotGradu[0] = _gradmu[0] * _gradu[0] + _gradmu[1] * _gradu[2];
-      _gradmuDotGradu[1] = _gradmu[0] * _gradu[1] + _gradmu[1] * _gradu[3];
+      // _gradmuDotGradu[0] = _gradmu[0] * _gradu[0] + _gradmu[1] * _gradu[2];
+      // _gradmuDotGradu[1] = _gradmu[0] * _gradu[1] + _gradmu[1] * _gradu[3];
       _symmetricGradu[0] = _gradu[0] + _gradu[0];
       _symmetricGradu[1] = _gradu[1] + _gradu[2];
       _symmetricGradu[2] = _gradu[2] + _gradu[1];
@@ -2074,7 +2075,7 @@ void CHNS_VolumeAveraged<dim>::computeBe(feBilinearForm *form)
     uSpace->dotProductShapeOther(k, _uDotGradu, _uDotGraduDotPhiU);
     uSpace->dotProductShapeOther(k, _f, _fDotPhiU);
     uSpace->dotProductShapeOther(k, _Su, _SuDotPhiU);
-    uSpace->dotProductShapeOther(k, _gradmuDotGradu, _gradMuDotgradUdotphiU);
+    // uSpace->dotProductShapeOther(k, _gradmuDotGradu, _gradMuDotgradUdotphiU);
     uSpace->dotProductShapeOther(k, _gradphi, _gradPhiDotphiU);
     uSpace->divergence(_gradPhiU, _divPhiU);
     uSpace->doubleContractionGradShapeOther(_gradPhiU, _symmetricGradu, _doubleContraction);
@@ -2095,7 +2096,7 @@ void CHNS_VolumeAveraged<dim>::computeBe(feBilinearForm *form)
         rho * (_dudtDotPhiU[i] + _uDotGraduDotPhiU[i] - _fDotPhiU[i])
 
         // Diffusive flux
-        + drhodphi * M * _gradMuDotgradUdotphiU[i]
+        // + drhodphi * M * _gradMuDotgradUdotphiU[i]
         
         // Korteweg force
         - mu * _gradPhiDotphiU[i]

@@ -87,7 +87,7 @@ feStatus createFiniteElementSpace(feSpace         *&space,
                                   const std::string fieldName,
                                   const std::string connectivityName,
                                   const int         degreeQuadrature,
-                                  void             *fct,
+                                  const void       *fct,
                                   const bool useGlobalShapeFunctions = false);
 
 // Abstract class defining a finite element space, handling the interpolation
@@ -151,7 +151,7 @@ protected:
   // std::vector<double> _barycentricCoordinates;
 
   bool _isDiscontinuous = false;
-  bool _isVectorValued = false;
+  bool _isVectorValued  = false;
 
   // Use global (physical) interpolation functions (experimental, do not use
   // yet)
@@ -163,8 +163,8 @@ protected:
   std::vector<std::vector<double>> _dLdyglob;
 
   // Scalar or vector field used to initialize the DOFs
-  feFunction       *_scalarFct;
-  feVectorFunction *_vectorFct;
+  const feFunction       *_scalarFct;
+  const feVectorFunction *_vectorFct;
   // How the DOFs should be initialized, see enum above
   dofInitialization        _DOFinitialization = dofInitialization::NODEWISE;
   std::vector<dofLocation> _dofLocations;
@@ -183,13 +183,13 @@ public:
 
   // Do not use the abstract class constructor directly, call the derived
   // classes.
-  feSpace(const int          dimension,
-          feMesh            *mesh                    = nullptr,
-          const std::string &fieldID                 = "",
-          const std::string &cncGeoID                = "",
-          feFunction        *scalarField             = nullptr,
-          feVectorFunction  *vectorField             = nullptr,
-          const bool         useGlobalShapeFunctions = false);
+  feSpace(const int               dimension,
+          feMesh                 *mesh                    = nullptr,
+          const std::string      &fieldID                 = "",
+          const std::string      &cncGeoID                = "",
+          const feFunction       *scalarField             = nullptr,
+          const feVectorFunction *vectorField             = nullptr,
+          const bool              useGlobalShapeFunctions = false);
   virtual ~feSpace();
 
   const std::string &getFieldID() const { return _fieldID; }
@@ -527,8 +527,8 @@ public:
                                               const int iQuadNode,
                                               const ElementTransformation &T,
                                               double *grad) const;
-  void interpolateField_physicalGradient(const std::vector<double> &field,
-                                         const double *r,
+  void interpolateField_physicalGradient(const std::vector<double>   &field,
+                                         const double                *r,
                                          const ElementTransformation &T,
                                          double *grad) const;
   void
@@ -625,11 +625,11 @@ public:
   // on edge for now).
   //
   // Return true if a root was found, false otherwise.
-  bool getRootOnEdge(const int iEdge,
+  bool getRootOnEdge(const int                  iEdge,
                      const std::vector<double> &field,
-                     const double val,
-                     double xsi[3],
-                     const double tol = 1e-6) const;
+                     const double               val,
+                     double                     xsi[3],
+                     const double               tol = 1e-6) const;
 };
 
 class feScalarSpace : public feSpace
@@ -640,8 +640,16 @@ public:
                 feMesh            *mesh                    = nullptr,
                 const std::string &fieldID                 = "",
                 const std::string &cncGeoID                = "",
-                feFunction        *scalarField             = nullptr,
-                const bool         useGlobalShapeFunctions = false);
+                const feFunction  *scalarField             = nullptr,
+                const bool         useGlobalShapeFunctions = false)
+    : feSpace(dimension,
+              mesh,
+              fieldID,
+              cncGeoID,
+              scalarField,
+              nullptr,
+              useGlobalShapeFunctions)
+  {}
   ~feScalarSpace(){};
 };
 
@@ -652,12 +660,12 @@ protected:
   static constexpr int _nVectorComponents = dim;
 
 public:
-  feVectorSpace(const int          dimension,
-                feMesh            *mesh                    = nullptr,
-                const std::string &fieldID                 = "",
-                const std::string &cncGeoID                = "",
-                feVectorFunction  *vectorField             = nullptr,
-                const bool         useGlobalShapeFunctions = false)
+  feVectorSpace(const int               dimension,
+                feMesh                 *mesh                    = nullptr,
+                const std::string      &fieldID                 = "",
+                const std::string      &cncGeoID                = "",
+                const feVectorFunction *vectorField             = nullptr,
+                const bool              useGlobalShapeFunctions = false)
     : feSpace(dimension,
               mesh,
               fieldID,
@@ -666,7 +674,7 @@ public:
               vectorField,
               useGlobalShapeFunctions)
   {
-    _isVectorValued = true;
+    _isVectorValued    = true;
     this->_nComponents = dim;
   };
 
@@ -760,7 +768,7 @@ public:
   void
   doubleContractionGradShapeGradShapeTransposed(const std::vector<double> &,
                                                 std::vector<double> &) const;
-  
+
   // Double contraction of the gradient of each shape function
   // with the gradient of each shape function :
   //       res[i] = grad(phi_i) : other
@@ -784,7 +792,7 @@ public:
   feSpace0DP0(feMesh           *mesh,
               const std::string fieldID,
               const std::string cncGeoID,
-              feFunction       *fct);
+              const feFunction *fct);
   ~feSpace0DP0(){};
 
   int getNumFunctions() const { return 1; }
@@ -807,7 +815,7 @@ public:
   feSpace0D_Hermite(feMesh           *mesh,
                     const std::string fieldID,
                     const std::string cncGeoID,
-                    feFunction       *fct);
+                    const feFunction *fct);
   ~feSpace0D_Hermite(){};
 
   int getNumFunctions() const { return 2; }
@@ -831,7 +839,7 @@ public:
   feSpace1DP0(feMesh           *mesh,
               const std::string fieldID,
               const std::string cncGeoID,
-              feFunction       *fct);
+              const feFunction *fct);
   ~feSpace1DP0(){};
 
   int getNumFunctions() const { return 1; }
@@ -856,7 +864,7 @@ public:
   feSpace1DP1(feMesh           *mesh,
               const std::string fieldID,
               const std::string cncGeoID,
-              feFunction       *fct);
+              const feFunction *fct);
   ~feSpace1DP1(){};
 
   int getNumFunctions() const { return 2; }
@@ -878,10 +886,10 @@ template <int dim>
 class feSpaceVecP1 : public feVectorSpace<dim>
 {
 public:
-  feSpaceVecP1(feMesh           *mesh,
-               const std::string fieldID,
-               const std::string cncGeoID,
-               feVectorFunction *fct);
+  feSpaceVecP1(feMesh                 *mesh,
+               const std::string       fieldID,
+               const std::string       cncGeoID,
+               const feVectorFunction *fct);
 
   int getNumFunctions() const { return 2 * dim; }
   int getPolynomialDegree() const { return 1; }
@@ -905,7 +913,7 @@ public:
   feSpace1D_DG_P1(feMesh           *mesh,
                   const std::string fieldID,
                   const std::string cncGeoID,
-                  feFunction       *fct);
+                  const feFunction *fct);
   ~feSpace1D_DG_P1(){};
 
   int getNumFunctions() const { return 2; }
@@ -931,7 +939,7 @@ public:
   feSpace1D_CR0(feMesh           *mesh,
                 const std::string fieldID,
                 const std::string cncGeoID,
-                feFunction       *fct);
+                const feFunction *fct);
   ~feSpace1D_CR0() {}
 
   int getNumFunctions() const { return 1; }
@@ -956,7 +964,7 @@ public:
   feSpace1DP2(feMesh           *mesh,
               const std::string fieldID,
               const std::string cncGeoID,
-              feFunction       *fct);
+              const feFunction *fct);
   ~feSpace1DP2() {}
 
   int getNumFunctions() const { return 3; }
@@ -979,10 +987,10 @@ class feSpaceVecP2 : public feVectorSpace<dim>
 {
 protected:
 public:
-  feSpaceVecP2(feMesh           *mesh,
-               const std::string fieldID,
-               const std::string cncGeoID,
-               feVectorFunction *fct);
+  feSpaceVecP2(feMesh                 *mesh,
+               const std::string       fieldID,
+               const std::string       cncGeoID,
+               const feVectorFunction *fct);
   ~feSpaceVecP2(){};
 
   int getNumFunctions() const { return 3 * dim; }
@@ -1008,7 +1016,7 @@ public:
   feSpace1DP3(feMesh           *mesh,
               const std::string fieldID,
               const std::string cncGeoID,
-              feFunction       *fct);
+              const feFunction *fct);
   ~feSpace1DP3() {}
 
   int getNumFunctions() const { return 4; }
@@ -1031,10 +1039,10 @@ class feSpaceVecP3 : public feVectorSpace<dim>
 {
 protected:
 public:
-  feSpaceVecP3(feMesh           *mesh,
-               const std::string fieldID,
-               const std::string cncGeoID,
-               feVectorFunction *fct);
+  feSpaceVecP3(feMesh                 *mesh,
+               const std::string       fieldID,
+               const std::string       cncGeoID,
+               const feVectorFunction *fct);
   ~feSpaceVecP3(){};
 
   int getNumFunctions() const { return 4 * dim; }
@@ -1059,7 +1067,7 @@ public:
   feSpace1D_H3(feMesh           *mesh,
                const std::string fieldID,
                const std::string cncGeoID,
-               feFunction       *fct);
+               const feFunction *fct);
   ~feSpace1D_H3() {}
 
   int getNumFunctions() const { return 4; }
@@ -1086,7 +1094,7 @@ public:
   feSpace1DP4(feMesh           *mesh,
               const std::string fieldID,
               const std::string cncGeoID,
-              feFunction       *fct);
+              const feFunction *fct);
   ~feSpace1DP4() {}
 
   int getNumFunctions() const { return 5; }
@@ -1109,10 +1117,10 @@ class feSpaceVecP4 : public feVectorSpace<dim>
 {
 protected:
 public:
-  feSpaceVecP4(feMesh           *mesh,
-               const std::string fieldID,
-               const std::string cncGeoID,
-               feVectorFunction *fct);
+  feSpaceVecP4(feMesh                 *mesh,
+               const std::string       fieldID,
+               const std::string       cncGeoID,
+               const feVectorFunction *fct);
   ~feSpaceVecP4(){};
 
   int getNumFunctions() const { return 5 * dim; }
@@ -1141,7 +1149,7 @@ public:
                      feMesh           *mesh,
                      const std::string fieldID,
                      const std::string cncGeoID,
-                     feFunction       *fct);
+                     const feFunction *fct);
   ~feSpace1D_Legendre() {}
 
   int getNumFunctions() const { return _nFunctions; }
@@ -1167,7 +1175,7 @@ public:
   feSpaceTriP0(feMesh           *mesh,
                const std::string fieldID,
                const std::string cncGeoID,
-               feFunction       *fct,
+               const feFunction *fct,
                const bool        useGlobalShapeFunctions = false);
   ~feSpaceTriP0() {}
 
@@ -1199,7 +1207,7 @@ public:
   feSpaceTriP1(feMesh           *mesh,
                const std::string fieldID,
                const std::string cncGeoID,
-               feFunction       *fct,
+               const feFunction *fct,
                const bool        useGlobalShapeFunctions = false);
   ~feSpaceTriP1() {}
 
@@ -1231,7 +1239,7 @@ public:
   feSpaceTriP1_Discontinuous(feMesh           *mesh,
                              const std::string fieldID,
                              const std::string cncGeoID,
-                             feFunction       *fct);
+                             const feFunction *fct);
   ~feSpaceTriP1_Discontinuous(){};
 
   int getNumFunctions() const { return 3; }
@@ -1261,11 +1269,11 @@ class feSpaceVecTriP1 : public feVectorSpace<dim>
 {
 protected:
 public:
-  feSpaceVecTriP1(feMesh           *mesh,
-                  const std::string fieldID,
-                  const std::string cncGeoID,
-                  feVectorFunction *fct,
-                  const bool        useGlobalShapeFunctions = false);
+  feSpaceVecTriP1(feMesh                 *mesh,
+                  const std::string       fieldID,
+                  const std::string       cncGeoID,
+                  const feVectorFunction *fct,
+                  const bool              useGlobalShapeFunctions = false);
   ~feSpaceVecTriP1() {}
 
   int getNumFunctions() const { return 3 * dim; }
@@ -1296,7 +1304,7 @@ public:
   feSpaceTri_CR1(feMesh           *mesh,
                  const std::string fieldID,
                  const std::string cncGeoID,
-                 feFunction       *fct);
+                 const feFunction *fct);
   ~feSpaceTri_CR1() {}
 
   int getNumFunctions() const { return 3; }
@@ -1324,11 +1332,11 @@ class feSpaceTriRT1 : public feVectorSpace<dim>
 {
 protected:
 public:
-  feSpaceTriRT1(feMesh           *mesh,
-                const std::string fieldID,
-                const std::string cncGeoID,
-                feVectorFunction *fct,
-                const bool        useGlobalShapeFunctions = false);
+  feSpaceTriRT1(feMesh                 *mesh,
+                const std::string       fieldID,
+                const std::string       cncGeoID,
+                const feVectorFunction *fct,
+                const bool              useGlobalShapeFunctions = false);
   ~feSpaceTriRT1() {}
 
   int getNumFunctions() const { return 3; }
@@ -1359,7 +1367,7 @@ public:
   feSpaceTriP2(feMesh           *mesh,
                const std::string fieldID,
                const std::string cncGeoID,
-               feFunction       *fct,
+               const feFunction *fct,
                const bool        useGlobalShapeFunctions = false);
   ~feSpaceTriP2() {}
 
@@ -1395,7 +1403,7 @@ public:
   feSpaceTriP2Bubble(feMesh           *mesh,
                      const std::string fieldID,
                      const std::string cncGeoID,
-                     feFunction       *fct,
+                     const feFunction *fct,
                      const bool        useGlobalShapeFunctions = false);
   ~feSpaceTriP2Bubble() {}
 
@@ -1423,11 +1431,11 @@ template <int dim>
 class feSpaceVecTriP2 : public feVectorSpace<dim>
 {
 public:
-  feSpaceVecTriP2(feMesh           *mesh,
-                  const std::string fieldID,
-                  const std::string cncGeoID,
-                  feVectorFunction *fct,
-                  const bool        useGlobalShapeFunctions = false);
+  feSpaceVecTriP2(feMesh                 *mesh,
+                  const std::string       fieldID,
+                  const std::string       cncGeoID,
+                  const feVectorFunction *fct,
+                  const bool              useGlobalShapeFunctions = false);
   ~feSpaceVecTriP2() {}
 
   int getNumFunctions() const { return 6 * dim; }
@@ -1454,11 +1462,11 @@ template <int dim>
 class feSpaceVecTriP2Bubble : public feVectorSpace<dim>
 {
 public:
-  feSpaceVecTriP2Bubble(feMesh           *mesh,
-                        const std::string fieldID,
-                        const std::string cncGeoID,
-                        feVectorFunction *fct,
-                        const bool        useGlobalShapeFunctions = false);
+  feSpaceVecTriP2Bubble(feMesh                 *mesh,
+                        const std::string       fieldID,
+                        const std::string       cncGeoID,
+                        const feVectorFunction *fct,
+                        const bool useGlobalShapeFunctions = false);
   ~feSpaceVecTriP2Bubble() {}
 
   int getNumFunctions() const { return 7 * dim; }
@@ -1489,7 +1497,7 @@ public:
   feSpaceTri_CR2(feMesh           *mesh,
                  const std::string fieldID,
                  const std::string cncGeoID,
-                 feFunction       *fct);
+                 const feFunction *fct);
   ~feSpaceTri_CR2() {}
 
   int getNumFunctions() const { return 7; }
@@ -1516,7 +1524,7 @@ public:
   feSpaceTriP3(feMesh           *mesh,
                const std::string fieldID,
                const std::string cncGeoID,
-               feFunction       *fct,
+               const feFunction *fct,
                const bool        useGlobalShapeFunctions = false);
   ~feSpaceTriP3() {}
 
@@ -1541,11 +1549,11 @@ template <int dim>
 class feSpaceVecTriP3 : public feVectorSpace<dim>
 {
 public:
-  feSpaceVecTriP3(feMesh           *mesh,
-                  const std::string fieldID,
-                  const std::string cncGeoID,
-                  feVectorFunction *fct,
-                  const bool        useGlobalShapeFunctions = false);
+  feSpaceVecTriP3(feMesh                 *mesh,
+                  const std::string       fieldID,
+                  const std::string       cncGeoID,
+                  const feVectorFunction *fct,
+                  const bool              useGlobalShapeFunctions = false);
   ~feSpaceVecTriP3() {}
 
   int getNumFunctions() const { return 10 * dim; }
@@ -1573,7 +1581,7 @@ public:
   feSpaceTriP4(feMesh           *mesh,
                const std::string fieldID,
                const std::string cncGeoID,
-               feFunction       *fct,
+               const feFunction *fct,
                const bool        useGlobalShapeFunctions = false);
   ~feSpaceTriP4() {}
 
@@ -1598,11 +1606,11 @@ template <int dim>
 class feSpaceVecTriP4 : public feVectorSpace<dim>
 {
 public:
-  feSpaceVecTriP4(feMesh           *mesh,
-                  const std::string fieldID,
-                  const std::string cncGeoID,
-                  feVectorFunction *fct,
-                  const bool        useGlobalShapeFunctions = false);
+  feSpaceVecTriP4(feMesh                 *mesh,
+                  const std::string       fieldID,
+                  const std::string       cncGeoID,
+                  const feVectorFunction *fct,
+                  const bool              useGlobalShapeFunctions = false);
   ~feSpaceVecTriP4() {}
 
   int getNumFunctions() const { return 15 * dim; }
@@ -1636,7 +1644,7 @@ public:
                feMesh           *mesh,
                const std::string fieldID,
                const std::string cncGeoID,
-               feFunction       *fct,
+               const feFunction *fct,
                const bool        useGlobalShapeFunctions = false);
   ~feSpaceTetPn() {}
 

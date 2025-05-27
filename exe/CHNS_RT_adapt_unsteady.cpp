@@ -1,23 +1,24 @@
 
 #include "feAPI.h"
 #include <numeric>
+#include "CHNS_Solver.h"
 
 //
 // User data to handle post processing
 // for the various benchmarks
 //
-class PostProcData
-{
-public:
-  // A vector of post-processing results, which can be anything. Even a boat.
-  std::vector<double> res;
+// class PostProcData
+// {
+// public:
+//   // A vector of post-processing results, which can be anything. Even a boat.
+//   std::vector<double> res;
 
-  // The 0 isoline for CHNS test cases
-  std::vector<double> isoline;
+//   // The 0 isoline for CHNS test cases
+//   std::vector<double> isoline;
 
-public:
-  PostProcData(){};
-};
+// public:
+//   PostProcData(){};
+// };
 
 class AdaptData
 {
@@ -467,7 +468,7 @@ namespace CHNS_Generic
   }
 
   //
-  // Degenerated mobility (0 in pure phases)
+  // Degenerate mobility (0 in pure phases)
   //
   double mobility_f(const feFunctionArguments &args, const std::vector<double> &par)
   {
@@ -878,7 +879,7 @@ namespace CHNS_Generic
 
     int _numSlipBoundaries = 0;
 
-    feNLSolverOptions NLoptions{1e-10, 1e-10, 1e4, 50, 4, 1.};
+    feNLSolverOptions NLoptions{1e-10, 1e-10, 1e8, 50, 4, 1.};
 
     // Physical properties
     double _rhoA, _rhoB, _viscA, _viscB;
@@ -989,15 +990,15 @@ namespace CHNS_Generic
     feStatus updateParameters(const int fixedPointIteration) override
     {
       UNUSED(fixedPointIteration);
-      // if(fixedPointIteration > 0) {
-      //   _epsilon = fmax(_epsilonMin, _epsilon/2.);
-      // }
+      if(fixedPointIteration > 0 && (fixedPointIteration % 2) == 0) {
+        _epsilon = fmax(_epsilonMin, _epsilon/3.);
+      }
 
-      // // Update parameters depending on epsilon
-      // _lambda = 3. / (2.*sqrt(2.)) * _epsilon * _gamma;
+      // Update parameters depending on epsilon
+      _lambda = 3. / (2.*sqrt(2.)) * _epsilon * _gamma;
 
-      // // Update functions depending on epsilon or M
-      // _mobility->resetParameters({_M});
+      // Update functions depending on epsilon or M
+      _mobility->resetParameters({_M});
 
       return FE_STATUS_OK;
     }
@@ -2082,7 +2083,7 @@ namespace CHNS_YoungLaplace
   }
 
   // class Solver  : public CHNS_Generic::GenericSolverCHNS_Alternative
-  class Solver  : public CHNS_Generic::SolverCHNS_VolumeAveraged
+  class VolumeAveragedSolver  : public CHNS_Generic::SolverCHNS_VolumeAveraged
   {
   public:
     // Geometry
@@ -2095,12 +2096,12 @@ namespace CHNS_YoungLaplace
 
   public:
     // Solver() : CHNS_Generic::GenericSolverCHNS_Alternative()
-    Solver() : CHNS_Generic::SolverCHNS_VolumeAveraged()
+    VolumeAveragedSolver() : CHNS_Generic::SolverCHNS_VolumeAveraged()
     {
-      _readDir = "../data/CHNS/YoungLaplace/";
-      _writeDir = "../data/CHNS/YoungLaplace/";
-      _initialMesh = "../data/CHNS/YoungLaplace/coarse.msh";
-      // _initialMesh = "../data/CHNS/YoungLaplace/mesh.msh";
+      _readDir     = "../data/CHNS/YoungLaplace/";
+      _writeDir    = "../data/CHNS/YoungLaplace/";
+      // _initialMesh = "../data/CHNS/YoungLaplace/coarse.msh";
+      _initialMesh = "../data/CHNS/YoungLaplace/mesh.msh";
     };
 
     // Parse for CHNS parameters
@@ -2217,23 +2218,21 @@ namespace CHNS_Jurin
   {
     double y = args.pos[1];
     double epsilon = par[0];
-    return tanh((y - 4e-3)/(sqrt(2.) * epsilon));
+    return tanh((y - 4.)/(sqrt(2.) * epsilon));
   }
 
-  // class Solver  : public CHNS_Generic::GenericSolverCHNS_Alternative
-  class Solver  : public CHNS_Generic::SolverCHNS_VolumeAveraged
+  class VolumeAveragedSolver  : public CHNS_Generic::SolverCHNS_VolumeAveraged
   {
   public:
     double _contactAngle = 50.;
 
   public:
-    // Solver() : CHNS_Generic::GenericSolverCHNS_Alternative()
-    Solver() : CHNS_Generic::SolverCHNS_VolumeAveraged()
+    VolumeAveragedSolver() : CHNS_Generic::SolverCHNS_VolumeAveraged()
     {
-      _readDir = "../data/CHNS/jurin/";
-      _writeDir = "../data/CHNS/jurin/";
-      _initialMesh = "../data/CHNS/jurin/coarse.msh";
-      // _initialMesh = "../data/CHNS/jurin/mesh.msh";
+      _readDir     = "../data/CHNS/jurin/";
+      _writeDir    = "../data/CHNS/jurin/";
+      // _initialMesh = "../data/CHNS/jurin/coarse.msh";
+      _initialMesh = "../data/CHNS/jurin/medium.msh";
       // _initialMesh = "../data/CHNS/jurin/fine.msh";
     };
 
@@ -2247,22 +2246,29 @@ namespace CHNS_Jurin
       options.addOption(&_contactAngle, "-angle", "--angle", "");
       feCheckReturn(options.parse());
 
-      _contactAngle *= M_PI / 180.;
+      const double m_to_mm  = 1e3;
+      const double m_to_mm2 = 1e6;
+      const double m_to_mm3 = 1e9;
 
-      _rhoA          = 1.;
-      _viscA         = 8e-5 * _rhoA;
-      _rhoB          = 2000.;
-      _viscB         = 1e-4 * _rhoB;
+      _rhoA          =    1. / m_to_mm3;
+      _rhoB          = 2000. / m_to_mm3;
+
+      const double nuA = 8e-5  * m_to_mm2;
+      const double nuB = 1e-4  * m_to_mm2;
+
+      _viscA         = nuA * _rhoA;
+      _viscB         = nuB * _rhoB;
+
       _gamma         = 0.073;
 
-      _gravityVal    = -9.81;
+      _gravityVal    = -9.81 * m_to_mm;
 
       // const double mesh_size = 1./32;
       // _epsilon0 = 0.64 * mesh_size;
       // _epsilon = _epsilon0;
       // _M = 0.1 * _epsilon * _epsilon;
 
-      _epsilon = 0.044e-3;
+      _epsilon = 0.044;
       _M       = 1e-7;
 
       createCHNSFunctions();
@@ -2276,7 +2282,6 @@ namespace CHNS_Jurin
     // Update specific test case parameters as the mesh is adapted
     feStatus updateParameters(const int fixedPointIteration) override
     {
-      // GenericSolverCHNS_Alternative::updateParameters(fixedPointIteration);
       SolverCHNS_VolumeAveraged::updateParameters(fixedPointIteration);
 
       // Update derived function
@@ -2293,24 +2298,35 @@ namespace CHNS_Jurin
       spaces.clear();
       essentialSpaces.clear();
 
-      feSpace *u, *uSlipX, *uSlipY, *uSlipYcontact, *p, *pPoint, *phi, *phiContact, *mu, *muContact;
+      feSpace *u, *uSlipX, *uSlipY, *uSlipYcontact, *uSlipYMeasure, *uSlipSymmetry, *uTop,
+        *p, *pPoint, *phi, *phiContact, *phiMeasure, *phiSymmetry, *mu, *muContact;
 
       feCheckReturn(createFiniteElementSpace(            u, mesh, elementType::VECTOR_LAGRANGE, _orderVelocity,   "U",       "Domaine", _degreeQuadrature, &vectorConstant::zero));
       feCheckReturn(createFiniteElementSpace(       uSlipX, mesh, elementType::VECTOR_LAGRANGE, _orderVelocity,   "U",         "SlipX", _degreeQuadrature, &vectorConstant::zero));
       feCheckReturn(createFiniteElementSpace(       uSlipY, mesh, elementType::VECTOR_LAGRANGE, _orderVelocity,   "U",         "SlipY", _degreeQuadrature, &vectorConstant::zero));
       feCheckReturn(createFiniteElementSpace(uSlipYcontact, mesh, elementType::VECTOR_LAGRANGE, _orderVelocity,   "U",  "ContactAngle", _degreeQuadrature, &vectorConstant::zero));
+      feCheckReturn(createFiniteElementSpace(uSlipYMeasure, mesh, elementType::VECTOR_LAGRANGE, _orderVelocity,   "U",   "MeasureSide", _degreeQuadrature, &vectorConstant::zero));
+      feCheckReturn(createFiniteElementSpace(uSlipSymmetry, mesh, elementType::VECTOR_LAGRANGE, _orderVelocity,   "U",      "Symmetry", _degreeQuadrature, &vectorConstant::zero));
+      feCheckReturn(createFiniteElementSpace(         uTop, mesh, elementType::VECTOR_LAGRANGE, _orderVelocity,   "U",           "Top", _degreeQuadrature, &vectorConstant::zero));
       feCheckReturn(createFiniteElementSpace(            p, mesh, elementType::LAGRANGE,        _orderPressure,   "P",       "Domaine", _degreeQuadrature, &scalarConstant::zero));
       feCheckReturn(createFiniteElementSpace(       pPoint, mesh, elementType::LAGRANGE,        _orderPressure,   "P", "PressurePoint", _degreeQuadrature, &scalarConstant::zero));
       feCheckReturn(createFiniteElementSpace(          phi, mesh, elementType::LAGRANGE,        _orderPhi,        "Phi",     "Domaine", _degreeQuadrature, _phiInit));
       feCheckReturn(createFiniteElementSpace(   phiContact, mesh, elementType::LAGRANGE,        _orderPhi,        "Phi","ContactAngle", _degreeQuadrature, _phiInit));
+      feCheckReturn(createFiniteElementSpace(   phiMeasure, mesh, elementType::LAGRANGE,        _orderPhi,        "Phi", "MeasureSide", _degreeQuadrature, _phiInit));
+      feCheckReturn(createFiniteElementSpace(  phiSymmetry, mesh, elementType::LAGRANGE,        _orderPhi,        "Phi",    "Symmetry", _degreeQuadrature, _phiInit));
       feCheckReturn(createFiniteElementSpace(           mu, mesh, elementType::LAGRANGE,        _orderMu,         "Mu",      "Domaine", _degreeQuadrature, &scalarConstant::zero));
       feCheckReturn(createFiniteElementSpace(    muContact, mesh, elementType::LAGRANGE,        _orderMu,         "Mu", "ContactAngle", _degreeQuadrature, &scalarConstant::zero));
 
-      uSlipY->setEssentialComponent(0, true);
+             uSlipY->setEssentialComponent(0, true);
       uSlipYcontact->setEssentialComponent(0, true);
+      uSlipYMeasure->setEssentialComponent(0, true);
+      uSlipSymmetry->setEssentialComponent(0, true);
+
       uSlipX->setEssentialComponent(1, true);
-      spaces = {u, p, phi, mu, uSlipX, uSlipY, uSlipYcontact, phiContact, muContact};
-      essentialSpaces = {};
+        uTop->setEssentialComponent(1, true);
+      
+      spaces = {u, p, phi, mu, uSlipX, uSlipY, uSlipYcontact, phiContact, muContact, uSlipYMeasure, phiMeasure, uSlipSymmetry, phiSymmetry, uTop, pPoint};
+      essentialSpaces = {pPoint};
 
       return FE_STATUS_OK;
     }
@@ -2353,8 +2369,8 @@ namespace CHNS_Jurin
 
       // Contact angle
       feBilinearForm *flux;
-      feInfo("Contact angle = %f", _contactAngle);
-      feCheck(createBilinearForm(flux, {muContact, phiContact, phi}, new feSysElm_FluxPrescribedNormalAngle<2>(&scalarConstant::one, _contactAngle)));
+      feInfo("Contact angle = %f (deg)", _contactAngle);
+      feCheck(createBilinearForm(flux, {muContact, phiContact, phi}, new feSysElm_FluxPrescribedNormalAngle<2>(&scalarConstant::one, _contactAngle * M_PI / 180.)));
       forms.push_back(flux);
 
       feLinearSystem *system = nullptr;
@@ -2368,20 +2384,23 @@ namespace CHNS_Jurin
 
       std::vector<feNorm*> norms = {};
 
+      // timeIntegratorScheme scheme = timeIntegratorScheme::BDF1;
+      timeIntegratorScheme scheme = timeIntegratorScheme::BDF2;
+
       TimeIntegrator *timeIntegrator = nullptr;
       const double t0 = adapter.currentTime;
       const double t1 = adapter.currentTime + adapter.dt * adapter.nTimeStepsPerInterval;
       const int nTimeSteps = adapter.nTimeStepsPerInterval;
-      feCheckReturn(createTimeIntegrator(timeIntegrator, timeIntegratorScheme::BDF2, NLoptions,
+      feCheckReturn(createTimeIntegrator(timeIntegrator, scheme, NLoptions,
         system, sol, mesh, norms, exportData, t0, t1, nTimeSteps));
 
       // Restart from solution container if not the first sub-interval
       // (restart from last solutions of previous sub-interval)
       if(iInterval > 0) {
         // BDF1Integrator *ptr = dynamic_cast<BDF1Integrator*> (timeIntegrator);
-        BDF2Integrator *ptr = dynamic_cast<BDF2Integrator*> (timeIntegrator);
+        // BDF2Integrator *ptr = dynamic_cast<BDF2Integrator*> (timeIntegrator);
         
-        ptr->_sC->NaNify();
+        // ptr->_sC->NaNify();
         feCheckReturn(timeIntegrator->restartFromContainer(*adapter.allContainers[iInterval]));
         timeIntegrator->setCurrentStep(adapter.currentStep);
 
@@ -2427,7 +2446,8 @@ namespace CHNS_Jurin
     }
 
     //
-    //
+    // Compute height between tip of meniscus and outer fluid
+    // Export all quantities in millimeters
     //
     feStatus computePostProcessing(AdaptData &/*adapter*/,
                                    const std::vector<feSpace*> &spaces,
@@ -2435,11 +2455,586 @@ namespace CHNS_Jurin
                                    feSolution *sol,
                                    PostProcData &data) override
     {
-      UNUSED(spaces, sol, data);
+      const double time = sol->getCurrentTime();
+      const feSpace *phi         = spaces[2];
+      const feSpace *phiContact  = spaces[7];
+      const feSpace *phiMeasure  = spaces[10];
+      const feSpace *phiSymmetry = spaces[12];
+
+      // Detect point where phi = 0 on contact angle boundary and on opposite boundary
+      feNorm *interfaceContact, *interfaceOpposite, *interfaceSymmetry;
+      feCheckReturn(createNorm(interfaceContact, NONE, {phiContact}, sol));
+      feCheckReturn(createNorm(interfaceOpposite, NONE, {phiMeasure}, sol));
+      feCheckReturn(createNorm(interfaceSymmetry, NONE, {phiSymmetry}, sol));
+      const double targetValue = 0.;
+
+      double measuredContactAngle = -1.;
+
+      // Height at r = R
+      // Extract height from isoline (y-component of only point in isoline)
+      data.isoline.clear();
+      feCheckReturn(interfaceContact->reconstructScalarIsoline(targetValue, data.isoline));
+      const double hTipR = data.isoline[1];
+
+      // Height at r = 0
+      data.isoline.clear();
+      feCheckReturn(interfaceSymmetry->reconstructScalarIsoline(targetValue, data.isoline));
+      const double hTip0 = data.isoline[1];
+
+      data.isoline.clear();
+      feCheckReturn(interfaceOpposite->reconstructScalarIsoline(targetValue, data.isoline));
+      const double hLow = data.isoline[1];
+
+      const double deltaH    = 0.5 * (hTip0 + hTipR) - hLow;
+      const double R         = 1e-3; // Half width of column
+      const double rho       = _rhoB * 1e9;
+      const double deltaHref = _gamma * cos(_contactAngle * M_PI / 180.) / (rho * 9.81 * R);
+
+      // Reconstruct the interface (isoline phi = 0)
+      feNorm *interface;
+      feCheckReturn(createNorm(interface, NONE, {phi}, sol));
+      feCheckReturn(interface->reconstructScalarIsoline(targetValue, data.isoline, &measuredContactAngle));
+
+      const double measured_deltaHref = _gamma * cos(measuredContactAngle * M_PI / 180.) / (rho * 9.81 * R);
+
+      data.res = {time, hTipR, hTip0, hLow, deltaH, deltaHref * 1e3, measuredContactAngle, measured_deltaHref * 1e3};
+
+      delete interface;
+      delete interfaceContact;
+      delete interfaceOpposite;
+      delete interfaceSymmetry;
+
       return FE_STATUS_OK;
     }
-  };
+  }; // VolumeAveragedSolver
+
+  class MassAveragedSolver  : public CHNS_Generic::GenericSolverCHNS_Alternative
+  {
+  public:
+    double _contactAngle = 50.;
+
+  public:
+    MassAveragedSolver() : CHNS_Generic::GenericSolverCHNS_Alternative()
+    {
+      _readDir     = "../data/CHNS/jurin/";
+      _writeDir    = "../data/CHNS/jurin/";
+      // _initialMesh = "../data/CHNS/jurin/coarse.msh";
+      _initialMesh = "../data/CHNS/jurin/medium.msh";
+      // _initialMesh = "../data/CHNS/jurin/fine.msh";
+    };
+
+    // Parse for CHNS parameters
+    feStatus parseAndCreateFunctions(int argc, char **argv)
+    {
+      feCheckReturn(parseGenericCHNSParameters(argc, argv));
+
+      // Parse specific test case parameters if needed
+      feOptionsParser options(argc, argv, true);
+      options.addOption(&_contactAngle, "-angle", "--angle", "");
+      feCheckReturn(options.parse());
+
+      const double m_to_mm  = 1e3;
+      const double m_to_mm2 = 1e6;
+      const double m_to_mm3 = 1e9;
+
+      _rhoA          =    1. / m_to_mm3;
+      _rhoB          = 2000. / m_to_mm3;
+
+      const double nuA = 8e-5  * m_to_mm2;
+      const double nuB = 1e-4  * m_to_mm2;
+
+      _viscA         = nuA * _rhoA;
+      _viscB         = nuB * _rhoB;
+
+      _gamma         = 0.073;
+
+      _gravityVal    = -9.81 * m_to_mm;
+
+      // const double mesh_size = 1./32;
+      // _epsilon0 = 0.64 * mesh_size;
+      // _epsilon = _epsilon0;
+      // _M = 0.1 * _epsilon * _epsilon;
+
+      _epsilon = 0.044;
+      _M       = 1e-7;
+
+      createCHNSFunctions();
+
+      _phiInit           = new feFunction(phiInit_f, {_epsilon});
+      _volumeForce       = new feConstantVectorFunction({0., _gravityVal});
+
+      return FE_STATUS_OK;
+    }
+
+    // Update specific test case parameters as the mesh is adapted
+    feStatus updateParameters(const int fixedPointIteration) override
+    {
+      GenericSolverCHNS_Alternative::updateParameters(fixedPointIteration);
+
+      // Update derived function
+      _phiInit->resetParameters({_epsilon});
+
+      return FE_STATUS_OK;
+    }
+
+    feStatus createSpaces(feMesh *mesh,
+                          std::vector<feSpace*> &spaces,
+                          std::vector<feSpace*> &essentialSpaces)
+    {
+      for(auto *s : spaces) delete s;
+      spaces.clear();
+      essentialSpaces.clear();
+
+      feSpace *u, *uSlipX, *uSlipY, *uSlipYcontact, *uSlipYMeasure,
+        *p, *pPoint, *phi, *phiContact, *phiMeasure, *mu, *muContact;
+
+      feCheckReturn(createFiniteElementSpace(            u, mesh, elementType::VECTOR_LAGRANGE, _orderVelocity,   "U",       "Domaine", _degreeQuadrature, &vectorConstant::zero));
+      feCheckReturn(createFiniteElementSpace(       uSlipX, mesh, elementType::VECTOR_LAGRANGE, _orderVelocity,   "U",         "SlipX", _degreeQuadrature, &vectorConstant::zero));
+      feCheckReturn(createFiniteElementSpace(       uSlipY, mesh, elementType::VECTOR_LAGRANGE, _orderVelocity,   "U",         "SlipY", _degreeQuadrature, &vectorConstant::zero));
+      feCheckReturn(createFiniteElementSpace(uSlipYcontact, mesh, elementType::VECTOR_LAGRANGE, _orderVelocity,   "U",  "ContactAngle", _degreeQuadrature, &vectorConstant::zero));
+      feCheckReturn(createFiniteElementSpace(uSlipYMeasure, mesh, elementType::VECTOR_LAGRANGE, _orderVelocity,   "U",   "MeasureSide", _degreeQuadrature, &vectorConstant::zero));
+      feCheckReturn(createFiniteElementSpace(            p, mesh, elementType::LAGRANGE,        _orderPressure,   "P",       "Domaine", _degreeQuadrature, &scalarConstant::zero));
+      feCheckReturn(createFiniteElementSpace(       pPoint, mesh, elementType::LAGRANGE,        _orderPressure,   "P", "PressurePoint", _degreeQuadrature, &scalarConstant::zero));
+      feCheckReturn(createFiniteElementSpace(          phi, mesh, elementType::LAGRANGE,        _orderPhi,        "Phi",     "Domaine", _degreeQuadrature, _phiInit));
+      feCheckReturn(createFiniteElementSpace(   phiContact, mesh, elementType::LAGRANGE,        _orderPhi,        "Phi","ContactAngle", _degreeQuadrature, _phiInit));
+      feCheckReturn(createFiniteElementSpace(   phiMeasure, mesh, elementType::LAGRANGE,        _orderPhi,        "Phi", "MeasureSide", _degreeQuadrature, _phiInit));
+      feCheckReturn(createFiniteElementSpace(           mu, mesh, elementType::LAGRANGE,        _orderMu,         "Mu",      "Domaine", _degreeQuadrature, &scalarConstant::zero));
+      feCheckReturn(createFiniteElementSpace(    muContact, mesh, elementType::LAGRANGE,        _orderMu,         "Mu", "ContactAngle", _degreeQuadrature, &scalarConstant::zero));
+
+      uSlipY->setEssentialComponent(0, true);
+      uSlipYcontact->setEssentialComponent(0, true);
+      uSlipYMeasure->setEssentialComponent(0, true);
+      uSlipX->setEssentialComponent(1, true);
+      spaces = {u, p, phi, mu, uSlipX, uSlipY, uSlipYcontact, phiContact, muContact, uSlipYMeasure, phiMeasure};
+      essentialSpaces = {};
+
+      return FE_STATUS_OK;
+    }
+
+    feStatus solve(AdaptData &adapter,
+                   const int iInterval,
+                   feMesh *mesh,
+                   feSolution *sol,
+                   feMetaNumber *numbering,
+                   std::vector<feSpace*> &spaces,
+                   const int numUnknowns,
+                   feExportData &exportData)
+    {
+      std::vector<feBilinearForm*> forms = {};
+
+      feSpace *u   = spaces[0];
+      feSpace *p   = spaces[1];
+      feSpace *phi = spaces[2];
+      feSpace *mu  = spaces[3];
+      feSpace *phiContact = spaces[7];
+      feSpace *muContact  = spaces[8];
+
+      std::vector<double> CHNSparameters = {_alpha, _gamma, _epsilon};
+
+      // CHNS
+      feBilinearForm *CHNS;
+      feCheck(createBilinearForm(CHNS, {u, p, phi, mu}, new feSysElm_CHNS_Alternative<2>(
+        _density,
+        _drhodphi,
+        _viscosity,
+        _dviscdphi,
+        _mobility,
+        _volumeForce,
+        _pSource,
+        _uSource,
+        _phiSource,
+        _muSource,
+        CHNSparameters)));
+      forms.push_back(CHNS);
+
+      // Contact angle
+      feBilinearForm *flux;
+      feInfo("Contact angle = %f (deg)", _contactAngle);
+      feCheck(createBilinearForm(flux, {muContact, phiContact, phi}, new feSysElm_FluxPrescribedNormalAngle<2>(&scalarConstant::one, _contactAngle * M_PI / 180.)));
+      forms.push_back(flux);
+
+      feLinearSystem *system = nullptr;
+      #if defined(HAVE_MKL)
+        feCheckReturn(createLinearSystem(system, MKLPARDISO, forms, numUnknowns));
+      #elif defined(HAVE_PETSC) && defined(PETSC_HAVE_MUMPS)
+        feCheckReturn(createLinearSystem(system, PETSC_MUMPS, forms, numUnknowns));
+      #else
+        feCheckReturn(createLinearSystem(system, PETSC, forms, numUnknowns));
+      #endif
+
+      std::vector<feNorm*> norms = {};
+
+      // timeIntegratorScheme scheme = timeIntegratorScheme::BDF1;
+      timeIntegratorScheme scheme = timeIntegratorScheme::BDF2;
+
+      TimeIntegrator *timeIntegrator = nullptr;
+      const double t0 = adapter.currentTime;
+      const double t1 = adapter.currentTime + adapter.dt * adapter.nTimeStepsPerInterval;
+      const int nTimeSteps = adapter.nTimeStepsPerInterval;
+      feCheckReturn(createTimeIntegrator(timeIntegrator, scheme, NLoptions,
+        system, sol, mesh, norms, exportData, t0, t1, nTimeSteps));
+
+      // Restart from solution container if not the first sub-interval
+      // (restart from last solutions of previous sub-interval)
+      if(iInterval > 0) {
+        // BDF1Integrator *ptr = dynamic_cast<BDF1Integrator*> (timeIntegrator);
+        // BDF2Integrator *ptr = dynamic_cast<BDF2Integrator*> (timeIntegrator);
+        
+        // ptr->_sC->NaNify();
+        feCheckReturn(timeIntegrator->restartFromContainer(*adapter.allContainers[iInterval]));
+        timeIntegrator->setCurrentStep(adapter.currentStep);
+
+        feInfo("Time           of timeIntegrator : %f", timeIntegrator->getCurrentTime());
+        feInfo("Previous times of timeIntegrator : %f", timeIntegrator->getTime()[0]);
+        feInfo("Previous times of timeIntegrator : %f", timeIntegrator->getTime()[1]);
+        feInfo("Previous times of timeIntegrator : %f", timeIntegrator->getTime()[2]);
+        feInfo("Step           of timeIntegrator : %d", timeIntegrator->getCurrentStep());
+      }
+
+      // Solve and compute metrics at each time step
+      for(int iStep = 0; iStep < adapter.nTimeStepsPerInterval; ++iStep)
+      {
+        tic();
+        feCheckReturn(timeIntegrator->makeSteps(1));
+        feInfo("Computed time step in %f s", toc());
+
+        // Reconstruct phi
+        std::string meshFile = adapter.allOptions[iInterval].backgroundMeshfile;
+        std::string recoveryFile = adapter.writeDir + "phi.msh";
+        feNewRecovery recPhi(phi, 0, mesh, sol, meshFile, recoveryFile, false, false, false, nullptr, numbering);
+
+        // Compute metric field and increment metric integral Hi
+        feMetric *metricField = adapter.allMetrics[iInterval];
+        computeAndIncrementMetric(timeIntegrator->getCurrentTime(), iStep, iInterval, adapter, metricField, &recPhi);
+
+        adapter.currentStep++;
+      }
+
+      adapter.currentTime = timeIntegrator->getCurrentTime();
+
+      delete adapter.allContainers[iInterval];
+      adapter.allContainers[iInterval] = new feSolutionContainer();
+      adapter.allContainers[iInterval]->NaNify();
+      *(adapter.allContainers[iInterval]) = timeIntegrator->getSolutionContainer();
+
+      delete timeIntegrator;
+      delete system;
+      for(feBilinearForm *f : forms)
+        delete f;
+
+      return FE_STATUS_OK;
+    }
+
+    //
+    // Compute height between tip of meniscus and outer fluid
+    // Export all quantities in millimeters
+    //
+    feStatus computePostProcessing(AdaptData &/*adapter*/,
+                                   const std::vector<feSpace*> &spaces,
+                                   feMesh */*mesh*/,
+                                   feSolution *sol,
+                                   PostProcData &data) override
+    {
+      const double time = sol->getCurrentTime();
+      const feSpace *phiContact = spaces[7];
+      const feSpace *phiMeasure = spaces[10];
+
+      // Detect point where phi = 0 on contact angle boundary and on opposite boundary
+      feNorm *interfaceContact, *interfaceOpposite;
+      feCheckReturn(createNorm(interfaceContact, NONE, {phiContact}, sol));
+      feCheckReturn(createNorm(interfaceOpposite, NONE, {phiMeasure}, sol));
+      const double targetValue = 0.;
+
+      data.isoline.clear();
+      feCheckReturn(interfaceContact->reconstructScalarIsoline(targetValue, data.isoline));
+
+      // Extract height from isoline (y-component of only point in isoline)
+      const double hTip = data.isoline[1];
+
+      data.isoline.clear();
+      feCheckReturn(interfaceOpposite->reconstructScalarIsoline(targetValue, data.isoline));
+      const double hLow = data.isoline[1];
+
+      const double deltaH    = hTip - hLow;
+      const double R   = 1e-3; // Half width of column
+      const double rho = _rhoB * 1e9;
+      const double deltaHref = _gamma * cos(_contactAngle * M_PI / 180.) / (rho * 9.81 * R);
+
+      data.res = {time, hTip, hLow, deltaH, deltaHref * 1e3};
+
+      delete interfaceContact;
+      delete interfaceOpposite;
+
+      return FE_STATUS_OK;
+    }
+  }; // Mass-averaged solver
+
 } // namespace CHNS_Jurin
+
+namespace CHNS_BubbleContact
+{
+  double phiInit_f(const feFunctionArguments &args, const std::vector<double> &par)
+  {
+    double x       = args.pos[0];
+    double y       = args.pos[1];
+    double x0      = par[0];
+    double y0      = par[1];
+    double R       = par[2];
+    double epsilon = par[3];
+    double d = sqrt((x-x0)*(x-x0) + (y-y0)*(y-y0));
+    return tanh((d - R)/(sqrt(2.)*epsilon));
+  }
+
+  class VolumeAveragedSolver  : public CHNS_Generic::SolverCHNS_VolumeAveraged
+  {
+  public:
+    double x0 = 7.5;
+    double y0 = 0.0;
+    double R  = 2.5;
+    double _contactAngle = 50.;
+
+    feConstantFunction *_coeffFlux;
+
+  public:
+    VolumeAveragedSolver() : CHNS_Generic::SolverCHNS_VolumeAveraged()
+    {
+      _readDir     = "../data/CHNS/BubbleContact/";
+      _writeDir    = "../data/CHNS/BubbleContact/";
+      // _initialMesh = "../data/CHNS/BubbleContact/coarse.msh";
+      _initialMesh = "../data/CHNS/BubbleContact/mesh.msh";
+      // _initialMesh = "../data/CHNS/BubbleContact/fine.msh";
+    };
+
+    // Parse for CHNS parameters
+    feStatus parseAndCreateFunctions(int argc, char **argv)
+    {
+      feCheckReturn(parseGenericCHNSParameters(argc, argv));
+
+      // Parse specific test case parameters if needed
+      feOptionsParser options(argc, argv, true);
+      options.addOption(&_contactAngle, "-angle", "--angle", "");
+      feCheckReturn(options.parse());
+
+      const double m_to_mm  = 1e3;
+      const double m_to_mm3 = 1e9;
+
+      _rhoA        =   1.2 / m_to_mm3;
+      _rhoB        = 1000. / m_to_mm3;
+
+      _viscA       = 1.82e-5 / m_to_mm * 100.;
+      _viscB       = 1.01e-3 / m_to_mm * 100.;
+
+      _gamma       = 0.073;
+
+      _gravityVal  = -9.81 * m_to_mm;
+
+      _epsilon     = 0.4;
+      _M           = 0.1 * _epsilon * _epsilon;
+
+      createCHNSFunctions();
+
+      _phiInit           = new feFunction(phiInit_f, {x0, y0, R, _epsilon});
+      _volumeForce       = new feConstantVectorFunction({0., _gravityVal});
+
+
+      const double lambda  = 3. / (2. * sqrt(2.)) * _gamma * _epsilon;
+      _coeffFlux         = new feConstantFunction(lambda);
+
+      return FE_STATUS_OK;
+    }
+
+    // Update specific test case parameters as the mesh is adapted
+    feStatus updateParameters(const int fixedPointIteration) override
+    {
+      SolverCHNS_VolumeAveraged::updateParameters(fixedPointIteration);
+
+      // Update derived function
+      _phiInit->resetParameters({x0, y0, R, _epsilon});
+
+      const double lambda  = 3. / (2. * sqrt(2.)) * _gamma * _epsilon;
+      _coeffFlux->resetParameters({lambda});
+
+      return FE_STATUS_OK;
+    }
+
+    feStatus createSpaces(feMesh *mesh,
+                          std::vector<feSpace*> &spaces,
+                          std::vector<feSpace*> &essentialSpaces)
+    {
+      for(auto *s : spaces) delete s;
+      spaces.clear();
+      essentialSpaces.clear();
+
+      feSpace *u, *uT, *uB, *uL, *uR, *p, *pPoint, *phi, *phiB, *mu, *muB;
+
+      feCheckReturn(createFiniteElementSpace(     u, mesh, elementType::VECTOR_LAGRANGE, _orderVelocity,   "U",       "Domaine", _degreeQuadrature, &vectorConstant::zero));
+      feCheckReturn(createFiniteElementSpace(    uT, mesh, elementType::VECTOR_LAGRANGE, _orderVelocity,   "U",           "Top", _degreeQuadrature, &vectorConstant::zero));
+      feCheckReturn(createFiniteElementSpace(    uB, mesh, elementType::VECTOR_LAGRANGE, _orderVelocity,   "U",        "Bottom", _degreeQuadrature, &vectorConstant::zero));
+      feCheckReturn(createFiniteElementSpace(    uL, mesh, elementType::VECTOR_LAGRANGE, _orderVelocity,   "U",          "Left", _degreeQuadrature, &vectorConstant::zero));
+      feCheckReturn(createFiniteElementSpace(    uR, mesh, elementType::VECTOR_LAGRANGE, _orderVelocity,   "U",         "Right", _degreeQuadrature, &vectorConstant::zero));
+      feCheckReturn(createFiniteElementSpace(     p, mesh, elementType::LAGRANGE,        _orderPressure,   "P",       "Domaine", _degreeQuadrature, &scalarConstant::zero));
+      feCheckReturn(createFiniteElementSpace(pPoint, mesh, elementType::LAGRANGE,        _orderPressure,   "P", "PressurePoint", _degreeQuadrature, &scalarConstant::zero));
+      feCheckReturn(createFiniteElementSpace(   phi, mesh, elementType::LAGRANGE,        _orderPhi,        "Phi",     "Domaine", _degreeQuadrature, _phiInit));
+      feCheckReturn(createFiniteElementSpace(  phiB, mesh, elementType::LAGRANGE,        _orderPhi,        "Phi",      "Bottom", _degreeQuadrature, _phiInit));
+      feCheckReturn(createFiniteElementSpace(    mu, mesh, elementType::LAGRANGE,        _orderMu,         "Mu",      "Domaine", _degreeQuadrature, &scalarConstant::zero));
+      feCheckReturn(createFiniteElementSpace(   muB, mesh, elementType::LAGRANGE,        _orderMu,         "Mu",       "Bottom", _degreeQuadrature, &scalarConstant::zero));
+
+      uL->setEssentialComponent(0, true);
+      uR->setEssentialComponent(0, true);
+
+      uT->setEssentialComponent(1, true);
+      uB->setEssentialComponent(1, true);
+      
+      spaces = {u, p, phi, mu, uT, uB, uL, uR, pPoint, phiB, muB};
+      essentialSpaces = {pPoint};
+
+      return FE_STATUS_OK;
+    }
+
+    feStatus solve(AdaptData &adapter,
+                   const int iInterval,
+                   feMesh *mesh,
+                   feSolution *sol,
+                   feMetaNumber *numbering,
+                   std::vector<feSpace*> &spaces,
+                   const int numUnknowns,
+                   feExportData &exportData)
+    {
+      std::vector<feBilinearForm*> forms = {};
+
+      feSpace *u   = spaces[0];
+      feSpace *p   = spaces[1];
+      feSpace *phi = spaces[2];
+      feSpace *mu  = spaces[3];
+      feSpace *phiContact = spaces[9];
+      feSpace *muContact  = spaces[10];
+
+      std::vector<double> CHNSparameters = {_gamma, _epsilon};
+
+      // CHNS
+      feBilinearForm *CHNS;
+      feCheck(createBilinearForm(CHNS, {u, p, phi, mu}, new CHNS_VolumeAveraged<2>(
+        _density,
+        _drhodphi,
+        _viscosity,
+        _dviscdphi,
+        _mobility,
+        _volumeForce,
+        _pSource,
+        _uSource,
+        _phiSource,
+        _muSource,
+        CHNSparameters)));
+      forms.push_back(CHNS);
+
+      // Contact angle
+      feBilinearForm *flux;
+      feInfo("Contact angle = %f (deg)", _contactAngle);
+      feCheck(createBilinearForm(flux, {muContact, phiContact, phi}, new feSysElm_FluxPrescribedNormalAngle<2>(_coeffFlux, _contactAngle * M_PI / 180.)));
+      forms.push_back(flux);
+
+      feLinearSystem *system = nullptr;
+      #if defined(HAVE_MKL)
+        feCheckReturn(createLinearSystem(system, MKLPARDISO, forms, numUnknowns));
+      #elif defined(HAVE_PETSC) && defined(PETSC_HAVE_MUMPS)
+        feCheckReturn(createLinearSystem(system, PETSC_MUMPS, forms, numUnknowns));
+      #else
+        feCheckReturn(createLinearSystem(system, PETSC, forms, numUnknowns));
+      #endif
+
+      std::vector<feNorm*> norms = {};
+
+      // timeIntegratorScheme scheme = timeIntegratorScheme::BDF1;
+      timeIntegratorScheme scheme = timeIntegratorScheme::BDF2;
+
+      TimeIntegrator *timeIntegrator = nullptr;
+      const double t0 = adapter.currentTime;
+      const double t1 = adapter.currentTime + adapter.dt * adapter.nTimeStepsPerInterval;
+      const int nTimeSteps = adapter.nTimeStepsPerInterval;
+      feCheckReturn(createTimeIntegrator(timeIntegrator, scheme, NLoptions,
+        system, sol, mesh, norms, exportData, t0, t1, nTimeSteps));
+
+      // Restart from solution container if not the first sub-interval
+      // (restart from last solutions of previous sub-interval)
+      if(iInterval > 0) {
+        // BDF1Integrator *ptr = dynamic_cast<BDF1Integrator*> (timeIntegrator);
+        // BDF2Integrator *ptr = dynamic_cast<BDF2Integrator*> (timeIntegrator);
+        
+        // ptr->_sC->NaNify();
+        feCheckReturn(timeIntegrator->restartFromContainer(*adapter.allContainers[iInterval]));
+        timeIntegrator->setCurrentStep(adapter.currentStep);
+
+        feInfo("Time           of timeIntegrator : %f", timeIntegrator->getCurrentTime());
+        feInfo("Previous times of timeIntegrator : %f", timeIntegrator->getTime()[0]);
+        feInfo("Previous times of timeIntegrator : %f", timeIntegrator->getTime()[1]);
+        feInfo("Previous times of timeIntegrator : %f", timeIntegrator->getTime()[2]);
+        feInfo("Step           of timeIntegrator : %d", timeIntegrator->getCurrentStep());
+      }
+
+      // Solve and compute metrics at each time step
+      for(int iStep = 0; iStep < adapter.nTimeStepsPerInterval; ++iStep)
+      {
+        tic();
+        feCheckReturn(timeIntegrator->makeSteps(1));
+        feInfo("Computed time step in %f s", toc());
+
+        // Reconstruct phi
+        std::string meshFile = adapter.allOptions[iInterval].backgroundMeshfile;
+        std::string recoveryFile = adapter.writeDir + "phi.msh";
+        feNewRecovery recPhi(phi, 0, mesh, sol, meshFile, recoveryFile, false, false, false, nullptr, numbering);
+
+        // Compute metric field and increment metric integral Hi
+        feMetric *metricField = adapter.allMetrics[iInterval];
+        computeAndIncrementMetric(timeIntegrator->getCurrentTime(), iStep, iInterval, adapter, metricField, &recPhi);
+
+        adapter.currentStep++;
+      }
+
+      adapter.currentTime = timeIntegrator->getCurrentTime();
+
+      delete adapter.allContainers[iInterval];
+      adapter.allContainers[iInterval] = new feSolutionContainer();
+      adapter.allContainers[iInterval]->NaNify();
+      *(adapter.allContainers[iInterval]) = timeIntegrator->getSolutionContainer();
+
+      delete timeIntegrator;
+      delete system;
+      for(feBilinearForm *f : forms)
+        delete f;
+
+      return FE_STATUS_OK;
+    }
+
+    //
+    // Compute height between tip of meniscus and outer fluid
+    // Export all quantities in millimeters
+    //
+    feStatus computePostProcessing(AdaptData &/*adapter*/,
+                                   const std::vector<feSpace*> &spaces,
+                                   feMesh */*mesh*/,
+                                   feSolution *sol,
+                                   PostProcData &data) override
+    {
+      const double time = sol->getCurrentTime();
+      const feSpace *phi   = spaces[2];
+      // const feSpace *phiB  = spaces[9];
+
+      double measuredContactAngle = -1.;
+
+      // Reconstruct the interface (isoline phi = 0)
+      feNorm *interface;
+      feCheckReturn(createNorm(interface, NONE, {phi}, sol));
+      const double targetValue = 0.;
+      feCheckReturn(interface->reconstructScalarIsoline(targetValue, data.isoline, &measuredContactAngle));
+
+      data.res = {time, measuredContactAngle};
+
+      delete interface;
+
+      return FE_STATUS_OK;
+    }
+  }; // VolumeAveragedSolver
+} // namespace CHNS_BubbleContact
 
 namespace Cylinder {
 
@@ -3071,13 +3666,24 @@ int main(int argc, char **argv)
   GenericSolver *solver = nullptr;
 
   std::string solverTypeStr(solverType);
-  if(solverTypeStr == "CHNS_RT")                solver = new CHNS_RT::Solver();
-  else if(solverTypeStr == "CHNS_Sloshing")     solver = new CHNS_Sloshing::Solver();
-  else if(solverTypeStr == "CHNS_Bubble")       solver = new CHNS_Bubble::Solver();
-  else if(solverTypeStr == "CHNS_YoungLaplace") solver = new CHNS_YoungLaplace::Solver();
-  else if(solverTypeStr == "CHNS_Jurin")        solver = new CHNS_Jurin::Solver();
-  else if(solverTypeStr == "Cylinder")          solver = new Cylinder::Solver();
-  else if(solverTypeStr == "Analytic")          solver = new Analytic::Solver();
+  if(solverTypeStr == "CHNS_RT")
+    solver = new CHNS_RT::Solver();
+  else if(solverTypeStr == "CHNS_Sloshing")
+    solver = new CHNS_Sloshing::Solver();
+  else if(solverTypeStr == "CHNS_Bubble")
+    solver = new CHNS_Bubble::Solver();
+  else if(solverTypeStr == "CHNS_YoungLaplace_VolumeAveraged")
+    solver = new CHNS_YoungLaplace::VolumeAveragedSolver();
+  else if(solverTypeStr == "CHNS_Jurin_MassAveraged")
+    solver = new CHNS_Jurin::MassAveragedSolver();
+  else if(solverTypeStr == "CHNS_Jurin_VolumeAveraged")
+    solver = new CHNS_Jurin::VolumeAveragedSolver();
+  else if(solverTypeStr == "CHNS_BubbleContact_VolumeAveraged")
+    solver = new CHNS_BubbleContact::VolumeAveragedSolver();
+  else if(solverTypeStr == "Cylinder")
+    solver = new Cylinder::Solver();
+  else if(solverTypeStr == "Analytic")
+    solver = new Analytic::Solver();
   else {
     feErrorMsg(FE_STATUS_ERROR, "Unexpected solver type : %s", solverTypeStr.data());
     return -1;

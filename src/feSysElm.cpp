@@ -72,7 +72,7 @@ void feSysElm_FluxPrescribedNormalAngle<dim>::createElementarySystem(std::vector
   _idU = 1;
   _idU2D = 2;
   _fieldsLayoutI = {_idV};
-  _fieldsLayoutJ = {_idU};
+  _fieldsLayoutJ = {_idU2D};
   _nFunctionsV = space[_idV]->getNumFunctions();
   _nFunctionsU = space[_idU]->getNumFunctions();
   _phiV.resize(_nFunctionsV);
@@ -117,16 +117,18 @@ void feSysElm_FluxPrescribedNormalAngle<dim>::computeBe(feBilinearForm *form)
   double jac, norm_gradu, xsi[3];
   bool isFound;
 
-  const double gamma   = 0.073;
-  const double epsilon = 0.044e-3;
-  const double lambda  = 3. / (2. * sqrt(2.)) * gamma * epsilon;
+  double coeff;
+
+  // const double gamma   = 0.073;
+  // const double epsilon = 0.044;
+  // const double lambda  = 3. / (2. * sqrt(2.)) * gamma * epsilon;
 
   for(int k = 0; k < _nQuad; ++k)
   {
     jac = form->_J[_nQuad * form->_numElem + k];
 
     form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, form->_args.pos);
-    // coeff = (*_coeff)(form->_args);
+    coeff = (*_coeff)(form->_args);
 
     // Locate edge quadrature node in mesh and evaluate 2D gradient?
     isFound = form->_cnc->getMesh()->locateVertex(form->_args.pos.data(), elm, xsi, 1e-4);
@@ -154,30 +156,16 @@ void feSysElm_FluxPrescribedNormalAngle<dim>::computeBe(feBilinearForm *form)
     }
     s2D->interpolateField_physicalGradient(sol2D, xsi, T2D, _gradu.data());
 
-    // feInfo("Point (%f,%f) en (%f,%f,%f)", form->_args.pos[0], form->_args.pos[1], xsi[0], xsi[1], xsi[2]);
-    // feInfo("at (%f, %f) : grad = %f, %f ",  form->_args.pos[0], form->_args.pos[1], _gradu[0], _gradu[1]);
-
     if constexpr(dim == 2) {
       norm_gradu = sqrt(_gradu[0] * _gradu[0] + _gradu[1] * _gradu[1]);
     }
-
-    // if(fabs(norm_gradu) > 1e-10) {
-    //   feInfo("norm    = %1.6e", norm_gradu);
-    //   feInfo("cos     = %1.6e", cos(_normalAngle));
-    //   feInfo("lambda  = %1.6e", lambda);
-    // }
 
     form->_intSpaces[_idV]->getFunctionsAtQuadNode(k, _phiV);
 
     for(int i = 0; i < _nFunctionsV; ++i)
     {
-      form->_Be[i] -= - lambda * norm_gradu * cos(_normalAngle) * _phiV[i] * jac * _wQuad[k];
+      form->_Be[i] -= - coeff * norm_gradu * cos(_normalAngle) * _phiV[i] * jac * _wQuad[k];
     }
-
-    // lambda * phi_potential_i *
-    //                     std::cos(angle_of_contact * M_PI / 180.0) *
-    //                     (face_phase_grad_value.norm()) * JxW_face;
-
   }
 }
 

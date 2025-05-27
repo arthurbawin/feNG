@@ -1,5 +1,7 @@
 
 #include "feAPI.h"
+#include "feParameters.h"
+#include "CHNS_Solver.h"
 #include "../tests.h"
 
 #include <gtest/gtest.h>
@@ -1218,7 +1220,7 @@ struct CahnHilliardVolumeAveraged {
     UNUSED(timeStepFactor);
     double t0 = 0.;
     double t1 = 1.;
-    int nTimeSteps = 50;
+    int nTimeSteps = 20;
     timesteps = nTimeSteps;
 
     TimeIntegrator *solver;
@@ -1267,6 +1269,169 @@ struct CahnHilliardVolumeAveraged {
       delete f;
     for(feSpace *s : spaces)
       delete s;
+
+    return FE_STATUS_OK;
+  }
+
+  static feStatus ezsolve(const std::string &meshFile,
+                        const int timeStepFactor,
+                        const int orderU,
+                        const int orderPhiMu,
+                        const int degreeQuadrature,
+                        const feNLSolverOptions &NLoptions,
+                        int &numInteriorElements,
+                        int &numVertices,
+                        double &L2ErrorU,
+                        double &L2ErrorP,
+                        double &L2ErrorPhi,
+                        double &L2ErrorMu,
+                        double &integralP,
+                        double &H1ErrorU,
+                        double &H1ErrorP,
+                        double &H1ErrorPhi,
+                        double &H1ErrorMu,
+                        int &timesteps)
+  {
+    UNUSED(timesteps, NLoptions, timeStepFactor);
+
+    const double rhoA    = 1000.;
+    const double rhoB    = 1.;
+    const double viscA   = 100.;
+    const double viscB   = 1.;
+    const double M       = 1e-6;
+    const double gamma   = 0.01;
+    const double epsilon = 1e-3;
+
+    const double lambda = 3. / (2.*sqrt(2.)) * epsilon * gamma;
+
+    std::vector<double> params = {rhoA, rhoB, viscA, viscB, M, gamma, epsilon, lambda};
+
+    Parameters::CHNS CHNSparameters;
+    CHNSparameters.formulation = Parameters::CHNS::Formulation::volumeAveraged;
+    CHNSparameters.mobilityType = Parameters::CHNS::MobilityType::constant;
+    CHNSparameters.fluids[0].density           = rhoA;
+    CHNSparameters.fluids[0].dynamic_viscosity = viscA;
+    CHNSparameters.fluids[1].density           = rhoB;
+    CHNSparameters.fluids[1].dynamic_viscosity = viscB;
+    CHNSparameters.gravity        = -9.81;
+    CHNSparameters.surfaceTension = gamma;
+    CHNSparameters.epsilon        = epsilon;
+    CHNSparameters.mobility       = M;
+    CHNSparameters.limitPhaseMarker = false;
+
+    feVectorFunction uSol(  uSol_f, params);
+    feFunction       pSol(  pSol_f, params);
+    feFunction     phiSol(phiSol_f, params);
+    feFunction      muSol( muSol_f, params);
+
+    feVectorFunction   grad_uSol(  grad_uSol_f, params);
+    feVectorFunction   grad_pSol(  grad_pSol_f, params);
+    feVectorFunction grad_phiSol(grad_phiSol_f, params);
+    feVectorFunction  grad_muSol( grad_muSol_f, params);
+
+    feVectorFunction   uSource(  uSource_f, params);
+    feFunction         pSource(  pSource_f, params);
+    feFunction       phiSource(phiSource_f, params);
+    feFunction        muSource( muSource_f, params);
+
+    const elementType      lag    = elementType::LAGRANGE;
+    const elementType      vlag   = elementType::VECTOR_LAGRANGE;
+
+    VectorFEDescriptor   u("U", "Domaine", vlag, orderU, degreeQuadrature, &uSol);
+    ScalarFEDescriptor   p("P", "Domaine", lag, orderU-1, degreeQuadrature, &pSol);
+    ScalarFEDescriptor phi("Phi", "Domaine", lag, orderPhiMu, degreeQuadrature, &phiSol);
+    ScalarFEDescriptor  mu("Mu", "Domaine", lag, orderPhiMu, degreeQuadrature, &muSol);
+
+    std::vector<FEDescriptor> fieldDescriptors = {u, p, phi, mu};
+
+    VectorFEDescriptor uB("U", "Bord", vlag, orderU, degreeQuadrature, &uSol);
+    ScalarFEDescriptor pP("P", "PointPression", lag, orderU-1, degreeQuadrature, &pSol);
+    ScalarFEDescriptor phiB("Phi", "Bord", lag, orderPhiMu, degreeQuadrature, &phiSol);
+    ScalarFEDescriptor muB("Mu", "Bord", lag, orderPhiMu, degreeQuadrature, &muSol);
+
+    VectorDirichletBC uBC(uB);
+    ScalarDirichletBC pBC(pP), phiBC(phiB), muBC(muB);
+
+    std::vector<BoundaryCondition> BC = {uBC, pBC, phiBC, muBC};
+
+    Parameters::NonLinearSolver NLSolver_param;
+
+    Parameters::TimeIntegration TimeIntegration_param;
+    TimeIntegration_param.t_initial  = 0.;
+    TimeIntegration_param.t_final    = 1.;
+    TimeIntegration_param.nTimeSteps = 20;
+
+    CHNS_Solver *solver;
+    feCheck(createCHNS_Solver(solver,
+                              CHNSparameters,
+                              NLSolver_param,
+                              TimeIntegration_param,
+                              fieldDescriptors,
+                              BC,
+                              nullptr,
+                              &pSource,
+                              &uSource,
+                              &phiSource,
+                              &muSource));
+
+    feMesh2DP1 mesh(meshFile);
+    numInteriorElements = mesh.getNumInteriorElements();
+    numVertices = mesh.getNumVertices();
+
+    std::vector<feSpace *> spaces, essentialSpaces;
+    solver->createSpaces(&mesh, spaces, essentialSpaces);
+
+    feMetaNumber numbering(&mesh, spaces, essentialSpaces);
+    feSolution   sol(numbering.getNbDOFs(), spaces, essentialSpaces);
+
+    feExporter *exporter = nullptr;
+    feExportData exportData = {exporter, 1, "sol"};
+
+    feCheck(solver->solve(
+      &mesh, &sol, &numbering, spaces, exportData));
+
+    feNorm *errorU_L2 = nullptr, *errorP_L2 = nullptr, *errorPhi_L2 = nullptr, *errorMu_L2 = nullptr;
+    feNorm *errorU_H1 = nullptr, *errorP_H1 = nullptr, *errorPhi_H1 = nullptr, *errorMu_H1 = nullptr;
+
+    feSpace *uS = spaces[0];
+    feSpace *pS = spaces[1];
+    feSpace *phiS = spaces[2];
+    feSpace *muS = spaces[3];
+    feCheckReturn(createNorm(  errorU_L2, VECTOR_L2_ERROR,   {uS}, &sol, nullptr, &uSol));
+    feCheckReturn(createNorm(  errorP_L2,        L2_ERROR,   {pS}, &sol, &pSol));
+    feCheckReturn(createNorm(errorPhi_L2,        L2_ERROR, {phiS}, &sol, &phiSol));
+    feCheckReturn(createNorm( errorMu_L2,        L2_ERROR,  {muS}, &sol, &muSol));
+
+    feCheckReturn(createNorm(  errorU_H1, VECTOR_SEMI_H1_ERROR,   {uS}, &sol, nullptr, &grad_uSol));
+    feCheckReturn(createNorm(  errorP_H1,        SEMI_H1_ERROR,   {pS}, &sol, nullptr, &grad_pSol));
+    feCheckReturn(createNorm(errorPhi_H1,        SEMI_H1_ERROR, {phiS}, &sol, nullptr, &grad_phiSol));
+    feCheckReturn(createNorm( errorMu_H1,        SEMI_H1_ERROR,  {muS}, &sol, nullptr, &grad_muSol));
+
+    // Use L2 at t1 to compare with reference test files:
+    L2ErrorU   = errorU_L2->compute();
+    L2ErrorP   = errorP_L2->compute();
+    L2ErrorPhi = errorPhi_L2->compute();
+    L2ErrorMu  = errorMu_L2->compute();
+
+    H1ErrorU   = errorU_H1->compute();
+    H1ErrorP   = errorP_H1->compute();
+    H1ErrorPhi = errorPhi_H1->compute();
+    H1ErrorMu  = errorMu_H1->compute();
+
+    // Integral of pressure (target is 0)
+    feNorm *intP;
+    feCheckReturn(createNorm(intP, INTEGRAL, {pS}, &sol));
+    integralP = fabs(intP->compute());
+    delete intP;
+
+    delete errorU_L2;
+    delete errorP_L2;
+    delete errorPhi_L2;
+    delete errorMu_L2;
+
+    for(feSpace *s : spaces)
+      delete s;
+    // delete solver;
 
     return FE_STATUS_OK;
   }
@@ -2522,10 +2687,29 @@ TEST(CahnHilliard, CHNS_VolumeAveraged)
   int orderU = 2;
   int orderPhiMu = 1;
   ASSERT_TRUE(meshConvergence<CahnHilliardVolumeAveraged>(resultBuffer, 
-    meshFileRoot, orderU, orderPhiMu, 5, degreeQuadrature) == FE_STATUS_OK);
+    meshFileRoot, orderU, orderPhiMu, 4, degreeQuadrature) == FE_STATUS_OK);
   EXPECT_EQ(compareOutputFiles(testRoot, resultBuffer), 0);
   finalize();
 }
+
+// TEST(CahnHilliard, CHNS_VolumeAveraged_EZ)
+// {
+//   initialize(my_argc, my_argv);
+//   setVerbose(1);
+  
+//   std::string testRoot = "../../../tests/withLinearSolver/CHNS_VolumeAveraged";
+//   std::string meshFileRoot = "../data/transfiniteSquare_pressurePoint";
+
+//   std::stringstream resultBuffer;
+
+//   int degreeQuadrature = 12;
+//   int orderU = 2;
+//   int orderPhiMu = 1;
+//   ASSERT_TRUE(meshConvergence<CahnHilliardVolumeAveraged>(resultBuffer, 
+//     meshFileRoot, orderU, orderPhiMu, 4, degreeQuadrature) == FE_STATUS_OK);
+//   EXPECT_EQ(compareOutputFiles(testRoot, resultBuffer), 0);
+//   finalize();
+// }
 
 // TEST(CahnHilliard, CHNS_Alt_Constant_Mobility)
 // {

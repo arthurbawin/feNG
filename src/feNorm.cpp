@@ -2338,119 +2338,206 @@ double feNorm::computeForcesFromLagrangeMultiplier(int iComponent)
 }
 
 feStatus feNorm::reconstructScalarIsoline(const double val,
-                                          std::vector<double> &isoline)
+                                          std::vector<double> &isoline,
+                                          double *userPtr)
 {
   if (_spaces[0]->isVectorValued())
   {
-    return feErrorMsg(FE_STATUS_ERROR, "Can only reconstruct isoline for scalar field");
+    return feErrorMsg(FE_STATUS_ERROR, "Isoline reconstruction is only "
+      "available for scalar fields");
   }
 
   isoline.clear();
   isoline.reserve(3 * 2 * _nElm); // Reserve for 2 intersection points per element (3 coord each)
 
-  FILE *isolineTxt  = fopen("reconstructedIsoline.txt", "w");
-  FILE *isolinePos  = fopen("reconstructedIsoline.pos", "w");
-  FILE *elements = fopen("crossedElements.pos", "w");
-  fprintf(isolinePos, "View \"reconstructedIsoline_val%f\"{\n", val);
-  fprintf(elements, "View \"crossedElements\"{\n");
-
-  std::vector<std::vector<double>> intersections;
-
-  for (int iElm = 0; iElm < _nElm; ++iElm)
+  if(_cnc->getInterpolant() == geometricInterpolant::LINEP1)
   {
-    this->initializeLocalSolutionOnSpace(0, iElm);
-    _spaces[0]->_mesh->getCoord(_cnc, iElm, _geoCoord);
+    std::vector<std::vector<double>> intersections;
+    for (int iElm = 0; iElm < _nElm; ++iElm)
+    {
+      this->initializeLocalSolutionOnSpace(0, iElm);
+      _spaces[0]->_mesh->getCoord(_cnc, iElm, _geoCoord);
 
-    // Check for sign changes in the nodal values
-    bool signChanged = false;
-    for(size_t i = 0; i < _localSol[0].size(); ++i) {
-      for(size_t j = 0; j < _localSol[0].size(); ++j) {
-        if( (_localSol[0][i] - val) * (_localSol[0][j] - val) < 0) {
-          signChanged = true;
-          break;
+      // Check for sign changes in the nodal values
+      bool signChanged = false;
+      for(size_t i = 0; i < _localSol[0].size(); ++i) {
+        for(size_t j = 0; j < _localSol[0].size(); ++j) {
+          if( (_localSol[0][i] - val) * (_localSol[0][j] - val) < 0) {
+            signChanged = true;
+            break;
+          }
         }
       }
+
+      if(!signChanged) continue;
+
+      intersections.reserve(1);
+
+      // fprintf(elements, "SL(%g,%g,%g,%g,%g,%g){%g,%g};\n",
+      //   _geoCoord[0], _geoCoord[1], _geoCoord[2],
+      //   _geoCoord[3], _geoCoord[4], _geoCoord[5], 1., 1.);
+
+      int numIntersections = 0;
+
+      double xsi[3] = {0., 0., 0.};
+      if(_spaces[0]->getRootOnEdge(0, _localSol[0], val, xsi, 1e-6))
+      {
+        // feInfo("Elm %d - Found root on edge 0 : (%+-1.4e, %+-1.4e, %+-1.4e)", iElm, xsi[0], xsi[1], xsi[2]);
+        std::vector<double> pos(3);
+        _geoSpace->interpolateVectorField(_geoCoord, xsi, pos);
+        // fprintf(isolinePos, "SP(%g,%g,%g){%g};\n", pos[0], pos[1], pos[2], 2.);
+
+        numIntersections++;
+        intersections.push_back(pos);
+        isoline.push_back(pos[0]);
+        isoline.push_back(pos[1]);
+        isoline.push_back(pos[2]);
+
+        // Draw the intersection point
+        // fprintf(isolinePos, "SP(%g,%g,%g){%g};\n",
+        //   intersections[0][0], intersections[0][1], intersections[0][2], 1.);
+      }
+
+      intersections.clear();
     }
-
-    if(!signChanged) continue;
-
-    intersections.reserve(2);
-
-    fprintf(elements, "ST(%g,%g,%g,%g,%g,%g,%g,%g,%g){%g,%g,%g};\n", _geoCoord[0],
-              _geoCoord[1], _geoCoord[2], _geoCoord[3], _geoCoord[4], _geoCoord[5],
-              _geoCoord[6], _geoCoord[7], _geoCoord[8], 1., 1., 1.);
-
-    int numIntersections = 0;
-
-    double xsi[3] = {0., 0., 0.};
-    bool s0 = _spaces[0]->getRootOnEdge(0, _localSol[0], val, xsi, 1e-6);
-    if(s0) {
-      // feInfo("Elm %d - Found root on edge 0 : (%+-1.4e, %+-1.4e, %+-1.4e)", iElm, xsi[0], xsi[1], xsi[2]);
-      std::vector<double> pos(3);
-      _geoSpace->interpolateVectorField(_geoCoord, xsi, pos);
-      fprintf(isolinePos, "SP(%g,%g,%g){%g};\n", pos[0], pos[1], pos[2], 2.);
-
-      numIntersections++;
-      intersections.push_back(pos);
-      isoline.push_back(pos[0]);
-      isoline.push_back(pos[1]);
-      isoline.push_back(pos[2]);
-    }
-
-    bool s1 = _spaces[0]->getRootOnEdge(1, _localSol[0], val, xsi, 1e-6);
-    if(s1) {
-      // feInfo("Elm %d - Found root on edge 1 : (%+-1.4e, %+-1.4e, %+-1.4e)", iElm, xsi[0], xsi[1], xsi[2]);
-      std::vector<double> pos(3);
-      _geoSpace->interpolateVectorField(_geoCoord, xsi, pos);
-      fprintf(isolinePos, "SP(%g,%g,%g){%g};\n", pos[0], pos[1], pos[2], 2.);
-
-      numIntersections++;
-      intersections.push_back(pos);
-      isoline.push_back(pos[0]);
-      isoline.push_back(pos[1]);
-      isoline.push_back(pos[2]);
-    }
-    
-    bool s2 = _spaces[0]->getRootOnEdge(2, _localSol[0], val, xsi, 1e-6);
-    if(s2) {
-      // feInfo("Elm %d - Found root on edge 2 : (%+-1.4e, %+-1.4e, %+-1.4e)", iElm, xsi[0], xsi[1], xsi[2]);
-      std::vector<double> pos(3);
-      _geoSpace->interpolateVectorField(_geoCoord, xsi, pos);
-      fprintf(isolinePos, "SP(%g,%g,%g){%g};\n", pos[0], pos[1], pos[2], 2.);
-
-      numIntersections++;
-      intersections.push_back(pos);
-      isoline.push_back(pos[0]);
-      isoline.push_back(pos[1]);
-      isoline.push_back(pos[2]);
-    }
-
-    if(numIntersections == 2) {
-      // Isoline crosses the element once
-      // Draw the intersection
-      fprintf(isolinePos, "SL(%g,%g,%g,%g,%g,%g){%g,%g};\n",
-        intersections[0][0], intersections[0][1], intersections[0][2],
-        intersections[1][0], intersections[1][1], intersections[1][2], 1., 1.);
-
-      // Print to text file in 2D
-      fprintf(isolineTxt, "%+-1.16e \t %+-1.16e\n", intersections[0][0], intersections[0][1]);
-      fprintf(isolineTxt, "%+-1.16e \t %+-1.16e\n", intersections[1][0], intersections[1][1]);
-    } else {
-      // Error for now
-      feErrorMsg(FE_STATUS_ERROR, "Isoline reconstruction: "
-        "There are %d intersection(s) with this element", numIntersections);
-      exit(-1);
-    }
-
-    intersections.clear();
-
   }
+  else if(_cnc->getInterpolant() == geometricInterpolant::TRIP1)
+  {
+    FILE *isolineTxt  = fopen("reconstructedIsoline.txt", "w");
+    FILE *isolinePos  = fopen("reconstructedIsoline.pos", "w");
+    FILE *elements = fopen("crossedElements.pos", "w");
+    fprintf(isolinePos, "View \"reconstructedIsoline_val%f\"{\n", val);
+    fprintf(elements, "View \"crossedElements\"{\n");
 
-  fprintf(isolinePos, "};");
-  fprintf(elements, "};");
-  fclose(isolineTxt);
-  fclose(isolinePos);
-  fclose(elements);
+    std::vector<std::vector<double>> intersections;
+    for (int iElm = 0; iElm < _nElm; ++iElm)
+    {
+      this->initializeLocalSolutionOnSpace(0, iElm);
+      _spaces[0]->_mesh->getCoord(_cnc, iElm, _geoCoord);
+
+      // Check for sign changes in the nodal values
+      bool signChanged = false;
+      for(size_t i = 0; i < _localSol[0].size(); ++i) {
+        for(size_t j = 0; j < _localSol[0].size(); ++j) {
+          if( (_localSol[0][i] - val) * (_localSol[0][j] - val) < 0) {
+            signChanged = true;
+            break;
+          }
+        }
+      }
+
+      if(!signChanged) continue;
+
+      intersections.reserve(2);
+
+      fprintf(elements, "ST(%g,%g,%g,%g,%g,%g,%g,%g,%g){%g,%g,%g};\n", _geoCoord[0],
+                _geoCoord[1], _geoCoord[2], _geoCoord[3], _geoCoord[4], _geoCoord[5],
+                _geoCoord[6], _geoCoord[7], _geoCoord[8], 1., 1., 1.);
+
+      int numIntersections = 0;
+
+      double xsi[3] = {0., 0., 0.};
+      bool s0 = _spaces[0]->getRootOnEdge(0, _localSol[0], val, xsi, 1e-6);
+      if(s0) {
+        // feInfo("Elm %d - Found root on edge 0 : (%+-1.4e, %+-1.4e, %+-1.4e)", iElm, xsi[0], xsi[1], xsi[2]);
+        std::vector<double> pos(3);
+        _geoSpace->interpolateVectorField(_geoCoord, xsi, pos);
+        fprintf(isolinePos, "SP(%g,%g,%g){%g};\n", pos[0], pos[1], pos[2], 2.);
+
+        numIntersections++;
+        intersections.push_back(pos);
+        isoline.push_back(pos[0]);
+        isoline.push_back(pos[1]);
+        isoline.push_back(pos[2]);
+      }
+
+      bool s1 = _spaces[0]->getRootOnEdge(1, _localSol[0], val, xsi, 1e-6);
+      if(s1) {
+        // feInfo("Elm %d - Found root on edge 1 : (%+-1.4e, %+-1.4e, %+-1.4e)", iElm, xsi[0], xsi[1], xsi[2]);
+        std::vector<double> pos(3);
+        _geoSpace->interpolateVectorField(_geoCoord, xsi, pos);
+        fprintf(isolinePos, "SP(%g,%g,%g){%g};\n", pos[0], pos[1], pos[2], 2.);
+
+        numIntersections++;
+        intersections.push_back(pos);
+        isoline.push_back(pos[0]);
+        isoline.push_back(pos[1]);
+        isoline.push_back(pos[2]);
+      }
+      
+      bool s2 = _spaces[0]->getRootOnEdge(2, _localSol[0], val, xsi, 1e-6);
+      if(s2) {
+        // feInfo("Elm %d - Found root on edge 2 : (%+-1.4e, %+-1.4e, %+-1.4e)", iElm, xsi[0], xsi[1], xsi[2]);
+        std::vector<double> pos(3);
+        _geoSpace->interpolateVectorField(_geoCoord, xsi, pos);
+        fprintf(isolinePos, "SP(%g,%g,%g){%g};\n", pos[0], pos[1], pos[2], 2.);
+
+        numIntersections++;
+        intersections.push_back(pos);
+        isoline.push_back(pos[0]);
+        isoline.push_back(pos[1]);
+        isoline.push_back(pos[2]);
+      }
+
+      if(numIntersections == 2) {
+        // Isoline crosses the element once
+        // Draw the intersection
+        fprintf(isolinePos, "SL(%g,%g,%g,%g,%g,%g){%g,%g};\n",
+          intersections[0][0], intersections[0][1], intersections[0][2],
+          intersections[1][0], intersections[1][1], intersections[1][2], 1., 1.);
+
+        // Print to text file in 2D
+        fprintf(isolineTxt, "%+-1.16e \t %+-1.16e\n", intersections[0][0], intersections[0][1]);
+        fprintf(isolineTxt, "%+-1.16e \t %+-1.16e\n", intersections[1][0], intersections[1][1]);
+
+        // Get contact angle for particular case of Jurin's geometry
+        // if(fabs(intersections[0][0] - 1.) < 1e-8 || fabs(intersections[1][0] - 1.) < 1e-8)
+        if(fabs(intersections[0][1]) < 1e-8 || fabs(intersections[1][1]) < 1e-8)
+        {
+          double v1[2] = {intersections[1][0] - intersections[0][0],
+                          intersections[1][1] - intersections[0][1]};
+          const double normV1 = sqrt(v1[0]*v1[0] + v1[1]*v1[1]);
+          v1[0] /= normV1;
+          v1[1] /= normV1;
+          const double e_bdr[2] = {1.,  0.};
+          // const double e_bdr[2] = {0., -1.};
+
+          fprintf(isolinePos, "VP(%g,%g,%g){%g,%g,%g};\n", intersections[0][0], intersections[0][1], 0., v1[0], v1[1], 0.);
+          fprintf(isolinePos, "VP(%g,%g,%g){%g,%g,%g};\n", intersections[0][0], intersections[0][1], 0., e_bdr[0], e_bdr[1], 0.);
+
+          const double dotprod = v1[0]*e_bdr[0] + v1[1]*e_bdr[1];
+          const double angle = acos(dotprod);
+          if(userPtr != nullptr) {
+            userPtr[0] = angle / M_PI * 180.;
+          }
+          feInfo("Angle is %f (deg)", angle / M_PI * 180.);
+          feInfo("Angle is %f (deg)", angle / M_PI * 180.);
+          feInfo("Angle is %f (deg)", angle / M_PI * 180.);
+          feInfo("Angle is %f (deg)", angle / M_PI * 180.);
+        }
+
+      } else {
+        feWarning("Isoline reconstruction: "
+          "There are %d intersection(s) with this element", numIntersections);
+        fprintf(elements, "ST(%g,%g,%g,%g,%g,%g,%g,%g,%g){%g,%g,%g};\n", _geoCoord[0],
+                _geoCoord[1], _geoCoord[2], _geoCoord[3], _geoCoord[4], _geoCoord[5],
+                _geoCoord[6], _geoCoord[7], _geoCoord[8], 2., 2., 2.);
+      }
+
+      intersections.clear();
+    }
+
+    fprintf(isolinePos, "};");
+    fprintf(elements, "};");
+    fclose(isolineTxt);
+    fclose(isolinePos);
+    fclose(elements);
+  }
+  else
+  {
+    return feErrorMsg(FE_STATUS_ERROR, "Isoline extraction for cnc of type %s "
+      "is not implemented", toString(_cnc->getInterpolant()).data());
+  }
 
   return FE_STATUS_OK;
 }

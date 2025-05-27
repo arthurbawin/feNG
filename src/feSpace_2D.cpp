@@ -57,7 +57,7 @@ static void vectorLagrangeLayout(const double *phi, const int nScalarFunctions,
 // Discontinuous Lagrange element of degree 0 on reference triangle r = [0,1], s = [0,1-r]
 // -----------------------------------------------------------------------------
 feSpaceTriP0::feSpaceTriP0(feMesh *mesh, const std::string fieldID, const std::string cncGeoID,
-                           feFunction *fct, const bool useGlobalShapeFunctions)
+                           const feFunction *fct, const bool useGlobalShapeFunctions)
   : feScalarSpace(2, mesh, fieldID, cncGeoID, fct, useGlobalShapeFunctions)
 {
   _isDiscontinuous = true;
@@ -107,7 +107,7 @@ feSpaceTriP1::feSpaceTriP1(std::string cncGeoID)
 }
 
 feSpaceTriP1::feSpaceTriP1(feMesh *mesh, const std::string fieldID, const std::string cncGeoID,
-                           feFunction *fct, const bool useGlobalShapeFunctions)
+                           const feFunction *fct, const bool useGlobalShapeFunctions)
   : feScalarSpace(2, mesh, fieldID, cncGeoID, fct, useGlobalShapeFunctions)
 {
   _nFunctions = 3;
@@ -162,7 +162,7 @@ void feSpaceTriP1::initializeAddressingVector(int numElem, std::vector<feInt> &a
 // Discontinuous Lagrange element of degree 1 on reference triangle r = [0,1], s = [0,1-r]
 // -----------------------------------------------------------------------------
 feSpaceTriP1_Discontinuous::feSpaceTriP1_Discontinuous(feMesh *mesh, const std::string fieldID, const std::string cncGeoID,
-                           feFunction *fct)
+                           const feFunction *fct)
   : feScalarSpace(2, mesh, fieldID, cncGeoID, fct)
 {
   _isDiscontinuous = true;
@@ -255,7 +255,7 @@ void feSpaceTriP1_Discontinuous::synchronizeNumberingOfEssentialDOF(int &numModi
 // -----------------------------------------------------------------------------
 template <int dim>
 feSpaceVecTriP1<dim>::feSpaceVecTriP1(feMesh *mesh, const std::string fieldID,
-                                      const std::string cncGeoID, feVectorFunction *fct,
+                                      const std::string cncGeoID, const feVectorFunction *fct,
                                       const bool useGlobalShapeFunctions)
   : feVectorSpace<dim>(2, mesh, fieldID, cncGeoID, fct, useGlobalShapeFunctions)
 {
@@ -364,7 +364,7 @@ template class feSpaceVecTriP1<2>;
 // Non-conforming Crouzeix-Raviart element of degree 1 on reference triangle r = [0,1], s = [0,1-r]
 // -----------------------------------------------------------------------------
 feSpaceTri_CR1::feSpaceTri_CR1(feMesh *mesh, std::string fieldID, std::string cncGeoID,
-                               feFunction *fct)
+                               const feFunction *fct)
   : feScalarSpace(2, mesh, fieldID, cncGeoID, fct)
 {
   _nFunctions = 3;
@@ -421,7 +421,7 @@ void feSpaceTri_CR1::initializeAddressingVector(int numElem, std::vector<feInt> 
 // -----------------------------------------------------------------------------
 template <int dim>
 feSpaceTriRT1<dim>::feSpaceTriRT1(feMesh *mesh, const std::string fieldID,
-                             const std::string cncGeoID, feVectorFunction *fct,
+                             const std::string cncGeoID, const feVectorFunction *fct,
                              const bool useGlobalShapeFunctions)
   : feVectorSpace<dim>(2, mesh, fieldID, cncGeoID, fct, useGlobalShapeFunctions)
 {
@@ -524,7 +524,7 @@ feSpaceTriP2::feSpaceTriP2(std::string cncGeoID)
 }
 
 feSpaceTriP2::feSpaceTriP2(feMesh *mesh, const std::string fieldID, const std::string cncGeoID,
-                           feFunction *fct, const bool useGlobalShapeFunctions)
+                           const feFunction *fct, const bool useGlobalShapeFunctions)
   : feScalarSpace(2, mesh, fieldID, cncGeoID, fct, useGlobalShapeFunctions)
 {
   _nFunctions = 6;
@@ -789,7 +789,7 @@ void feSpaceTriP2::initializeAddressingVector(int numElem, std::vector<feInt> &a
 // Lagrange element of degree 2 enriched with cubic bubble on reference triangle
 // -----------------------------------------------------------------------------
 feSpaceTriP2Bubble::feSpaceTriP2Bubble(feMesh *mesh, const std::string fieldID, const std::string cncGeoID,
-                           feFunction *fct, const bool useGlobalShapeFunctions)
+                           const feFunction *fct, const bool useGlobalShapeFunctions)
   : feScalarSpace(2, mesh, fieldID, cncGeoID, fct, useGlobalShapeFunctions)
 {
   _nFunctions = 7;
@@ -899,7 +899,7 @@ void feSpaceTriP2Bubble::initializeAddressingVector(int numElem, std::vector<feI
 // -----------------------------------------------------------------------------
 template <int dim>
 feSpaceVecTriP2<dim>::feSpaceVecTriP2(feMesh *mesh, const std::string fieldID,
-                                      const std::string cncGeoID, feVectorFunction *fct,
+                                      const std::string cncGeoID, const feVectorFunction *fct,
                                       const bool useGlobalShapeFunctions)
   : feVectorSpace<dim>(2, mesh, fieldID, cncGeoID, fct, useGlobalShapeFunctions)
 {
@@ -1048,7 +1048,7 @@ template class feSpaceVecTriP2<2>;
 // -----------------------------------------------------------------------------
 template <int dim>
 feSpaceVecTriP2Bubble<dim>::feSpaceVecTriP2Bubble(feMesh *mesh, const std::string fieldID,
-                                      const std::string cncGeoID, feVectorFunction *fct,
+                                      const std::string cncGeoID, const feVectorFunction *fct,
                                       const bool useGlobalShapeFunctions)
   : feVectorSpace<dim>(2, mesh, fieldID, cncGeoID, fct, useGlobalShapeFunctions)
 {
@@ -1211,7 +1211,7 @@ template class feSpaceVecTriP2Bubble<2>;
 // Non-conforming Crouzeix-Raviart element of degree 2 on reference triangle r = [0,1], s = [0,1-r]
 // -----------------------------------------------------------------------------
 feSpaceTri_CR2::feSpaceTri_CR2(feMesh *mesh, std::string fieldID, std::string cncGeoID,
-                               feFunction *fct)
+                               const feFunction *fct)
   : feScalarSpace(2, mesh, fieldID, cncGeoID, fct)
 {
   _nFunctions = 7;
@@ -1327,7 +1327,7 @@ feSpaceTriP3::feSpaceTriP3(std::string cncGeoID)
 }
 
 feSpaceTriP3::feSpaceTriP3(feMesh *mesh, const std::string fieldID, const std::string cncGeoID,
-                           feFunction *fct, const bool useGlobalShapeFunctions)
+                           const feFunction *fct, const bool useGlobalShapeFunctions)
   : feScalarSpace(2, mesh, fieldID, cncGeoID, fct, useGlobalShapeFunctions)
 {
   _nFunctions = 10;
@@ -1484,7 +1484,7 @@ void feSpaceTriP3::initializeAddressingVector(int numElem, std::vector<feInt> &a
 // -----------------------------------------------------------------------------
 template <int dim>
 feSpaceVecTriP3<dim>::feSpaceVecTriP3(feMesh *mesh, const std::string fieldID,
-                                      const std::string cncGeoID, feVectorFunction *fct,
+                                      const std::string cncGeoID, const feVectorFunction *fct,
                                       const bool useGlobalShapeFunctions)
   : feVectorSpace<dim>(2, mesh, fieldID, cncGeoID, fct, useGlobalShapeFunctions)
 {
@@ -1715,7 +1715,7 @@ feSpaceTriP4::feSpaceTriP4(std::string cncGeoID)
 }
 
 feSpaceTriP4::feSpaceTriP4(feMesh *mesh, const std::string fieldID, const std::string cncGeoID,
-                           feFunction *fct, const bool useGlobalShapeFunctions)
+                           const feFunction *fct, const bool useGlobalShapeFunctions)
   : feScalarSpace(2, mesh, fieldID, cncGeoID, fct, useGlobalShapeFunctions)
 {
   _nFunctions = 15;
@@ -1918,7 +1918,7 @@ void feSpaceTriP4::initializeAddressingVector(int numElem, std::vector<feInt> &a
 // -----------------------------------------------------------------------------
 template <int dim>
 feSpaceVecTriP4<dim>::feSpaceVecTriP4(feMesh *mesh, const std::string fieldID,
-                                      const std::string cncGeoID, feVectorFunction *fct,
+                                      const std::string cncGeoID, const feVectorFunction *fct,
                                       const bool useGlobalShapeFunctions)
   : feVectorSpace<dim>(2, mesh, fieldID, cncGeoID, fct, useGlobalShapeFunctions)
 {

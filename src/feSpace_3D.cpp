@@ -47,7 +47,7 @@ feSpaceTetPn::feSpaceTetPn(int n, std::string cncGeoID)
 }
 
 feSpaceTetPn::feSpaceTetPn(int n, feMesh *mesh, const std::string fieldID, const std::string cncGeoID,
-                           feFunction *fct, const bool useGlobalShapeFunctions)
+                           const feFunction *fct, const bool useGlobalShapeFunctions)
   : feScalarSpace(3, mesh, fieldID, cncGeoID, fct, useGlobalShapeFunctions), _n(n)
 {
   _nFunctions = (n+1)*(n+2)*(n+3)/6;

@@ -1,4 +1,6 @@
 set(feNG_SRC
+    CHNS_Solver.cpp
+    DiffusionSolver.cpp
     ellipseToolbox.cpp
     feAdaptMesh.cpp
     feBilinearForm.cpp
@@ -48,8 +50,10 @@ set(feNG_SRC
     feTetrahedron.cpp
     feVectorSpace.cpp
     feVectorSysElm.cpp
+    GenericSolver.cpp
     geodesic.cpp
-    glfem.cpp)
+    glfem.cpp
+    TransientAdapter.cpp)
 
 #Add Gmsh files for STensor3
 list(APPEND feNG_SRC ${CMAKE_SOURCE_DIR}/contrib/gmsh/fullMatrix.cpp
@@ -58,12 +62,16 @@ list(APPEND feNG_SRC ${CMAKE_SOURCE_DIR}/contrib/gmsh/fullMatrix.cpp
     ${CMAKE_SOURCE_DIR}/contrib/gmsh/STensor3.cpp)
 
 set(feNG_API
+    CHNS_Solver.h
+    DiffusionSolver.h
     ellipseToolbox.h
     feAPI.h
     feBilinearForm.h
+    feBoundaryConditions.h
     feCncGeo.h
     feColoring.h
     feCompressedRowStorage.h
+    feConstants.h
     feEdge.h
     feEigenProblem.h
     feExporter.h
@@ -94,7 +102,9 @@ set(feNG_API
     feTriangle.h
     feTetrahedron.h
     feVertex.h
+    GenericSolver.h
     geodesic.h
-    glfem.h)
+    glfem.h
+    TransientAdapter.h)
 
 addLibraryMacro(feNG "${feNG_SRC}" "${feNG_API}")

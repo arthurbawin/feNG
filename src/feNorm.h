@@ -236,7 +236,8 @@ public:
   // associated to this feNorm and return the points of the curve
   // in "isoline".
   feStatus reconstructScalarIsoline(const double val,
-                                    std::vector<double> &isoline);
+                                    std::vector<double> &isoline,
+                                    double *userPtr = nullptr);
 
   // void computeInterpolationErrorGradientRochery(const int whichElements[2],
   //                                               const int whichControlPoint_localTag[2],

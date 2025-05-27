@@ -652,9 +652,9 @@ feStatus DCBDF1Integrator::makeSteps(int nSteps)
     // }
 
     // _scBDF1->setSolutionDot(_currentSolution->getSolutionDot(), 0);
-    // feInfoCond(FE_VERBOSE > 0, "\t\t\tSolving linear problem for initial time derivative");
-    // bool solveForTimeDerivative = true;
-    // feCheckReturn(solveNewtonRaphson(_linearSystem, _currentSolution, _scBDF1, _NLoptions, solveForTimeDerivative));
+    feInfoCond(FE_VERBOSE > 0, "\t\t\tSolving linear problem for initial time derivative");
+    bool solveForTimeDerivative = true;
+    feCheckReturn(solveNewtonRaphson(_linearSystem, _currentSolution, _scBDF1, _NLoptions, solveForTimeDerivative));
     // for(auto &val : _currentSolution->getSolutionDot()) {
     //   val = 0.;
     //   const double t = _t[0];
