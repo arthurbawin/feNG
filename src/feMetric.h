@@ -364,9 +364,7 @@ public:
   //
   // If computing metrics on a P2 mesh, nodeTags is also the trivial list of vertices
   // computed by gmsh (minus 1)
-  #if defined(HAVE_GMSH)
   feStatus computeMetrics();
-  #endif
 
   feStatus computeMetricsP1();
   feStatus computeMetricsHechtKuate();

@@ -205,6 +205,7 @@ feStatus TransientAdapter::updateBeforeFixedPointIteration()
 
 feStatus TransientAdapter::computeSpaceTimeMetrics()
 {
+#if defined(HAVE_GMSH)
   const Parameters::MeshAdaptation &ap = _adapt_parameters;
   const int                         nI = ap.nIntervals;
   //
@@ -282,7 +283,9 @@ feStatus TransientAdapter::computeSpaceTimeMetrics()
   feInfo("Total  number of space      vertices : %d", totalVertices);
   feInfo("Total  number of space-time vertices : %d", effectiveNst);
   feInfo("Target number of space-time vertices : %f", targetNst);
-
+#else
+  feWarning("Gmsh is required to compute and write metric fields.");
+#endif
   return FE_STATUS_OK;
 }
 

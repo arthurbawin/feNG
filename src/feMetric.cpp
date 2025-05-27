@@ -493,12 +493,12 @@ void feMetric::writeMetricField()
 }
 #endif
 
-#if defined(HAVE_GMSH)
 // Compute the metric tensor field from recovered derivatives,
 // scale it to obtain roughly N vertices and write it as a Gmsh view
 // to adapt with MMG
 feStatus feMetric::computeMetrics()
 {
+#if defined(HAVE_GMSH)
   feInfoCond(FE_VERBOSE > 0, "");
   feInfoCond(FE_VERBOSE > 0, "RIEMANNIAN METRIC:");
   feInfoCond(FE_VERBOSE > 0, "\t\tReading mesh model with Gmsh");
@@ -690,7 +690,8 @@ feStatus feMetric::computeMetrics()
 
   // Write the metric field as a view in the Gmsh model
   writeMetricField();
-
+#else
+  feWarning("Gmsh is required to compute and write a metric field.");
+#endif
   return FE_STATUS_OK;
 }
-#endif
