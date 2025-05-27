@@ -118,7 +118,7 @@ public:
 };
 
 //
-// Wrappers for scalar fields
+// Wrappers for vector fields
 //
 class feVectorFunction
 {

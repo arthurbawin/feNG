@@ -1996,7 +1996,6 @@ void CHNS_VolumeAveraged<dim>::computeBe(feBilinearForm *form)
   // const double hsize = hCircumInscr(form->_geoCoord);
 
   double jac, jacw, rho, eta, p, phi, mu, dphidt, div_u;
-  // double drhodphi;
   double M, Sp, Sphi, Smu;
   double uDotGradPhi;
 
@@ -2034,7 +2033,6 @@ void CHNS_VolumeAveraged<dim>::computeBe(feBilinearForm *form)
     //
     form->_geoSpace->interpolateVectorFieldAtQuadNode(form->_geoCoord, k, form->_args.pos);
     rho      = (*_density)(form->_args);
-    // drhodphi = (*_drhodphi)(form->_args);
     eta      = (*_viscosity)(form->_args);
     M        = (*_mobility)(form->_args);
     (*_volumeForce)(form->_args, _f);
@@ -2060,8 +2058,6 @@ void CHNS_VolumeAveraged<dim>::computeBe(feBilinearForm *form)
     if constexpr(dim == 2) {
       _uDotGradu[0] = _u[0] * _gradu[0] + _u[1] * _gradu[2];
       _uDotGradu[1] = _u[0] * _gradu[1] + _u[1] * _gradu[3];
-      // _gradmuDotGradu[0] = _gradmu[0] * _gradu[0] + _gradmu[1] * _gradu[2];
-      // _gradmuDotGradu[1] = _gradmu[0] * _gradu[1] + _gradmu[1] * _gradu[3];
       _symmetricGradu[0] = _gradu[0] + _gradu[0];
       _symmetricGradu[1] = _gradu[1] + _gradu[2];
       _symmetricGradu[2] = _gradu[2] + _gradu[1];
@@ -2075,7 +2071,6 @@ void CHNS_VolumeAveraged<dim>::computeBe(feBilinearForm *form)
     uSpace->dotProductShapeOther(k, _uDotGradu, _uDotGraduDotPhiU);
     uSpace->dotProductShapeOther(k, _f, _fDotPhiU);
     uSpace->dotProductShapeOther(k, _Su, _SuDotPhiU);
-    // uSpace->dotProductShapeOther(k, _gradmuDotGradu, _gradMuDotgradUdotphiU);
     uSpace->dotProductShapeOther(k, _gradphi, _gradPhiDotphiU);
     uSpace->divergence(_gradPhiU, _divPhiU);
     uSpace->doubleContractionGradShapeOther(_gradPhiU, _symmetricGradu, _doubleContraction);
@@ -2104,7 +2099,7 @@ void CHNS_VolumeAveraged<dim>::computeBe(feBilinearForm *form)
         // Pressure gradient
         - p * _divPhiU[i]
         
-        // Viscous term : Symmetric gradient and compressible contribution
+        // Viscous term : Symmetric gradient
         + eta * _doubleContraction[i]
 
         // Source term if needed
@@ -2148,14 +2143,11 @@ void CHNS_VolumeAveraged<dim>::computeBe(feBilinearForm *form)
     // mu test functions block : potential equation
     //
     double gradPhi_dot_gradPhiMu;
-    // double gradMu_dot_gradPhiMu;
     for(int i = 0; i < _nFunctionsMu; ++i, ++I)
     {
       if constexpr(dim == 2) {
         gradPhi_dot_gradPhiMu = _gradphi[0] * _gradPhiMu[2 * i + 0]
                               + _gradphi[1] * _gradPhiMu[2 * i + 1];
-        // gradMu_dot_gradPhiMu  =  _gradmu[0] * _gradPhiMu[2 * i + 0]
-        //                       +  _gradmu[1] * _gradPhiMu[2 * i + 1];
       }
 
       form->_Be[I] -= jacw * (
@@ -2167,8 +2159,6 @@ void CHNS_VolumeAveraged<dim>::computeBe(feBilinearForm *form)
         - _lambda / (_epsilon * _epsilon) * phi * (phi * phi - 1.) * _phiMu[i]
         // Source term if needed
         + Smu * _phiMu[i]
-        // Smoothing
-        // - 1. * hsize * hsize * gradMu_dot_gradPhiMu
         );
     }
   }

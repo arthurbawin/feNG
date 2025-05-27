@@ -23,7 +23,7 @@ public:
   const feVectorFunction *_vectorField;
 
   bool              _isEssential;
-  std::vector<bool> _essentialComponents;
+  std::vector<int> _essentialComponents;
 
 public:
   FEDescriptor(const std::string  fieldName,

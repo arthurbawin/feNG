@@ -73,19 +73,11 @@ public:
     delete _muSource;
   }
 
-  feStatus solve(feMesh                 *mesh,
-                 feSolution             *sol,
-                 feMetaNumber           *numbering,
-                 std::vector<feSpace *> &spaces,
-                 feExportData           &exportData) const override;
+  feStatus
+  createBilinearForms(const std::vector<feSpace *>  &spaces,
+                      std::vector<feBilinearForm *> &forms) const;
 
-  feStatus solve(feMesh                 *mesh,
-                 feSolution             *sol,
-                 feMetaNumber           *numbering,
-                 std::vector<feSpace *> &spaces,
-                 feExportData           &exportData,
-                 TransientAdapter       &adapter,
-                 const int               iInterval) const override;
+  void updateBeforeFixedPointIteration(const int iter) override;
 
   //
   // Compute error on scalar fields p, phi, mu w.r.t. reference finer solution
@@ -96,19 +88,6 @@ public:
                         const int            iIntervalReferenceSolution,
                         TransientAdapter    &adapter,
                         std::vector<double> &errors) const;
-
-  // /*
-  //  * This function computes various postprocessing quantities. Since the
-  //  * postprocessing varies a lot from one benchmark to another, the function
-  //  * must be implemented individually in each benchmark executable.
-  //  * This is not ideal, should think of a better way.
-  //  */
-  // feStatus computePostProcessing(const std::vector<feSpace *> &spaces,
-  //                                feMesh                       *mesh,
-  //                                feSolution                   *sol,
-  //                                PostProcData &data) const override;
-
-  feStatus updateBeforeFixedPointIteration(const int iter);
 };
 
 #endif

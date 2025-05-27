@@ -4004,9 +4004,9 @@ int main(int argc, char **argv)
           std::vector<int> numVerticesInAdaptedMeshes(adapter.nIntervals, 0);
           for(int iI = 0; iI < adapter.nIntervals; ++iI)
           {
+          #if defined(HAVE_GMSH)
             feMetric *metricField = adapter.allMetrics[iI];
             metricField->scaleMetricsByDeterminant(globalScalingFactor, expDeterminantLocal);
-
             initializeGmsh();
             feMetricOptions my_options = metricField->getOptions();
             gmsh::open(my_options.backgroundMeshfile);
@@ -4021,6 +4021,7 @@ int main(int argc, char **argv)
             // Read the adapted mesh to check the number of vertices
             feMesh2DP1 mesh(my_options.adaptedMeshName);
             numVerticesInAdaptedMeshes[iI] = mesh.getNumVertices();
+          #endif
           }
           
           feInfo("Number of vertices in adapted meshes :");

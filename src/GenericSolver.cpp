@@ -1,9 +1,11 @@
 
 #include "GenericSolver.h"
 
+#include "TransientAdapter.h"
 #include "feNorm.h"
 #include "feSolution.h"
 #include "feSolutionContainer.h"
+#include "feTimeIntegration.h"
 
 feStatus SolverBase::createSpaces(feMesh                 *mesh,
                                   std::vector<feSpace *> &spaces,
@@ -67,13 +69,322 @@ feStatus SolverBase::createSpaces(feMesh                 *mesh,
     {
       for (int i = 0; i < 3; ++i)
       {
-        if (d._essentialComponents[i])
+        if (d._essentialComponents[i] == 1)
         {
           s->setEssentialComponent(i, true);
         }
       }
     }
   }
+
+  return FE_STATUS_OK;
+}
+
+feStatus SolverBase::solve(feMesh                 *mesh,
+                           feSolution             *sol,
+                           feMetaNumber           *numbering,
+                           std::vector<feSpace *> &spaces,
+                           feExportData           &exportData) const
+{
+  //
+  // Time stepping is controlled by the TimeIntegration parameters
+  //
+  const Parameters::TimeIntegration &tp = _TimeIntegration_parameters;
+  const int                          nT = tp.nTimeSteps;
+  const double                       t0 = tp.t_initial;
+  const double                       tf = tp.t_final;
+
+  //
+  // Linear and bilinear forms
+  //
+  std::vector<feBilinearForm *> forms;
+  this->createBilinearForms(spaces, forms);
+
+  feLinearSystem *system = nullptr;
+#if defined(HAVE_MKL)
+  feCheckReturn(
+    createLinearSystem(system, MKLPARDISO, forms, numbering->getNbUnknowns()));
+#elif defined(HAVE_PETSC) && defined(PETSC_HAVE_MUMPS)
+  feCheckReturn(
+    createLinearSystem(system, PETSC_MUMPS, forms, numbering->getNbUnknowns()));
+#else
+  feCheckReturn(
+    createLinearSystem(system, PETSC, forms, numbering->getNbUnknowns()));
+#endif
+
+  std::vector<feNorm *> norms = {};
+
+  //
+  // Until NLoptions and timeIntegratorScheme are fully replaced by feParameters
+  // structures:
+  //
+  feNLSolverOptions NLoptions{
+    _NLSolver_parameters.tolResidual,
+    _NLSolver_parameters.tolCorrection,
+    _NLSolver_parameters.tolDivergence,
+    _NLSolver_parameters.maxIter,
+    _NLSolver_parameters.recomputeJacobianEveryNsteps,
+    _NLSolver_parameters.residualDecrease,
+  };
+
+  timeIntegratorScheme scheme;
+
+  switch (tp.method)
+  {
+    case Parameters::TimeIntegration::TimeIntegrationMethod::stationary:
+      scheme = timeIntegratorScheme::STATIONARY;
+      break;
+    case Parameters::TimeIntegration::TimeIntegrationMethod::bdf1:
+      scheme = timeIntegratorScheme::BDF1;
+      break;
+    case Parameters::TimeIntegration::TimeIntegrationMethod::bdf2:
+      scheme = timeIntegratorScheme::BDF2;
+      break;
+    default:
+      return feErrorMsg(FE_STATUS_ERROR,
+                        "Time integration method not handled.");
+  }
+
+  TimeIntegrator *timeIntegrator = nullptr;
+  feCheckReturn(createTimeIntegrator(timeIntegrator,
+                                     scheme,
+                                     NLoptions,
+                                     system,
+                                     sol,
+                                     mesh,
+                                     norms,
+                                     exportData,
+                                     t0,
+                                     tf,
+                                     nT));
+
+  // Set BDF2 starter if needed
+  if (tp.method == Parameters::TimeIntegration::TimeIntegrationMethod::bdf2)
+  {
+    if (tp.bdf2starter == Parameters::TimeIntegration::BDF2Starter::bdf1)
+    {
+      static_cast<BDF2Integrator *>(timeIntegrator)
+        ->setStartingMethod(BDF2Starter::BDF1);
+    }
+    if (tp.bdf2starter ==
+        Parameters::TimeIntegration::BDF2Starter::exactSolution)
+    {
+      static_cast<BDF2Integrator *>(timeIntegrator)
+        ->setStartingMethod(BDF2Starter::InitialCondition);
+    }
+  }
+
+  // Solve
+  feCheckReturn(timeIntegrator->makeSteps(nT));
+
+  delete timeIntegrator;
+  delete system;
+  for (feBilinearForm *f : forms)
+    delete f;
+
+  return FE_STATUS_OK;
+}
+
+feStatus SolverBase::solve(feMesh                 *mesh,
+                           feSolution             *sol,
+                           feMetaNumber           *numbering,
+                           std::vector<feSpace *> &spaces,
+                           feExportData           &exportData,
+                           TransientAdapter       &adapter,
+                           const int               iInterval) const
+{
+  //
+  // Time stepping is controlled by the transient adapter
+  //
+  const Parameters::TimeIntegration &tp = _TimeIntegration_parameters;
+  const int    nT = adapter._adapt_parameters.nTimeStepsPerInterval;
+  const double t0 = adapter.currentTime;
+  const double tf = t0 + adapter._time_parameters.dt * nT;
+  const double dt = adapter._time_parameters.dt;
+
+  //
+  // Linear and bilinear forms
+  //
+  std::vector<feBilinearForm *> forms;
+  this->createBilinearForms(spaces, forms);
+
+  //
+  // Linear system, nonlinear solver and time integration
+  //
+  feLinearSystem *system = nullptr;
+#if defined(HAVE_MKL)
+  feCheckReturn(
+    createLinearSystem(system, MKLPARDISO, forms, numbering->getNbUnknowns()));
+#elif defined(HAVE_PETSC) && defined(PETSC_HAVE_MUMPS)
+  feCheckReturn(
+    createLinearSystem(system, PETSC_MUMPS, forms, numbering->getNbUnknowns()));
+#else
+  feCheckReturn(
+    createLinearSystem(system, PETSC, forms, numbering->getNbUnknowns()));
+#endif
+
+  std::vector<feNorm *> norms = {};
+
+  //
+  // Until NLoptions and timeIntegratorScheme are fully replaced by feParameters
+  // structures:
+  //
+  feNLSolverOptions NLoptions{
+    _NLSolver_parameters.tolResidual,
+    _NLSolver_parameters.tolCorrection,
+    _NLSolver_parameters.tolDivergence,
+    _NLSolver_parameters.maxIter,
+    _NLSolver_parameters.recomputeJacobianEveryNsteps,
+    _NLSolver_parameters.residualDecrease,
+  };
+
+  timeIntegratorScheme scheme;
+
+  switch (tp.method)
+  {
+    case Parameters::TimeIntegration::TimeIntegrationMethod::stationary:
+      scheme = timeIntegratorScheme::STATIONARY;
+      break;
+    case Parameters::TimeIntegration::TimeIntegrationMethod::bdf1:
+      scheme = timeIntegratorScheme::BDF1;
+      break;
+    case Parameters::TimeIntegration::TimeIntegrationMethod::bdf2:
+      scheme = timeIntegratorScheme::BDF2;
+      break;
+    default:
+      return feErrorMsg(FE_STATUS_ERROR,
+                        "Time integration method not handled.");
+  }
+
+  TimeIntegrator *timeIntegrator = nullptr;
+  feCheckReturn(createTimeIntegrator(timeIntegrator,
+                                     scheme,
+                                     NLoptions,
+                                     system,
+                                     sol,
+                                     mesh,
+                                     norms,
+                                     exportData,
+                                     t0,
+                                     tf,
+                                     nT));
+
+  // Set BDF2 starter if needed
+  if (tp.method == Parameters::TimeIntegration::TimeIntegrationMethod::bdf2)
+  {
+    if (tp.bdf2starter == Parameters::TimeIntegration::BDF2Starter::bdf1)
+    {
+      static_cast<BDF2Integrator *>(timeIntegrator)
+        ->setStartingMethod(BDF2Starter::BDF1);
+    }
+    if (tp.bdf2starter ==
+        Parameters::TimeIntegration::BDF2Starter::exactSolution)
+    {
+      static_cast<BDF2Integrator *>(timeIntegrator)
+        ->setStartingMethod(BDF2Starter::InitialCondition);
+    }
+  }
+
+  // Restart from solution container if not the first sub-interval
+  // (restart from last solutions of previous sub-interval)
+  if (iInterval > 0)
+  {
+    feCheckReturn(
+      timeIntegrator->restartFromContainer(*adapter.allContainers[iInterval]));
+    timeIntegrator->setCurrentStep(adapter.currentTimeStep);
+
+    feInfo("Time           of timeIntegrator : %f",
+           timeIntegrator->getCurrentTime());
+    feInfo("Previous times of timeIntegrator : %f",
+           timeIntegrator->getTime()[0]);
+    feInfo("Previous times of timeIntegrator : %f",
+           timeIntegrator->getTime()[1]);
+    feInfo("Previous times of timeIntegrator : %f",
+           timeIntegrator->getTime()[2]);
+    feInfo("Step           of timeIntegrator : %d",
+           timeIntegrator->getCurrentStep());
+  }
+
+  // Solve and compute metrics at each time step
+  for (int iStep = 0; iStep < nT; ++iStep)
+  {
+    tic();
+    feCheckReturn(timeIntegrator->makeSteps(1));
+    feInfo("Computed time step in %f s", toc());
+
+    //
+    // Compute metric field
+    //
+    feMetric *metricField = adapter.allMetrics[iInterval];
+
+    if (adapter._adapt_parameters.useExactDerivatives)
+    {
+      // Use analytical field derivatives
+      // Check that the derivatives were given
+      const int order = adapter._adapt_parameters.orderForAdaptation;
+      if ((order == 1 && metricField->_options.secondDerivatives == nullptr) ||
+          (order == 2 && metricField->_options.thirdDerivatives == nullptr) ||
+          (order == 3 && metricField->_options.fourthDerivatives == nullptr) ||
+          (order == 4 && metricField->_options.fifthDerivatives == nullptr))
+      {
+        std::cout << metricField->_options.secondDerivatives << std::endl;
+        return feErrorMsg(
+          FE_STATUS_ERROR,
+          "The metric field is set to be computed with exact field "
+          "derivatives,\n but no callback for derivatives of order k+1 was "
+          "provided for field of order k = %d driving the adaptation.\n",
+          order);
+      }
+      metricField->setCurrentTime(timeIntegrator->getCurrentTime());
+      metricField->setMetricScaling(false);
+      feCheckReturn(metricField->computeMetrics());
+    }
+    else
+    {
+      // Reconstruct prescribed field for adaptation
+      const int   id = adapter._adapt_parameters.spaceIDForAdaptation;
+      feSpace    *spaceToReconstruct = spaces[id];
+      std::string meshFile = adapter.allOptions[iInterval].backgroundMeshfile;
+      std::string recoveryFile =
+        adapter._io_parameters.writeDir + "reconstruction.msh";
+      feNewRecovery recoveredField(spaceToReconstruct,
+                                   0,
+                                   mesh,
+                                   sol,
+                                   meshFile,
+                                   recoveryFile,
+                                   false,
+                                   false,
+                                   false,
+                                   nullptr,
+                                   numbering);
+
+      metricField->setRecoveredFields({&recoveredField});
+      metricField->setCurrentTime(timeIntegrator->getCurrentTime());
+      metricField->setMetricScaling(false);
+      feCheckReturn(metricField->computeMetrics());
+    }
+
+    // Trapeze rule
+    if (iStep == 0 || iStep == nT - 1)
+      metricField->addMetricsToOther(dt / 2., adapter.allHi[iInterval]);
+    else
+      metricField->addMetricsToOther(dt, adapter.allHi[iInterval]);
+
+    adapter.currentTimeStep++;
+  }
+
+  adapter.currentTime = timeIntegrator->getCurrentTime();
+
+  delete adapter.allContainers[iInterval];
+  adapter.allContainers[iInterval] = new feSolutionContainer();
+  adapter.allContainers[iInterval]->NaNify();
+  *(adapter.allContainers[iInterval]) = timeIntegrator->getSolutionContainer();
+
+  delete timeIntegrator;
+  delete system;
+  for (feBilinearForm *f : forms)
+    delete f;
 
   return FE_STATUS_OK;
 }

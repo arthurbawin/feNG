@@ -51,22 +51,11 @@ public:
                   feFunction                           *source);
   ~DiffusionSolver() {}
 
-  feStatus solve(feMesh                 *mesh,
-                 feSolution             *sol,
-                 feMetaNumber           *numbering,
-                 std::vector<feSpace *> &spaces,
-                 feExportData           &exportData) const override;
-
-  feStatus solve(feMesh                 *mesh,
-                 feSolution             *sol,
-                 feMetaNumber           *numbering,
-                 std::vector<feSpace *> &spaces,
-                 feExportData           &exportData,
-                 TransientAdapter       &adapter,
-                 const int               iInterval) const override;
+  feStatus createBilinearForms(const std::vector<feSpace *>  &spaces,
+                               std::vector<feBilinearForm *> &forms) const;
 
   //
-  // Compute error on scalar fields p, phi, mu w.r.t. reference finer solution
+  // Compute error on scalar field u
   //
   feStatus computeError(const std::vector<feSpace *> &spaces,
                         feMesh                       *mesh,
@@ -74,8 +63,6 @@ public:
                         const int            iIntervalReferenceSolution,
                         TransientAdapter    &adapter,
                         std::vector<double> &errors) const;
-
-  feStatus updateBeforeFixedPointIteration(const int iter);
 };
 
 #endif

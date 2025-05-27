@@ -8,8 +8,8 @@ feStatus createNorm(feNorm                            *&norm,
                     normType                            type,
                     const std::vector<const feSpace *> &spaces,
                     feSolution                         *sol,
-                    feFunction                         *scalarSolution,
-                    feVectorFunction                   *vectorSolution)
+                    const feFunction                         *scalarSolution,
+                    const feVectorFunction                   *vectorSolution)
 {
   for (const feSpace *fS : spaces)
   {
@@ -49,8 +49,8 @@ feStatus createNorm(feNorm                            *&norm,
 feNorm::feNorm(normType                            type,
                const std::vector<const feSpace *> &spaces,
                feSolution                         *sol,
-               feFunction                         *scalarSolution,
-               feVectorFunction                   *vectorSolution)
+               const feFunction                         *scalarSolution,
+               const feVectorFunction                   *vectorSolution)
   : _type(type)
   , _spaces(spaces)
   , _solution(sol)
@@ -90,8 +90,8 @@ feNorm::feNorm(normType                            type,
 }
 
 feNorm::feNorm(feCncGeo         *cnc,
-               feFunction       *scalarSolution,
-               feVectorFunction *vectorSolution)
+               const feFunction       *scalarSolution,
+               const feVectorFunction *vectorSolution)
   : _cnc(cnc)
   , _J(_cnc->getJacobians())
   , _scalarSolution(scalarSolution)

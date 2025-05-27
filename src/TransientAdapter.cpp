@@ -49,12 +49,43 @@ feStatus TransientAdapter::allocate(const SolverBase &solver)
   allEssentialSpaces.resize(nI);
 
   allErrors.resize(ap.nFixedPoint, std::vector<std::vector<double>>(nI));
+  const int nUnknownFields = solver.getNumFields();
+  for (int i = 0; i < ap.nFixedPoint; ++i)
+    for (int j = 0; j < nI; ++j)
+      allErrors[i][j].resize(nUnknownFields, 0.);
+
+  spaceTimeComplexity.resize(ap.nFixedPoint);
 
   referenceTestCases.resize(ap.nIntervalsReferenceSolution);
 
   // Metric options common to all meshes
   feMetricOptions metricOptions(io.initialMesh);
   metricOptions.polynomialDegree = ap.orderForAdaptation;
+
+  // Check that the provided polynomial order for mesh adaptation
+  // matches the one of the computed field in the solver.
+  // This would still work with mismatched degrees, but would
+  // yield non-optimal adapted meshes.
+  const FEDescriptor &fieldForAdaptation =
+    solver._fieldDescriptors[ap.spaceIDForAdaptation];
+  const int solvedDegree = fieldForAdaptation._degree;
+  if (solvedDegree != ap.orderForAdaptation)
+  {
+    return feErrorMsg(
+      FE_STATUS_ERROR,
+      "The prescribed field degree for mesh adaptation (%d) does not match the "
+      "degree of this field in the solver (%d).\n"
+      "Field ID given to drive the mesh adaptation procedure: %d\n"
+      "Associated field name   in solver: %s\n"
+      "Associated field entity in solver: %s\n"
+      "Associated field degree in solver: %d\n",
+      ap.orderForAdaptation,
+      solvedDegree,
+      ap.spaceIDForAdaptation,
+      fieldForAdaptation._fieldName.data(),
+      fieldForAdaptation._physicalEntityName.data(),
+      fieldForAdaptation._degree);
+  }
 
   switch (ap.orderForAdaptation)
   {
@@ -67,6 +98,7 @@ feStatus TransientAdapter::allocate(const SolverBase &solver)
     default:
       metricOptions.method = adaptationMethod::ANISO_PN;
   }
+
   metricOptions.nTargetVertices   = ap.targetVertices;
   metricOptions.LpNorm            = ap.Lp_norm;
   metricOptions.hMin              = 1e-10;
@@ -78,15 +110,32 @@ feStatus TransientAdapter::allocate(const SolverBase &solver)
   metricOptions.mmgOutputMeshfile = io.writeDir + "outputMMG.msh";
   metricOptions.debug             = false;
 
+  if (ap.useExactDerivatives)
+  {
+    metricOptions.useAnalyticDerivatives = true;
+  }
+
   allOptions.resize(nI, metricOptions);
 
+  //
+  // Read initial meshes and create metric fields
+  //
   for (int iI = 0; iI < nI; ++iI)
   {
     // Different adapted mesh name for each sub-interval
     allOptions[iI].adaptedMeshName =
       io.writeDir + "adapted_ifp_0_interval_" + std::to_string(iI) + ".msh";
 
-    allMeshes[iI] = new feMesh2DP1(io.initialMesh);
+    if (ap.restartFromAdaptedMeshes)
+    {
+      std::string meshFile = io.writeDir + ap.restartMeshesRoot + "_interval" +
+                             std::to_string(iI) + ".msh";
+      allMeshes[iI] = new feMesh2DP1(meshFile);
+    }
+    else
+    {
+      allMeshes[iI] = new feMesh2DP1(io.initialMesh);
+    }
 
     feCheckReturn(
       createMetricField(allMetrics[iI], allOptions[iI], allMeshes[iI]));
@@ -135,6 +184,55 @@ feStatus TransientAdapter::allocate(const SolverBase &solver)
   postProcFile.open(io.writeDir + "postProcessing_iConv" + std::to_string(0) +
                     ".txt");
 
+  wasAllocated = true;
+
+  return FE_STATUS_OK;
+}
+
+feStatus
+TransientAdapter::setExactDerivatives(const int               order,
+                                      const feVectorFunction *derivatives)
+{
+  if (!wasAllocated)
+  {
+    return feErrorMsg(
+      FE_STATUS_ERROR,
+      "Cannot set exact derivatives for metric computation before "
+      "TransientAdapter is allocated. Call allocate(...) function first.");
+  }
+  for (int iI = 0; iI < _adapt_parameters.nIntervals; ++iI)
+  {
+    // Set callback for the current metric fields (already created)
+    // and for the options, which are used to create the subsequent
+    // metric fields, at the next fixed point iteration.
+    switch (order)
+    {
+      case 1:
+        allOptions[iI].firstDerivatives           = derivatives;
+        allMetrics[iI]->_options.firstDerivatives = derivatives;
+        break;
+      case 2:
+        allOptions[iI].secondDerivatives           = derivatives;
+        allMetrics[iI]->_options.secondDerivatives = derivatives;
+        break;
+      case 3:
+        allOptions[iI].thirdDerivatives           = derivatives;
+        allMetrics[iI]->_options.thirdDerivatives = derivatives;
+        break;
+      case 4:
+        allOptions[iI].fourthDerivatives           = derivatives;
+        allMetrics[iI]->_options.fourthDerivatives = derivatives;
+        break;
+      case 5:
+        allOptions[iI].fifthDerivatives           = derivatives;
+        allMetrics[iI]->_options.fifthDerivatives = derivatives;
+        break;
+      default:
+        return feErrorMsg(FE_STATUS_ERROR,
+                          "Derivatives of order %d are not handled.",
+                          order);
+    }
+  }
   return FE_STATUS_OK;
 }
 
@@ -168,7 +266,7 @@ feStatus TransientAdapter::readAdaptedMeshes()
   return FE_STATUS_OK;
 }
 
-feStatus TransientAdapter::updateBeforeFixedPointIteration()
+void TransientAdapter::updateBeforeFixedPointIteration()
 {
   Parameters::MeshAdaptation &param = _adapt_parameters;
   if (iFixedPoint > 0)
@@ -199,8 +297,6 @@ feStatus TransientAdapter::updateBeforeFixedPointIteration()
              param.targetVertices);
     }
   }
-
-  return FE_STATUS_OK;
 }
 
 feStatus TransientAdapter::computeSpaceTimeMetrics()
@@ -260,7 +356,12 @@ feStatus TransientAdapter::computeSpaceTimeMetrics()
     gmsh::open(my_options.backgroundMeshfile);
     // openGmshModel(my_options.backgroundMeshfile);
     metricField->setDebugPrefix(std::to_string(iI));
-    metricField->applyGradation();
+
+    if (ap.enableSpaceTimeGradation)
+    {
+      metricField->applyGradation();
+    }
+
     metricField->writeMetricField();
     setVerbose(0);
     allMeshes[iI]->adapt(metricField);
@@ -273,12 +374,14 @@ feStatus TransientAdapter::computeSpaceTimeMetrics()
 
   feInfo("Number of vertices in adapted meshes :");
   for (int iI = 0; iI < nI; ++iI)
-    feInfo("%d : %d", iI, numVerticesInAdaptedMeshes[iI]);
+    feInfo("Mesh %d : %d", iI, numVerticesInAdaptedMeshes[iI]);
   int totalVertices = std::accumulate(numVerticesInAdaptedMeshes.begin(),
                                       numVerticesInAdaptedMeshes.end(),
                                       0);
 
   const int effectiveNst = totalVertices * ap.nTimeStepsPerInterval;
+
+  spaceTimeComplexity[iFixedPoint] = effectiveNst;
 
   feInfo("Total  number of space      vertices : %d", totalVertices);
   feInfo("Total  number of space-time vertices : %d", effectiveNst);
@@ -286,58 +389,6 @@ feStatus TransientAdapter::computeSpaceTimeMetrics()
 #else
   feWarning("Gmsh is required to compute and write metric fields.");
 #endif
-  return FE_STATUS_OK;
-}
-
-feStatus TransientAdapter::adaptAllMeshes()
-{
-  // #if defined(HAVE_GMSH)
-  //   const Parameters::MeshAdaptation &ap = _adapt_parameters;
-  //   const int    nI     = ap.nIntervals;
-
-  //   std::vector<int> numVerticesInAdaptedMeshes(nI, 0);
-
-  //   //
-  //   // Adapt on each sub-interval
-  //   //
-  //   for(int iI = 0; iI < nI; ++iI)
-  //   {
-  //     feMetric *metricField = allMetrics[iI];
-  //     // metricField->scaleMetricsByDeterminant(globalScalingFactor,
-  //     expDeterminantLocal);
-
-  //     initializeGmsh();
-  //     feMetricOptions my_options = metricField->getOptions();
-  //     gmsh::open(my_options.backgroundMeshfile);
-  //     // openGmshModel(my_options.backgroundMeshfile);
-  //     metricField->setDebugPrefix(std::to_string(iI));
-  //     // metricField->applyGradation();
-  //     metricField->writeMetricField();
-  //     setVerbose(0);
-  //     allMeshes[iI]->adapt(metricField);
-  //     setVerbose(1);
-
-  //     // Read the adapted mesh to check the number of vertices
-  //     feMesh2DP1 mesh(my_options.adaptedMeshName);
-  //     numVerticesInAdaptedMeshes[iI] = mesh.getNumVertices();
-  //   }
-
-
-  //   feInfo("Number of vertices in adapted meshes :");
-  //   for(int iI = 0; iI < nI; ++iI)
-  //     feInfo("%d : %d", iI, numVerticesInAdaptedMeshes[iI]);
-  //   int totalVertices = std::accumulate(numVerticesInAdaptedMeshes.begin(),
-  //   numVerticesInAdaptedMeshes.end(), 0);
-
-  //   const double targetNst = (double) ap.targetVertices * nI;
-  //   const int effectiveNst = totalVertices * ap.nTimeStepsPerInterval;
-
-  //   feInfo("Total  number of space      vertices : %d", totalVertices);
-  //   feInfo("Total  number of space-time vertices : %d", effectiveNst);
-  //   feInfo("Target number of space-time vertices : %f", targetNst);
-  // #else
-  //   feWarning("Gmsh is required to write the metric field");
-  // #endif
   return FE_STATUS_OK;
 }
 
@@ -429,12 +480,14 @@ feStatus TransientAdapter::fixedPointIteration(SolverBase &solver)
     feExporter *exporter = nullptr;
     std::string vtkFileRoot =
       _io_parameters.writeDir + "sol_iConv" + std::to_string(0);
-    if (exportSolution)
+    if (_io_parameters.exportVisualizationFile)
     {
       feCheck(createVisualizationExporter(
         exporter, VTK, numbering, &sol, mesh, spaces));
     }
-    feExportData exportData = {exporter, exportFrequency, vtkFileRoot};
+    feExportData exportData = {exporter,
+                               _io_parameters.exportFrequency,
+                               vtkFileRoot};
 
     //
     // Solve. The time stepping information is provided by *this.
@@ -503,13 +556,78 @@ feStatus TransientAdapter::fixedPointIteration(SolverBase &solver)
     }
   } // for iI (sub-intervals)
 
-  if (adapt)
+  if (ap.adapt)
   {
     this->computeSpaceTimeMetrics();
     // this->adapt();
   }
 
   ++iFixedPoint;
+
+  return FE_STATUS_OK;
+}
+
+feStatus TransientAdapter::computeSpaceTimeErrors(
+  std::vector<std::vector<double>> &spaceTimeErrors)
+{
+  const Parameters::MeshAdaptation  &ap        = _adapt_parameters;
+  const Parameters::TimeIntegration &tp        = _time_parameters;
+  const int                          nI        = ap.nIntervals;
+  const size_t                       numFields = allErrors[0][0].size();
+
+  spaceTimeErrors.clear();
+  spaceTimeErrors.resize(_adapt_parameters.nFixedPoint);
+
+  for (int ifp = 0; ifp < _adapt_parameters.nFixedPoint; ++ifp)
+  {
+    // The space-time (integral) error for each field and this fixed-point
+    // iteration
+    spaceTimeErrors[ifp].resize(numFields, 0.);
+
+    for (int iI = 0; iI < nI; ++iI)
+    {
+      for (size_t j = 0; j < numFields; ++j)
+      {
+        switch (ap.spaceTimeNorm)
+        {
+          case Parameters::MeshAdaptation::SpaceTimeErrorNorm::L1:
+            // L1 error from Alauzet et al.'s paper
+            spaceTimeErrors[ifp][j] +=
+              tp.dt * ap.nTimeStepsPerInterval * allErrors[ifp][iI][j];
+            break;
+          case Parameters::MeshAdaptation::SpaceTimeErrorNorm::Linf:
+            // Linf error in time
+            spaceTimeErrors[ifp][j] =
+              fmax(spaceTimeErrors[ifp][j], allErrors[ifp][iI][j]);
+            break;
+        }
+      }
+    }
+
+    // // Print error of the last fixed-point iteration to file
+    // if (ifp == adapter.nFixedPoint - 1)
+    // {
+    //   const int targetNst =
+    //     nI * adapter.nVertices * adapter.nTimeStepsPerInterval;
+
+    //   errorFile << adapter.nVertices << "\t";
+    //   errorFile << (effectiveNst / adapter.nTimeStepsPerInterval)
+    //             << "\t"; // sum of all effective vertices
+    //   errorFile << nI << "\t";
+    //   errorFile << adapter.nTimeStepsPerInterval << "\t";
+
+    //   errorFile << targetNst << "\t";
+    //   errorFile << effectiveNst << "\t";
+
+    //   errorFile << adapter.dt;
+    //   for (int j = 0; j < solver->getNumFields(); ++j)
+    //   {
+    //     errorFile << "\t" << std::setprecision(8) << e_st[j];
+    //   }
+    //   errorFile << "\n";
+    //   errorFile.flush();
+    // }
+  }
 
   return FE_STATUS_OK;
 }

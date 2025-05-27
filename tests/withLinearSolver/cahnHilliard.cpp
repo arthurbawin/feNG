@@ -2575,7 +2575,7 @@ feStatus meshConvergence(std::stringstream &resultBuffer,
     const int timeStepFactor = i;
     std::string meshFile = meshFileRoot + std::to_string(i+1) + ".msh";
 
-    feCheckReturn(problemType::solve(meshFile, timeStepFactor, orderU, orderPhiMu,
+    feCheckReturn(problemType::ezsolve(meshFile, timeStepFactor, orderU, orderPhiMu,
                        degreeQuadrature, NLoptions, nElm[i], nVertices[i],
                        errU[i],
                        errP[i],
@@ -2673,26 +2673,7 @@ feStatus meshConvergence(std::stringstream &resultBuffer,
 //   finalize();
 // }
 
-TEST(CahnHilliard, CHNS_VolumeAveraged)
-{
-  initialize(my_argc, my_argv);
-  setVerbose(1);
-  
-  std::string testRoot = "../../../tests/withLinearSolver/CHNS_VolumeAveraged";
-  std::string meshFileRoot = "../data/transfiniteSquare_pressurePoint";
-
-  std::stringstream resultBuffer;
-
-  int degreeQuadrature = 12;
-  int orderU = 2;
-  int orderPhiMu = 1;
-  ASSERT_TRUE(meshConvergence<CahnHilliardVolumeAveraged>(resultBuffer, 
-    meshFileRoot, orderU, orderPhiMu, 4, degreeQuadrature) == FE_STATUS_OK);
-  EXPECT_EQ(compareOutputFiles(testRoot, resultBuffer), 0);
-  finalize();
-}
-
-// TEST(CahnHilliard, CHNS_VolumeAveraged_EZ)
+// TEST(CahnHilliard, CHNS_VolumeAveraged)
 // {
 //   initialize(my_argc, my_argv);
 //   setVerbose(1);
@@ -2710,6 +2691,25 @@ TEST(CahnHilliard, CHNS_VolumeAveraged)
 //   EXPECT_EQ(compareOutputFiles(testRoot, resultBuffer), 0);
 //   finalize();
 // }
+
+TEST(CahnHilliard, CHNS_VolumeAveraged_EZ)
+{
+  initialize(my_argc, my_argv);
+  setVerbose(1);
+  
+  std::string testRoot = "../../../tests/withLinearSolver/CHNS_VolumeAveraged";
+  std::string meshFileRoot = "../data/transfiniteSquare_pressurePoint";
+
+  std::stringstream resultBuffer;
+
+  int degreeQuadrature = 12;
+  int orderU = 2;
+  int orderPhiMu = 1;
+  ASSERT_TRUE(meshConvergence<CahnHilliardVolumeAveraged>(resultBuffer, 
+    meshFileRoot, orderU, orderPhiMu, 5, degreeQuadrature) == FE_STATUS_OK);
+  EXPECT_EQ(compareOutputFiles(testRoot, resultBuffer), 0);
+  finalize();
+}
 
 // TEST(CahnHilliard, CHNS_Alt_Constant_Mobility)
 // {

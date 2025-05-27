@@ -1,13 +1,13 @@
 #ifndef _TRANSIENT_ADAPTER_
 #define _TRANSIENT_ADAPTER_
 
+#include "GenericSolver.h"
 #include "feMesh.h"
 #include "feMetric.h"
 #include "feNumber.h"
 #include "feParameters.h"
 #include "feSolution.h"
 #include "feSpace.h"
-#include "GenericSolver.h"
 
 /*
 
@@ -18,28 +18,18 @@
 class TransientAdapter
 {
 public:
+  bool wasAllocated = false;
+
   Parameters::MeshAdaptation  _adapt_parameters;
   Parameters::TimeIntegration _time_parameters;
   Parameters::IO              _io_parameters;
-
-  bool adapt           = true;
-  bool exportSolution  = true;
-  int  exportFrequency = 1;
 
   std::ofstream postProcFile;
 
   int iFixedPoint = 0;
 
   double currentTime;
-  int currentTimeStep;
-
-  // Time integration
-  // double t0                    = 0.;
-  // double tEnd                  = 0.1;
-  // double currentTime           = t0;
-  // int    currentStep           = 0;
-  // int    nTimeStepsPerInterval = 4;
-  // double dt = (tEnd - t0) / (nIntervals * nTimeStepsPerInterval);
+  int    currentTimeStep;
 
   std::vector<feMesh2DP1 *>                allMeshes;
   std::vector<feMetric *>                  allMetrics;
@@ -51,10 +41,16 @@ public:
   std::vector<std::vector<feSpace *>>      allEssentialSpaces;
 
   //
-  // Error computed for each global fixed-point iteration, 
+  // Error computed for each global fixed-point iteration,
   // each sub-interval and for each field.
   //
+  // Size is nFixedPoint x nIntervals x nUnknownFields
+  //
   std::vector<std::vector<std::vector<double>>> allErrors;
+
+  // The effective space-time complexity computed after all meshes are adapted,
+  // for each fixed-point iteration.
+  std::vector<int> spaceTimeComplexity;
 
   struct referenceTestCaseStruct
   {
@@ -100,36 +96,75 @@ public:
     }
   }
 
+  std::vector<int> getSpaceTimeComplexities() const
+  {
+    return spaceTimeComplexity;
+  }
+
+  //
+  // Set the callback "derivatives" as the exact derivatives of order "order"
+  // for the computation of all metric fields.
+  //
+  feStatus setExactDerivatives(const int               order,
+                               const feVectorFunction *derivatives);
+
+  //
+  // Allocate the structures and perform some compatibility checks between
+  // parameters, and between the solver and the adapter.
+  //
   feStatus allocate(const SolverBase &solver);
+
   feStatus readAdaptedMeshes();
 
   //
-  // Any updatein the transient adapter that should be done
+  // Any update in the transient adapter that should be done
   // before computing the next global fixed point iteration,
   // such as changes in the Lp norm.
   //
-  feStatus updateBeforeFixedPointIteration();
+  void updateBeforeFixedPointIteration();
 
   //
   // Compute the space-time metric fields for all meshes
+  // Adapt the mesh of each sub-interval after metrics were computed
   //
   feStatus computeSpaceTimeMetrics();
 
   //
-  // Adapt the mesh of each sub-interval after metrics were computed
-  //
-  feStatus adaptAllMeshes();
-
-  //
-  // Perform a fixed point iteration:
+  // Perform a single fixed point iteration:
   //
   // - (Optional updates in adapter and/or solver)
-  // - Solution transfer from previous iteration
-  // - Solver for the prescribed time interval
-  // - Postprocessing
-  // - Mesh adaptation
+  // - Solve the problem on all time sub-intervals:
+  //
+  //   For each interval [ti, ti+1]:
+  //
+  //   - Transfer solution from previous interval (if > 0)
+  //   - Advance solution to ti+1
+  //   - Compute metrics every few time steps and increment
+  //     time integral of metric
+  //   - Compute error at end of interval
+  //   - Post-process solution at end of interval
+  //
+  // - Compute all space-time metric fields
+  // - Adapt all meshes (one per sub-interval)
   //
   feStatus fixedPointIteration(SolverBase &solver);
+
+  //
+  // Compute the space-time error for all fixed-point iterations and all fields:
+  //
+  //         /T  /
+  // e_st =  |   |      |u_ref(x,t) - u(x,t)| dx dt  (L1 norm in time),
+  //         /0  /Omega
+  //
+  // or
+  //                   /
+  // e_st =  max_t_i   |      |u_ref(x,t) - u(x,t)| dx (Linf norm).
+  //                   /Omega
+  //
+  // Returns a vector of size nFixedPoint x nFields.
+  //
+  feStatus
+  computeSpaceTimeErrors(std::vector<std::vector<double>> &spaceTimeErrors);
 
   feStatus finalize();
 };

@@ -16,8 +16,16 @@ namespace Parameters
       bdf1,
       bdf2,
       dc2bdf1,
-      dc3bdf1
+      dc3bdf1,
+      dc3bdf2,
+      eigensolver
     } method;
+
+    enum class BDF2Starter
+    {
+      bdf1,
+      exactSolution
+    } bdf2starter = BDF2Starter::bdf1;
   };
 
   struct NonLinearSolver
@@ -36,7 +44,7 @@ namespace Parameters
     // returns an error.
     double tolDivergence = 1e4;
 
-    // // Nonlinear solver stops if numIter > maxIter and returns an error.
+    // Nonlinear solver stops if numIter > maxIter and returns an error.
     double maxIter = 20;
 
     // For unsteady problems, Jacobian matrix is recomputed every N steps by
@@ -61,7 +69,7 @@ namespace Parameters
 
   struct Diffusion 
   {
-    double diffusivity = 1.;
+    double placeholder; // Unused for now
   };
 
   /*
@@ -107,12 +115,19 @@ namespace Parameters
 
   struct MeshAdaptation
   {
+    bool adapt = true;
     int orderForAdaptation;
+    int spaceIDForAdaptation = 0;
     int targetVertices = 5000;
     double Lp_norm = 2.;
     double dim = 2.;
+
     bool enableGradation = false;
-    double gradation = 1.6;
+    bool enableSpaceTimeGradation = false;
+    double gradation = 2.;
+
+    // Use the exact function derivatives to compute the metric field
+    bool useExactDerivatives = false;
 
     // For unsteady adaptation
     int nFixedPoint;
@@ -120,19 +135,36 @@ namespace Parameters
     int nTimeStepsPerInterval;
     int nIntervalsReferenceSolution;
 
+    // The Lp norm used to compute the space-time error,
+    // at the end of an unsteady fixed-point iteration
+    enum class SpaceTimeErrorNorm
+    {
+      L1,
+      Linf
+    } spaceTimeNorm = SpaceTimeErrorNorm::L1;
+
     // Increase the number of target vertices every N fixed point iterations
     int verticesIncreaseFrequency = 1;
 
     // Multiply target number of vertices by this value when condition is met
     double targetVerticesIncrease = 1.;
 
+    // Restart from prescribed meshes.
+    // If not the provided initial mesh is used as starting mesh 
+    // for all time sub-intervals.
+    bool restartFromAdaptedMeshes = false;
+    // If restarting from specified meshes, look for the mesh files:
+    //
+    // IO.writeDir + restartMeshesRoot + "_intervalXX.msh"
+    std::string restartMeshesRoot = "";
+
     // When reading a reference mesh and solution, we look for the files:
     //
-    // Mesh: IO.writeDir + referenceMeshRoot + "_intervalXX.msh";
+    // Mesh: IO.writeDir + referenceMeshRoot + "_intervalXX.msh"
     //
     // and
     // 
-    // Solution file: IO.writeDir + referenceSolutionRoot + "_intervalXX.txt";
+    // Solution file: IO.writeDir + referenceSolutionRoot + "_intervalXX.txt"
     bool readReferenceSolution = false;
     std::string referenceMeshRoot = "referenceMesh";
     std::string referenceSolutionRoot = "referenceSolution";
@@ -143,6 +175,9 @@ namespace Parameters
     std::string readDir = "";
     std::string writeDir = "";
     std::string initialMesh = "";
+
+    bool exportVisualizationFile = true;
+    int exportFrequency = 1;
   };
 } // namespace Parameters
 

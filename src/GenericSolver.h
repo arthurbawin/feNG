@@ -56,6 +56,13 @@ public:
 
   PostProcCallback *_postprocCallback;
 
+  // Number of unknown (solved) scalar and/or vector fields
+  int _numFields = 0;
+
+  // Scalar exact solution, along with the index of the
+  // associated scalar space given in fieldDescriptors.
+  std::vector<std::pair<int, const feFunction *>> _scalarExactSolutions;
+
 public:
   SolverBase(const Parameters::NonLinearSolver    &NLSolver_parameters,
              const Parameters::TimeIntegration    &TimeIntegration_parameters,
@@ -70,41 +77,26 @@ public:
   {}
   virtual ~SolverBase(){};
 
+  int getNumFields() const { return _numFields; };
+  void
+  setScalarSolutions(const std::vector<std::pair<int, const feFunction *>> &solutions)
+  {
+    _scalarExactSolutions = solutions;
+  }
+
+  //
+  // Create the finite element spaces (domain and boundaries)
+  //
   feStatus createSpaces(feMesh                 *mesh,
                         std::vector<feSpace *> &spaces,
                         std::vector<feSpace *> &essentialSpaces) const;
 
   //
-  // Solve with time stepping information provided by the TimeIntegration
-  // parameters. Used when using this solver as a "stand-alone" solver.
+  // Create the vector of linear and bilinear forms to assemble
   //
-  virtual feStatus solve(feMesh                 *mesh,
-                         feSolution             *sol,
-                         feMetaNumber           *numbering,
-                         std::vector<feSpace *> &spaces,
-                         feExportData           &exportData) const = 0;
-
-  //
-  // Solve with time stepping information provided by a TransientAdapter.
-  // Used inside the unsteady adaptation loop when providing this solver
-  // to a TransientAdapter.
-  //
-  virtual feStatus solve(feMesh                 *mesh,
-                         feSolution             *sol,
-                         feMetaNumber           *numbering,
-                         std::vector<feSpace *> &spaces,
-                         feExportData           &exportData,
-                         TransientAdapter       &adapter,
-                         const int               iInterval) const = 0;
-
-  feStatus projectSolution(feMesh2DP1                  *currentMesh,
-                           feMesh2DP1                  *nextMesh,
-                           feSolutionContainer         *container,
-                           feSolutionContainer         &bufferContainer,
-                           feSolutionContainer        *&nextContainer,
-                           feMetaNumber                *numbering,
-                           const std::vector<feSpace *> spaces,
-                           const std::vector<feSpace *> essentialSpaces) const;
+  virtual feStatus
+  createBilinearForms(const std::vector<feSpace *>  &spaces,
+                      std::vector<feBilinearForm *> &forms) const = 0;
 
   //
   // Create the structures for a reference test case
@@ -117,8 +109,80 @@ public:
                                  feMetaNumber          *&numbering,
                                  feSolution            *&sol) const;
 
-  virtual feStatus updateBeforeFixedPointIteration(const int iter) = 0;
+  //
+  // When used within a TransientAdapter, perform any update to the solver
+  // parameters before computing the next global fixed-point iteration.
+  //
+  virtual void updateBeforeFixedPointIteration(const int /*iter*/) {}
 
+  //
+  // Solve with time stepping information provided by the TimeIntegration
+  // parameters. Used when using this solver as a "stand-alone" solver.
+  //
+  // The generic solve method does the following:
+  //
+  //  - Create the linear and bilinear forms
+  //  - Create a linear system
+  //  - Create a time integrator.
+  //  - Integrate N time steps
+  //  - Free the allocated memory
+  //
+  // This method can be overriden by derived solvers to perform
+  // more specific actions.
+  //
+  virtual feStatus solve(feMesh                 *mesh,
+                         feSolution             *sol,
+                         feMetaNumber           *numbering,
+                         std::vector<feSpace *> &spaces,
+                         feExportData           &exportData) const;
+
+  //
+  // Solve with time stepping information provided by a TransientAdapter.
+  // Used inside the unsteady adaptation loop when providing this solver
+  // to a TransientAdapter.
+  //
+  // The generic solve method does the following:
+  //
+  //  - Create the linear and bilinear forms
+  //  - Create a linear system
+  //  - Create a time integrator. The time integrator is restarted
+  //    from the solution on the previous time sub-interval, after
+  //    this solution has been transfered to the mesh of this interval.
+  //  - Integrate N time steps
+  //  - Compute a metric field based on the prescribed field every
+  //    prescribed number of time steps (for now 1).
+  //  - Increment the time integral of the metric field
+  //  - Store the solution at the last N BDF time steps into the
+  //    container of the adapter.
+  //  - Free the allocated memory
+  //
+  // This method can be overriden by derived solvers to perform
+  // more specific actions.
+  //
+  virtual feStatus solve(feMesh                 *mesh,
+                         feSolution             *sol,
+                         feMetaNumber           *numbering,
+                         std::vector<feSpace *> &spaces,
+                         feExportData           &exportData,
+                         TransientAdapter       &adapter,
+                         const int               iInterval) const;
+
+  //
+  // Transfer solution from current mesh to next mesh
+  //
+  feStatus projectSolution(feMesh2DP1                  *currentMesh,
+                           feMesh2DP1                  *nextMesh,
+                           feSolutionContainer         *container,
+                           feSolutionContainer         &bufferContainer,
+                           feSolutionContainer        *&nextContainer,
+                           feMetaNumber                *numbering,
+                           const std::vector<feSpace *> spaces,
+                           const std::vector<feSpace *> essentialSpaces) const;
+
+  //
+  // Compute errors based on either an exact solution
+  // or a finer reference solution.
+  //
   virtual feStatus computeError(const std::vector<feSpace *> &spaces,
                                 feMesh                       *mesh,
                                 feSolution                   *sol,
@@ -126,6 +190,9 @@ public:
                                 TransientAdapter    &adapter,
                                 std::vector<double> &errors) const = 0;
 
+  //
+  // Call the provided post-processing callback.
+  //
   feStatus computePostProcessing(const std::vector<feSpace *> &spaces,
                                  feSolution                   *sol,
                                  PostProcData                 &data) const

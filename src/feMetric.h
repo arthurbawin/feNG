@@ -135,11 +135,11 @@ public:
 
   // Use analytic derivatives? For debug only
   bool useAnalyticDerivatives = false;
-  feVectorFunction *firstDerivatives = nullptr;
-  feVectorFunction *secondDerivatives = nullptr;
-  feVectorFunction *thirdDerivatives = nullptr;
-  feVectorFunction *fourthDerivatives = nullptr;
-  feVectorFunction *fifthDerivatives = nullptr;
+  const feVectorFunction *firstDerivatives = nullptr;
+  const feVectorFunction *secondDerivatives = nullptr;
+  const feVectorFunction *thirdDerivatives = nullptr;
+  const feVectorFunction *fourthDerivatives = nullptr;
+  const feVectorFunction *fifthDerivatives = nullptr;
 
   // Function to compute analytic metric instead of error-based metric
   feMetricTensorFunction *analyticMetric = nullptr;
