@@ -1,5 +1,6 @@
 #include "feSpace.h"
 
+#include "feBoundaryConditions.h"
 #include "feMatrixInterface.h"
 #include "feMesh.h"
 #include "feNumeric.h"
@@ -449,6 +450,14 @@ feSpace::~feSpace()
 {
   // if(_scalarFct) delete _scalarFct;
   // if(_vectorFct) delete _vectorFct;
+}
+
+bool feSpace::representsSameFieldAs(const FEDescriptor &other) const
+{
+  bool same = true;
+  same &= this->_fieldID == other._fieldName;
+  same &= this->_cncGeoID == other._physicalEntityName;
+  return same;
 }
 
 template class feVectorSpace<1>;

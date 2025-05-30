@@ -22,15 +22,16 @@
 class DiffusionSolver;
 
 feStatus createDiffusionSolver(
-  DiffusionSolver                     *&solver,
-  const Parameters::Diffusion          &diff_parameters,
-  const Parameters::NonLinearSolver    &NLSolver_parameters,
-  const Parameters::TimeIntegration    &TimeIntegration_parameters,
-  const std::vector<FEDescriptor>      &fieldDescriptors,
-  const std::vector<BoundaryCondition> &boundaryConditions,
-  feFunction                           *diffusivity,
-  PostProcCallback                     *postProcCallback = nullptr,
-  feFunction                           *source           = nullptr);
+  DiffusionSolver                  *&solver,
+  const Parameters::Diffusion       &diff_parameters,
+  const Parameters::NonLinearSolver &NLSolver_parameters,
+  const Parameters::TimeIntegration &TimeIntegration_parameters,
+  const std::vector<FEDescriptor>   &fieldDescriptors,
+  const std::vector<const BoundaryConditions::BoundaryCondition *>
+                   &boundaryConditions,
+  feFunction       *diffusivity,
+  PostProcCallback *postProcCallback = nullptr,
+  feFunction       *source           = nullptr);
 
 class DiffusionSolver : public SolverBase
 {
@@ -41,14 +42,16 @@ public:
   feFunction *_source;
 
 public:
-  DiffusionSolver(const Parameters::Diffusion       &diff_parameters,
-                  const Parameters::NonLinearSolver &NLSolver_parameters,
-                  const Parameters::TimeIntegration &TimeIntegration_parameters,
-                  const std::vector<FEDescriptor>   &fieldDescriptors,
-                  const std::vector<BoundaryCondition> &boundaryConditions,
-                  feFunction                           *diffusivity,
-                  PostProcCallback                     *postProcCallback,
-                  feFunction                           *source);
+  DiffusionSolver(
+    const Parameters::Diffusion       &diff_parameters,
+    const Parameters::NonLinearSolver &NLSolver_parameters,
+    const Parameters::TimeIntegration &TimeIntegration_parameters,
+    const std::vector<FEDescriptor>   &fieldDescriptors,
+    const std::vector<const BoundaryConditions::BoundaryCondition *>
+                     &boundaryConditions,
+    feFunction       *diffusivity,
+    PostProcCallback *postProcCallback,
+    feFunction       *source);
   ~DiffusionSolver() {}
 
   feStatus createBilinearForms(const std::vector<feSpace *>  &spaces,

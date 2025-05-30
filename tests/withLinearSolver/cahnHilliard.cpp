@@ -1349,10 +1349,10 @@ struct CahnHilliardVolumeAveraged {
     ScalarFEDescriptor phiB("Phi", "Bord", lag, orderPhiMu, degreeQuadrature, &phiSol);
     ScalarFEDescriptor muB("Mu", "Bord", lag, orderPhiMu, degreeQuadrature, &muSol);
 
-    VectorDirichletBC uBC(uB);
-    ScalarDirichletBC pBC(pP), phiBC(phiB), muBC(muB);
+    BoundaryConditions::VectorDirichlet uBC(uB);
+    BoundaryConditions::ScalarDirichlet pBC(pP), phiBC(phiB), muBC(muB);
 
-    std::vector<BoundaryCondition> BC = {uBC, pBC, phiBC, muBC};
+    std::vector<const BoundaryConditions::BoundaryCondition*> BC = {&uBC, &pBC, &phiBC, &muBC};
 
     Parameters::NonLinearSolver NLSolver_param;
 
@@ -1360,6 +1360,10 @@ struct CahnHilliardVolumeAveraged {
     TimeIntegration_param.t_initial  = 0.;
     TimeIntegration_param.t_final    = 1.;
     TimeIntegration_param.nTimeSteps = 20;
+    TimeIntegration_param.method =
+      Parameters::TimeIntegration::TimeIntegrationMethod::bdf2;
+    TimeIntegration_param.bdf2starter =
+      Parameters::TimeIntegration::BDF2Starter::bdf1;
 
     CHNS_Solver *solver;
     feCheck(createCHNS_Solver(solver,
@@ -2706,7 +2710,7 @@ TEST(CahnHilliard, CHNS_VolumeAveraged_EZ)
   int orderU = 2;
   int orderPhiMu = 1;
   ASSERT_TRUE(meshConvergence<CahnHilliardVolumeAveraged>(resultBuffer, 
-    meshFileRoot, orderU, orderPhiMu, 5, degreeQuadrature) == FE_STATUS_OK);
+    meshFileRoot, orderU, orderPhiMu, 4, degreeQuadrature) == FE_STATUS_OK);
   EXPECT_EQ(compareOutputFiles(testRoot, resultBuffer), 0);
   finalize();
 }

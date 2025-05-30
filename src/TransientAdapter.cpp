@@ -274,11 +274,11 @@ void TransientAdapter::updateBeforeFixedPointIteration()
     //
     // Increase Lp norm after first iteration
     //
-    param.Lp_norm = 100.;
-    for (int iI = 0; iI < param.nIntervals; ++iI)
-    {
-      allOptions[iI].LpNorm = param.Lp_norm;
-    }
+    // param.Lp_norm = 100.;
+    // for (int iI = 0; iI < param.nIntervals; ++iI)
+    // {
+    //   allOptions[iI].LpNorm = param.Lp_norm;
+    // }
 
     //
     // Modify target number of vertices
@@ -399,8 +399,8 @@ feStatus TransientAdapter::fixedPointIteration(SolverBase &solver)
   //
   // Updates in adapter and/or solver
   //
-  this->updateBeforeFixedPointIteration();
-  solver.updateBeforeFixedPointIteration(iFixedPoint);
+  // this->updateBeforeFixedPointIteration();
+  // solver.updateBeforeFixedPointIteration(iFixedPoint);
 
   // Reset time and number of time steps
   currentTime     = _time_parameters.t_initial;
@@ -521,7 +521,7 @@ feStatus TransientAdapter::fixedPointIteration(SolverBase &solver)
     feCheck(solver.computePostProcessing(spaces, &sol, postProcData));
     for (auto val : postProcData.res)
     {
-      postProcFile << val << "\t";
+      postProcFile << std::scientific << std::setprecision(6) << val << "\t";
     }
     postProcFile << "\n";
     postProcFile.flush();

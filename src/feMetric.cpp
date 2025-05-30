@@ -12,12 +12,12 @@ extern int FE_VERBOSE;
 
 #define MAX_VERTICES_BACKMESH 6
 
-#if defined(HAVE_GMSH)
 feStatus createMetricField(feMetric *&metricField,
                            feMetricOptions &options,
                            feMesh2DP1 *mesh,
                            std::vector<feNewRecovery*> recoveredFields)
 {
+#if defined(HAVE_GMSH)
   initializeGmsh();
 
   gmsh::open(options.backgroundMeshfile);
@@ -33,10 +33,12 @@ feStatus createMetricField(feMetric *&metricField,
 
   metricField->_backmeshOrder = mesh->getOrder();
   metricField->_nVerticesPerElmOnBackmesh = mesh->getNumVerticesPerElemForDimension(mesh->getDim());
+#else
+  UNUSED(metricField, options, mesh, recoveredFields);
+#endif
 
   return FE_STATUS_OK;
 }
-#endif
 
 feMetric::feMetric(const feMetricOptions &options,
                    feMesh2DP1 *mesh,

@@ -25,6 +25,9 @@ public:
   PostProcData(){};
 };
 
+class SolverBase;
+class TransientAdapter;
+
 //
 // A callback used in executable scripts to specify the operations
 // to be performed during post-processing. This is because the
@@ -32,12 +35,11 @@ public:
 // so it would be awkward to try and have a generic built-in function
 // to handle all kinds of post-processings.
 //
-typedef std::function<feStatus(const std::vector<feSpace *> &spaces,
+typedef std::function<feStatus(const SolverBase             *solver,
+                               const std::vector<feSpace *> &spaces,
                                feSolution                   *sol,
                                PostProcData                 &data)>
   PostProcCallback;
-
-class TransientAdapter;
 
 /*
 
@@ -51,8 +53,9 @@ public:
   Parameters::NonLinearSolver _NLSolver_parameters;
   Parameters::TimeIntegration _TimeIntegration_parameters;
 
-  std::vector<FEDescriptor>      _fieldDescriptors;
-  std::vector<BoundaryCondition> _boundaryConditions;
+  std::vector<FEDescriptor> _fieldDescriptors;
+  std::vector<const BoundaryConditions::BoundaryCondition *>
+    _boundaryConditions;
 
   PostProcCallback *_postprocCallback;
 
@@ -64,11 +67,12 @@ public:
   std::vector<std::pair<int, const feFunction *>> _scalarExactSolutions;
 
 public:
-  SolverBase(const Parameters::NonLinearSolver    &NLSolver_parameters,
-             const Parameters::TimeIntegration    &TimeIntegration_parameters,
-             const std::vector<FEDescriptor>      &fieldDescriptors,
-             const std::vector<BoundaryCondition> &boundaryConditions,
-             PostProcCallback                     *postProcCallback = nullptr)
+  SolverBase(const Parameters::NonLinearSolver &NLSolver_parameters,
+             const Parameters::TimeIntegration &TimeIntegration_parameters,
+             const std::vector<FEDescriptor>   &fieldDescriptors,
+             const std::vector<const BoundaryConditions::BoundaryCondition *>
+                              &boundaryConditions,
+             PostProcCallback *postProcCallback = nullptr)
     : _NLSolver_parameters(NLSolver_parameters)
     , _TimeIntegration_parameters(TimeIntegration_parameters)
     , _fieldDescriptors(fieldDescriptors)
@@ -77,13 +81,21 @@ public:
   {}
   virtual ~SolverBase(){};
 
-  int getNumFields() const { return _numFields; };
-  void
-  setScalarSolutions(const std::vector<std::pair<int, const feFunction *>> &solutions)
+  int  getNumFields() const { return _numFields; };
+  void setScalarSolutions(
+    const std::vector<std::pair<int, const feFunction *>> &solutions)
   {
     _scalarExactSolutions = solutions;
   }
 
+private:
+  feStatus addBoundarySpace(const BoundaryConditions::BoundaryCondition *bc,
+                            const FEDescriptor     &spaceDescriptor,
+                            feMesh                 *mesh,
+                            std::vector<feSpace *> &spaces,
+                            std::vector<feSpace *> &essentialSpaces) const;
+
+public:
   //
   // Create the finite element spaces (domain and boundaries)
   //
@@ -200,7 +212,7 @@ public:
     // Simply call the given callback
     if (_postprocCallback)
     {
-      feCheckReturn((*_postprocCallback)(spaces, sol, data));
+      feCheckReturn((*_postprocCallback)(this, spaces, sol, data));
     }
     return FE_STATUS_OK;
   };

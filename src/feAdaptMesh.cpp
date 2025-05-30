@@ -37,9 +37,9 @@ inline feStatus checkMMGcall(std::string &command)
   }
 }
 
-#if defined(HAVE_GMSH)
 feStatus feMesh2DP1::adapt(feMetric *metricField)
 {
+#if defined(HAVE_GMSH)
   initializeGmsh();
   feMetricOptions options = metricField->_options;
 
@@ -112,10 +112,11 @@ feStatus feMesh2DP1::adapt(feMetric *metricField)
   gmsh::write(options.adaptedMeshName);
 
   finalizeGmsh();
-
+#else
+  UNUSED(metricField);
+#endif
   return FE_STATUS_OK;
 }
-#endif
 
 feStatus feMesh2DP1::adapt(std::vector<feNewRecovery*> recoveredFields, feMetricOptions &options,
                            const std::vector<feSpace *> &spaces,

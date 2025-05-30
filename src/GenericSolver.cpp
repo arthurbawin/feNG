@@ -7,6 +7,60 @@
 #include "feSolutionContainer.h"
 #include "feTimeIntegration.h"
 
+feStatus
+SolverBase::addBoundarySpace(const BoundaryConditions::BoundaryCondition *bc,
+                             const FEDescriptor     &spaceDescriptor,
+                             feMesh                 *mesh,
+                             std::vector<feSpace *> &spaces,
+                             std::vector<feSpace *> &essentialSpaces) const
+{
+  const FEDescriptor &d = spaceDescriptor;
+
+  void *initFct = d._isScalar ? (void *)d._scalarField : (void *)d._vectorField;
+
+  feSpace *s;
+  feCheckReturn(createFiniteElementSpace(s,
+                                         mesh,
+                                         d._feType,
+                                         d._degree,
+                                         d._fieldName,
+                                         d._physicalEntityName,
+                                         d._degreeQuadrature,
+                                         initFct));
+  spaces.push_back(s);
+
+  feInfo("\tAdded boundary condition:");
+  feInfo("\t\tType : %s",
+         BoundaryConditions::typeToString(bc->_boundaryType).data());
+  feInfo("\t\tField: %s", d._fieldName.data());
+  feInfo("\t\tPhysical entity: %s", d._physicalEntityName.data());
+  feInfo("\t\tIs essential ?: %s", d._isEssential ? "yes" : "no");
+  feInfo("\t\tEssential components: %d - %d - %d",
+         d._essentialComponents[0],
+         d._essentialComponents[1],
+         d._essentialComponents[2]);
+
+  //
+  // Assign essential components
+  //
+  if (d._isEssential)
+  {
+    essentialSpaces.push_back(s);
+  }
+  else
+  {
+    for (int i = 0; i < 3; ++i)
+    {
+      if (d._essentialComponents[i] == 1)
+      {
+        s->setEssentialComponent(i, true);
+      }
+    }
+  }
+
+  return FE_STATUS_OK;
+}
+
 feStatus SolverBase::createSpaces(feMesh                 *mesh,
                                   std::vector<feSpace *> &spaces,
                                   std::vector<feSpace *> &essentialSpaces) const
@@ -39,41 +93,18 @@ feStatus SolverBase::createSpaces(feMesh                 *mesh,
   //
   for (const auto &b : _boundaryConditions)
   {
-    const FEDescriptor &d = b._descriptor;
+    // For most BC, the test and trial spaces are identical.
+    // They differ for e.g. a contact angle condition
+    // in the Cahn-Hilliard model, where the flux of the phase
+    // marker is tested in the equation of the potential.
+    const FEDescriptor &dtrial = b->_descriptor_trialSpace;
+    const FEDescriptor &dtest  = b->_descriptor_testSpace;
 
-    void *initFct =
-      d._isScalar ? (void *)d._scalarField : (void *)d._vectorField;
+    this->addBoundarySpace(b, dtrial, mesh, spaces, essentialSpaces);
 
-    feSpace *s;
-    feCheckReturn(createFiniteElementSpace(s,
-                                           mesh,
-                                           d._feType,
-                                           d._degree,
-                                           d._fieldName,
-                                           d._physicalEntityName,
-                                           d._degreeQuadrature,
-                                           initFct));
-    spaces.push_back(s);
-
-    // Print a summary of the boundary condition
-    feInfo("");
-
-    //
-    // Assign essential components
-    //
-    if (d._isEssential)
+    if (!dtrial.representsSameFieldAs(dtest))
     {
-      essentialSpaces.push_back(s);
-    }
-    else
-    {
-      for (int i = 0; i < 3; ++i)
-      {
-        if (d._essentialComponents[i] == 1)
-        {
-          s->setEssentialComponent(i, true);
-        }
-      }
+      this->addBoundarySpace(b, dtest, mesh, spaces, essentialSpaces);
     }
   }
 
@@ -98,7 +129,7 @@ feStatus SolverBase::solve(feMesh                 *mesh,
   // Linear and bilinear forms
   //
   std::vector<feBilinearForm *> forms;
-  this->createBilinearForms(spaces, forms);
+  feCheckReturn(this->createBilinearForms(spaces, forms));
 
   feLinearSystem *system = nullptr;
 #if defined(HAVE_MKL)
@@ -206,7 +237,7 @@ feStatus SolverBase::solve(feMesh                 *mesh,
   // Linear and bilinear forms
   //
   std::vector<feBilinearForm *> forms;
-  this->createBilinearForms(spaces, forms);
+  feCheckReturn(this->createBilinearForms(spaces, forms));
 
   //
   // Linear system, nonlinear solver and time integration

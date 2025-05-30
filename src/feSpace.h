@@ -53,6 +53,7 @@ enum class dofInitialization
   EXTRAPOLATED_EULER_0D
 };
 
+class FEDescriptor;
 class feMesh;
 class feNumber;
 class feSolution;
@@ -272,6 +273,10 @@ public:
     same &= this->_cncGeoID == other._cncGeoID;
     return same;
   }
+
+  // Same but compare with a field descriptor.
+  // A field descriptor does not have a dimension.
+  bool representsSameFieldAs(const FEDescriptor &other) const;
 
   EigenMat innerProductBasisFunctions(int iElm);
   double   innerProductBasisFunctions(int iElm, int ex, int ey);

@@ -119,7 +119,7 @@ namespace Parameters
     int orderForAdaptation;
     int spaceIDForAdaptation = 0;
     int targetVertices = 5000;
-    double Lp_norm = 2.;
+    double Lp_norm = 4.;
     double dim = 2.;
 
     bool enableGradation = false;
@@ -179,6 +179,7 @@ namespace Parameters
     bool exportVisualizationFile = true;
     int exportFrequency = 1;
   };
+
 } // namespace Parameters
 
 #endif

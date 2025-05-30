@@ -17,18 +17,19 @@
 
 class CHNS_Solver;
 
-feStatus
-createCHNS_Solver(CHNS_Solver                      *&solver,
-                  const Parameters::CHNS            &CHNS_parameters,
-                  const Parameters::NonLinearSolver &NLSolver_parameters,
-                  const Parameters::TimeIntegration &TimeIntegration_parameters,
-                  const std::vector<FEDescriptor>   &fieldDescriptors,
-                  const std::vector<BoundaryCondition> &boundaryConditions,
-                  PostProcCallback *postProcCallback = nullptr,
-                  feFunction       *pSource          = nullptr,
-                  feVectorFunction *uSource          = nullptr,
-                  feFunction       *phiSource        = nullptr,
-                  feFunction       *muSource         = nullptr);
+feStatus createCHNS_Solver(
+  CHNS_Solver                      *&solver,
+  const Parameters::CHNS            &CHNS_parameters,
+  const Parameters::NonLinearSolver &NLSolver_parameters,
+  const Parameters::TimeIntegration &TimeIntegration_parameters,
+  const std::vector<FEDescriptor>   &fieldDescriptors,
+  const std::vector<const BoundaryConditions::BoundaryCondition *>
+                   &boundaryConditions,
+  PostProcCallback *postProcCallback = nullptr,
+  feFunction       *pSource          = nullptr,
+  feVectorFunction *uSource          = nullptr,
+  feFunction       *phiSource        = nullptr,
+  feFunction       *muSource         = nullptr);
 
 class CHNS_Solver : public SolverBase
 {
@@ -42,22 +43,33 @@ public:
   feFunction       *_mobility;
   feVectorFunction *_volumeForce;
 
+  feConstantFunction *_coeffFluxContactAngle;
+
   feFunction       *_pSource;
   feVectorFunction *_uSource;
   feFunction       *_phiSource;
   feFunction       *_muSource;
 
+  // The indicator function for each parameter,
+  // returning rho(phi) or mu(phi) if in fluid A (resp. B)
+  // and 0 otherwise.
+  feFunction *_densityIndicatorFluidA;
+  feFunction *_densityIndicatorFluidB;
+  feFunction *_viscosityIndicatorFluidA;
+  feFunction *_viscosityIndicatorFluidB;
+
 public:
-  CHNS_Solver(const Parameters::CHNS               &CHNS_parameters,
-              const Parameters::NonLinearSolver    &NLSolver_parameters,
-              const Parameters::TimeIntegration    &TimeIntegration_parameters,
-              const std::vector<FEDescriptor>      &fieldDescriptors,
-              const std::vector<BoundaryCondition> &boundaryConditions,
-              PostProcCallback                     *postProcCallback,
-              feFunction                           *pSource,
-              feVectorFunction                     *uSource,
-              feFunction                           *phiSource,
-              feFunction                           *muSource);
+  CHNS_Solver(const Parameters::CHNS            &CHNS_parameters,
+              const Parameters::NonLinearSolver &NLSolver_parameters,
+              const Parameters::TimeIntegration &TimeIntegration_parameters,
+              const std::vector<FEDescriptor>   &fieldDescriptors,
+              const std::vector<const BoundaryConditions::BoundaryCondition *>
+                               &boundaryConditions,
+              PostProcCallback *postProcCallback,
+              feFunction       *pSource,
+              feVectorFunction *uSource,
+              feFunction       *phiSource,
+              feFunction       *muSource);
   ~CHNS_Solver()
   {
     delete _density;
@@ -71,11 +83,35 @@ public:
     delete _uSource;
     delete _phiSource;
     delete _muSource;
+
+    delete _densityIndicatorFluidA;
+    delete _densityIndicatorFluidB;
+    delete _viscosityIndicatorFluidA;
+    delete _viscosityIndicatorFluidB;
   }
 
-  feStatus
-  createBilinearForms(const std::vector<feSpace *>  &spaces,
-                      std::vector<feBilinearForm *> &forms) const;
+  double getInterfaceThickness() const { return _CHNS_parameters.epsilon; }
+
+  // Get the const density or viscosity callback or their
+  // indicator function.
+  // This is used in post-processing callbacks, to access
+  // the rho(phi) and mu(phi) relations.
+  const feFunction *densityCallback() const { return _density; };
+  const feFunction *dynamicViscosityCallback() const { return _viscosity; };
+  const feFunction *densityIndicatorCallback(const int whichFluid) const
+  {
+    return (whichFluid == 0) ? _densityIndicatorFluidA :
+                               _densityIndicatorFluidB;
+  };
+  const feFunction *
+  dynamicViscosityIndicatorCallback(const int whichFluid) const
+  {
+    return (whichFluid == 0) ? _viscosityIndicatorFluidA :
+                               _viscosityIndicatorFluidB;
+  };
+
+  feStatus createBilinearForms(const std::vector<feSpace *>  &spaces,
+                               std::vector<feBilinearForm *> &forms) const;
 
   void updateBeforeFixedPointIteration(const int iter) override;
 

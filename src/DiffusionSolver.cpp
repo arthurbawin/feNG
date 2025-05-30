@@ -3,19 +3,20 @@
 
 #include "TransientAdapter.h"
 #include "feConstants.h"
-#include "feTimeIntegration.h"
 #include "feNorm.h"
+#include "feTimeIntegration.h"
 
 feStatus createDiffusionSolver(
-  DiffusionSolver                     *&solver,
-  const Parameters::Diffusion          &diff_parameters,
-  const Parameters::NonLinearSolver    &NLSolver_parameters,
-  const Parameters::TimeIntegration    &TimeIntegration_parameters,
-  const std::vector<FEDescriptor>      &fieldDescriptors,
-  const std::vector<BoundaryCondition> &boundaryConditions,
-  feFunction                           *diffusivity,
-  PostProcCallback                     *postProcCallback,
-  feFunction                           *source)
+  DiffusionSolver                  *&solver,
+  const Parameters::Diffusion       &diff_parameters,
+  const Parameters::NonLinearSolver &NLSolver_parameters,
+  const Parameters::TimeIntegration &TimeIntegration_parameters,
+  const std::vector<FEDescriptor>   &fieldDescriptors,
+  const std::vector<const BoundaryConditions::BoundaryCondition *>
+                   &boundaryConditions,
+  feFunction       *diffusivity,
+  PostProcCallback *postProcCallback,
+  feFunction       *source)
 {
   if (fieldDescriptors.size() != 1)
   {
@@ -38,14 +39,15 @@ feStatus createDiffusionSolver(
 }
 
 DiffusionSolver::DiffusionSolver(
-  const Parameters::Diffusion          &diff_parameters,
-  const Parameters::NonLinearSolver    &NLSolver_parameters,
-  const Parameters::TimeIntegration    &TimeIntegration_parameters,
-  const std::vector<FEDescriptor>      &fieldDescriptors,
-  const std::vector<BoundaryCondition> &boundaryConditions,
-  feFunction                           *diffusivity,
-  PostProcCallback                     *postProcCallback,
-  feFunction                           *source)
+  const Parameters::Diffusion       &diff_parameters,
+  const Parameters::NonLinearSolver &NLSolver_parameters,
+  const Parameters::TimeIntegration &TimeIntegration_parameters,
+  const std::vector<FEDescriptor>   &fieldDescriptors,
+  const std::vector<const BoundaryConditions::BoundaryCondition *>
+                   &boundaryConditions,
+  feFunction       *diffusivity,
+  PostProcCallback *postProcCallback,
+  feFunction       *source)
   : SolverBase(NLSolver_parameters,
                TimeIntegration_parameters,
                fieldDescriptors,
@@ -90,18 +92,18 @@ DiffusionSolver::createBilinearForms(const std::vector<feSpace *>  &spaces,
 // Compute error on scalar fields
 //
 feStatus DiffusionSolver::computeError(const std::vector<feSpace *> &spaces,
-                                       feMesh                       */*mesh*/,
-                                       feSolution                   *sol,
+                                       feMesh * /*mesh*/,
+                                       feSolution *sol,
                                        const int /*iIntervalReferenceSolution*/,
-                                       TransientAdapter    &/*adapter*/,
+                                       TransientAdapter & /*adapter*/,
                                        std::vector<double> &errors) const
 {
-  const feFunction* exactSolution = _scalarExactSolutions[0].second;
+  const feFunction *exactSolution = _scalarExactSolutions[0].second;
 
   if (exactSolution)
   {
     feSpace *u = spaces[0];
-    feNorm *errorU;
+    feNorm  *errorU;
     feCheck(createNorm(errorU, L2_ERROR, {u}, sol, exactSolution));
     errors[0] = errorU->compute();
     delete errorU;

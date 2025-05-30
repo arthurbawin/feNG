@@ -4,6 +4,7 @@ set(feNG_SRC
     ellipseToolbox.cpp
     feAdaptMesh.cpp
     feBilinearForm.cpp
+    feBoundaryConditions.cpp
     feCncGeo.cpp
     feColoring.cpp
     feCompressedRowStorage.cpp

@@ -4,18 +4,19 @@
 #include "TransientAdapter.h"
 #include "feTimeIntegration.h"
 
-feStatus
-createCHNS_Solver(CHNS_Solver                      *&solver,
-                  const Parameters::CHNS            &CHNS_parameters,
-                  const Parameters::NonLinearSolver &NLSolver_parameters,
-                  const Parameters::TimeIntegration &TimeIntegration_parameters,
-                  const std::vector<FEDescriptor>   &fieldDescriptors,
-                  const std::vector<BoundaryCondition> &boundaryConditions,
-                  PostProcCallback                     *postProcCallback,
-                  feFunction                           *pSource,
-                  feVectorFunction                     *uSource,
-                  feFunction                           *phiSource,
-                  feFunction                           *muSource)
+feStatus createCHNS_Solver(
+  CHNS_Solver                      *&solver,
+  const Parameters::CHNS            &CHNS_parameters,
+  const Parameters::NonLinearSolver &NLSolver_parameters,
+  const Parameters::TimeIntegration &TimeIntegration_parameters,
+  const std::vector<FEDescriptor>   &fieldDescriptors,
+  const std::vector<const BoundaryConditions::BoundaryCondition *>
+                   &boundaryConditions,
+  PostProcCallback *postProcCallback,
+  feFunction       *pSource,
+  feVectorFunction *uSource,
+  feFunction       *phiSource,
+  feFunction       *muSource)
 {
   if (fieldDescriptors.size() != 4)
   {
@@ -39,6 +40,41 @@ createCHNS_Solver(CHNS_Solver                      *&solver,
     }
   }
 
+  //
+  // Test validity of boundary conditions
+  //
+  for (auto b : boundaryConditions)
+  {
+    if (b->_boundaryType == BoundaryConditions::Type::contactAngle)
+    {
+      const BoundaryConditions::FluxContactAngle *flux =
+        dynamic_cast<const BoundaryConditions::FluxContactAngle *>(b);
+
+      if (flux->_contactAngle <= 0. || flux->_contactAngle >= 180.)
+      {
+        return feErrorMsg(FE_STATUS_ERROR,
+                          "Contact angle must be in ]0,180[ degrees.");
+      }
+
+      // Contact angle is only defined for the phase marker,
+      // and the associated test space must be the potential.
+      if (b->_descriptor_trialSpace._fieldName != "Phi")
+      {
+        return feErrorMsg(
+          FE_STATUS_ERROR,
+          "Contact angle condition for the Cahn-Hilliard Navier-Stokes system "
+          "is only defined for the phase marker variable \"Phi\".");
+      }
+      if (b->_descriptor_testSpace._fieldName != "Mu")
+      {
+        return feErrorMsg(FE_STATUS_ERROR,
+                          "The test FE space for the contact angle condition "
+                          "for the Cahn-Hilliard Navier-Stokes system must be "
+                          "the chemical potential \"Mu\"");
+      }
+    }
+  }
+
   solver = new CHNS_Solver(CHNS_parameters,
                            NLSolver_parameters,
                            TimeIntegration_parameters,
@@ -58,74 +94,127 @@ double density_f(const feFunctionArguments &args,
 {
   // Assumes phi is in [-1,1]
   // Property of A when phi = 1, of B when phi = -1
-  double phi  = args.u;
-  double rhoA = par[0];
-  double rhoB = par[1];
+  const double phi  = args.u;
+  const double rhoA = par[0];
+  const double rhoB = par[1];
   return (rhoA - rhoB) / 2. * phi + (rhoA + rhoB) / 2.;
 }
 
 double densityLimiter_f(const feFunctionArguments &args,
                         const std::vector<double> &par)
 {
-  double phi  = fmax(-1., fmin(1., args.u));
-  double rhoA = par[0];
-  double rhoB = par[1];
+  const double phi  = fmax(-1., fmin(1., args.u));
+  const double rhoA = par[0];
+  const double rhoB = par[1];
   return (rhoA - rhoB) / 2. * phi + (rhoA + rhoB) / 2.;
 }
 
 double drhodphi_f(const feFunctionArguments & /*args*/,
                   const std::vector<double> &par)
 {
-  double rhoA = par[0];
-  double rhoB = par[1];
+  const double rhoA = par[0];
+  const double rhoB = par[1];
   return (rhoA - rhoB) / 2.;
+}
+
+template <int whichFluid, bool withLimiter>
+double indicatorDensity_f(const feFunctionArguments &args,
+                          const std::vector<double> &par)
+{
+  const double phi = args.u;
+  double       density;
+  if constexpr (withLimiter)
+  {
+    density = densityLimiter_f(args, par);
+  }
+  else
+  {
+    density = density_f(args, par);
+  }
+  if constexpr (whichFluid == 0)
+  {
+    // In fluid A: phi >= 0.
+    return (phi >= 0) ? density : 0;
+  }
+  else
+  {
+    // In fluid B: phi <= 0
+    return (phi <= 0) ? density : 0;
+  }
 }
 
 double viscosity_f(const feFunctionArguments &args,
                    const std::vector<double> &par)
 {
-  double phi   = args.u;
-  double viscA = par[0];
-  double viscB = par[1];
+  const double phi   = args.u;
+  const double viscA = par[0];
+  const double viscB = par[1];
   return (viscA - viscB) / 2. * phi + (viscA + viscB) / 2.;
 }
 
 double viscosityLimiter_f(const feFunctionArguments &args,
                           const std::vector<double> &par)
 {
-  double phi   = fmax(-1., fmin(1., args.u));
-  double viscA = par[0];
-  double viscB = par[1];
+  const double phi   = fmax(-1., fmin(1., args.u));
+  const double viscA = par[0];
+  const double viscB = par[1];
   return (viscA - viscB) / 2. * phi + (viscA + viscB) / 2.;
 }
 
 double dviscdphi_f(const feFunctionArguments & /*args*/,
                    const std::vector<double> &par)
 {
-  double viscA = par[0];
-  double viscB = par[1];
+  const double viscA = par[0];
+  const double viscB = par[1];
   return (viscA - viscB) / 2.;
+}
+
+template <int whichFluid, bool withLimiter>
+double indicatorViscosity_f(const feFunctionArguments &args,
+                            const std::vector<double> &par)
+{
+  const double phi = args.u;
+  double       viscosity;
+  if constexpr (withLimiter)
+  {
+    viscosity = viscosityLimiter_f(args, par);
+  }
+  else
+  {
+    viscosity = viscosity_f(args, par);
+  }
+  if constexpr (whichFluid == 0)
+  {
+    // In fluid A: phi >= 0.
+    return (phi >= 0) ? viscosity : 0;
+  }
+  else
+  {
+    // In fluid B: phi <= 0
+    return (phi <= 0) ? viscosity : 0;
+  }
 }
 
 double degenerateMobility_f(const feFunctionArguments &args,
                             const std::vector<double> &par)
 {
-  double       phi         = args.u;
+  const double phi         = args.u;
   const double mobilityVal = par[0];
   return mobilityVal * fabs(1. - phi * phi);
 }
 
 CHNS_Solver::CHNS_Solver(
-  const Parameters::CHNS               &CHNS_parameters,
-  const Parameters::NonLinearSolver    &NLSolver_parameters,
-  const Parameters::TimeIntegration    &TimeIntegration_parameters,
-  const std::vector<FEDescriptor>      &fieldDescriptors,
-  const std::vector<BoundaryCondition> &boundaryConditions,
-  PostProcCallback                     *postProcCallback,
-  feFunction                           *pSource,
-  feVectorFunction                     *uSource,
-  feFunction                           *phiSource,
-  feFunction                           *muSource)
+  const Parameters::CHNS            &CHNS_parameters,
+  const Parameters::NonLinearSolver &NLSolver_parameters,
+  const Parameters::TimeIntegration &TimeIntegration_parameters,
+  const std::vector<FEDescriptor>   &fieldDescriptors,
+  const std::vector<const BoundaryConditions::BoundaryCondition *>
+                   &boundaryConditions,
+  PostProcCallback *postProcCallback,
+  feFunction       *pSource,
+  feVectorFunction *uSource,
+  feFunction       *phiSource,
+  feFunction       *muSource)
   : SolverBase(NLSolver_parameters,
                TimeIntegration_parameters,
                fieldDescriptors,
@@ -150,15 +239,34 @@ CHNS_Solver::CHNS_Solver(
   //
   // Initialize CHNS callbacks
   //
-  if (CHNS_parameters.limitPhaseMarker)
+  bool limiter = CHNS_parameters.limitPhaseMarker;
+  if (limiter)
   {
     _density   = new feFunction(densityLimiter_f, {rhoA, rhoB});
     _viscosity = new feFunction(viscosityLimiter_f, {viscA, viscB});
+
+    _densityIndicatorFluidA =
+      new feFunction(indicatorDensity_f<0, true>, {rhoA, rhoB});
+    _densityIndicatorFluidB =
+      new feFunction(indicatorDensity_f<1, true>, {rhoA, rhoB});
+    _viscosityIndicatorFluidA =
+      new feFunction(indicatorViscosity_f<0, true>, {rhoA, rhoB});
+    _viscosityIndicatorFluidB =
+      new feFunction(indicatorViscosity_f<1, true>, {rhoA, rhoB});
   }
   else
   {
     _density   = new feFunction(density_f, {rhoA, rhoB});
     _viscosity = new feFunction(viscosity_f, {viscA, viscB});
+
+    _densityIndicatorFluidA =
+      new feFunction(indicatorDensity_f<0, false>, {rhoA, rhoB});
+    _densityIndicatorFluidB =
+      new feFunction(indicatorDensity_f<1, false>, {rhoA, rhoB});
+    _viscosityIndicatorFluidA =
+      new feFunction(indicatorViscosity_f<0, false>, {rhoA, rhoB});
+    _viscosityIndicatorFluidB =
+      new feFunction(indicatorViscosity_f<1, false>, {rhoA, rhoB});
   }
 
   _drhodphi  = new feFunction(drhodphi_f, {rhoA, rhoB});
@@ -189,11 +297,34 @@ CHNS_Solver::CHNS_Solver(
   // Initialize derived coefficients
   //
   _CHNS_parameters.mass_alpha = (rhoB - rhoA) / (rhoA + rhoB);
+
+  const double lambda = 3. / (2. * sqrt(2.)) * _CHNS_parameters.surfaceTension *
+                        _CHNS_parameters.epsilon;
+  _coeffFluxContactAngle = new feConstantFunction(lambda);
+
+  feInfo("CHNS SOLVER");
+  feInfo("\tCreated solver with parameters:");
+  feInfo("\t\t                   rhoA = %+-1.6e", rhoA);
+  feInfo("\t\t                   rhoB = %+-1.6e", rhoB);
+  feInfo("\t\t                    muA = %+-1.6e", viscA);
+  feInfo("\t\t                    muB = %+-1.6e", viscB);
+  feInfo("\t\t                epsilon = %+-1.6e", _CHNS_parameters.epsilon);
+  feInfo("\t\t        surface tension = %+-1.6e",
+         _CHNS_parameters.surfaceTension);
+  feInfo("\t\t                gravity = %+-1.6e", _CHNS_parameters.gravity);
+  feInfo("\t\t               mobility = %+-1.6e", _CHNS_parameters.mobility);
+  feInfo("\t\t    degenerate mobility = %s",
+         (CHNS_parameters.mobilityType ==
+          Parameters::CHNS::MobilityType::degenerate) ?
+           "yes" :
+           "no");
+  feInfo("\t\t limter on phase marker = %s",
+         (CHNS_parameters.limitPhaseMarker) ? "yes" : "no");
 }
 
 feStatus
 CHNS_Solver::createBilinearForms(const std::vector<feSpace *>  &spaces,
-                                     std::vector<feBilinearForm *> &forms) const
+                                 std::vector<feBilinearForm *> &forms) const
 {
   forms.clear();
 
@@ -253,10 +384,49 @@ CHNS_Solver::createBilinearForms(const std::vector<feSpace *>  &spaces,
   }
 
   forms = {CHNS};
-  
-  //
-  // TODO: Loop over boundaries and impose flux BC if needed
-  //
+
+  for (auto b : _boundaryConditions)
+  {
+    //
+    // Contact angle boundary condition
+    //
+    if (b->_boundaryType == BoundaryConditions::Type::contactAngle)
+    {
+      const BoundaryConditions::FluxContactAngle *fluxBC =
+        dynamic_cast<const BoundaryConditions::FluxContactAngle *>(b);
+
+      // Find FE spaces for phase marker and potential
+      feSpace *muContact = nullptr, *phiContact = nullptr;
+      for (auto &s : spaces)
+      {
+        if (s->representsSameFieldAs(b->_descriptor_trialSpace))
+        {
+          phiContact = s;
+        }
+        if (s->representsSameFieldAs(b->_descriptor_testSpace))
+        {
+          muContact = s;
+        }
+      }
+      if (!muContact || !phiContact)
+      {
+        return feErrorMsg(
+          FE_STATUS_ERROR,
+          "Could not create a FluxPrescribedAngle bilinear form because the FE "
+          "space for Phi or Mu on the prescribed boundary could not be found "
+          "in the vector of all FE spaces. This should not happen unless the "
+          "flux boundary condition is ill-formed.");
+      }
+
+      feBilinearForm *flux;
+      feCheck(createBilinearForm(flux,
+                                 {muContact, phiContact, phi},
+                                 new feSysElm_FluxPrescribedNormalAngle<2>(
+                                   _coeffFluxContactAngle,
+                                   fluxBC->_contactAngle * M_PI / 180.)));
+      forms.push_back(flux);
+    }
+  }
 
   return FE_STATUS_OK;
 }
@@ -271,10 +441,11 @@ void CHNS_Solver::updateBeforeFixedPointIteration(const int iter)
     const double prev = _CHNS_parameters.epsilon;
     _CHNS_parameters.epsilon /= p.epsilonDecrease;
     feInfo("CHNS epsilon was updated from %+-1.6e to %+-1.6e",
-      prev, _CHNS_parameters.epsilon);
+           prev,
+           _CHNS_parameters.epsilon);
   }
 
-  // // Update functions depending on epsilon or M
+  // Update functions depending on epsilon or M
   const double M = 0.1 * _CHNS_parameters.epsilon * _CHNS_parameters.epsilon;
   _mobility->resetParameters({M});
 }

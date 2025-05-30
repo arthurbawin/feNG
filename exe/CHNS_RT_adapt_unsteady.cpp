@@ -4021,6 +4021,8 @@ int main(int argc, char **argv)
             // Read the adapted mesh to check the number of vertices
             feMesh2DP1 mesh(my_options.adaptedMeshName);
             numVerticesInAdaptedMeshes[iI] = mesh.getNumVertices();
+          #else
+            UNUSED(globalScalingFactor, expDeterminantLocal);
           #endif
           }
           
