@@ -3,6 +3,7 @@
 
 #include <numeric>
 
+#include "feNorm.h"
 #include "feOptionsParser.h"
 
 #if defined(HAVE_GMSH)
@@ -38,6 +39,7 @@ feStatus TransientAdapter::allocate(const SolverBase &solver)
   const Parameters::MeshAdaptation &ap = _adapt_parameters;
   const Parameters::IO             &io = _io_parameters;
   const int                         nI = ap.nIntervals;
+  const int                         nT = ap.nTimeStepsPerInterval;
 
   // Create problem structures for each time interval
   allMeshes.resize(nI, nullptr);
@@ -49,12 +51,28 @@ feStatus TransientAdapter::allocate(const SolverBase &solver)
   allEssentialSpaces.resize(nI);
 
   allErrors.resize(ap.nFixedPoint, std::vector<std::vector<double>>(nI));
+  allErrorsAllTimeSteps.resize(ap.nFixedPoint,
+                               std::vector<std::vector<double>>(nI));
   const int nUnknownFields = solver.getNumFields();
   for (int i = 0; i < ap.nFixedPoint; ++i)
+  {
     for (int j = 0; j < nI; ++j)
+    {
       allErrors[i][j].resize(nUnknownFields, 0.);
+    }
 
+    allErrorsAllTimeSteps[i].resize(nUnknownFields + 1);
+    for (int j = 0; j < nUnknownFields + 1; ++j)
+    {
+      // The error at local time = 0 is saved, thus allocate for nT+1 steps
+      // per interval
+      allErrorsAllTimeSteps[i][j].reserve(nI * (nT + 1));
+    }
+  }
+
+  spaceComplexity.resize(ap.nFixedPoint);
   spaceTimeComplexity.resize(ap.nFixedPoint);
+  prescribedSpaceTimeComplexity.resize(ap.nFixedPoint);
 
   referenceTestCases.resize(ap.nIntervalsReferenceSolution);
 
@@ -238,14 +256,30 @@ TransientAdapter::setExactDerivatives(const int               order,
 
 feStatus TransientAdapter::readAdaptedMeshes()
 {
+  std::string meshFile;
+
   for (int iI = 0; iI < _adapt_parameters.nIntervals; ++iI)
   {
     // Read adapted mesh
     feInfo("Deleting mesh %d", iI);
     delete allMeshes[iI];
-    std::string meshFile = _io_parameters.writeDir + "adapted_ifp_" +
-                           std::to_string(iFixedPoint - 1) + "_interval_" +
-                           std::to_string(iI) + ".msh";
+
+    if (_adapt_parameters.alternateBetweenPresetMeshes)
+    {
+      feInfo("Reading preset meshes");
+      // Debug test: alternate only between 2 predefined meshes
+      meshFile = (iI % 2) == 0 ? (_io_parameters.writeDir + "../mesh1.msh") :
+                                 (_io_parameters.writeDir + "../mesh2.msh");
+    }
+    else
+    {
+      feInfo("Reading adapted meshes");
+      meshFile = _io_parameters.writeDir + "adapted_ifp_" +
+                 std::to_string(iFixedPoint - 1) + "_interval_" +
+                 std::to_string(iI) + ".msh";
+    }
+
+
     allMeshes[iI] = new feMesh2DP1(meshFile);
 
     // Create new metric field
@@ -308,12 +342,21 @@ feStatus TransientAdapter::computeSpaceTimeMetrics()
   // Compute metric scaling
   //
   // Space-time complexity from Nv :
-  // const double targetNst = (double) adapter.nVertices * adapter.nIntervals *
-  // adapter.nTimeStepsPerInterval;
-  const double targetNst            = (double)ap.targetVertices * nI;
+  const double nT = (double)ap.nTimeStepsPerInterval;
+
+  // Set the target space-time complexity.
+  double targetNst;
+  if (ap.prescribeTimeDiscretization)
+  {
+    targetNst = (double)ap.targetVertices * nI * nT;
+  }
+  else
+  {
+    targetNst = (double)ap.targetVertices * nI;
+  }
+
   const double dim                  = ap.dim;
   const double p                    = ap.Lp_norm;
-  const double nT                   = (double)ap.nTimeStepsPerInterval;
   const double expDeterminantGlobal = p / (2. * p + dim);
   const double expDeterminantLocal  = -1. / (2. * p + dim);
 
@@ -324,13 +367,26 @@ feStatus TransientAdapter::computeSpaceTimeMetrics()
     metricField->setMetrics(allHi[iI]);
     const double Kj =
       metricField->computeIntegralOfDeterminant(expDeterminantGlobal);
+    feInfo("Integral of det H on interval %d = %+-1.6e", iI, Kj);
     // Use simplification for constant time step. Otherwise, multiply Kj
     // by integral of (time step)^-1 on sub-interval before summing.
     sumKj += Kj;
   }
 
+  // Expected Kj for H = identity and domain [-2,2] x [-1,1]
+  const double T        = 1.;
+  const double exponent = (dim * p) / (2. * p + dim);
+  const double area     = 8;
+  feInfo("Kj for H = I and rectangular domain = %+-1.6e",
+         pow(T / nI, exponent) * area);
+
   // Integral of (time step)^-1 is nT, exponents of nT reduce to 2/d
   const double globalScalingFactor = pow(targetNst / (nT * sumKj), 2. / dim);
+  feInfo("Target Nst is            %+-1.6e", targetNst);
+  feInfo("Denominator is           %+-1.6e", nT * sumKj);
+  feInfo("Global scaling factor is %+-1.6e", globalScalingFactor);
+  feInfo("Expected is              %+-1.6e",
+         (double)ap.targetVertices / nT * pow(nI, exponent) / area);
 
   std::vector<int> numVerticesInAdaptedMeshes(nI, 0);
 
@@ -348,6 +404,8 @@ feStatus TransientAdapter::computeSpaceTimeMetrics()
   for (int iI = 0; iI < nI; ++iI)
   {
     feMetric *metricField = allMetrics[iI];
+    // feInfo("Expected det for local scaling is  %+-1.6e",
+    //        pow(T / nI, dim * expDeterminantLocal));
     metricField->scaleMetricsByDeterminant(globalScalingFactor,
                                            expDeterminantLocal);
 
@@ -381,7 +439,9 @@ feStatus TransientAdapter::computeSpaceTimeMetrics()
 
   const int effectiveNst = totalVertices * ap.nTimeStepsPerInterval;
 
-  spaceTimeComplexity[iFixedPoint] = effectiveNst;
+  spaceComplexity[iFixedPoint]               = totalVertices;
+  spaceTimeComplexity[iFixedPoint]           = effectiveNst;
+  prescribedSpaceTimeComplexity[iFixedPoint] = targetNst;
 
   feInfo("Total  number of space      vertices : %d", totalVertices);
   feInfo("Total  number of space-time vertices : %d", effectiveNst);
@@ -475,6 +535,45 @@ feStatus TransientAdapter::fixedPointIteration(SolverBase &solver)
         s->setDOFInitialization(dofInitialization::PREVIOUS_SOL);
       for (auto *s : essentialSpaces)
         s->setDOFInitialization(dofInitialization::NODEWISE);
+
+      ////////////////////////////////////////////
+      // For debug : bypass transfer error by reinitializing exactly
+      // Only if solution is provided
+      if (solver._TimeIntegration_parameters.bypassSolutionTransfer)
+      {
+        const feFunction *exactSolution =
+          solver._scalarExactSolutions[0].second;
+        feNorm *norm1;
+        feCheckReturn(
+          createNorm(norm1, L2_ERROR, {spaces[0]}, &sol, exactSolution));
+        feInfo("After transfer error at t - %1.3f is %+-1.8e",
+               sol.getCurrentTime(),
+               norm1->compute());
+        delete norm1;
+
+        // Reinitialize from exactSolution
+        const feFunction *originalCallback = spaces[0]->getCallback();
+        spaces[0]->setCallback(exactSolution);
+        for (auto *s : spaces)
+          s->setDOFInitialization(dofInitialization::NODEWISE);
+        sol.initialize(mesh);
+        allContainers[iI]->setCurrentSolution(&sol);
+
+        feCheckReturn(
+          createNorm(norm1, L2_ERROR, {spaces[0]}, &sol, exactSolution));
+        feInfo("After reinitialization at t - %1.3f error is %+-1.8e",
+               sol.getCurrentTime(),
+               norm1->compute());
+        delete norm1;
+
+        for (auto *s : spaces)
+          s->setDOFInitialization(dofInitialization::PREVIOUS_SOL);
+        for (auto *s : essentialSpaces)
+          s->setDOFInitialization(dofInitialization::NODEWISE);
+
+        spaces[0]->setCallback(originalCallback);
+      }
+      ////////////////////////////////////////////
     }
 
     feExporter *exporter = nullptr;

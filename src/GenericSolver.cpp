@@ -256,6 +256,17 @@ feStatus SolverBase::solve(feMesh                 *mesh,
 
   std::vector<feNorm *> norms = {};
 
+  ///////////////////////////////////////
+  feNorm *norm1;
+  if(_scalarExactSolutions.size() > 0) {
+    const feFunction *exactSolution = _scalarExactSolutions[0].second;
+    if(exactSolution) {
+      feCheckReturn(createNorm(norm1, L2_ERROR, {spaces[0]}, sol, exactSolution));
+      norms.push_back(norm1);
+    }
+  }
+  ///////////////////////////////////////
+
   //
   // Until NLoptions and timeIntegratorScheme are fully replaced by feParameters
   // structures:
@@ -336,20 +347,12 @@ feStatus SolverBase::solve(feMesh                 *mesh,
            timeIntegrator->getCurrentStep());
   }
 
-  // Solve and compute metrics at each time step
-  for (int iStep = 0; iStep < nT; ++iStep)
-  {
-    tic();
-    feCheckReturn(timeIntegrator->makeSteps(1));
-    feInfo("Computed time step in %f s", toc());
-
-    //
-    // Compute metric field
-    //
-    feMetric *metricField = adapter.allMetrics[iInterval];
-
+  if(adapter._adapt_parameters.adapt) {
+    // Need to compute metrics at t = t_i (beginning of time interval) as well
     if (adapter._adapt_parameters.useExactDerivatives)
     {
+      feMetric *metricField = adapter.allMetrics[iInterval];
+      
       // Use analytical field derivatives
       // Check that the derivatives were given
       const int order = adapter._adapt_parameters.orderForAdaptation;
@@ -369,9 +372,15 @@ feStatus SolverBase::solve(feMesh                 *mesh,
       metricField->setCurrentTime(timeIntegrator->getCurrentTime());
       metricField->setMetricScaling(false);
       feCheckReturn(metricField->computeMetrics());
-    }
-    else
-    {
+      // metricField->setMetricsToIdentity();
+
+      // Increment integral for t = ti
+      metricField->addMetricsToOther(dt / 2., adapter.allHi[iInterval]);
+
+    } else {
+
+      feMetric *metricField = adapter.allMetrics[iInterval];
+
       // Reconstruct prescribed field for adaptation
       const int   id = adapter._adapt_parameters.spaceIDForAdaptation;
       feSpace    *spaceToReconstruct = spaces[id];
@@ -394,28 +403,119 @@ feStatus SolverBase::solve(feMesh                 *mesh,
       metricField->setCurrentTime(timeIntegrator->getCurrentTime());
       metricField->setMetricScaling(false);
       feCheckReturn(metricField->computeMetrics());
-    }
 
-    // Trapeze rule
-    if (iStep == 0 || iStep == nT - 1)
+      // Increment integral for t = ti
       metricField->addMetricsToOther(dt / 2., adapter.allHi[iInterval]);
-    else
-      metricField->addMetricsToOther(dt, adapter.allHi[iInterval]);
+    }
+  }
+
+  // Solve and compute metrics at each time step
+  for (int iStep = 0; iStep < nT; ++iStep)
+  {
+    tic();
+    feCheckReturn(timeIntegrator->makeSteps(1));
+    feInfo("Computed time step in %f s", toc());
+
+    if(adapter._adapt_parameters.adapt)
+    {
+      //
+      // Compute metric field
+      //
+      feMetric *metricField = adapter.allMetrics[iInterval];
+
+      if (adapter._adapt_parameters.useExactDerivatives)
+      {
+        // Use analytical field derivatives
+        // Check that the derivatives were given
+        const int order = adapter._adapt_parameters.orderForAdaptation;
+        if ((order == 1 && metricField->_options.secondDerivatives == nullptr) ||
+            (order == 2 && metricField->_options.thirdDerivatives == nullptr) ||
+            (order == 3 && metricField->_options.fourthDerivatives == nullptr) ||
+            (order == 4 && metricField->_options.fifthDerivatives == nullptr))
+        {
+          std::cout << metricField->_options.secondDerivatives << std::endl;
+          return feErrorMsg(
+            FE_STATUS_ERROR,
+            "The metric field is set to be computed with exact field "
+            "derivatives,\n but no callback for derivatives of order k+1 was "
+            "provided for field of order k = %d driving the adaptation.\n",
+            order);
+        }
+        metricField->setCurrentTime(timeIntegrator->getCurrentTime());
+        metricField->setMetricScaling(false);
+        feCheckReturn(metricField->computeMetrics());
+        // metricField->setMetricsToIdentity();
+      }
+      else
+      {
+        // Reconstruct prescribed field for adaptation
+        const int   id = adapter._adapt_parameters.spaceIDForAdaptation;
+        feSpace    *spaceToReconstruct = spaces[id];
+        std::string meshFile = adapter.allOptions[iInterval].backgroundMeshfile;
+        std::string recoveryFile =
+          adapter._io_parameters.writeDir + "reconstruction.msh";
+        feNewRecovery recoveredField(spaceToReconstruct,
+                                     0,
+                                     mesh,
+                                     sol,
+                                     meshFile,
+                                     recoveryFile,
+                                     false,
+                                     false,
+                                     false,
+                                     nullptr,
+                                     numbering);
+
+        metricField->setRecoveredFields({&recoveredField});
+        metricField->setCurrentTime(timeIntegrator->getCurrentTime());
+        metricField->setMetricScaling(false);
+        feCheckReturn(metricField->computeMetrics());
+      }
+
+      // Trapeze rule
+      if (iStep == nT - 1) {
+        feInfo("With dt/2 at t = %f", timeIntegrator->getCurrentTime());
+        metricField->addMetricsToOther(dt / 2., adapter.allHi[iInterval]);
+      }
+      else {
+        feInfo("With dt   at t = %f", timeIntegrator->getCurrentTime());
+        metricField->addMetricsToOther(dt, adapter.allHi[iInterval]);
+      }
+    }
 
     adapter.currentTimeStep++;
   }
 
   adapter.currentTime = timeIntegrator->getCurrentTime();
 
+  feInfo("Time integrator computed %d norms", norms.size());
+  // 
+  std::vector<std::vector<double>> postProc = timeIntegrator->getPostProcessingData();
+  if(postProc.size() >= 2) {
+    for(int j = 0; j < nT+1; ++j) {
+      feInfo("Error at step %2d (t = %1.3e) = %1.6e", j, postProc[0][j], postProc[1][j]);
+      adapter.allErrorsAllTimeSteps[adapter.iFixedPoint][0].push_back(postProc[0][j]); 
+      adapter.allErrorsAllTimeSteps[adapter.iFixedPoint][1].push_back(postProc[1][j]); 
+    }
+  }
+
+  feInfo("postproc of size %d", postProc.size());
+
   delete adapter.allContainers[iInterval];
   adapter.allContainers[iInterval] = new feSolutionContainer();
   adapter.allContainers[iInterval]->NaNify();
   *(adapter.allContainers[iInterval]) = timeIntegrator->getSolutionContainer();
 
+  feInfo("Reassigned container");
+
   delete timeIntegrator;
   delete system;
   for (feBilinearForm *f : forms)
     delete f;
+  for (feNorm *norm : norms)
+    delete norm;
+
+  feInfo("Done solving on this interval");
 
   return FE_STATUS_OK;
 }

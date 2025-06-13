@@ -433,6 +433,9 @@ public:
   // Similarly, synchronize the actual DOF number between coupled DOFs.
   virtual void synchronizeNumberingOfEssentialDOF(int & /*numModifiedDOF*/){};
 
+  const feFunction *getCallback() const { return _scalarFct; };
+  void setCallback(const feFunction *other) { _scalarFct = other; };
+
   // Evaluate prescribed scalar or vector field
   double evalFun(const feFunctionArguments &args) const
   {

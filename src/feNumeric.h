@@ -185,6 +185,7 @@ void computeAndPrintConvergence(const int dim,
                                 const std::vector<double> &error,
                                 const std::vector<int> &nElm,
                                 const int nSignificantDigits = 8,
-                                std::ostream &os = std::cout);
+                                std::ostream &os = std::cout,
+                                bool printHeader = true);
 
 #endif

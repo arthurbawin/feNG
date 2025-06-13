@@ -57,6 +57,8 @@ TimeIntegrator::TimeIntegrator(feLinearSystem *linearSystem,
   _currentSolution->initializeTemporalSolution(_t0, _tEnd, _nTimeSteps);
   _timeHistory.resize(_nTimeSteps, 0.);
 
+  _currentLocalStep = 0;
+
   // Allocate vectors for post-processing operators.
   // Norms are computed for the initial condition as well,
   // thus nTimeSteps + 1 times.
@@ -109,6 +111,7 @@ void TimeIntegrator::computePostProcessing(const int iStep, const double t)
   // Remaining are the results of the norms and indicators
   for(size_t i = 0; i < _postProcessing.size(); ++i) {
     _postProcessingData[i+1][iStep] = _postProcessing[i]->compute();
+    feInfo("at t = %1.3e Postproc computed %+-1.8e", t, _postProcessingData[i+1][iStep]);
   }
 }
 
@@ -459,7 +462,7 @@ feStatus BDF2Integrator::makeSteps(int nSteps)
 
     // Compute post-processing indicators (L2 norms, etc.)
     // on initial condition
-    computePostProcessing(0, _t[0]);
+    computePostProcessing(_currentLocalStep, _t[0]);
 
     // Export initial solution
     feStatus s = this->writeVisualizationFile(0, _exportData);
@@ -496,15 +499,26 @@ feStatus BDF2Integrator::makeSteps(int nSteps)
         break;
     }
 
-    computePostProcessing(1, _t[0]);
-
     // Export solution for visualization
     _currentStep++;
+    _currentLocalStep++;
+
+    computePostProcessing(_currentLocalStep, _t[0]);
+
     s = this->writeVisualizationFile(_currentStep, _exportData);
     if(s != FE_STATUS_OK) return s;
   }
 
-  for(int iStep = start; iStep < nSteps; ++iStep, ++_currentStep)
+  //
+  // Only compute post-processing at starting step.
+  // For instance, when the time integrator retarts from a previous solution.
+  //
+  if(_currentLocalStep == 0)
+  {
+    computePostProcessing(_currentLocalStep, _t[0]);
+  }
+
+  for(int iStep = start; iStep < nSteps; ++iStep, ++_currentStep, ++_currentLocalStep)
   {
     feInfoCond(FE_VERBOSE > 0, "\t\tBDF2 - Overall step = %d - Step %d/%d from t = %1.4e to t = %1.4e", 
       _currentStep+1, iStep+1, nSteps, _currentTime, _currentTime + _dt);
@@ -513,32 +527,8 @@ feStatus BDF2Integrator::makeSteps(int nSteps)
     _sC->rotate(_dt);
     _sC->computeBDFCoefficients(_order, _deltaT);
 
-    // feInfo("Integrator info:");
-    // feInfo("_nSol            : %d", _nSol);
-    // feInfo("_order           : %d", _order);
-    // feInfo("_t0              : %+-1.20e", _t0);
-    // feInfo("_tEnd            : %+-1.20e", _tEnd);
-    // feInfo("_dt              : %+-1.20e", _dt);
-    // feInfo("_nTimeSteps :    : %d", _nTimeSteps);
-    // feInfo("_currentTime     : %+-1.20e", _currentTime);
-    // feInfo("_currentStep     : %d", _currentStep);
-    // feInfo("time             : %+-1.20e - %+-1.20e - %+-1.20e", _t[0], _t[1], _t[2]);
-    // feInfo("deltaT           : %+-1.20e - %+-1.20e - %+-1.20e", _deltaT[0], _deltaT[1], _deltaT[2]);
-    // feInfo("time history     : %+-1.20e - %+-1.20e - %+-1.20e", _timeHistory[0], _timeHistory[1], _timeHistory[2]);
-    // feInfo("BDF coefficients : %+-1.20e - %+-1.20e - %+-1.20e",
-    //   _sC->getBDFCoefficients()[0],
-    //   _sC->getBDFCoefficients()[1],
-    //   _sC->getBDFCoefficients()[2]);
-
     _currentSolution->setC0(_sC->getC0());
     // _currentSolution->setCurrentTime(_currentTime); // Done in updateTime
-
-    // for(const auto &val : _currentSolution->getSolution()) {
-    //   if(std::isnan(val)) {
-    //     feInfo("Nan alert before initialize BC");
-    //     exit(-1);
-    //   }
-    // }
 
     _currentSolution->initializeEssentialBC(_mesh, _sC);
 
@@ -548,7 +538,7 @@ feStatus BDF2Integrator::makeSteps(int nSteps)
     if(s == FE_STATUS_ERROR) { return s; }
 
     // Compute post-processing indicators (L2 norms, etc.)
-    computePostProcessing(iStep+1, _t[0]);
+    computePostProcessing(_currentLocalStep+1, _t[0]);
 
     // Export solution for visualization
     s = this->writeVisualizationFile(_currentStep+1, _exportData);
@@ -742,6 +732,7 @@ feStatus DCBDF1Integrator::makeSteps(int nSteps)
 
       feCheckReturn(postProcessingAndVisualization(1, 1, _t[0], _exportData));
       _currentStep++;
+      _currentLocalStep++;
     }
 
     feInfoCond(FE_VERBOSE > 0, "\t\tEnd of DC%d/BDF1 initialization procedure", _order);
@@ -751,7 +742,7 @@ feStatus DCBDF1Integrator::makeSteps(int nSteps)
   //
   // Regular time steps
   //
-  for(int iStep = start; iStep < nSteps; ++iStep, ++_currentStep)
+  for(int iStep = start; iStep < nSteps; ++iStep, ++_currentStep, ++_currentLocalStep)
   {
     feInfoCond(FE_VERBOSE > 0, "\t\tDC%d/BDF1 - Overall step = %d - Step %d/%d from t = %1.4e to t = %1.4e", 
       _order, _currentStep+1, iStep+1, nSteps, _currentTime, _currentTime + _dt);
@@ -995,6 +986,7 @@ feStatus DC3BDF2Integrator::makeSteps(int nSteps)
     computePostProcessing(1, _t[0]);
     // Export solution for visualization
     _currentStep++;
+    _currentLocalStep++;
     feCheckReturn(writeVisualizationFile(_currentStep, _exportData));
   }
 
@@ -1002,7 +994,7 @@ feStatus DC3BDF2Integrator::makeSteps(int nSteps)
   // - the scBDF2 container contains the BDF2 solution at times 0,1,2
   // - the sc     container contains the DC3  solution at times 0,1
 
-  for(int iStep = start; iStep < nSteps; ++iStep, ++_currentStep)
+  for(int iStep = start; iStep < nSteps; ++iStep, ++_currentStep, ++_currentLocalStep)
   {
     feInfoCond(FE_VERBOSE > 0, "\t\tDC3/BDF2 - Overall step = %d - Step %d/%d from t = %1.4e to t = %1.4e", 
       _currentStep+1, iStep+1, nSteps, _currentTime, _currentTime + _dt);

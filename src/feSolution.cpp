@@ -507,6 +507,8 @@ feStatus feSolution::addSquaredNormOfVectorSpace(feMesh *mesh,
 
 void feSolution::setSolFromContainer(const feSolutionContainer *solContainer, const int iSol)
 {
+  _tn = solContainer->getTime()[0];
+
   // Resize if necessary, then copy
   if(_sol.size() != (size_t) solContainer->getNbDOFs()) {
     _nDOF = solContainer->getNbDOFs();

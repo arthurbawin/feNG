@@ -65,7 +65,16 @@ protected:
   double _dt;
   int    _nTimeSteps;
   double _currentTime;
+
+  // The global step counter of the overall simulation.
+  // A time integrator may have been initialized from a previous
+  // integrator, in which case the starting current step is nonzero.
   int    _currentStep;
+  
+  // The local step counter, in [0, _nTimeSteps].
+  // Useful when a time integrator is created to perform nTimeSteps,
+  // but is called with e.g. makeSteps(1), by calls of a single step.
+  int _currentLocalStep;
 
   // Time of the N last steps (for multistep methods)
   std::vector<double> _t;

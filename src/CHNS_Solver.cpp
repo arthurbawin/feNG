@@ -75,6 +75,16 @@ feStatus createCHNS_Solver(
     }
   }
 
+  if (CHNS_parameters.formulation ==
+        Parameters::CHNS::Formulation::massAveraged &&
+      CHNS_parameters.mobilityType == Parameters::CHNS::MobilityType::constant)
+  {
+    return feErrorMsg(
+      FE_STATUS_ERROR,
+      "Mobility was set to constant, but mass-averaged CHNS formulation is "
+      "consistent only with degenerate mobility.");
+  }
+
   solver = new CHNS_Solver(CHNS_parameters,
                            NLSolver_parameters,
                            TimeIntegration_parameters,
@@ -318,7 +328,7 @@ CHNS_Solver::CHNS_Solver(
           Parameters::CHNS::MobilityType::degenerate) ?
            "yes" :
            "no");
-  feInfo("\t\t limter on phase marker = %s",
+  feInfo("\t\tlimiter on phase marker = %s",
          (CHNS_parameters.limitPhaseMarker) ? "yes" : "no");
 }
 

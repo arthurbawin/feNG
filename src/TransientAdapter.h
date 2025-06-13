@@ -48,9 +48,17 @@ public:
   //
   std::vector<std::vector<std::vector<double>>> allErrors;
 
-  // The effective space-time complexity computed after all meshes are adapted,
-  // for each fixed-point iteration.
+  // Similar as allErrors, but this is the error computed at each
+  // time step. Size is nFixedPoint x (nUnknownFields + 1) x nTotalTimeSteps.
+  //
+  // The first field is associated with the time.
+  std::vector<std::vector<std::vector<double>>> allErrorsAllTimeSteps;
+
+  // The effective space-only and space-time complexity computed after all
+  // meshes are adapted, for each fixed-point iteration.
+  std::vector<int> spaceComplexity;
   std::vector<int> spaceTimeComplexity;
+  std::vector<int> prescribedSpaceTimeComplexity;
 
   struct referenceTestCaseStruct
   {
@@ -96,9 +104,21 @@ public:
     }
   }
 
+  std::vector<int> getSpaceComplexities() const
+  {
+    return spaceComplexity;
+  }
   std::vector<int> getSpaceTimeComplexities() const
   {
     return spaceTimeComplexity;
+  }
+  std::vector<int> getPrescribedSpaceTimeComplexities() const
+  {
+    return prescribedSpaceTimeComplexity;
+  }
+  auto getErrorAllTimeSteps() const
+  {
+    return allErrorsAllTimeSteps;
   }
 
   //

@@ -485,10 +485,12 @@ feStatus feMetric::newGradation(const std::vector<std::size_t> &nodeTags, const 
 {
 #if defined(HAVE_GMSH)
 
+  tic();
+
 	int dim = 2;
   std::vector<int> elementTypes;
-  std::vector<std::vector<std::size_t> > elementTags;
-  std::vector<std::vector<std::size_t> > elemNodeTags;
+  std::vector<std::vector<std::size_t>> elementTags;
+  std::vector<std::vector<std::size_t>> elemNodeTags;
   gmsh::model::mesh::getElements(elementTypes, elementTags, elemNodeTags, dim);
 
   if(elementTypes[0] != 2 && elementTypes[0] != 9) {
@@ -598,6 +600,9 @@ feStatus feMetric::newGradation(const std::vector<std::size_t> &nodeTags, const 
 
     mNew.clear();
   }
+
+  const double tEnd = toc();
+  feInfoCond(FE_VERBOSE > 0, "Applied gradation in %f s.", tEnd);
 
   return FE_STATUS_OK;
 #else

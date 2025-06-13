@@ -26,6 +26,8 @@ namespace Parameters
       bdf1,
       exactSolution
     } bdf2starter = BDF2Starter::bdf1;
+
+    bool bypassSolutionTransfer = false;
   };
 
   struct NonLinearSolver
@@ -134,6 +136,21 @@ namespace Parameters
     int nIntervals;
     int nTimeStepsPerInterval;
     int nIntervalsReferenceSolution;
+
+    // For debug tests only: in the space-time adaptation loop,
+    // alternate only between 2 predefined meshes "mesh1.msh" and "mesh2.msh"
+    // for odd and even sub-intervals.
+    // This is to assess the impact of repeated solution transfers.
+    bool alternateBetweenPresetMeshes = false;
+
+    // For unsteady adaptation with space-time metric.
+    // If true, prescribe the complete space-time complexity when computing
+    // the space-time metrics, i.e., impose Nst = Navg * nI * nT.
+    //
+    // If false, prescribe only Nst = Navg * nI. Used in Alauzet's paper
+    // because they use an explicit time integration scheme and thus do
+    // not control the time discretization.
+    bool prescribeTimeDiscretization = false;
 
     // The Lp norm used to compute the space-time error,
     // at the end of an unsteady fixed-point iteration
