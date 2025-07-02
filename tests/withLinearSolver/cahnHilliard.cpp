@@ -760,6 +760,8 @@ namespace cahnHilliardNavierStokes {
 ///////////////////////////////////////////////////////////////////////////////
 // Modify here for another MMS
 
+// #define TEST_TIME_CONVERGENCE
+
 #define CONSTANT_MOBILITY(M, phi) M
 #define DCONSTANT_MOBILITY_DPHI(M, phi) 0. 
 
@@ -771,73 +773,128 @@ namespace cahnHilliardNavierStokes {
 // #define FT(t) 1.
 // #define DFDT(t) 0.
 
-#define FT(t) t
-#define DFDT(t) 1.
+// #define FT(t) t
+// #define DFDT(t) 1.
 
 // #define FT(t) t*t
 // #define DFDT(t) 2.*t
 
+#define FT(t) t*t*t*t
+#define DFDT(t) 4.*t*t*t
+
 // #define FT(t) exp(-t)
 // #define DFDT(t) -exp(-t)
 
-// #define CU 1.
-// #define CV 2.
-// #define U(x,y,t) CU * FT(t) * x*x*x*x * y*y*y*y
-// #define V(x,y,t) CV * FT(t) * -4./5. * x*x*x * y*y*y*y*y
+// #define FT(t) sin(t)
+// #define DFDT(t) cos(t)
 
-// #define DUDT(x,y,t) CU * DFDT(t) * x*x*x*x * y*y*y*y
-// #define DVDT(x,y,t) CV * DFDT(t) * -4./5. * x*x*x * y*y*y*y*y
+#if !defined(TEST_TIME_CONVERGENCE)
+  // MMS 1 for spatial convergence
+  //
+  // #define CU 1.
+  // #define CV 1.
+  // #define U(x,y,t) CU * FT(t) * x*x*x*x * y*y*y*y
+  // #define V(x,y,t) CV * FT(t) * -4./5. * x*x*x * y*y*y*y*y
 
-// #define DUDX(x,y,t) CU * FT(t) *      4. *   x*x*x *   y*y*y*y
-// #define DUDY(x,y,t) CU * FT(t) *      4. * x*x*x*x *     y*y*y
-// #define DVDX(x,y,t) CV * FT(t) * -12./5. *     x*x * y*y*y*y*y
-// #define DVDY(x,y,t) CV * FT(t) *     -4. *   x*x*x *   y*y*y*y
+  // #define DUDT(x,y,t) CU * DFDT(t) * x*x*x*x * y*y*y*y
+  // #define DVDT(x,y,t) CV * DFDT(t) * -4./5. * x*x*x * y*y*y*y*y
 
-// #define UXX(x,y,t) CU * FT(t) *  12.    *          x*x * y*y*y*y
-// #define UXY(x,y,t) CU * FT(t) *  16.    *        x*x*x * y*y*y
-// #define UYY(x,y,t) CU * FT(t) *  12.    *      x*x*x*x * y*y
-// #define VXX(x,y,t) CV * FT(t) * -24./5. *            x * y*y*y*y*y
-// #define VXY(x,y,t) CV * FT(t) * -12.    *          x*x * y*y*y*y
-// #define VYY(x,y,t) CV * FT(t) * -16.    *        x*x*x * y*y*y
+  // #define DUDX(x,y,t) CU * FT(t) *      4. *   x*x*x *   y*y*y*y
+  // #define DUDY(x,y,t) CU * FT(t) *      4. * x*x*x*x *     y*y*y
+  // #define DVDX(x,y,t) CV * FT(t) * -12./5. *     x*x * y*y*y*y*y
+  // #define DVDY(x,y,t) CV * FT(t) *     -4. *   x*x*x *   y*y*y*y
 
-#define CU 1.
-#define CV 1.
-#define U(x,y,t) FT(t) * sin(M_PI*x) * sin(M_PI*y)
-#define V(x,y,t) FT(t) * sin(M_PI*x) * sin(M_PI*y)
+  // #define UXX(x,y,t) CU * FT(t) *  12.    *          x*x * y*y*y*y
+  // #define UXY(x,y,t) CU * FT(t) *  16.    *        x*x*x * y*y*y
+  // #define UYY(x,y,t) CU * FT(t) *  12.    *      x*x*x*x * y*y
+  // #define VXX(x,y,t) CV * FT(t) * -24./5. *            x * y*y*y*y*y
+  // #define VXY(x,y,t) CV * FT(t) * -12.    *          x*x * y*y*y*y
+  // #define VYY(x,y,t) CV * FT(t) * -16.    *        x*x*x * y*y*y
 
-#define DUDT(x,y,t) CU * DFDT(t) * sin(M_PI*x) * sin(M_PI*y)
-#define DVDT(x,y,t) CV * DFDT(t) * sin(M_PI*x) * sin(M_PI*y)
+  // // #define P(x,y,t) x*x*y*y - 1./9. // Zero-average on [0,1]^2
+  // #define P(x,y,t) x*x*y*y // Zero-average on [0,1]^2
+  // #define DPDX(x,y,t) 2.*x*y*y
+  // #define DPDY(x,y,t) 2.*x*x*y
+  // #define DPDXX(x,y,t) 2.*y*y
+  // #define DPDYY(x,y,t) 2.*x*x
 
-#define DUDX(x,y,t) CU * FT(t) * M_PI * cos(M_PI*x) * sin(M_PI*y)
-#define DUDY(x,y,t) CU * FT(t) * M_PI * sin(M_PI*x) * cos(M_PI*y)
-#define DVDX(x,y,t) CV * FT(t) * M_PI * cos(M_PI*x) * sin(M_PI*y)
-#define DVDY(x,y,t) CV * FT(t) * M_PI * sin(M_PI*x) * cos(M_PI*y)
+  #define U(x,y,t) FT(t) * sin(M_PI*x) * sin(M_PI*y)
+  #define V(x,y,t) FT(t) * cos(M_PI*x) * cos(M_PI*y)
 
-#define UXX(x,y,t) - CU * FT(t) * M_PI * M_PI * sin(M_PI*x) * sin(M_PI*y)
-#define UXY(x,y,t)   CU * FT(t) * M_PI * M_PI * cos(M_PI*x) * cos(M_PI*y)
-#define UYY(x,y,t) - CU * FT(t) * M_PI * M_PI * sin(M_PI*x) * sin(M_PI*y)
-#define VXX(x,y,t) - CV * FT(t) * M_PI * M_PI * sin(M_PI*x) * sin(M_PI*y)
-#define VXY(x,y,t)   CV * FT(t) * M_PI * M_PI * cos(M_PI*x) * cos(M_PI*y)
-#define VYY(x,y,t) - CV * FT(t) * M_PI * M_PI * sin(M_PI*x) * sin(M_PI*y)
+  #define DUDT(x,y,t) DFDT(t) * sin(M_PI*x) * sin(M_PI*y)
+  #define DVDT(x,y,t) DFDT(t) * cos(M_PI*x) * cos(M_PI*y)
 
-#define P(x,y,t) x*x*y*y - 1./9. // Zero-average on [0,1]^2
-#define DPDX(x,y,t) 2.*x*y*y
-#define DPDY(x,y,t) 2.*x*x*y
-#define DPDXX(x,y,t) 2.*y*y
-#define DPDYY(x,y,t) 2.*x*x
+  #define DUDX(x,y,t) FT(t) * M_PI *   cos(M_PI*x) * sin(M_PI*y)
+  #define DUDY(x,y,t) FT(t) * M_PI *   sin(M_PI*x) * cos(M_PI*y)
+  #define DVDX(x,y,t) FT(t) * M_PI * - sin(M_PI*x) * cos(M_PI*y)
+  #define DVDY(x,y,t) FT(t) * M_PI * - cos(M_PI*x) * sin(M_PI*y)
 
-#define PHI(x,y,t)                     FT(t) * sin(M_PI*x) * sin(M_PI*y)
-#define DPHIDT(x,y,t)                DFDT(t) * sin(M_PI*x) * sin(M_PI*y)
-#define DPHIDX(x,y,t)           M_PI * FT(t) * cos(M_PI*x) * sin(M_PI*y)
-#define DPHIDY(x,y,t)           M_PI * FT(t) * sin(M_PI*x) * cos(M_PI*y)
-#define DPHIDXX(x,y,t) - M_PI * M_PI * FT(t) * sin(M_PI*x) * sin(M_PI*y)
-#define DPHIDYY(x,y,t) - M_PI * M_PI * FT(t) * sin(M_PI*x) * sin(M_PI*y)
+  #define UXX(x,y,t) - FT(t) * M_PI * M_PI * sin(M_PI*x) * sin(M_PI*y)
+  #define UXY(x,y,t)   FT(t) * M_PI * M_PI * cos(M_PI*x) * cos(M_PI*y)
+  #define UYY(x,y,t) - FT(t) * M_PI * M_PI * sin(M_PI*x) * sin(M_PI*y)
+  #define VXX(x,y,t) - FT(t) * M_PI * M_PI * cos(M_PI*x) * cos(M_PI*y)
+  #define VXY(x,y,t)   FT(t) * M_PI * M_PI * sin(M_PI*x) * sin(M_PI*y)
+  #define VYY(x,y,t) - FT(t) * M_PI * M_PI * cos(M_PI*x) * cos(M_PI*y)
 
-#define MU(x,y,t)                     sin(M_PI*x) * sin(M_PI*y)
-#define DMUDX(x,y,t)           M_PI * cos(M_PI*x) * sin(M_PI*y)
-#define DMUDY(x,y,t)           M_PI * sin(M_PI*x) * cos(M_PI*y)
-#define DMUDXX(x,y,t) - M_PI * M_PI * sin(M_PI*x) * sin(M_PI*y)
-#define DMUDYY(x,y,t) - M_PI * M_PI * sin(M_PI*x) * sin(M_PI*y)
+  #define P(x,y,t)                     sin(M_PI*x) * cos(M_PI*y)
+  #define DPDX(x,y,t)           M_PI * cos(M_PI*x) * cos(M_PI*y)
+  #define DPDY(x,y,t)         - M_PI * sin(M_PI*x) * sin(M_PI*y)
+  #define DPDXX(x,y,t) - M_PI * M_PI * sin(M_PI*x) * cos(M_PI*y)
+  #define DPDYY(x,y,t)   M_PI * M_PI * sin(M_PI*x) * cos(M_PI*y)
+
+  #define PHI(x,y,t)                     FT(t) * sin(M_PI*x) * sin(M_PI*y)
+  #define DPHIDT(x,y,t)                DFDT(t) * sin(M_PI*x) * sin(M_PI*y)
+  #define DPHIDX(x,y,t)           M_PI * FT(t) * cos(M_PI*x) * sin(M_PI*y)
+  #define DPHIDY(x,y,t)           M_PI * FT(t) * sin(M_PI*x) * cos(M_PI*y)
+  #define DPHIDXX(x,y,t) - M_PI * M_PI * FT(t) * sin(M_PI*x) * sin(M_PI*y)
+  #define DPHIDYY(x,y,t) - M_PI * M_PI * FT(t) * sin(M_PI*x) * sin(M_PI*y)
+
+  #define MU(x,y,t)                     sin(M_PI*x) * sin(M_PI*y)
+  #define DMUDX(x,y,t)           M_PI * cos(M_PI*x) * sin(M_PI*y)
+  #define DMUDY(x,y,t)           M_PI * sin(M_PI*x) * cos(M_PI*y)
+  #define DMUDXX(x,y,t) - M_PI * M_PI * sin(M_PI*x) * sin(M_PI*y)
+  #define DMUDYY(x,y,t) - M_PI * M_PI * sin(M_PI*x) * sin(M_PI*y)
+
+#else 
+  // MMS 2 for time convergence
+  // Spatial component captured by P2-P1.
+  #define U(x,y,t) FT(t) * (x*x - 2.*x + 3.*y*y + y - x*y + 1)
+  #define V(x,y,t) FT(t) * (3.*x*x + y*y/2. + 2.*y - 1. - 2.*x*y)
+
+  #define DUDT(x,y,t) DFDT(t) * (x*x - 2.*x + 3.*y*y + y - x*y + 1)
+  #define DVDT(x,y,t) DFDT(t) * (3.*x*x + y*y/2. + 2.*y - 1. - 2.*x*y)
+
+  #define DUDX(x,y,t) FT(t) * (2.*x - 2. - y)
+  #define DUDY(x,y,t) FT(t) * (6.*y + 1. - x)
+  #define DVDX(x,y,t) FT(t) * (6.*x - 2.*y)
+  #define DVDY(x,y,t) FT(t) * (y + 2. - 2.*x)
+
+  #define UXX(x,y,t) FT(t) * 2.
+  #define UXY(x,y,t) FT(t) * (-1.)
+  #define UYY(x,y,t) FT(t) * 6.
+  #define VXX(x,y,t) FT(t) * 6.
+  #define VXY(x,y,t) FT(t) * (-2.)
+  #define VYY(x,y,t) FT(t) * 1.
+
+  #define P(x,y,t) 10. * (x + y - 1.)
+  #define DPDX(x,y,t) 10.
+  #define DPDY(x,y,t) 10.
+  #define DPDXX(x,y,t) 0.
+  #define DPDYY(x,y,t) 0.
+
+  #define PHI(x,y,t)      FT(t) * (x + y - 1.)
+  #define DPHIDT(x,y,t) DFDT(t) * (x + y - 1.)
+  #define DPHIDX(x,y,t)   FT(t) * (1.)
+  #define DPHIDY(x,y,t)   FT(t) * (1.)
+  #define DPHIDXX(x,y,t)  0.
+  #define DPHIDYY(x,y,t)  0.
+
+  #define MU(x,y,t)      (x + y - 1.)
+  #define DMUDX(x,y,t)   (1.)
+  #define DMUDY(x,y,t)   (1.)
+  #define DMUDXX(x,y,t)  0.
+  #define DMUDYY(x,y,t)  0.
+#endif
 ///////////////////////////////////////////////////////////////////////////////
 // These should not be changed (-:
 #define UVEC(x,y,t) {U(x,y,t), V(x,y,t)}
@@ -1055,8 +1112,12 @@ struct CahnHilliardVolumeAveraged {
     const double div_d[2] = {dviscdphi * gradPhidotSymGradu[0] + visc * (2. * divd_incompressible[0]),
                              dviscdphi * gradPhidotSymGradu[1] + visc * (2. * divd_incompressible[1])};
 
-    res[0] = - (acceleration[0] + diffusiveFlux[0] - div_d[0] + gradp[0] - mu * gradphi[0]);
-    res[1] = - (acceleration[1] + diffusiveFlux[1] - div_d[1] + gradp[1] - mu * gradphi[1]);
+    // res[0] = - (acceleration[0] + diffusiveFlux[0] - div_d[0] + gradp[0] - mu * gradphi[0]);
+    // res[1] = - (acceleration[1] + diffusiveFlux[1] - div_d[1] + gradp[1] - mu * gradphi[1]);
+
+    UNUSED(mu);
+    res[0] = - (acceleration[0] - diffusiveFlux[0] - div_d[0] + gradp[0] + phiRef * gradmu[0]);
+    res[1] = - (acceleration[1] - diffusiveFlux[1] - div_d[1] + gradp[1] + phiRef * gradmu[1]);
   }
 
   static double phiSource_f(const feFunctionArguments &args, const std::vector<double> &par)
@@ -1292,7 +1353,7 @@ struct CahnHilliardVolumeAveraged {
                         double &H1ErrorMu,
                         int &timesteps)
   {
-    UNUSED(timesteps, NLoptions, timeStepFactor);
+    UNUSED(NLoptions);
 
     const double rhoA    = 1000.;
     const double rhoB    = 1.;
@@ -1301,6 +1362,14 @@ struct CahnHilliardVolumeAveraged {
     const double M       = 1e-6;
     const double gamma   = 0.01;
     const double epsilon = 1e-3;
+
+    // const double rhoA    = 1.;
+    // const double rhoB    = 1.;
+    // const double viscA   = 1.;
+    // const double viscB   = 1.;
+    // const double M       = 1.;
+    // const double gamma   = 1.;
+    // const double epsilon = 1.;
 
     const double lambda = 3. / (2.*sqrt(2.)) * epsilon * gamma;
 
@@ -1344,6 +1413,20 @@ struct CahnHilliardVolumeAveraged {
 
     std::vector<FEDescriptor> fieldDescriptors = {u, p, phi, mu};
 
+    // The exact solutions and gradients for those fields, and the associated norms to compute
+    std::vector<std::pair<int, const feFunction *>> exactScalarSol = {{1, &pSol}, {2, &phiSol}, {3, &muSol}};
+    std::vector<std::pair<int, const feVectorFunction *>> exactVectorSol = {{0, &grad_uSol}, {1, &grad_pSol}, {2, &grad_phiSol}, {3, &grad_muSol}};
+    std::vector<std::pair<int, normType>> normTypes = {
+
+      {1, L2_ERROR},
+      {2, L2_ERROR},
+      {3, L2_ERROR},
+
+      {0, VECTOR_SEMI_H1_ERROR},
+      {1, SEMI_H1_ERROR},
+      {2, SEMI_H1_ERROR},
+      {3, SEMI_H1_ERROR}};
+
     VectorFEDescriptor uB("U", "Bord", vlag, orderU, degreeQuadrature, &uSol);
     ScalarFEDescriptor pP("P", "PointPression", lag, orderU-1, degreeQuadrature, &pSol);
     ScalarFEDescriptor phiB("Phi", "Bord", lag, orderPhiMu, degreeQuadrature, &phiSol);
@@ -1359,11 +1442,21 @@ struct CahnHilliardVolumeAveraged {
     Parameters::TimeIntegration TimeIntegration_param;
     TimeIntegration_param.t_initial  = 0.;
     TimeIntegration_param.t_final    = 1.;
-    TimeIntegration_param.nTimeSteps = 20;
+
+    #if defined(TEST_TIME_CONVERGENCE)
+      TimeIntegration_param.nTimeSteps = 10 * pow(2, timeStepFactor);
+    #else 
+      TimeIntegration_param.nTimeSteps = 10 * pow(2, timeStepFactor);
+    #endif
+
+    timesteps = TimeIntegration_param.nTimeSteps;
+
     TimeIntegration_param.method =
       Parameters::TimeIntegration::TimeIntegrationMethod::bdf2;
     TimeIntegration_param.bdf2starter =
-      Parameters::TimeIntegration::BDF2Starter::bdf1;
+      // Parameters::TimeIntegration::BDF2Starter::bdf1;
+      Parameters::TimeIntegration::BDF2Starter::exactSolution;
+
 
     CHNS_Solver *solver;
     feCheck(createCHNS_Solver(solver,
@@ -1377,6 +1470,10 @@ struct CahnHilliardVolumeAveraged {
                               &uSource,
                               &phiSource,
                               &muSource));
+
+    solver->setScalarSolutions(exactScalarSol);
+    solver->setVectorSolutions(exactVectorSol);
+    solver->setNormTypes(normTypes);
 
     feMesh2DP1 mesh(meshFile);
     numInteriorElements = mesh.getNumInteriorElements();
@@ -1394,44 +1491,75 @@ struct CahnHilliardVolumeAveraged {
     feCheck(solver->solve(
       &mesh, &sol, &numbering, spaces, exportData));
 
-    feNorm *errorU_L2 = nullptr, *errorP_L2 = nullptr, *errorPhi_L2 = nullptr, *errorMu_L2 = nullptr;
-    feNorm *errorU_H1 = nullptr, *errorP_H1 = nullptr, *errorPhi_H1 = nullptr, *errorMu_H1 = nullptr;
+    std::vector<std::vector<double>> postProcData = solver->getPostProcessingData();
+
+    L2ErrorU = 0.;
+    L2ErrorP = 0.;
+    L2ErrorPhi = 0.;
+    L2ErrorMu = 0.;
+
+    H1ErrorU = 0.;
+    H1ErrorP = 0.;
+    H1ErrorPhi = 0.;
+    H1ErrorMu = 0.;
+
+    // First post proc vector is the time
+    const double dt = postProcData[0][1] - postProcData[0][0];
+
+    // Compute L1 norm in time of the computed spatial errors
+    for(size_t i = 0; i < postProcData[0].size(); ++i)
+    {
+      // L2ErrorU   += dt * postProcData[1][i];
+      L2ErrorP   += dt * postProcData[1][i];
+      L2ErrorPhi += dt * postProcData[2][i];
+      L2ErrorMu  += dt * postProcData[3][i];
+
+      H1ErrorU   += dt * postProcData[4][i];
+      H1ErrorP   += dt * postProcData[5][i];
+      H1ErrorPhi += dt * postProcData[6][i];
+      H1ErrorMu  += dt * postProcData[7][i];
+    }
+
+    feNorm *errorU_L2 = nullptr;
+    // feNorm *errorP_L2 = nullptr, *errorPhi_L2 = nullptr, *errorMu_L2 = nullptr;
+    // feNorm *errorU_H1 = nullptr, *errorP_H1 = nullptr, *errorPhi_H1 = nullptr, *errorMu_H1 = nullptr;
 
     feSpace *uS = spaces[0];
-    feSpace *pS = spaces[1];
-    feSpace *phiS = spaces[2];
-    feSpace *muS = spaces[3];
+    // feSpace *pS = spaces[1];
+    // feSpace *phiS = spaces[2];
+    // feSpace *muS = spaces[3];
     feCheckReturn(createNorm(  errorU_L2, VECTOR_L2_ERROR,   {uS}, &sol, nullptr, &uSol));
-    feCheckReturn(createNorm(  errorP_L2,        L2_ERROR,   {pS}, &sol, &pSol));
-    feCheckReturn(createNorm(errorPhi_L2,        L2_ERROR, {phiS}, &sol, &phiSol));
-    feCheckReturn(createNorm( errorMu_L2,        L2_ERROR,  {muS}, &sol, &muSol));
+    // feCheckReturn(createNorm(  errorP_L2,        L2_ERROR,   {pS}, &sol, &pSol));
+    // feCheckReturn(createNorm(errorPhi_L2,        L2_ERROR, {phiS}, &sol, &phiSol));
+    // feCheckReturn(createNorm( errorMu_L2,        L2_ERROR,  {muS}, &sol, &muSol));
 
-    feCheckReturn(createNorm(  errorU_H1, VECTOR_SEMI_H1_ERROR,   {uS}, &sol, nullptr, &grad_uSol));
-    feCheckReturn(createNorm(  errorP_H1,        SEMI_H1_ERROR,   {pS}, &sol, nullptr, &grad_pSol));
-    feCheckReturn(createNorm(errorPhi_H1,        SEMI_H1_ERROR, {phiS}, &sol, nullptr, &grad_phiSol));
-    feCheckReturn(createNorm( errorMu_H1,        SEMI_H1_ERROR,  {muS}, &sol, nullptr, &grad_muSol));
+    // feCheckReturn(createNorm(  errorU_H1, VECTOR_SEMI_H1_ERROR,   {uS}, &sol, nullptr, &grad_uSol));
+    // feCheckReturn(createNorm(  errorP_H1,        SEMI_H1_ERROR,   {pS}, &sol, nullptr, &grad_pSol));
+    // feCheckReturn(createNorm(errorPhi_H1,        SEMI_H1_ERROR, {phiS}, &sol, nullptr, &grad_phiSol));
+    // feCheckReturn(createNorm( errorMu_H1,        SEMI_H1_ERROR,  {muS}, &sol, nullptr, &grad_muSol));
 
     // Use L2 at t1 to compare with reference test files:
     L2ErrorU   = errorU_L2->compute();
-    L2ErrorP   = errorP_L2->compute();
-    L2ErrorPhi = errorPhi_L2->compute();
-    L2ErrorMu  = errorMu_L2->compute();
+    // L2ErrorP   = errorP_L2->compute();
+    // L2ErrorPhi = errorPhi_L2->compute();
+    // L2ErrorMu  = errorMu_L2->compute();
 
-    H1ErrorU   = errorU_H1->compute();
-    H1ErrorP   = errorP_H1->compute();
-    H1ErrorPhi = errorPhi_H1->compute();
-    H1ErrorMu  = errorMu_H1->compute();
+    // H1ErrorU   = errorU_H1->compute();
+    // H1ErrorP   = errorP_H1->compute();
+    // H1ErrorPhi = errorPhi_H1->compute();
+    // H1ErrorMu  = errorMu_H1->compute();
 
     // Integral of pressure (target is 0)
-    feNorm *intP;
-    feCheckReturn(createNorm(intP, INTEGRAL, {pS}, &sol));
-    integralP = fabs(intP->compute());
-    delete intP;
+    // feNorm *intP;
+    // feCheckReturn(createNorm(intP, INTEGRAL, {pS}, &sol));
+    // integralP = fabs(intP->compute());
+    // delete intP;
+    integralP = 0.;
 
-    delete errorU_L2;
-    delete errorP_L2;
-    delete errorPhi_L2;
-    delete errorMu_L2;
+    // delete errorU_L2;
+    // delete errorP_L2;
+    // delete errorPhi_L2;
+    // delete errorMu_L2;
 
     for(feSpace *s : spaces)
       delete s;
@@ -2028,8 +2156,6 @@ namespace alternativeCHNS_constantMobility {
       computeAndPrintConvergence(2, numMeshes, errPhi, nElm, DEFAULT_SIGNIFICANT_DIGITS, resultBuffer);
       resultBuffer << "Cahn-Hilliard Navier-Stokes MMS - L2 Error on chemical potential mu" << std::endl;
       computeAndPrintConvergence(2, numMeshes, errMu, nElm, DEFAULT_SIGNIFICANT_DIGITS, resultBuffer);
-      resultBuffer << "Cahn-Hilliard Navier-Stokes MMS - Integral of pressure" << std::endl;
-      computeAndPrintConvergence(2, numMeshes, integralP, nElm, DEFAULT_SIGNIFICANT_DIGITS, resultBuffer);
 
       // resultBuffer << "Time convergence:" << std::endl; 
       // computeAndPrintConvergence(1, numMeshes, errU, timesteps, DEFAULT_SIGNIFICANT_DIGITS, resultBuffer);
@@ -2565,19 +2691,27 @@ feStatus meshConvergence(std::stringstream &resultBuffer,
   std::vector<double> errPhi_H1(numMeshes, 0.);
   std::vector<double> errMu_H1(numMeshes, 0.);
 
-  bool writeErrorToFile = false;
-  std::string outputDirectory = "./";
+  bool writeErrorToFile = true;
+  std::string outputDirectory = "./tests/withLinearSolver/";
   std::ofstream errorFileL2, errorFileH1, timeErrorFile;
   if(writeErrorToFile) {
+  #if defined(TEST_TIME_CONVERGENCE)
+    timeErrorFile.open(outputDirectory + "timeErrorFile.txt");
+  #else
     errorFileL2.open(outputDirectory + "errorL2.txt");
     errorFileH1.open(outputDirectory + "errorH1.txt");
-    timeErrorFile.open(outputDirectory + "timeErrorFile.txt");
+  #endif
   }
 
   for(int i = 0; i < numMeshes; ++i)
   {
     const int timeStepFactor = i;
-    std::string meshFile = meshFileRoot + std::to_string(i+1) + ".msh";
+
+    #if defined(TEST_TIME_CONVERGENCE)
+      std::string meshFile = meshFileRoot + "1.msh";
+    #else
+      std::string meshFile = meshFileRoot + std::to_string(i+1) + ".msh";
+    #endif
 
     feCheckReturn(problemType::ezsolve(meshFile, timeStepFactor, orderU, orderPhiMu,
                        degreeQuadrature, NLoptions, nElm[i], nVertices[i],
@@ -2593,25 +2727,37 @@ feStatus meshConvergence(std::stringstream &resultBuffer,
                        timesteps[i]));
 
     if(writeErrorToFile) {
+    #if defined(TEST_TIME_CONVERGENCE)
+      timeErrorFile << timesteps[i] << "\t" << nElm[i] << "\t"
+        << std::setprecision(DEFAULT_SIGNIFICANT_DIGITS) << errU_H1[i] << "\t"
+        << std::setprecision(DEFAULT_SIGNIFICANT_DIGITS) << errP[i] << "\t"
+        << std::setprecision(DEFAULT_SIGNIFICANT_DIGITS) << errPhi_H1[i] << "\t"
+        << std::setprecision(DEFAULT_SIGNIFICANT_DIGITS) << errMu_H1[i] << "\n";
+      timeErrorFile.flush();
+    #else
       errorFileL2 << nVertices[i] << "\t" << nElm[i] << "\t"
         << std::setprecision(DEFAULT_SIGNIFICANT_DIGITS) << errU[i] << "\t"
         << std::setprecision(DEFAULT_SIGNIFICANT_DIGITS) << errP[i] << "\t"
         << std::setprecision(DEFAULT_SIGNIFICANT_DIGITS) << errPhi[i] << "\t"
         << std::setprecision(DEFAULT_SIGNIFICANT_DIGITS) << errMu[i] << "\n";
       errorFileL2.flush();
-      timeErrorFile << timesteps[i] << "\t" << nElm[i] << "\t"
-        << std::setprecision(DEFAULT_SIGNIFICANT_DIGITS) << errU[i] << "\t"
-        << std::setprecision(DEFAULT_SIGNIFICANT_DIGITS) << errP[i] << "\t"
-        << std::setprecision(DEFAULT_SIGNIFICANT_DIGITS) << errPhi[i] << "\t"
-        << std::setprecision(DEFAULT_SIGNIFICANT_DIGITS) << errMu[i] << "\n";
-      timeErrorFile.flush();
+      errorFileH1 << nVertices[i] << "\t" << nElm[i] << "\t"
+        << std::setprecision(DEFAULT_SIGNIFICANT_DIGITS) << errU_H1[i] << "\t"
+        << std::setprecision(DEFAULT_SIGNIFICANT_DIGITS) << errP_H1[i] << "\t"
+        << std::setprecision(DEFAULT_SIGNIFICANT_DIGITS) << errPhi_H1[i] << "\t"
+        << std::setprecision(DEFAULT_SIGNIFICANT_DIGITS) << errMu_H1[i] << "\n";
+      errorFileH1.flush();
+    #endif
     }
   }
 
   if(writeErrorToFile) {
+  #if defined(TEST_TIME_CONVERGENCE)
+    timeErrorFile.close();
+  #else
     errorFileL2.close();
     errorFileH1.close();
-    timeErrorFile.close();
+  #endif
   }
 
   resultBuffer << "Cahn-Hilliard Navier-Stokes MMS" << std::endl;
@@ -2628,9 +2774,6 @@ feStatus meshConvergence(std::stringstream &resultBuffer,
   resultBuffer << "Mu Chemical potential" << std::endl;
   computeAndPrintConvergence(2, numMeshes, errMu, nElm, DEFAULT_SIGNIFICANT_DIGITS, resultBuffer);
 
-  resultBuffer << "Cahn-Hilliard Navier-Stokes MMS - Integral of pressure" << std::endl;
-  computeAndPrintConvergence(2, numMeshes, integralP, nElm, DEFAULT_SIGNIFICANT_DIGITS, resultBuffer);
-
   resultBuffer << "==================== H1 error norms ==================" << std::endl;
   resultBuffer << "U Velocity" << std::endl;
   computeAndPrintConvergence(2, numMeshes, errU_H1, nElm, DEFAULT_SIGNIFICANT_DIGITS, resultBuffer);
@@ -2644,21 +2787,21 @@ feStatus meshConvergence(std::stringstream &resultBuffer,
   return FE_STATUS_OK;
 }
 
-// TEST(CahnHilliard, CH)
-// {
-//   initialize(my_argc, my_argv);
-//   setVerbose(0);
+TEST(CahnHilliard, CH)
+{
+  initialize(my_argc, my_argv);
+  setVerbose(0);
   
-//   std::string testRoot = "../../../tests/withLinearSolver/CH_MMS";
+  std::string testRoot = "../../../tests/withLinearSolver/CH_MMS";
 
-//   std::stringstream resultBuffer;
+  std::stringstream resultBuffer;
 
-//   int degreeQuadrature = 8;
-//   int order = 1;
-//   cahnHilliard::MMS::meshConvergence(resultBuffer, order, 4, degreeQuadrature);
-//   EXPECT_EQ(compareOutputFiles(testRoot, resultBuffer), 0);
-//   finalize();
-// }
+  int degreeQuadrature = 8;
+  int order = 1;
+  cahnHilliard::MMS::meshConvergence(resultBuffer, order, 4, degreeQuadrature);
+  EXPECT_EQ(compareOutputFiles(testRoot, resultBuffer), 0);
+  finalize();
+}
 
 // TEST(CahnHilliard, CHNS)
 // {
@@ -2677,40 +2820,21 @@ feStatus meshConvergence(std::stringstream &resultBuffer,
 //   finalize();
 // }
 
-// TEST(CahnHilliard, CHNS_VolumeAveraged)
-// {
-//   initialize(my_argc, my_argv);
-//   setVerbose(1);
-  
-//   std::string testRoot = "../../../tests/withLinearSolver/CHNS_VolumeAveraged";
-//   std::string meshFileRoot = "../data/transfiniteSquare_pressurePoint";
-
-//   std::stringstream resultBuffer;
-
-//   int degreeQuadrature = 12;
-//   int orderU = 2;
-//   int orderPhiMu = 1;
-//   ASSERT_TRUE(meshConvergence<CahnHilliardVolumeAveraged>(resultBuffer, 
-//     meshFileRoot, orderU, orderPhiMu, 4, degreeQuadrature) == FE_STATUS_OK);
-//   EXPECT_EQ(compareOutputFiles(testRoot, resultBuffer), 0);
-//   finalize();
-// }
-
-TEST(CahnHilliard, CHNS_VolumeAveraged_EZ)
+TEST(CahnHilliard, CHNS_VolumeAveraged)
 {
   initialize(my_argc, my_argv);
   setVerbose(1);
   
   std::string testRoot = "../../../tests/withLinearSolver/CHNS_VolumeAveraged";
-  std::string meshFileRoot = "../data/transfiniteSquare_pressurePoint";
+  std::string meshFileRoot = "../../../data/mmsMeshes/square";
 
   std::stringstream resultBuffer;
 
-  int degreeQuadrature = 12;
+  int degreeQuadrature = 8;
   int orderU = 2;
   int orderPhiMu = 1;
   ASSERT_TRUE(meshConvergence<CahnHilliardVolumeAveraged>(resultBuffer, 
-    meshFileRoot, orderU, orderPhiMu, 4, degreeQuadrature) == FE_STATUS_OK);
+    meshFileRoot, orderU, orderPhiMu, 3, degreeQuadrature) == FE_STATUS_OK);
   EXPECT_EQ(compareOutputFiles(testRoot, resultBuffer), 0);
   finalize();
 }

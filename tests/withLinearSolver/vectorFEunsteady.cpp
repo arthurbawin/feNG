@@ -412,6 +412,7 @@ struct diffusionWeakBC {
     TimeIntegrator *solver;
     feCheckReturn(createTimeIntegrator(solver, scheme, NLoptions,
       system, &sol, &mesh, norms, {nullptr, 1, ""}, t0, t1, nTimeSteps));
+
     feCheckReturn(solver->makeSteps(nTimeSteps));
 
     std::vector<std::vector<double>> postProc = solver->getPostProcessingData();
@@ -435,12 +436,21 @@ struct diffusionWeakBC {
 
 struct navierStokesMMS {
 
+  // static double FT(const double t) { UNUSED(t); return 1.; }
+  // static double DFDT(const double t) { UNUSED(t); return 0.; }
+
   // A "separated" function f(t) such that u(x,t) = f(t) * w(x)
-  static double FT(const double t) { return t*t*t*t*t; }
-  static double DFDT(const double t) { return 5.*t*t*t*t; }
+  static double FT(const double t) { return t*t; }
+  static double DFDT(const double t) { return 2.*t; }
+
+  // static double FT(const double t) { return t*t*t*t*t; }
+  // static double DFDT(const double t) { return 5.*t*t*t*t; }
 
   // static double FT(const double t) { return exp(-t); }
   // static double DFDT(const double t) { return -exp(-t); }
+
+  // static double FT(const double t) { return sin(t); }
+  // static double DFDT(const double t) { return cos(t); }
 
   // static double FT(const double t) { return cos(t); }
   // static double DFDT(const double t) { return -sin(t); }
@@ -448,22 +458,48 @@ struct navierStokesMMS {
   // static double FT(const double t) { return 1./(1.+t); }
   // static double DFDT(const double t) { return -1./((1.+t)*(1.+t)); }
 
+  #define U(x,y,t) FT(t) * cos(M_PI*x) * cos(M_PI*y)
+  #define V(x,y,t) FT(t) * sin(M_PI*x) * sin(M_PI*y)
+
+  #define DUDT(x,y,t) DFDT(t) * cos(M_PI*x) * cos(M_PI*y)
+  #define DVDT(x,y,t) DFDT(t) * sin(M_PI*x) * sin(M_PI*y)
+
+  #define UX(x,y,t) - FT(t) * M_PI * sin(M_PI*x) * cos(M_PI*y)
+  #define UY(x,y,t) - FT(t) * M_PI * cos(M_PI*x) * sin(M_PI*y)
+  #define VX(x,y,t)   FT(t) * M_PI * cos(M_PI*x) * sin(M_PI*y)
+  #define VY(x,y,t)   FT(t) * M_PI * sin(M_PI*x) * cos(M_PI*y)
+
+  #define UXX(x,y,t) - FT(t) * M_PI * M_PI * cos(M_PI*x) * cos(M_PI*y)
+  #define UYY(x,y,t) - FT(t) * M_PI * M_PI * cos(M_PI*x) * cos(M_PI*y)
+  #define VXX(x,y,t) - FT(t) * M_PI * M_PI * sin(M_PI*x) * sin(M_PI*y)
+  #define VYY(x,y,t) - FT(t) * M_PI * M_PI * sin(M_PI*x) * sin(M_PI*y)
+
+  // #define P(x,y,t) x*x*y*y
+  // #define PX(x,y,t) 2.*x*y*y
+  // #define PY(x,y,t) 2.*y*x*x
+
+  #define P(x,y,t) x*y
+  #define PX(x,y,t) y
+  #define PY(x,y,t) x
+
   static void uSol_f(const feFunctionArguments &args, const std::vector<double> &/*par*/, std::vector<double> &res)
   {
     const double x = args.pos[0];
     const double y = args.pos[1];
     const double t = args.t;
-    res[0] = FT(t) * x*y;
-    res[1] = FT(t) * -y*y/2.;
+    // res[0] = FT(t) * x*y;
+    // res[1] = FT(t) * -y*y/2.;
+    res[0] = U(x,y,t);
+    res[1] = V(x,y,t);
   }
 
   static double pSol_f(const feFunctionArguments &args, const std::vector<double> &/*par*/)
   {
+    const double t = args.t;
     const double x = args.pos[0];
     const double y = args.pos[1];
-    return x*y;
-    // const double t = args.t;
-    // return sin(t) * x*y;
+    UNUSED(x,y,t);
+    return P(x,y,t);
   }
 
   static void uSrc_f(const feFunctionArguments &args, const std::vector<double> &/*par*/, std::vector<double> &res)
@@ -472,20 +508,16 @@ struct navierStokesMMS {
     const double y = args.pos[1];
     const double t = args.t;
 
-    const double gradp[2] = {y, x};
-    // const double gradp[2] = {sin(t) * y, sin(t) * x};
+    const double gradp[2] = {PX(x,y,t), PY(x,y,t)};
 
-    const double lap_u[2] = {FT(t) * 0.,
-                             FT(t) *-1.};
-    const double u[2] = {FT(t)*x*y,
-                         FT(t)*(-y*y/2.)};
+    const double lap_u[2] = {UXX(x,y,t) + UYY(x,y,t), VXX(x,y,t) + VYY(x,y,t)};
+    const double u[2] = {U(x,y,t), V(x,y,t)};
 
-    const double dudt[2] = {DFDT(t) * x*y,
-                            DFDT(t) * (-y*y/2.)};
+    const double dudt[2] = {DUDT(x,y,t), DVDT(x,y,t)};
 
     // Convention: defined as gradu_ij = du_j/dx_i to agree with directional derivatives
-    const double gradu[2][2] = {{FT(t)*y, FT(t)*0.},
-                                {FT(t)*x, FT(t)*(-y)}};
+    const double gradu[2][2] = {{UX(x,y,t), VX(x,y,t)},
+                                {UY(x,y,t), VY(x,y,t)}};
 
     const double uDotGradu[2] = {(u[0]*gradu[0][0] + u[1]*gradu[1][0]),
                                  (u[0]*gradu[0][1] + u[1]*gradu[1][1])};
@@ -514,13 +546,13 @@ struct navierStokesMMS {
     feMesh2DP1 mesh(meshFile);
     numInteriorElements = mesh.getNumInteriorElements();
 
-    feSpace *u = nullptr, *uB = nullptr, *p = nullptr, *pB = nullptr;
+    feSpace *u = nullptr, *uB = nullptr, *p = nullptr, *pP = nullptr;
     feCheck(createFiniteElementSpace( u, &mesh, elementType::VECTOR_LAGRANGE,   order, "U", "Domaine", degreeQuadrature, &uSol));
     feCheck(createFiniteElementSpace(uB, &mesh, elementType::VECTOR_LAGRANGE,   order, "U", "Bord"   , degreeQuadrature, &uSol));
     feCheck(createFiniteElementSpace( p, &mesh, elementType::LAGRANGE       , order-1, "P", "Domaine", degreeQuadrature, &pSol));
-    feCheck(createFiniteElementSpace(pB, &mesh, elementType::LAGRANGE       , order-1, "P", "PointPression", degreeQuadrature, &pSol));
-    std::vector<feSpace*> spaces = {u, uB, p, pB};
-    std::vector<feSpace*> essentialSpaces = {uB, pB};
+    feCheck(createFiniteElementSpace(pP, &mesh, elementType::LAGRANGE       , order-1, "P", "PointPression", degreeQuadrature, &pSol));
+    std::vector<feSpace*> spaces = {u, uB, p, pP};
+    std::vector<feSpace*> essentialSpaces = {uB, pP};
 
     feMetaNumber numbering(&mesh, spaces, essentialSpaces);
     feSolution sol(numbering.getNbDOFs(), spaces, essentialSpaces);
@@ -568,6 +600,11 @@ struct navierStokesMMS {
 
     TimeIntegrator *solver;
     feCheck(createTimeIntegrator(solver, scheme, NLoptions, system, &sol, &mesh, norms, {nullptr, 1, ""}, t0, t1, nTimeSteps));
+
+    // Start BDF2 with manufactured solution
+    if(scheme == timeIntegratorScheme::BDF2)
+      static_cast<BDF2Integrator*>(solver)->setStartingMethod(BDF2Starter::InitialCondition);
+
     feCheck(solver->makeSteps(nTimeSteps));
 
     std::vector<std::vector<double>> postProc = solver->getPostProcessingData();
@@ -591,7 +628,7 @@ struct navierStokesMMS {
     return FE_STATUS_OK;
   }
 
-  static int meshConvergence(std::stringstream &resultBuffer,
+  static feStatus meshConvergence(std::stringstream &resultBuffer,
                              const timeIntegratorScheme scheme,
                              const std::string &schemeStr,
                              const int order, 
@@ -607,24 +644,24 @@ struct navierStokesMMS {
 
     double t0 = 0.;
     double t1 = 1.;
-    int nTimeSteps = 10;
+    int nTimeSteps = 20;
 
-    bool divergenceFormulation = true;
-    for(int i = 0; i < numMeshes; ++i, nTimeSteps *= 2)
+    bool divergenceFormulation = false;
+    for(int i = 0; i < numMeshes; ++i, nTimeSteps *= 1)
     {
       timeSteps[i] = nTimeSteps;
-      // std::string meshFile = "../../../data/square" + std::to_string(i+1) + ".msh";
-      // std::string meshFile = "../../../data/square1.msh";
-      std::string meshFile = "../../../data/stokes1.msh";
-      solve(meshFile, scheme, t0, t1, nTimeSteps, order, degreeQuadrature, NLoptions, divergenceFormulation, nElm[i], errU[i], errP[i]);
+      // std::string meshFile = "../../../data/stokes" + std::to_string(i+1) + ".msh";
+      std::string meshFile = "../data/stokes" + std::to_string(i+1) + ".msh";
+      // std::string meshFile = "../../../data/stokes1.msh";
+      feCheckReturn(solve(meshFile, scheme, t0, t1, nTimeSteps, order, degreeQuadrature, NLoptions, divergenceFormulation, nElm[i], errU[i], errP[i]));
     }
     resultBuffer << "Taylor-Hood elements P" << order << "-P" << order-1 << std::endl; 
     resultBuffer << "Navier-Stokes MMS - " << schemeStr << " Divergence formulation - Error on u" << std::endl;
-    // computeAndPrintConvergence(2, numMeshes, errU, nElm, DEFAULT_SIGNIFICANT_DIGITS, resultBuffer);
-    computeAndPrintConvergence(1, numMeshes, errU, timeSteps, DEFAULT_SIGNIFICANT_DIGITS, resultBuffer);
+    computeAndPrintConvergence(2, numMeshes, errU, nElm, DEFAULT_SIGNIFICANT_DIGITS, resultBuffer);
+    // computeAndPrintConvergence(1, numMeshes, errU, timeSteps, DEFAULT_SIGNIFICANT_DIGITS, resultBuffer);
     resultBuffer << "Navier-Stokes MMS - " << schemeStr << " Divergence formulation - Error on p" << std::endl;
-    // computeAndPrintConvergence(2, numMeshes, errP, nElm, DEFAULT_SIGNIFICANT_DIGITS, resultBuffer);
-    computeAndPrintConvergence(1, numMeshes, errP, timeSteps, DEFAULT_SIGNIFICANT_DIGITS, resultBuffer);
+    computeAndPrintConvergence(2, numMeshes, errP, nElm, DEFAULT_SIGNIFICANT_DIGITS, resultBuffer);
+    // computeAndPrintConvergence(1, numMeshes, errP, timeSteps, DEFAULT_SIGNIFICANT_DIGITS, resultBuffer);
 
     // nTimeSteps = 10;
     // divergenceFormulation = false;
@@ -639,7 +676,7 @@ struct navierStokesMMS {
     // resultBuffer << "Navier-Stokes MMS - Laplacian formulation - Error on p" << std::endl;
     // computeAndPrintConvergence(2, numMeshes, errP, nElm, DEFAULT_SIGNIFICANT_DIGITS, resultBuffer);
 
-    return 0;
+    return FE_STATUS_OK;
   }
 };
 
@@ -677,40 +714,6 @@ feStatus timeStepConvergence(std::stringstream &resultBuffer,
   return FE_STATUS_OK;
 }
 
-// //
-// // Convergence study - Refine mesh and time step
-// //
-// template<typename problemType>
-// feStatus meshAndTimeStepConvergence(std::stringstream &resultBuffer,
-//                                     const timeIntegratorScheme scheme,
-//                                     const double t0,
-//                                     const double t1, 
-//                                     const int initial_nTimeSteps,
-//                                     const int order,
-//                                     const int N,
-//                                     const int degreeQuadrature)
-// {
-//   feNLSolverOptions NLoptions{1e-10, 1e-10, 1e4, 10, 4, 1e-1};
-//   {
-//     std::vector<int> nElm(N);
-//     std::vector<int> timeSteps(N);
-//     std::vector<double> err(N, 0.);
-//     int nTimeSteps = initial_nTimeSteps;
-
-//     for(int i = 0; i < N; ++i, nTimeSteps *= 2)
-//     {
-//       timeSteps[i] = nTimeSteps;
-//       // std::string meshFile = "../../../data/square" + std::to_string(i+1) + ".msh";
-//       std::string meshFile = "../../../data/square1.msh";
-//       feCheckReturn(problemType::solve(meshFile, scheme, t0, t1, nTimeSteps, order, degreeQuadrature, NLoptions, nElm[i], err[i]));
-//     }
-//     resultBuffer << "Unsteady vector diffusion - Error on u - Lagrange elements P" << order << std::endl;
-//     // computeAndPrintConvergence(2, N, err, nElm, DEFAULT_SIGNIFICANT_DIGITS, resultBuffer);
-//     computeAndPrintConvergence(1, N, err, timeSteps, DEFAULT_SIGNIFICANT_DIGITS, resultBuffer);
-//   }
-//   return FE_STATUS_OK;
-// }
-
 TEST(VectorFEUnsteady, LinearODE)
 {
   initialize(my_argc, my_argv);
@@ -732,28 +735,27 @@ TEST(VectorFEUnsteady, LinearODE)
   finalize();
 }
 
-// TEST(VectorFEUnsteady, Diffusion)
-// {
-//   initialize(my_argc, my_argv);
-//   // setVerbose(0);
-//   std::string testRoot = "../../../tests/withLinearSolver/vectorFEunsteady_diffusion";
-//   std::stringstream resultBuffer;
-//   int degreeQuadrature = 4;
-//   double t0 = 0.;
-//   double t1 = 1.;
-//   int initial_nTimeSteps = 1;
+TEST(VectorFEUnsteady, Diffusion)
+{
+  initialize(my_argc, my_argv);
+  // setVerbose(0);
+  std::string testRoot = "../../../tests/withLinearSolver/vectorFEunsteady_diffusion";
+  std::stringstream resultBuffer;
+  int degreeQuadrature = 4;
+  double t0 = 0.;
+  double t1 = 1.;
+  int initial_nTimeSteps = 10;
 
-//   // for(size_t i = 0; i < schemes.size(); ++i)
-//   for(size_t i = 2; i < 3; ++i)
-//   // for(size_t i = 3; i < 4; ++i)
-//   {
-//     std::string message = "Diffusion PDE w/ strong BC - Error on vector-valued solution u - Time integrator: " + schemesStr[i];
-//     ASSERT_TRUE(timeStepConvergence<diffusion>(resultBuffer, schemes[i], t0, t1, initial_nTimeSteps, 1, 1, degreeQuadrature, message) == FE_STATUS_OK);
-//   }
+  // for(size_t i = 0; i < schemes.size(); ++i)
+  for(size_t i = 0; i < 2; ++i)
+  {
+    std::string message = "Diffusion PDE w/ strong BC - Error on vector-valued solution u - Time integrator: " + schemesStr[i];
+    ASSERT_TRUE(timeStepConvergence<diffusion>(resultBuffer, schemes[i], t0, t1, initial_nTimeSteps, 3, 6, degreeQuadrature, message) == FE_STATUS_OK);
+  }
 
-//   EXPECT_EQ(compareOutputFiles(testRoot, resultBuffer), 0);
-//   finalize();
-// }
+  EXPECT_EQ(compareOutputFiles(testRoot, resultBuffer), 0);
+  finalize();
+}
 
 // TEST(VectorFEUnsteady, DiffusionWeakBC)
 // {
@@ -776,27 +778,28 @@ TEST(VectorFEUnsteady, LinearODE)
 //   finalize();
 // }
 
-// TEST(VectorFEUnsteady, NSMMS)
-// {
-//   initialize(my_argc, my_argv);
-//   // setVerbose(0);
-//   std::string testRoot = "../../../tests/withLinearSolver/vectorFEunsteady_nsmms";
-//   std::stringstream resultBuffer;
-//   int degreeQuadrature = 8;
-//   // double t0 = 0.;
-//   // double t1 = 1.;
-//   // int initial_nTimeSteps = 10;
+TEST(VectorFEUnsteady, NSMMS)
+{
+  initialize(my_argc, my_argv);
+  // setVerbose(0);
+  std::string testRoot = "../../../tests/withLinearSolver/vectorFEunsteady_nsmms";
+  std::stringstream resultBuffer;
+  int degreeQuadrature = 8;
+  double t0 = 0.;
+  double t1 = 1.;
+  int initial_nTimeSteps = 10;
 
-//   for(size_t i = 0; i < schemes.size(); ++i)
-//   {
-//     // std::string message = " - Error on vector-valued solution u - Time integrator: " + schemesStr[i];
-//     // ASSERT_TRUE(timeStepConvergence<diffusion>(resultBuffer, schemes[i], t0, t1, initial_nTimeSteps, 3, 4, degreeQuadrature, message) == FE_STATUS_OK);
-//     navierStokesMMS::meshConvergence(resultBuffer, schemes[i], schemesStr[i], 3, 6, degreeQuadrature);
-//   }
+  // for(size_t i = 0; i < schemes.size(); ++i)
+  for(size_t i = 0; i < 2; ++i)
+  {
+    std::string message = " - Error on vector-valued solution u - Time integrator: " + schemesStr[i];
+    ASSERT_TRUE(timeStepConvergence<diffusion>(resultBuffer, schemes[i], t0, t1, initial_nTimeSteps, 2, 6, degreeQuadrature, message) == FE_STATUS_OK);
+    // navierStokesMMS::meshConvergence(resultBuffer, schemes[i], schemesStr[i], 2, 4, degreeQuadrature);
+  }
 
-//   EXPECT_EQ(compareOutputFiles(testRoot, resultBuffer), 0);
-//   finalize();
-// }
+  EXPECT_EQ(compareOutputFiles(testRoot, resultBuffer), 0);
+  finalize();
+}
 
 //
 // Custom main to capture argc and argv

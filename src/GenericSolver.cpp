@@ -145,6 +145,80 @@ feStatus SolverBase::solve(feMesh                 *mesh,
 
   std::vector<feNorm *> norms = {};
 
+  if(_normTypes.size() > 0)
+  {
+    for(size_t i = 0; i < _normTypes.size(); ++i)
+    {
+      const int index = _normTypes[i].first;
+      const normType nt = _normTypes[i].second;
+      if(nt == L2_ERROR)
+      {
+        bool found = false;
+        for(const auto &p : _scalarExactSolutions)
+        {
+          if(p.first == index)
+          {
+            found = true;
+            const feFunction *exactSolution = p.second;
+            if(exactSolution) {
+              feNorm *n;
+              feCheckReturn(createNorm(n, L2_ERROR, {spaces[index]}, sol, exactSolution));
+              norms.push_back(n);
+            }
+          }
+        }
+        if(!found)
+        {
+          return feErrorMsg(FE_STATUS_ERROR, "An L2_ERROR norm is set to be computed for FE space %d,"
+            " but no scalar reference field was provided for this space.",
+            index);
+        }
+      }
+
+      else if(nt == H1_ERROR || nt == SEMI_H1_ERROR || nt == VECTOR_L2_ERROR || nt == VECTOR_SEMI_H1_ERROR)
+      {
+        bool found = false;
+        for(const auto &p : _vectorExactSolutions)
+        {
+          if(p.first == index)
+          {
+            found = true;
+            const feVectorFunction *exactSolution = p.second;
+            if(exactSolution) {
+              feNorm *n;
+              feCheckReturn(createNorm(n, nt, {spaces[index]}, sol, nullptr, exactSolution));
+              norms.push_back(n);
+            }
+          }
+        }
+        if(!found)
+        {
+          return feErrorMsg(FE_STATUS_ERROR, "An H1_ERROR/VECTOR_L2_ERROR/VECTOR_SEMI_H1_ERROR "
+            " norm is set to be computed for FE space %d,"
+            " but no vector reference field was provided for this space.",
+            index);
+        }
+      }
+
+      else
+      {
+        return feErrorMsg(FE_STATUS_ERROR, "Prescribed norm in GenericSolver is not handled.");
+      }
+    }
+  }
+
+  // feNorm *norm1;
+  // if(_scalarExactSolutions.size() > 0) {
+  //   for(size_t i = 0; i < _scalarExactSolutions.size(); ++i)
+  //   {
+  //     const feFunction *exactSolution = _scalarExactSolutions[i].second;
+  //     if(exactSolution) {
+  //       feCheckReturn(createNorm(norm1, L2_ERROR, {spaces[i]}, sol, exactSolution));
+  //       norms.push_back(norm1);
+  //     }
+  //   }
+  // }
+
   //
   // Until NLoptions and timeIntegratorScheme are fully replaced by feParameters
   // structures:
@@ -208,10 +282,14 @@ feStatus SolverBase::solve(feMesh                 *mesh,
   // Solve
   feCheckReturn(timeIntegrator->makeSteps(nT));
 
+  _postProcessingData = timeIntegrator->getPostProcessingData();
+
   delete timeIntegrator;
   delete system;
   for (feBilinearForm *f : forms)
     delete f;
+  for (feNorm *norm : norms)
+    delete norm;
 
   return FE_STATUS_OK;
 }
@@ -489,7 +567,7 @@ feStatus SolverBase::solve(feMesh                 *mesh,
   adapter.currentTime = timeIntegrator->getCurrentTime();
 
   feInfo("Time integrator computed %d norms", norms.size());
-  // 
+  
   std::vector<std::vector<double>> postProc = timeIntegrator->getPostProcessingData();
   if(postProc.size() >= 2) {
     for(int j = 0; j < nT+1; ++j) {
@@ -499,14 +577,10 @@ feStatus SolverBase::solve(feMesh                 *mesh,
     }
   }
 
-  feInfo("postproc of size %d", postProc.size());
-
   delete adapter.allContainers[iInterval];
   adapter.allContainers[iInterval] = new feSolutionContainer();
   adapter.allContainers[iInterval]->NaNify();
   *(adapter.allContainers[iInterval]) = timeIntegrator->getSolutionContainer();
-
-  feInfo("Reassigned container");
 
   delete timeIntegrator;
   delete system;
@@ -610,12 +684,16 @@ SolverBase::projectSolution(feMesh2DP1                  *currentMesh,
 
 feStatus SolverBase::readReferenceTestCase(const std::string meshName,
                                            const std::string solutionFileName,
-                                           feMesh          *&mesh,
+                                           feMesh                *&mesh,
                                            std::vector<feSpace *> &spaces,
                                            feMetaNumber          *&numbering,
                                            feSolution            *&sol) const
 {
+  feInfo("Starting with mesh %p", mesh);
+
   mesh = new feMesh2DP1(meshName);
+
+  feInfo("Created mesh %p", mesh);
 
   // Essential spaces are not needed for error computation, and are not
   // returned

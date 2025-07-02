@@ -2,11 +2,11 @@
 #define _FESOLUTION_
 
 #include "feMesh.h"
-#include "feSpace.h"
 #include "feNumber.h"
 #include "feSolutionContainer.h"
+#include "feSpace.h"
 #if defined(HAVE_OMP)
-#include "omp.h"
+#  include "omp.h"
 #endif
 
 class feSolutionContainer;
@@ -34,48 +34,48 @@ protected:
   // Initial and final time of integration, (number of) time steps
   double _t0;
   double _t1;
-  int _nTimeSteps;
+  int    _nTimeSteps;
   double _dt;
 
 public:
   // Copy of the FE spaces ptrs
-  std::vector<feSpace*> _spaces;
-  std::vector<feSpace*> _essentialSpaces;
+  std::vector<feSpace *> _spaces;
+  std::vector<feSpace *> _essentialSpaces;
 
 public:
-  feSolution() {};
-  // Create a solution wrapper holding numDOF degrees of freedom and their time derivative.
-  feSolution(const int numDOF,
-             const std::vector<feSpace*> &spaces,
-             const std::vector<feSpace*> &essentialSpaces);
+  feSolution(){};
+  // Create a solution wrapper holding numDOF degrees of freedom and their time
+  // derivative.
+  feSolution(const int                     numDOF,
+             const std::vector<feSpace *> &spaces,
+             const std::vector<feSpace *> &essentialSpaces);
   // Create a solution wrapper from an existing solution container,
   // using the solution stored at position solutionIndex
-  feSolution(const feSolutionContainer &container,
-             const int solutionIndex,
-             const std::vector<feSpace*> &spaces,
-             const std::vector<feSpace*> &essentialSpaces);
-  // Create a solution wrapper holding numDOF degrees of freedom from a solution file.
-  // See printSol function for parsing.
-  feSolution(const int numDOF,
-             const std::string solutionFile);
+  feSolution(const feSolutionContainer    &container,
+             const int                     solutionIndex,
+             const std::vector<feSpace *> &spaces,
+             const std::vector<feSpace *> &essentialSpaces);
+  // Create a solution wrapper holding numDOF degrees of freedom from a solution
+  // file. See printSol function for parsing.
+  feSolution(const int numDOF, const std::string solutionFile);
 
-  int getNumDOFs() { return _nDOF; }
+  int    getNumDOFs() { return _nDOF; }
   double getC0() const { return _c0; }
-  void setC0(double c0) { _c0 = c0; }
+  void   setC0(double c0) { _c0 = c0; }
   double getCurrentTime() const { return _tn; }
-  void setCurrentTime(double t) { _tn = t; }
+  void   setCurrentTime(double t) { _tn = t; }
   double getTimeStep() const { return _dt; }
   double getNbTimeSteps() const { return _nTimeSteps; }
   double getInitialTime() const { return _t0; }
   double getFinalTime() const { return _t1; }
 
-  std::vector<double> &getSolution() { return _sol; }
-  std::vector<double> &getSolutionDot() { return _dsoldt; }
+  std::vector<double>       &getSolution() { return _sol; }
+  std::vector<double>       &getSolutionDot() { return _dsoldt; }
   const std::vector<double> &getSolution() const { return _sol; }
   const std::vector<double> &getSolutionDot() const { return _dsoldt; }
   // To remove
-  std::vector<double> getSolutionCopy() const { return _sol; }
-  std::vector<double> getSolutionDotCopy() const { return _dsoldt; }
+  std::vector<double>  getSolutionCopy() const { return _sol; }
+  std::vector<double>  getSolutionDotCopy() const { return _dsoldt; }
   std::vector<double> &getSolutionReference() { return _sol; }
   std::vector<double> &getSolutionReferenceDot() { return _dsoldt; }
 
@@ -84,8 +84,10 @@ public:
   double getSolDotAtDOF(int iDOF) const { return _dsoldt[iDOF]; }
   // Fill 'sol' with the solution at dofs with numbers stored in 'addressing'.
   // Sizes of the vector arguments must match.
-  void getSolAtDOF(const std::vector<feInt> &addressing, std::vector<double> &sol) const;
-  void getSolDotAtDOF(const std::vector<feInt> &addressing, std::vector<double> &solDot) const;
+  void getSolAtDOF(const std::vector<feInt> &addressing,
+                   std::vector<double>      &sol) const;
+  void getSolDotAtDOF(const std::vector<feInt> &addressing,
+                      std::vector<double>      &solDot) const;
 
   void setSolAtDOF(int iDOF, double val) { _sol[iDOF] = val; }
   void setSolDotAtDOF(int iDOF, double val) { _dsoldt[iDOF] = val; }
@@ -93,7 +95,8 @@ public:
   void incrementSolAtDOF(int iDOF, double val) { _sol[iDOF] += val; }
 
   // Set the solution array to the iSol-th solution stored in solContainer
-  void setSolFromContainer(const feSolutionContainer *solContainer, const int iSol = 0);
+  void setSolFromContainer(const feSolutionContainer *solContainer,
+                           const int                  iSol = 0);
 
   // Reset the time derivative of the solution
   void setSolDotToZero();
@@ -102,16 +105,21 @@ public:
   // and dof initialization mode.
   void initialize(feMesh *mesh);
   void initializeUnknowns(feMesh *mesh);
-  void initializeEssentialBC(feMesh *mesh, feSolutionContainer *solContainer = nullptr);
+  void initializeEssentialBC(feMesh              *mesh,
+                             feSolutionContainer *solContainer = nullptr);
 
   // Should be moved elsewhere
   void initializeTemporalSolution(double t0, double t1, int nTimeSteps);
 
-  void copySpace(feMesh *mesh, feSpace *s1, feSpace *s2);
-  feStatus addConstantTimesSpace(feMesh *mesh, 
-  const double coeff, feSpace *sourceSpace, feSpace *targetSpace);
-  feStatus addSquaredNormOfVectorSpace(feMesh *mesh, 
-    const double coeff, feSpace *sourceSpace, feSpace *targetSpace);
+  void     copySpace(feMesh *mesh, feSpace *s1, feSpace *s2);
+  feStatus addConstantTimesSpace(feMesh      *mesh,
+                                 const double coeff,
+                                 feSpace     *sourceSpace,
+                                 feSpace     *targetSpace);
+  feStatus addSquaredNormOfVectorSpace(feMesh      *mesh,
+                                       const double coeff,
+                                       feSpace     *sourceSpace,
+                                       feSpace     *targetSpace);
 
   void printSol(const std::string &file = "");
 };

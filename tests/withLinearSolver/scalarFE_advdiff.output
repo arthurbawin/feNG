@@ -1,28 +1,28 @@
-Advection-diffusion - Error on u - Lagrange elements P1
+Advection-diffusion - Error on u - Lagrange elements P1 field 0
             nElm           error            rate
-              42    3.037079e-03    0.000000e+00
-             168    7.570182e-04    2.004284e+00
-             672    1.891065e-04    2.001129e+00
-            2688    4.726645e-05    2.000311e+00
+              32    6.627960e-03    0.000000e+00
+             128    1.642586e-03    2.012596e+00
+             512    4.096968e-04    2.003341e+00
+            2048    1.023639e-04    2.000850e+00
 
-Advection-diffusion - Error on u - Lagrange elements P2
+Advection-diffusion - Error on u - Lagrange elements P2 field 0
             nElm           error            rate
-              42    9.567463e-05    0.000000e+00
-             168    1.191434e-05    3.005438e+00
-             672    1.488523e-06    3.000745e+00
-            2688    1.861286e-07    2.999510e+00
+              32    8.535503e-05    0.000000e+00
+             128    1.069797e-05    2.996140e+00
+             512    1.337817e-06    2.999384e+00
+            2048    1.672420e-07    2.999872e+00
 
-Advection-diffusion - Error on u - Lagrange elements P3
+Advection-diffusion - Error on u - Lagrange elements P3 field 0
             nElm           error            rate
-              42    3.176260e-06    0.000000e+00
-             168    1.948962e-07    4.026551e+00
-             672    1.203805e-08    4.017032e+00
-            2688    7.474306e-10    4.009519e+00
+              32    3.656498e-06    0.000000e+00
+             128    2.270226e-07    4.009555e+00
+             512    1.406515e-08    4.012639e+00
+            2048    8.740671e-10    4.008237e+00
 
-Advection-diffusion - Error on u - Lagrange elements P4
+Advection-diffusion - Error on u - Lagrange elements P4 field 0
             nElm           error            rate
-              42    7.398458e-08    0.000000e+00
-             168    2.299071e-09    5.008101e+00
-             672    7.174438e-11    5.002041e+00
-            2688    2.241459e-12    5.000356e+00
+              32    1.850028e-07    0.000000e+00
+             128    5.817233e-09    4.991070e+00
+             512    1.814484e-10    5.002702e+00
+            2048    5.656129e-12    5.003601e+00
 

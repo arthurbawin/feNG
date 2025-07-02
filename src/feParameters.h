@@ -175,6 +175,10 @@ namespace Parameters
     // IO.writeDir + restartMeshesRoot + "_intervalXX.msh"
     std::string restartMeshesRoot = "";
 
+    // Write the last solution of the transient adaptation loop
+    // to file as reference solution.
+    bool writeSolutionAsReference = false;
+
     // When reading a reference mesh and solution, we look for the files:
     //
     // Mesh: IO.writeDir + referenceMeshRoot + "_intervalXX.msh"
@@ -183,6 +187,7 @@ namespace Parameters
     // 
     // Solution file: IO.writeDir + referenceSolutionRoot + "_intervalXX.txt"
     bool readReferenceSolution = false;
+    std::string referenceDirectory = "./";
     std::string referenceMeshRoot = "referenceMesh";
     std::string referenceSolutionRoot = "referenceSolution";
   };

@@ -1,0 +1,42 @@
+Mixed diffusion - Lagrange elements P1 Error on field 0
+            nElm           error            rate
+              32    6.943903e-02    0.000000e+00
+             128    1.814914e-02    1.935846e+00
+             512    4.583262e-03    1.985454e+00
+            2048    1.148104e-03    1.997121e+00
+
+Mixed diffusion - Lagrange elements P1 Error on field 1
+            nElm           error            rate
+              32    7.630917e-02    0.000000e+00
+             128    1.906618e-02    2.000841e+00
+             512    4.701032e-03    2.019966e+00
+            2048    1.163052e-03    2.015062e+00
+
+Mixed diffusion - Lagrange elements P1 Error on field 2
+            nElm           error            rate
+              32    7.364452e-02    0.000000e+00
+             128    1.864898e-02    1.981482e+00
+             512    4.644680e-03    2.005445e+00
+            2048    1.155737e-03    2.006766e+00
+
+Mixed diffusion - Lagrange elements P2 Error on field 0
+            nElm           error            rate
+              32    4.217169e-03    0.000000e+00
+             128    5.438969e-04    2.954870e+00
+             512    6.859945e-05    2.987064e+00
+            2048    8.596051e-06    2.996451e+00
+
+Mixed diffusion - Lagrange elements P2 Error on field 1
+            nElm           error            rate
+              32    4.323403e-03    0.000000e+00
+             128    5.468339e-04    2.982993e+00
+             512    6.865684e-05    2.993627e+00
+            2048    8.597027e-06    2.997494e+00
+
+Mixed diffusion - Lagrange elements P2 Error on field 2
+            nElm           error            rate
+              32    4.382671e-03    0.000000e+00
+             128    5.469728e-04    3.002269e+00
+             512    6.864328e-05    2.994279e+00
+            2048    8.596663e-06    2.997270e+00
+

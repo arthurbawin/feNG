@@ -92,22 +92,38 @@ DiffusionSolver::createBilinearForms(const std::vector<feSpace *>  &spaces,
 // Compute error on scalar fields
 //
 feStatus DiffusionSolver::computeError(const std::vector<feSpace *> &spaces,
-                                       feMesh * /*mesh*/,
-                                       feSolution *sol,
-                                       const int /*iIntervalReferenceSolution*/,
-                                       TransientAdapter & /*adapter*/,
+                                       feMesh                       *mesh,
+                                       feSolution                   *sol,
+                                       const int iIntervalReferenceSolution,
+                                       TransientAdapter    &adapter,
                                        std::vector<double> &errors) const
 {
   const feFunction *exactSolution = _scalarExactSolutions[0].second;
 
+  feSpace *u      = spaces[0];
+  feNorm  *errorU = nullptr;
+
   if (exactSolution)
   {
-    feSpace *u = spaces[0];
-    feNorm  *errorU;
-    feCheck(createNorm(errorU, L2_ERROR, {u}, sol, exactSolution));
+    feInfo("Computing error from analytical solution");
+    feCheckReturn(createNorm(errorU, L2_ERROR, {u}, sol, exactSolution));
     errors[0] = errorU->compute();
-    delete errorU;
   }
+
+  if (adapter._adapt_parameters.readReferenceSolution)
+  {
+    feInfo("Computing error from finer reference solution");
+    feCheckReturn(createNorm(errorU, NONE, {u}, sol));
+    feCheckReturn(errorU->computeErrorNormFromExternalSolution(
+      adapter.referenceTestCases[iIntervalReferenceSolution].mesh,
+      adapter.referenceTestCases[iIntervalReferenceSolution].sol,
+      adapter.referenceTestCases[iIntervalReferenceSolution].spaces,
+      mesh,
+      sol,
+      errors));
+  }
+
+  delete errorU;
 
   return FE_STATUS_OK;
 }

@@ -1472,7 +1472,7 @@ protected:
   std::vector<double> _phiP, _phiPhi, _phiMu, _gradPhiU, _gradPhiP, _gradPhiPhi,
     _gradPhiMu;
   std::vector<double> _uDotPhiU, _dudtDotPhiU, _uDotGraduDotPhiU, _fDotPhiU,
-    _SuDotPhiU, _gradPhiDotphiU, _divPhiU, _doubleContraction,
+    _SuDotPhiU, _gradPhiDotphiU, _gradMuDotphiU, _divPhiU, _doubleContraction,
     _gradMuDotgradUdotphiU;
 
 public:

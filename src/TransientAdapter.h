@@ -62,7 +62,7 @@ public:
 
   struct referenceTestCaseStruct
   {
-    feMesh2DP1            *mesh;
+    feMesh                *mesh;
     feMetaNumber          *numbering;
     feSolution            *sol;
     std::vector<feSpace *> spaces;

@@ -6,6 +6,7 @@
 #include "feFunction.h"
 #include "feMessage.h"
 #include "feNonLinearSolver.h"
+#include "feNorm.h"
 #include "feNumber.h"
 #include "feParameters.h"
 
@@ -62,9 +63,14 @@ public:
   // Number of unknown (solved) scalar and/or vector fields
   int _numFields = 0;
 
-  // Scalar exact solution, along with the index of the
-  // associated scalar space given in fieldDescriptors.
+  // Scalar and vecotr exact solutions, along with the index of the
+  // associated space given in fieldDescriptors.
   std::vector<std::pair<int, const feFunction *>> _scalarExactSolutions;
+  std::vector<std::pair<int, const feVectorFunction *>> _vectorExactSolutions;
+
+  std::vector<std::pair<int, normType>> _normTypes;
+
+  mutable std::vector<std::vector<double>> _postProcessingData;
 
 public:
   SolverBase(const Parameters::NonLinearSolver &NLSolver_parameters,
@@ -86,6 +92,20 @@ public:
     const std::vector<std::pair<int, const feFunction *>> &solutions)
   {
     _scalarExactSolutions = solutions;
+  }
+  void setVectorSolutions(
+    const std::vector<std::pair<int, const feVectorFunction *>> &solutions)
+  {
+    _vectorExactSolutions = solutions;
+  }
+  void setNormTypes(
+    const std::vector<std::pair<int, normType>> &normTypes)
+  {
+    _normTypes = normTypes;
+  }
+  std::vector<std::vector<double>> getPostProcessingData() const
+  {
+    return _postProcessingData;
   }
 
 private:

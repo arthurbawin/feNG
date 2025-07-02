@@ -181,20 +181,19 @@ feStatus TransientAdapter::allocate(const SolverBase &solver)
 
     for (int iIref = 0; iIref < ap.nIntervalsReferenceSolution; ++iIref)
     {
-      std::string refMeshFile = io.writeDir + ap.referenceMeshRoot +
+      std::string refMeshFile = ap.referenceDirectory + ap.referenceMeshRoot +
                                 "_interval" + std::to_string(iIref) + ".msh";
-      std::string refSolutionFile = io.writeDir + ap.referenceSolutionRoot +
+      std::string refSolutionFile = ap.referenceDirectory + ap.referenceSolutionRoot +
                                     "_interval" + std::to_string(iIref) +
                                     ".txt";
 
-      feMesh *mesh = referenceTestCases[iIref].mesh;
-
-      solver.readReferenceTestCase(refMeshFile,
-                                   refSolutionFile,
-                                   mesh,
-                                   referenceTestCases[iIref].spaces,
-                                   referenceTestCases[iIref].numbering,
-                                   referenceTestCases[iIref].sol);
+      feCheckReturn(
+        solver.readReferenceTestCase(refMeshFile,
+                                     refSolutionFile,
+                                     referenceTestCases[iIref].mesh,
+                                     referenceTestCases[iIref].spaces,
+                                     referenceTestCases[iIref].numbering,
+                                     referenceTestCases[iIref].sol));
     }
   }
 
@@ -578,7 +577,7 @@ feStatus TransientAdapter::fixedPointIteration(SolverBase &solver)
 
     feExporter *exporter = nullptr;
     std::string vtkFileRoot =
-      _io_parameters.writeDir + "sol_iConv" + std::to_string(0);
+      _io_parameters.writeDir + "sol_iFP_" + std::to_string(iFixedPoint);
     if (_io_parameters.exportVisualizationFile)
     {
       feCheck(createVisualizationExporter(
@@ -659,6 +658,45 @@ feStatus TransientAdapter::fixedPointIteration(SolverBase &solver)
   {
     this->computeSpaceTimeMetrics();
     // this->adapt();
+  }
+
+  //
+  // Export current solution as reference solution at last iteration
+  //
+  if (iFixedPoint == _adapt_parameters.nFixedPoint - 1)
+  {
+    if (ap.writeSolutionAsReference)
+    {
+      for (int iI = 0; iI < nI; ++iI)
+      {
+        std::string solutionFileName =
+          _io_parameters.writeDir + _adapt_parameters.referenceSolutionRoot +
+          "_interval" + std::to_string(iI) + ".txt";
+        feSolution sol(*allContainers[iI],
+                       0,
+                       allSpaces[iI],
+                       allEssentialSpaces[iI]);
+        feInfo("Writing solution with time %f and %d (%d) dofs",
+               sol.getCurrentTime(),
+               sol.getNumDOFs(),
+               allContainers[iI]->getNbDOFs());
+        sol.printSol(solutionFileName);
+      }
+
+      // // Check: read new mesh and solution
+      // feInfo("Check : Reading reference solution all each interval");
+      // for (int iI = 0; iI < nI; ++iI)
+      // {
+      //   std::string referenceMeshName = allMeshes[iI]->getID();
+      //   std::string solutionFileName  = _io_parameters.writeDir +
+      //                                  "currentSolution_interval" +
+      //                                  std::to_string(iI) + ".txt";
+      //   solver.readReferenceTestCase(iI,
+      //                                 adapter,
+      //                                 referenceMeshName,
+      //                                 solutionFileName);
+      // }
+    }
   }
 
   ++iFixedPoint;

@@ -11,379 +11,383 @@
 static int my_argc;
 static char** my_argv;
 
-// struct diffusion {
+struct diffusion {
 
-//   static double uSol_f(const feFunctionArguments &args, const std::vector<double> &/*par*/)
-//   {
-//     const double x = args.pos[0];
-//     const double y = args.pos[1];
-//     return sin(M_PI*x)*sin(M_PI*y);
-//   }
+  static double uSol_f(const feFunctionArguments &args, const std::vector<double> &/*par*/)
+  {
+    const double x = args.pos[0];
+    const double y = args.pos[1];
+    return sin(M_PI*x)*sin(M_PI*y);
+  }
 
-//   static double uSrc_f(const feFunctionArguments &args, const std::vector<double> &/*par*/)
-//   {
-//     const double x = args.pos[0];
-//     const double y = args.pos[1];
-//     return -2. * M_PI*M_PI * sin(M_PI*x)*sin(M_PI*y);
-//   }
+  static double uSrc_f(const feFunctionArguments &args, const std::vector<double> &/*par*/)
+  {
+    const double x = args.pos[0];
+    const double y = args.pos[1];
+    return -2. * M_PI*M_PI * sin(M_PI*x)*sin(M_PI*y);
+  }
 
-//   static feStatus solve(const std::string &meshFile,
-//                         const int order,
-//                         const int degreeQuadrature,
-//                         const feNLSolverOptions &NLoptions,
-//                         int &numInteriorElements,
-//                         double &L2Error)
-//   {
-//     feFunction uSol(uSol_f);
-//     feFunction uSrc(uSrc_f);
+  static feStatus solve(const std::string &meshFile,
+                        const int order,
+                        const int degreeQuadrature,
+                        const feNLSolverOptions &NLoptions,
+                        int &numInteriorElements,
+                        std::vector<double> &errors)
+  {
+    feFunction uSol(uSol_f);
+    feFunction uSrc(uSrc_f);
 
-//     feMesh2DP1 mesh(meshFile);
-//     numInteriorElements = mesh.getNumInteriorElements();
+    feMesh2DP1 mesh(meshFile);
+    numInteriorElements = mesh.getNumInteriorElements();
 
-//     feSpace *u = nullptr, *uBord = nullptr;
-//     feCheckReturn(createFiniteElementSpace(uBord, &mesh, elementType::LAGRANGE, order, "U",    "Bord", degreeQuadrature, &uSol));
-//     feCheckReturn(createFiniteElementSpace(    u, &mesh, elementType::LAGRANGE, order, "U", "Domaine", degreeQuadrature, &scalarConstant::zero));
+    feSpace *u = nullptr, *uBord = nullptr;
+    feCheckReturn(createFiniteElementSpace(uBord, &mesh, elementType::LAGRANGE, order, "U",    "Bord", degreeQuadrature, &uSol));
+    feCheckReturn(createFiniteElementSpace(    u, &mesh, elementType::LAGRANGE, order, "U", "Domaine", degreeQuadrature, &scalarConstant::zero));
 
-//     std::vector<feSpace*> spaces = {uBord, u};
-//     std::vector<feSpace*> essentialSpaces = {uBord};
+    std::vector<feSpace*> spaces = {uBord, u};
+    std::vector<feSpace*> essentialSpaces = {uBord};
 
-//     feMetaNumber numbering(&mesh, spaces, essentialSpaces);
-//     feSolution sol(numbering.getNbDOFs(), spaces, essentialSpaces);
+    feMetaNumber numbering(&mesh, spaces, essentialSpaces);
+    feSolution sol(numbering.getNbDOFs(), spaces, essentialSpaces);
     
-//     feBilinearForm *diff = nullptr, *src = nullptr;
-//     feCheckReturn(createBilinearForm(diff, {u}, new feSysElm_Diffusion<2>(&scalarConstant::one)));
-//     feCheckReturn(createBilinearForm(src, {u}, new feSysElm_Source(&uSrc)));
-//     std::vector<feBilinearForm*> forms = {diff, src};
+    feBilinearForm *diff = nullptr, *src = nullptr;
+    feCheckReturn(createBilinearForm(diff, {u}, new feSysElm_Diffusion<2>(&scalarConstant::one)));
+    feCheckReturn(createBilinearForm(src, {u}, new feSysElm_Source(&uSrc)));
+    std::vector<feBilinearForm*> forms = {diff, src};
 
-//     feLinearSystem *system;
-//     #if defined(HAVE_MKL)
-//       feCheckReturn(createLinearSystem(system, MKLPARDISO, forms, numbering.getNbUnknowns()));
-//     #elif defined(HAVE_PETSC) && defined(PETSC_HAVE_MUMPS)
-//       feCheckReturn(createLinearSystem(system, PETSC_MUMPS, forms, numbering.getNbUnknowns()));
-//     #else
-//       feCheckReturn(createLinearSystem(system, PETSC, forms, numbering.getNbUnknowns()));
-//     #endif
+    feLinearSystem *system;
+    #if defined(HAVE_MKL)
+      feCheckReturn(createLinearSystem(system, MKLPARDISO, forms, numbering.getNbUnknowns()));
+    #elif defined(HAVE_PETSC) && defined(PETSC_HAVE_MUMPS)
+      feCheckReturn(createLinearSystem(system, PETSC_MUMPS, forms, numbering.getNbUnknowns()));
+    #else
+      feCheckReturn(createLinearSystem(system, PETSC, forms, numbering.getNbUnknowns()));
+    #endif
 
-//     feNorm *errorU_L2 = nullptr;
-//     feCheckReturn(createNorm(errorU_L2, L2_ERROR, {u}, &sol, &uSol));
-//     std::vector<feNorm *> norms = {};
+    feNorm *errorU_L2 = nullptr;
+    feCheckReturn(createNorm(errorU_L2, L2_ERROR, {u}, &sol, &uSol));
+    std::vector<feNorm *> norms = {};
 
-//     TimeIntegrator *solver;
-//     feCheckReturn(createTimeIntegrator(solver, timeIntegratorScheme::STATIONARY, NLoptions, system, &sol, &mesh, norms, {nullptr, 1, ""}));
-//     feCheckReturn(solver->makeSteps(1));
+    TimeIntegrator *solver;
+    feCheckReturn(createTimeIntegrator(solver, timeIntegratorScheme::STATIONARY, NLoptions, system, &sol, &mesh, norms, {nullptr, 1, ""}));
+    feCheckReturn(solver->makeSteps(1));
 
-//     L2Error = errorU_L2->compute();
+    errors.resize(1);
+    errors[0] = errorU_L2->compute();
 
-//     delete errorU_L2;
-//     delete solver;
-//     delete system;
-//     for(feBilinearForm* f : forms)
-//       delete f;
-//     for(feSpace *space : spaces)
-//       delete space;
+    delete errorU_L2;
+    delete solver;
+    delete system;
+    for(feBilinearForm* f : forms)
+      delete f;
+    for(feSpace *space : spaces)
+      delete space;
 
-//     return FE_STATUS_OK;
-//   }
-// };
+    return FE_STATUS_OK;
+  }
+};
 
-// struct nonLinearDiffusion {
+struct nonLinearDiffusion {
 
-//   static double uSol_f(const feFunctionArguments &args, const std::vector<double> &/*par*/)
-//   {
-//     const double x = args.pos[0];
-//     const double y = args.pos[1];
-//     return sin(M_PI*x)*sin(M_PI*y);
-//   }
+  static double uSol_f(const feFunctionArguments &args, const std::vector<double> &/*par*/)
+  {
+    const double x = args.pos[0];
+    const double y = args.pos[1];
+    return sin(M_PI*x)*sin(M_PI*y);
+  }
 
-//   static double uSrc_f(const feFunctionArguments &args, const std::vector<double> &/*par*/)
-//   {
-//     const double x = args.pos[0];
-//     const double y = args.pos[1];
-//     const double cpx = cos(M_PI*x);
-//     const double cpy = cos(M_PI*y);
-//     const double spx = sin(M_PI*x);
-//     const double spy = sin(M_PI*y);
-//     return 2.*M_PI*M_PI* (cpx*cpx*spx*spy*spy*spy + cpy*cpy*spx*spx*spx*spy - spx*spy*(spx*spx*spy*spy + 1.));
-//   }
+  static double uSrc_f(const feFunctionArguments &args, const std::vector<double> &/*par*/)
+  {
+    const double x = args.pos[0];
+    const double y = args.pos[1];
+    const double cpx = cos(M_PI*x);
+    const double cpy = cos(M_PI*y);
+    const double spx = sin(M_PI*x);
+    const double spy = sin(M_PI*y);
+    return 2.*M_PI*M_PI* (cpx*cpx*spx*spy*spy*spy + cpy*cpy*spx*spx*spx*spy - spx*spy*(spx*spx*spy*spy + 1.));
+  }
 
-//   static double conductivity_f(const feFunctionArguments &args, const std::vector<double> &/*par*/)
-//   {
-//     const double u = args.u;
-//     return 1. + u*u;
-//   }
+  static double conductivity_f(const feFunctionArguments &args, const std::vector<double> &/*par*/)
+  {
+    const double u = args.u;
+    return 1. + u*u;
+  }
 
-//   static double ddu_conductivity_f(const feFunctionArguments &args, const std::vector<double> &/*par*/)
-//   {
-//     const double u = args.u;
-//     return 2.*u;
-//   }
+  static double ddu_conductivity_f(const feFunctionArguments &args, const std::vector<double> &/*par*/)
+  {
+    const double u = args.u;
+    return 2.*u;
+  }
 
-//   static feStatus solve(const std::string &meshFile,
-//                  const int order,
-//                  const int degreeQuadrature,
-//                  const feNLSolverOptions &NLoptions,
-//                  int &numInteriorElements,
-//                  double &L2Error)
-//   {
-//     feFunction uSol(uSol_f);
-//     feFunction uSrc(uSrc_f);
-//     feFunction conductivity(conductivity_f);
-//     feFunction ddu_conductivity(ddu_conductivity_f);
+  static feStatus solve(const std::string &meshFile,
+                 const int order,
+                 const int degreeQuadrature,
+                 const feNLSolverOptions &NLoptions,
+                 int &numInteriorElements,
+                 std::vector<double> &errors)
+  {
+    feFunction uSol(uSol_f);
+    feFunction uSrc(uSrc_f);
+    feFunction conductivity(conductivity_f);
+    feFunction ddu_conductivity(ddu_conductivity_f);
 
-//     feMesh2DP1 mesh(meshFile);
-//     numInteriorElements = mesh.getNumInteriorElements();
+    feMesh2DP1 mesh(meshFile);
+    numInteriorElements = mesh.getNumInteriorElements();
 
-//     feSpace *u = nullptr, *uBord = nullptr;
-//     feCheckReturn(createFiniteElementSpace(uBord, &mesh, elementType::LAGRANGE, order, "U",    "Bord", degreeQuadrature, &uSol));
-//     feCheckReturn(createFiniteElementSpace(    u, &mesh, elementType::LAGRANGE, order, "U", "Domaine", degreeQuadrature, &scalarConstant::zero));
+    feSpace *u = nullptr, *uBord = nullptr;
+    feCheckReturn(createFiniteElementSpace(uBord, &mesh, elementType::LAGRANGE, order, "U",    "Bord", degreeQuadrature, &uSol));
+    feCheckReturn(createFiniteElementSpace(    u, &mesh, elementType::LAGRANGE, order, "U", "Domaine", degreeQuadrature, &scalarConstant::zero));
 
-//     std::vector<feSpace*> spaces = {uBord, u};
-//     std::vector<feSpace*> essentialSpaces = {uBord};
+    std::vector<feSpace*> spaces = {uBord, u};
+    std::vector<feSpace*> essentialSpaces = {uBord};
 
-//     feMetaNumber numbering(&mesh, spaces, essentialSpaces);
-//     feSolution sol(numbering.getNbDOFs(), spaces, essentialSpaces);
+    feMetaNumber numbering(&mesh, spaces, essentialSpaces);
+    feSolution sol(numbering.getNbDOFs(), spaces, essentialSpaces);
     
-//     feBilinearForm *diff = nullptr, *src = nullptr;
-//     feCheckReturn(createBilinearForm(diff, {u}, new feSysElm_NonlinearDiffusion<2>(&conductivity, &ddu_conductivity)));
-//     feCheckReturn(createBilinearForm( src, {u}, new feSysElm_Source(&uSrc)));
-//     std::vector<feBilinearForm*> forms = {diff, src};
+    feBilinearForm *diff = nullptr, *src = nullptr;
+    feCheckReturn(createBilinearForm(diff, {u}, new feSysElm_NonlinearDiffusion<2>(&conductivity, &ddu_conductivity)));
+    feCheckReturn(createBilinearForm( src, {u}, new feSysElm_Source(&uSrc)));
+    std::vector<feBilinearForm*> forms = {diff, src};
 
-//     feLinearSystem *system;
-//     #if defined(HAVE_MKL)
-//       feCheckReturn(createLinearSystem(system, MKLPARDISO, forms, numbering.getNbUnknowns()));
-//     #elif defined(HAVE_PETSC) && defined(PETSC_HAVE_MUMPS)
-//       feCheckReturn(createLinearSystem(system, PETSC_MUMPS, forms, numbering.getNbUnknowns()));
-//     #else
-//       feCheckReturn(createLinearSystem(system, PETSC, forms, numbering.getNbUnknowns()));
-//     #endif
+    feLinearSystem *system;
+    #if defined(HAVE_MKL)
+      feCheckReturn(createLinearSystem(system, MKLPARDISO, forms, numbering.getNbUnknowns()));
+    #elif defined(HAVE_PETSC) && defined(PETSC_HAVE_MUMPS)
+      feCheckReturn(createLinearSystem(system, PETSC_MUMPS, forms, numbering.getNbUnknowns()));
+    #else
+      feCheckReturn(createLinearSystem(system, PETSC, forms, numbering.getNbUnknowns()));
+    #endif
 
-//     feNorm *errorU_L2 = nullptr;
-//     feCheckReturn(createNorm(errorU_L2, L2_ERROR, {u}, &sol, &uSol));
-//     std::vector<feNorm *> norms = {};
+    feNorm *errorU_L2 = nullptr;
+    feCheckReturn(createNorm(errorU_L2, L2_ERROR, {u}, &sol, &uSol));
+    std::vector<feNorm *> norms = {};
 
-//     TimeIntegrator *solver;
-//     feCheckReturn(createTimeIntegrator(solver, timeIntegratorScheme::STATIONARY, NLoptions, system, &sol, &mesh, norms, {nullptr, 1, ""}));
-//     feCheckReturn(solver->makeSteps(1));
+    TimeIntegrator *solver;
+    feCheckReturn(createTimeIntegrator(solver, timeIntegratorScheme::STATIONARY, NLoptions, system, &sol, &mesh, norms, {nullptr, 1, ""}));
+    feCheckReturn(solver->makeSteps(1));
 
-//     L2Error = errorU_L2->compute();
+    errors.resize(1);
+    errors[0] = errorU_L2->compute();
 
-//     delete errorU_L2;
-//     delete solver;
-//     delete system;
-//     for(feBilinearForm* f : forms)
-//       delete f;
-//     for(feSpace *space : spaces)
-//       delete space;
+    delete errorU_L2;
+    delete solver;
+    delete system;
+    for(feBilinearForm* f : forms)
+      delete f;
+    for(feSpace *space : spaces)
+      delete space;
 
-//     return FE_STATUS_OK;
-//   }
-// };
+    return FE_STATUS_OK;
+  }
+};
 
-// thread_local std::vector<double> velocityVec(2, 0.);
+thread_local std::vector<double> velocityVec(2, 0.);
 
-// struct advectionDiffusion {
+struct advectionDiffusion {
 
-//   static double uSol_f(const feFunctionArguments &args, const std::vector<double> &/*par*/)
-//   {
-//     const double x = args.pos[0];
-//     const double y = args.pos[1];
-//     return sin(x*y);
-//   }
+  static double uSol_f(const feFunctionArguments &args, const std::vector<double> &/*par*/)
+  {
+    const double x = args.pos[0];
+    const double y = args.pos[1];
+    return sin(x*y);
+  }
 
-//   static void velocity_f(const feFunctionArguments &args, const std::vector<double> &par, std::vector<double> &res)
-//   {
-//     const double x = args.pos[0];
-//     const double y = args.pos[1];
-//     UNUSED(x,y);
-//     res[0] = par[0];
-//     res[1] = par[1];
-//   }
+  static void velocity_f(const feFunctionArguments &args, const std::vector<double> &par, std::vector<double> &res)
+  {
+    const double x = args.pos[0];
+    const double y = args.pos[1];
+    UNUSED(x,y);
+    res[0] = par[0];
+    res[1] = par[1];
+  }
 
-//   static double uSrc_f(const feFunctionArguments &args, const std::vector<double> &par)
-//   {
-//     const double x = args.pos[0];
-//     const double y = args.pos[1];
-//     const double k = par[2];
-//     velocity_f(args, par, velocityVec);
-//     const double cx = velocityVec[0];
-//     const double cy = velocityVec[1];
-//     return - ((cx*y+cy*x) * cos(x*y) + k * (x*x+y*y)*sin(x*y));
-//   }
+  static double uSrc_f(const feFunctionArguments &args, const std::vector<double> &par)
+  {
+    const double x = args.pos[0];
+    const double y = args.pos[1];
+    const double k = par[2];
+    velocity_f(args, par, velocityVec);
+    const double cx = velocityVec[0];
+    const double cy = velocityVec[1];
+    return - ((cx*y+cy*x) * cos(x*y) + k * (x*x+y*y)*sin(x*y));
+  }
 
-//   static feStatus solve(const std::string &meshFile,
-//                  const int order,
-//                  const int degreeQuadrature,
-//                  const feNLSolverOptions &NLoptions,
-//                  int &numInteriorElements,
-//                  double &L2Error)
-//   {
-//     double cx = 1., cy = 2., k = 1.;
-//     std::vector<double> param = {cx, cy, k};
-//     feFunction uSol(uSol_f);
-//     feFunction uSrc(uSrc_f, param);
-//     feVectorFunction velocity(velocity_f, param);
-//     feConstantFunction conductivity(k);
+  static feStatus solve(const std::string &meshFile,
+                 const int order,
+                 const int degreeQuadrature,
+                 const feNLSolverOptions &NLoptions,
+                 int &numInteriorElements,
+                 std::vector<double> &errors)
+  {
+    double cx = 1., cy = 2., k = 1.;
+    std::vector<double> param = {cx, cy, k};
+    feFunction uSol(uSol_f);
+    feFunction uSrc(uSrc_f, param);
+    feVectorFunction velocity(velocity_f, param);
+    feConstantFunction conductivity(k);
 
-//     feMesh2DP1 mesh(meshFile);
-//     numInteriorElements = mesh.getNumInteriorElements();
+    feMesh2DP1 mesh(meshFile);
+    numInteriorElements = mesh.getNumInteriorElements();
 
-//     feSpace *u = nullptr, *uBord = nullptr;
-//     feCheckReturn(createFiniteElementSpace(uBord, &mesh, elementType::LAGRANGE, order, "U",    "Bord", degreeQuadrature, &uSol));
-//     feCheckReturn(createFiniteElementSpace(    u, &mesh, elementType::LAGRANGE, order, "U", "Domaine", degreeQuadrature, &scalarConstant::zero));
+    feSpace *u = nullptr, *uBord = nullptr;
+    feCheckReturn(createFiniteElementSpace(uBord, &mesh, elementType::LAGRANGE, order, "U",    "Bord", degreeQuadrature, &uSol));
+    feCheckReturn(createFiniteElementSpace(    u, &mesh, elementType::LAGRANGE, order, "U", "Domaine", degreeQuadrature, &scalarConstant::zero));
 
-//     std::vector<feSpace*> spaces = {uBord, u};
-//     std::vector<feSpace*> essentialSpaces = {uBord};
+    std::vector<feSpace*> spaces = {uBord, u};
+    std::vector<feSpace*> essentialSpaces = {uBord};
 
-//     feMetaNumber numbering(&mesh, spaces, essentialSpaces);
-//     feSolution sol(numbering.getNbDOFs(), spaces, essentialSpaces);
+    feMetaNumber numbering(&mesh, spaces, essentialSpaces);
+    feSolution sol(numbering.getNbDOFs(), spaces, essentialSpaces);
     
-//     feBilinearForm *adv = nullptr, *diff = nullptr, *src = nullptr;
-//     feCheckReturn(createBilinearForm(adv, {u}, new feSysElm_Advection<2>(&velocity)));
-//     feCheckReturn(createBilinearForm(diff, {u}, new feSysElm_Diffusion<2>(&conductivity)));
-//     feCheckReturn(createBilinearForm(src, {u}, new feSysElm_Source(&uSrc)));
-//     std::vector<feBilinearForm*> forms = {adv, diff, src};
-//     // adv->setComputeMatrixWithFD(true);
+    feBilinearForm *adv = nullptr, *diff = nullptr, *src = nullptr;
+    feCheckReturn(createBilinearForm(adv, {u}, new feSysElm_Advection<2>(&velocity)));
+    feCheckReturn(createBilinearForm(diff, {u}, new feSysElm_Diffusion<2>(&conductivity)));
+    feCheckReturn(createBilinearForm(src, {u}, new feSysElm_Source(&uSrc)));
+    std::vector<feBilinearForm*> forms = {adv, diff, src};
+    // adv->setComputeMatrixWithFD(true);
 
-//     feLinearSystem *system;
-//     #if defined(HAVE_MKL)
-//       feCheckReturn(createLinearSystem(system, MKLPARDISO, forms, numbering.getNbUnknowns()));
-//     #elif defined(HAVE_PETSC) && defined(PETSC_HAVE_MUMPS)
-//       feCheckReturn(createLinearSystem(system, PETSC_MUMPS, forms, numbering.getNbUnknowns()));
-//     #else
-//       feCheckReturn(createLinearSystem(system, PETSC, forms, numbering.getNbUnknowns()));
-//     #endif
+    feLinearSystem *system;
+    #if defined(HAVE_MKL)
+      feCheckReturn(createLinearSystem(system, MKLPARDISO, forms, numbering.getNbUnknowns()));
+    #elif defined(HAVE_PETSC) && defined(PETSC_HAVE_MUMPS)
+      feCheckReturn(createLinearSystem(system, PETSC_MUMPS, forms, numbering.getNbUnknowns()));
+    #else
+      feCheckReturn(createLinearSystem(system, PETSC, forms, numbering.getNbUnknowns()));
+    #endif
 
-//     feNorm *errorU_L2 = nullptr;
-//     feCheckReturn(createNorm(errorU_L2, L2_ERROR, {u}, &sol, &uSol));
-//     std::vector<feNorm *> norms = {};
+    feNorm *errorU_L2 = nullptr;
+    feCheckReturn(createNorm(errorU_L2, L2_ERROR, {u}, &sol, &uSol));
+    std::vector<feNorm *> norms = {};
 
-//     TimeIntegrator *solver;
-//     feCheckReturn(createTimeIntegrator(solver, timeIntegratorScheme::STATIONARY, NLoptions, system, &sol, &mesh, norms, {nullptr, 1, ""}));
-//     feCheckReturn(solver->makeSteps(1));
+    TimeIntegrator *solver;
+    feCheckReturn(createTimeIntegrator(solver, timeIntegratorScheme::STATIONARY, NLoptions, system, &sol, &mesh, norms, {nullptr, 1, ""}));
+    feCheckReturn(solver->makeSteps(1));
 
-//     L2Error = errorU_L2->compute();
+    errors.resize(1);
+    errors[0] = errorU_L2->compute();
 
-//     delete errorU_L2;
-//     delete solver;
-//     delete system;
-//     for(feBilinearForm* f : forms)
-//       delete f;
-//     for(feSpace *space : spaces)
-//       delete space;
+    delete errorU_L2;
+    delete solver;
+    delete system;
+    for(feBilinearForm* f : forms)
+      delete f;
+    for(feSpace *space : spaces)
+      delete space;
 
-//     return FE_STATUS_OK;
-//   }
-// };
+    return FE_STATUS_OK;
+  }
+};
 
-// struct advectionDiffusionReaction {
+struct advectionDiffusionReaction {
 
-//   static double uSol_f(const feFunctionArguments &args, const std::vector<double> &/*par*/)
-//   {
-//     const double x = args.pos[0];
-//     const double y = args.pos[1];
-//     return sin(x*y);
-//   }
+  static double uSol_f(const feFunctionArguments &args, const std::vector<double> &/*par*/)
+  {
+    const double x = args.pos[0];
+    const double y = args.pos[1];
+    return sin(x*y);
+  }
 
-//   static void velocity_f(const feFunctionArguments &args, const std::vector<double> &par, std::vector<double> &res)
-//   {
-//     const double x = args.pos[0];
-//     const double y = args.pos[1];
-//     UNUSED(x,y);
-//     res[0] = par[0];
-//     res[1] = par[1];
-//   }
+  static void velocity_f(const feFunctionArguments &args, const std::vector<double> &par, std::vector<double> &res)
+  {
+    const double x = args.pos[0];
+    const double y = args.pos[1];
+    UNUSED(x,y);
+    res[0] = par[0];
+    res[1] = par[1];
+  }
 
-//   // thread_local std::vector<double> velocityVec(2, 0.);
+  // thread_local std::vector<double> velocityVec(2, 0.);
 
-//   static double uSrc_f(const feFunctionArguments &args, const std::vector<double> &par)
-//   {
-//     const double x = args.pos[0];
-//     const double y = args.pos[1];
-//     const double k = par[2];
-//     const double alpha = par[3];
-//     velocity_f(args, par, velocityVec);
-//     const double cx = velocityVec[0];
-//     const double cy = velocityVec[1];
-//     return - ((cx*y+cy*x) * cos(x*y) + k * (x*x+y*y)*sin(x*y) + alpha*sin(x*y));
-//   }
+  static double uSrc_f(const feFunctionArguments &args, const std::vector<double> &par)
+  {
+    const double x = args.pos[0];
+    const double y = args.pos[1];
+    const double k = par[2];
+    const double alpha = par[3];
+    velocity_f(args, par, velocityVec);
+    const double cx = velocityVec[0];
+    const double cy = velocityVec[1];
+    return - ((cx*y+cy*x) * cos(x*y) + k * (x*x+y*y)*sin(x*y) + alpha*sin(x*y));
+  }
 
-//   static feStatus solve(const std::string &meshFile,
-//                  const int order,
-//                  const int degreeQuadrature,
-//                  const feNLSolverOptions &NLoptions,
-//                  int &numInteriorElements,
-//                  double &L2Error)
-//   {
-//     feStatus s;
+  static feStatus solve(const std::string &meshFile,
+                 const int order,
+                 const int degreeQuadrature,
+                 const feNLSolverOptions &NLoptions,
+                 int &numInteriorElements,
+                 std::vector<double> &errors)
+  {
+    feStatus s;
 
-//     double cx = 1., cy = 2., k = 1., alpha = 7.;
-//     std::vector<double> param = {cx, cy, k, alpha};
-//     feFunction uSol(uSol_f);
-//     feFunction uSrc(uSrc_f, param);
-//     feVectorFunction velocity(velocity_f, param);
-//     feConstantFunction conductivity(k);
-//     feConstantFunction reactionCoeff(alpha);
+    double cx = 1., cy = 2., k = 1., alpha = 7.;
+    std::vector<double> param = {cx, cy, k, alpha};
+    feFunction uSol(uSol_f);
+    feFunction uSrc(uSrc_f, param);
+    feVectorFunction velocity(velocity_f, param);
+    feConstantFunction conductivity(k);
+    feConstantFunction reactionCoeff(alpha);
 
-//     feMesh2DP1 mesh(meshFile);
-//     numInteriorElements = mesh.getNumInteriorElements();
+    feMesh2DP1 mesh(meshFile);
+    numInteriorElements = mesh.getNumInteriorElements();
 
-//     feSpace *u = nullptr, *uBord = nullptr;
-//     s = createFiniteElementSpace(uBord, &mesh, elementType::LAGRANGE, order, "U",    "Bord", degreeQuadrature, &uSol);
-//     if(s != FE_STATUS_OK) return s;
-//     s = createFiniteElementSpace(    u, &mesh, elementType::LAGRANGE, order, "U", "Domaine", degreeQuadrature, &scalarConstant::zero);
-//     if(s != FE_STATUS_OK) return s;
+    feSpace *u = nullptr, *uBord = nullptr;
+    s = createFiniteElementSpace(uBord, &mesh, elementType::LAGRANGE, order, "U",    "Bord", degreeQuadrature, &uSol);
+    if(s != FE_STATUS_OK) return s;
+    s = createFiniteElementSpace(    u, &mesh, elementType::LAGRANGE, order, "U", "Domaine", degreeQuadrature, &scalarConstant::zero);
+    if(s != FE_STATUS_OK) return s;
 
-//     std::vector<feSpace*> spaces = {uBord, u};
-//     std::vector<feSpace*> essentialSpaces = {uBord};
+    std::vector<feSpace*> spaces = {uBord, u};
+    std::vector<feSpace*> essentialSpaces = {uBord};
 
-//     feMetaNumber numbering(&mesh, spaces, essentialSpaces);
-//     feSolution sol(numbering.getNbDOFs(), spaces, essentialSpaces);
+    feMetaNumber numbering(&mesh, spaces, essentialSpaces);
+    feSolution sol(numbering.getNbDOFs(), spaces, essentialSpaces);
     
-//     feBilinearForm *adv = nullptr, *diff = nullptr, *mass = nullptr, *src = nullptr;
-//     s = createBilinearForm(adv, {u}, new feSysElm_Advection<2>(&velocity));
-//     if(s != FE_STATUS_OK) return s;
-//     s = createBilinearForm(diff, {u}, new feSysElm_Diffusion<2>(&conductivity));
-//     if(s != FE_STATUS_OK) return s;
-//     s = createBilinearForm(mass, {u}, new feSysElm_Mass(&reactionCoeff));
-//     if(s != FE_STATUS_OK) return s;
-//     s = createBilinearForm(src, {u}, new feSysElm_Source(&uSrc));
-//     if(s != FE_STATUS_OK) return s;
-//     std::vector<feBilinearForm*> forms = {adv, diff, mass, src};
+    feBilinearForm *adv = nullptr, *diff = nullptr, *mass = nullptr, *src = nullptr;
+    s = createBilinearForm(adv, {u}, new feSysElm_Advection<2>(&velocity));
+    if(s != FE_STATUS_OK) return s;
+    s = createBilinearForm(diff, {u}, new feSysElm_Diffusion<2>(&conductivity));
+    if(s != FE_STATUS_OK) return s;
+    s = createBilinearForm(mass, {u}, new feSysElm_Mass(&reactionCoeff));
+    if(s != FE_STATUS_OK) return s;
+    s = createBilinearForm(src, {u}, new feSysElm_Source(&uSrc));
+    if(s != FE_STATUS_OK) return s;
+    std::vector<feBilinearForm*> forms = {adv, diff, mass, src};
 
-//     feLinearSystem *system;
-//     #if defined(HAVE_MKL)
-//       s = createLinearSystem(system, MKLPARDISO, forms, numbering.getNbUnknowns());
-//     #elif defined(HAVE_PETSC) && defined(PETSC_HAVE_MUMPS)
-//       s = createLinearSystem(system, PETSC_MUMPS, forms, numbering.getNbUnknowns());
-//     #else
-//       s = createLinearSystem(system, PETSC, forms, numbering.getNbUnknowns());
-//     #endif
-//     if(s != FE_STATUS_OK) return s;
+    feLinearSystem *system;
+    #if defined(HAVE_MKL)
+      s = createLinearSystem(system, MKLPARDISO, forms, numbering.getNbUnknowns());
+    #elif defined(HAVE_PETSC) && defined(PETSC_HAVE_MUMPS)
+      s = createLinearSystem(system, PETSC_MUMPS, forms, numbering.getNbUnknowns());
+    #else
+      s = createLinearSystem(system, PETSC, forms, numbering.getNbUnknowns());
+    #endif
+    if(s != FE_STATUS_OK) return s;
 
-//     feNorm *errorU_L2 = nullptr;
-//     s = createNorm(errorU_L2, L2_ERROR, {u}, &sol, &uSol);
-//     if(s != FE_STATUS_OK) return s;
-//     std::vector<feNorm *> norms = {};
+    feNorm *errorU_L2 = nullptr;
+    s = createNorm(errorU_L2, L2_ERROR, {u}, &sol, &uSol);
+    if(s != FE_STATUS_OK) return s;
+    std::vector<feNorm *> norms = {};
 
-//     TimeIntegrator *solver;
-//     s = createTimeIntegrator(solver, timeIntegratorScheme::STATIONARY, NLoptions, system, &sol, &mesh, norms, {nullptr, 1, ""});
-//     if(s != FE_STATUS_OK) return s;
-//     s = solver->makeSteps(1);
-//     if(s != FE_STATUS_OK) return s;
+    TimeIntegrator *solver;
+    s = createTimeIntegrator(solver, timeIntegratorScheme::STATIONARY, NLoptions, system, &sol, &mesh, norms, {nullptr, 1, ""});
+    if(s != FE_STATUS_OK) return s;
+    s = solver->makeSteps(1);
+    if(s != FE_STATUS_OK) return s;
 
-//     L2Error = errorU_L2->compute();
+    errors.resize(1);
+    errors[0] = errorU_L2->compute();
 
-//     delete errorU_L2;
-//     delete solver;
-//     delete system;
-//     for(feBilinearForm* f : forms)
-//       delete f;
-//     for(feSpace *space : spaces)
-//       delete space;
+    delete errorU_L2;
+    delete solver;
+    delete system;
+    for(feBilinearForm* f : forms)
+      delete f;
+    for(feSpace *space : spaces)
+      delete space;
 
-//     return FE_STATUS_OK;
-//   }
-// };
+    return FE_STATUS_OK;
+  }
+};
 
 /*
   Tests the implementation of mixed forms for scalar-valued FE:
@@ -437,7 +441,7 @@ struct mixedDiffusion {
                         const int degreeQuadrature,
                         const feNLSolverOptions &NLoptions,
                         int &numInteriorElements,
-                        double &L2Error)
+                        std::vector<double> &errors)
   {
     feFunction uSol(uSol_f);
     feFunction vSol(vSol_f);
@@ -482,17 +486,21 @@ struct mixedDiffusion {
       feCheckReturn(createLinearSystem(system, PETSC, forms, numbering.getNbUnknowns()));
     #endif
 
-    feNorm *errorU_L2 = nullptr;
+    feNorm *errorU_L2 = nullptr, *errorV_L2;
     feCheckReturn(createNorm(errorU_L2, L2_ERROR, {u}, &sol, &uSol));
+    feCheckReturn(createNorm(errorV_L2, L2_ERROR, {v}, &sol, &vSol));
     std::vector<feNorm *> norms = {};
 
     TimeIntegrator *solver;
     feCheckReturn(createTimeIntegrator(solver, timeIntegratorScheme::STATIONARY, NLoptions, system, &sol, &mesh, norms, {nullptr, 1, ""}));
     feCheckReturn(solver->makeSteps(1));
 
-    L2Error = errorU_L2->compute();
+    errors.resize(2);
+    errors[0] = errorU_L2->compute();
+    errors[1] = errorV_L2->compute();
 
     delete errorU_L2;
+    delete errorV_L2;
     delete solver;
     delete system;
     for(feBilinearForm* f : forms)
@@ -761,9 +769,7 @@ feStatus meshConvergence(std::stringstream &resultBuffer,
 
     for(int i = 0; i < numMeshes; ++i)
     {
-      // std::string meshFile = "../../../data/square" + std::to_string(i+1) + ".msh";
-      // std::string meshFile = "../../../data/transfiniteSquare" + std::to_string(i+1) + ".msh";
-      std::string meshFile = "../data/transfiniteSquare" + std::to_string(i+1) + ".msh";
+      std::string meshFile = "../../../data/mmsMeshes/square" + std::to_string(i+1) + ".msh";
       feCheckReturn(problemType::solve(meshFile, order, degreeQuadrature, NLoptions, nElm[i], err[i]));
     }
 
@@ -787,97 +793,97 @@ feStatus meshConvergence(std::stringstream &resultBuffer,
   return FE_STATUS_OK;
 }
 
-// TEST(ScalarFE, Diffusion)
-// {
-//   initialize(my_argc, my_argv);
-//   // setVerbose(0);
-//   std::string testRoot = "../../../tests/withLinearSolver/scalarFE_diffusion";
-//   std::stringstream resultBuffer;
-//   int degreeQuadrature = 8;
-//   for(int order = 1; order <= 4; ++order)
-//   {
-//     std::string message = "Diffusion - Error on u - Lagrange elements P" + std::to_string(order);
-//     ASSERT_TRUE(meshConvergence<diffusion>(resultBuffer, order, 4, degreeQuadrature, message) == FE_STATUS_OK);
-//   }
-//   EXPECT_EQ(compareOutputFiles(testRoot, resultBuffer), 0);
-//   finalize();
-// }
+TEST(ScalarFE, Diffusion)
+{
+  initialize(my_argc, my_argv);
+  // setVerbose(0);
+  std::string testRoot = "../../../tests/withLinearSolver/scalarFE_diffusion";
+  std::stringstream resultBuffer;
+  int degreeQuadrature = 8;
+  for(int order = 1; order <= 4; ++order)
+  {
+    std::string message = "Diffusion - Error on u - Lagrange elements P" + std::to_string(order);
+    ASSERT_TRUE(meshConvergence<diffusion>(resultBuffer, order, 4, degreeQuadrature, message) == FE_STATUS_OK);
+  }
+  EXPECT_EQ(compareOutputFiles(testRoot, resultBuffer), 0);
+  finalize();
+}
 
-// TEST(ScalarFE, NonLinearDiffusion)
-// {
-//   initialize(my_argc, my_argv);
-//   // setVerbose(0);
-//   std::string testRoot = "../../../tests/withLinearSolver/scalarFE_nonlineardiffusion";
-//   std::stringstream resultBuffer;
-//   int degreeQuadrature = 8;
-//   for(int order = 1; order <= 4; ++order)
-//   {
-//     std::string message = "Diffusion - Error on u - Lagrange elements P" + std::to_string(order);
-//     ASSERT_TRUE(meshConvergence<nonLinearDiffusion>(resultBuffer, order, 4, degreeQuadrature, message) == FE_STATUS_OK);
-//   }
-//   EXPECT_EQ(compareOutputFiles(testRoot, resultBuffer), 0);
-//   finalize();
-// }
+TEST(ScalarFE, NonLinearDiffusion)
+{
+  initialize(my_argc, my_argv);
+  // setVerbose(0);
+  std::string testRoot = "../../../tests/withLinearSolver/scalarFE_nonlineardiffusion";
+  std::stringstream resultBuffer;
+  int degreeQuadrature = 8;
+  for(int order = 1; order <= 4; ++order)
+  {
+    std::string message = "Diffusion - Error on u - Lagrange elements P" + std::to_string(order);
+    ASSERT_TRUE(meshConvergence<nonLinearDiffusion>(resultBuffer, order, 4, degreeQuadrature, message) == FE_STATUS_OK);
+  }
+  EXPECT_EQ(compareOutputFiles(testRoot, resultBuffer), 0);
+  finalize();
+}
 
-// TEST(ScalarFE, AdvectionDiffusion)
-// {
-//   initialize(my_argc, my_argv);
-//   setVerbose(0);
-//   std::string testRoot = "../../../tests/withLinearSolver/scalarFE_advdiff";
-//   std::stringstream resultBuffer;
-//   int degreeQuadrature = 8;
-//   for(int order = 1; order <= 4; ++order)
-//   {
-//     std::string message = "Advection-diffusion - Error on u - Lagrange elements P" + std::to_string(order);
-//     ASSERT_TRUE(meshConvergence<advectionDiffusion>(resultBuffer, order, 4, degreeQuadrature, message) == FE_STATUS_OK);
-//   }
-//   EXPECT_EQ(compareOutputFiles(testRoot, resultBuffer), 0);
-//   finalize();
-// }
+TEST(ScalarFE, AdvectionDiffusion)
+{
+  initialize(my_argc, my_argv);
+  setVerbose(0);
+  std::string testRoot = "../../../tests/withLinearSolver/scalarFE_advdiff";
+  std::stringstream resultBuffer;
+  int degreeQuadrature = 8;
+  for(int order = 1; order <= 4; ++order)
+  {
+    std::string message = "Advection-diffusion - Error on u - Lagrange elements P" + std::to_string(order);
+    ASSERT_TRUE(meshConvergence<advectionDiffusion>(resultBuffer, order, 4, degreeQuadrature, message) == FE_STATUS_OK);
+  }
+  EXPECT_EQ(compareOutputFiles(testRoot, resultBuffer), 0);
+  finalize();
+}
 
-// TEST(ScalarFE, AdvectionDiffusionReaction)
-// {
-//   initialize(my_argc, my_argv);
-//   setVerbose(0);
-//   std::string testRoot = "../../../tests/withLinearSolver/scalarFE_advdiffreact";
-//   std::stringstream resultBuffer;
-//   int degreeQuadrature = 8;
-//   for(int order = 1; order <= 4; ++order)
-//   {
-//     std::string message = "Advection-diffusion-reaction - Error on u - Lagrange elements P" + std::to_string(order);
-//     ASSERT_TRUE(meshConvergence<advectionDiffusionReaction>(resultBuffer, order, 4, degreeQuadrature, message) == FE_STATUS_OK);
-//   }
-//   EXPECT_EQ(compareOutputFiles(testRoot, resultBuffer), 0);
-//   finalize();
-// }
+TEST(ScalarFE, AdvectionDiffusionReaction)
+{
+  initialize(my_argc, my_argv);
+  setVerbose(0);
+  std::string testRoot = "../../../tests/withLinearSolver/scalarFE_advdiffreact";
+  std::stringstream resultBuffer;
+  int degreeQuadrature = 8;
+  for(int order = 1; order <= 4; ++order)
+  {
+    std::string message = "Advection-diffusion-reaction - Error on u - Lagrange elements P" + std::to_string(order);
+    ASSERT_TRUE(meshConvergence<advectionDiffusionReaction>(resultBuffer, order, 4, degreeQuadrature, message) == FE_STATUS_OK);
+  }
+  EXPECT_EQ(compareOutputFiles(testRoot, resultBuffer), 0);
+  finalize();
+}
 
-// TEST(ScalarFE, MixedDiffusion)
-// {
-//   initialize(my_argc, my_argv);
-//   setVerbose(1);
-//   std::string testRoot = "../../../tests/withLinearSolver/scalarFE_mixedDiffusion";
-//   std::stringstream resultBuffer;
-//   int degreeQuadrature = 8;
-//   for(int order = 1; order <= 4; ++order)
-//   {
-//     std::string message = "Mixed diffusion - Error on u - Lagrange elements P" + std::to_string(order);
-//     ASSERT_TRUE(meshConvergence<mixedDiffusion>(resultBuffer, order, 4, degreeQuadrature, message) == FE_STATUS_OK);
-//   }
-//   EXPECT_EQ(compareOutputFiles(testRoot, resultBuffer), 0);
-//   finalize();
-// }
-
-TEST(ScalarFE, MixedDiffusionFieldDependent)
+TEST(ScalarFE, MixedDiffusion)
 {
   initialize(my_argc, my_argv);
   setVerbose(1);
   std::string testRoot = "../../../tests/withLinearSolver/scalarFE_mixedDiffusion";
   std::stringstream resultBuffer;
-  int degreeQuadrature = 16;
-  for(int order = 1; order <= 1; ++order)
+  int degreeQuadrature = 8;
+  for(int order = 1; order <= 4; ++order)
   {
     std::string message = "Mixed diffusion - Error on u - Lagrange elements P" + std::to_string(order);
-    ASSERT_TRUE(meshConvergence<mixedDiffusionFieldDependent>(resultBuffer, order, 5, degreeQuadrature, message) == FE_STATUS_OK);
+    ASSERT_TRUE(meshConvergence<mixedDiffusion>(resultBuffer, order, 4, degreeQuadrature, message) == FE_STATUS_OK);
+  }
+  EXPECT_EQ(compareOutputFiles(testRoot, resultBuffer), 0);
+  finalize();
+}
+
+TEST(ScalarFE, MixedDiffusionFieldDependent)
+{
+  initialize(my_argc, my_argv);
+  setVerbose(1);
+  std::string testRoot = "../../../tests/withLinearSolver/scalarFE_mixedDiffFieldDep";
+  std::stringstream resultBuffer;
+  int degreeQuadrature = 10;
+  for(int order = 1; order <= 2; ++order)
+  {
+    std::string message = "Mixed diffusion - Lagrange elements P" + std::to_string(order) + " Error on";
+    ASSERT_TRUE(meshConvergence<mixedDiffusionFieldDependent>(resultBuffer, order, 4, degreeQuadrature, message) == FE_STATUS_OK);
   }
   EXPECT_EQ(compareOutputFiles(testRoot, resultBuffer), 0);
   finalize();

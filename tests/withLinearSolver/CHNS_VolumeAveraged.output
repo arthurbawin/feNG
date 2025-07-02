@@ -1,0 +1,53 @@
+Cahn-Hilliard Navier-Stokes MMS
+   (u,p) : Taylor-Hood elements P2-P1
+(phi,mu) : Equal order elements P1-P1
+==================== L2 error norms ==================
+U Velocity
+            nElm           error            rate
+              32    7.613946e-03    0.000000e+00
+             128    1.306592e-03    2.542836e+00
+             512    2.841663e-04    2.201001e+00
+
+P Pressure
+            nElm           error            rate
+              32    2.559769e+01    0.000000e+00
+             128    3.443194e+00    2.894194e+00
+             512    7.291851e-01    2.239390e+00
+
+Phi Phase marker
+            nElm           error            rate
+              32    1.105642e-02    0.000000e+00
+             128    2.403915e-03    2.201426e+00
+             512    5.715366e-04    2.072468e+00
+
+Mu Chemical potential
+            nElm           error            rate
+              32    8.922057e-02    0.000000e+00
+             128    1.835404e-02    2.281279e+00
+             512    4.418770e-03    2.054381e+00
+
+==================== H1 error norms ==================
+U Velocity
+            nElm           error            rate
+              32    5.381798e-02    0.000000e+00
+             128    1.190133e-02    2.176966e+00
+             512    2.826461e-03    2.074054e+00
+
+P Pressure
+            nElm           error            rate
+              32    5.675195e+01    0.000000e+00
+             128    1.065592e+01    2.413015e+00
+             512    2.519205e+00    2.080615e+00
+
+Phi Phase marker
+            nElm           error            rate
+              32    2.483856e-01    0.000000e+00
+             128    1.029478e-01    1.270668e+00
+             512    4.722157e-02    1.124396e+00
+
+Mu Chemical potential
+            nElm           error            rate
+              32    1.314131e+00    0.000000e+00
+             128    4.954360e-01    1.407339e+00
+             512    2.380331e-01    1.057536e+00
+
