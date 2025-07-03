@@ -111,11 +111,11 @@ int main(int argc, char **argv)
 
   feLinearSystem *system;
   if(std::string(solverType).compare("PETSc") == 0) {
-    feCheck(createLinearSystem(system, PETSC, forms, numbering.getNbUnknowns()));
+    feCheck(createLinearSystem(system, PETSC, forms, &numbering));
   } else if(std::string(solverType).compare("PETSc_MUMPS") == 0) {
-    feCheck(createLinearSystem(system, PETSC_MUMPS, forms, numbering.getNbUnknowns()));
+    feCheck(createLinearSystem(system, PETSC_MUMPS, forms, &numbering));
   } else if(std::string(solverType).compare("Pardiso") == 0) {
-    feCheck(createLinearSystem(system, MKLPARDISO, forms, numbering.getNbUnknowns()));
+    feCheck(createLinearSystem(system, MKLPARDISO, forms, &numbering));
   } else {
     feErrorMsg(FE_STATUS_ERROR, "Unrecognized linear solver type: %s", solverType);
     return 1;

@@ -81,11 +81,11 @@ namespace {
       // Decide if the Pardiso linear system is stored on a single process (-1)
       // or distributed on the processes (>= 0)
       int ownershipSplit = -1;
-      feCheck(createLinearSystem(system, MKLPARDISO, {diff, source}, numbering.getNbUnknowns(), ownershipSplit));
+      feCheck(createLinearSystem(system, MKLPARDISO, {diff, source}, &numbering, ownershipSplit));
       #elif defined(HAVE_PETSC) && defined(PETSC_HAVE_MUMPS)
-      feCheck(createLinearSystem(system, PETSC_MUMPS, {diff, source}, numbering.getNbUnknowns()));
+      feCheck(createLinearSystem(system, PETSC_MUMPS, {diff, source}, &numbering));
       #else
-      feCheck(createLinearSystem(system, PETSC, {diff, source}, numbering.getNbUnknowns()));
+      feCheck(createLinearSystem(system, PETSC, {diff, source}, &numbering));
       system->setRelativeTol(1e-10);
       system->setAbsoluteTol(1e-20);
       #endif

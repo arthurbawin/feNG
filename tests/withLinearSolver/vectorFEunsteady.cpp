@@ -93,11 +93,11 @@ struct linearODE {
 
     feLinearSystem *system;
     #if defined(HAVE_MKL)
-      feCheckReturn(createLinearSystem(system, MKLPARDISO, forms, numbering.getNbUnknowns()));
+      feCheckReturn(createLinearSystem(system, MKLPARDISO, forms, &numbering));
     #elif defined(HAVE_PETSC) && defined(PETSC_HAVE_MUMPS)
-      feCheckReturn(createLinearSystem(system, PETSC_MUMPS, forms, numbering.getNbUnknowns()));
+      feCheckReturn(createLinearSystem(system, PETSC_MUMPS, forms, &numbering));
     #else
-      feCheckReturn(createLinearSystem(system, PETSC, forms, numbering.getNbUnknowns()));
+      feCheckReturn(createLinearSystem(system, PETSC, forms, &numbering));
     #endif
 
     feNorm *errorU = nullptr, *errurUdot = nullptr;
@@ -243,11 +243,11 @@ struct diffusion {
 
     feLinearSystem *system;
     #if defined(HAVE_MKL)
-      feCheckReturn(createLinearSystem(system, MKLPARDISO, forms, numbering.getNbUnknowns()));
+      feCheckReturn(createLinearSystem(system, MKLPARDISO, forms, &numbering));
     #elif defined(HAVE_PETSC) && defined(PETSC_HAVE_MUMPS)
-      feCheckReturn(createLinearSystem(system, PETSC_MUMPS, forms, numbering.getNbUnknowns()));
+      feCheckReturn(createLinearSystem(system, PETSC_MUMPS, forms, &numbering));
     #else
-      feCheckReturn(createLinearSystem(system, PETSC, forms, numbering.getNbUnknowns()));
+      feCheckReturn(createLinearSystem(system, PETSC, forms, &numbering));
     #endif
 
     // system->setDisplayRHSInConsole(true);
@@ -398,11 +398,11 @@ struct diffusionWeakBC {
 
     feLinearSystem *system;
     #if defined(HAVE_MKL)
-      feCheckReturn(createLinearSystem(system, MKLPARDISO, forms, numbering.getNbUnknowns()));
+      feCheckReturn(createLinearSystem(system, MKLPARDISO, forms, &numbering));
     #elif defined(HAVE_PETSC) && defined(PETSC_HAVE_MUMPS)
-      feCheckReturn(createLinearSystem(system, PETSC_MUMPS, forms, numbering.getNbUnknowns()));
+      feCheckReturn(createLinearSystem(system, PETSC_MUMPS, forms, &numbering));
     #else
-      feCheckReturn(createLinearSystem(system, PETSC, forms, numbering.getNbUnknowns()));
+      feCheckReturn(createLinearSystem(system, PETSC, forms, &numbering));
     #endif
 
     feNorm *errorU = nullptr;
@@ -586,11 +586,11 @@ struct navierStokesMMS {
 
     feLinearSystem *system;
     #if defined(HAVE_MKL)
-      feCheck(createLinearSystem(system, MKLPARDISO, forms, numbering.getNbUnknowns()));
+      feCheck(createLinearSystem(system, MKLPARDISO, forms, &numbering));
     #elif defined(HAVE_PETSC) && defined(PETSC_HAVE_MUMPS)
-      feCheck(createLinearSystem(system, PETSC_MUMPS, forms, numbering.getNbUnknowns()));
+      feCheck(createLinearSystem(system, PETSC_MUMPS, forms, &numbering));
     #else
-      feCheck(createLinearSystem(system, PETSC, forms, numbering.getNbUnknowns()));
+      feCheck(createLinearSystem(system, PETSC, forms, &numbering));
     #endif
 
     feNorm *errorUinf, *errorPinf;

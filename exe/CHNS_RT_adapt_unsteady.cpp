@@ -338,7 +338,7 @@ public:
                          feSolution *sol,
                          feMetaNumber *numbering,
                          std::vector<feSpace*> &spaces,
-                         const int numUnknowns,
+                         const int /*numUnknowns*/,
                          feExportData &exportData) = 0;
 
   feStatus computeAndIncrementMetric(const double currentTime,
@@ -673,7 +673,7 @@ namespace CHNS_Generic
                    feSolution *sol,
                    feMetaNumber *numbering,
                    std::vector<feSpace*> &spaces,
-                   const int numUnknowns,
+                   const int /*numUnknowns*/,
                    feExportData &exportData)
     {
       std::vector<feBilinearForm*> forms = {};
@@ -735,11 +735,11 @@ namespace CHNS_Generic
 
       feLinearSystem *system = nullptr;
       #if defined(HAVE_MKL)
-        feCheckReturn(createLinearSystem(system, MKLPARDISO, forms, numUnknowns));
+        feCheckReturn(createLinearSystem(system, MKLPARDISO, forms, numbering));
       #elif defined(HAVE_PETSC) && defined(PETSC_HAVE_MUMPS)
-        feCheckReturn(createLinearSystem(system, PETSC_MUMPS, forms, numUnknowns));
+        feCheckReturn(createLinearSystem(system, PETSC_MUMPS, forms, numbering));
       #else
-        feCheckReturn(createLinearSystem(system, PETSC, forms, numUnknowns));
+        feCheckReturn(createLinearSystem(system, PETSC, forms, numbering));
       #endif
 
       std::vector<feNorm*> norms = {};
@@ -1071,7 +1071,7 @@ namespace CHNS_Generic
                    feSolution *sol,
                    feMetaNumber *numbering,
                    std::vector<feSpace*> &spaces,
-                   const int numUnknowns,
+                   const int /*numUnknowns*/,
                    feExportData &exportData)
     {
       std::vector<feBilinearForm*> forms = {};
@@ -1100,11 +1100,11 @@ namespace CHNS_Generic
 
       feLinearSystem *system = nullptr;
       #if defined(HAVE_MKL)
-        feCheckReturn(createLinearSystem(system, MKLPARDISO, forms, numUnknowns));
+        feCheckReturn(createLinearSystem(system, MKLPARDISO, forms, numbering));
       #elif defined(HAVE_PETSC) && defined(PETSC_HAVE_MUMPS)
-        feCheckReturn(createLinearSystem(system, PETSC_MUMPS, forms, numUnknowns));
+        feCheckReturn(createLinearSystem(system, PETSC_MUMPS, forms, numbering));
       #else
-        feCheckReturn(createLinearSystem(system, PETSC, forms, numUnknowns));
+        feCheckReturn(createLinearSystem(system, PETSC, forms, numbering));
       #endif
 
       std::vector<feNorm*> norms = {};
@@ -1471,7 +1471,7 @@ namespace CHNS_Generic
                    feSolution *sol,
                    feMetaNumber *numbering,
                    std::vector<feSpace*> &spaces,
-                   const int numUnknowns,
+                   const int /*numUnknowns*/,
                    feExportData &exportData)
     {
       std::vector<feBilinearForm*> forms = {};
@@ -1551,11 +1551,11 @@ namespace CHNS_Generic
 
       feLinearSystem *system = nullptr;
       #if defined(HAVE_MKL)
-        feCheckReturn(createLinearSystem(system, MKLPARDISO, forms, numUnknowns));
+        feCheckReturn(createLinearSystem(system, MKLPARDISO, forms, numbering));
       #elif defined(HAVE_PETSC) && defined(PETSC_HAVE_MUMPS)
-        feCheckReturn(createLinearSystem(system, PETSC_MUMPS, forms, numUnknowns));
+        feCheckReturn(createLinearSystem(system, PETSC_MUMPS, forms, numbering));
       #else
-        feCheckReturn(createLinearSystem(system, PETSC, forms, numUnknowns));
+        feCheckReturn(createLinearSystem(system, PETSC, forms, numbering));
       #endif
 
       std::vector<feNorm*> norms = {};
@@ -2337,7 +2337,7 @@ namespace CHNS_Jurin
                    feSolution *sol,
                    feMetaNumber *numbering,
                    std::vector<feSpace*> &spaces,
-                   const int numUnknowns,
+                   const int /*numUnknowns*/,
                    feExportData &exportData)
     {
       std::vector<feBilinearForm*> forms = {};
@@ -2375,11 +2375,11 @@ namespace CHNS_Jurin
 
       feLinearSystem *system = nullptr;
       #if defined(HAVE_MKL)
-        feCheckReturn(createLinearSystem(system, MKLPARDISO, forms, numUnknowns));
+        feCheckReturn(createLinearSystem(system, MKLPARDISO, forms, numbering));
       #elif defined(HAVE_PETSC) && defined(PETSC_HAVE_MUMPS)
-        feCheckReturn(createLinearSystem(system, PETSC_MUMPS, forms, numUnknowns));
+        feCheckReturn(createLinearSystem(system, PETSC_MUMPS, forms, numbering));
       #else
-        feCheckReturn(createLinearSystem(system, PETSC, forms, numUnknowns));
+        feCheckReturn(createLinearSystem(system, PETSC, forms, numbering));
       #endif
 
       std::vector<feNorm*> norms = {};
@@ -2617,7 +2617,7 @@ namespace CHNS_Jurin
                    feSolution *sol,
                    feMetaNumber *numbering,
                    std::vector<feSpace*> &spaces,
-                   const int numUnknowns,
+                   const int /*numUnknowns*/,
                    feExportData &exportData)
     {
       std::vector<feBilinearForm*> forms = {};
@@ -2655,11 +2655,11 @@ namespace CHNS_Jurin
 
       feLinearSystem *system = nullptr;
       #if defined(HAVE_MKL)
-        feCheckReturn(createLinearSystem(system, MKLPARDISO, forms, numUnknowns));
+        feCheckReturn(createLinearSystem(system, MKLPARDISO, forms, numbering));
       #elif defined(HAVE_PETSC) && defined(PETSC_HAVE_MUMPS)
-        feCheckReturn(createLinearSystem(system, PETSC_MUMPS, forms, numUnknowns));
+        feCheckReturn(createLinearSystem(system, PETSC_MUMPS, forms, numbering));
       #else
-        feCheckReturn(createLinearSystem(system, PETSC, forms, numUnknowns));
+        feCheckReturn(createLinearSystem(system, PETSC, forms, numbering));
       #endif
 
       std::vector<feNorm*> norms = {};
@@ -2897,7 +2897,7 @@ namespace CHNS_BubbleContact
                    feSolution *sol,
                    feMetaNumber *numbering,
                    std::vector<feSpace*> &spaces,
-                   const int numUnknowns,
+                   const int /*numUnknowns*/,
                    feExportData &exportData)
     {
       std::vector<feBilinearForm*> forms = {};
@@ -2935,11 +2935,11 @@ namespace CHNS_BubbleContact
 
       feLinearSystem *system = nullptr;
       #if defined(HAVE_MKL)
-        feCheckReturn(createLinearSystem(system, MKLPARDISO, forms, numUnknowns));
+        feCheckReturn(createLinearSystem(system, MKLPARDISO, forms, numbering));
       #elif defined(HAVE_PETSC) && defined(PETSC_HAVE_MUMPS)
-        feCheckReturn(createLinearSystem(system, PETSC_MUMPS, forms, numUnknowns));
+        feCheckReturn(createLinearSystem(system, PETSC_MUMPS, forms, numbering));
       #else
-        feCheckReturn(createLinearSystem(system, PETSC, forms, numUnknowns));
+        feCheckReturn(createLinearSystem(system, PETSC, forms, numbering));
       #endif
 
       std::vector<feNorm*> norms = {};
@@ -3144,7 +3144,7 @@ namespace Cylinder {
                    feSolution *sol,
                    feMetaNumber *numbering,
                    std::vector<feSpace*> &spaces,
-                   const int numUnknowns,
+                   const int /*numUnknowns*/,
                    feExportData &exportData)
     {
       std::vector<feBilinearForm*> forms = {};
@@ -3193,11 +3193,11 @@ namespace Cylinder {
 
       feLinearSystem *system;
       #if defined(HAVE_MKL)
-        feCheckReturn(createLinearSystem(system, MKLPARDISO, forms, numUnknowns));
+        feCheckReturn(createLinearSystem(system, MKLPARDISO, forms, numbering));
       #elif defined(HAVE_PETSC) && defined(PETSC_HAVE_MUMPS)
-        feCheckReturn(createLinearSystem(system, PETSC_MUMPS, forms, numUnknowns));
+        feCheckReturn(createLinearSystem(system, PETSC_MUMPS, forms, numbering));
       #else
-        feCheckReturn(createLinearSystem(system, PETSC, forms, numUnknowns));
+        feCheckReturn(createLinearSystem(system, PETSC, forms, numbering));
       #endif
 
       std::vector<feNorm*> norms = {};
@@ -3448,7 +3448,7 @@ namespace Analytic {
                    feSolution *sol,
                    feMetaNumber *numbering,
                    std::vector<feSpace*> &spaces,
-                   const int numUnknowns,
+                   const int /*numUnknowns*/,
                    feExportData &exportData)
     {
       feSpace *u = spaces[0];
@@ -3475,11 +3475,11 @@ namespace Analytic {
         forms.push_back(src);
 
         #if defined(HAVE_MKL)
-          feCheckReturn(createLinearSystem(system, MKLPARDISO, forms, numUnknowns));
+          feCheckReturn(createLinearSystem(system, MKLPARDISO, forms, numbering));
         #elif defined(HAVE_PETSC) && defined(PETSC_HAVE_MUMPS)
-          feCheckReturn(createLinearSystem(system, PETSC_MUMPS, forms, numUnknowns));
+          feCheckReturn(createLinearSystem(system, PETSC_MUMPS, forms, numbering));
         #else
-          feCheckReturn(createLinearSystem(system, PETSC, forms, numUnknowns));
+          feCheckReturn(createLinearSystem(system, PETSC, forms, numbering));
         #endif
 
         const double t0 = adapter.currentTime;

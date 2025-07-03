@@ -139,11 +139,11 @@ namespace cahnHilliard {
 
       feLinearSystem *system;
       #if defined(HAVE_MKL)
-        feCheck(createLinearSystem(system, MKLPARDISO, forms, numbering.getNbUnknowns()));
+        feCheck(createLinearSystem(system, MKLPARDISO, forms, &numbering));
       #elif defined(HAVE_PETSC) && defined(PETSC_HAVE_MUMPS)
-        feCheck(createLinearSystem(system, PETSC_MUMPS, forms, numbering.getNbUnknowns()));
+        feCheck(createLinearSystem(system, PETSC_MUMPS, forms, &numbering));
       #else
-        feCheck(createLinearSystem(system, PETSC, forms, numbering.getNbUnknowns()));
+        feCheck(createLinearSystem(system, PETSC, forms, &numbering));
       #endif
 
       std::vector<feNorm *> norms = {};
@@ -584,11 +584,11 @@ namespace cahnHilliardNavierStokes {
 
       feLinearSystem *system;
       #if defined(HAVE_MKL)
-        feCheck(createLinearSystem(system, MKLPARDISO, forms, numbering.getNbUnknowns()));
+        feCheck(createLinearSystem(system, MKLPARDISO, forms, &numbering));
       #elif defined(HAVE_PETSC) && defined(PETSC_HAVE_MUMPS)
-        feCheck(createLinearSystem(system, PETSC_MUMPS, forms, numbering.getNbUnknowns()));
+        feCheck(createLinearSystem(system, PETSC_MUMPS, forms, &numbering));
       #else
-        feCheck(createLinearSystem(system, PETSC, forms, numbering.getNbUnknowns()));
+        feCheck(createLinearSystem(system, PETSC, forms, &numbering));
       #endif
 
       feNorm *errorU_L2 = nullptr, *errorP_L2 = nullptr, *errorPhi_L2 = nullptr, *errorMu_L2 = nullptr;
@@ -1255,11 +1255,11 @@ struct CahnHilliardVolumeAveraged {
 
     feLinearSystem *system;
     #if defined(HAVE_MKL)
-      feCheck(createLinearSystem(system, MKLPARDISO, forms, numbering.getNbUnknowns()));
+      feCheck(createLinearSystem(system, MKLPARDISO, forms, &numbering));
     #elif defined(HAVE_PETSC) && defined(PETSC_HAVE_MUMPS)
-      feCheck(createLinearSystem(system, PETSC_MUMPS, forms, numbering.getNbUnknowns()));
+      feCheck(createLinearSystem(system, PETSC_MUMPS, forms, &numbering));
     #else
-      feCheck(createLinearSystem(system, PETSC, forms, numbering.getNbUnknowns()));
+      feCheck(createLinearSystem(system, PETSC, forms, &numbering));
     #endif
 
     feNorm *errorU_L2 = nullptr, *errorP_L2 = nullptr, *errorPhi_L2 = nullptr, *errorMu_L2 = nullptr;
@@ -1974,11 +1974,11 @@ namespace alternativeCHNS_constantMobility {
 
       feLinearSystem *system;
       #if defined(HAVE_MKL)
-        feCheck(createLinearSystem(system, MKLPARDISO, forms, numbering.getNbUnknowns()));
+        feCheck(createLinearSystem(system, MKLPARDISO, forms, &numbering));
       #elif defined(HAVE_PETSC) && defined(PETSC_HAVE_MUMPS)
-        feCheck(createLinearSystem(system, PETSC_MUMPS, forms, numbering.getNbUnknowns()));
+        feCheck(createLinearSystem(system, PETSC_MUMPS, forms, &numbering));
       #else
-        feCheck(createLinearSystem(system, PETSC, forms, numbering.getNbUnknowns()));
+        feCheck(createLinearSystem(system, PETSC, forms, &numbering));
       #endif
 
       feNorm *errorU_L2 = nullptr, *errorP_L2 = nullptr, *errorPhi_L2 = nullptr, *errorMu_L2 = nullptr;
@@ -2589,11 +2589,11 @@ struct alternativeCHNS_degenerateMobility {
 
     feLinearSystem *system;
     #if defined(HAVE_MKL)
-      feCheckReturn(createLinearSystem(system, MKLPARDISO, forms, numbering.getNbUnknowns()));
+      feCheckReturn(createLinearSystem(system, MKLPARDISO, forms, &numbering));
     #elif defined(HAVE_PETSC) && defined(PETSC_HAVE_MUMPS)
-      feCheckReturn(createLinearSystem(system, PETSC_MUMPS, forms, numbering.getNbUnknowns()));
+      feCheckReturn(createLinearSystem(system, PETSC_MUMPS, forms, &numbering));
     #else
-      feCheckReturn(createLinearSystem(system, PETSC, forms, numbering.getNbUnknowns()));
+      feCheckReturn(createLinearSystem(system, PETSC, forms, &numbering));
     #endif
 
     feNorm *errorU_L2 = nullptr, *errorP_L2 = nullptr, *errorPhi_L2 = nullptr, *errorMu_L2 = nullptr;

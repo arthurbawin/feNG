@@ -78,11 +78,11 @@ struct linearODE {
 
     feLinearSystem *system;
     #if defined(HAVE_MKL)
-      feCheckReturn(createLinearSystem(system, MKLPARDISO, forms, numbering.getNbUnknowns()));
+      feCheckReturn(createLinearSystem(system, MKLPARDISO, forms, &numbering));
     #elif defined(HAVE_PETSC) && defined(PETSC_HAVE_MUMPS)
-      feCheckReturn(createLinearSystem(system, PETSC_MUMPS, forms, numbering.getNbUnknowns()));
+      feCheckReturn(createLinearSystem(system, PETSC_MUMPS, forms, &numbering));
     #else
-      feCheckReturn(createLinearSystem(system, PETSC, forms, numbering.getNbUnknowns()));
+      feCheckReturn(createLinearSystem(system, PETSC, forms, &numbering));
     #endif
 
     feNorm *errorU = nullptr, *errorUdot = nullptr;
@@ -162,11 +162,11 @@ struct nonlinearODE {
 
     feLinearSystem *system;
     #if defined(HAVE_MKL)
-      feCheckReturn(createLinearSystem(system, MKLPARDISO, forms, numbering.getNbUnknowns()));
+      feCheckReturn(createLinearSystem(system, MKLPARDISO, forms, &numbering));
     #elif defined(HAVE_PETSC) && defined(PETSC_HAVE_MUMPS)
-      feCheckReturn(createLinearSystem(system, PETSC_MUMPS, forms, numbering.getNbUnknowns()));
+      feCheckReturn(createLinearSystem(system, PETSC_MUMPS, forms, &numbering));
     #else
-      feCheckReturn(createLinearSystem(system, PETSC, forms, numbering.getNbUnknowns()));
+      feCheckReturn(createLinearSystem(system, PETSC, forms, &numbering));
     #endif
 
     feNorm *errorU = nullptr;
@@ -285,11 +285,11 @@ struct diffusion {
 
     feLinearSystem *system;
     #if defined(HAVE_MKL)
-      feCheckReturn(createLinearSystem(system, MKLPARDISO, forms, numbering.getNbUnknowns()));
+      feCheckReturn(createLinearSystem(system, MKLPARDISO, forms, &numbering));
     #elif defined(HAVE_PETSC) && defined(PETSC_HAVE_MUMPS)
-      feCheckReturn(createLinearSystem(system, PETSC_MUMPS, forms, numbering.getNbUnknowns()));
+      feCheckReturn(createLinearSystem(system, PETSC_MUMPS, forms, &numbering));
     #else
-      feCheckReturn(createLinearSystem(system, PETSC, forms, numbering.getNbUnknowns()));
+      feCheckReturn(createLinearSystem(system, PETSC, forms, &numbering));
     #endif
 
     feNorm *errorU = nullptr, *errorUDot = nullptr;
@@ -400,11 +400,11 @@ namespace nonLinearDiffusion {
 
     feLinearSystem *system;
     #if defined(HAVE_MKL)
-      feCheckReturn(createLinearSystem(system, MKLPARDISO, forms, numbering.getNbUnknowns()));
+      feCheckReturn(createLinearSystem(system, MKLPARDISO, forms, &numbering));
     #elif defined(HAVE_PETSC) && defined(PETSC_HAVE_MUMPS)
-      feCheckReturn(createLinearSystem(system, PETSC_MUMPS, forms, numbering.getNbUnknowns()));
+      feCheckReturn(createLinearSystem(system, PETSC_MUMPS, forms, &numbering));
     #else
-      feCheckReturn(createLinearSystem(system, PETSC, forms, numbering.getNbUnknowns()));
+      feCheckReturn(createLinearSystem(system, PETSC, forms, &numbering));
     #endif
 
     feNorm *errorU_L2 = nullptr;

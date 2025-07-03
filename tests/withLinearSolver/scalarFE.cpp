@@ -57,11 +57,11 @@ struct diffusion {
 
     feLinearSystem *system;
     #if defined(HAVE_MKL)
-      feCheckReturn(createLinearSystem(system, MKLPARDISO, forms, numbering.getNbUnknowns()));
+      feCheckReturn(createLinearSystem(system, MKLPARDISO, forms, &numbering));
     #elif defined(HAVE_PETSC) && defined(PETSC_HAVE_MUMPS)
-      feCheckReturn(createLinearSystem(system, PETSC_MUMPS, forms, numbering.getNbUnknowns()));
+      feCheckReturn(createLinearSystem(system, PETSC_MUMPS, forms, &numbering));
     #else
-      feCheckReturn(createLinearSystem(system, PETSC, forms, numbering.getNbUnknowns()));
+      feCheckReturn(createLinearSystem(system, PETSC, forms, &numbering));
     #endif
 
     feNorm *errorU_L2 = nullptr;
@@ -151,11 +151,11 @@ struct nonLinearDiffusion {
 
     feLinearSystem *system;
     #if defined(HAVE_MKL)
-      feCheckReturn(createLinearSystem(system, MKLPARDISO, forms, numbering.getNbUnknowns()));
+      feCheckReturn(createLinearSystem(system, MKLPARDISO, forms, &numbering));
     #elif defined(HAVE_PETSC) && defined(PETSC_HAVE_MUMPS)
-      feCheckReturn(createLinearSystem(system, PETSC_MUMPS, forms, numbering.getNbUnknowns()));
+      feCheckReturn(createLinearSystem(system, PETSC_MUMPS, forms, &numbering));
     #else
-      feCheckReturn(createLinearSystem(system, PETSC, forms, numbering.getNbUnknowns()));
+      feCheckReturn(createLinearSystem(system, PETSC, forms, &numbering));
     #endif
 
     feNorm *errorU_L2 = nullptr;
@@ -248,11 +248,11 @@ struct advectionDiffusion {
 
     feLinearSystem *system;
     #if defined(HAVE_MKL)
-      feCheckReturn(createLinearSystem(system, MKLPARDISO, forms, numbering.getNbUnknowns()));
+      feCheckReturn(createLinearSystem(system, MKLPARDISO, forms, &numbering));
     #elif defined(HAVE_PETSC) && defined(PETSC_HAVE_MUMPS)
-      feCheckReturn(createLinearSystem(system, PETSC_MUMPS, forms, numbering.getNbUnknowns()));
+      feCheckReturn(createLinearSystem(system, PETSC_MUMPS, forms, &numbering));
     #else
-      feCheckReturn(createLinearSystem(system, PETSC, forms, numbering.getNbUnknowns()));
+      feCheckReturn(createLinearSystem(system, PETSC, forms, &numbering));
     #endif
 
     feNorm *errorU_L2 = nullptr;
@@ -355,11 +355,11 @@ struct advectionDiffusionReaction {
 
     feLinearSystem *system;
     #if defined(HAVE_MKL)
-      s = createLinearSystem(system, MKLPARDISO, forms, numbering.getNbUnknowns());
+      s = createLinearSystem(system, MKLPARDISO, forms, &numbering);
     #elif defined(HAVE_PETSC) && defined(PETSC_HAVE_MUMPS)
-      s = createLinearSystem(system, PETSC_MUMPS, forms, numbering.getNbUnknowns());
+      s = createLinearSystem(system, PETSC_MUMPS, forms, &numbering);
     #else
-      s = createLinearSystem(system, PETSC, forms, numbering.getNbUnknowns());
+      s = createLinearSystem(system, PETSC, forms, &numbering);
     #endif
     if(s != FE_STATUS_OK) return s;
 
@@ -479,11 +479,11 @@ struct mixedDiffusion {
 
     feLinearSystem *system;
     #if defined(HAVE_MKL)
-      feCheckReturn(createLinearSystem(system, MKLPARDISO, forms, numbering.getNbUnknowns()));
+      feCheckReturn(createLinearSystem(system, MKLPARDISO, forms, &numbering));
     #elif defined(HAVE_PETSC) && defined(PETSC_HAVE_MUMPS)
-      feCheckReturn(createLinearSystem(system, PETSC_MUMPS, forms, numbering.getNbUnknowns()));
+      feCheckReturn(createLinearSystem(system, PETSC_MUMPS, forms, &numbering));
     #else
-      feCheckReturn(createLinearSystem(system, PETSC, forms, numbering.getNbUnknowns()));
+      feCheckReturn(createLinearSystem(system, PETSC, forms, &numbering));
     #endif
 
     feNorm *errorU_L2 = nullptr, *errorV_L2;
@@ -718,11 +718,11 @@ struct mixedDiffusionFieldDependent {
 
     feLinearSystem *system;
     #if defined(HAVE_MKL)
-      feCheckReturn(createLinearSystem(system, MKLPARDISO, forms, numbering.getNbUnknowns()));
+      feCheckReturn(createLinearSystem(system, MKLPARDISO, forms, &numbering));
     #elif defined(HAVE_PETSC) && defined(PETSC_HAVE_MUMPS)
-      feCheckReturn(createLinearSystem(system, PETSC_MUMPS, forms, numbering.getNbUnknowns()));
+      feCheckReturn(createLinearSystem(system, PETSC_MUMPS, forms, &numbering));
     #else
-      feCheckReturn(createLinearSystem(system, PETSC, forms, numbering.getNbUnknowns()));
+      feCheckReturn(createLinearSystem(system, PETSC, forms, &numbering));
     #endif
 
     std::vector<feNorm *> norms = {};
