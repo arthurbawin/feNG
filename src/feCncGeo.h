@@ -179,6 +179,10 @@ public:
   const std::vector<int> &getEdgeConnectivity() const { return _connecEdges; }
   const std::vector<int> &getElemConnectivity() const { return _connecElem; }
 
+  // The global indices of the mesh vertices on this connectivity
+  const std::vector<int> &GlobalVertexTags() const { return _connecVerticesOnly; }
+  const std::vector<int> &GlobalEdgeTags() const { return _connecEdgesOnly; }
+
   //
   // Get (and rarely set) connectivities on this Physical Entity
   //

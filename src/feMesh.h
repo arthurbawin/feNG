@@ -127,13 +127,14 @@ public:
     return connectivities;
   }
 
+  std::vector<Vertex> &getVertices() { return _vertices; }
   Vertex *getVertex(int iVertex) { return &_vertices[iVertex]; }
   Vertex *getVertexFromGmshNodeTag(int gmshNodeTag)
   {
     return &_vertices[_verticesMap[gmshNodeTag]];
   }
   const Edge *getEdge(int edgeTag) { return _edgesMap[edgeTag]; }
-  std::vector<Vertex> &getVertices() { return _vertices; }
+  const std::map<int, const Edge *> &getEdgesMap() const { return _edgesMap; }
   std::vector<const Edge *> &getEdges() { return _edgesVec; }
 
   void recomputeDisplacementVectors();

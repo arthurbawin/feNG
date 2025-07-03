@@ -43,7 +43,7 @@ void feLinearSystemPETSc::initializeSequential()
   ierr = VecSet(_constrainedDOFValue, 0.0);
 
   // Determine the nonzero structure
-  feEZCompressedRowStorage _EZCRS(_nInc, _formMatrices, _numMatrixForms);
+  feEZCompressedRowStorage _EZCRS(_nInc, _formMatrices, _numMatrixForms, _numbering);
 
   feInt num_nnz = _EZCRS.getNumNNZ();
 
@@ -393,15 +393,15 @@ void feLinearSystemPETSc::initialize()
 }
 
 feLinearSystemPETSc::feLinearSystemPETSc(const std::vector<feBilinearForm*> bilinearForms,
-                                         const int numUnknowns,
+                                         const feMetaNumber *numbering,
                                          const linearSolverType type)
-  : feLinearSystem(bilinearForms)
+  : feLinearSystem(bilinearForms, numbering)
 #if defined(HAVE_PETSC)
-    , _nInc(numUnknowns)
+    , _nInc(numbering->getNbUnknowns())
 #endif
 {
 #if !defined(HAVE_PETSC)
-  UNUSED(numUnknowns, type);
+  UNUSED(numbering->getNbUnknowns(), type);
 #endif
 
 #if defined(HAVE_PETSC)

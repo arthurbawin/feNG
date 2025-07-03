@@ -9,6 +9,8 @@ std::string BoundaryConditions::typeToString(const Type &type)
       return "dirichlet";
     case Type::dirichlet_one_component:
       return "dirichlet_one_component";
+    case Type::periodic:
+      return "periodic";
     case Type::contactAngle:
       return "contactAngle";
     

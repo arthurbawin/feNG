@@ -177,6 +177,15 @@ protected:
   // Ptr to the connectivity on which the space is defined
   feCncGeo *_cnc;
 
+  // If this space is defined on a periodic boundary,
+  // _matchingPeriodicSpace is its matching space on the
+  // matching boundary.
+  bool _isPeriodic = false;
+  bool _isPeriodicMaster = false;
+  bool _isPeriodicSlave  = false;
+  const feSpace *_matchingPeriodicSpace = nullptr;
+  std::vector<double> _periodicOffset;
+
 public:
   friend class feBilinearForm;
   friend class feNorm;
@@ -277,6 +286,26 @@ public:
   // Same but compare with a field descriptor.
   // A field descriptor does not have a dimension.
   bool representsSameFieldAs(const FEDescriptor &other) const;
+
+  void setPeriodic(bool flag) { _isPeriodic = flag; }
+  void setPeriodicMaster(bool flag) { _isPeriodicMaster = flag; }
+  void setPeriodicSlave(bool flag) { _isPeriodicSlave = flag; }
+  bool isPeriodic() const { return _isPeriodic; }
+  bool isPeriodicMaster() const { return _isPeriodicMaster; }
+  bool isPeriodicSlave() const { return _isPeriodicSlave; }
+  void setMatchingPeriodicSpace(const feSpace *other)
+  {
+    _matchingPeriodicSpace = other;
+  }
+  const feSpace *MatchingPeriodicSpace() const
+  {
+    return _matchingPeriodicSpace;
+  }
+  void setPeriodicOffset(const std::vector<double> &offset)
+  {
+    _periodicOffset = offset;
+  }
+  const std::vector<double> &PeriodicOffset() const { return _periodicOffset; }
 
   EigenMat innerProductBasisFunctions(int iElm);
   double   innerProductBasisFunctions(int iElm, int ex, int ey);

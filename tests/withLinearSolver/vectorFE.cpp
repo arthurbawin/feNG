@@ -132,9 +132,9 @@ namespace weakGradient {
 
 // Vector Laplacian test case
 //
-// Solve u = grad(f) on \Omega, where f is a scalar source term
+// Solve -div(grad u) = f  on \Omega, where f is a vector-valued source term
 //       
-//       u = uD      on \partial \Omega
+//                  u = uD on \partial \Omega
 //
 // The Dirichlet BC can be enforced strongly, or weakly,
 // in which case we solve instead the mixed problem for (u, lambda) := (u, -dudn):

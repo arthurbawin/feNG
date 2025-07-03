@@ -34,7 +34,7 @@ protected:
   int _maxDOFperEdge;
   int _maxDOFperFace;
 
-  // Acutal number of DOF at each vertex/element/edge/face
+  // Actual number of DOF at each vertex/element/edge/face
   std::vector<int> _nDOFVertices;
   std::vector<int> _nDOFElements;
   std::vector<int> _nDOFEdges;
@@ -60,6 +60,9 @@ protected:
   std::set<int> _allEssentialDOF;
   // The global number of all unknown DOF (elements, faces (edges) and vertices together).
   std::set<int> _allUnknownDOF;
+
+  // Maps slave DOFs to master DOFs
+  std::map<int, int> _periodicDOF;
 
 public:
   friend class feMetaNumber;
@@ -107,6 +110,10 @@ public:
   void setEssentialFaceDOF(feMesh *mesh, const int cncGeoTag, int numElem, int numFace,
                            int numDOF = -1);
 
+  // Identify matching vertices and elements using the offset periodic vector.
+  // Fills the _periodicDOF map with slave/master pairs.
+  void applyPeriodicity(feMesh *mesh, const std::vector<feSpace*> &spaces);
+
   // Get the global number of the specified DOF
   int getVertexDOF(feMesh *mesh, const int cncGeoTag, int numElem, int numVertex,
                    int numDOF = 0);
@@ -122,6 +129,8 @@ public:
 
   int getDOFCodeAtVertex(int iVertex) { return _codeDOFVertices[iVertex]; };
 
+  const std::map<int, int> &PeriodicDOF() const { return _periodicDOF; }
+
   bool hasVertexDOFs() { return _maxDOFperVertex > 0; };
   bool hasEdgeDOFs() { return _maxDOFperEdge > 0; };
   bool hasFaceDOFs() { return _maxDOFperFace > 0; };
@@ -129,7 +138,10 @@ public:
 
   // Export the vertex DOFs and their coordinates in file.
   // Use the same function in feMetaNumber instead.
-  void exportNumberingVertices(feMesh *mesh, FILE *file);
+  //
+  // If posFormat is true, write vertex DOFs to .pos file, which can be
+  // visualized in Gmsh.
+  void exportNumberingVertices(feMesh *mesh, FILE *file, bool posFormat = false);
 
 protected:
   void allocateStructures();
@@ -173,6 +185,9 @@ protected:
   // Field numberings: <fieldID : feNumber>
   std::map<std::string, feNumber *> _numberings;
 
+  // Maps slave DOFs to master DOFs
+  std::map<int, int> _periodicDOF;
+
 public:
   // Create a global numbering for the degrees of freedom of the problem.
   // spaces is the vector of all the FE spaces defined on the mesh, and
@@ -184,11 +199,11 @@ public:
   feMetaNumber(){};
   ~feMetaNumber();
 
-  int getNbUnknowns() { return _nInc; }
-  int getNbDOFs() { return _nDofs; }
-  int getNbDOFs(std::string fieldID) { return _numberings[fieldID]->getNbDOFs(); }
-  int getNbFields() { return _nFields; }
-  std::string getFieldID(int iField) { return _fieldIDs[iField]; }
+  int getNbUnknowns() const { return _nInc; }
+  int getNbDOFs() const { return _nDofs; }
+  int getNbDOFs(std::string fieldID) const { return _numberings.at(fieldID)->getNbDOFs(); }
+  int getNbFields() const { return _nFields; }
+  std::string getFieldID(int iField) const { return _fieldIDs[iField]; }
 
   // Return the numbering of target field
   feNumber *getNumbering(std::string fieldID) { return _numberings[fieldID]; }
@@ -216,8 +231,14 @@ public:
     return _numberings[_fieldIDs[fieldTag]]->getEssentialDOF();
   };
 
+  const std::map<int, int> &PeriodicDOF() const { return _periodicDOF; }
+
   // Export the vertex DOFs and their coordinates in file.
-  feStatus exportNumberingVertices(feMesh *mesh, std::string fileName);
+  // If posFormat is true, write vertex DOFs to .pos file, which can be
+  // visualized in Gmsh.
+  feStatus exportNumberingVertices(feMesh *mesh,
+                                   std::string fileName,
+                                   bool posFormat = false);
 
   void printFields(std::ostream &os = std::cout);
   void printNumberings(std::ostream &os = std::cout);

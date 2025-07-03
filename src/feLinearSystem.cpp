@@ -7,7 +7,7 @@ extern bool wasInitialized;
 feStatus createLinearSystem(feLinearSystem *&system,
                             const linearSolverType type,
                             const std::vector<feBilinearForm*> bilinearForms,
-                            const int numUnknowns,
+                            const feMetaNumber *numbering,
                             const int ownershipSplit)
 {
 #if !defined(HAVE_MKL)
@@ -29,13 +29,13 @@ feStatus createLinearSystem(feLinearSystem *&system,
     }
   }
 
-  if(numUnknowns == 0)
+  if(numbering->getNbUnknowns() == 0)
     return feErrorMsg(FE_STATUS_ERROR,
                       "0 unknowns : attempting to create a linear system of size 0.");
 
   if(type == MKLPARDISO) {
 #if defined(HAVE_MKL)
-      system = new feLinearSystemMklPardiso(bilinearForms, numUnknowns, ownershipSplit);
+      system = new feLinearSystemMklPardiso(bilinearForms, numbering, ownershipSplit);
 #else
       return feErrorMsg(FE_STATUS_ERROR,
                         "feNG must be compiled with Intel MKL to solve with MKL Pardiso.");
@@ -54,7 +54,7 @@ feStatus createLinearSystem(feLinearSystem *&system,
           " Add the option --with-mumps=1 or --download-mumps=1 when configuring PETSc.");
       #endif
     }
-    system = new feLinearSystemPETSc(bilinearForms, numUnknowns, type);
+    system = new feLinearSystemPETSc(bilinearForms, numbering, type);
 #else
     return feErrorMsg(FE_STATUS_ERROR,
                         "feNG must be compiled with MPI and PETSc to solve with PETSc.");
@@ -66,7 +66,9 @@ feStatus createLinearSystem(feLinearSystem *&system,
   return FE_STATUS_OK;
 }
 
-feLinearSystem::feLinearSystem(const std::vector<feBilinearForm*> bilinearForms)
+feLinearSystem::feLinearSystem(const std::vector<feBilinearForm*> bilinearForms,
+                               const feMetaNumber                *numbering)
+ : _numbering(numbering)
 {
   _recomputeMatrix = false;
   _numMatrixForms = 0;

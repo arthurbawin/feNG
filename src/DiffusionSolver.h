@@ -31,7 +31,8 @@ feStatus createDiffusionSolver(
                    &boundaryConditions,
   feFunction       *diffusivity,
   PostProcCallback *postProcCallback = nullptr,
-  feFunction       *source           = nullptr);
+  feFunction       *source           = nullptr,
+  feVectorFunction *vectorSource     = nullptr);
 
 class DiffusionSolver : public SolverBase
 {
@@ -40,6 +41,7 @@ public:
 
   feFunction *_diffusivity;
   feFunction *_source;
+  feVectorFunction *_vectorSource;
 
 public:
   DiffusionSolver(
@@ -51,7 +53,8 @@ public:
                      &boundaryConditions,
     feFunction       *diffusivity,
     PostProcCallback *postProcCallback,
-    feFunction       *source);
+    feFunction       *source,
+    feVectorFunction *vectorSource);
   ~DiffusionSolver() {}
 
   feStatus createBilinearForms(const std::vector<feSpace *>  &spaces,

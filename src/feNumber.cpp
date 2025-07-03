@@ -214,6 +214,103 @@ int feNumber::getFaceDOF(feMesh *mesh, const int cncGeoTag, int numElem, int num
   return _numberingFaces[_maxDOFperFace * face + numDOF];
 }
 
+void feNumber::applyPeriodicity(feMesh *mesh, const std::vector<feSpace*> &spaces)
+{
+  const double tol = 1e-8;
+
+  for(const auto &s : spaces)
+  {
+    if(s->getFieldID() == _fieldID && s->isPeriodic() && s->isPeriodicMaster())
+    {
+      const feSpace *matchingSpace = s->MatchingPeriodicSpace();
+      const feCncGeo *cnc0 = mesh->getCncGeoByTag(s->getCncGeoTag());
+      const feCncGeo *cnc1 = mesh->getCncGeoByTag(matchingSpace->getCncGeoTag());
+
+      //
+      // Vertex DOFs
+      //
+      const std::vector<int> &vertices0 = cnc0->GlobalVertexTags();
+      const std::vector<int> &vertices1 = cnc1->GlobalVertexTags();
+      const std::vector<Vertex> &vertices = mesh->getVertices();
+
+      Vertex offset(s->PeriodicOffset());
+
+      int matchingVertices = 0;
+      for(size_t i = 0; i < vertices0.size(); ++i)
+      {
+        const int iv0 = vertices0[i];
+        const Vertex &v0 = vertices[iv0];
+        Vertex v0translated = v0 + offset;
+
+        for(size_t j = 0; j < vertices1.size(); ++j)
+        {
+          const int iv1 = vertices1[j];
+          const Vertex &v1 = vertices[iv1];
+          if(v1.distance(v0translated) < tol)
+          {
+            // Vertices match: add all their DOF to map
+            matchingVertices++;
+            for(int iDOF = 0; iDOF < _nDOFVertices[iv0]; ++iDOF)
+            {
+              const int masterDOF = _numberingVertices[_maxDOFperVertex * iv0 + iDOF];
+              const int slaveDOF  = _numberingVertices[_maxDOFperVertex * iv1 + iDOF];
+              _periodicDOF.insert({masterDOF, slaveDOF});
+            }
+            break;
+          }
+        }
+      }
+
+      //
+      // Edge DOFs
+      //
+      int matchingEdges = 0;
+      const std::vector<int> &edges0 = cnc0->GlobalEdgeTags();
+      const std::vector<int> &edges1 = cnc1->GlobalEdgeTags();
+      const std::map<int, const Edge *> &edges = mesh->getEdgesMap();
+
+      for(size_t i = 0; i < edges0.size(); ++i)
+      {
+        const int iedge0 = fabs(edges0[i]) - 1;
+        const Vertex *v00 = edges.at(edges0[i])->getVertex(0);
+        const Vertex *v01 = edges.at(edges0[i])->getVertex(1);
+        Vertex v00translated = *v00 + offset;
+        Vertex v01translated = *v01 + offset;
+
+        for(size_t j = 0; j < edges1.size(); ++j)
+        {
+          const int iedge1 = fabs(edges1[j]) - 1;
+          const Vertex *v10 = edges.at(edges1[j])->getVertex(0);
+          const Vertex *v11 = edges.at(edges1[j])->getVertex(1);
+
+          if((v10->distance(v00translated) < tol && v11->distance(v01translated) < tol) ||
+             (v11->distance(v00translated) < tol && v10->distance(v01translated) < tol))
+          {
+            // Edges match: add all their DOF to map
+            matchingEdges++;
+            for(int iDOF = 0; iDOF < _nDOFEdges[iedge0]; ++iDOF)
+            {
+              const int masterDOF = _numberingEdges[_maxDOFperEdge * iedge0 + iDOF];
+              const int slaveDOF  = _numberingEdges[_maxDOFperEdge * iedge1 + iDOF];
+              _periodicDOF.insert({masterDOF, slaveDOF});
+            }
+            break;         
+          }
+        }
+      }
+
+      if(matchingVertices == 0 && matchingEdges == 0)
+      {
+        feErrorMsg(FE_STATUS_ERROR,
+          "Could not find any matching vertex or edge when assigning\n"
+          " periodic degrees of freedom with tolerance %1.3e. Increase tolerance,\n"
+          " or check offset vector for inconsistency with the mesh.\n", tol);
+        exit(-1);
+      }
+    }
+  }
+}
+
 void feNumber::allocateStructures()
 {
   // Initialize the numbering arrays
@@ -388,16 +485,43 @@ int feNumber::numberEssential(int globalNum)
 // Is used in feMetaNumber::exportNumberingVertices.
 // Writes the DOFs numbering along with the physical coordinates of the DOFs for this field.
 // Writes a file with format : (1 if essential 0 otherwise) #dof x_dof y_dof z_dof
-void feNumber::exportNumberingVertices(feMesh *mesh, FILE *file)
+void feNumber::exportNumberingVertices(feMesh *mesh, FILE *file, bool posFormat)
 {
-  std::vector<Vertex> &vertices = mesh->getVertices();
-  int dofNumber;
-  Vertex v;
-  for(size_t i = 0; i < vertices.size(); ++i) {
-    dofNumber = _numberingVertices[i];
-    v = vertices[i];
-    fprintf(file, "%d %d %+-1.16e %+-1.16e %+-1.16e\n", _codeDOFVertices[i] == DOF_ESSENTIAL,
-            dofNumber, v.x(), v.y(), v.z());
+  const std::vector<Vertex> &vertices = mesh->getVertices();
+
+  for(size_t i = 0; i < vertices.size(); ++i)
+  {
+    const int dofNumber = _numberingVertices[i];
+    const Vertex &v = vertices[i];
+
+    if(posFormat)
+    {
+      fprintf(file, "SP(%g,%g,%g){%d};\n", v.x(), v.y(), v.z(), dofNumber);
+    } else 
+    {
+      fprintf(file, "%d %d %+-1.16e %+-1.16e %+-1.16e\n", _codeDOFVertices[i] == DOF_ESSENTIAL,
+              dofNumber, v.x(), v.y(), v.z());
+    }
+  }
+
+  const std::vector<const Edge *> &edges = mesh->getEdges();
+
+  for(size_t i = 0; i < edges.size(); ++i)
+  {
+    const int edge = fabs(edges[i]->getTag()) - 1;
+    const int dofNumber = _numberingEdges[edge];
+    const Vertex *v0 = edges[i]->getVertex(0);
+    const Vertex *v1 = edges[i]->getVertex(1);
+    Vertex vMid = (*v0 + *v1) * 0.5;
+
+    if(posFormat)
+    {
+      fprintf(file, "SP(%g,%g,%g){%d};\n", vMid.x(), vMid.y(), vMid.z(), dofNumber);
+    } else 
+    {
+      fprintf(file, "%d %d %+-1.16e %+-1.16e %+-1.16e\n", _codeDOFEdges[i] == DOF_ESSENTIAL,
+              dofNumber, vMid.x(), vMid.y(), vMid.z());
+    }
   }
 }
 
@@ -636,8 +760,8 @@ feMetaNumber::feMetaNumber(feMesh *mesh,
   // has marked a vertex essential.
   //
   // For now we only synchronize vertices and elements DOF (e.g. to apply pressure point (0D) BC),
-  // additional checks (e.g. edges and elements DOF for Dirichlet BC on 1D boundaries)
-  // can be added when necessary.
+  // additional checks can be added when necessary 
+  // (e.g., edges and elements DOF for Dirichlet BC on 1D boundaries).
   for(feSpace *fS : spaces) {
     fS->synchronizeCodeOfEssentialDOF();
     // fS->synchronizeNumberingOfEssentialDOF();
@@ -686,6 +810,17 @@ feMetaNumber::feMetaNumber(feMesh *mesh,
     _nDofs -= numModifiedDOF;
   }
 
+  // Handle periodicity
+  for(const auto &fieldID : _fieldIDs)
+  {
+    _numberings[fieldID]->applyPeriodicity(mesh, spaces);
+
+    for(const auto &pair : _numberings[fieldID]->PeriodicDOF())
+    {
+      _periodicDOF.insert(pair);
+    }
+  }
+
   // Summarize all the degrees of freedom assigned for each field in the _allFieldDOF vector
   for(int i = 0; i < _nFields; ++i) {
     _numberings[_fieldIDs[i]]->compactFieldDOF();
@@ -716,7 +851,9 @@ feMetaNumber::~feMetaNumber()
   }
 }
 
-feStatus feMetaNumber::exportNumberingVertices(feMesh *mesh, std::string fileName)
+feStatus feMetaNumber::exportNumberingVertices(feMesh *mesh,
+  std::string fileName,
+  bool posFormat)
 {
   FILE *file = fopen(fileName.data(), "w");
   if(file == nullptr) {
@@ -724,8 +861,18 @@ feStatus feMetaNumber::exportNumberingVertices(feMesh *mesh, std::string fileNam
                       fileName.data());
   }
 
+  if(posFormat)
+  {
+    fprintf(file, "View \"%s\"{\n", fileName.data());
+  }
+
   for(auto pair : _numberings) {
-    pair.second->exportNumberingVertices(mesh, file);
+    pair.second->exportNumberingVertices(mesh, file, posFormat);
+  }
+
+  if(posFormat)
+  {
+    fprintf(file, "};");
   }
 
   fclose(file);

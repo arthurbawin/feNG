@@ -40,6 +40,7 @@ public:
   feEZCompressedRowStorage(const int numUnknowns,
                            const std::vector<feBilinearForm*> &formMatrices,
                            const int numMatrixForms,
+                           const feMetaNumber *numbering,
                            const int *ownedUpperBounds = nullptr);
 
   feInt getNumNNZ() { return _num_nnz; };

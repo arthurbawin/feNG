@@ -92,6 +92,7 @@ feStatus solveNewtonRaphson(feLinearSystem *linearSystem,
     }
     
     linearSystem->constrainEssentialComponents(sol);
+    linearSystem->applyPeriodicity();
 
     // Solve J(u) * du = -NL(u)
     bool successSolve = linearSystem->solve(&normCorrection, &normResidual, &normAxb, &linearSystemIter);

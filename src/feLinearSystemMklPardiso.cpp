@@ -172,15 +172,17 @@ void feLinearSystemMklPardiso::initialize(void)
 }
 
 feLinearSystemMklPardiso::feLinearSystemMklPardiso(const std::vector<feBilinearForm*> bilinearForms,
-                                                   const int numUnknowns,
+                                                   const feMetaNumber *numbering,
                                                    const int ownershipSplit)
-  : feLinearSystem(bilinearForms), _nInc(numUnknowns), _ownershipSplit(ownershipSplit)
+  : feLinearSystem(bilinearForms, numbering)
+  , _nInc(numbering->getNbUnknowns())
+  , _ownershipSplit(ownershipSplit)
 {
   //
   // Determine sparsity pattern, allocate MKL Pardiso arrays
   // for sequential or distributed matrix.
   //
-  feEZCompressedRowStorage _EZCRS(numUnknowns, _formMatrices, _numMatrixForms);
+  feEZCompressedRowStorage _EZCRS(_nInc, _formMatrices, _numMatrixForms, numbering);
   _nnz = _EZCRS.getNumNNZ();
   _mat_ia = (PardisoInt*) malloc((_nInc + 1)*sizeof(PardisoInt)); // ia in pardiso doc (beginning of row in ja)
   _mat_ja = (PardisoInt*) malloc( _nnz      *sizeof(PardisoInt)); // ja in pardiso doc (columns)
@@ -1090,6 +1092,7 @@ void feLinearSystemMklPardiso::constrainEssentialComponents(const feSolution *so
   for(size_t iRow = 0; iRow < _rowsToConstrain.size(); ++iRow)
   {
     feInt row = _rowsToConstrain[iRow];
+
     // Constrain columns. For every occurence of 'row' in ja,
     // set the associated value to zero
     for(auto jRow : _posOccurencesInJa[iRow]) {
@@ -1111,6 +1114,38 @@ void feLinearSystemMklPardiso::constrainEssentialComponents(const feSolution *so
   }
 
   feInfoCond(FE_VERBOSE > 1, "\t\t\t\tConstrained essential DOFs in %f s", toc());
+}
+
+void feLinearSystemMklPardiso::applyPeriodicity()
+{
+  const std::map<int, int> &periodicDOF = _numbering->PeriodicDOF();
+
+  for(const auto &pair : periodicDOF)
+  {
+    const int masterDOF = pair.first;
+    const int slaveDOF  = pair.second;
+
+    if(slaveDOF < _nInc && masterDOF < _nInc)
+    {
+      // Constrain slave rows to set: dof_slave - dof_master = 0
+      // Assign 1 at (slave,slave), -1 at (slave, master), 0 everywhere else on row.
+      int debut = _mat_ia[slaveDOF];
+      int fin   = _mat_ia[slaveDOF + 1];
+
+      for(feInt j = 0; j < fin - debut; ++j)
+      {
+        _mat_values[debut + j] = 0.;
+        if(_mat_ja[debut + j] == slaveDOF)
+          _mat_values[debut + j] = 1.;
+        if(_mat_ja[debut + j] == masterDOF)
+          _mat_values[debut + j] = -1.;
+      }
+
+      // Constrain RHS
+      _rhs[slaveDOF] = 0.;
+    }
+  }
+  viewMatrix();
 }
 
 //

@@ -16,7 +16,8 @@ feStatus createDiffusionSolver(
                    &boundaryConditions,
   feFunction       *diffusivity,
   PostProcCallback *postProcCallback,
-  feFunction       *source)
+  feFunction       *source,
+  feVectorFunction *vectorSource)
 {
   if (fieldDescriptors.size() != 1)
   {
@@ -33,7 +34,8 @@ feStatus createDiffusionSolver(
                                boundaryConditions,
                                diffusivity,
                                postProcCallback,
-                               source);
+                               source,
+                               vectorSource);
 
   return FE_STATUS_OK;
 }
@@ -47,7 +49,8 @@ DiffusionSolver::DiffusionSolver(
                    &boundaryConditions,
   feFunction       *diffusivity,
   PostProcCallback *postProcCallback,
-  feFunction       *source)
+  feFunction       *source,
+  feVectorFunction *vectorSource)
   : SolverBase(NLSolver_parameters,
                TimeIntegration_parameters,
                fieldDescriptors,
@@ -56,12 +59,17 @@ DiffusionSolver::DiffusionSolver(
   , _diff_parameters(diff_parameters)
   , _diffusivity(diffusivity)
   , _source(source)
+  , _vectorSource(vectorSource)
 {
   _numFields = 1;
 
   if (source == nullptr)
   {
     _source = new feConstantFunction(0.);
+  }
+  if (vectorSource == nullptr)
+  {
+    vectorSource = new feConstantVectorFunction({0., 0., 0.});
   }
 }
 
@@ -74,11 +82,26 @@ DiffusionSolver::createBilinearForms(const std::vector<feSpace *>  &spaces,
   feSpace *u = spaces[0];
 
   feBilinearForm *dudt, *diff, *src;
-  feCheckReturn(createBilinearForm(
-    dudt, {u}, new feSysElm_TransientMass(&scalarConstant::one)));
-  feCheckReturn(
-    createBilinearForm(diff, {u}, new feSysElm_Diffusion<2>(_diffusivity)));
-  feCheckReturn(createBilinearForm(src, {u}, new feSysElm_Source(_source)));
+
+  if(u->isVectorValued())
+  {
+    feSysElm *f1 = new feSysElm_TransientVectorMass<2>(&scalarConstant::one);
+    feSysElm *f2 = new feSysElm_VectorDiffusion<2>(&scalarConstant::one, _diffusivity);
+    feSysElm *f3 = new feSysElm_VectorSource<2>(_vectorSource);
+
+    feCheckReturn(createBilinearForm(dudt, {u}, f1));
+    feCheckReturn(createBilinearForm(diff, {u}, f2));
+    feCheckReturn(createBilinearForm( src, {u}, f3));
+  } else {
+    feSysElm *f1 = new feSysElm_TransientMass(&scalarConstant::one);
+    feSysElm *f2 = new feSysElm_Diffusion<2>(_diffusivity);
+    feSysElm *f3 = new feSysElm_Source(_source);
+
+    feCheckReturn(createBilinearForm(dudt, {u}, f1));
+    feCheckReturn(createBilinearForm(diff, {u}, f2));
+    feCheckReturn(createBilinearForm( src, {u}, f3));
+  }
+  
   forms = {dudt, diff, src};
 
   //

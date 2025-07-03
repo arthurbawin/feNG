@@ -116,6 +116,7 @@ namespace BoundaryConditions
   {
     dirichlet,
     dirichlet_one_component,
+    periodic,
     contactAngle
   };
 
@@ -214,6 +215,49 @@ namespace BoundaryConditions
     SlipY(const VectorFEDescriptor &descriptor)
       : DirichletSingleComponent(descriptor, 0)
     {}
+  };
+
+  //
+  // Periodic boundary condition
+  //
+  // Matching periodic boundaries are detected for translation only.
+  // The offset vector is the translation from a vertex on boundary 1
+  // to its position on boundary 2, that is, v2 = v1 + offset.
+  //
+  class ScalarPeriodic : public BoundaryCondition
+  {
+  public:
+    FEDescriptor _matching_descriptor;
+    const std::vector<double> &_offset;
+  public:
+    ScalarPeriodic(const ScalarFEDescriptor &descriptor,
+                   const ScalarFEDescriptor &matching_descriptor,
+                   const std::vector<double> &offset)
+      : BoundaryCondition(descriptor, descriptor, Type::periodic)
+      , _matching_descriptor(matching_descriptor)
+      , _offset(offset)
+    {
+      _descriptor_trialSpace._isEssential         = false;
+      _descriptor_trialSpace._essentialComponents = {0, 0, 0};
+    }
+  };
+
+  class VectorPeriodic : public BoundaryCondition
+  {
+  public:
+    FEDescriptor _matching_descriptor;
+    const std::vector<double> &_offset;
+  public:
+    VectorPeriodic(const VectorFEDescriptor &descriptor,
+                   const VectorFEDescriptor &matching_descriptor,
+                   const std::vector<double> &offset)
+      : BoundaryCondition(descriptor, descriptor, Type::periodic)
+      , _matching_descriptor(matching_descriptor)
+      , _offset(offset)
+    {
+      _descriptor_trialSpace._isEssential         = false;
+      _descriptor_trialSpace._essentialComponents = {0, 0, 0};
+    }
   };
 
   //

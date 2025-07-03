@@ -113,7 +113,8 @@ private:
                             const FEDescriptor     &spaceDescriptor,
                             feMesh                 *mesh,
                             std::vector<feSpace *> &spaces,
-                            std::vector<feSpace *> &essentialSpaces) const;
+                            std::vector<feSpace *> &essentialSpaces,
+                            size_t                 &spaceIndex) const;
 
 public:
   //

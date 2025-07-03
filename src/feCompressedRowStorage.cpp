@@ -15,6 +15,7 @@
 feEZCompressedRowStorage::feEZCompressedRowStorage(const int numUnknowns,
                                                    const std::vector<feBilinearForm *> &formMatrices,
                                                    const int numMatrixForms,
+                                                   const feMetaNumber *numbering,
                                                    const int *ownedUpperBounds)
 {
   nnz.resize(numUnknowns, 0.);
@@ -89,6 +90,19 @@ feEZCompressedRowStorage::feEZCompressedRowStorage(const int numUnknowns,
           }
         }
       }
+    }
+  }
+
+  // Add periodicity constraints
+  // Slave DOF rows will have -1 in master DOF column
+  const std::map<int, int> &periodicDOF = numbering->PeriodicDOF();
+  for(const auto &p : periodicDOF)
+  {
+    const int masterDOF = p.first;
+    const int slaveDOF  = p.second;
+    if(slaveDOF < numUnknowns && masterDOF < numUnknowns)
+    {
+      nnzPerRow[slaveDOF].push_back(masterDOF);
     }
   }
 
