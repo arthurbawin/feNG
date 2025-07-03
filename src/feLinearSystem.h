@@ -247,7 +247,7 @@ public:
                         const bool        assembleOnlyTransientMatrices);
   void assembleResiduals(const feSolution *sol);
   void constrainEssentialComponents(const feSolution *sol);
-  // void applyPeriodicity();
+  void applyPeriodicity();
   void permute();
   bool solve(double *normSolution,
              double *normRHS,

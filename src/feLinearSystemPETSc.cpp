@@ -240,7 +240,7 @@ int feLinearSystemPETSc::initializeMPI()
   if(rank == 0) {
 
     // Determine the nonzero structure
-    feEZCompressedRowStorage _EZCRS(_nInc, _formMatrices, _numMatrixForms, _ownedUpperBounds);
+    feEZCompressedRowStorage _EZCRS(_nInc, _formMatrices, _numMatrixForms, _numbering, _ownedUpperBounds);
     num_nnz = _EZCRS.getNumNNZ();
 
     for(int i = 0; i < _nInc; ++i) {
@@ -854,6 +854,12 @@ void feLinearSystemPETSc::constrainEssentialComponents(const feSolution *sol)
 #else
   UNUSED(sol);
 #endif
+}
+
+void feLinearSystemPETSc::applyPeriodicity()
+{
+  feErrorMsg(FE_STATUS_ERROR, "Implement applyPeriodicity for PETSc system");
+  exit(-1);
 }
 
 //
