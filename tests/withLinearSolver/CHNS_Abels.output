@@ -1,12 +1,16 @@
 Cahn-Hilliard Navier-Stokes MMS
    (u,p) : Taylor-Hood elements P2-P1
 (phi,mu) : Equal order elements P1-P1
+Initial time : 0
+Final   time : 1
+N timesteps for first mesh : 10
+N timesteps for last  mesh : 40
 ==================== L2 error norms ==================
 U Velocity
             nElm           error            rate
-              32    7.613946e-03    0.000000e+00
-             128    1.306592e-03    2.542836e+00
-             512    2.841663e-04    2.201001e+00
+              32    2.325039e-03    0.000000e+00
+             128    4.440247e-04    2.388543e+00
+             512    1.036562e-04    2.098834e+00
 
 P Pressure
             nElm           error            rate

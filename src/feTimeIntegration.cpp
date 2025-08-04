@@ -111,7 +111,6 @@ void TimeIntegrator::computePostProcessing(const int iStep, const double t)
   // Remaining are the results of the norms and indicators
   for(size_t i = 0; i < _postProcessing.size(); ++i) {
     _postProcessingData[i+1][iStep] = _postProcessing[i]->compute();
-    feInfo("at t = %1.3e Postproc computed %+-1.8e", t, _postProcessingData[i+1][iStep]);
   }
 }
 

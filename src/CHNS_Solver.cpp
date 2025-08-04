@@ -18,15 +18,25 @@ feStatus createCHNS_Solver(
   feFunction       *phiSource,
   feFunction       *muSource)
 {
-  if (fieldDescriptors.size() != 4)
+  size_t requiredDescriptors = 4;
+  if (CHNS_parameters.formulation ==
+      Parameters::CHNS::Formulation::volumeAveragedGeneric)
+    requiredDescriptors = 5;
+
+  if (fieldDescriptors.size() != requiredDescriptors)
   {
-    return feErrorMsg(FE_STATUS_ERROR,
-                      "CHNS Solver expects 4 unknown finite element spaces: u, "
-                      "p, phi, mu. Only %d field descriptor(s) were provided.",
-                      fieldDescriptors.size());
+    return feErrorMsg(
+      FE_STATUS_ERROR,
+      "CHNS Solver expects %d unknown finite element spaces: u, "
+      "p, phi, mu (,v). %d field descriptor(s) were provided.",
+      requiredDescriptors,
+      fieldDescriptors.size());
   }
 
-  std::string expectedName[4] = {"U", "P", "Phi", "Mu"};
+  std::vector<std::string> expectedName = {"U", "P", "Phi", "Mu"};
+  if (CHNS_parameters.formulation ==
+      Parameters::CHNS::Formulation::volumeAveragedGeneric)
+    expectedName.push_back("V");
 
   for (size_t i = 0; i < fieldDescriptors.size(); ++i)
   {
@@ -75,6 +85,9 @@ feStatus createCHNS_Solver(
     }
   }
 
+  //
+  // Formulation-specific constraints
+  //
   if (CHNS_parameters.formulation ==
         Parameters::CHNS::Formulation::massAveraged &&
       CHNS_parameters.mobilityType == Parameters::CHNS::MobilityType::constant)
@@ -83,6 +96,16 @@ feStatus createCHNS_Solver(
       FE_STATUS_ERROR,
       "Mobility was set to constant, but mass-averaged CHNS formulation is "
       "consistent only with degenerate mobility.");
+  }
+
+  if (CHNS_parameters.formulation == Parameters::CHNS::Formulation::khanwale &&
+      TimeIntegration_parameters.method !=
+        Parameters::TimeIntegration::TimeIntegrationMethod::bdf1)
+  {
+    return feErrorMsg(
+      FE_STATUS_ERROR,
+      "CHNS formulation from Khanwale et al. requires implicit Euler (BDF1) "
+      "time stepping for consistency with energy stability properties.");
   }
 
   solver = new CHNS_Solver(CHNS_parameters,
@@ -349,25 +372,24 @@ CHNS_Solver::createBilinearForms(const std::vector<feSpace *>  &spaces,
 
   switch (_CHNS_parameters.formulation)
   {
-    case Parameters::CHNS::Formulation::volumeAveraged:
+    case Parameters::CHNS::Formulation::abels:
 
       scalarParameters.push_back(_CHNS_parameters.surfaceTension);
       scalarParameters.push_back(_CHNS_parameters.epsilon);
 
-      feCheckReturn(
-        createBilinearForm(CHNS,
-                           {u, p, phi, mu},
-                           new CHNS_VolumeAveraged<2>(_density,
-                                                      _drhodphi,
-                                                      _viscosity,
-                                                      _dviscdphi,
-                                                      _mobility,
-                                                      _volumeForce,
-                                                      _pSource,
-                                                      _uSource,
-                                                      _phiSource,
-                                                      _muSource,
-                                                      scalarParameters)));
+      feCheckReturn(createBilinearForm(CHNS,
+                                       {u, p, phi, mu},
+                                       new CHNS_Abels<2>(_density,
+                                                         _drhodphi,
+                                                         _viscosity,
+                                                         _dviscdphi,
+                                                         _mobility,
+                                                         _volumeForce,
+                                                         _pSource,
+                                                         _uSource,
+                                                         _phiSource,
+                                                         _muSource,
+                                                         scalarParameters)));
       break;
 
     case Parameters::CHNS::Formulation::massAveraged:
@@ -379,18 +401,72 @@ CHNS_Solver::createBilinearForms(const std::vector<feSpace *>  &spaces,
       feCheckReturn(
         createBilinearForm(CHNS,
                            {u, p, phi, mu},
-                           new feSysElm_CHNS_Alternative<2>(_density,
-                                                            _drhodphi,
-                                                            _viscosity,
-                                                            _dviscdphi,
-                                                            _mobility,
-                                                            _volumeForce,
-                                                            _pSource,
-                                                            _uSource,
-                                                            _phiSource,
-                                                            _muSource,
-                                                            scalarParameters)));
+                           new CHNS_MassAveraged<2>(_density,
+                                                    _drhodphi,
+                                                    _viscosity,
+                                                    _dviscdphi,
+                                                    _mobility,
+                                                    _volumeForce,
+                                                    _pSource,
+                                                    _uSource,
+                                                    _phiSource,
+                                                    _muSource,
+                                                    scalarParameters)));
       break;
+
+    case Parameters::CHNS::Formulation::khanwale:
+    {
+      const double rhoA = _CHNS_parameters.fluids[0].density;
+      const double rhoB = _CHNS_parameters.fluids[1].density;
+      
+      scalarParameters.push_back(_CHNS_parameters.Re);
+      scalarParameters.push_back(_CHNS_parameters.Pe);
+      scalarParameters.push_back(_CHNS_parameters.Cn);
+      scalarParameters.push_back(_CHNS_parameters.We);
+      scalarParameters.push_back(_CHNS_parameters.Fr);
+      scalarParameters.push_back(rhoA);
+      scalarParameters.push_back(rhoB);
+
+      feCheckReturn(
+        createBilinearForm(CHNS,
+                           {u, p, phi, mu},
+                           new CHNS_Khanwale<2>(_density,
+                                                _drhodphi,
+                                                _viscosity,
+                                                _dviscdphi,
+                                                _mobility,
+                                                _volumeForce,
+                                                _pSource,
+                                                _uSource,
+                                                _phiSource,
+                                                _muSource,
+                                                scalarParameters)));
+      break;
+    }
+    case Parameters::CHNS::Formulation::volumeAveragedGeneric:
+    {
+      feSpace *v = spaces[4];
+
+      scalarParameters.push_back(_CHNS_parameters.mass_alpha);
+      scalarParameters.push_back(_CHNS_parameters.surfaceTension);
+      scalarParameters.push_back(_CHNS_parameters.epsilon);
+
+      feCheckReturn(createBilinearForm(
+        CHNS,
+        {u, p, phi, mu, v},
+        new CHNS_VolumeAveragedGeneric<2>(_density,
+                                          _drhodphi,
+                                          _viscosity,
+                                          _dviscdphi,
+                                          _mobility,
+                                          _volumeForce,
+                                          _pSource,
+                                          _uSource,
+                                          _phiSource,
+                                          _muSource,
+                                          scalarParameters)));
+      break;
+    }
   }
 
   forms = {CHNS};

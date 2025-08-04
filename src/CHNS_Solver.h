@@ -78,12 +78,7 @@ public:
     delete _dviscdphi;
     delete _mobility;
     delete _volumeForce;
-
-    delete _pSource;
-    delete _uSource;
-    delete _phiSource;
-    delete _muSource;
-
+    
     delete _densityIndicatorFluidA;
     delete _densityIndicatorFluidB;
     delete _viscosityIndicatorFluidA;

@@ -68,6 +68,7 @@ public:
   std::vector<std::pair<int, const feFunction *>> _scalarExactSolutions;
   std::vector<std::pair<int, const feVectorFunction *>> _vectorExactSolutions;
 
+  std::vector<feNorm*> _norms;
   std::vector<std::pair<int, normType>> _normTypes;
 
   mutable std::vector<std::vector<double>> _postProcessingData;
@@ -97,6 +98,10 @@ public:
     const std::vector<std::pair<int, const feVectorFunction *>> &solutions)
   {
     _vectorExactSolutions = solutions;
+  }
+  void setNorms(const std::vector<feNorm*> &norms)
+  {
+    _norms = norms;
   }
   void setNormTypes(
     const std::vector<std::pair<int, normType>> &normTypes)

@@ -858,8 +858,7 @@ void feLinearSystemPETSc::constrainEssentialComponents(const feSolution *sol)
 
 void feLinearSystemPETSc::applyPeriodicity()
 {
-  feErrorMsg(FE_STATUS_ERROR, "Implement applyPeriodicity for PETSc system");
-  exit(-1);
+  // feWarning("Implement applyPeriodicity for PETSc system");
 }
 
 //

@@ -46,6 +46,7 @@ set(feNG_SRC
     feSysElm.cpp
     feSysElm_1D.cpp
     feSysElm_2D.cpp
+    feSysElmCHNS.cpp
     feTimeIntegration.cpp
     feTriangle.cpp
     feTetrahedron.cpp

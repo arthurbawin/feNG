@@ -81,8 +81,11 @@ namespace Parameters
   {
     enum class Formulation
     {
-      volumeAveraged,
-      massAveraged
+      abels,
+      // abels_no_flux,
+      massAveraged,
+      khanwale,
+      volumeAveragedGeneric,
     } formulation;
 
     enum class MobilityType
@@ -100,6 +103,11 @@ namespace Parameters
     double surfaceTension;
     double mobility;
     double mass_alpha;
+    double Re;
+    double Pe;
+    double Cn;
+    double We;
+    double Fr;
 
     //
     // Control the CHNS parameters to modify

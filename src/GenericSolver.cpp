@@ -18,14 +18,15 @@ SolverBase::addBoundarySpace(const BoundaryConditions::BoundaryCondition *bc,
   const FEDescriptor &d = spaceDescriptor;
 
   // Check if space was already added
-  for(size_t i = 0; i < spaces.size(); ++i)
+  for (size_t i = 0; i < spaces.size(); ++i)
   {
     const auto &s = spaces[i];
-    if(s->representsSameFieldAs(d))
+    if (s->representsSameFieldAs(d) && !d._isEssential)
     {
       spaceIndex = i;
       feInfo("Skipping existing space for %s - %s",
-        d._fieldName.data(), d._physicalEntityName.data());
+             d._fieldName.data(),
+             d._physicalEntityName.data());
       return FE_STATUS_OK;
     }
   }
@@ -122,12 +123,14 @@ feStatus SolverBase::createSpaces(feMesh                 *mesh,
     const FEDescriptor &dtest  = b->_descriptor_testSpace;
 
     size_t bSpaceIndex;
-    feCheckReturn(this->addBoundarySpace(b, dtrial, mesh, spaces, essentialSpaces, bSpaceIndex));
+    feCheckReturn(this->addBoundarySpace(
+      b, dtrial, mesh, spaces, essentialSpaces, bSpaceIndex));
 
     if (!dtrial.representsSameFieldAs(dtest))
     {
       size_t unusedIndex;
-      feCheckReturn(this->addBoundarySpace(b, dtest, mesh, spaces, essentialSpaces, unusedIndex));
+      feCheckReturn(this->addBoundarySpace(
+        b, dtest, mesh, spaces, essentialSpaces, unusedIndex));
     }
 
     //
@@ -170,12 +173,14 @@ feStatus SolverBase::createSpaces(feMesh                 *mesh,
           FE_STATUS_ERROR,
           "Could not create periodic BC because matching boundaries do "
           "not have the same number of mesh vertices: %d vs %d",
-          n0, n1);
+          n0,
+          n1);
       }
 
       // Add matching feSpace and set both spaces as matching
       size_t b1SpaceIndex;
-      feCheckReturn(this->addBoundarySpace(b, m0, mesh, spaces, essentialSpaces, b1SpaceIndex));
+      feCheckReturn(this->addBoundarySpace(
+        b, m0, mesh, spaces, essentialSpaces, b1SpaceIndex));
 
       feSpace *b0Space = spaces[bSpaceIndex];
       feSpace *b1Space = spaces[b1SpaceIndex];
@@ -188,87 +193,11 @@ feStatus SolverBase::createSpaces(feMesh                 *mesh,
       b0Space->setPeriodicOffset(bP->_offset);
       b1Space->setPeriodicOffset(bP->_offset);
 
-      if(b0Space == b1Space || b0Space->representsSameFieldAs(*b1Space))
+      if (b0Space == b1Space || b0Space->representsSameFieldAs(*b1Space))
       {
-        return feErrorMsg(FE_STATUS_ERROR, "FIXME: Space was set as matching itself...");
+        return feErrorMsg(FE_STATUS_ERROR,
+                          "FIXME: Space was set as matching itself...");
       }
-
-      feInfo("Set space %s - %s matching for %s - %s",
-        b0Space->getFieldID().data(), b0Space->getCncGeoID().data(),
-        b1Space->getFieldID().data(), b1Space->getCncGeoID().data());
-
-      // // Get matching boundary
-      // bool found = false;
-      // for (const auto &b1 : _boundaryConditions)
-      // {
-      //   if (b1->_boundaryType == BoundaryConditions::Type::periodic)
-      //   {
-      //     const BoundaryConditions::ScalarPeriodic *b1P =
-      //       static_cast<const BoundaryConditions::ScalarPeriodic *>(b1);
-      //     const FEDescriptor &d1 = b1P->_descriptor_trialSpace;
-      //     const FEDescriptor &m1 = b1P->_matching_descriptor;
-
-      //     if (d0._physicalEntityName == m1._physicalEntityName &&
-      //         m0._physicalEntityName == d1._physicalEntityName &&
-      //         d0._fieldName == m1._fieldName && m0._fieldName == d1._fieldName)
-      //     {
-      //       if(found)
-      //       {
-      //         return feErrorMsg(
-      //           FE_STATUS_ERROR,
-      //           "Periodic BC for field %s on entity %s has more than one "
-      //           "matching boundary!", d0._fieldName.data(), d0._physicalEntityName.data());
-      //       }
-
-      //       found = true;
-      //       feInfo("Matching periodic BC found");
-
-      //       // Compare number of mesh vertices on matching boundaries
-      //       int n0 =
-      //         mesh->getCncGeoByName(d0._physicalEntityName)->getNumVertices();
-      //       int n1 =
-      //         mesh->getCncGeoByName(d1._physicalEntityName)->getNumVertices();
-
-      //       if (n0 != n1)
-      //       {
-      //         return feErrorMsg(
-      //           FE_STATUS_ERROR,
-      //           "Could not create periodic BC because matching boundaries do "
-      //           "not have the same number of mesh vertices: %d vs %d",
-      //           n0, n1);
-      //       }
-
-      //       // Add matching feSpace and set both spaces as matching
-      //       const FEDescriptor &d1trial = b1->_descriptor_trialSpace;
-
-      //       size_t b1SpaceIndex;
-      //       feCheckReturn(this->addBoundarySpace(b1, d1trial, mesh, spaces, essentialSpaces, b1SpaceIndex));
-
-      //       feSpace *b0Space = spaces[bSpaceIndex];
-      //       feSpace *b1Space = spaces[b1SpaceIndex];
-      //       b0Space->setPeriodic(true);
-      //       b1Space->setPeriodic(true);
-      //       b0Space->setMatchingPeriodicSpace(b1Space);
-      //       b1Space->setMatchingPeriodicSpace(b0Space);
-
-      //       if(b0Space == b1Space || b0Space->representsSameFieldAs(*b1Space))
-      //       {
-      //         return feErrorMsg(FE_STATUS_ERROR, "FIXME: Space was set as matching itself...");
-      //       }
-
-      //       feInfo("Set space %s - %s matching for %s - %s",
-      //         b0Space->getFieldID().data(), b0Space->getCncGeoID().data(),
-      //         b1Space->getFieldID().data(), b1Space->getCncGeoID().data());
-
-      //       break;
-      //     }
-      //   }
-      // }
-
-      // if (!found)
-      // {
-      //   return feErrorMsg(FE_STATUS_ERROR, "Did not find matching periodic BC");
-      // }
     }
   }
 
@@ -297,17 +226,17 @@ feStatus SolverBase::solve(feMesh                 *mesh,
 
   feLinearSystem *system = nullptr;
 #if defined(HAVE_MKL)
-  feCheckReturn(
-    createLinearSystem(system, MKLPARDISO, forms, numbering));
+  feCheckReturn(createLinearSystem(system, MKLPARDISO, forms, numbering));
 #elif defined(HAVE_PETSC) && defined(PETSC_HAVE_MUMPS)
-  feCheckReturn(
-    createLinearSystem(system, PETSC_MUMPS, forms, numbering));
+  feCheckReturn(createLinearSystem(system, PETSC_MUMPS, forms, numbering));
 #else
-  feCheckReturn(
-    createLinearSystem(system, PETSC, forms, numbering));
+  feCheckReturn(createLinearSystem(system, PETSC, forms, numbering));
 #endif
 
   std::vector<feNorm *> norms = {};
+
+  for(const auto &n : _norms)
+    norms.push_back(n);
 
   if (_normTypes.size() > 0)
   {
@@ -315,7 +244,15 @@ feStatus SolverBase::solve(feMesh                 *mesh,
     {
       const int      index = _normTypes[i].first;
       const normType nt    = _normTypes[i].second;
-      if (nt == L2_ERROR)
+
+      if(nt == L2 || nt == VECTOR_L2)
+      {
+        feNorm *n;
+        feCheckReturn(createNorm(n, nt, {spaces[index]}, sol));
+        norms.push_back(n);
+      }
+
+      else if (nt == L2_ERROR)
       {
         bool found = false;
         for (const auto &p : _scalarExactSolutions)
@@ -484,14 +421,11 @@ feStatus SolverBase::solve(feMesh                 *mesh,
   //
   feLinearSystem *system = nullptr;
 #if defined(HAVE_MKL)
-  feCheckReturn(
-    createLinearSystem(system, MKLPARDISO, forms, numbering));
+  feCheckReturn(createLinearSystem(system, MKLPARDISO, forms, numbering));
 #elif defined(HAVE_PETSC) && defined(PETSC_HAVE_MUMPS)
-  feCheckReturn(
-    createLinearSystem(system, PETSC_MUMPS, forms, numbering));
+  feCheckReturn(createLinearSystem(system, PETSC_MUMPS, forms, numbering));
 #else
-  feCheckReturn(
-    createLinearSystem(system, PETSC, forms, numbering));
+  feCheckReturn(createLinearSystem(system, PETSC, forms, numbering));
 #endif
 
   std::vector<feNorm *> norms = {};

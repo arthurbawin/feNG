@@ -56,13 +56,10 @@ typedef enum
 
   SCALAR_VECTOR_PRODUCT,
 
-  CHNS_MOMENTUM,
-  MIXED_DIVERGENCE_CHNS,
-  CHNS_TRACER_SUPG,
-
-  CHNS_VOLUME_AVERAGED,
-  CHNS_ALTERNATIVE, // = mass averaged
-  CHNS_MOMENTUM_ALTERNATIVE,
+  CHNS_ABELS,
+  CHNS_MASS_AVERAGED,
+  CHNS_VOLUME_GENERIC,
+  CHNS_KHANWALE,
 
   SUPG_PSPG_STOKES,
   SUPG_PSPG_NAVIERSTOKES,
@@ -153,18 +150,16 @@ inline const std::string toString(elementSystemType t)
       return "SCALAR_VECTOR_PRODUCT";
     case TRIPLE_MIXED_GRADIENT:
       return "TRIPLE_MIXED_GRADIENT";
-    case CHNS_MOMENTUM:
-      return "CHNS_MOMENTUM";
-    case CHNS_VOLUME_AVERAGED:
-      return "CHNS_VOLUME_AVERAGED";
-    case CHNS_ALTERNATIVE:
-      return "CHNS_ALTERNATIVE";
-    case CHNS_MOMENTUM_ALTERNATIVE:
-      return "CHNS_MOMENTUM_ALTERNATIVE";
-    case MIXED_DIVERGENCE_CHNS:
-      return "MIXED_DIVERGENCE_CHNS";
-    case CHNS_TRACER_SUPG:
-      return "CHNS_TRACER_SUPG";
+
+    case CHNS_ABELS:
+      return "CHNS_ABELS";
+    case CHNS_MASS_AVERAGED:
+      return "CHNS_MASS_AVERAGED";
+    case CHNS_VOLUME_GENERIC:
+      return "CHNS_VOLUME_GENERIC";
+    case CHNS_KHANWALE:
+      return "CHNS_KHANWALE";
+
     case NEUMANN_1D:
       return "NEUMANN_1D";
     case SUPG_STABILIZATION_1D:
@@ -1160,68 +1155,6 @@ public:
   CLONEABLE(feSysElm_MixedDivergence)
 };
 
-//
-// Mixed divergence with density function of the phase marker phi:
-//
-//    coeff * (rho(phi) * div(u)) * q, with      q (= phiP) : pressure test
-//    functions
-//
-// Integral of coeff * (div(rho(phi) * u)) * v
-//
-template <int dim>
-class feSysElm_MixedDivergenceCHNS : public feSysElm
-{
-protected:
-  const feFunction   *_coeff;
-  const feFunction   *_density;
-  const feFunction   *_drhodphi;
-  int                 _idP, _idU, _idPhi;
-  int                 _nFunctionsP, _nFunctionsU;
-  std::vector<double> _u, _gradu, _gradphi, _gradPhiU, _phiU, _phiP;
-
-public:
-  feSysElm_MixedDivergenceCHNS(const feFunction *coeff,
-                               const feFunction *density,
-                               const feFunction *drhodphi)
-    : feSysElm(dim, 3, MIXED_DIVERGENCE_CHNS, true)
-    , _coeff(coeff)
-    , _density(density)
-    , _drhodphi(drhodphi){};
-  virtual void createElementarySystem(std::vector<feSpace *> &space) override;
-  virtual void computeAe(feBilinearForm *form) override;
-  virtual void computeBe(feBilinearForm *form) override;
-  CLONEABLE(feSysElm_MixedDivergenceCHNS)
-};
-
-//
-// SUPG formulation for the tracer equation in the CHNS model:
-//
-//   (dphidt + u dot grad(phi) - M*lap(mu)) * (tau * u * grad(test_phi))
-//
-template <int dim>
-class feSysElm_CHNS_Tracer_SUPG : public feSysElm
-{
-protected:
-  const feFunction   *_coeff;
-  const feFunction   *_mobility;
-  int                 _idPhi, _idU, _idMu;
-  int                 _nFunctionsPhi, _nFunctionsU, _nFunctionsMu;
-  std::vector<double> _u, _gradphi, _gradPhiphi, _hessMu;
-
-public:
-  feSysElm_CHNS_Tracer_SUPG(const feFunction *coeff, const feFunction *mobility)
-    : feSysElm(dim, 3, CHNS_TRACER_SUPG, true)
-    , _coeff(coeff)
-    , _mobility(mobility)
-  {
-    _computeMatrixWithFD = true;
-  };
-  virtual void createElementarySystem(std::vector<feSpace *> &space) override;
-  virtual void computeAe(feBilinearForm *form) override;
-  virtual void computeBe(feBilinearForm *form) override;
-  CLONEABLE(feSysElm_CHNS_Tracer_SUPG)
-};
-
 template <int dim>
 class feSysElm_MixedCurl : public feSysElm
 {
@@ -1329,123 +1262,11 @@ public:
   CLONEABLE(feSysElm_TripleMixedGradient)
 };
 
-//
-// Momentum equation for the Cahn-Hilliard Navier-Stokes model:
-//
-// Strong form:
-//  rho(phi) * (du/dt + (u dot grad) u - f) - coeff * mu * grad(phi) -
-//  div(sigma)
-//
-// Weak form:
-//  integral of rho(phi) * (du/dt + (u dot grad) u - f) dot phi_u + sigma :
-//  grad(phi_u)
-//
-// with:
-//  -   rho: the density which depends on phi
-//  -   phi: the phase marker
-//  -     u: the velocity field
-//  - coeff: a coefficient, e.g. gamma/eps (surface tension/interface thickness)
-//  -    mu: the chemical potential
-//  - sigma: the Newtonian stress tensor whose viscosity also depends on phi
-//  -     f: volume source term
-//  - phi_u: the velocity test functions
-//
-// Requires 4 fields: u, p (through sigma), phi, mu.
-// The density is a function depending on the solution.
-//
+/**
+ *  Cahn-Hilliard Navier-Stokes model with formulation from Abels et al.
+ */
 template <int dim>
-class feSysElm_CHNS_Momentum : public feSysElm
-{
-protected:
-  const feFunction       *_density;
-  const feFunction       *_drhodphi;
-  const feFunction       *_viscosity;
-  const feFunction       *_dviscdphi;
-  const feFunction       *_mobility;
-  const feFunction       *_coeffKorteweg;
-  const feVectorFunction *_volumeForce;
-  int                     _idU, _idP, _idPhi, _idMu;
-  int _nFunctionsU, _nFunctionsP, _nFunctionsPhi, _nFunctionsMu;
-  // A lot of vectors for the dot products and contractions
-  std::vector<double> _f, _u, _dudt, _gradu, _uDotGradu, _gradphi, _gradmu,
-    _gradmuDotGradu, _symmetricGradu, _phiU, _gradPhiU, _phiP, _phiPhi,
-    _gradPhiPhi, _phiMu, _gradPhiMu, _dudtDotPhiU, _uDotGraduDotPhiU, _fDotPhiU,
-    _gradPhiDotphiU, _gradMuDotgradUdotphiU, _divPhiU, _doubleContraction,
-    _phi_idotphi_j, _u0DotGradPhiUDotPhiU, _phiUDotGradu0DotPhiU,
-    _doubleContractionPhiPhi, _doubleContractionPhiPhiT,
-    _gradMu0DotgradUdotphiU, _gradMuDotgradU0DotphiU, _gradPhi0dotPhiU,
-    _gradPhiPhiDotPhiU, _symGraduDDotGradPhiU;
-
-public:
-  feSysElm_CHNS_Momentum(const feFunction       *density,
-                         const feFunction       *drhodphi,
-                         const feFunction       *viscosity,
-                         const feFunction       *dviscdphi,
-                         const feFunction       *mobility,
-                         const feFunction       *coeffKorteweg,
-                         const feVectorFunction *volumeForce)
-    : feSysElm(dim, 4, CHNS_MOMENTUM, true)
-    , _density(density)
-    , _drhodphi(drhodphi)
-    , _viscosity(viscosity)
-    , _dviscdphi(dviscdphi)
-    , _mobility(mobility)
-    , _coeffKorteweg(coeffKorteweg)
-    , _volumeForce(volumeForce){};
-  virtual void createElementarySystem(std::vector<feSpace *> &space) override;
-  virtual void computeAe(feBilinearForm *form) override;
-  virtual void computeBe(feBilinearForm *form) override;
-  CLONEABLE(feSysElm_CHNS_Momentum)
-};
-
-template <int dim>
-class feSysElm_CHNS_Momentum_Alternative : public feSysElm
-{
-protected:
-  const feFunction       *_density;
-  const feFunction       *_drhodphi;
-  const feFunction       *_viscosity;
-  const feFunction       *_dviscdphi;
-  const feFunction       *_mobility;
-  const feVectorFunction *_volumeForce;
-  int                     _idU, _idP, _idPhi, _idMu;
-  int _nFunctionsU, _nFunctionsP, _nFunctionsPhi, _nFunctionsMu;
-
-  // A lot of vectors for the dot products and contractions
-  std::vector<double> _f, _u, _dudt, _gradu, _uDotGradu, _gradphi, _gradmu,
-    _gradmuDotGradu, _symmetricGradu, _phiU, _gradPhiU, _phiP, _phiPhi,
-    _gradPhiPhi, _phiMu, _gradPhiMu, _dudtDotPhiU, _uDotGraduDotPhiU, _fDotPhiU,
-    _gradPhiDotphiU, _gradMuDotgradUdotphiU, _divPhiU, _doubleContraction,
-    _phi_idotphi_j, _u0DotGradPhiUDotPhiU, _phiUDotGradu0DotPhiU,
-    _doubleContractionPhiPhi, _doubleContractionPhiPhiT,
-    _gradMu0DotgradUdotphiU, _gradMuDotgradU0DotphiU, _gradPhi0dotPhiU,
-    _gradPhiPhiDotPhiU, _symGraduDDotGradPhiU;
-
-  std::vector<double> _uDotPhiU, _gradMuDotphiU;
-
-public:
-  feSysElm_CHNS_Momentum_Alternative(const feFunction       *density,
-                                     const feFunction       *drhodphi,
-                                     const feFunction       *viscosity,
-                                     const feFunction       *dviscdphi,
-                                     const feVectorFunction *volumeForce)
-    : feSysElm(dim, 4, CHNS_MOMENTUM_ALTERNATIVE, true)
-    , _density(density)
-    , _drhodphi(drhodphi)
-    , _viscosity(viscosity)
-    , _dviscdphi(dviscdphi)
-    , _volumeForce(volumeForce)
-  {
-    _computeMatrixWithFD = true;
-  };
-  virtual void createElementarySystem(std::vector<feSpace *> &space) override;
-  virtual void computeAe(feBilinearForm *form) override;
-  virtual void computeBe(feBilinearForm *form) override;
-  CLONEABLE(feSysElm_CHNS_Momentum_Alternative)
-};
-
-template <int dim>
-class CHNS_VolumeAveraged : public feSysElm
+class CHNS_Abels : public feSysElm
 {
 protected:
   const feFunction       *_density;
@@ -1476,7 +1297,7 @@ protected:
     _gradMuDotgradUdotphiU;
 
 public:
-  CHNS_VolumeAveraged(const feFunction       *density,
+  CHNS_Abels(const feFunction       *density,
                       const feFunction       *drhodphi,
                       const feFunction       *viscosity,
                       const feFunction       *dviscdphi,
@@ -1487,7 +1308,7 @@ public:
                       const feFunction       *sourcePhi,
                       const feFunction       *sourceMu,
                       std::vector<double>    &CHNSparameters)
-    : feSysElm(dim, 4, CHNS_VOLUME_AVERAGED, true)
+    : feSysElm(dim, 4, CHNS_ABELS, true)
     , _density(density)
     , _drhodphi(drhodphi)
     , _viscosity(viscosity)
@@ -1520,19 +1341,15 @@ public:
   virtual void createElementarySystem(std::vector<feSpace *> &space) override;
   virtual void computeAe(feBilinearForm *form) override;
   virtual void computeBe(feBilinearForm *form) override;
-  CLONEABLE(CHNS_VolumeAveraged)
+  CLONEABLE(CHNS_Abels)
 };
 
-/*
-  Alternative formulation of the CHNS system,
-  including the complete system :
-  - continuity
-  - momentum
-  - tracer equation
-  - potential equation
-*/
+/**
+ * Cahn-Hilliard Navier-Stokes model with the generic formulation of 
+ * ten Eikelder et al., in terms of the mass-averaged velocity.
+ */
 template <int dim>
-class feSysElm_CHNS_Alternative : public feSysElm
+class CHNS_MassAveraged : public feSysElm
 {
 protected:
   const feFunction       *_density;
@@ -1563,7 +1380,7 @@ protected:
     _SuDotPhiU, _gradMuDotphiU, _divPhiU, _doubleContraction;
 
 public:
-  feSysElm_CHNS_Alternative(const feFunction       *density,
+  CHNS_MassAveraged(const feFunction       *density,
                             const feFunction       *drhodphi,
                             const feFunction       *viscosity,
                             const feFunction       *dviscdphi,
@@ -1574,7 +1391,7 @@ public:
                             const feFunction       *sourcePhi,
                             const feFunction       *sourceMu,
                             std::vector<double>    &CHNSparameters)
-    : feSysElm(dim, 4, CHNS_ALTERNATIVE, true)
+    : feSysElm(dim, 4, CHNS_MASS_AVERAGED, true)
     , _density(density)
     , _drhodphi(drhodphi)
     , _viscosity(viscosity)
@@ -1610,7 +1427,186 @@ public:
   virtual void createElementarySystem(std::vector<feSpace *> &space) override;
   virtual void computeAe(feBilinearForm *form) override;
   virtual void computeBe(feBilinearForm *form) override;
-  CLONEABLE(feSysElm_CHNS_Alternative)
+  CLONEABLE(CHNS_MassAveraged)
+};
+
+template <int dim>
+class CHNS_Khanwale : public feSysElm
+{
+protected:
+  const feFunction       *_density;
+  const feFunction       *_drhodphi;
+  const feFunction       *_viscosity;
+  const feFunction       *_dviscdphi;
+  const feFunction       *_mobility;
+  const feVectorFunction *_volumeForce;
+
+  const feFunction       *_sourceP;
+  const feVectorFunction *_sourceU;
+  const feFunction       *_sourcePhi;
+  const feFunction       *_sourceMu;
+
+  double _Re, _Pe, _Cn, _We, _Fr, _rhoA, _rhoB;
+
+  int _idU, _idP, _idPhi, _idMu;
+  int _nFunctionsU, _nFunctionsP, _nFunctionsPhi, _nFunctionsMu;
+
+  // A lot of vectors for the dot products and contractions
+  std::vector<double> _f, _Su, _u, _u_n, _u_avg, _dudt, _jflux;
+  std::vector<double> _gradu, _symmetricGradu, _uDotGradu, _jFluxDotGradu, _gradp, _gradphi,
+    _gradmu;
+  std::vector<double> _gradu_n, _gradphi_n, _gradmu_n, _gradu_avg, _gradphi_avg, _gradmu_avg;
+  std::vector<double> _phiP, _phiPhi, _phiMu, _gradPhiU, _gradPhiP, _gradPhiPhi,
+    _gradPhiMu;
+  std::vector<double> _gphiOtimesgphi, _gphiOtimesgphi_times_gradPhiU;
+  std::vector<double> _uDotPhiU, _dudtDotPhiU, _uDotGraduDotPhiU, _jFluxDotGraduDotPhiU, _fDotPhiU,
+    _SuDotPhiU, _divPhiU, _doubleContraction;
+
+public:
+  CHNS_Khanwale(const feFunction       *density,
+                const feFunction       *drhodphi,
+                const feFunction       *viscosity,
+                const feFunction       *dviscdphi,
+                const feFunction       *mobility,
+                const feVectorFunction *volumeForce,
+                const feFunction       *sourceP,
+                const feVectorFunction *sourceU,
+                const feFunction       *sourcePhi,
+                const feFunction       *sourceMu,
+                std::vector<double>    &CHNSparameters)
+    : feSysElm(dim, 4, CHNS_KHANWALE, true)
+    , _density(density)
+    , _drhodphi(drhodphi)
+    , _viscosity(viscosity)
+    , _dviscdphi(dviscdphi)
+    , _mobility(mobility)
+    , _volumeForce(volumeForce)
+    , _sourceP(sourceP)
+    , _sourceU(sourceU)
+    , _sourcePhi(sourcePhi)
+    , _sourceMu(sourceMu)
+  {
+    _computeMatrixWithFD = true;
+
+    size_t numRequiredParameters = 7;
+    if (CHNSparameters.size() != numRequiredParameters)
+    {
+      feErrorMsg(FE_STATUS_ERROR,
+                 "CHNS weak forms requires %d parameters:\n"
+                 " - Re, Pe, Cn, We, Fr, rhoA, rhoB",
+                 numRequiredParameters);
+      exit(-1);
+    }
+
+    _Re   = CHNSparameters[0];
+    _Pe   = CHNSparameters[1];
+    _Cn   = CHNSparameters[2];
+    _We   = CHNSparameters[3];
+    _Fr   = CHNSparameters[4];
+    _rhoA = CHNSparameters[5];
+    _rhoB = CHNSparameters[6];
+  };
+  virtual void createElementarySystem(std::vector<feSpace *> &space) override;
+  virtual void computeAe(feBilinearForm *form) override;
+  virtual void computeBe(feBilinearForm *form) override;
+  CLONEABLE(CHNS_Khanwale)
+};
+
+/**
+ * Cahn-Hilliard Navier-Stokes model with the generic formulation of 
+ * ten Eikelder et al., in terms of the volume-averaged velocity.
+ */
+template <int dim>
+class CHNS_VolumeAveragedGeneric : public feSysElm
+{
+protected:
+  const feFunction       *_density;
+  const feFunction       *_drhodphi;
+  const feFunction       *_viscosity;
+  const feFunction       *_dviscdphi;
+  const feFunction       *_mobility;
+  const feVectorFunction *_volumeForce;
+
+  const feFunction       *_sourceP;
+  const feVectorFunction *_sourceU;
+  const feVectorFunction *_sourceV = nullptr;
+  const feFunction       *_sourcePhi;
+  const feFunction       *_sourceMu;
+
+  double _alpha, _surfaceTension, _epsilon, _lambda;
+
+  int _idU, _idV, _idP, _idPhi, _idMu;
+  int _nFunctionsU, _nFunctionsV, _nFunctionsP, _nFunctionsPhi, _nFunctionsMu;
+
+  // A lot of vectors for the dot products and contractions
+  std::vector<double> _f, _Su, _Sv, _u, _dudt;
+  std::vector<double> _gradu, _symmetricGradu, _uDotGradu, _gradp, _gradphi,
+    _gradmu, _gradmuDotGradu;
+    std::vector<double> _gradv;
+  std::vector<double> _phiP, _phiPhi, _phiMu, _gradPhiU, _gradPhiP, _gradPhiPhi,
+    _gradPhiMu;
+  std::vector<double> _uDotPhiU, _dudtDotPhiU, _uDotGraduDotPhiU, _fDotPhiU,
+    _SuDotPhiU, _gradPhiDotphiU, _gradMuDotphiU, _divPhiU, _doubleContraction,
+    _gradMuDotgradUdotphiU;
+  std::vector<double> _JfluxDotPhiU;
+  std::vector<double> _v, _dvdt, _gradPhiV, _dvdtDotPhiV, _vDotPhiV, _vDotPhiU, _SvDotPhiV, _fDotPhiV;
+
+  // J = -(rho1 - rho2)/2 * M(phi) * grad(mu + alpha *p)
+  //   = -    drhodphi    * M(phi) * grad(mu + alpha *p)
+  std::vector<double> _Jflux;
+  std::vector<double> _viscousStress, _SDotGradPhiV;
+
+  // T := rho * u otimes u + u otimes J + J otimes u + 1/rho * J otimes J
+  std::vector<double> _momentumTensor, _TDotGradPhiV;
+
+public:
+  CHNS_VolumeAveragedGeneric(const feFunction       *density,
+                             const feFunction       *drhodphi,
+                             const feFunction       *viscosity,
+                             const feFunction       *dviscdphi,
+                             const feFunction       *mobility,
+                             const feVectorFunction *volumeForce,
+                             const feFunction       *sourceP,
+                             const feVectorFunction *sourceU,
+                             const feFunction       *sourcePhi,
+                             const feFunction       *sourceMu,
+                             std::vector<double>    &CHNSparameters)
+    : feSysElm(dim, 5, CHNS_VOLUME_GENERIC, true)
+    , _density(density)
+    , _drhodphi(drhodphi)
+    , _viscosity(viscosity)
+    , _dviscdphi(dviscdphi)
+    , _mobility(mobility)
+    , _volumeForce(volumeForce)
+    , _sourceP(sourceP)
+    , _sourceU(sourceU)
+    , _sourcePhi(sourcePhi)
+    , _sourceMu(sourceMu)
+  {
+    _computeMatrixWithFD = true;
+
+    size_t numRequiredParameters = 3;
+    if (CHNSparameters.size() != numRequiredParameters)
+    {
+      feErrorMsg(FE_STATUS_ERROR,
+                 "CHNS formulation requires %d parameters:\n"
+                 " - alpha = (rho_2 - rho_1) / (rho_1 + rho_2)\n"
+                 " - surface tension\n"
+                 " - epsilon : interface thickness\n",
+                 numRequiredParameters);
+      exit(-1);
+    }
+
+    _alpha          = CHNSparameters[0];
+    _surfaceTension = CHNSparameters[1];
+    _epsilon        = CHNSparameters[2];
+    _lambda         = 3. / (2. * sqrt(2.)) * _surfaceTension * _epsilon;
+  };
+
+  virtual void createElementarySystem(std::vector<feSpace *> &space) override;
+  virtual void computeAe(feBilinearForm *form) override;
+  virtual void computeBe(feBilinearForm *form) override;
+  CLONEABLE(CHNS_VolumeAveragedGeneric)
 };
 
 //
