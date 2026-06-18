@@ -1,3 +1,7 @@
+# Note
+
+This project is no longer under development, but feel free to checkout [fez](https://github.com/arthurbawin/fez/) (-:
+
 # feNG
 
 [![Debug](https://github.com/arthurbawin/feNG/actions/workflows/debug.yml/badge.svg)](https://github.com/arthurbawin/feNG/actions/workflows/debug.yml)
